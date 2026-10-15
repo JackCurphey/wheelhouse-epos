@@ -150,6 +150,95 @@ test('if someone else changed the job first, it says so', async () => {
   assert.ok(has(await r.dlg.findByText('This job changed while you were looking at it.')));
 });
 
+// Jack, 15 Oct (issue #190): Put on hold, beside the main button, while the
+// bike is expected or the work is not started, in progress or waiting for parts.
+const HOLDS = [
+  ['an expected bike', {}],
+  ['a bike booked in', { custodyState: 'in_shop' }],
+  ['work in progress', { custodyState: 'in_shop', workState: 'in_progress' }],
+  ['work waiting for parts', { custodyState: 'in_shop', workState: 'waiting_parts' }],
+];
+for (const [name, over] of HOLDS) {
+  test(`${name} can be put on hold`, async () => {
+    const { dlg, fireEvent, waitFor } = await openJob(over);
+    fireEvent.click(dlg.getByRole('button', { name: 'Put on hold' }));
+    await waitFor(() => assert.deepEqual(posts(), ['/api/workshop-jobs/1/hold {"version":3}']));
+  });
+}
+
+test('finished work and work on hold have no Put on hold', async () => {
+  for (const over of [{ custodyState: 'in_shop', workState: 'complete' }, { custodyState: 'in_shop', workState: 'on_hold' }]) {
+    const { dlg, cleanup } = await openJob(over);
+    assert.ok(dlg.queryByRole('button', { name: 'Put on hold' }) === null, JSON.stringify(over));
+    cleanup();
+    shell.queryClient.clear();
+    uninstall();
+  }
+  uninstall = null;
+});
+
+// Jack, 15 Oct: a refused move says why in plain words, from where the job is.
+test('a move the job can no longer make says why in plain words', async () => {
+  const r = await openJob();
+  answer = { status: 409, ok: false, json: async () => ({ error: 'cannot book_in a job that is in_shop; from here you can collect', code: 'illegal' }) };
+  r.fireEvent.click(r.dlg.getByRole('button', { name: 'Book in' }));
+  assert.ok(has(await r.dlg.findByText('The bike is already here.')));
+  assert.ok(r.dlg.queryByText(/book_in|in_shop/) === null);
+  assert.ok(r.dlg.queryByText('This job changed while you were looking at it.') === null);
+});
+
+test('the status reads Change requested, Cancelled, Declined or Expired for those bookings', async () => {
+  const { jobStage } = await import(new URL('../../.test-build/screens/diary/job-dialog.js', import.meta.url).href);
+  const at = (bookingState, over = {}) => jobStage({ bookingState, custodyState: 'expected', workState: 'not_started', quote: null, ...over });
+  // As the diary: only with the time the customer asked for.
+  assert.equal(at('reschedule_requested', { requested: { jobDate: '2026-10-08', startTime: '14:00' } }), 'Change requested');
+  assert.equal(at('reschedule_requested'), 'Expected');
+  assert.equal(at('cancelled'), 'Cancelled');
+  assert.equal(at('declined'), 'Declined');
+  assert.equal(at('expired'), 'Expired');
+  assert.equal(at('cancelled', { custodyState: 'in_shop' }), 'Cancelled');
+  assert.equal(at('scheduled'), 'Expected');
+});
+
+// The diary marks a change request's block "Change requested" in amber; its
+// job page says the same (Jack, 15 Oct, decision 4).
+test('a change request\'s page reads Change requested, in the diary\'s amber', async () => {
+  const { dlg } = await openJob({ bookingState: 'reschedule_requested', requested: { jobDate: '2026-10-08', startTime: '14:00', endTime: '15:30', mechanicId: 11 } });
+  const badge = dlg.getAllByText('Change requested').find((el) => /wh-state-hold/.test(el.className));
+  assert.ok(badge, 'a Change requested badge in the hold colours');
+});
+
+// A cancelled job can still be opened, from its block's menu: it can't be
+// booked in from there (fresh review, 15 Oct).
+test('a cancelled job opened from its menu reads Cancelled and can\'t be booked in', async () => {
+  JOB = job({ bookingState: 'cancelled', cancelledBy: 'customer' });
+  uninstall = installDom('http://localhost/workshop/diary?date=2026-10-05');
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
+  stubServer();
+  const rtl = await import('@testing-library/react');
+  const { createElement } = await import('react');
+  shell = await importFresh(SHELL);
+  const ui = rtl.render(createElement(shell.AppShell));
+  const label = await ui.findByText(/^Trek Domane AL 3, Standard service.*Cancelled/);
+  rtl.fireEvent.contextMenu(label.parentElement, { clientX: 200, clientY: 200 });
+  rtl.fireEvent.click(rtl.within(ui.getByRole('menu')).getByRole('menuitem', { name: 'Open job' }));
+  const dlg = rtl.within(await ui.findByRole('dialog', { name: /Standard service/ }));
+  await rtl.waitFor(() => assert.equal(Boolean(dlg.queryByText('Loading…')), false));
+  assert.ok(has(dlg.getAllByText('Cancelled').length));
+  assert.equal(dlg.getByRole('switch', { name: 'Bike is here' }).disabled, true);
+});
+
+// Notes typed but not saved don't stay in a box that has become read-only.
+test('notes not saved before the work is finished are not shown as if saved', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ custodyState: 'in_shop', workState: 'in_progress' });
+  fireEvent.change(dlg.getByRole('textbox', { name: 'Notes' }), { target: { value: 'Typed, never saved' } });
+  JOB = { ...JOB, workState: 'complete', version: 4 };
+  fireEvent.click(dlg.getByRole('button', { name: 'Mark ready for collection' }));
+  await waitFor(() => assert.ok(has(dlg.queryByText('Reopen the job to change its notes.'))));
+  assert.equal(dlg.getByRole('textbox', { name: 'Notes' }).value, 'Check the rear hub too.');
+});
+
 test('M picks a job up to move it from the keyboard', async () => {
   JOB = job({});
   uninstall = installDom('http://localhost/workshop/diary?date=2026-10-05');

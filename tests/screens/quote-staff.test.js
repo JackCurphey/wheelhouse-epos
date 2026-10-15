@@ -38,6 +38,7 @@ let uninstall;
 let shell;
 let calls;
 let sendAnswer;
+let refuse = null; // a quote refusal the next POST gets, in the shop's words
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -54,6 +55,7 @@ function stubServer() {
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
     if (method === 'POST' && u.pathname === '/api/quotes/9/send') return reply(200, sendAnswer ?? { quote: { ...QUOTE, state: 'sent' }, message: { status: 'sent' }, link: 'http://localhost/book/north-street/booking/abc' });
+    if (method === 'POST' && refuse) return reply(409, { error: refuse, code: 'illegal' });
     if (method === 'POST') return reply(u.pathname.endsWith('/quotes') ? 201 : 200, { ...(QUOTE ?? quote('draft', [])), id: 9 });
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
@@ -153,6 +155,32 @@ test('a sent quote can be withdrawn, after asking', async () => {
   const confirm = within(await ui.findByRole('dialog', { name: 'Withdraw this quote?' }));
   fireEvent.click(confirm.getByRole('button', { name: 'Withdraw' }));
   await waitFor(() => assert.deepEqual(posts(), ['/api/quotes/9/withdraw {}']));
+});
+
+// Jack, 15 Oct (issue #190): a quote refusal says why in plain words.
+test('a refused quote action says why in plain words', async () => {
+  const { dlg, fireEvent, within, ui } = await openJob({ q: quote('sent', [line({})]) });
+  refuse = 'a quote that is approved cannot be withdrawn';
+  try {
+    fireEvent.click(await dlg.findByRole('button', { name: 'Withdraw quote' }));
+    const confirm = within(await ui.findByRole('dialog', { name: 'Withdraw this quote?' }));
+    fireEvent.click(confirm.getByRole('button', { name: 'Withdraw' }));
+    assert.ok(Boolean(await ui.findByText('This quote has been approved, so it can\'t be withdrawn.')));
+    assert.ok(ui.queryByText(/cannot be withdrawn/) === null);
+  } finally { refuse = null; }
+});
+
+test('an answer the customer beat staff to says so in plain words', async () => {
+  const lines = [line({})];
+  const { dlg, fireEvent, within, ui } = await openJob({ q: quote('sent', lines) });
+  refuse = 'a quote that is approved is not open for an answer';
+  try {
+    fireEvent.click(await dlg.findByRole('button', { name: 'Record their answer' }));
+    const rec = within(await ui.findByRole('dialog', { name: "Record Maya Patel's answer" }));
+    fireEvent.click(rec.getByRole('radio', { name: 'By phone' }));
+    fireEvent.click(rec.getByRole('button', { name: /^Save/ }));
+    assert.ok(Boolean(await ui.findByText('This quote has been approved, so it can\'t be answered.')));
+  } finally { refuse = null; }
 });
 
 test('an answered quote strikes out what was declined and shows the Approved total', async () => {

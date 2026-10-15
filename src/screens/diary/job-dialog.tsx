@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog } from '@/components/ui/dialog.tsx';
 import { shortDay, todayIso } from './rules.ts';
 import { WorkParts } from './work-parts.tsx';
+import { refusalText } from './refusal-words.ts';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -20,8 +21,15 @@ type Customer = { id: number; name: string; email: string | null; phone: string 
 const money = (n: number) => `£${n.toFixed(2)}`;
 
 /** The badge's word for where the job is (the drawings' stage names). */
-export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'>): string {
+export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested'] }): string {
   if (j.bookingState === 'pending') return 'Booking request';
+  // Bookings that ended, or wait on the customer's change (Jack, 15 Oct, issue 190):
+  // the diary's words, with Declined and Expired added.
+  // As the diary: a change request with the time the customer asked for.
+  if (j.bookingState === 'reschedule_requested' && j.requested) return 'Change requested';
+  if (j.bookingState === 'cancelled') return 'Cancelled';
+  if (j.bookingState === 'declined') return 'Declined';
+  if (j.bookingState === 'expired') return 'Expired';
   if (j.custodyState === 'collected') return 'Collected';
   if (j.workState === 'complete') return 'Finished';
   // Waiting for parts wins over a quote out, as in the diary (Jack, 4 Oct).
@@ -39,14 +47,17 @@ type Action = { label: string; action: string; primary: boolean };
 function stageActions(j: WorkshopJob): Action[] {
   if (j.bookingState === 'pending' || j.bookingState === 'cancelled' || j.bookingState === 'declined' || j.bookingState === 'expired') return [];
   if (j.custodyState === 'collected') return [];
-  if (j.custodyState === 'expected') return [{ label: 'Book in', action: 'book-in', primary: true }];
+  // Put on hold, beside the main button, wherever the work can be held (Jack, 15 Oct).
+  const hold: Action = { label: 'Put on hold', action: 'hold', primary: false };
+  if (j.custodyState === 'expected') return [{ label: 'Book in', action: 'book-in', primary: true }, ...(j.workState === 'not_started' ? [hold] : [])];
   switch (j.workState) {
-    case 'not_started': return [{ label: 'Start work', action: 'start', primary: true }];
+    case 'not_started': return [{ label: 'Start work', action: 'start', primary: true }, hold];
     case 'in_progress': return [
       { label: 'Mark ready for collection', action: 'finish', primary: true },
       { label: 'Waiting for parts', action: 'await-parts', primary: false },
+      hold,
     ];
-    case 'waiting_parts': return [{ label: 'Parts arrived', action: 'parts-arrived', primary: true }];
+    case 'waiting_parts': return [{ label: 'Parts arrived', action: 'parts-arrived', primary: true }, hold];
     case 'on_hold': return [{ label: 'Resume', action: 'resume', primary: true }];
     case 'complete': return [{ label: 'Hand over', action: 'collect', primary: true }];
     default: return [];
@@ -60,6 +71,10 @@ const BADGE: Record<string, string> = {
   'In the workshop': 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   'Waiting for parts': 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
   'On hold': 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
+  'Change requested': 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
+  Cancelled: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
+  Declined: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
+  Expired: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
   Finished: 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',
   Collected: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
 };
@@ -72,6 +87,10 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const queryClient = useQueryClient();
   const jobQuery = useQuery({ queryKey: ['workshop-job', jobId], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${jobId}`) });
   const job = jobQuery.data;
+  // A booking that ended can't be booked in or given another day, though its page still opens (fresh review, 15 Oct).
+  const ended = job?.bookingState === 'cancelled' || job?.bookingState === 'declined' || job?.bookingState === 'expired';
+  // Finished work's notes are read-only: what was typed and not saved is not shown as if saved.
+  const finished = job?.workState === 'complete';
   const customer = useQuery({
     queryKey: ['customer', job?.customerId],
     queryFn: () => apiGet<Customer>(`/api/customers/${job?.customerId}`),
@@ -94,11 +113,16 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
       ]);
     } catch (err) {
-      if (err instanceof ApiError && (err.code === 'stale' || err.code === 'illegal')) {
+      // Only a stale refusal means someone else changed the job; a move it can
+      // no longer make is explained from where it is (Jack, 15 Oct).
+      if (err instanceof ApiError && err.code === 'stale') {
         setMessage('This job changed while you were looking at it.');
         void jobQuery.refetch();
+      } else if (err instanceof ApiError && err.code === 'illegal') {
+        setMessage(refusalText(err));
+        void jobQuery.refetch();
       } else {
-        setMessage(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
+        setMessage(refusalText(err));
       }
     } finally {
       setSending(false);
@@ -125,7 +149,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         setMessage('This job changed while you were looking at it. Your words are still in the box.');
         void jobQuery.refetch();
       } else {
-        setMessage(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
+        setMessage(refusalText(err));
       }
     } finally {
       setSending(false);
@@ -236,7 +260,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                         ))}
                       </ul>
                     ) : null}
-                    {stageActions(job).length || job.custodyState !== 'collected' ? (
+                    {!ended && (stageActions(job).length || job.custodyState !== 'collected') ? (
                       <Button size="sm" className="self-start" disabled={sending} onClick={addDay}>Add another day</Button>
                     ) : null}
                     {/* Decision 50: a toggle pill. Turning it on books the bike in; it can't be turned back off here. */}
@@ -247,7 +271,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           type="button"
                           role="switch"
                           aria-checked={here}
-                          disabled={here || sending || job.bookingState === 'pending'}
+                          disabled={here || sending || job.bookingState === 'pending' || ended}
                           onClick={() => run('book-in')}
                           className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-[13px] font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
                         >
@@ -266,19 +290,25 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           <span>{job.customerDescription}</span>
                         </div>
                       ) : null}
+                      {/* Finished work is frozen until it is reopened, so its notes are read-only (Jack, 15 Oct). */}
                       <textarea
                         aria-labelledby="job-notes"
+                        readOnly={job.workState === 'complete'}
                         rows={5}
-                        value={draft ?? job.notes ?? ''}
+                        value={(finished ? null : draft) ?? job.notes ?? ''}
                         onChange={(e) => { setDraft(e.target.value); setNotesNote(''); }}
                         placeholder="Add notes for the workshop"
                         className="min-h-24 w-full resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 py-2 text-sm leading-normal"
                       />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Button size="sm" disabled={sending || draft === null || draft === (job.notes ?? '')} onClick={saveNotes}>Save notes</Button>
-                      <span role="status" className="text-[13px] text-[var(--wh-muted)]">{notesNote}</span>
-                    </div>
+                    {job.workState === 'complete' ? (
+                      <span className="text-[13px] text-[var(--wh-muted)]">Reopen the job to change its notes.</span>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <Button size="sm" disabled={sending || draft === null || draft === (job.notes ?? '')} onClick={saveNotes}>Save notes</Button>
+                        <span role="status" className="text-[13px] text-[var(--wh-muted)]">{notesNote}</span>
+                      </div>
+                    )}
                   </section>
                 </div>
                 <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
