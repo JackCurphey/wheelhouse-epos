@@ -171,8 +171,8 @@ export type WaitingItem = Slot & {
   customerName?: string | null;
   serviceNames?: string[];
   mechanicId?: number | null;
-  from?: Slot & { mechanicId?: number | null };
-  to?: Slot & { mechanicId?: number | null };
+  from?: Slot & { mechanicId?: number | null; mechanicName?: string | null };
+  to?: Slot & { mechanicId?: number | null; mechanicName?: string | null };
 };
 
 const KIND: Record<WaitingItem['kind'], { tone: DiaryState; label: string }> = {
