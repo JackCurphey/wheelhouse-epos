@@ -134,7 +134,9 @@ export async function upgrade(repo, mainRef, env = process.env) {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Compared as real paths, so a symlinked path (a worktree under macOS's /tmp)
+// still runs the script rather than silently skipping it.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [mode, ref] = process.argv.slice(2);
   const repo = process.cwd();
   if (mode === 'pr' && ref) {
