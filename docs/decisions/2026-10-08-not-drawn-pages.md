@@ -111,8 +111,10 @@ over booking a call.
 page is (Detail page, block 4): back to the customer, the bike's name with
 "[Customer]’s bike" and New job; on the left its details (colour, frame
 number, note) with Edit, the warranty when bought here (Customer service 4),
-and who it belongs to; on the right its jobs, open first, then earlier.
-Header search can open it directly. Chosen over a pop-up over the customer's
+and who it belongs to; on the right its jobs, sorted as the customer's page
+sorts them (a Finished job waiting to be collected is still open).
+Header search can open it directly, since it finds bikes and frame numbers
+(second walk 12; stage 1 gaps 22). Chosen over a pop-up over the customer's
 page. Taken from the customer page's pattern without a question: New job,
 Edit and the jobs list's shape. Still not drawn: the box Edit opens, and a
 Cycle to Work bike's page (it would read as this one, with its frame number).
@@ -134,9 +136,10 @@ Parked sales as "Waiting for payment", with Send again (`till-pay-link-waiting`)
 and the till is free for the next customer. When Stripe says it's paid, the
 sale finishes by itself and the till shows "Paid by link: Maya Patel · £74.00
 · receipt B1-[0000]" (`till-pay-link-paid`). Built in WP-3.1, through the
-card-payments adapter with a pretend Stripe first. Chosen over putting the
+online payments adapter (WP-1.11) with a pretend Stripe first. Chosen over putting the
 sale on the customer's account, and over the till waiting on the payment
-screen. Not drawn: how long a link lasts.
+screen. Not drawn: how long a link lasts, cancelling a link, or paying at
+the till instead if the customer comes back in person.
 
 ## The 95, by stage
 

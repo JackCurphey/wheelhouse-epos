@@ -164,10 +164,15 @@ function bikeSummary() {
   const owner = `${secHead('Belongs to')}${factLink('cs-page-desktop.dc.html', MAYA.name, mono(MAYA.phone))}`;
   return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${cover}${owner}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
 }
-// Her jobs are all on this bike: what's open first, then earlier, newest first.
+// Her jobs are all on this bike, sorted as her page sorts them (walk-through 9
+// L5, Customer service 12): a Finished job is still open, its bike waiting to
+// be collected, so Open now has the newest one on or before today; Earlier
+// has the older Finished ones.
 function bikeJobs() {
-  const open = mj().filter((j) => j.key !== 'ready').slice(0, 3);
-  const earlier = mj().filter((j) => j.key === 'ready' && j.day <= TODAY).slice(0, 2);
+  const ready = mj().filter((j) => j.key === 'ready' && j.day <= TODAY);
+  const open = [...mj().filter((j) => j.key !== 'ready').slice(0, 3), ...ready.slice(0, 1)]
+    .sort((a, b) => b.day - a.day || b.start - a.start);
+  const earlier = ready.slice(1, 3);
   return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
 <span style="font-size: 17px; font-weight: 700">Jobs on this bike</span>
 <div style="display: flex; flex-direction: column">${subHead('Open now')}${open.map(jobRow).join('')}${subHead('Earlier, newest first')}${earlier.map(jobRow).join('')}

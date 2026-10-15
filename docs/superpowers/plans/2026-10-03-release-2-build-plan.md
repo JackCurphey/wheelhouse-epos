@@ -490,7 +490,7 @@ later packages.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
 - **`till-park`** (block 21, Pick-one box) — 1 situation: `till-pay-link-waiting`.
-- Sending a link to pay (Jack, 15 Oct, #139 row #51): Text or Email, through Stripe behind the card-payments adapter (WP-1.11) with a pretend version first. The sale waits in Parked sales as "Waiting for payment" and finishes by itself when Stripe says it's paid.
+- Sending a link to pay (Jack, 15 Oct, #139 row #51): Text or Email, through Stripe behind the online payments adapter (WP-1.11) with a pretend version first. The sale waits in Parked sales as "Waiting for payment" and finishes by itself when Stripe says it's paid.
 - **`till-find`** (block 3, Table with search and filters) — 1 situation: `till-find-customer`.
 - **`till-sale-detail`** (block 4, Detail page) — its one situation comes with a later package.
 - **`till-refund`** (block 9, Form box) — 3 situations: `till-refund-older`, `till-refund-cash`, `till-refund-noreceipt`; plus 1 written line.
@@ -695,8 +695,8 @@ later packages.
 - **`set-eod`** (block 1, Settings page) — 2 situations: `set-eod-close`, `set-save-failed`.
 - **`set-pay-ways`** (block 1, Settings page) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
 - **`set-staff`** (block 1, Settings page) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
-- **`set-staff-person`** (block 9, Form box) — 2 of its 6 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
-- Brought back from later (Jack, 8 Oct, #139): `ops-person` and `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. The button is drawn (Jack, 15 Oct): a row under Till PIN, "Signed in somewhere?", and the box reads "Every till, phone and computer". The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
+- **`set-staff-person`** (block 9, Form box) — 4 of its 6 situations here: `set-staff-person-all`, `set-staff-clear-pin`, `ops-person`, `ops-person-everywhere`; plus 4 written lines.
+- Brought back from later (Jack, 8 Oct, #139): the two situations above, "Sign Jo Taylor out everywhere?" on a person's page. The button is drawn (Jack, 15 Oct): a row under Till PIN, "Signed in somewhere?", and the box reads "Every till, phone and computer". The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
 - **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).
