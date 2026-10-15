@@ -1,11 +1,10 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
 import { createServer } from 'node:http';
-import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { sendQuoteResult, answerAndAddToOrder } from './workshop/jobs.js';
 import { clientIp } from './proxy-trust.js';
@@ -197,126 +196,6 @@ async function processShopifyRefundWebhook(shopId, refund) {
     }
   });
 }
-
-route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Job not found');
-  // The attachments row is ON DELETE CASCADE, but that only removes the DB
-  // record - the file on disk needs its own cleanup or it just sits there
-  // forever with nothing pointing at it.
-  const attachments = await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE workshop_job_id = ?').all(id);
-  await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
-  // The capacity hold references this job, so it has to go first or the delete
-  // fails on the foreign key. Deleted rather than released: a released hold is
-  // a record of a slot the shop gave back, and there is no longer a booking for
-  // it to be a record of.
-  await db.prepare('DELETE FROM workshop_capacity_holds WHERE workshop_job_id = ?').run(id);
-  await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
-  await Promise.all(attachments.map((a) => unlink(path.join(UPLOADS_DIR, a.storage_key)).catch(() => {})));
-  sendJson(res, 200, { ok: true });
-});
-
-// ---------- Workshop job attachments ----------
-// Files (e.g. an e-bike's downloaded diagnostic report) attached to a
-// workshop job. Uploaded as base64 inside a normal JSON body rather than
-// multipart/form-data - this project deliberately has exactly one
-// dependency (pg), and a hand-rolled multipart parser is a lot of surface
-// area for something that's rare and small (a PDF report, not a video) for
-// a single shop's workshop.
-
-const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // plenty for a PDF report; small enough a handful of them won't fill the disk
-// Base64 inflates the raw bytes by ~1.37x, so the request-body cap needs
-// headroom above the decoded-file cap it's ultimately enforcing.
-const MAX_ATTACHMENT_BODY_BYTES = Math.ceil(MAX_ATTACHMENT_BYTES * 1.4);
-
-function serializeAttachment(row) {
-  return {
-    id: row.id,
-    workshopJobId: row.workshop_job_id,
-    originalName: row.original_name,
-    contentType: row.content_type,
-    sizeBytes: row.size_bytes,
-    uploadedAt: row.uploaded_at,
-    fromCustomer: row.from_customer,
-  };
-}
-
-route('GET', '/api/workshop-jobs/:jobId/attachments', async (req, res, params) => {
-  const jobId = Number(params.jobId);
-  const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
-  if (!job) return notFound(res, 'Job not found');
-  const rows = await db
-    .prepare('SELECT * FROM workshop_job_attachments WHERE workshop_job_id = ? ORDER BY uploaded_at DESC')
-    .all(jobId);
-  sendJson(res, 200, rows.map(serializeAttachment));
-});
-
-route('POST', '/api/workshop-jobs/:jobId/attachments', async (req, res, params) => {
-  const jobId = Number(params.jobId);
-  const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
-  if (!job) return notFound(res, 'Job not found');
-
-  let body;
-  try {
-    body = await readJsonBody(req, MAX_ATTACHMENT_BODY_BYTES);
-  } catch (err) {
-    return badRequest(res, err.message === 'Payload too large' ? 'That file is too large (max 15MB).' : 'Invalid request body');
-  }
-  if (!body.dataBase64) return badRequest(res, 'No file data received');
-  const originalName = String(body.filename || 'attachment').trim().slice(0, 200) || 'attachment';
-  const contentType = String(body.contentType || 'application/octet-stream').trim().slice(0, 100);
-
-  let buffer;
-  try {
-    buffer = Buffer.from(body.dataBase64, 'base64');
-  } catch (err) {
-    return badRequest(res, 'Could not decode file data');
-  }
-  if (!buffer.length) return badRequest(res, 'That file is empty');
-  if (buffer.length > MAX_ATTACHMENT_BYTES) return badRequest(res, 'That file is too large (max 15MB).');
-
-  const storageKey = randomBytes(24).toString('hex');
-  await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
-  const info = await db
-    .prepare(
-      `INSERT INTO workshop_job_attachments (workshop_job_id, storage_key, original_name, content_type, size_bytes)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run(jobId, storageKey, originalName, contentType, buffer.length);
-  const row = await db.prepare('SELECT * FROM workshop_job_attachments WHERE id = ?').get(info.lastInsertRowid);
-  sendJson(res, 201, serializeAttachment(row));
-});
-
-route('GET', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, params) => {
-  const attachment = await db
-    .prepare('SELECT * FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?')
-    .get(Number(params.id), Number(params.jobId));
-  if (!attachment) return notFound(res, 'Attachment not found');
-  const filePath = path.join(UPLOADS_DIR, attachment.storage_key);
-  if (!existsSync(filePath)) return notFound(res, 'Attachment not found');
-  // RFC 5987 filename* carries the real (possibly non-ASCII) name; the
-  // plain filename= is a plain-ASCII fallback for older clients, with
-  // anything that would break the quoted string stripped out.
-  const asciiFallback = attachment.original_name.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
-  res.writeHead(200, {
-    'Content-Type': attachment.content_type || 'application/octet-stream',
-    'Content-Length': attachment.size_bytes,
-    'Content-Disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(attachment.original_name)}`,
-    'Cache-Control': 'no-store',
-  });
-  createReadStream(filePath).pipe(res);
-});
-
-route('DELETE', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, params) => {
-  const attachment = await db
-    .prepare('SELECT * FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?')
-    .get(Number(params.id), Number(params.jobId));
-  if (!attachment) return notFound(res, 'Attachment not found');
-  await db.prepare('DELETE FROM workshop_job_attachments WHERE id = ?').run(attachment.id);
-  await unlink(path.join(UPLOADS_DIR, attachment.storage_key)).catch(() => {});
-  sendJson(res, 200, { ok: true });
-});
 
 // ---------- Uploaded images, served to anyone ----------
 

@@ -32,6 +32,13 @@ const MOVED = [
   ['POST', '/api/quotes/:id/send'],
   ['POST', '/api/quotes/:id/withdraw'],
   ['POST', '/api/quotes/:id/answer'],
+  // Deleting a job and its attachments, once the uploads folder had a shared
+  // home in server/lib/uploads.js (#205).
+  ['DELETE', '/api/workshop-jobs/:id'],
+  ['GET', '/api/workshop-jobs/:jobId/attachments'],
+  ['POST', '/api/workshop-jobs/:jobId/attachments'],
+  ['GET', '/api/workshop-jobs/:jobId/attachments/:id'],
+  ['DELETE', '/api/workshop-jobs/:jobId/attachments/:id'],
 ];
 // POST /api/workshop-jobs/:id/<action>, each registered by jobActionRoute.
 const ACTIONS = [
@@ -63,4 +70,11 @@ test('each job action is registered in server/routes/workshop.js, none in server
 test('server/routes/index.js registers the workshop area', () => {
   assert.match(read('server/routes/index.js'), /^import \* as workshop from '\.\/workshop\.js';$/m);
   assert.match(read('server/routes/index.js'), /ROUTE_AREAS = \[[^\]]*\bworkshop\b/);
+});
+
+test('server/server.js keeps no copy of the attachment helpers, which moved with their routes', () => {
+  const server = read('server/server.js');
+  for (const name of ['serializeAttachment', 'MAX_ATTACHMENT_BYTES', 'MAX_ATTACHMENT_BODY_BYTES']) {
+    assert.ok(!new RegExp(`^(function ${name}\\b|const ${name}\\b)`, 'm').test(server), name);
+  }
 });
