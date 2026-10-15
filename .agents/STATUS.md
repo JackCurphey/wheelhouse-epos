@@ -5,25 +5,27 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** WP-0.4: the sale helpers are in `server/lib/sales.js`
-(#202, merged 15 Oct); the 15 workshop settings routes to his own
-`server/routes/workshop-settings.js`, with the shared
-`server/lib/uploads.js` (`UPLOADS_DIR`, `MAX_SERIAL`) (#205, open); Jack's
-#151 follow-ups (#204, open; the products Shopify push is a separate
-change). Then image uploads, then booking. WP-0.5's spec merged (#201);
-he brings hosts after Jack answers #137. #134 answered: open orders stay in
-`sale_documents`, in pence; the list, steps and totals check are in #203
-(open).
-**Jack is on:** WP-0.4's workshop moves merged 15 Oct (#180–#184), with
-#187, #188, #189, #191 and #193. Next: answer #137 (where the data lives)
-and #134 (labour's VAT rate); the quote move, now unblocked by #202;
-attachments and deleting a job once #205 brings `server/lib/uploads.js`;
-the test shop loader if he wants it (#201 tasks group 1, Mark's area, so
-his approval). Then the stage check once lines 1–6 of §9 are in.
-**Open for Jack:** Mark's UK-or-EU question on #137 (15 Oct); labour's VAT
-rate on #134 (15 Oct); ask from Mark #140 (#139 answered 8 Oct, with pages to
-draw before stages 2, 3 and 5); till job warning for WP-3.1 (#196); a Change
-requested badge on the job window (stage 4, stage 1 gaps decision 25).
+**Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
+route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
+#208 were Jack's #151 follow-ups). WP-0.5: the host is DigitalOcean in
+London, about £20 a month with VAT (#215; Jack's UK answer in
+`docs/decisions/2026-10-15-hosted-copy-region.md`), and the setup script
+and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
+(#219). #134 answered: the sales-in-pence spec merged (#203). When back:
+move the booking link's quote answer to `portal.js` (after #207); a login
+for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
+the commit in `/healthz`), then the deploy workflow; then #203 step A.
+**Jack is on:** setting up the online test copy himself, following
+`docs/runbooks/hosted-copy.md` (Mark, 15 Oct: good learning), once he says
+yes on #137 and opens the DigitalOcean account. Merge #207 (quote routes,
+approved by Mark) and #216 (test shop loader, approved). Then attachments
+and deleting a job, now that `server/lib/uploads.js` is in (#205). Then the
+stage check once lines 1–6 of §9 are in.
+**Open for Jack:** yes to DigitalOcean on #137 (about £20 a month; 15 Oct);
+labour's VAT rate on #134 (15 Oct); before WP-3.1, two new "check these"
+kinds and deposits on unfinished work (`openspec/changes/wp-1-6-sales-in-pence/design.md`,
+Open Questions); ask from Mark #140; till job warning for WP-3.1 (#196); a
+Change requested badge on the job window (stage 4).
 
 **Updated:** 2026-10-15. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
@@ -45,9 +47,9 @@ half, #148, 5 Oct); line 3 (STATUS trim, #149, 5 Oct); line 5 (WP-0.2 screens, #
 `scripts/new-db.sh` #151, screen-trace reads the route files #152, route
 moves #155 suppliers, #156 purchase orders, #158 label settings and shop
 theme, #159 website and Shopify, #160 sites and tills, #162 team, #165
-printing and messages, #167 sign-in, #168 products, #202 the sale helpers to `server/lib/sales.js`; open: #205 workshop settings with `server/lib/uploads.js`; Jack's workshop moves #180–#184; guards that moved files
+printing and messages, #167 sign-in, #168 products; 15 Oct: #202 the sale helpers, #205 workshop settings and `server/lib/uploads.js`, #209 image uploads, #210 and #211 the booking pages, #212 customers, #213 sales and orders, #214 employees and the dashboard; Jack's workshop moves #180–#184, with his quote routes (#207) approved; guards that moved files
 and `server.js` define every name they use and import nothing unused,
-#155 and #158). Waiting: line 6 (Mark, WP-0.5; its spec merged in #201, 15 Oct; the host waits on Jack's answer on #137, the build on line 4); line 7
+#155 and #158). Waiting: line 6 (WP-0.5: spec #201, DigitalOcean in London #215, setup script #219; Jack sets it up once he says yes on #137); line 7
 (Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
 line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 done in
 #157 (5 Oct). #161 fixed by #166. Stage 1's 25 drawing gaps answered (#185,
