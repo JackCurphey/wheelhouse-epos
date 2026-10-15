@@ -13,5 +13,6 @@ import * as customerMessages from './customer-messages.js';
 import * as auth from './auth.js';
 import * as products from './products.js';
 import * as workshop from './workshop.js';
+import * as workshopSettings from './workshop-settings.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth, products, workshop];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth, products, workshop, workshopSettings];
