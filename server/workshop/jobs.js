@@ -4,13 +4,14 @@
 // Reads run through the request's shop context (row-level security), as they
 // did in server.js.
 import { prepare, dbExec } from '../db.js';
-import { sendJson, notFound, nowIso } from '../lib/http.js';
+import { sendJson, notFound, nowIso, ValidationError } from '../lib/http.js';
+import { loadDocumentLine } from '../lib/sales.js';
 import {
   LIVE_BOOKING_STATES, parseWeekdayHours, bookingLockKey, effectiveHours, computeCapacity, datesBetween,
 } from '../capacity.js';
 import { shopToday } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
-import { serializeQuote } from './quotes.js';
+import { serializeQuote, answerAll as answerQuote } from './quotes.js';
 import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
 import { allocateReference } from './references.js';
@@ -531,4 +532,48 @@ export async function loadCapacity(start, end, { ignoreJobId = null } = {}) {
   ).all(start, end, ignoreJobId, ignoreJobId)).map((r) => ({ ...toCapacityJob(r), requested: true })));
   const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
   return { settings, blocks, jobs, days };
+}
+
+// Approved quote lines join the job's work and parts (journey 4): a part with
+// a product as that product, anything else as a labour line with its
+// description. Each line records when, so it is never added twice. Refused
+// (thrown as a ValidationError) when the job's order is closed.
+export async function addApprovedLinesToOrder(quoteId) {
+  const quote = await db.prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
+  const lines = await db.prepare(
+    "SELECT * FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved' AND added_to_order_at IS NULL ORDER BY id"
+  ).all(quoteId);
+  if (!lines.length) return;
+  const doc = await db.prepare('SELECT * FROM sale_documents WHERE workshop_job_id = ?').get(quote.workshop_job_id);
+  if (!doc) throw new ValidationError('This job has no order to add the approved work to');
+  if (doc.status !== 'open') throw new ValidationError(`This job's order is already ${doc.status}`);
+  let added = 0;
+  for (const l of lines) {
+    const line = l.kind === 'part' && l.product_id
+      ? await loadDocumentLine({ productId: l.product_id, qty: Math.max(1, Math.round(Number(l.quantity))), unitPrice: Number(l.unit_amount) }, { checkStock: false })
+      : await loadDocumentLine({ lineType: 'labour', name: l.description, unitPrice: Number(l.quantity) * Number(l.unit_amount) }, { checkStock: false });
+    await db.prepare(
+      `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(doc.id, line.product ? line.product.id : null, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal, line.lineType, line.serviceId, line.minutes);
+    await db.prepare('UPDATE workshop_quote_lines SET added_to_order_at = now() WHERE id = ?').run(l.id);
+    added += line.lineTotal;
+  }
+  await db.prepare('UPDATE sale_documents SET subtotal = subtotal + ?, total = GREATEST(0, subtotal + ? - discount), updated_at = ? WHERE id = ?')
+    .run(added, added, nowIso(), doc.id);
+}
+
+// An answer and its lines joining the order happen together, or not at all.
+export async function answerAndAddToOrder(args) {
+  await db.exec('BEGIN');
+  try {
+    const result = await answerQuote(args);
+    if (result.ok) await addApprovedLinesToOrder(result.quote.id);
+    await db.exec('COMMIT');
+    return result;
+  } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
+    if (err instanceof ValidationError) return { ok: false, code: 'illegal', message: err.message };
+    throw err;
+  }
 }

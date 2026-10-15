@@ -18,6 +18,8 @@ const MOVED = [
   'currentShopTimeZone', 'toCapacitySettings', 'LIVE_STATES_SQL',
   'withBookingLock', 'withJobBookingLock', 'applyLocked', 'syncRequestedHold', 'syncJobHold',
   'createWorkshopJob', 'checkJobSlot', 'toBlock', 'toCapacityJob', 'loadCapacity',
+  // Answering a quote: the staff route and the booking link's both call it.
+  'addApprovedLinesToOrder', 'answerAndAddToOrder',
 ];
 const defines = (source, name) =>
   new RegExp(`^(export )?((async )?function ${name}\\b|const ${name}\\b)`, 'm').test(source);
@@ -32,6 +34,11 @@ test('server/workshop/jobs.js exports each shared workshop helper', () => {
 test('server/server.js keeps no copy of a moved helper', () => {
   const server = read('server/server.js');
   assert.deepEqual(MOVED.filter((name) => defines(server, name)), []);
+});
+
+test('server/server.js keeps no copy of publicBase, which moved with the quote send route', () => {
+  assert.ok(!defines(read('server/server.js'), 'publicBase'));
+  assert.ok(defines(read('server/routes/workshop.js'), 'publicBase'));
 });
 
 test('server/workshop/jobs.js imports nothing from server.js', () => {

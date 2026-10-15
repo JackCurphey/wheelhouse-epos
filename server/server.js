@@ -7,18 +7,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
-import { sendQuoteResult } from './workshop/jobs.js';
-import {
-  createRevision as createQuoteRevision,
-  send as sendQuoteForApproval,
-  serializeQuote,
-  readQuote,
-  serializeQuoteWithLines,
-  listRevisions,
-  withdraw as withdrawQuote,
-  answerAll as answerQuote,
-} from './workshop/quotes.js';
-import { clientIp, isHttpsRequest } from './proxy-trust.js';
+import { sendQuoteResult, answerAndAddToOrder } from './workshop/jobs.js';
+import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso, ValidationError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
@@ -34,9 +24,8 @@ import { resolveBookingLink } from './routes/portal.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
 export { serializeWorkshopService } from './routes/workshop-settings.js';
-import { sendSms } from './sms.js';
 import { parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
-import { newLinkCode, hashLinkCode, linkPath } from './booking-link.js';
+import { hashLinkCode } from './booking-link.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
 import { pushInventoryLevel } from './shopify.js';
 import {
@@ -208,128 +197,6 @@ async function processShopifyRefundWebhook(shopId, refund) {
     }
   });
 }
-
-// ---------- Quotes ----------
-// screens: quote-editor, quote-send, approved
-route('GET', '/api/quotes/:id', async (req, res, params) => {
-  const result = await readQuote({ quoteId: Number(params.id) });
-  if (!result.ok) return notFound(res, 'Quote not found');
-  sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
-});
-
-// screens: quote-editor, approved, job
-route('GET', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
-  const rows = await listRevisions({ jobId: Number(params.id) });
-  sendJson(res, 200, rows.map(serializeQuote));
-});
-
-// screens: quote-editor
-route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
-  const body = await readJsonBody(req);
-  if (!Array.isArray(body.lines)) return badRequest(res, 'lines must be an array');
-  sendQuoteResult(res, await createQuoteRevision({ jobId: Number(params.id), lines: body.lines }), 201);
-});
-
-// Approved quote lines join the job's work and parts (journey 4): a part with
-// a product as that product, anything else as a labour line with its
-// description. Each line records when, so it is never added twice. Refused
-// (thrown as a ValidationError) when the job's order is closed.
-async function addApprovedLinesToOrder(quoteId) {
-  const quote = await db.prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
-  const lines = await db.prepare(
-    "SELECT * FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved' AND added_to_order_at IS NULL ORDER BY id"
-  ).all(quoteId);
-  if (!lines.length) return;
-  const doc = await db.prepare('SELECT * FROM sale_documents WHERE workshop_job_id = ?').get(quote.workshop_job_id);
-  if (!doc) throw new ValidationError('This job has no order to add the approved work to');
-  if (doc.status !== 'open') throw new ValidationError(`This job's order is already ${doc.status}`);
-  let added = 0;
-  for (const l of lines) {
-    const line = l.kind === 'part' && l.product_id
-      ? await loadDocumentLine({ productId: l.product_id, qty: Math.max(1, Math.round(Number(l.quantity))), unitPrice: Number(l.unit_amount) }, { checkStock: false })
-      : await loadDocumentLine({ lineType: 'labour', name: l.description, unitPrice: Number(l.quantity) * Number(l.unit_amount) }, { checkStock: false });
-    await db.prepare(
-      `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(doc.id, line.product ? line.product.id : null, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal, line.lineType, line.serviceId, line.minutes);
-    await db.prepare('UPDATE workshop_quote_lines SET added_to_order_at = now() WHERE id = ?').run(l.id);
-    added += line.lineTotal;
-  }
-  await db.prepare('UPDATE sale_documents SET subtotal = subtotal + ?, total = GREATEST(0, subtotal + ? - discount), updated_at = ? WHERE id = ?')
-    .run(added, added, nowIso(), doc.id);
-}
-
-// An answer and its lines joining the order happen together, or not at all.
-async function answerAndAddToOrder(args) {
-  await db.exec('BEGIN');
-  try {
-    const result = await answerQuote(args);
-    if (result.ok) await addApprovedLinesToOrder(result.quote.id);
-    await db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    await db.exec('ROLLBACK').catch(() => {});
-    if (err instanceof ValidationError) return { ok: false, code: 'illegal', message: err.message };
-    throw err;
-  }
-}
-
-// The address a customer opens: APP_PUBLIC_URL when set, else the address
-// the member of staff is using.
-function publicBase(req) {
-  return process.env.APP_PUBLIC_URL || `${isHttpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
-}
-
-// Send (journey 4 decision 5): the quote goes to sent, the customer's booking
-// link is issued afresh (only a hash of the old one is kept, so it can't be
-// sent again; the old link stops working), and the link goes to them by text.
-// The answer says whether the text went. The staff app's one-minute Undo
-// lives in the app, which calls this only when the minute is up.
-// screens: quote-send
-route('POST', '/api/quotes/:id/send', async (req, res, params, query, afterRelease, shopId) => {
-  const ctx = await currentSession(req);
-  const result = await sendQuoteForApproval({ quoteId: Number(params.id) });
-  if (!result.ok) return sendQuoteResult(res, result);
-  const job = await db.prepare(
-    `SELECT w.id, w.customer_id, c.name AS customer_name, c.phone, trim(b.make || ' ' || b.model) AS bike_label
-       FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id LEFT JOIN customer_bikes b ON b.id = w.bike_id
-      WHERE w.id = ?`
-  ).get(result.quote.workshop_job_id);
-  const code = newLinkCode();
-  await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(code), nowIso(), job.id);
-  const { rows: [shop] } = await pool.query('SELECT slug, name FROM shops WHERE id = $1', [shopId]);
-  const link = `${publicBase(req)}${linkPath(shop.slug, code)}`;
-  let message;
-  if (!job.customer_id) message = { status: 'not_sent', reason: 'This job has no customer.' };
-  else if (!job.phone) message = { status: 'not_sent', reason: `${job.customer_name} has no phone number on file.` };
-  else if (!process.env.TWILIO_ACCOUNT_SID) message = { status: 'not_sent', reason: "Texts aren't set up on this Wheelhouse yet." };
-  else {
-    const text = `${shop.name}: your quote for ${job.bike_label || 'your bike'} is ready. See it and choose what to go ahead with: ${link}`;
-    const sent = await sendSms(job.phone, text);
-    await db.prepare(
-      `INSERT INTO customer_messages (customer_id, body, status, error, provider_sid, sent_by_login_id) VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(job.customer_id, text, sent.ok ? 'sent' : 'failed', sent.ok ? null : sent.error, sent.ok ? sent.sid : null, ctx?.login?.id ?? null);
-    message = sent.ok ? { status: 'sent' } : { status: 'failed', reason: sent.error };
-  }
-  sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
-});
-
-// screens: quote-send
-route('POST', '/api/quotes/:id/withdraw', async (req, res, params) => {
-  sendQuoteResult(res, await withdrawQuote({ quoteId: Number(params.id) }));
-});
-
-// Record their answer (journey 4 decision 4): staff, after a phone call or a
-// chat in the shop. Who took it and when are recorded with each line.
-// screens: approved
-route('POST', '/api/quotes/:id/answer', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  const body = await readJsonBody(req);
-  if (!['phone', 'in_shop'].includes(body.via)) return badRequest(res, "via must be 'phone' or 'in_shop'");
-  sendQuoteResult(res, await answerAndAddToOrder({
-    quoteId: Number(params.id), decisions: body.decisions, via: body.via, loginId: ctx?.login?.id ?? null,
-  }));
-});
 
 route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
