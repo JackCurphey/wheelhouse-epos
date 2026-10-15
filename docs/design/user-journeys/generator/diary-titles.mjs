@@ -42,5 +42,6 @@ export const TOUCH_TITLE_OVERRIDE = {
   'diary-stack-open': 'Diary · tap a stack to choose a job',
   'diary-hover-summary': 'Diary · keep holding a job for its summary',
   'new-job-pick': 'New job · tap a free time',
+  'new-job-entered': 'New job · Enter a time instead',
 };
 export const TITLE_FOR = (id, size) => (size !== 'desktop' && TOUCH_TITLE_OVERRIDE[id]) || TITLE(id);
