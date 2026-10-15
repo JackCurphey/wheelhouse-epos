@@ -159,6 +159,16 @@ test('if the server refuses the time, it says why and the job stays put', async 
   assert.ok(has(await ui.findByText("Couldn't move Trek Domane: Alex Morgan already has a job at that time")));
 });
 
+test('dropping finished work says so in plain words', async () => {
+  const { ui, fireEvent } = await openDiary();
+  answer = { status: 400, body: { error: 'This job is complete - reopen it before making changes.' } };
+  const b = block(ui, 'Trek Domane');
+  fireEvent.keyDown(b, { key: 'm' });
+  fireEvent.keyDown(b, { key: 'ArrowDown' });
+  fireEvent.keyDown(b, { key: 'Enter' });
+  assert.ok(has(await ui.findByText("Couldn't move Trek Domane: The work is already finished. Reopen the job to change it.")));
+});
+
 test('if someone else changed the job first, it says so', async () => {
   const { ui, fireEvent } = await openDiary();
   answer = { status: 409, body: { error: 'Job has been changed by someone else', code: 'stale' } };

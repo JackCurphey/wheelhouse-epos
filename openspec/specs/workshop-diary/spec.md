@@ -158,7 +158,7 @@ Staff SHALL be able to drag a timed job to another time or day, or, in the Day v
 - **THEN** only day 2 moves
 
 ### Requirement: A move the shop's rules refuse is put back, and says why
-A move SHALL be checked against the shop's rules for a job's day and time (see `workshop-jobs`). When it is refused, the job SHALL stay where it was and the diary SHALL show "Couldn't move [bike]: " and the server's reason, or "This job changed while you were looking at it." and reload when someone else changed the job first. A booking request, a customer's cancellation and a job with no time SHALL NOT be movable on the diary.
+A move SHALL be checked against the shop's rules for a job's day and time (see `workshop-jobs`). When it is refused, the job SHALL stay where it was and the diary SHALL show "Couldn't move [bike]: " and why: the server's reason when it is already plain English, "The work is already finished. Reopen the job to change it." for finished work, "This job no longer exists." for a deleted job, "That mechanic is no longer working here. Choose another." for a mechanic who has left (Jack, 15 Oct), or "This job changed while you were looking at it." and reload when someone else changed the job first. A booking request, a customer's cancellation and a job with no time SHALL NOT be movable on the diary.
 
 #### Scenario: A clash with another job
 - **WHEN** staff drop a job over another of the same mechanic's jobs
@@ -171,6 +171,10 @@ A move SHALL be checked against the shop's rules for a job's day and time (see `
 #### Scenario: A booking request
 - **WHEN** the Specialized Sirrus booking is still a request
 - **THEN** it cannot be picked up or dragged
+
+#### Scenario: Finished work
+- **WHEN** staff drop a job whose work is finished
+- **THEN** the diary shows "Couldn't move Trek Domane AL 3: The work is already finished. Reopen the job to change it."
 
 ### Requirement: Dropping a job on the customer's requested time accepts the change
 When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop of the job's first day on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
