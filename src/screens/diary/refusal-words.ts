@@ -42,8 +42,35 @@ const QUOTE: Record<string, string> = {
 };
 const QUOTE_VERB: Record<string, string> = { revised: 'changed', sent: 'sent', withdrawn: 'withdrawn' };
 
-/** Plain words for a refused move or quote action, or null when the message isn't one of those. */
+/** An order that is no longer open, by its status. */
+const ORDER: Record<string, string> = {
+  converted: "This job has been paid for, so its work and parts can't change.",
+  cancelled: "This job's order was cancelled, so its work and parts can't change.",
+};
+
+/**
+ * The work and parts, days and diary moves' refusals the server words for
+ * itself (issue 190 C, the rest; Jack, 15 Oct). Messages already in plain
+ * English, such as the diary's rule refusals, aren't here and show as sent.
+ */
+const OTHER: Record<string, string> = {
+  'A labour line needs a description': 'The work needs a description.',
+  'A labour line needs a price of zero or more': 'The work needs a price of £0.00 or more.',
+  'Duration must be a positive number of minutes': 'The work needs a time of at least 1 minute.',
+  'Each item needs a valid productId and positive qty': 'Each part needs a quantity of 1 or more.',
+  'That day of the job was not found': 'That day has already been removed.',
+  'Job not found': 'This job no longer exists.',
+  'Mechanic not found or inactive': 'That mechanic is no longer working here. Choose another.',
+  'This job is complete - reopen it before making changes.': 'The work is already finished. Reopen the job to change it.',
+};
+
+/** Plain words for a refusal the server words for itself, or null when the message is already plain. */
 export function plainWords(message: string): string | null {
+  if (OTHER[message]) return OTHER[message];
+  const order = /^This (?:order|job's order) is already (\w+)$/.exec(message);
+  if (order && ORDER[order[1]]) return ORDER[order[1]];
+  if (/^Service \d+ not found or inactive$/.test(message)) return 'That service is no longer offered. Choose another.';
+  if (/^Product \d+ not found or inactive$/.test(message)) return 'That product is no longer sold. Choose another.';
   const move = /^cannot \S+ a job that is (\w+);/.exec(message);
   if (move) return WHERE[move[1]] ?? null;
   if (message === 'this quote has already been answered') return 'This quote has already been answered.';
@@ -62,4 +89,10 @@ export function plainWords(message: string): string | null {
 export function refusalText(err: unknown): string {
   if (err instanceof ApiError) return plainWords(err.message) ?? err.message;
   return "Couldn't reach the server — try again.";
+}
+
+/** As refusalText, but a stale refusal says someone else changed the job first. */
+export function jobRefusalText(err: unknown): string {
+  if (err instanceof ApiError && err.code === 'stale') return 'This job changed while you were looking at it.';
+  return refusalText(err);
 }

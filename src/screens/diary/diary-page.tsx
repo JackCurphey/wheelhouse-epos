@@ -9,6 +9,7 @@ import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
 import { NewJobDialog } from './new-job-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
+import { jobRefusalText } from './refusal-words.ts';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { HoverSummary, JobMenu, OverviewDialog, StackChooser, tileClass, type ChooserAt, type MenuAt } from './job-extras.tsx';
 import {
@@ -661,9 +662,7 @@ export function DiaryPage() {
         queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
       ]);
     } catch (err) {
-      const why = err instanceof ApiError
-        ? (err.code === 'stale' ? 'This job changed while you were looking at it.' : err.message)
-        : "Couldn't reach the server — try again.";
+      const why = jobRefusalText(err);
       setMoveError(`Couldn't move ${job.bikeLabel || 'Bike'}: ${why}`);
       if (err instanceof ApiError && err.code === 'stale') void queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
     } finally {
