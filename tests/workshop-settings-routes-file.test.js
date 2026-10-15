@@ -50,3 +50,14 @@ test('the settings routes are registered, and import nothing from server.js', ()
   assert.ok(existsSync(path.join(ROOT, FILE)), `${FILE} does not exist`);
   assert.ok(!/['"]\.\.\/server\.js['"]/.test(read(FILE)), 'workshop-settings.js imports ../server.js');
 });
+
+test('the shared names left server.js, and uploads still live in the same folder', async () => {
+  const server = read('server/server.js');
+  for (const name of ['UPLOADS_DIR', 'MAX_SERIAL', 'resolveWorkingDays']) {
+    assert.ok(!defines(server, name), `server.js still defines ${name}`);
+  }
+  // server/lib/ is a folder deeper than server/, so a wrong path depth would
+  // put new uploads somewhere the existing files are not.
+  const { UPLOADS_DIR } = await import('../server/lib/uploads.js');
+  assert.equal(UPLOADS_DIR, path.join(ROOT, 'uploads'));
+});

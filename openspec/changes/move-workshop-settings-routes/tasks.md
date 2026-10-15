@@ -6,7 +6,7 @@
 - [x] 1.2 Added `server/lib/uploads.js`, moved `resolveWorkingDays` to `server/capacity.js`, and fixed the imports. `tests/route-files-defined.test.js` (defined and unused names) passes
 - [x] 1.3 Added `tests/workshop-settings-routes-file.test.js`. It was written after the move, so it was run against a checkout without the move, where it fails 3 of 3 ("`server/routes/workshop-settings.js` does not exist"). It passes with the move, along with `route-list`, the screen trace (46 routes) and the other module guards (33 tests)
 - [ ] 1.4 `npm test` and `npm run test:browser` pass in CI on the final commit. This Mac has no Postgres
-- [ ] 1.5 A fresh review confirms the move is pure
+- [x] 1.5 A fresh review confirmed the move is pure: the code is identical, `UPLOADS_DIR` resolves to the same folder, the order is safe, and there is no shared state or circular import. Its test point is fixed with a check that the shared names left `server.js` and that `UPLOADS_DIR` is still `<repo>/uploads` (watched failing with the old path depth). Its comment point is in Jack's `tests/helpers/workshopFixtures.js`, so it's left for him
 
 ## Workflow follow-up
 
