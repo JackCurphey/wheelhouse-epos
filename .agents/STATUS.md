@@ -5,19 +5,19 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** back 15 Oct (#199). Writing #137 (what the hosted copy must
-do) first, then #134 (where a job's open order lives after WP-1.6, and his
-till, sales, Shopify and dashboard part). WP-0.4: 57 of 161 routes moved
-(5 Oct); next the sales helpers to `server/lib/sales.js` (before Jack moves
-quotes; he'll say on #180), the 15 workshop settings routes to his own
-`server/routes/workshop-settings.js`, a shared `server/lib/uploads.js` with
-image uploads, then booking. Then WP-0.5, with a part marked for Jack on
-#137. Still unanswered: Jack's two follow-ups on #151.
-**Jack is on:** merging WP-0.4's workshop moves #180–#184 in order (Mark
-approved 15 Oct), then #188, and #189 rebased into `workshop.js` after #183.
-Mark's small spec points on #187 (one) and #191 (three); #187 merges before
-#191. #193 needs a rebase (no server change, so not Mark's). Then a part of
-WP-0.5 once Mark marks it, and the stage check once lines 1–6 of §9 are in.
+**Mark is on:** back 15 Oct (#199). WP-0.5's spec is written (#201,
+answering #137), waiting on Jack's UK-or-EU answer on #137 before he
+brings hosts. WP-0.4: the sale helpers to `server/lib/sales.js` (#202,
+open; unblocks Jack's quote move); then the 15 workshop settings routes
+to his own `server/routes/workshop-settings.js`, a shared
+`server/lib/uploads.js` with image uploads, then booking. #134: where a
+job's open order lives after WP-1.6. Still unanswered: Jack's two
+follow-ups on #151.
+**Jack is on:** WP-0.4's workshop moves merged 15 Oct (#180–#184), with
+#187, #188, #189, #191 and #193. Next: answer #137 (where the data
+lives); the test shop loader, #201 tasks group 1 (Mark's area, so his
+approval); the quote move once #202 merges. Then the stage check once
+lines 1–6 of §9 are in.
 **Open for Jack:** ask from Mark #140 (#135 and #137 handed to Mark, 8 Oct;
 #139 answered 8 Oct, with pages to draw before stages 2, 3 and 5; #134's
 workshop part listed 8 Oct, Mark to say where a job's order lives after
