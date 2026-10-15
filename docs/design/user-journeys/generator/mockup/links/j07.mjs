@@ -139,7 +139,7 @@ export default {
     '+ Add': notDrawn('Add a bike, on the staff customer page'),
     'New job': go('new-job'),
     'Show all ([n])': STAY,
-    'Trek Domane AL 3 Green · black mudguards · bought here [date] Under warranty · [n] months left': notDrawn('A customer’s bike opened from the staff customer page'),
+    'Trek Domane AL 3 Green · black mudguards · bought here [date] Under warranty · [n] months left': go('cs-bike'),
     'WH-1042 Standard service Thu 17 Sep · 11:30 · Alex Morgan In the workshop': go('job-overview'),
     'WH-1056 Standard service Tue 15 Sep · 13:00 · Alex Morgan Finished': go('job-overview'),
     'WH-1062 Standard service Wed 16 Sep · 11:00 · Alex Morgan Expected': go('job-overview'),

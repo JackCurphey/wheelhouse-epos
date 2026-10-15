@@ -106,6 +106,17 @@ lands is a real account, so it is built behind an adapter with a pretend
 version until one exists. Chosen over an email address or phone number, and
 over booking a call.
 
+**Later change (15 Oct 2026): a bike's own page** (#7 and #8; Jack, 15 Oct:
+"1"). Its own page, `cs-bike`, built in WP-3.2, laid out as a customer's
+page is (Detail page, block 4): back to the customer, the bike's name with
+"[Customer]’s bike" and New job; on the left its details (colour, frame
+number, note) with Edit, the warranty when bought here (Customer service 4),
+and who it belongs to; on the right its jobs, open first, then earlier.
+Header search can open it directly. Chosen over a pop-up over the customer's
+page. Taken from the customer page's pattern without a question: New job,
+Edit and the jobs list's shape. Still not drawn: the box Edit opens, and a
+Cycle to Work bike's page (it would read as this one, with its frame number).
+
 ## The 95, by stage
 
 Kept as researched on 8 Oct, from `origin/main` at that date. "plan:N" is a

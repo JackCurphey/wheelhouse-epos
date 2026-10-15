@@ -930,6 +930,7 @@ export const journeys = [
       { label: "Customers and the customer page", screens: [
         sd15("cs-list", "Customers: find someone, or add them", "Staff"),
         sd15("cs-page", "A customer’s page: details, bikes with warranty, one history", "Staff"),
+        sd15("cs-bike", "A bike’s page: details, warranty and its jobs", "Staff"),
         sd15("cs-page-over", "Over her account limit", "Staff"),
         sd15("cs-page-new", "A new customer: nothing in the history yet", "Staff"),
         sd15("cs-page-off", "A shop with customer accounts switched off (Payments › Ways to pay)", "Staff"),

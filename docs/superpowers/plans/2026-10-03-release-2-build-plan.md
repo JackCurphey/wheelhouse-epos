@@ -510,9 +510,10 @@ later packages.
 *Building blocks built here:* none new.
 *Reused, already built:* 3 Table with search and filters (WP-2.1); 4 Detail page (WP-2.1); 9 Form box (WP-1.3).
 
-*Screens it builds (8) and the situations it covers:*
+*Screens it builds (9) and the situations it covers:*
 
 - **`cs-list`** (block 3, Table with search and filters) — no other situations.
+- **`cs-bike`** (block 4, Detail page) — no other situations. A bike's own page (Jack, 15 Oct, #139 rows #7 and #8): details, warranty if bought here, the customer it belongs to, and its jobs; header search opens it directly.
 - **`cs-page`** (block 4, Detail page) — 5 of its 9 situations here: `customer`, `cs-page-over`, `cs-page-new`, `cs-page-off`, `cs-page-dup`.
 - **`cs-credit`** (block 9, Form box) — no other situations.
 - **`cs-add`** (block 9, Form box) — 3 situations: `cs-edit`, `cs-add-company`, `cs-add-match`.

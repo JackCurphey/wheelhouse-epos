@@ -3,13 +3,16 @@ import { go, STAY, BACK, outside, notDrawn } from '../controls.mjs';
 
 // Her page: details, bikes, history (customer.mjs). The rows read with
 // "· Bolton" on cs-page and without it on the boards drawn over her page.
-const BIKE = notDrawn('A customer’s bike: its details, warranty and jobs');
+// A bike's own page (Jack, 15 Oct). The Cycle to Work bike has no page drawn: it
+// would read as the Trek's, with its frame number.
+const BIKE = go('cs-bike');
+const C2W_BIKE = notDrawn('A Cycle to Work bike’s page: as the Trek’s, with its frame number');
 const PAGE = {
   'New job': go('new-job'),
   'Edit': go('cs-edit'),
   '+ Add': notDrawn('Adding a bike to a customer’s page'),
   'Trek Domane AL 3 Green · black mudguards · bought here [date] Under warranty · [n] months left': BIKE,
-  '[Bike] · [Size] Frame [frame number] · bought here on Cycle to Work [date] Under warranty · [n] months left': BIKE,
+  '[Bike] · [Size] Frame [frame number] · bought here on Cycle to Work [date] Under warranty · [n] months left': C2W_BIKE,
   'WH-1077 Standard service Sat 19 Sep · 13:00 · Alex Morgan Expected': go('job-overview'),
   'WH-1077 Standard service Sat 19 Sep · 13:00 · Alex Morgan · Bolton Expected': go('job-overview'),
   'WH-1062 Standard service Wed 16 Sep · 11:00 · Alex Morgan Expected': go('job-overview'),
@@ -45,6 +48,14 @@ const LIST = {
 export default {
   '*': { ...PAGE, ...LIST },
   'cs-page': PAGE,
+  // A bike's own page: back to her page, her jobs as on it, and Edit for the bike.
+  'cs-bike': {
+    ...PAGE,
+    Edit: notDrawn('Editing a bike: its colour, frame number and note'),
+    'Maya Patel': go('cs-page'),
+    'Maya Patel 07700 900 142': go('cs-page'),
+    'WH-1054 Gear adjustment Mon 14 Sep · 15:00 · Jo Taylor Finished': go('job-finished'),
+  },
   'cs-list': LIST,
   'cs-page-dup': { 'Check': go('cs-merge') },
   // Adding and editing
