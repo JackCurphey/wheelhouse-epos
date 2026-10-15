@@ -5,7 +5,8 @@ Lane: Mark, unless a group says otherwise. When each group can start:
 - **Group 1:** any time. It doesn't touch `server.js`.
 - **Group 2:** waits for WP-0.4's route moves to merge (split plan §9 line 6;
   nothing edits `server.js` while it moves).
-- **Groups 3 and 4:** wait for Jack's yes to DigitalOcean on #137.
+- **Group 3:** tasks 3.2 and 3.3 wait for Jack's yes to DigitalOcean on #137, and Jack does them himself (Mark, 15 Oct), with Mark on hand. Tasks 3.4 to 3.6 also wait for group 2, which adds the commit to `/healthz` and the real-key guard.
+- **Group 4:** after group 3.
 - **Group 5:** Jack's hands, Mark's eyes (PL-3).
 
 Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
@@ -38,22 +39,23 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 ## 3. The host and the first deploy (Mark; waits for Jack's yes on #137)
 
 - [x] 3.1 Jack answered #137: a UK region, for the test copy only. Mark compared Fly.io, free tiers and London servers, and chose DigitalOcean (London) with managed Postgres. Recorded in `docs/decisions/2026-10-15-hosted-copy-region.md`, with PL-1 settled for the test copy
-- [ ] 3.2 Jack says yes on #137, opens the DigitalOcean account with his card and invites Mark. Mark makes his own API token and stores it with `doctl auth init`; no token goes in the repo or chat
-- [ ] 3.3 Write `scripts/hosting/` (setup with `doctl`, a first-boot script, the Caddy and compose files) and run it. It should create, all in `lon1`:
+- [ ] 3.2 (Jack) Jack says yes on #137, opens the DigitalOcean account with his card and invites Mark. Jack makes an API token and stores it with `doctl auth init` on his machine; no token goes in the repo or chat
+- [ ] 3.3 (Mark writes, Jack runs) `scripts/hosting/` (setup with `doctl`, a first-boot script, the Caddy and compose files) and `docs/runbooks/hosted-copy.md`, Jack's step-by-step guide. Running it should create, all in `lon1`:
   - the 1GB droplet with Mark's SSH key, automatic security updates, and a firewall open only for web traffic and SSH;
-  - the smallest managed Postgres cluster, with trusted sources limited to the droplet, the app's database and its own non-admin login, connected by its direct address with SSL;
-  - the server's settings file: `NODE_ENV=production`, `WHEELHOUSE_HOSTED_COPY=1`, a generated `SHOPIFY_TOKEN_ENCRYPTION_KEY`, `SIGNUP_CODE`, `TRUST_PROXY`, `PGSSL`, and no `TWILIO_*`.
+  - the smallest managed Postgres cluster, with trusted sources limited to the droplet, the app's database and its own non-admin login, connected by its direct address (port 25060) with SSL, the server holding DigitalOcean's certificate and the app trusting it (`NODE_EXTRA_CA_CERTS`);
+  - the server's settings file: `NODE_ENV=production`, `WHEELHOUSE_HOSTED_COPY=1`, a generated `SHOPIFY_TOKEN_ENCRYPTION_KEY`, `SIGNUP_CODE`, `TRUST_PROXY`, `PGSSL`, and no `TWILIO_*`;
+  - the app started from `main`, built on the server, behind Caddy.
 
-  Verify point-in-time restore is available on the cluster, that migrations and row-level security work under the app's login, and that `/healthz` answers `ok` over HTTPS. Record the database address used and why in `docs/runbooks/hosted-copy.md`
-- [ ] 3.4 Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
+  Verify point-in-time restore is available on the cluster, that migrations and row-level security work under the app's login, and that `/healthz` answers `ok` over HTTPS. Record the database address and port used, and why, in `docs/runbooks/hosted-copy.md`
+- [ ] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
   - it starts on `workflow_run` and only deploys when `Tests` succeeded on a `push` to this repository's `main`;
-  - it builds the image, pushes it to GitHub's container registry tagged with `head_sha`, and starts it on the server over SSH with a deploy-only key, in one concurrency group, skipping an older commit;
+  - it builds the image, pushes it to GitHub's container registry (package public) tagged with `head_sha`, and starts it on the server over SSH with a deploy-only key checked against a stored `known_hosts` entry, in one concurrency group, skipping an older commit;
   - it records the time before each deploy;
   - it waits for `/healthz` to show the new commit, and fails and starts the previous image otherwise.
 
   Verify that a merge deploys and `/healthz` shows its commit, and that a branch push or pull request deploys nothing
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
-- [ ] 3.6 Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
+- [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
 ## 4. The way back (Mark; after group 3)
 

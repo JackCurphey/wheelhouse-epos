@@ -85,8 +85,8 @@ The hosted copy SHALL connect to its database in a way where the app only report
 - **WHEN** the server's start-up check finds evidence that two requests share one database connection
 - **THEN** the server refuses to start, saying the database connection is unsafe
 
-### Requirement: The hosted copy keeps no uploads, and says so
-The hosted copy SHALL NOT keep uploaded files (job attachments and uploaded images) past the next deploy or restart. Jack SHALL be told this before he first uses it.
+### Requirement: The hosted copy doesn't keep uploads, and says so
+Uploaded files on the hosted copy (job attachments and uploaded images) SHALL NOT be backed up, and MAY be lost on any deploy. Jack SHALL be told this before he first uses it.
 
 #### Scenario: An attachment after a deploy
 - **WHEN** a photo is attached to a job and the next merge is deployed

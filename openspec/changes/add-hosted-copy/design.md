@@ -70,14 +70,20 @@ Mark chose DigitalOcean's London region (`lon1`):
   image with Docker, about $6 a month;
 - **DigitalOcean managed Postgres, smallest plan**, about $15 a month, with
   daily backups and point-in-time restore (to be confirmed on the new
-  cluster before anything relies on it), using its **direct** connection,
-  not its optional pooler, and SSL (`PGSSL`);
+  cluster before anything relies on it), using its **direct** connection
+  (port 25060), not its optional pools (port 25061), with SSL. The app
+  verifies the database's certificate (`PGSSL=require`, `server/db.js`), and
+  DigitalOcean signs it with its own authority, so the server holds that
+  certificate (`doctl databases get-ca`) and the app trusts it through
+  `NODE_EXTRA_CA_CERTS`; `sslmode` stays out of `DATABASE_URL`;
 - the database reachable only from the server (DigitalOcean "trusted
   sources"), and the server's firewall open only for web traffic and SSH.
 
 That's about $21 a month, about £20 with VAT. Everything is set up from a
 script in the repo (`scripts/hosting/`, Mark's area) through DigitalOcean's
 `doctl` command-line tool, so the whole setup can be rebuilt or reviewed.
+**Jack runs it himself** (Mark, 15 Oct: good learning for him), following
+`docs/runbooks/hosted-copy.md`, with Mark on hand.
 
 **A deploy means a short outage.** One server runs one copy of the app, so
 the old version stops before the new one starts: under a minute. A failed
@@ -85,8 +91,8 @@ deploy puts the previous version back (Decision 3). That's fine for a test
 copy.
 
 *Alternatives considered (15 Oct):*
-- **Fly.io** (app plus its managed Postgres, about $45 a month; or app plus
-  Neon's free Postgres, under $5). No servers to look after and no outage on
+- **Fly.io** (app plus its managed Postgres, about $45 a month, about £40
+  with VAT; or app plus Neon's free Postgres, under $5). No servers to look after and no outage on
   deploy, but its managed Postgres is young, and the free database's 6-hour
   restore window and sleeping compute suit development, not the restore
   rehearsal.
@@ -118,16 +124,19 @@ hold:
 It then works like this:
 - **The commit.** It deploys `workflow_run.head_sha`, never `GITHUB_SHA`,
   which is just the latest `main`. It builds the image in GitHub Actions,
-  pushes it to GitHub's container registry tagged with that commit, then
-  logs into the server with a deploy-only SSH key (a repository secret)
-  and starts the new image. The previous image stays on the server for
+  pushes it to GitHub's container registry tagged with that commit (the
+  package made public, as the repo is, so the server pulls it without a
+  token), then logs into the server with a deploy-only SSH key (a repository
+  secret, checked against the server's stored `known_hosts` entry) and
+  starts the new image. The deploy key can run Docker, which amounts to
+  root on that server, so it is used for nothing else. The previous image stays on the server for
   rolling back.
 - **Order.** One concurrency group (`hosted-copy`), without cancelling a
   deploy already under way. Before deploying, it skips a commit that is an
   ancestor of the one already running, so two quick merges finishing out of
   order can't put the older one on top.
-- **Watching to the end.** It waits until the host reports the new version
-  healthy and `/healthz` answers with the new commit. If that doesn't happen
+- **Watching to the end.** It waits until `/healthz`, over HTTPS, answers
+  `ok` with the new commit (task 2.4). If that doesn't happen
   within [n] minutes, the workflow fails, which emails Mark through GitHub,
   and it starts the previous image again.
 - **Settings at build time.** `NODE_ENV` is a run-time setting only. If it
@@ -151,9 +160,10 @@ merges: add first, remove later.
 
 ### 4. Uploads are not kept on the test copy (Mark, 15 Oct)
 
-The photos part isn't being built now, so the test copy keeps no uploads.
-The upload screens still work, but files land inside the app's container
-and are gone on the next deploy or restart. Jack is told this up front
+The photos part isn't being built now, so the test copy doesn't keep
+uploads. The upload screens still work, but files land inside the app's
+container, aren't backed up, and are lost whenever a deploy replaces the
+container. Jack is told this up front
 (#137), so a missing attachment isn't a surprise. Before any real use,
 uploads need a home that survives: DigitalOcean Spaces (its file store),
 behind the shared `server/lib/uploads.js` (#180), is the likely choice, with
@@ -225,7 +235,8 @@ WP-0.4.
      the bad deploy. DigitalOcean restores into a new cluster with a new
      address.
   3. Point `DATABASE_URL` at the restored cluster, by its direct address,
-     and add the server to its trusted sources.
+     add the server to its trusted sources, and refresh the server's copy of
+     the database certificate if the new cluster's differs.
   4. Start the previous image, and check `/healthz` shows its commit.
   5. Tell Jack that anything made after that moment is gone.
 
@@ -268,15 +279,17 @@ Mark writes the steps first, so Jack can follow them.
 
 ## Migration Plan
 
-1. Jack says yes on #137, opens the DigitalOcean account with his card and
-   invites Mark to it. Mark makes his own API token and stores it with
-   `doctl auth init` on his machine; no token goes in the repo or chat.
-2. The setup script creates the server, database, firewall and trusted
-   sources in London, and installs Docker, Caddy and the settings.
-3. The deploy workflow goes in and does the first deploy. The test shop is
-   loaded, and Jack gets his address and login privately.
-4. The guard, Shopify refusal and commit in `/healthz` (tasks group 2), the
-   runbook, each rollback once, then the restore rehearsal (Jack's hands,
+1. Jack says yes on #137 and opens the DigitalOcean account with his card,
+   inviting Mark. He makes an API token and stores it with `doctl auth init`
+   on his own machine; no token goes in the repo or chat.
+2. Jack runs `scripts/hosting/setup.sh`, following the runbook, with Mark on
+   hand. It creates the server, database, firewall and trusted sources in
+   London, installs Docker and Caddy, writes the settings, and starts the
+   app built from `main`. Jack can sign up with his code and try it at once.
+3. Tasks group 2 (the guard, the Shopify refusal and the commit in
+   `/healthz`) merges, and the server is updated to it by hand.
+4. The deploy workflow goes in, so every merge deploys itself. Then the test
+   shop, the runbook's rollbacks, and the restore rehearsal (Jack's hands,
    Mark's eyes).
 
 Rollback for this change itself: switch off the deploy workflow and destroy
@@ -285,5 +298,5 @@ the server and database. Nothing on a shop's own machine changes.
 ## Open Questions
 
 - The `[n]` values: deploy time, rollback time, days of point-in-time
-  restore and backup retention. These are set once the host is known and
-  don't change the approach.
+  restore and backup retention. They're measured on DigitalOcean and don't
+  change the approach.
