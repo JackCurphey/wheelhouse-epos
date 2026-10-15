@@ -807,7 +807,7 @@ export function DiaryPage() {
 
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
-  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean } | null>(null);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean } | null>(null);
 
   // ---- The extras (piece 5b) ----
   const [hovered, setHovered] = useState<{ job: Shown; rect: DOMRect } | null>(null);
@@ -964,7 +964,7 @@ export function DiaryPage() {
     },
   } : null;
   const enterInstead = () => {
-    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true });
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true });
     setPicking(false);
   };
   const newJobDialog = newJob ? (
@@ -974,6 +974,8 @@ export function DiaryPage() {
       startMin={newJob.startMin}
       mechanicId={newJob.mechanicId}
       autoChosen={newJob.auto}
+      entered={newJob.entered}
+      chooseMechanic={freest}
       people={people}
       onClose={() => setNewJob(null)}
     />

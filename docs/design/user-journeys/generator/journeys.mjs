@@ -791,6 +791,7 @@ export const journeys = [
       { label: 'New job from an empty slot', screens: [
         sd('new-job-pick', 'New job · choose a free time', 'Staff'),
         sd('new-job', 'New job', 'Staff'),
+        sd('new-job-entered', 'New job · Enter a time instead', 'Staff'),
         sd('new-job-day', 'New job (from the day view)', 'Staff'),
       ] },
       { label: 'The job — one page, no tabs', screens: [
