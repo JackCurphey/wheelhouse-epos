@@ -17,7 +17,7 @@ wrong, the spec is corrected, never the code.
 ## 2. Fresh review
 
 - [x] 2.1 A reviewer who did not write the spec (a fresh subagent) checks `specs/workshop-jobs/spec.md` against the code, the tests and the drawings (job-overview, job-book-in, job-mechanic, job-waiting-parts, job-finished, job-collection), looking for anything described that the app does not do; verified by the reviewer's written findings, each one fixed in the spec or answered
-- [ ] 2.2 Jack reads the "Differences from decisions and the older specs" list in `design.md` and says, for each, whether it stays as is or becomes a later change; verified by his answer recorded in the pull request. Still waiting for Jack's answer. Differences 1 and 3 already have their own changes (#188 and #189)
+- [x] 2.2 Jack reads the "Differences from decisions and the older specs" list in `design.md` and says, for each, whether it stays as is or becomes a later change; verified by his answer recorded in the pull request. Jack, 8 Oct: differences 1 and 3 became their own changes (#188, #189); 2 and 4–11 stay as they are for now (https://github.com/JackCurphey/wheelhouse-epos/pull/187#issuecomment-6061970479)
 
 ## 3. Point the old documents at the new spec
 
