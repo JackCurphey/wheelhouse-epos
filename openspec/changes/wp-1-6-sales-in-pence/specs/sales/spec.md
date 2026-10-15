@@ -8,12 +8,19 @@ count sales and check their totals while the old sales record is retired.
 
 ## ADDED Requirements
 
-### Requirement: Amounts are added up in whole pence
-Every amount the server stores or adds up for an order SHALL be whole pence. An order's total SHALL equal the sum of its lines less its discount, exactly, with no rounding left over.
+### Requirement: Amounts are stored in whole pence
+Every amount the server stores or adds up for an order SHALL be a whole number of pence.
 
 #### Scenario: Three lines
 - **WHEN** an order has three lines of [amount] each and no discount
-- **THEN** its total is exactly three times [amount], in pence
+- **THEN** its total is exactly three times [amount], in pence, with no rounding left over
+
+### Requirement: An order's total is its lines less its discount, never below zero
+An order's total SHALL be the sum of its lines less its discount, and never below 0.
+
+#### Scenario: A discount bigger than the lines
+- **WHEN** an order's discount is more than its lines add up to
+- **THEN** its total is 0
 
 ### Requirement: An open order is kept in pence until it is paid
 An order not yet paid, such as a workshop job's order, SHALL keep its lines, its total and what has been paid towards it, in pence. A new order SHALL start with all of these at zero.
@@ -66,7 +73,7 @@ An order from the shop's Shopify store SHALL still be recorded once and counted 
 - **THEN** it counts once in that day's dashboard total
 
 ### Requirement: The totals check finds every mismatch
-A totals check SHALL compare every converted amount with its pounds value, every order's lines with its total, every sale's lines and payments with its total, and each shop's daily takings with a saved baseline. It SHALL report each mismatch with the record and both amounts.
+A totals check SHALL compare every converted amount with its pounds value, every order's lines with its total (never below 0), every sale's lines and payments with its total, and each shop's daily takings with a saved baseline. It SHALL report each mismatch with the record and both amounts.
 
 #### Scenario: A clean database
 - **WHEN** the totals check runs on a database where every amount adds up
@@ -75,10 +82,3 @@ A totals check SHALL compare every converted amount with its pounds value, every
 #### Scenario: A mismatch
 - **WHEN** an order's lines add up to 1p more than its total
 - **THEN** the check names that order and both amounts
-
-### Requirement: A mismatch stops the switch
-A step of the move that changes how sales are read or written SHALL NOT be deployed while the totals check reports a mismatch, unless that mismatch is one of the known kinds the check lists separately (an old sale's group discount rounding or the old till's 1p payment tolerance).
-
-#### Scenario: An unknown mismatch
-- **WHEN** the totals check reports a mismatch that is not a known kind
-- **THEN** the step waits until the mismatch is fixed

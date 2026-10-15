@@ -138,8 +138,8 @@ don't belong to one.
 `scripts/ci/check-money-totals.mjs`, run on any database, reports each
 mismatch with the record, the table and both amounts. It checks:
 1. **Conversion:** for every row with both, `pounds * 100 = pence`.
-2. **Orders:** lines add up to the subtotal, and subtotal less discount
-   equals the total. `paid_pence` equals the converted sale's total plus the
+2. **Orders:** lines add up to the subtotal, and the total is the subtotal
+   less the discount, never below 0. `paid_pence` equals the converted sale's total plus the
    till sale lines paying it (from step D).
 3. **Sales:** lines and payments each add up to the total, in both records.
    Old sales' group-discount rounding and `createSale`'s 1p payment
@@ -166,9 +166,20 @@ in its own change.
   that can no longer take it (the job changed in between) is recorded,
   because sales are never refused, and goes on "check these" as a new kind,
   `order_changed`.
+- **A deposit on unfinished work is Jack's call.** The paying-for-finished-work
+  decision refuses payment for work that isn't finished, but Selling at the
+  till decision 11 and Cycle to Work decision 4 take deposits before the work
+  is done. Whether a deposit on such a job is allowed narrows a recorded
+  decision, so it waits for Jack (Open Questions). Until he answers, the till
+  pays a job's order only in full, as convert does today.
+- **When the balance reaches zero**, the job is finished exactly as convert
+  finishes it today, and the bike is marked collected unless "Bike collected
+  when paid" is switched off (Selling at the till decisions 10 and 11).
 - **Lines say what they pay.** `till_sale_lines` gains `order_id`,
   `line_type`, `service_id` and `minutes`. A paid order's lines are copied
-  over with their VAT. `sync.js` doesn't flag labour lines as
+  over with their VAT; a labour line can't be copied until Jack sets labour's
+  VAT rate, because `till_sale_lines.vat_rate_bp` is `NOT NULL` (036:79).
+  `sync.js` doesn't flag labour lines as
   `unknown_product`, and labour stays countable on the dashboard.
 - **Paid counts only the order's lines.** After the duplicate check,
   `paid_pence = paid_pence + (the sale's lines for that order)`, in the same
@@ -177,14 +188,18 @@ in its own change.
 - **More than the balance** is recorded and goes on "check these" as
   `order_overpaid`.
 - **Convert and the till never both pay one order.** Convert refuses an
-  order with `paid_pence > 0` ("pay the rest at the till"). A till sale
+  order with `paid_pence > 0` ("pay the rest at the till"), as a conditional
+  update (`WHERE status = 'open' AND paid_pence = 0`) so it can't race a till
+  sale; from step A, convert also sets `paid_pence` to the sale's total. A till sale
   against an order that isn't open is recorded and goes on "check these"
   (`order_changed`).
 - **The old app** shows an order paid at the new till as converted. Its
   receipt link only works for orders paid the old way; the new till's past
-  sales show the rest.
+  sales show the rest. Its order page prints "Converted to Sale #[n]"
+  (`public/app.js:6733`), which needs a wording for an order with no
+  converted sale before WP-3.1 ships.
 - **Group discount:** sync gains a sale-level discount field when WP-3.1
-  adds customers to sales (`resolveGroupDiscount`, `server.js:758-768`).
+  adds customers to sales (`resolveGroupDiscount`, `server/lib/sales.js`).
 
 The new "check these" kinds (`order_changed`, `order_overpaid`) need Jack's
 yes, and a migration widening `till_attention.kind` (036:96-99). They follow
@@ -215,7 +230,7 @@ they cross into Mark's files.
 | Where | What | Step |
 |---|---|---|
 | `SALE_SELECT`, `GET /api/sales`, `GET /api/sales/:id` | sales list and a sale | B |
-| `GET /api/customers/:id/sales` (`server.js:536`) | customer history | B |
+| `GET /api/customers/:id/sales` | customer history | B |
 | dashboard (`server.js`): today's count and total; top 5 from `sale_items` | dashboard | B (today), D (top 5 reads till lines once they carry line type) |
 | `GET /api/sale-documents`, `/:id` | orders | A |
 | `WORKSHOP_JOB_SELECT` (`jobs.js:83-88`) | a job's order total | A′ |
@@ -280,3 +295,6 @@ check.
   answers, labour lines' `vat_rate_bp` stays empty. This doesn't change the
   approach.
 - For Jack, before WP-3.1: the two new "check these" kinds (Decision 8).
+- For Jack, before WP-3.1: may the till take a deposit on a job whose work
+  isn't finished, which the paying-for-finished-work decision refuses today?
+  (Decision 8.)

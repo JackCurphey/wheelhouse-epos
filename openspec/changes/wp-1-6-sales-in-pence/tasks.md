@@ -1,5 +1,7 @@
 # Tasks: one sales record in pence, and where open orders live
 
+A step that changes how sales are read or written is not deployed while the totals check reports a mismatch that isn't one of its known kinds (`design.md` Decision 7).
+
 Each group is about one pull request (aim: 250–600 changed lines). Group 1
 merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
 (`design.md` Decision 5) are built in later changes and are listed under
@@ -17,7 +19,7 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
   - amounts are backfilled with `ROUND(x * 100)`;
   - `paid_pence` equals the converted sale's total for converted orders;
   - `vat_rate_bp` comes from the product for product lines, and is empty for labour lines.
-- [ ] 1.4 Tests first for the sale-documents routes, `loadDocumentLine` and convert writing pence and pounds together, and returning `…Pence` fields beside the pound fields, with statuses unchanged. Watch them fail, then build. Verify `saleDocuments` and `saleDocumentsConvertApi` pass unchanged apart from the new fields
+- [ ] 1.4 Tests first for the sale-documents routes, `loadDocumentLine` and convert writing pence and pounds together (convert also setting `paid_pence` to the sale's total), and returning `…Pence` fields beside the pound fields, with statuses unchanged. Watch them fail, then build. Verify `saleDocuments` and `saleDocumentsConvertApi` pass unchanged apart from the new fields
 - [ ] 1.5 Verify that `npm test`, `npm run test:browser` and the totals check pass, then get a fresh review against `specs/sales/spec.md` and the money contract
 
 ## 2. Step A′: workshop amounts in pence (Jack, workshop, after group 1 merges)
