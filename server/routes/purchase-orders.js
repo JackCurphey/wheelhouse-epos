@@ -4,7 +4,7 @@
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { prepare, dbExec } from '../db.js';
-import { pushInventoryLevel } from '../shopify.js';
+import { deferShopifyPushes } from '../lib/sales.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso, ValidationError } from '../lib/http.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -218,7 +218,7 @@ export function register(route) {
     sendJson(res, 200, serializePurchaseOrder(row, items));
   });
 
-  route('POST', '/api/purchase-orders/:id/receive', async (req, res, params) => {
+  route('POST', '/api/purchase-orders/:id/receive', async (req, res, params, query, afterRelease, shopId) => {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
@@ -245,9 +245,10 @@ export function register(route) {
     }
     if (toApply.length === 0) return badRequest(res, 'No quantities to receive were provided');
 
-    // Same reasoning as createSale's shopifyPushes: defer the HTTP calls until
-    // after COMMIT so they don't hold this receipt's row locks / a pool
-    // connection for the duration of a retried Shopify request.
+    // Same reasoning as createSale's shopifyPushes: the HTTP calls wait until
+    // after COMMIT and after the request releases its pooled connection, so
+    // they hold neither this receipt's row locks nor a connection for the
+    // duration of a retried Shopify request.
     const shopifyPushes = [];
 
     await db.exec('BEGIN');
@@ -281,10 +282,9 @@ export function register(route) {
       throw err;
     }
 
-    for (const { product, newQty } of shopifyPushes) {
-      // Never let a Shopify hiccup fail a real PO receipt - log and move on.
-      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
-    }
+    // After the reply, from a fresh connection; a Shopify hiccup is logged and
+    // never fails the receipt (firePendingShopifyPushes).
+    deferShopifyPushes(afterRelease, shopId, shopifyPushes);
 
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
     sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
