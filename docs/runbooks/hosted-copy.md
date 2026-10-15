@@ -84,6 +84,11 @@ anything twice.
 2. Sign up as a new shop, using the sign-up code.
 3. That's your test shop. Try anything: it's test data only.
 
+Later, Mark will load the drawings' own test shop (North Street Cycles,
+from #216) and give you a login to it. That needs an empty database, so the
+shop you make here will be cleared then. Don't keep anything in it you'll
+miss.
+
 ## Good to know
 
 - **Updates are by hand for now.** Mark is adding automatic updates after
