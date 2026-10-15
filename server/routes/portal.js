@@ -68,7 +68,7 @@ const portalSignupLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // workshop_jobs/etc through the normal db.prepare(...) shim.
 
 // Guest bookings skip signup entirely, so nothing else gates how often this
-// network can create jobs/customers - mirrors portalSignupLimiter (server/routes/portal.js)'s limits
+// network can create jobs/customers - mirrors portalSignupLimiter's limits
 // since it's standing in for that same missing gate.
 const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 

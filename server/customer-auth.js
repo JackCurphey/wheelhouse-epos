@@ -9,7 +9,7 @@
 // customer_logins/customer_sessions carry no shop_id-defaulted columns and
 // no RLS, for the same reason logins/sessions don't: resolving which shop a
 // session belongs to has to happen before any shop context exists. Once
-// resolved, portal routes in server.js go through the normal
+// resolved, portal routes in server/routes/portal.js go through the normal
 // runWithShop(shop.id, ...) - same as staff routes - so everything they
 // touch afterward (customers, customer_bikes, workshop_jobs) is RLS-scoped
 // exactly like it already is for staff.
