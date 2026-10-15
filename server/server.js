@@ -92,7 +92,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const db = { prepare, exec: dbExec };
 
 // Guest bookings skip signup entirely, so nothing else gates how often this
-// network can create jobs/customers - mirrors portalSignupLimiter's limits
+// network can create jobs/customers - mirrors portalSignupLimiter (server/routes/portal.js)'s limits
 // since it's standing in for that same missing gate.
 const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 
@@ -1836,7 +1836,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // shouldn't be forced through signup. Falls back to a guest customer
   // (a new row each time, see resolveGuestCustomer) instead of the
   // signed-in customer's own record - rate-limited per IP since guests skip
-  // portalSignupLimiter, the only other gate on how fast jobs/customers get
+  // portalSignupLimiter (server/routes/portal.js), the only other gate on how fast jobs/customers get
   // created here.
   let customerId;
   if (signedIn) {
