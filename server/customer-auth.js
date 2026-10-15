@@ -1,5 +1,5 @@
 // Customer accounts & sessions - a second, parallel account system to
-// auth.js's staff one, for the online booking portal (server/server.js's
+// auth.js's staff one, for the online booking portal (server/routes/portal.js's
 // /api/portal/* routes, public-portal/). Deliberately separate rather than
 // reusing logins/sessions: customers and staff are different audiences with
 // different trust levels, and keeping them in different tables means a bug
