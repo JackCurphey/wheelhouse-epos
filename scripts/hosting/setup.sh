@@ -64,6 +64,8 @@ else
 fi
 ip=$(doctl compute droplet get "$droplet_id" --format PublicIPv4 --no-header)
 echo "Server address: $ip"
+# DigitalOcean reuses addresses: forget any old server this Mac saw there.
+ssh-keygen -R "$ip" >/dev/null 2>&1 || true
 
 step "The firewall (web and SSH only)"
 if ! doctl compute firewall list --format Name --no-header | grep -qx "$NAME"; then
@@ -95,12 +97,13 @@ if ! doctl databases firewalls list "$db_id" --format Value --no-header | grep -
   doctl databases firewalls append "$db_id" --rule "droplet:$droplet_id" >/dev/null
   echo "Only the server can reach the database."
 fi
-# The private address: the server and database share DigitalOcean's private
-# network in London, so traffic never leaves it. Port 25060 is the direct
-# connection; DigitalOcean's optional pools (25061) aren't used (server/db.js).
-db_host=$(doctl databases connection "$db_id" --private --format Host --no-header)
-db_port=$(doctl databases connection "$db_id" --private --format Port --no-header)
-db_admin_pw=$(doctl databases connection "$db_id" --private --format Password --no-header)
+# The database's public address, which its certificate is sure to cover (the
+# app checks the certificate's name). Only the server may connect: the
+# trusted-source rule above. Port 25060 is the direct connection;
+# DigitalOcean's optional pools (25061) aren't used (server/db.js).
+db_host=$(doctl databases connection "$db_id" --format Host --no-header)
+db_port=$(doctl databases connection "$db_id" --format Port --no-header)
+db_admin_pw=$(doctl databases connection "$db_id" --format Password --no-header)
 app_pw=$(doctl databases user get "$db_id" epos_app --format Password --no-header)
 ca_file=$(mktemp)
 trap 'rm -f "$ca_file"' EXIT
@@ -114,9 +117,14 @@ for _ in $(seq 1 30); do ssh "${ssh_opts[@]}" "root@$ip" true 2>/dev/null && bre
 ssh "${ssh_opts[@]}" "root@$ip" 'mkdir -p /opt/wheelhouse'
 scp -q "${ssh_opts[@]}" "$HERE/compose.yml" "$HERE/Caddyfile" "root@$ip:/opt/wheelhouse/"
 scp -q "${ssh_opts[@]}" "$ca_file" "root@$ip:/opt/wheelhouse/ca.crt"
-ssh "${ssh_opts[@]}" "root@$ip" \
-  "DB_HOST='$db_host' DB_PORT='$db_port' DB_ADMIN_PASSWORD='$db_admin_pw' APP_DB_PASSWORD='$app_pw' SITE_ADDRESS='$site' bash -s" \
-  < "$HERE/remote-install.sh"
+ssh "${ssh_opts[@]}" "root@$ip" 'chmod 644 /opt/wheelhouse/ca.crt'
+# The database details go in on standard input, not the command line, so no
+# password shows up in a process list on either machine.
+{
+  printf 'export DB_HOST=%q DB_PORT=%q DB_ADMIN_PASSWORD=%q APP_DB_PASSWORD=%q SITE_ADDRESS=%q\n' \
+    "$db_host" "$db_port" "$db_admin_pw" "$app_pw" "$site"
+  cat "$HERE/remote-install.sh"
+} | ssh "${ssh_opts[@]}" "root@$ip" 'bash -s'
 
 signup_code=$(ssh "${ssh_opts[@]}" "root@$ip" "grep '^SIGNUP_CODE=' /opt/wheelhouse/.env | cut -d= -f2")
 cat <<DONE

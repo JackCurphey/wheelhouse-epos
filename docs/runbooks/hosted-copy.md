@@ -52,10 +52,14 @@ tools on a Mac.)
 In Terminal, go to the Wheelhouse folder and run:
 
 ```
-cd path/to/wheelhouse-epos
+cd ~/Documents/GitHub/wheelhouse-epos
+git checkout main
 git pull
 scripts/hosting/setup.sh
 ```
+
+(If your Wheelhouse folder is somewhere else, use that folder in the first
+line instead.)
 
 It checks your setup, tells you what it's about to create and what it costs,
 and asks you to type `yes`. Then it:
@@ -88,8 +92,10 @@ anything twice.
 - **Photos and attachments disappear** when the copy is updated.
 - **To stop paying,** delete the server (`wheelhouse-test`) and the database
   (`wheelhouse-test-db`) in DigitalOcean. That deletes everything on them.
-- **Your token** can be deleted in DigitalOcean (API) once setup is done, and
-  a new one made when needed.
+  The firewall and your SSH key cost nothing and can stay or go.
+- **Your token** expires after 30 days. It can be deleted in DigitalOcean
+  (API) once setup is done; to run the script again later, make a new one and
+  run `doctl auth init` again.
 
 ## For Mark: what the script does, and where
 
@@ -101,11 +107,14 @@ anything twice.
   certificate.
 - `scripts/hosting/cloud-init.yaml` (first boot): Docker, Compose, git,
   `psql`, automatic security updates, 2GB swap for the build.
-- `scripts/hosting/remote-install.sh` (on the server, as root): grants
-  `epos_app` the public schema (as `docker/init-db.sh` does), writes
-  `/opt/wheelhouse/.env` once, clones `main`, and runs `docker compose up -d
-  --build`.
-- **Database address:** the private host, port **25060** (direct). Not the
+- `scripts/hosting/remote-install.sh` (on the server, as root, read from
+  stdin with the database details): grants `epos_app` the public schema (as
+  `docker/init-db.sh` does) and checks it took, rewrites
+  `/opt/wheelhouse/.env` keeping the two secrets, clones `main`, and runs
+  `docker compose up -d --build`.
+- **Database address:** the public host (its certificate is sure to cover
+  it; access is limited to the droplet by the trusted-source rule), port
+  **25060** (direct). Not the
   pools on 25061: the app's session-scoped tenancy needs a direct connection
   (`server/db.js`). SSL is verified against DigitalOcean's CA through
   `NODE_EXTRA_CA_CERTS`.
