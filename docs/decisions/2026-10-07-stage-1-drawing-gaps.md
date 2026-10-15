@@ -337,3 +337,5 @@ sign-in screen requirements (not yet checked against Google's own pages):
   a Wheelhouse privacy policy page for Google's screen.
 - **Needs Jack's yes before it is created:** the WhatsApp Business
   connection; later, the Apple Developer Program ($99 a year).
+
+*Note (15 Oct):* decision 25's open question, a Change requested badge on the job window, is answered: the job page reads "Change requested" in the diary's amber (`2026-10-15-job-page-fixes.md`, decision 4).

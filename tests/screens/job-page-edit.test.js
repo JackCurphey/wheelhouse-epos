@@ -106,6 +106,15 @@ test('if someone else changed the job first, the notes are not saved and it says
   assert.equal(dlg.getByRole('textbox', { name: 'Notes' }).value, 'New words');
 });
 
+// Jack, 15 Oct (issue #190): finished work's notes are read-only, since the
+// shop refuses changes to finished work until it is reopened.
+test('on finished work the notes box is read-only and says to reopen the job', async () => {
+  const { dlg } = await openJob({ custodyState: 'in_shop', workState: 'complete' });
+  assert.equal(dlg.getByRole('textbox', { name: 'Notes' }).readOnly, true);
+  assert.ok(has(dlg.queryByText('Reopen the job to change its notes.')));
+  assert.ok(dlg.queryByRole('button', { name: 'Save notes' }) === null);
+});
+
 test('"Bike is here" is off until the bike is booked in, and turning it on books it in', async () => {
   const { dlg, fireEvent, waitFor } = await openJob();
   const pill = dlg.getByRole('switch', { name: 'Bike is here' });

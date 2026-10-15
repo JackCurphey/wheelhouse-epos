@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { ItemSearch, type Picked } from './item-search.tsx';
+import { refusalText } from './refusal-words.ts';
 
 /**
  * The quote, in the job's work and parts (journey 4; quoteJobBoards in
@@ -76,7 +77,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       await refresh();
       return true;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
+      setError(refusalText(err));
       return false;
     } finally {
       setBusy(false);

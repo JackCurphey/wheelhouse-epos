@@ -130,6 +130,27 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    time."), not the server's "End time must be in HH:MM format". *Pattern:*
    the form's other refusals.
 
+### 15 Oct 2026: the job page's plain refusals (issue 190, decision 2)
+
+1. **`job-*`: a refused move says where the job is**, one sentence per
+   state: "The bike isn't here yet.", "The bike is already here.", "The bike
+   has already been collected.", "The work hasn't started yet.", "The work
+   has already started.", "The job is waiting for parts.", "The job is on
+   hold.", "The work is already finished.", "This is still a booking
+   request. Accept it first.", "The booking is already confirmed.", "The
+   customer has asked to change this booking. Answer their request first.",
+   "This booking was declined.", "This booking expired.", "This booking was
+   cancelled." *Pattern:* the request pop-up's refusal words.
+2. **`job-*`: a refused quote action** reads "This quote [has been sent /
+   has been approved / …], so it can't be [changed / sent / withdrawn].",
+   and a sent quote that can't be changed reads "This quote has been sent.
+   Withdraw it before changing it." An answer the customer gave first reads
+   "This quote has been approved, so it can't be answered." or "This quote
+   has already been answered." *Pattern:* Jack's example of 15 Oct.
+3. **`job-*`: a cancelled, declined or expired booking's page** can't be
+   booked in ("Bike is here" is off and fixed) and has no Add another day,
+   as a booking request can't. *Pattern:* the booking request.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
