@@ -205,6 +205,19 @@ silent:
 4. Refusals the server already words in plain English (the diary's rule
    refusals, "A job's first day can't be removed") still show as sent.
 
+### 15 Oct 2026: a change request into another week (decision 19, issue 192)
+
+1. **`change-selected`: in a week without the booking, a screen reader
+   hears "[customer] asks to move here: [time]"**, as "Waiting for you"
+   gives no bike. *Pattern:* the card, which names the customer.
+2. **`change-selected`: the chosen request's outline is marked** with the
+   chosen block's highlight, and a screen reader hears ", chosen from
+   Waiting for you". *Pattern:* the chosen block; decision 19's "highlights
+   the time the customer wants".
+3. **`diary`: a job over several days shows its requested time once**, from
+   its first day, rather than once per day. *Pattern:* the change request
+   pop-up, which moves the booking as a whole.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
