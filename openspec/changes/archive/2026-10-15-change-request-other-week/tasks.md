@@ -18,4 +18,4 @@
 ## 3. Checks
 
 - [x] 3.1 Decided-here choices logged in Jack's section of `decided-while-building.md`
-- [ ] 3.2 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.2 A fresh review; `npm test` and `npm run test:browser` pass
