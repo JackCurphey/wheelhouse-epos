@@ -85,12 +85,12 @@ The hosted copy SHALL connect to its database in a way where the app only report
 - **WHEN** the server's start-up check finds evidence that two requests share one database connection
 - **THEN** the server refuses to start, saying the database connection is unsafe
 
-### Requirement: Photos and attachments survive updates and restarts
-Every file uploaded to the hosted copy (job attachments and uploaded images, such as product photos and the shop's logo) SHALL survive an update and a restart, and SHALL be recoverable from the nightly backup if the disk is lost.
+### Requirement: The hosted copy doesn't keep uploads, and says so
+Uploaded files on the hosted copy (job attachments and uploaded images) SHALL NOT be backed up, and MAY be lost on any deploy. Jack SHALL be told this before he first uses it.
 
-#### Scenario: An update after an upload
+#### Scenario: An attachment after a deploy
 - **WHEN** a photo is attached to a job and the next merge is deployed
-- **THEN** the photo still opens from the job
+- **THEN** the photo is gone, as Jack was told it would be
 
 ### Requirement: The hosted copy holds test data only
 The hosted copy SHALL hold only test data: a test shop loaded from the drawings' example data, and anything made while trying it. Real shop data, real customers and real Citrus Lime export files SHALL never be loaded onto it. Where the drawings give no value, the test shop SHALL use a bracketed placeholder.
@@ -146,19 +146,19 @@ The hosted copy SHALL always use the real date and time. A pinned test clock SHA
 - **WHEN** the hosted copy starts with a test clock set to 1 Sep 2026
 - **THEN** it still shows today's real date in the shop's time zone
 
-### Requirement: The database and attachments are backed up
-The database SHALL be backed up so it can be brought back to any moment in the last [n] days. The attachments SHALL be backed up at least once a day, inside the same host account, and each backup SHALL be kept for [n] days.
+### Requirement: The database is backed up
+The database SHALL be backed up so it can be brought back to any moment in the last [n] days.
 
 #### Scenario: Something deleted by mistake
 - **WHEN** test data is deleted by mistake at a known time
 - **THEN** the database can be brought back to just before that time
 
 ### Requirement: A timed restore is rehearsed before any real use
-Before any real shop uses Wheelhouse, Jack SHALL restore the database **and** the attachments from backup into a fresh copy, with Mark watching (PL-3, Jack's hands, Mark's eyes), and check it by opening a job with a photo. A dated runbook SHALL record each step and how long it took. Until then the rehearsal SHALL read "blocked", never "done". It SHALL be repeated whenever the host or backup method changes.
+Before any real shop uses Wheelhouse, Jack SHALL restore the database (and the attachments, once uploads are kept) from backup into a fresh copy, with Mark watching (PL-3, Jack's hands, Mark's eyes), and check it by opening a job. A dated runbook SHALL record each step and how long it took. Until then the rehearsal SHALL read "blocked", never "done". It SHALL be repeated whenever the host or backup method changes.
 
 #### Scenario: The rehearsal
-- **WHEN** Jack, with Mark watching, restores the database to a chosen moment and the latest attachments backup into a fresh copy
-- **THEN** a job with a photo opens there with its photo, and the runbook gives the date, each step and how long it took
+- **WHEN** Jack, with Mark watching, restores the database to a chosen moment into a fresh copy
+- **THEN** a job opens there as it was at that moment, and the runbook gives the date, each step and how long it took
 
 #### Scenario: Real use before a rehearsal
 - **WHEN** someone proposes real shop use and there is no dated restore runbook

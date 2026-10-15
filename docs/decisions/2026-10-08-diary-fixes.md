@@ -29,5 +29,12 @@ time row, as a block does, as the drawing shows. On a tablet a second tap on
 a Waiting for you card opens it (Workshop day decision 14). And the Day view
 gets the No time row too, with that day's untimed jobs (Jack, 15 Oct: "1",
 asked because no drawing shows them there; chosen over leaving them out of
-the Day view). Still open: date or time fields on "Enter a time instead",
-which no decision or drawing has.
+the Day view).
+
+**Later change (15 Oct 2026): "Enter a time instead"** (Jack, 15 Oct: "yes,
+add the boxes", then "build it" after seeing the drawing `new-job-entered`).
+Opened that way, New job has Date and Start time boxes, filled with the
+diary's day and first hour, with the Date box focused. A new date chooses the
+mechanic again (decision 18) unless staff picked one; a typed time keeps to
+the quarter hour. Chosen over leaving the job at the first hour to be moved
+afterwards.

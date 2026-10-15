@@ -2028,6 +2028,15 @@ ${link('Search services')}
 // UX walk-through 7 H2: a job booked into the other shop's workshop starts
 // as "Booked" only; the bike isn't at that shop yet, so Bolton's hooks go.
 const otherShopStatus = (shop, size, pillFn, hintSize) => `${pillRadioGroup('Starting status', ['Expected'], 0, 'nj-status-' + size, pillFn)}${note(`The customer brings the bike to ${esc(shop)}.`, hintSize)}`;
+// "Enter a time instead" (Jack, 15 Oct, issue 192): the form opens with Date
+// and Start time boxes in place of the time it was clicked at, filled with the
+// diary's day and its first hour. Only this way in; a click on the grid still
+// fills them from the click.
+const enteredWhen = (size, when, mechanic) => {
+  const [day, time] = when.split(' · ');
+  return `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">${field('Date', { value: day, id: 'nj-date-' + size })}${field('Start time', { value: time, id: 'nj-time-' + size })}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Mechanic: <strong style="color: ${C.ink}">${esc(mechanic)}</strong></p>`;
+};
 function newJobBody(size, opts = {}) {
   const {
     when = 'Fri 18 Sep · 12:00',
@@ -2088,7 +2097,7 @@ ${area('Note for the customer', receiptNote, 'nj-receipt-' + size, 2)}
 ${note('Printed on their receipt.', 12)}
 </div>`;
   const rightCol = `<div style="display: flex; flex-direction: column; gap: 6px">
-${banner(`${when} · ${mechanic}`, 'info')}
+${opts.entered ? enteredWhen(size, when, mechanic) : banner(`${when} · ${mechanic}`, 'info')}
 ${note(mechHint)}
 ${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}
 ${otherShop ? otherShopStatus(otherShop, size, (o, active) => formPill(o, active), 12) : `${pillRadioGroup('Starting status', STARTING_STATUS, startingStatusIdx, 'nj-status-' + size, (o, active) => formPill(o, active))}
@@ -2121,7 +2130,7 @@ function newJobBodyTouch(size, opts = {}) {
   const activeGroup = serviceGroupOf(service);
   const g = (inner, gap = 4) => `<div style="display: flex; flex-direction: column; gap: ${gap}px">${inner}</div>`;
   const hint = (t) => note(t, 13);
-  const whenBlock = g(`${banner(`${esc(when)} · ${esc(mechanic)}`, 'info')}${hint(mechHint)}${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}`, 6);
+  const whenBlock = g(`${opts.entered ? enteredWhen(size, when, mechanic) : banner(`${esc(when)} · ${esc(mechanic)}`, 'info')}${hint(mechHint)}${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}`, 6);
   const newBuild = g(`${togglePill('New bike build or pre-delivery check', false, 'nj-newbuild-' + size, 'align-self: flex-start')}${hint('Customer becomes optional.')}`);
   const customer = showCustomer
     ? g(`${field('Find customer by name, phone or email', { value: 'Maya Patel', id: 'nj-find-' + size })}${custResult}<div>${touchLink('+ New customer')}</div>`)
@@ -2199,6 +2208,18 @@ screens['new-job'] = {
   phone: dialogPhone('New job', 'new-job-pick-phone.dc.html', newJobBody('phone', NEW_JOB_OPTS), button('Save job', { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 }),
 };
 keepDesktopSeq('new-job');
+// new-job-entered (Jack, 15 Oct, issue 192): New job opened by "Enter a time
+// instead" on the diary's today, Thu 17 Sep, at the grid's first hour, 09:00,
+// with the mechanic chosen automatically.
+const NEW_JOB_ENTERED_OPTS = {
+  ...NEW_JOB_OPTS, entered: true, when: 'Thu 17 Sep · 09:00', freeMinutes: null,
+  mechHint: 'Mechanic chosen automatically: most free time on that day. To change it, drag the job to another mechanic in the Day view.',
+};
+screens['new-job-entered'] = {
+  desktop: newJobDialog('desktop', DW, DH, 6, { baseFn: (s) => diaryFrozenContent(s), bodyOpts: NEW_JOB_ENTERED_OPTS }),
+  tablet: newJobDialog('tablet', TW, TH, 20, { baseFn: (s) => diaryPickContent(s), bodyOpts: NEW_JOB_ENTERED_OPTS }),
+  phone: dialogPhone('New job', 'new-job-pick-phone.dc.html', newJobBody('phone', NEW_JOB_ENTERED_OPTS), button('Save job', { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 }),
+};
 // new-job-day (brief item 2): opened from Jo's column in the day view, Thu 17
 // Sep 16:00 — the mechanic is pre-filled from the column clicked, not chosen
 // automatically, and there's no matching customer search result yet. Jo's
@@ -2229,10 +2250,12 @@ screens['new-job-day'] = {
 function pickInstructionBar(size) {
   if (size !== 'desktop') return `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 1px 1px 1px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 14px; font-weight: 600; color: ${C.accentDark}">
 <span>Tap a free time ${size === 'phone' ? '' : 'in the diary '}for the new job.</span>
+<a href="new-job-entered-${size}.dc.html" style="margin-left: auto; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Enter a time instead</a>
 <a href="diary-${size}.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 14px; font-weight: 600; text-decoration: none; flex-shrink: 0">Cancel</a>
 </div>`;
   return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">
 <span>Click a free time in the diary for the new job. Esc to cancel.</span>
+<a href="new-job-entered-${size}.dc.html" style="margin-left: auto; font-size: 13px; font-weight: 600; color: ${C.ink}">Enter a time instead</a>
 <a href="diary-${size}.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 13px; font-weight: 600; text-decoration: none">Cancel</a>
 </div>`;
 }
@@ -2879,7 +2902,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -2897,7 +2920,7 @@ export const ROWS = [
   // again — x 14960, y 263, no existing board moves.
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
-  { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
+  { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },

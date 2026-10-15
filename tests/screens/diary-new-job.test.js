@@ -158,6 +158,96 @@ test('"Waiting for parts" with the bike here saves once and closes: the server h
   assert.deepEqual(posts().map((p) => p.split(' ')[0]), ['/api/workshop-jobs']);
 });
 
+// Jack, 15 Oct (issue 192; drawn as new-job-entered): "Enter a time instead"
+// opens the form with Date and Start time boxes, filled with the diary's day
+// and the grid's first hour.
+async function enterATime(r) {
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Enter a time instead' }));
+  return r.within(await r.ui.findByRole('dialog', { name: 'New job' }));
+}
+
+test('Enter a time instead opens the form with Date and Start time boxes, filled in', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  assert.equal(form.getByLabelText('Date').value, '2026-10-05');
+  assert.equal(form.getByLabelText('Start time').value, '09:00');
+});
+
+test('the date and time entered are the ones saved', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  r.fireEvent.change(form.getByLabelText('Date'), { target: { value: '2026-10-08' } });
+  r.fireEvent.change(form.getByLabelText('Start time'), { target: { value: '14:30' } });
+  r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'PDI' } });
+  r.fireEvent.click(form.getByRole('switch', { name: 'New bike build or pre-delivery check' }));
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.equal(posts().length, 1));
+  const body = JSON.parse(posts()[0].split(' ').slice(1).join(' '));
+  assert.deepEqual([body.jobDate, body.startTime, body.endTime], ['2026-10-08', '14:30', '15:30']);
+});
+
+test('a click on the grid shows no date or time box', async () => {
+  const r = await openDiary();
+  const form = await pickTuesdayTen(r);
+  assert.ok(form.queryByLabelText('Date') === null);
+  assert.ok(form.queryByLabelText('Start time') === null);
+});
+
+test('an empty date or time box is refused', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  r.fireEvent.change(form.getByLabelText('Start time'), { target: { value: '' } });
+  r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'PDI' } });
+  r.fireEvent.click(form.getByRole('switch', { name: 'New bike build or pre-delivery check' }));
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  assert.ok(has(await form.findByText('Choose a date and a start time.')));
+  assert.equal(posts().length, 0);
+});
+
+// Decision 18 on the day entered: the mechanic is chosen again when the date
+// changes, unless staff picked one themselves (fresh review, 15 Oct).
+test('changing the date chooses the mechanic again, for the new day', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  assert.equal(form.getByRole('radio', { name: 'Alex Morgan' }).getAttribute('aria-checked'), 'true');
+  r.fireEvent.change(form.getByLabelText('Date'), { target: { value: '2026-10-06' } });
+  assert.equal(form.getByRole('radio', { name: 'Jo Taylor' }).getAttribute('aria-checked'), 'true');
+  assert.ok(has(form.queryByText('Mechanic chosen automatically: most free time on Tuesday.')));
+});
+
+test('a mechanic picked by hand stays when the date changes', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  r.fireEvent.click(form.getByRole('radio', { name: 'Jo Taylor' }));
+  r.fireEvent.change(form.getByLabelText('Date'), { target: { value: '2026-10-07' } });
+  assert.equal(form.getByRole('radio', { name: 'Jo Taylor' }).getAttribute('aria-checked'), 'true');
+  assert.ok(form.queryByText(/Mechanic chosen automatically/) === null);
+});
+
+async function saveEntered(r, form, time) {
+  r.fireEvent.change(form.getByLabelText('Start time'), { target: { value: time } });
+  r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'PDI' } });
+  r.fireEvent.click(form.getByRole('switch', { name: 'New bike build or pre-delivery check' }));
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+}
+
+test('a start time off the quarter hour is refused, as the grid snaps to 15 minutes', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  await saveEntered(r, form, '14:37');
+  assert.ok(has(await form.findByText('Choose a start time on the quarter hour, like 14:30 or 14:45.')));
+  assert.equal(posts().length, 0);
+});
+
+test('a job that would run past midnight is refused in plain words', async () => {
+  const r = await openDiary();
+  const form = await enterATime(r);
+  await saveEntered(r, form, '23:30');
+  assert.ok(has(await form.findByText('The job would run past midnight. Choose an earlier start time.')));
+  assert.equal(posts().length, 0);
+});
+
 test('a job needs a title, and a customer unless it is a new bike build', async () => {
   const r = await openDiary();
   const form = await pickTuesdayTen(r);

@@ -148,6 +148,20 @@ silent:
    tall, 12px text, with a border), now that it can be tapped. *Pattern:*
    `unschedRow` in the drawing.
 
+### 15 Oct 2026: New job's "Enter a time instead" (issue 192)
+
+1. **`new-job-entered`: the mechanic stays as pills**, as on every built New
+   job form since piece 5a (decision 18), where the drawings show a line,
+   "Mechanic: [name]", and "drag the job to another mechanic". *Pattern:*
+   the built form.
+2. **`new-job`: "Mechanic chosen automatically" goes once staff pick a
+   mechanic themselves**, on a grid click too, since it no longer says who
+   chose. *Pattern:* the note's own wording.
+3. **`new-job`: a job that would run past midnight is refused in plain
+   words** ("The job would run past midnight. Choose an earlier start
+   time."), not the server's "End time must be in HH:MM format". *Pattern:*
+   the form's other refusals.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
