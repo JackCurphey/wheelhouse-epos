@@ -89,6 +89,8 @@ None. There are no specs in `openspec/specs/` yet.
 
 ## Impact
 
-- New files only, under `openspec/changes/document-workshop-jobs/`, plus one
-  pointer line in each of the two older specs.
+- New files only: the change, archived under
+  `openspec/changes/archive/2026-10-08-document-workshop-jobs/`, and the spec
+  in `openspec/specs/workshop-jobs/spec.md`, plus one pointer line in each
+  of the two older specs.
 - No effect on code, database, routes, screens, dependencies or hosting.
