@@ -164,6 +164,19 @@ test('a change request names the mechanic on each side, since accepting moves it
   assert.ok(dlg.queryByText(/same work and mechanic/) === null);
 });
 
+test('a change request to no mechanic reads Shared queue on its To side', async () => {
+  const to = WAITING.items[1].to;
+  const saved = { ...to };
+  Object.assign(to, { mechanicId: null, mechanicName: null });
+  try {
+    const r = await openDiary();
+    const dlg = await openCard(r, 'Oliver Chen');
+    assert.ok(has(dlg.queryByText('Mon 5 Oct · 14:00 · Shared queue')));
+  } finally {
+    Object.assign(to, saved);
+  }
+});
+
 test('declining a change request keeps the booking where it was', async () => {
   const r = await openDiary();
   const dlg = await openCard(r, 'Oliver Chen');

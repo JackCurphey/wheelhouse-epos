@@ -3,9 +3,9 @@
 ### Requirement: Saving a new job
 Save job SHALL create the job with what the form holds and, when work was chosen, its planned length; with no work chosen the job SHALL be an hour long. A title SHALL be needed, and a customer unless it is a new bike build. If the server refuses, the form SHALL show its words and stay open. "The bike is here now" SHALL book the bike in straight after saving, unless the job was created with the bike already in the shop.
 
-#### Scenario: Maya Patel's Standard service
-- **WHEN** staff find "Maya", choose Maya Patel, choose "Standard service · 90 min" and save
-- **THEN** a job is created for Maya Patel's Trek Domane AL 3 on Tuesday 6 October from 10:00 to 11:30 with Jo Taylor, booked, with a planned length of 90 minutes
+#### Scenario: Maya Patel's Brake service
+- **WHEN** staff find "Maya", choose Maya Patel, choose "Brake service · 45 min" and save
+- **THEN** a job is created for Maya Patel's Trek Domane AL 3 on Tuesday 6 October from 10:00 to 10:45 with Jo Taylor, booked, with a planned length of 45 minutes
 
 #### Scenario: The bike is here now
 - **WHEN** staff turn on "The bike is here now" and save with the starting status Booked
@@ -16,7 +16,7 @@ Save job SHALL create the job with what the form holds and, when work was chosen
 - **THEN** the job is created with the bike already in the shop, no book-in is sent, and the form closes
 
 #### Scenario: No customer
-- **WHEN** staff save a job titled "PDI" with no customer and New bike build off
+- **WHEN** staff save a job titled "Safety check" with no customer and New bike build off
 - **THEN** the form says "Give the job a title, and choose a customer or turn on New bike build."
 
 ### Requirement: The change request pop-up shows from and to
