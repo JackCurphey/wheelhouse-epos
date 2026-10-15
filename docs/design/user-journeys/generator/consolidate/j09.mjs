@@ -15,6 +15,8 @@ export default {
   'mv-both': keep(25), // inferred: a box over the move page
   'mv-check': into('mv-start', '', "Weekly check: type four Citrus Lime figures, each shows 'Matches'; 'Weeks in a row that matched: [n] of 2'"),
   'mv-check-result': into('mv-start', '', "'3 of 4 match, so this week doesn’t count yet'; 'Stock value [£] different'"),
+  'mv-help': into('mv-start', 'Not-drawn pages #30 (Jack, 15 Oct: a form in the app)', "'Ask us to help' box: 'What looks wrong?', the card asked from and who's asking, 'Cancel' or 'Send'"),
+  'mv-help-sent': into('mv-start', 'Not-drawn pages #30 (Jack, 15 Oct)', "Sent: 'Thanks — we’ve got it. Any reply comes to your email.'"),
   'mv-practice-checkin': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'mv-practice-sale': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'mv-practice-card': later('Dropped, not later: issue #116 question 4, practice mode dropped'),

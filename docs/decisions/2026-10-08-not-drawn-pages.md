@@ -94,6 +94,18 @@ later Signed-in devices list would show, and over a button beside Done.
 "yes"): its line under the title reads "Every till, phone and computer"
 instead of "Till B1 now · [n] phone or computer".
 
+**Later change (15 Oct 2026): what "Ask us to help" opens** (#30; Jack, 15
+Oct: "1"). A short form in the app, "Ask us to help" / "With moving from
+Citrus Lime · to the Wheelhouse team": "What looks wrong?", and a line saying
+the team will see which card it was asked from and who is asking. Cancel or
+Send; once sent, "Thanks — we’ve got it. Any reply comes to your email."
+Drawn as `mv-help` and `mv-help-sent`, situations of `mv-start`, built in
+WP-2.4, following Send feedback (`oversight.mjs`), without its picture of the
+screen because a move's rows hold customers' details. Where the message
+lands is a real account, so it is built behind an adapter with a pretend
+version until one exists. Chosen over an email address or phone number, and
+over booking a call.
+
 ## The 95, by stage
 
 Kept as researched on 8 Oct, from `origin/main` at that date. "plan:N" is a

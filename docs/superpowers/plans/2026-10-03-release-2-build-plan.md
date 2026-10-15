@@ -445,7 +445,8 @@ later packages.
 
 *Screens it builds (1) and the situations it covers:*
 
-- **`mv-start`** (block 24, Stage strip and its next-step box) — 5 of its 13 situations here: `mv-progress`, `mv-progress-failed`, `mv-summary`, `mv-fix`, `mv-sorted`.
+- **`mv-start`** (block 24, Stage strip and its next-step box) — 7 of its 15 situations here: `mv-progress`, `mv-progress-failed`, `mv-summary`, `mv-fix`, `mv-sorted`, `mv-help`, `mv-help-sent`.
+- "Ask us to help" (Jack, 15 Oct, #139 row #30): a short form in the app, and a toast once sent. What the owner writes, the card they asked from and who they are go to the Wheelhouse team; until a real inbox exists, it is built behind an adapter with a pretend version.
 <!-- /screens -->
 
 ### Stage 3 — The till and the shop day
@@ -692,8 +693,8 @@ later packages.
 - **`set-eod`** (block 1, Settings page) — 2 situations: `set-eod-close`, `set-save-failed`.
 - **`set-pay-ways`** (block 1, Settings page) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
 - **`set-staff`** (block 1, Settings page) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
-- **`set-staff-person`** (block 9, Form box) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
-- Brought back from later (Jack, 8 Oct, #139): `ops-person` and `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. Where the button sits on the page is not drawn yet; Jack draws it before stage 5. The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
+- **`set-staff-person`** (block 9, Form box) — 2 of its 6 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
+- Brought back from later (Jack, 8 Oct, #139): `ops-person` and `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. The button is drawn (Jack, 15 Oct): a row under Till PIN, "Signed in somewhere?", and the box reads "Every till, phone and computer". The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
 - **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).

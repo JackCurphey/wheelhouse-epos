@@ -631,6 +631,8 @@ export const journeys = [
         sd9("mv-both", "Changed in both: Citrus Lime’s kept", "Owner"),
         sd9("mv-check", "The weekly check: each figure checks itself", "Owner"),
         sd9("mv-check-result", "The weekly check: three match, one doesn’t", "Owner"),
+        sd9("mv-help", "Ask us to help: what looks wrong", "Owner"),
+        sd9("mv-help-sent", "Sent to the Wheelhouse team", "Owner"),
       ] },
       { label: "Practice: the till and jobs", screens: [
         sd9("mv-practice-checkin", "Checked in during practice: no float check", "Staff"),
