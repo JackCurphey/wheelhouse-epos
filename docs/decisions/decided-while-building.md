@@ -105,6 +105,17 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    mechanic, and the drawing doesn't say what that side shows. *Pattern:*
    the job page reads "Shared queue" for a job with no mechanic.
 
+### 15 Oct 2026: the diary's No time row and Waiting cards (issue 192)
+
+1. **`diary`: Enter on a chosen Waiting card only chooses it.** Decision 14
+   says a second tap opens it on a touch screen, and says nothing about the
+   keyboard; Enter or Open, or a double-click, open it as before. *Pattern:*
+   a stack, where "a click from the keyboard is never a tap". A pen counts as
+   a mouse, as it does for a stack.
+2. **`diary`: the No time chip is the drawn tablet size** (at least 24px
+   tall, 12px text, with a border), now that it can be tapped. *Pattern:*
+   `unschedRow` in the drawing.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

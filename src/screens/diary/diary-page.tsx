@@ -454,13 +454,16 @@ function HourGutter({ range }: { range: { start: number; end: number } }) {
   );
 }
 
-function Grid({ heads, columns, noTime, range, ariaLabel }: {
+function Grid({ heads, columns, noTime, onOpen, range, ariaLabel }: {
   heads: { key: string; top?: string; main: string; today?: boolean }[];
   columns: ReactNode[];
   noTime?: Shown[];
+  onOpen: (job: Shown) => void;
   range: { start: number; end: number };
   ariaLabel: string;
 }) {
+  // While New job picks a time, the chips can't be opened, as blocks can't.
+  const picking = useContext(PickContext);
   const cols = `44px repeat(${heads.length}, minmax(0, 1fr))`;
   return (
     <section aria-label={ariaLabel} className="min-w-[720px] overflow-hidden rounded-[10px] md:min-w-0 border border-[var(--wh-border)] bg-[var(--wh-panel)]">
@@ -481,11 +484,12 @@ function Grid({ heads, columns, noTime, range, ariaLabel }: {
             time
           </div>
           <div role="group" aria-label="No time" className="flex min-h-[26px] flex-wrap items-center gap-[5px] px-2 py-1">
+            {/* A chip opens the job, as a block does (the drawing's No time row, issue 192). */}
             {noTime.map((j) => (
-              <span key={j.partId} title={describe(j, false)} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
+              <button type="button" key={j.partId} title={describe(j, false)} disabled={Boolean(picking)} onClick={() => onOpen(j)} className={`inline-flex min-h-6 items-center rounded-full border border-current px-2 text-xs font-bold whitespace-nowrap disabled:opacity-40 ${CHIP[j.state]}`}>
                 <span className={SR}>{describe(j, false)}</span>
                 <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
-              </span>
+              </button>
             ))}
           </div>
         </div>
@@ -540,6 +544,9 @@ export function DiaryPage() {
   const who = params.get('who');
   const slotPx = isPhone ? PHONE_SLOT_H : SLOT_H;
   const [chosen, setChosen] = useState<number | null>(null);
+  // How the last press on a Waiting card was made: a second tap opens the
+  // chosen card on a touch screen, a second mouse click doesn't (decision 14).
+  const cardPointer = useRef<string>('mouse');
   const [openItem, setOpenItem] = useState<WaitingItem | null>(null);
 
   const set = (changes: Record<string, string | null>) => {
@@ -789,7 +796,9 @@ export function DiaryPage() {
           return { key: d, top: weekday, main: rest.join(' '), today: d === today };
         })
         : columns.map((c) => ({ key: c.key, main: c.label }))}
-      noTime={view === 'week' ? shown.filter((j) => !j.startTime) : undefined}
+      // The Day view has the row too, with that day's untimed jobs (Jack, 15 Oct, issue 192).
+      noTime={shown.filter((j) => !j.startTime && (view === 'week' || j.jobDate === date))}
+      onOpen={openJob}
       columns={columns.map((c, i) => (
         <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={view === 'day'} chosenId={chosen} />
       ))}
@@ -1113,10 +1122,10 @@ export function DiaryPage() {
               <div role="group" aria-label="No time" className="flex flex-wrap gap-1.5">
                 {noTime.length === 0 ? <span className="text-[13px] text-[var(--wh-muted)]">None</span> : null}
                 {noTime.map((j) => (
-                  <span key={j.partId} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
+                  <button type="button" key={j.partId} disabled={picking} onClick={() => openJob(j)} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
                     <span className={SR}>{describe(j, false)}</span>
                     <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1282,11 +1291,14 @@ export function DiaryPage() {
                 key={`${item.kind}-${item.jobId}`}
                 className={`flex flex-col gap-2 rounded-lg bg-[var(--wh-panel)] ${on ? 'border-2 border-[var(--accent)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'border border-[var(--wh-border)]'}`}
               >
-                {/* One click chooses the card; double-click, or Open, opens it (decision 14). */}
+                {/* One click chooses the card; double-click, or Open, opens it; on a
+                    touch screen a second tap opens it too (decision 14). A click
+                    from the keyboard (detail 0) is never a tap, as for a stack. */}
                 <button
                   type="button"
                   aria-pressed={on}
-                  onClick={choose}
+                  onPointerDown={(e) => { cardPointer.current = e.pointerType; }}
+                  onClick={(e) => { if (on && e.detail > 0 && cardPointer.current === 'touch') setOpenItem(item); else choose(); }}
                   onDoubleClick={() => { choose(); setOpenItem(item); }}
                   className="flex flex-col gap-[5px] rounded-lg px-3 pt-2.5 pb-2.5 text-left"
                 >
