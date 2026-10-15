@@ -1,11 +1,11 @@
 // tests/sale-shopify-push-release.test.js
 //
 // Part 4 of the lifecycle brief: createSale's Shopify inventory pushes fire
-// after COMMIT (see the comment at server/server.js's createSale), but used
+// after COMMIT (see the comment at server/lib/sales.js's createSale), but used
 // to run while still inside the request's own runWithShop scope - holding
 // one of the ten pooled Postgres connections across an HTTP round-trip to
 // Shopify, retries and backoff included. createSale's `deferShopifyPushesTo`
-// option (server/server.js) lets a caller collect the pending pushes instead
+// option (server/lib/sales.js) lets a caller collect the pending pushes instead
 // of firing them inline, so it can release its own client first and fire
 // them from a fresh scope afterward - exactly what server.js's
 // firePendingShopifyPushes does for the two real HTTP routes
