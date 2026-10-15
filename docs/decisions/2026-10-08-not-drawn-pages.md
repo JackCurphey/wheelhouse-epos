@@ -127,6 +127,17 @@ elsewhere, or Mark as sorted, which asks "What did you do?"
 fix for each kind of reason inside the sale, which can come once the reasons
 are known.
 
+**Later change (15 Oct 2026): sending a link to pay** (#51; Jack, 15 Oct:
+"1"). "Payment link" in Other ways to pay opens `till-pay-link`: send it by
+Text or Email, as the receipt offers, then "Send the link". The sale waits in
+Parked sales as "Waiting for payment", with Send again (`till-pay-link-waiting`),
+and the till is free for the next customer. When Stripe says it's paid, the
+sale finishes by itself and the till shows "Paid by link: Maya Patel · £74.00
+· receipt B1-[0000]" (`till-pay-link-paid`). Built in WP-3.1, through the
+card-payments adapter with a pretend Stripe first. Chosen over putting the
+sale on the customer's account, and over the till waiting on the payment
+screen. Not drawn: how long a link lasts.
+
 ## The 95, by stage
 
 Kept as researched on 8 Oct, from `origin/main` at that date. "plan:N" is a

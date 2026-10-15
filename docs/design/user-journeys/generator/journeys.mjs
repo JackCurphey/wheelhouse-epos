@@ -720,6 +720,9 @@ export const journeys = [
         sc("till-account", "Put on account: pay later", "Staff"),
         sc("till-loyalty", "Store credit, earned by buying: shown with the customer in the basket", "Staff"),
         sc("till-deposit", "Take a deposit: part now, the rest later", "Staff"),
+        sc("till-pay-link", "Send a link to pay: text or email", "Staff"),
+        sc("till-pay-link-waiting", "Parked sales: one waiting for payment", "Staff"),
+        sc("till-pay-link-paid", "Paid by link: the sale finishes by itself", "Staff"),
       ] },
       { label: "Other till jobs", screens: [
         sc("till-park", "Parked sales: resume", "Staff"),

@@ -331,6 +331,20 @@ const listRow = (main, sub, right, action) => `<div style="display: flex; align-
 def('till-park', () => overTill(dialog('park-title', 'Parked sales', 'Kept on this till until someone resumes or clears them', `
 <div>${listRow('Maya Patel · 3 items', 'Parked by Jo Taylor · [time]', money(TOTAL), button('Resume', { variant: 'default' }))}${listRow('[No customer] · [n] items', 'Parked by [name] · [time]', '[£ total]', button('Resume', { variant: 'default' }))}</div>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Resuming puts the parked sale back in the basket. Anything already in the basket is parked in its place.</p>`, '', 600)));
+// A link to pay (not-drawn pages #51; Jack, 15 Oct: "1", the sale waits,
+// parked, until it's paid). Text or email, as the receipt offers (decision 7);
+// Stripe sends the link (Card payments provider, 5 Oct). The sale waits in
+// Parked sales as "Waiting for payment" and finishes by itself when the
+// customer pays; the till is free meanwhile.
+const sendBy = (ic, t, sub, on) => `<label style="display: flex; align-items: center; gap: 12px; min-height: 60px; box-sizing: border-box; padding: 10px 14px; border-radius: 10px; border: ${on ? 2 : 1}px solid ${on ? C.ink : C.border}; background: ${C.panel}; cursor: pointer"><input type="radio" name="send-by"${on ? ' checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.ink}">${icon(ic, 20)}<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span></label>`;
+def('till-pay-link', () => overTill(dialog('link-title', `Payment link · ${money(TOTAL)}`, 'Maya Patel · Jo Taylor serving · 3 items', `
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="font-size: 15px; font-weight: 700; padding: 0 0 6px">Send it by</legend>${sendBy('phone', 'Text', mono('07700 900 142'), true)}${sendBy('mail', 'Email', 'maya@example.test', false)}</fieldset>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">The sale waits in Parked sales as “Waiting for payment”, and finishes by itself when Maya pays. The till is free for the next customer.</p>`, `${button('Back', { variant: 'ghost' })}${button('Send the link')}`, 560)));
+const waitBadge = `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 12px; font-weight: 700; white-space: nowrap">Waiting for payment</span>`;
+def('till-pay-link-waiting', () => overlay(() => tillPage(leftSide(), basket([])), dialog('park-title', 'Parked sales', 'Kept on this till until someone resumes or clears them', `
+<div>${listRow('Maya Patel · 3 items', 'Payment link sent by text · [time]', money(TOTAL), `<span style="display: flex; align-items: center; gap: 10px">${waitBadge}${button('Send again', { variant: 'default' })}</span>`)}${listRow('[No customer] · [n] items', 'Parked by [name] · [time]', '[£ total]', button('Resume', { variant: 'default' }))}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">A sale waiting for payment finishes by itself when the customer pays, and leaves this list.</p>`, '', 600)));
+const linkPaidToast = () => `<div role="status" style="position: absolute; ${CUR === 'phone' ? 'left: 12px; right: 12px; bottom: 12px' : 'left: 50%; bottom: 24px; transform: translateX(-50%); white-space: nowrap'}; z-index: 6; display: flex; align-items: center; gap: 10px; padding: 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}<span style="padding: 8px 0">Paid by link: Maya Patel · ${money(TOTAL)} · receipt ${mono('B1-[0000]')}</span></div>`;
 
 // Find a past sale — by receipt number, customer, card or date.
 const datePill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
@@ -542,6 +556,8 @@ def('till-fix-sorted', () => overTill(dialog('sorted-title', `Mark ${'B1-[0000]'
 
 // ---------- Audit additions (decision 12) ----------
 def('till-empty', () => tillPage(leftSide(), basket([])));
+// The link paid while the till serves someone else: a short message, then gone.
+def('till-pay-link-paid', () => tillPage(leftSide(), basket([])).replace('<main style="', '<main style="position: relative; ').replace('</main>', `${linkPaidToast()}</main>`));
 function noResults() {
   return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
 <label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" value="[what was typed]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
@@ -608,6 +624,9 @@ export const TITLES = {
   'till-loyalty': 'Store credit, earned by buying — shown with the customer in the basket',
   'till-deposit': 'Take a deposit — part now, the rest later',
   'till-park': 'Parked sales — resume',
+  'till-pay-link': 'Send a link to pay: text or email',
+  'till-pay-link-waiting': 'Parked sales: one waiting for payment',
+  'till-pay-link-paid': 'Paid by link: the sale finishes by itself',
   'till-find': 'Past sales — scan the receipt, today’s list, or find the customer', // UX walk-through 2 M10
   'till-refund': 'Refund from the original sale — back to the card',
   'till-refund-noreceipt': 'No receipt — store credit only',
@@ -642,7 +661,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-serving-pills', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split'] },
-  { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
+  { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit', 'till-pay-link', 'till-pay-link-waiting', 'till-pay-link-paid'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },
   // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.
   { label: 'Cycle to Work', screens: ['till-c2w-pick', 'till-c2w', 'till-c2w-pay', 'till-c2w-extra', 'till-c2w-paid-cert', 'till-c2w-paid', 'till-c2w-deposit'] },

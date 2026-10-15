@@ -481,7 +481,7 @@ later packages.
 - **`till-customer`** (block 21, Pick-one box) — no other situations.
 - **`till-variant`** (block 21, Pick-one box) — no other situations.
 - **`till-serial`** (block 21, Pick-one box) — 1 situation: `till-serial-held`.
-- **`till-pay`** (block 20, Payment step) — 2 of its 4 situations here: `till-pay-other`, `till-pay-discounted`; plus 1 written line.
+- **`till-pay`** (block 20, Payment step) — 4 of its 6 situations here: `till-pay-other`, `till-pay-discounted`, `till-pay-link`, `till-pay-link-paid`; plus 1 written line.
 - **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
 - **`till-pay-cash`** (block 20, Payment step) — no other situations.
 - **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
@@ -489,7 +489,8 @@ later packages.
 - **`till-giftcard`** (block 20, Payment step) — no other situations.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
-- **`till-park`** (block 21, Pick-one box) — no other situations.
+- **`till-park`** (block 21, Pick-one box) — 1 situation: `till-pay-link-waiting`.
+- Sending a link to pay (Jack, 15 Oct, #139 row #51): Text or Email, through Stripe behind the card-payments adapter (WP-1.11) with a pretend version first. The sale waits in Parked sales as "Waiting for payment" and finishes by itself when Stripe says it's paid.
 - **`till-find`** (block 3, Table with search and filters) — 1 situation: `till-find-customer`.
 - **`till-sale-detail`** (block 4, Detail page) — its one situation comes with a later package.
 - **`till-refund`** (block 9, Form box) — 3 situations: `till-refund-older`, `till-refund-cash`, `till-refund-noreceipt`; plus 1 written line.

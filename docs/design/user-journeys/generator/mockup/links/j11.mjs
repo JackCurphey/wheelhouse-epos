@@ -56,7 +56,7 @@ export default {
     // Other ways to pay (decision 15)
     'Finance [Finance provider] — the customer applies, the shop is paid by the lender': outside('[Finance provider]: the customer’s finance application'),
     'Cycle to Work For a bike on a Cycle to Work order': go('till-c2w-pick'),
-    'Payment link Text or email the customer a link to pay — once set up': notDrawn('Payment link: texting or emailing the customer a link to pay'),
+    'Payment link Text or email the customer a link to pay — once set up': go('till-pay-link'),
     '[Shop’s own] Added by the shop in till settings': go('till-receipt'),
     // The card machine (decision 6)
     'Machine not answering? Key it in on the machine instead': outside('The card machine: key the amount in on it'),
@@ -112,6 +112,9 @@ export default {
   'till-pay-discounted': { Split: go('till-split-discounted') },
   // After paying, Close goes to the empty till, as No receipt does (third walk, walk-through 5 L2).
   'till-receipt': { Close: go('till-empty') },
+  // A link to pay (Jack, 15 Oct): sent, the sale waits parked, then pays itself.
+  'till-pay-link': { Back: go('till-pay-other'), 'Send the link': go('till-pay-link-waiting') },
+  'till-pay-link-waiting': { 'Send again': STAY, Resume: go('till-sale') },
   'till-receipt-split': { Close: go('till-empty') },
   'till-find-customer': { Refund: go('till-refund-older'), Change: STAY },
   'till-account': { Change: go('till-customer') },
