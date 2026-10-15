@@ -183,6 +183,20 @@ silent:
    booked in ("Bike is here" is off and fixed) and has no Add another day,
    as a booking request can't. *Pattern:* the booking request.
 
+### 15 Oct 2026: New job's "won't fit" warning (decision 23, issue 192)
+
+1. **`new-job`: no warning for the Shared queue**, which has no free time of
+   its own to compare with. *Pattern:* the server's capacity answer, which
+   gives the queue only a total.
+2. **`new-job`: a start inside busy time reads "No free time at [time] —
+   this job needs [m]. …"** rather than "Only 0 minutes free". *Pattern:*
+   the drawn warning's own wording.
+3. **`new-job`: "Find the next free [m] minutes" looks 60 days ahead**, and
+   with nothing found says "[mechanic] has no free [m] minutes in the next
+   60 days." *Pattern:* Add another day's 60 days.
+4. **`new-job`: the found time is on the quarter hour**, as a grid click
+   snaps to 15 minutes.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
