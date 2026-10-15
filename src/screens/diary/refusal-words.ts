@@ -60,6 +60,7 @@ const OTHER: Record<string, string> = {
   'Each item needs a valid productId and positive qty': 'Each part needs a quantity of 1 or more.',
   'That day of the job was not found': 'That day has already been removed.',
   'Job not found': 'This job no longer exists.',
+  'Mechanic not found or inactive': 'That mechanic is no longer working here. Choose another.',
   'This job is complete - reopen it before making changes.': 'The work is already finished. Reopen the job to change it.',
 };
 
@@ -69,6 +70,7 @@ export function plainWords(message: string): string | null {
   const order = /^This (?:order|job's order) is already (\w+)$/.exec(message);
   if (order && ORDER[order[1]]) return ORDER[order[1]];
   if (/^Service \d+ not found or inactive$/.test(message)) return 'That service is no longer offered. Choose another.';
+  if (/^Product \d+ not found or inactive$/.test(message)) return 'That product is no longer sold. Choose another.';
   const move = /^cannot \S+ a job that is (\w+);/.exec(message);
   if (move) return WHERE[move[1]] ?? null;
   if (message === 'this quote has already been answered') return 'This quote has already been answered.';

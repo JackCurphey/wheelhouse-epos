@@ -19,6 +19,8 @@ const PLAIN = {
   'Each item needs a valid productId and positive qty': 'Each part needs a quantity of 1 or more.',
   'That day of the job was not found': 'That day has already been removed.',
   'Job not found': 'This job no longer exists.',
+  'Mechanic not found or inactive': 'That mechanic is no longer working here. Choose another.',
+  'Product 40 not found or inactive': 'That product is no longer sold. Choose another.',
   'This job is complete - reopen it before making changes.': 'The work is already finished. Reopen the job to change it.',
 };
 

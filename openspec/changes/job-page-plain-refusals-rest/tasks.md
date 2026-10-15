@@ -14,4 +14,4 @@
 ## 3. Checks
 
 - [x] 3.1 Sentences logged in Jack's section of `decided-while-building.md`
-- [ ] 3.2 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.2 A fresh review (it found a product, a mechanic and a deleted order still in the server's words, and a test using a status no order has; each fixed, tests watched failing); `npm test` and `npm run test:browser` pass

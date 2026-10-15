@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: A move the shop's rules refuse is put back, and says why
-A move SHALL be checked against the shop's rules for a job's day and time (see `workshop-jobs`). When it is refused, the job SHALL stay where it was and the diary SHALL show "Couldn't move [bike]: " and why: the server's reason when it is already plain English, "The work is already finished. Reopen the job to change it." for finished work, "This job no longer exists." for a deleted job (Jack, 15 Oct), or "This job changed while you were looking at it." and reload when someone else changed the job first. A booking request, a customer's cancellation and a job with no time SHALL NOT be movable on the diary.
+A move SHALL be checked against the shop's rules for a job's day and time (see `workshop-jobs`). When it is refused, the job SHALL stay where it was and the diary SHALL show "Couldn't move [bike]: " and why: the server's reason when it is already plain English, "The work is already finished. Reopen the job to change it." for finished work, "This job no longer exists." for a deleted job, "That mechanic is no longer working here. Choose another." for a mechanic who has left (Jack, 15 Oct), or "This job changed while you were looking at it." and reload when someone else changed the job first. A booking request, a customer's cancellation and a job with no time SHALL NOT be movable on the diary.
 
 #### Scenario: A clash with another job
 - **WHEN** staff drop a job over another of the same mechanic's jobs

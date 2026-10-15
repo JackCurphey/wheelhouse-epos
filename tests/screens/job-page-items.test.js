@@ -135,11 +135,11 @@ test('a part\'s quantity can be changed, and a line removed', async () => {
 
 test('if the server refuses, it says why', async () => {
   const { dlg, fireEvent } = await openJob(open([]));
-  answer = { status: 400, ok: false, json: async () => ({ error: 'This order is already completed' }) };
+  answer = { status: 400, ok: false, json: async () => ({ error: 'Invalid price for "Brake pads (pair)"' }) };
   fireEvent.click(dlg.getByRole('button', { name: 'Add item' }));
   fireEvent.change(dlg.getByLabelText('Search products or services, or scan a barcode'), { target: { value: 'brake' } });
   fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
-  assert.ok(has(await dlg.findByText('This order is already completed')));
+  assert.ok(has(await dlg.findByText('Invalid price for "Brake pads (pair)"')));
 });
 
 test('a refusal for a paid order reads in plain words', async () => {
@@ -149,6 +149,15 @@ test('a refusal for a paid order reads in plain words', async () => {
   fireEvent.change(dlg.getByLabelText('Search products or services, or scan a barcode'), { target: { value: 'brake' } });
   fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
   assert.ok(has(await dlg.findByText("This job has been paid for, so its work and parts can't change.")));
+});
+
+test('a deleted order says so', async () => {
+  const { dlg, fireEvent } = await openJob(open([]));
+  answer = { status: 404, ok: false, json: async () => ({ error: 'Not found' }) };
+  fireEvent.click(dlg.getByRole('button', { name: 'Add item' }));
+  fireEvent.change(dlg.getByLabelText('Search products or services, or scan a barcode'), { target: { value: 'brake' } });
+  fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
+  assert.ok(has(await dlg.findByText("This job's order no longer exists.")));
 });
 
 test('a paid order cannot be changed here', async () => {
