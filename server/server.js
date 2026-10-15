@@ -3717,7 +3717,7 @@ export function gracefulShutdown(signal, {
     // A sale that completed just as the signal landed can still have a
     // deferred Shopify push in flight, opened on its OWN pooled client after
     // the sale's own client was already released (see
-    // firePendingShopifyPushes above) - draining HTTP connections says
+    // firePendingShopifyPushes in lib/sales.js) - draining HTTP connections says
     // nothing about that. Wait for it before ending the pool, or pg refuses
     // its connect() with the pool already ended and the push dies silently.
     waitForPendingShopifyPushes(pendingPushes)
