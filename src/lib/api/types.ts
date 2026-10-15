@@ -1,10 +1,10 @@
 /**
- * Response shapes, one definition per API shape. Each mirrors a serializer in
- * server/server.js - when the two disagree, the server is right and this file
- * is the bug.
+ * Response shapes, one definition per API shape. Each mirrors a serializer on
+ * the server (server/server.js, server/routes/, server/workshop/) - when the two
+ * disagree, the server is right and this file is the bug.
  */
 
-/** One day of a job (serializePart in server/server.js). */
+/** One day of a job (serializePart in server/routes/workshop.js). */
 export type JobPart = {
   id: number;
   position: number;

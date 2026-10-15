@@ -144,6 +144,6 @@ test('an old-form save that changes a finished job to scheduled still reopens it
   const res = await save(started.id, { status: 'scheduled', version: finished.body.version });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const after = await read(started.id);
-  assert.notEqual(after.workState, 'complete');
+  assert.equal(after.workState, 'not_started');
   assert.equal(after.status, 'scheduled');
 });
