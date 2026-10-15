@@ -183,6 +183,25 @@ silent:
    booked in ("Bike is here" is off and fixed) and has no Add another day,
    as a booking request can't. *Pattern:* the booking request.
 
+### 15 Oct 2026: the other refusals in plain words (issue 190 C, the rest)
+
+1. **`job-*`: work and parts refusals** read "This job has been paid for,
+   so its work and parts can't change.", "This job's order was cancelled,
+   so its work and parts can't change.", "That service is no longer
+   offered. Choose another.", "The work needs a description.", "The work
+   needs a price of £0.00 or more.", "The work needs a time of at least 1
+   minute." and "Each part needs a quantity of 1 or more." *Pattern:* the
+   job page's plain refusals, 15 Oct.
+2. **`job-*`: adding or removing a day** reads "That day has already been
+   removed." for a day that has gone, and "This job no longer exists." for
+   a deleted job. *Pattern:* the request pop-up's "This job no longer
+   exists."
+3. **`diary`: dropping finished work** reads "Couldn't move [bike]: The
+   work is already finished. Reopen the job to change it." *Pattern:* the
+   notes box's "Reopen the job to change its notes."
+4. Refusals the server already words in plain English (the diary's rule
+   refusals, "A job's first day can't be removed") still show as sent.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

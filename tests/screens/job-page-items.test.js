@@ -142,6 +142,15 @@ test('if the server refuses, it says why', async () => {
   assert.ok(has(await dlg.findByText('This order is already completed')));
 });
 
+test('a refusal for a paid order reads in plain words', async () => {
+  const { dlg, fireEvent } = await openJob(open([]));
+  answer = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted' }) };
+  fireEvent.click(dlg.getByRole('button', { name: 'Add item' }));
+  fireEvent.change(dlg.getByLabelText('Search products or services, or scan a barcode'), { target: { value: 'brake' } });
+  fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
+  assert.ok(has(await dlg.findByText("This job has been paid for, so its work and parts can't change.")));
+});
+
 test('a paid order cannot be changed here', async () => {
   const { dlg } = await openJob({ ...open([LABOUR]), status: 'completed' });
   assert.equal(has(dlg.queryByRole('button', { name: 'Add item' })), false);

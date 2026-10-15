@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { refusalText } from './refusal-words.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { ItemSearch } from './item-search.tsx';
 import { QuotePanel } from './quote-panel.tsx';
@@ -63,7 +64,7 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
       ]);
       return true;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
+      setError(refusalText(err));
       return false;
     } finally {
       setSaving(false);
