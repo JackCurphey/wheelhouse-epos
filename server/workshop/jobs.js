@@ -330,7 +330,7 @@ export async function syncJobHold(jobId) {
 // client-sent total).
 // Takes the three states, not a status: workshop_jobs.status is a generated
 // column since migration 021 and Postgres refuses a direct write. Callers that
-// still speak the old five-value vocabulary (the staff diary's POST, in server.js)
+// still speak the old five-value vocabulary (the staff diary's POST and PUT, server/routes/workshop.js)
 // translate at the boundary with readLegacyStatus().
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
