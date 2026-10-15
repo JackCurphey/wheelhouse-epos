@@ -8,7 +8,7 @@
 ## 2. The purchase-order edit route's bad lines
 
 - [x] 2.1 Added the edit-route case to `tests/purchase-orders-validation.test.js`. It failed in CI against a deliberate break, the edit route's `ValidationError` check removed (run 38735535589: "500 !== 400", the only failing test). The break is reverted
-- [ ] 2.2 Verify `npm test` and `npm run test:browser` pass in CI on the final commit (this Mac has no Postgres), then get a fresh review
+- [x] 2.2 A fresh review found no P1 or P2 issues. It confirmed the deliberate break is reverted (no net change to `purchase-orders.js`), and that the symlink test passes on this branch and fails on main's scripts. CI on the final commit (`npm test` and `npm run test:browser`; this Mac has no Postgres) is the merge gate
 
 ## Workflow follow-up
 
