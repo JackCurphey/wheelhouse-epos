@@ -18,11 +18,16 @@ the commit in `/healthz`), then the deploy workflow; then #203 step A.
 **Jack is on:** 15 Oct merged: quote routes (#207), test shop loader
 (#216), the five #139 drawings (#217, canvas and mockup republished), diary
 fixes (#218), Enter a time instead (#220) and four job page fixes from #190
-(#223). Next: set up the online test copy (#221) once he says yes on #137;
-attachments and deleting a job (WP-0.4, `server/lib/uploads.js` is in); the
-rest of #190; then the stage check once lines 1–6 of §9 are in.
-**Open for Jack:** yes to DigitalOcean on #137 (about £20 a month; 15 Oct);
-labour's VAT rate on #134 (15 Oct); before WP-3.1, two new "check these"
+(#223). Open: #225, attachments and deleting a job moved to `workshop.js`
+(the last of his WP-0.4; waits for Mark's approval, as it changes
+`server.js`). Online test copy (#221): yes posted on #137 (15 Oct); his
+DigitalOcean account is made and `doctl` is installed on his Mac, but the
+card was refused by DigitalOcean on 15 Oct, to retry on 16 Oct; then steps
+2–5 of `docs/runbooks/hosted-copy.md` (the repo is at `~/wheelhouse-epos`,
+not the guide's path). Next code in his lane: the rest of #190, #192's
+screen-only items (New job's won't-fit warning, a change request into
+another week); then the stage check once lines 1–6 of §9 are in.
+**Open for Jack:** labour's VAT rate on #134 (15 Oct); before WP-3.1, two new "check these"
 kinds and deposits on unfinished work (`openspec/changes/wp-1-6-sales-in-pence/design.md`,
 Open Questions); ask from Mark #140; till job warning for WP-3.1 (#196); the test shop's two
 defaults in `decided-while-building.md` (£0.00 unpriced services, the past
