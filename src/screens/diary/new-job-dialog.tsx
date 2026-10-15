@@ -4,7 +4,7 @@ import { apiGet, apiMutate, ApiError, jobAction } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { dayLabel, hhmm, shortDay } from './rules.ts';
+import { dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
 
 /**
  * New job (journey 12; drawn as new-job and new-job-day in
@@ -68,9 +68,17 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 const LABEL = 'text-sm font-semibold';
 const INPUT = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
 
-export function NewJobDialog({ date, startMin, mechanicId, autoChosen, people, onClose }: {
-  date: string; startMin: number; mechanicId: number | null; autoChosen: boolean; people: Person[]; onClose: () => void;
+export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, onClose }: {
+  date: string; startMin: number; mechanicId: number | null; autoChosen: boolean; entered?: boolean;
+  chooseMechanic?: (day: string) => number | null; people: Person[]; onClose: () => void;
 }) {
+  // Opened by "Enter a time instead" (Jack, 15 Oct, issue 192; drawn as
+  // new-job-entered), the form has Date and Start time boxes, filled with the
+  // diary's day and first hour. From a click on the grid it has the time clicked.
+  const [dayBox, setDayBox] = useState(chosenDate);
+  const [timeBox, setTimeBox] = useState(hhmm(chosenStart));
+  const date = entered ? dayBox : chosenDate;
+  const startMin = entered && /^\d{2}:\d{2}$/.test(timeBox) ? toMinutes(timeBox) : chosenStart;
   const queryClient = useQueryClient();
   const [newBuild, setNewBuild] = useState(false);
   const [search, setSearch] = useState('');
@@ -81,6 +89,13 @@ export function NewJobDialog({ date, startMin, mechanicId, autoChosen, people, o
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [mech, setMech] = useState<number | null>(mechanicId);
+  // Picked by hand, the mechanic stays when the date changes; otherwise it is
+  // chosen again for the new day (decision 18).
+  const [mechByHand, setMechByHand] = useState(false);
+  function changeDay(day: string) {
+    setDayBox(day);
+    if (!mechByHand && autoChosen && chooseMechanic && /^\d{4}-\d{2}-\d{2}$/.test(day)) setMech(chooseMechanic(day));
+  }
   const [status, setStatus] = useState<'scheduled' | 'waiting_parts'>('scheduled');
   const [bikeHere, setBikeHere] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +133,19 @@ export function NewJobDialog({ date, startMin, mechanicId, autoChosen, people, o
   }
 
   async function save() {
+    if (entered && (!/^\d{4}-\d{2}-\d{2}$/.test(dayBox) || !/^\d{2}:\d{2}$/.test(timeBox))) {
+      setError('Choose a date and a start time.');
+      return;
+    }
+    // A click on the grid snaps to 15 minutes; a typed time keeps to the same.
+    if (entered && startMin % 15 !== 0) {
+      setError('Choose a start time on the quarter hour, like 14:30 or 14:45.');
+      return;
+    }
+    if ((endMin ?? startMin + 60) > 24 * 60) {
+      setError('The job would run past midnight. Choose an earlier start time.');
+      return;
+    }
     if (!title.trim() || (!customer && !newBuild)) {
       setError('Give the job a title, and choose a customer or turn on New bike build.');
       return;
@@ -219,17 +247,31 @@ export function NewJobDialog({ date, startMin, mechanicId, autoChosen, people, o
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-2.5">
-            <p className="m-0 rounded-md bg-[var(--wh-state-scheduled-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-state-scheduled-ink)]">
-              {`${shortDay(date)} · ${hhmm(startMin)}${endMin ? `–${hhmm(endMin)}` : ''} · ${mechName}`}
-            </p>
-            {autoChosen ? <span className="text-[13px] text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
+            {entered ? (
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="nj-date" className={LABEL}>Date</label>
+                  <input id="nj-date" type="date" autoFocus value={dayBox} onChange={(e) => changeDay(e.target.value)} aria-invalid={error === 'Choose a date and a start time.' && !dayBox ? true : undefined} className={INPUT} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="nj-time" className={LABEL}>Start time</label>
+                  <input id="nj-time" type="time" step={900} value={timeBox} onChange={(e) => setTimeBox(e.target.value)} aria-invalid={error !== null && error.startsWith('Choose a') && (!timeBox || error.includes('quarter')) ? true : undefined} className={INPUT} />
+                </div>
+              </div>
+            ) : (
+              <p className="m-0 rounded-md bg-[var(--wh-state-scheduled-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-state-scheduled-ink)]">
+                {`${shortDay(date)} · ${hhmm(startMin)}${endMin ? `–${hhmm(endMin)}` : ''} · ${mechName}`}
+              </p>
+            )}
+            {/* Chosen for the day shown, until staff pick one themselves. */}
+            {autoChosen && !mechByHand ? <span className="text-[13px] text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
             <div className="flex flex-col gap-1.5">
               <span id="nj-mech" className={LABEL}>Mechanic</span>
               <div role="radiogroup" aria-labelledby="nj-mech" className="flex flex-wrap gap-1.5">
                 {people.map((p) => (
-                  <Pill key={p.id} on={mech === p.id} onClick={() => setMech(p.id)}>{p.name}</Pill>
+                  <Pill key={p.id} on={mech === p.id} onClick={() => { setMech(p.id); setMechByHand(true); }}>{p.name}</Pill>
                 ))}
-                <Pill on={mech === null} onClick={() => setMech(null)}>Shared queue</Pill>
+                <Pill on={mech === null} onClick={() => { setMech(null); setMechByHand(true); }}>Shared queue</Pill>
               </div>
             </div>
             <div className="flex flex-col gap-1.5">

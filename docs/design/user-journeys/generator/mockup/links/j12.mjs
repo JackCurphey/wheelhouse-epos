@@ -48,6 +48,7 @@ export default {
   'request-cancel': { 'Seen': go('diary') },
   // New job
   'new-job': NEW_JOB,
+  'new-job-entered': NEW_JOB,
   // The job
   // Close goes back to where the job was opened from (third walk, walk-through 9 L1).
   'job-overview': { ...JOB, 'Close, back to the diary': BACK },
