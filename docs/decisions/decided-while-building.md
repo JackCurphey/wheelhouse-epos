@@ -105,6 +105,38 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    mechanic, and the drawing doesn't say what that side shows. *Pattern:*
    the job page reads "Shared queue" for a job with no mechanic.
 
+### 15 Oct 2026: the hosted copy's test shop (WP-0.5, tasks group 1)
+
+The drawings' values, and where each comes from, are listed in
+`openspec/changes/add-hosted-copy/design.md` (decision 7). Where they were
+silent:
+
+1. **Services drawn "[£ price]" are £0.00.** Safety check, Gear adjustment,
+   Brake service and Gear service have no price in the drawings, and a price
+   can't hold a placeholder. *Pattern:* a product added without a price is
+   £0.00 too (the products table's default).
+2. **Jobs keep the drawn week, Mon 14 to Sun 20 September 2026.** That week
+   is in the past now, so the app carries unfinished jobs on by itself: some
+   read "Day 1 of 2" on the next day. *Pattern:* the drawings, as drawn.
+3. **The change request keeps its own mechanic.** The drawing's dashed 14:00
+   names none. *Pattern:* accepting keeps the same work (the pop-up's
+   sentence).
+4. **Working days stay at every day.** Owner setup draws Jo Taylor in the
+   workshop Tue, Wed and Sat, but the diary week gives her jobs on Mon, Thu
+   and Fri too. *Pattern:* the diary, since its jobs are what the copy is
+   for.
+5. **Waiting for you's three items arrive when the shop is loaded,** a
+   second apart, in the drawn order: Sam Reed's request, Oliver Chen's
+   change, Aisha Khan's cancellation. The drawings give the order, not the
+   times. Sam Reed's request has no booking link. *Pattern:* the drawn order.
+6. **WH-1046, with no time, is on Thu 17 Sep,** the drawings' "today". It is
+   drawn on every week's no-time row, and a job needs a day. *Pattern:* the
+   drawings' today.
+7. **No tills, and no Sam Reid.** A till's sign-in belongs to the device that
+   sets it up, so B1 is made through "Set up this till". "Sam Reid" on the
+   till check-in is left out: the Saturday worker has no name yet
+   (`personas.md:122`).
+
 ### 15 Oct 2026: the diary's No time row and Waiting cards (issue 192)
 
 1. **`diary`: Enter on a chosen Waiting card only chooses it.** Decision 14

@@ -225,6 +225,67 @@ drawings best. The file is in Mark's area (`scripts/dev/**`), so Mark
 approves it. It doesn't touch `server.js`, so it doesn't have to wait for
 WP-0.4.
 
+#### The test shop's records, and where each value comes from (task 1.1)
+
+`G/` is `docs/design/user-journeys/generator/`. The loader reads the jobs,
+the week, the pending booking, the change request and the services from
+`G/diary.mjs` itself, so they can't drift from the drawings.
+
+- **Shop:** North Street Cycles (`G/app-map.mjs:17`). Address and phone:
+  not given (`G/book.mjs:224` draws "[Shop address] · [shop phone]"), so
+  not set. Its starting rows (customer groups Blue Light and ACC, workshop,
+  label and theme settings, the Madison mock supplier) are the ones
+  `createShop()` gives every new shop (`server/auth.js:85`).
+- **No login.** Jack's login is given to him privately (spec, "Jack can
+  sign in"), so the loader makes none.
+- **Site:** Bolton, code B (`G/book.mjs:224`, `G/sites.mjs:17`). **No
+  tills:** a till's sign-in belongs to the device that sets it up, so Jack
+  makes B1, "Front counter", through "Set up this till"
+  (`G/stage1.mjs:248`), as drawn.
+- **Staff:** Jack Lewis (Owner), Jo Taylor (Staff, works in the workshop),
+  Alex Morgan (Mechanic, can use the till) (`G/setup.mjs:208`). Jo and Alex
+  each have a diary column (`G/diary.mjs:399`), so both are mechanics;
+  Alex can use the till, so is a cashier. No PINs or emails: not given.
+  Working days are left at every day: Owner setup draws Jo in the workshop
+  Tue, Wed and Sat (`G/setup.mjs:220`), but the diary week gives her jobs on
+  Mon, Thu and Fri too. "Sam Reid" on the till check-in (`G/stage1.mjs:256`)
+  is left out: the Saturday worker has no name yet (`personas.md:122`).
+- **Customers and bikes** (`G/customer.mjs:151`): Maya Patel, Trek Domane
+  AL 3, green, black mudguards, 07700 900 142, maya@example.test
+  (`G/customer.mjs:21`); Oliver Chen, Brompton C Line, black
+  (`G/diary.mjs:1929`); Sam Reed, Specialized Sirrus; Jamie Brooks, Giant
+  Escape 2; Aisha Khan, Cannondale Quick. The other four phones read
+  "[phone]", as drawn; no emails, serial numbers or other colours are given.
+- **Services** (`G/diary.mjs:329`, `:336`, `:402`): Standard service, 60
+  min, in Full service; Safety check 60, Gear adjustment 60 and Brake
+  service 45 min, in Individual service; Gear service, 90 min. Only Standard
+  service has a price, £65.00 (`G/diary.mjs:341`). The rest are drawn as
+  "[£ price]" (`G/browse.mjs:80`); a price can't hold a placeholder, so they
+  are £0.00, for Jack to overrule (`decided-while-building.md`).
+- **Product:** Shimano brake pads, SKU B05S-RX, £28.00 (`G/diary.mjs:342`).
+  No other product has a price in the drawings.
+- **Workshop jobs:** the drawings' example week, Mon 14 to Sun 20 September
+  2026 (`G/diary.mjs:388`), all 37 jobs with their WH numbers, times,
+  mechanics, services and customers (`G/diary.mjs:399`; WH-1038 and WH-1040
+  take theirs from `customerBikeOf()`, `G/diary.mjs:467`). WH-1046, a
+  Standard service with no time in the shared queue (`G/diary.mjs:504`),
+  is drawn on every week's no-time row, so it goes on the drawings' today,
+  Thu 17 Sep. Their colour
+  sets their state (`G/diary.mjs:57`): Expected is a scheduled booking with
+  the bike expected; "Booked in" has the bike in the shop; "In the
+  workshop" has work in progress; Waiting for parts; Finished; Cancelled,
+  by the customer (`G/diary.mjs:414`). Change requested is WH-1052, with
+  the customer's requested 14:00 (`G/diary.mjs:516`). Sam Reed's Brake
+  service request, Fri 18 Sep 10:00 to 10:45, is a pending booking with no
+  mechanic (`G/diary.mjs:511`). It accepted the booking terms, which puts it
+  in Waiting for you with the change request and the cancellation. The
+  drawings give those three no times, only an order (`G/diary.mjs`,
+  `WAITING`), so they arrive a second apart, in that order, when the shop
+  is loaded. It has no drawn number, so it takes the next one after the
+  week's, and has no booking link: its code would have to be given to
+  someone, and nobody is drawn receiving it. A job's title is its service.
+  Quotes are left out of this first version.
+
 ### 8. Rollback
 
 - **No new migration:** start the previous image on the server (the deploy
