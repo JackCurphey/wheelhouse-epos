@@ -1,0 +1,11 @@
+# Caddy sits in front of the app on the hosted copy (WP-0.5): it gets and
+# renews the HTTPS certificate, sends http:// to https://, and passes
+# requests to the app. The app trusts these two headers (TRUST_PROXY=1,
+# server/proxy-trust.js), so Caddy sets them itself rather than passing on
+# whatever a caller sent.
+{$SITE_ADDRESS} {
+	reverse_proxy app:4000 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
