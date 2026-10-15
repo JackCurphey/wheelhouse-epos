@@ -183,7 +183,7 @@ const BOARD = {
   // Jack (from Mark, or a decision), with a link where there is one, and the
   // next few pieces for each person. Keep it short; the rest is on Detail.
   overview: {
-    now: 'Stage 0. On 15 Oct Mark finished his half of the server split: every route of his is out of server.js. What the online test copy does and where it lives are decided: DigitalOcean in London, about £20 a month. It waits for your yes, and you set it up yourself with a step-by-step guide.',
+    now: 'Stage 0. On 15 Oct Mark finished his half of the server split: every route of his is out of server.js. What the online test copy does and where it lives are decided: DigitalOcean in London, about £20 a month. It waits for your yes, and you set it up yourself with a step-by-step guide. Your quote routes, the test shop loader, the five drawings, and the diary and job page fixes went in the same day.',
     next: {
       Mark: [
         { what: 'Away after 15 Oct', detail: 'Everything of his is merged. Your quote routes (#207) and test shop loader (#216) are approved, so you can carry on' },
@@ -192,8 +192,8 @@ const BOARD = {
       ],
       Jack: [
         { what: 'Set up the online test copy (#221)', detail: 'Say yes on #137, open the DigitalOcean account, then follow the guide (docs/runbooks/hosted-copy.md). About 30 minutes, mostly waiting' },
-        { what: 'Merge your quote routes (#207) and the test shop loader (#216)', detail: 'Both approved by Mark on 15 Oct' },
-        { what: 'Move attachments and deleting a job (WP-0.4)', detail: 'The shared uploads file is in (#205). Then your stage check, once lines 1 to 6 are in' },
+        { what: 'Move attachments and deleting a job (WP-0.4)', detail: 'The last of your server split: the shared uploads file is in (#205). Then your stage check, once lines 1 to 6 are in' },
+        { what: 'The rest of the job page\'s known problems (#190)', detail: 'Hold, plain refusals, finished notes and the ended-booking words are done (#223); bike and work moves on an ended booking, and carry-over, remain' },
       ],
     },
     waiting: [
@@ -201,8 +201,8 @@ const BOARD = {
       { from: 'Mark', what: 'Labour\'s VAT rate', detail: 'The shop\'s standard rate set once in Settings, a rate per service, or leave it until VAT reports. Nothing is assumed meanwhile. Asked 15 Oct.', links: [134] },
       { from: 'Mark', what: 'Later, before WP-3.1', detail: 'Two new kinds of "check these" item, and whether the till may take a deposit on a job whose work isn\'t finished (#203\'s open questions).' },
       { from: 'Mark', what: 'Later, before their stages', detail: 'A go-live checklist, before stage 8. Asked 4 Oct.', links: [140] },
-      { what: 'Five things to draw', detail: 'Ask us to help before stage 2; a bike\'s page, fixing an unsent sale and sending a payment link before stage 3; where Sign out everywhere sits on a person\'s page before stage 5 (8 Oct).', links: [139] },
-      { what: 'Still to design', detail: 'Where a mechanic signs off a finished job, and whether the job window gets a Change requested badge (stage 4).' },
+      { what: 'Two defaults in the test shop', detail: 'Services the drawings don\'t price are £0.00, and the jobs keep the drawings\' week of 14 to 20 Sep, now past. Both in decided-while-building.md, for you to overrule.', links: [216] },
+      { what: 'Still to design', detail: 'Where a mechanic signs off a finished job (stage 4).' },
       { what: 'Later, with the shop', detail: 'Ask Citrus Lime for the full export (stage 7), the Paymentsense questions (when it is added), and your yes for the Stripe account and reader.', links: [171, 138] },
       { what: 'When the till pays for jobs (WP-3.1)', detail: 'Approve how the warning looks when a job changes while it is being paid for.', links: [196] },
     ],
@@ -211,8 +211,8 @@ const BOARD = {
     ],
   },
   updated: '15 October 2026',
-  lead: 'Stage 0 is still under way. Mark\'s half of the server split is done. Yours has quotes approved to merge (#207), then attachments and deleting a job. The online test copy is decided (DigitalOcean, London) and waits for your yes on #137; you set it up yourself.',
-  sub: 'Merged 15 Oct: Mark\'s server split (#202, #205, #209, #210 to #214), your #151 follow-ups (#204, #208), sales in pence and where a job\'s order lives (#203), the online test copy\'s plan and host (#201, #215) and its setup script and guide (#219); your workshop moves (#180 to #184), the job fixes (#188, #189), the two workshop specs (#187, #191) and diary fixes (#193, #218).',
+  lead: 'Stage 0 is still under way. Mark\'s half of the server split is done, and yours has only attachments and deleting a job left (quotes moved, #207). The test shop loader is in (#216). The online test copy is decided (DigitalOcean, London) and waits for your yes on #137; you set it up yourself.',
+  sub: 'Merged 15 Oct: Mark\'s server split (#202, #205, #209, #210 to #214), your #151 follow-ups (#204, #208), sales in pence and where a job\'s order lives (#203), the online test copy\'s plan and host (#201, #215) and its setup script and guide (#219); your workshop moves (#180 to #184), the job fixes (#188, #189), the two workshop specs (#187, #191) and diary fixes (#193, #218); then your quote routes (#207), the test shop loader (#216), the five pages #139 left undrawn (#217), New job\'s Enter a time instead (#220) and the job page fixes (#223). The canvas and clickable mockup are republished.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -280,20 +280,23 @@ const BOARD = {
     { status: 'done', what: 'Follow-ups from your review of the split', detail: 'Mark: scripts run through a symlink, a test for the purchase-order edit route, and stock changes no longer wait on Shopify', pr: 204 },
     { status: 'done', what: 'Sales in pence, and where a job\'s order lives', detail: 'Mark: the answer to #134. A job\'s order stays where it is, in pence; every place the old sales tables are used, the steps that move them, and a totals check', pr: 203 },
     { status: 'done', what: 'The online test copy: plan, host and setup script', detail: 'Mark: what it must do (#201), DigitalOcean in London (#215), and the script and your guide (#219). Waits for your yes on #137', pr: 219 },
-    { status: 'review', what: 'Server split: your quote routes', detail: 'You: the staff quote routes to workshop.js. Approved by Mark on 15 Oct', pr: 207 },
-    { status: 'review', what: 'The test shop loader', detail: 'You: loads North Street Cycles from the drawings. Approved by Mark on 15 Oct', pr: 216 },
-    { status: 'next', what: 'Server split: the rest', detail: 'You: attachments and deleting a job. Mark: the last booking route after #207. Then the shared definitions the screens use' },
+    { status: 'done', what: 'Server split: your quote routes', detail: 'The staff quote routes to workshop.js, their helpers to jobs.js', pr: 207 },
+    { status: 'done', what: 'The test shop loader', detail: 'Loads North Street Cycles and the drawings\' example week onto an empty database, for the online test copy', pr: 216 },
+    { status: 'done', what: 'Drawings: the five pages #139 left undrawn', detail: 'Sign out everywhere, Ask us to help, a bike\'s own page, fixing a sale that didn\'t send, sending a link to pay; your answers of 15 Oct', pr: 217 },
+    { status: 'done', what: 'Diary: jobs with no time, and a second tap', detail: 'A job with no time opens and shows in the Day view; a second tap opens a Waiting card on a tablet', pr: 218 },
+    { status: 'done', what: 'New job: Enter a time instead', detail: 'Date and Start time boxes; a new date chooses the mechanic again', pr: 220 },
+    { status: 'done', what: 'Job page: hold, plain refusals, finished notes, ended bookings', detail: 'Put on hold; refusals in plain words; notes read-only on finished work; Change requested, Cancelled, Declined, Expired', pr: 223 },
+    { status: 'next', what: 'Server split: the rest', detail: 'You: attachments and deleting a job. Mark: the last booking route, now that #207 is in. Then the shared definitions the screens use' },
     { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'You set it up with the guide once you say yes on #137. Then Mark adds the safety checks and automatic updates' },
     { status: 'next', what: 'Stage 0 check', detail: 'You walk booking, the till and the diary in the real app. Waits for everything above' },
   ],
   asks: [
     { what: 'Wording to check', detail: 'A few words the drawings needed that no answer gave, in decided-while-building.md, for you to overrule if you want.' },
     { what: 'Check with the shop', detail: 'Citrus Lime\'s exports are listed (#170); ask Citrus Lime for the full customer list and workshop history nearer the end (#171). Card payments: Stripe first (#174); the Paymentsense questions (#138) wait until Paymentsense is added. Your yes is needed later for the Stripe account and which reader to buy.' },
-    { what: 'Pages not drawn yet', detail: 'Every one of the 95 pages a mockup button leads to that no drawing shows now has an answer and a work package (#139, 8 Oct). Four are to be drawn before their stage.' },
+    { what: 'Pages not drawn yet', detail: 'Every one of the 95 pages a mockup button leads to now has an answer and a work package (#139), and the five to draw before their stages are drawn (#217, 15 Oct).' },
     { what: 'Mechanic sign-off (Workshop day 64)', detail: 'Where and when a mechanic puts their name to a finished job. Still to design.' },
     { what: 'Staff roles', detail: 'The roles and switches are written down (#153), but the server still only knows who the Owner is until WP-1.1 is built.' },
     { what: 'Things the server cannot do yet', detail: 'Choosing the mechanic as you accept a booking, offering another time, and a message with a decline.' },
-    { what: 'A Change requested badge on the job window?', detail: 'The diary has the colour; the job window has no badge for it. Not drawn, so it\'s yours to decide; it belongs to the stage 4 job page (stage 1 gaps, decision 25). Until then the job window shows the job\'s own stage.' },
   ],
   // Each page of the app and how far it is built: built, part (partly built),
   // old (only in the old app for now) or none (drawn, not built yet).
@@ -305,7 +308,7 @@ const BOARD = {
       ] },
       { room: 'Workshop', pages: [
         ['Diary', 'built', 'Week, day and phone views; Waiting for you; drag jobs; New job; jobs over several days'],
-        ['Job window', 'part', 'Move a job through its stages; notes; work and parts; barcode scan. Not yet: the Done tick, a note per line'],
+        ['Job window', 'part', 'Move a job through its stages, or put it on hold; notes; work and parts; barcode scan; refusals in plain words. Not yet: the Done tick, a note per line'],
         ['Quotes', 'built', 'Build, send by text, the customer approves, Quoting in teal'],
         ['Overview', 'none'],
       ] },
