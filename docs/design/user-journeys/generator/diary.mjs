@@ -326,14 +326,14 @@ const JOB_CUSTOMER = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@
 // Service options for new-job-desktop's service select (item 23): durations
 // match what's already used across the example week's JOBS below, so the
 // "60 min" the warning quotes is the real duration of the first (default) option.
-const SERVICE_OPTIONS = [['Standard service', 60], ['Safety check', 60], ['Gear adjustment', 60], ['Brake service', 45]];
+export const SERVICE_OPTIONS = [['Standard service', 60], ['Safety check', 60], ['Gear adjustment', 60], ['Brake service', 45]];
 // Decision 66: the work is chosen as branching pills — a first-level group
 // (Full service / Individual service), then that group's own services as
 // pills. Grouping used (shops group their own services in service settings,
 // per the decision): Full service holds the one all-in service; Individual
 // service holds every single-item service — all four names are the ones
 // already in SERVICE_OPTIONS above, nothing invented.
-const SERVICE_GROUPS = { 'Full service': ['Standard service'], 'Individual service': ['Safety check', 'Gear adjustment', 'Brake service'] };
+export const SERVICE_GROUPS = { 'Full service': ['Standard service'], 'Individual service': ['Safety check', 'Gear adjustment', 'Brake service'] };
 const serviceGroupOf = (name) => Object.keys(SERVICE_GROUPS).find((g) => SERVICE_GROUPS[g].includes(name));
 const serviceDurationOf = (name) => (SERVICE_OPTIONS.find(([n]) => n === name) || [])[1];
 const CONCERN = '“My rear brake squeals and feels weak. The gears could use a tune-up too.”';
@@ -501,19 +501,19 @@ const STARTING_STATUS = ['Expected', 'Booked in', 'Waiting for parts']; // 3 Oct
 // Unscheduled row: bikes with no set time (stage2's "Shared queue" example).
 // A confirmed job with no set time uses the ordinary scheduled colour — purple
 // is reserved for pending requests only (decision 12).
-const UNSCHEDULED = [{ job: 'WH-1046', title: 'Standard service', detail: 'Shared queue · 60 min' }];
+export const UNSCHEDULED = [{ job: 'WH-1046', title: 'Standard service', detail: 'Shared queue · 60 min' }];
 // A pending booking request also sits in the diary, in the slot it asked for
 // (decision 12). No mechanic is assigned yet, so it only shows in the
 // Everyone view. Fri 18 Sep 10:00–10:45 (45 min, stage2's REQ effort). Item 2
 // (27 Sep round 2): the pending block shows bike, then job title, then
 // "Pending" — bike and jobTitle are explicit fields so pendingBlock can lead
 // with the bike, same as an ordinary job block.
-const PENDING_DIARY = { day: 4, start: 10 * 60, dur: 45, customer: 'Sam Reed', bike: 'Specialized Sirrus', jobTitle: 'Brake service', detail: '10:00–10:45 · requested Fri 18 Sep' };
+export const PENDING_DIARY = { day: 4, start: 10 * 60, dur: 45, customer: 'Sam Reed', bike: 'Specialized Sirrus', jobTitle: 'Brake service', detail: '10:00–10:45 · requested Fri 18 Sep' };
 // Oliver Chen's change request: shown at its current time (WH-1052, Mon 10:00,
 // amber) plus a dashed "requested" outline at the proposed new time (14:00).
 // Item 2: the outline reads "Brompton C Line · Requested 14:00" — bike, not
 // the customer's name (person stays for the aria-label).
-const REQUEST_OUTLINE = { day: 0, start: 14 * 60, dur: 60, label: 'Requested 14:00', person: 'Oliver Chen', bike: 'Brompton C Line' };
+export const REQUEST_OUTLINE = { day: 0, start: 14 * 60, dur: 60, label: 'Requested 14:00', person: 'Oliver Chen', bike: 'Brompton C Line' };
 // Waiting for you: one of each kind (stage2's requests and REQ example customers).
 const WAITING = [
   { kind: 'New booking request', tone: 'pending', customer: 'Sam Reed', bike: 'Specialized Sirrus', detail: 'Brake service · requested Fri 18 Sep' },

@@ -12,14 +12,14 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
 ## 1. The test shop loaded from the drawings (Jack could take this, with Mark's approval)
 
-- [ ] 1.1 List each record the test shop needs (shop, site, staff, customers, bikes, products, workshop jobs), with the drawing or persona each value comes from, or `[n]`. Add the list to `design.md` and check it against `docs/design/user-journeys/generator/` and `personas.md`
-- [ ] 1.2 Write tests first for `scripts/dev/load-test-shop.mjs`, and watch each fail:
+- [x] 1.1 List each record the test shop needs (shop, site, staff, customers, bikes, products, workshop jobs), with the drawing or persona each value comes from, or `[n]`. Add the list to `design.md` and check it against `docs/design/user-journeys/generator/` and `personas.md`
+- [x] 1.2 Write tests first for `scripts/dev/load-test-shop.mjs`, and watch each fail:
   - it loads onto an empty database;
   - it refuses when the test shop already exists, changing nothing;
   - it refuses when any other shop exists;
   - another shop can't see the test shop's rows.
-- [ ] 1.3 Write the loader using the server's database helpers. Verify the 1.2 tests pass, and that the app on `localhost:8080` shows the test shop after running it
-- [ ] 1.4 Verify `npm test` and `npm run test:browser` pass, then get a fresh review against `specs/hosted-copy/spec.md`
+- [x] 1.3 Write the loader using the server's database helpers. Verify the 1.2 tests pass, and that the app on `localhost:8080` shows the test shop after running it. Shown on a local copy of the app run on its own port against a throwaway database, because the compose database behind 8080 holds other shops and the loader refuses there: the diary shows the drawn week of 14 to 20 September with Waiting for you (3)
+- [x] 1.4 Verify `npm test` and `npm run test:browser` pass, then get a fresh review against `specs/hosted-copy/spec.md`. `npm test` 1750/1750 and `npm run test:browser` 34/34. The fresh review found WH-1038 and WH-1040 without their drawn customers, WH-1046 missing, and Waiting for you out of the drawn order; each fixed with a test watched failing first
 
 ## 2. The hosted-copy guard, Shopify switched off, and the commit in the health check (Mark; after WP-0.4)
 
