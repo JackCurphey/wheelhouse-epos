@@ -428,7 +428,15 @@ For screens not yet replaced, every job SHALL also show one of five old statuses
 - **THEN** the old status is one of pending, scheduled, waiting_parts, on_hold, complete
 
 ### Requirement: The old app can still set a job's status on create and save
-Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save whose status matches the status the job already reads SHALL change none of the job's states. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop.
+Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save whose status matches the status the job already reads SHALL change none of the job's states. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop. While a customer's change request is waiting, an old status whose booking is scheduled (scheduled, waiting_parts, on_hold or complete) SHALL leave the booking and the request as they are, unless the save puts the job on exactly the requested day, start and mechanic, which SHALL accept the request; "pending" SHALL end the request.
+
+#### Scenario: Saving a job with a change request waiting
+- **WHEN** a customer's change request is waiting and staff save the job from the old form, which sends the status "scheduled", without moving it to the requested time
+- **THEN** the request stays waiting and the booking is unchanged
+
+#### Scenario: Dropping a job onto the time the customer asked for
+- **WHEN** a customer's change request is waiting and a save puts the job on the requested day, start and mechanic, with no status or "scheduled"
+- **THEN** the request is accepted and the booking is scheduled
 
 #### Scenario: A cancelled booking saved as scheduled
 - **WHEN** staff save a cancelled job with the old status "scheduled"
@@ -477,7 +485,7 @@ The job page SHALL show the button for the job's next step: Book in (bike expect
 - **THEN** there is no Book in, Start work, Hand over or Mark ready for collection button
 
 #### Scenario: Someone else moved the job first
-- **WHEN** staff press a stage button and the shop refuses it as stale
+- **WHEN** staff press a stage button and the shop refuses it as stale, or as a move the job can no longer make
 - **THEN** the page says "This job changed while you were looking at it." and reloads the job
 
 ### Requirement: The job page has one notes box and a "Bike is here" switch
