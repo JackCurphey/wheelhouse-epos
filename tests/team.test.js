@@ -322,7 +322,7 @@ test('deleting an employee row leaves their login intact (employee_id goes to nu
         password: 'password123',
       });
 
-      // Mirrors DELETE /api/employees/:id/permanent in server.js.
+      // Mirrors DELETE /api/employees/:id/permanent in server/routes/team.js.
       await prepare('DELETE FROM employees WHERE id = ?').run(member.employeeId);
 
       const { rows: [login] } = await pool.query('SELECT * FROM logins WHERE id = $1', [member.loginId]);
