@@ -1,0 +1,44 @@
+# The hosted copy's containers (WP-0.5): the app and Caddy. The database is
+# DigitalOcean's managed Postgres, so there's no Postgres container. Lives in
+# /opt/wheelhouse on the server, beside .env (written by remote-install.sh,
+# never committed) and the database's certificate (ca.crt).
+services:
+  app:
+    build: ./app
+    image: wheelhouse-app:current
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # DigitalOcean signs the database's certificate with its own authority;
+      # the app verifies it (PGSSL=require), so Node must trust this one.
+      NODE_EXTRA_CA_CERTS: /run/wheelhouse/ca.crt
+    volumes:
+      - ./ca.crt:/run/wheelhouse/ca.crt:ro
+    # No published port: only Caddy reaches the app, which is what makes
+    # TRUST_PROXY safe (server/proxy-trust.js).
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/healthz', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
