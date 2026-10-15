@@ -432,7 +432,7 @@ For screens not yet replaced, every job SHALL also show one of five old statuses
 - **THEN** the old status is one of pending, scheduled, waiting_parts, on_hold, complete
 
 ### Requirement: The old app can still set a job's status on create and save
-Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop. The one exception is a save while a customer's change request is waiting: an old status whose booking is scheduled (scheduled, waiting_parts, on_hold or complete) SHALL leave the booking and the request as they are, unless the save puts the job on exactly the requested day, start and mechanic, which SHALL accept the request; "pending" SHALL end the request.
+Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save whose status matches the status the job already reads SHALL change none of the job's states. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop. While a customer's change request is waiting, an old status whose booking is scheduled (scheduled, waiting_parts, on_hold or complete) SHALL leave the booking and the request as they are, unless the save puts the job on exactly the requested day, start and mechanic, which SHALL accept the request; "pending" SHALL end the request.
 
 #### Scenario: Saving a job with a change request waiting
 - **WHEN** a customer's change request is waiting and staff save the job from the old form, which sends the status "scheduled", without moving it to the requested time
@@ -447,8 +447,12 @@ Creating or saving a job MAY carry an old status, which SHALL be set directly wi
 - **THEN** the booking is scheduled again
 
 #### Scenario: Saving work in progress from the old form
-- **WHEN** a job's work is in progress and staff save it from the old form, which sends the status "scheduled"
-- **THEN** the work is set back to not started
+- **WHEN** a job's work is in progress and staff save it from the old form, which sends the status "scheduled" it already reads
+- **THEN** the work stays in progress and the other changes are saved
+
+#### Scenario: Changing the status from the old form
+- **WHEN** a job's work is in progress and staff save it with the status "on_hold"
+- **THEN** the work is on hold
 
 #### Scenario: An unknown status
 - **WHEN** a create or save sends a status that is not one of the five

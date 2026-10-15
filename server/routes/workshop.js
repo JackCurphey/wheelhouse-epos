@@ -517,12 +517,10 @@ export function register(route) {
     // custody_state is left alone. The old status never expressed custody (Phase
     // 1: readLegacyStatus('complete') returns custody: null), so deriving one
     // here would reset a bike that is in the shop back to 'expected'.
-    let legacyStates = null;
+    let requestedStatus = null;
     if (body.status !== undefined) {
-      const requested = resolveJobStatus(body.status, null);
-      if (requested === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
-      const { booking, work: workState } = readLegacyStatus(requested);
-      legacyStates = { booking, workState };
+      requestedStatus = resolveJobStatus(body.status, null);
+      if (requestedStatus === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
     }
 
     // A complete job is a record of work already done, so its details are
@@ -561,6 +559,15 @@ export function register(route) {
         // that is no longer a request are cleared on any save.
         const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
         if (body.version !== undefined && current && current.version !== body.version) return staleRefusal;
+        // The old form sends its dropdown's status on every Save, and the old
+        // statuses have no "in progress": a status the job already reads changes
+        // nothing, or every Save would reset work in progress (Jack, 8 Oct).
+        // Compared with the job as read under the lock (Mark's review on #189).
+        let legacyStates = null;
+        if (requestedStatus !== null && requestedStatus !== current?.status) {
+          const { booking, work: workState } = readLegacyStatus(requestedStatus);
+          legacyStates = { booking, workState };
+        }
 
         const slotError = await checkJobSlot({
           jobDate,
