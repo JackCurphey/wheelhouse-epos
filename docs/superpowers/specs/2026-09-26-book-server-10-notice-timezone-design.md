@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** Its staff side (the diary, capacity, the shop's today, workshop settings) is now described in `openspec/specs/workshop-diary/spec.md`; its customer side moves with the online-booking spec. Kept as the record of how it was designed.
+
 # Book server piece 10: minimum notice and the shop's time zone
 
 **Date:** 2026-09-26. **For:** d4 (`2026-09-26-book-d4-date-screen-design.md`),
