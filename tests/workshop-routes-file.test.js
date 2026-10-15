@@ -24,6 +24,14 @@ const MOVED = [
   ['POST', '/api/workshop-jobs/:id/decline-change'],
   ['POST', '/api/workshop-jobs/:id/cancellation-seen'],
   ['GET', '/api/workshop-waiting'],
+  // Staff quotes, once the sale helpers were in server/lib/sales.js (#202).
+  // The portal's quote routes are Mark's and stay in server.js (#180).
+  ['GET', '/api/quotes/:id'],
+  ['GET', '/api/workshop-jobs/:id/quotes'],
+  ['POST', '/api/workshop-jobs/:id/quotes'],
+  ['POST', '/api/quotes/:id/send'],
+  ['POST', '/api/quotes/:id/withdraw'],
+  ['POST', '/api/quotes/:id/answer'],
 ];
 // POST /api/workshop-jobs/:id/<action>, each registered by jobActionRoute.
 const ACTIONS = [

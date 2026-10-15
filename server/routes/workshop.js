@@ -8,12 +8,20 @@
 import { prepare, dbExec, pool } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
+import { currentSession } from '../lib/session.js';
+import { isHttpsRequest } from '../proxy-trust.js';
+import { sendSms } from '../sms.js';
+import {
+  createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
+  serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
+} from '../workshop/quotes.js';
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, withBookingLock, withJobBookingLock, applyLocked,
+  sendQuoteResult, answerAndAddToOrder,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -263,6 +271,12 @@ function waitingItem(row) {
       }
       : {}),
   };
+}
+
+// The address a customer opens: APP_PUBLIC_URL when set, else the address
+// the member of staff is using.
+function publicBase(req) {
+  return process.env.APP_PUBLIC_URL || `${isHttpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
 }
 
 export function register(route) {
@@ -800,4 +814,76 @@ export function register(route) {
   // See reopen-custody above: a failed final check is not a bike coming back.
   // screens: reopen
   jobActionRoute('reopen-work', work, 'reopen');
+
+  // ---------- Quotes ----------
+  // screens: quote-editor, quote-send, approved
+  route('GET', '/api/quotes/:id', async (req, res, params) => {
+    const result = await readQuote({ quoteId: Number(params.id) });
+    if (!result.ok) return notFound(res, 'Quote not found');
+    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+  });
+
+  // screens: quote-editor, approved, job
+  route('GET', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
+    const rows = await listRevisions({ jobId: Number(params.id) });
+    sendJson(res, 200, rows.map(serializeQuote));
+  });
+
+  // screens: quote-editor
+  route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    if (!Array.isArray(body.lines)) return badRequest(res, 'lines must be an array');
+    sendQuoteResult(res, await createQuoteRevision({ jobId: Number(params.id), lines: body.lines }), 201);
+  });
+
+  // Send (journey 4 decision 5): the quote goes to sent, the customer's booking
+  // link is issued afresh (only a hash of the old one is kept, so it can't be
+  // sent again; the old link stops working), and the link goes to them by text.
+  // The answer says whether the text went. The staff app's one-minute Undo
+  // lives in the app, which calls this only when the minute is up.
+  // screens: quote-send
+  route('POST', '/api/quotes/:id/send', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const result = await sendQuoteForApproval({ quoteId: Number(params.id) });
+    if (!result.ok) return sendQuoteResult(res, result);
+    const job = await db.prepare(
+      `SELECT w.id, w.customer_id, c.name AS customer_name, c.phone, trim(b.make || ' ' || b.model) AS bike_label
+         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id LEFT JOIN customer_bikes b ON b.id = w.bike_id
+        WHERE w.id = ?`
+    ).get(result.quote.workshop_job_id);
+    const code = newLinkCode();
+    await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(code), nowIso(), job.id);
+    const { rows: [shop] } = await pool.query('SELECT slug, name FROM shops WHERE id = $1', [shopId]);
+    const link = `${publicBase(req)}${linkPath(shop.slug, code)}`;
+    let message;
+    if (!job.customer_id) message = { status: 'not_sent', reason: 'This job has no customer.' };
+    else if (!job.phone) message = { status: 'not_sent', reason: `${job.customer_name} has no phone number on file.` };
+    else if (!process.env.TWILIO_ACCOUNT_SID) message = { status: 'not_sent', reason: "Texts aren't set up on this Wheelhouse yet." };
+    else {
+      const text = `${shop.name}: your quote for ${job.bike_label || 'your bike'} is ready. See it and choose what to go ahead with: ${link}`;
+      const sent = await sendSms(job.phone, text);
+      await db.prepare(
+        `INSERT INTO customer_messages (customer_id, body, status, error, provider_sid, sent_by_login_id) VALUES (?, ?, ?, ?, ?, ?)`
+      ).run(job.customer_id, text, sent.ok ? 'sent' : 'failed', sent.ok ? null : sent.error, sent.ok ? sent.sid : null, ctx?.login?.id ?? null);
+      message = sent.ok ? { status: 'sent' } : { status: 'failed', reason: sent.error };
+    }
+    sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
+  });
+
+  // screens: quote-send
+  route('POST', '/api/quotes/:id/withdraw', async (req, res, params) => {
+    sendQuoteResult(res, await withdrawQuote({ quoteId: Number(params.id) }));
+  });
+
+  // Record their answer (journey 4 decision 4): staff, after a phone call or a
+  // chat in the shop. Who took it and when are recorded with each line.
+  // screens: approved
+  route('POST', '/api/quotes/:id/answer', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    const body = await readJsonBody(req);
+    if (!['phone', 'in_shop'].includes(body.via)) return badRequest(res, "via must be 'phone' or 'in_shop'");
+    sendQuoteResult(res, await answerAndAddToOrder({
+      quoteId: Number(params.id), decisions: body.decisions, via: body.via, loginId: ctx?.login?.id ?? null,
+    }));
+  });
 }
