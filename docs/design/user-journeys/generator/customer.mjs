@@ -147,6 +147,39 @@ ${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') :
 const deleteLine = () => `<p role="note" style="margin: 0; display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span><strong>Asked to delete their account on [date]</strong> · from their account on the website · answer by [date]. Still in the way: bike in the workshop, ${mono('WH-1042')}. Store credit ${mono('£[credit]')} will be lost.</span></p>`;
 const customerPage = (on = {}) => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${backLink()}${header({ owes: on.accounts !== false, over: !!on.over })}${on.deleteRequest ? deleteLine() : ''}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary(on)}${history('Everything', !!on.empty, on.c2w || '')}</div></div>`, STAFF);
 
+// ---------- A bike's own page (not-drawn pages #7 and #8; Jack, 15 Oct: "1") ----------
+// Its own page, laid out as her page is (Detail page, block 4): the bike's
+// details and warranty on the left (Customer service 4: bought here, and the
+// warranty left), its jobs on the right. Header search can open it directly.
+// Make, model, colour, frame number and a note are what a bike holds
+// (BIKE-01); the frame number and dates aren't drawn anywhere, so [ ].
+const bikeBack = () => `<a href="cs-page-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; align-self: flex-start; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: none">${icon('back', 16)}${MAYA.name}</a>`;
+const bikeHeader = () => `<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="font-size: 22px; font-weight: 700">Trek Domane AL 3</span><span style="font-size: 14px; color: ${C.muted}">${MAYA.name}’s bike</span></span>
+${button('New job')}</div>`;
+function bikeSummary() {
+  const details = `${secHead('Details', smallLink('Edit'))}${facts('Colour', 'Green')}${facts('Frame number', mono('[frame number]'))}
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 13px; font-weight: 700">Note</span><span style="font-size: 14px; line-height: 1.45">Black mudguards</span></div>`;
+  const cover = `${secHead('Warranty')}${facts('Bought here', '[date]')}<div style="display: flex; align-items: center; min-height: 40px; border-top: 1px solid ${C.border}">${warranty(true)}</div>`;
+  const owner = `${secHead('Belongs to')}${factLink('cs-page-desktop.dc.html', MAYA.name, mono(MAYA.phone))}`;
+  return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${cover}${owner}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
+}
+// Her jobs are all on this bike, sorted as her page sorts them (walk-through 9
+// L5, Customer service 12): a Finished job is still open, its bike waiting to
+// be collected, so Open now has the newest one on or before today; Earlier
+// has the older Finished ones.
+function bikeJobs() {
+  const ready = mj().filter((j) => j.key === 'ready' && j.day <= TODAY);
+  const open = [...mj().filter((j) => j.key !== 'ready').slice(0, 3), ...ready.slice(0, 1)]
+    .sort((a, b) => b.day - a.day || b.start - a.start);
+  const earlier = ready.slice(1, 3);
+  return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 17px; font-weight: 700">Jobs on this bike</span>
+<div style="display: flex; flex-direction: column">${subHead('Open now')}${open.map(jobRow).join('')}${subHead('Earlier, newest first')}${earlier.map(jobRow).join('')}
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ([n])</a></div></div>`, 'flex-grow: 1; min-width: 0');
+}
+const bikePage = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${bikeBack()}${bikeHeader()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${bikeSummary()}${bikeJobs()}</div></div>`, STAFF);
+
 // ---------- Customers: find someone, or add them ----------
 const CUSTOMERS = [['Maya Patel', 'Trek Domane AL 3', MAYA.phone], ['Oliver Chen', 'Brompton C Line', '[phone]'], ['Sam Reed', 'Specialized Sirrus', '[phone]'], ['Jamie Brooks', 'Giant Escape 2', '[phone]'], ['Aisha Khan', 'Cannondale Quick', '[phone]']];
 const custRow = ([n, bike, ph]) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 14px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: inline-flex; width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-size: 13px; font-weight: 700">${n.split(' ').map((x) => x[0]).join('')}</span><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${n}</span><span style="font-size: 13px; color: ${C.muted}">${bike}</span></span>${n === 'Maya Patel' ? owesChip() : ''}${isPhone() ? '' : mono(ph, 'font-size: 14px; color: ' + C.muted)}</a>`;
@@ -195,6 +228,7 @@ def('cs-page', () => { SHOP = 'Bolton'; try { return customerPage(); } finally {
 def('cs-page-off', () => customerPage({ accounts: false }));
 def('cs-page-over', () => customerPage({ over: true }));
 def('cs-page-new', () => customerPage({ empty: true }));
+def('cs-bike', bikePage);
 def('cs-add', () => overlay(customerList(), addDialog()));
 def('cs-add-company', () => overlay(customerList(), addDialog(true)));
 
@@ -314,6 +348,7 @@ export const customerPageAt = (size) => withSize(size, () => customerPage());
 export const TITLES = {
   'cs-list': 'Customers: find someone, or add them',
   'cs-page': 'A customer’s page: details, bikes with warranty, one history',
+  'cs-bike': 'A bike’s page: details, warranty and its jobs',
   'cs-page-off': 'A shop with customer accounts switched off (Payments › Ways to pay)',
   'cs-page-over': 'Over her account limit',
   'cs-page-new': 'A new customer: nothing in the history yet',
@@ -340,7 +375,7 @@ export const TITLES = {
   'cs-opt-timeline': 'Option 2: a summary on the left, one history on the right',
 };
 export const ROWS = [
-  { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-over', 'cs-page-new', 'cs-page-off', 'cs-sale', 'cs-credit', 'cs-edit', 'cs-add', 'cs-add-company'] },
+  { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-bike', 'cs-page-over', 'cs-page-new', 'cs-page-off', 'cs-sale', 'cs-credit', 'cs-edit', 'cs-add', 'cs-add-company'] },
   // UX walk-through 5 M5.
   { label: 'A Cycle to Work order on her page', screens: ['cs-page-c2w', 'cs-page-c2w-collected', 'cs-search-c2w'] },
   { label: 'Accounts (pay later)', screens: ['cs-account', 'cs-transfer'] },

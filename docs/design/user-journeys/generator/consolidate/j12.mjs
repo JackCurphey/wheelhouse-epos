@@ -25,6 +25,7 @@ export default {
   // New job from an empty slot
   'new-job-pick': into('diary', 'Workshop day 22', "After 'New job': button reads 'Choose a time'; 'Click a free time in the diary'; free times tinted"),
   'new-job': keep(9),
+  'new-job-entered': into('new-job', 'Issue 192 (Jack, 15 Oct: add the boxes)', "From 'Enter a time instead': Date and Start time boxes, filled with the diary's day and first hour"),
   'new-job-day': into('new-job', 'Workshop day 18, 54', "From Jo's day column: mechanic pre-filled, no customer yet, 'The bike is here now' on"),
   // The job — one page, no tabs (the 7 stages are its situation list)
   'job-overview': keep(15, { sizes: ['desktop', 'tablet', 'phone'] }), // rule 3: own touch layout (Workshop day 3)

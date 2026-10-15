@@ -54,6 +54,7 @@ export default {
     '+ Link to the job': STAY, '+ Opening hours': STAY, '+ Shop name': STAY,
     'Send again': STAY,
     'Clear a forgotten PIN': go('set-staff-clear-pin'),
+    'Sign out everywhere': go('ops-person-everywhere'),
     'Make this computer a till': go('till-setup'),
   },
   'fr-today': {

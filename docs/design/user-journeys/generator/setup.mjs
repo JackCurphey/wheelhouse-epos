@@ -223,6 +223,9 @@ const workshopBlock = (on, siteDays = '') => `<div style="display: flex; flex-di
 // pill; the switches as toggle pills; the PIN line (signing in 6).
 // Multiple sites decision 4 (audit M7): Works at, and days per shop.
 // Reports and accounts decision 5: "Can see costs and margin" after "Can see reports".
+// Not-drawn pages decision 2 (Jack, 8 Oct; place chosen 15 Oct, option 2):
+// "Sign out everywhere" sits under Till PIN, saying what it does, with no
+// count of devices (the Signed-in devices list stays later).
 function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '', costs = true, on = [], hints = {} } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
@@ -235,7 +238,8 @@ function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '
 <div style="display: flex; flex-direction: column; gap: 8px">${(costs ? SWITCHES.flatMap((s) => (s === 'Can see reports' ? [s, 'Can see costs and margin'] : [s])) : SWITCHES).map(sw).join('')}</div>
 </div>
 </div><div style="display: flex; flex-direction: column; gap: 16px">${workshopBlock(workshop, siteDays)}
-<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
+<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div>
+<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Signed in somewhere?</span><span style="font-size: 13px; color: ${C.muted}">Signs Jo out of every till, phone and computer</span></span>${button('Sign out everywhere', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
 }
 // UX walk-through 4 H1: a cleared PIN works like a first one — the next
 // sign-in opens "Your till PIN" (signin.mjs pin-cleared).

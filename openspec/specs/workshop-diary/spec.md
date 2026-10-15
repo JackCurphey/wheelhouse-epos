@@ -66,11 +66,19 @@ The diary SHALL NOT draw declined bookings, expired bookings, or bookings the sh
 - **THEN** it shows struck through, reading "Cancelled"
 
 ### Requirement: Jobs with no time sit in the No time row
-A job with no start time SHALL NOT be drawn on the time grid. In the Week view on a computer or tablet it SHALL appear as a chip showing only the bike, in one "No time" row above the grid for the whole week; the chip SHALL be plain text that cannot be opened or moved. The Day view SHALL show untimed jobs nowhere. On a phone the row SHALL show the day's untimed jobs only when one column shows, and read "None" when there are none.
+A job with no start time SHALL NOT be drawn on the time grid. In the Week view on a computer or tablet it SHALL appear as a chip showing only the bike, in one "No time" row above the grid for the whole week; a click, a tap or Enter on the chip SHALL open the job's page, as a block does, and the chip SHALL NOT be moved. The Day view SHALL have the same row above its grid, with that day's untimed jobs only (Jack, 15 Oct). On a phone the row SHALL show the day's untimed jobs only when one column shows, and read "None" when there are none; its chips open the job in the same way.
 
 #### Scenario: An untimed job
 - **WHEN** [customer name]'s [bike] is booked for a Standard service on Tuesday with no time
 - **THEN** "[bike]" sits in the Week view's No time row
+
+#### Scenario: An untimed job in the Day view
+- **WHEN** staff open the Day view for Tuesday
+- **THEN** "[bike]" sits in its No time row, and a Wednesday job with no time does not
+
+#### Scenario: Opening an untimed job
+- **WHEN** staff click, or press Enter on, the No time chip for [bike]
+- **THEN** that job's page opens
 
 ### Requirement: The grid covers the shop's opening hours
 The time grid SHALL run from the shop's earliest opening to its latest closing across the week, in 30-minute rows, or 09:00 to 18:00 when no hours are set. A job outside those hours SHALL stretch the grid, on the hour, so it still shows.
@@ -184,11 +192,11 @@ When a job with a customer's change request waiting is saved onto exactly the re
 - **THEN** day 2 moves with its own mechanic and the request stays
 
 ### Requirement: New job starts by choosing a time on the diary
-New job SHALL turn the diary to "Choose a time for the new job.", with "Enter a time instead" and Cancel. A click on the grid SHALL open the New job form at that time, snapped to 15 minutes; Cancel SHALL leave the diary as it was. The form SHALL have no date or time field. In the Day view the clicked column's mechanic SHALL be chosen, or Shared queue in the "Not assigned yet" column. Otherwise the form SHALL choose a mechanic as the next requirement says.
+New job SHALL turn the diary to "Choose a time for the new job.", with "Enter a time instead" and Cancel. A click on the grid SHALL open the New job form at that time, snapped to 15 minutes, with no date or time box; Cancel SHALL leave the diary as it was. "Enter a time instead" SHALL open the form with a Date box and a Start time box in place of the time, filled with the diary's date and the grid's first hour, and the job SHALL be saved at what they hold; with either box empty, Save job SHALL say "Choose a date and a start time.", and with a start time off the quarter hour "Choose a start time on the quarter hour, like 14:30 or 14:45.", and keep the form open (Jack, 15 Oct). Opened this way, the Date box SHALL have the focus. A job that would run past midnight SHALL be refused with "The job would run past midnight. Choose an earlier start time." In the Day view the clicked column's mechanic SHALL be chosen, or Shared queue in the "Not assigned yet" column. Otherwise the form SHALL choose a mechanic as the next requirement says.
 
 #### Scenario: Clicking Tuesday at 10:00
 - **WHEN** staff press New job and click Tuesday 6 October at 10:00, where Alex Morgan already has a job and Jo Taylor has none
-- **THEN** the form opens reading "Tue 6 Oct · 10:00 · Jo Taylor" with Jo Taylor chosen
+- **THEN** the form opens reading "Tue 6 Oct · 10:00 · Jo Taylor" with Jo Taylor chosen, and no date or time box
 
 #### Scenario: Cancel
 - **WHEN** staff press New job and then Cancel
@@ -196,14 +204,22 @@ New job SHALL turn the diary to "Choose a time for the new job.", with "Enter a 
 
 #### Scenario: Enter a time instead
 - **WHEN** staff press "Enter a time instead" in the Week view
-- **THEN** the form opens at the grid's first hour on the date in the page address, with no way to change the date or time in the form
+- **THEN** the form opens with Date and Start time boxes holding the date in the page address and the grid's first hour
+
+#### Scenario: Changing the time entered
+- **WHEN** staff open the form by "Enter a time instead", change Start time to 14:30 and the date to Thursday, and save
+- **THEN** the job is created on that Thursday from 14:30
 
 ### Requirement: New job chooses the mechanic with the fewest timed minutes
-Outside a mechanic's own column, New job SHALL choose, among the mechanics whose working days include that weekday, the one with the fewest minutes of timed jobs on that day in the diary, counting cancelled, declined and expired bookings too; on a tie, the first in the list. If nobody works that weekday, it SHALL choose from everyone. The form SHALL say "Mechanic chosen automatically: most free time on [weekday]."
+Outside a mechanic's own column, New job SHALL choose, among the mechanics whose working days include that weekday, the one with the fewest minutes of timed jobs on that day in the diary, counting cancelled, declined and expired bookings too; on a tie, the first in the list. If nobody works that weekday, it SHALL choose from everyone. The form SHALL say "Mechanic chosen automatically: most free time on [weekday]." until staff pick a mechanic themselves. When the Date box changes, the form SHALL choose again for the new day, unless staff have picked one; it counts only the jobs the diary has loaded, so for a day outside the week shown it chooses the first mechanic working that weekday.
 
 #### Scenario: Jo Taylor has nothing booked
 - **WHEN** both mechanics work Tuesdays and only Alex Morgan has a timed job on Tuesday 6 October
 - **THEN** Jo Taylor is chosen
+
+#### Scenario: A new date entered
+- **WHEN** the form opened by "Enter a time instead" on Monday 5 October has Alex Morgan chosen, and staff change the date to Tuesday 6 October
+- **THEN** Jo Taylor is chosen, and the form says "Mechanic chosen automatically: most free time on Tuesday."
 
 ### Requirement: The New job form finds the customer and fills in the work
 The New job form SHALL find a customer by name, phone or email and offer their bikes, choosing an only bike for them. The work SHALL be chosen as Full service or Individual service pills listing only the shop's active services; choosing one SHALL fill the job title and the job's length. New bike build or pre-delivery check SHALL make the customer optional. The mechanic SHALL be chosen from pills that include Shared queue, and the starting status SHALL be Booked or Waiting for parts.
@@ -270,7 +286,7 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 - **THEN** it never appears in this shop's list
 
 ### Requirement: The diary's Waiting column chooses and opens what is waiting
-On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the grid, refreshed every minute, one card per item with its kind, the customer, and the services and time or the move; with nothing waiting it SHALL say "Nothing waiting." One click on a card SHALL choose it: the diary moves to that job's week, shows Everyone, marks its block, and the card shows Open. Open, or a double-click, SHALL open the request; a second click or tap SHALL NOT.
+On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the grid, refreshed every minute, one card per item with its kind, the customer, and the services and time or the move; with nothing waiting it SHALL say "Nothing waiting." One click on a card SHALL choose it: the diary moves to that job's week, shows Everyone, marks its block, and the card shows Open. Open, or a double-click, SHALL open the request. On a touch screen a second tap on the chosen card SHALL open it too (Workshop day decision 14); a second click with a mouse SHALL NOT.
 
 #### Scenario: Choosing Sam Reed's request
 - **WHEN** staff click Sam Reed's card, booked for 14 October
@@ -283,6 +299,14 @@ On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the 
 #### Scenario: Double-click
 - **WHEN** staff double-click Aisha Khan's cancellation card
 - **THEN** its pop-up opens straight away
+
+#### Scenario: A second tap on a tablet
+- **WHEN** staff tap Aisha Khan's cancellation card on a tablet, then tap it again
+- **THEN** the first tap chooses it and the second opens its pop-up
+
+#### Scenario: A second click with a mouse
+- **WHEN** staff click Aisha Khan's cancellation card with a mouse, then click it again
+- **THEN** it stays chosen and its pop-up does not open
 
 ### Requirement: Staff answer a new booking request in a pop-up
 A new booking request SHALL open in a pop-up headed "[customer] · [bike]" with "Pending request", what the customer told us (or "No message from the customer."), the service and the time asked for. Accept SHALL accept the booking with the version the pop-up saw, close the pop-up and refresh the diary. Decline SHALL ask first, with Decline booking to confirm and Keep booking to back out. Accepting and declining follow `workshop-jobs`.

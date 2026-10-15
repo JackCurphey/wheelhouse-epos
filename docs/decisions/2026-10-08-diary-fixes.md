@@ -22,3 +22,19 @@ recorded in issue #192.
 3. **A Week-view drop on the requested time** sent no mechanic, so a request
    for another mechanic was not accepted. Fixed: a drop on exactly the
    requested day and time sends the requested mechanic.
+
+**Later change (15 Oct 2026): three more from issue #192** (Jack, 15 Oct:
+fix them now rather than at stage 4). A job with no time opens from the No
+time row, as a block does, as the drawing shows. On a tablet a second tap on
+a Waiting for you card opens it (Workshop day decision 14). And the Day view
+gets the No time row too, with that day's untimed jobs (Jack, 15 Oct: "1",
+asked because no drawing shows them there; chosen over leaving them out of
+the Day view).
+
+**Later change (15 Oct 2026): "Enter a time instead"** (Jack, 15 Oct: "yes,
+add the boxes", then "build it" after seeing the drawing `new-job-entered`).
+Opened that way, New job has Date and Start time boxes, filled with the
+diary's day and first hour, with the Date box focused. A new date chooses the
+mechanic again (decision 18) unless staff picked one; a typed time keeps to
+the quarter hour. Chosen over leaving the job at the first hour to be moved
+afterwards.

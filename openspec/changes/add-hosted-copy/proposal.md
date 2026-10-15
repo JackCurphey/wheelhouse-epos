@@ -23,9 +23,9 @@ before Jack's stage check (§9 line 7).
   (`server/db.js:10-22`, `assertPoolerModeSafe`) written down as a hosting
   requirement: a direct connection or a session-mode pooler, never a
   transaction-mode one.
-- Photos and attachments, which the server keeps on its own disk
-  (`server/server.js:260`, `UPLOADS_DIR`), kept on storage that survives an
-  update or a restart, and backed up with the database.
+- Photos and attachments are **not kept** on the test copy for now: the
+  photos part isn't being built yet (Mark, 15 Oct). Jack is told up front.
+  They get a lasting home before real use.
 - Updates: `main` only, the database changes applied before the new version
   takes any traffic, and a written way back.
 - Test data only: a test shop loaded from the drawings' example data, with
@@ -33,8 +33,8 @@ before Jack's stage check (§9 line 7).
   start if it is given a real key.
 - `NODE_ENV=production` set on the hosted copy, so a stray test clock can
   never freeze its time (`server/clock.js:15-21`; promised on #191).
-- A timed rehearsal that restores the database **and** the attachments into
-  a fresh copy, written down before any real shop uses Wheelhouse. Jack does
+- A timed rehearsal that restores the database (and the attachments, once
+  they're kept) into a fresh copy, written down before any real shop uses Wheelhouse. Jack does
   it with Mark watching, as agreed for PL-3
   (`docs/decisions/2026-09-01-ownership-signoff.md:55`).
 
@@ -73,19 +73,19 @@ None.
     `openspec/config.yaml`).
   - Managed Postgres with point-in-time restore and a rehearsed restore
     (the sixth architecture ceiling, `two-person-split.md:73-74`).
-- **Waiting on Jack (asked on #137):** which host. The host choice (PL-1) is
-  blocked on the UK-or-EU data residency question
-  (`docs/superpowers/plans/2026-08-31-master-implementation-plan.md:193, 361`;
-  `docs/decisions/2026-09-01-ownership-signoff.md:53`), which has never been
-  answered. Opening an account costs money, so it needs Jack's yes. This spec
-  names no host, and none of it depends on which one is picked.
+- **Where the data lives:** a UK region, for the test copy only (Jack, 15 Oct,
+  #137; `docs/decisions/2026-10-15-hosted-copy-region.md`). Where real shops'
+  data lives is settled before any real use.
+- **The host (PL-1, for the test copy):** DigitalOcean in London, a server
+  plus managed Postgres, about £20 a month with VAT (Mark, 15 Oct). Opening
+  the account costs money, so it waits for Jack's yes on #137.
 
 ## Out of scope
 
 - Hosting for real shops (release 2's go-live): uptime monitoring, error
   tracking, a status page, real email, more than one server (PL-11 to PL-14).
-- Moving photos to a separate file store. Durable storage the host provides
-  is enough for a test copy (see `design.md`).
+- Keeping photos and attachments, and the file store they need (see
+  `design.md` Decision 4).
 - A "this is a test copy" banner on screens. That would be a screen change,
   in Jack's lane and needing a drawing.
 - Switching the database to transaction-mode tenancy (`DB_TENANT_SCOPE`).
@@ -95,9 +95,11 @@ None.
 
 - **New files:** `openspec/changes/add-hosted-copy/` (this change), then on
   archive `openspec/specs/hosted-copy/spec.md`.
-- **Code, when built:** a deploy workflow in `.github/workflows/`, host
-  config at the repo root (with `NODE_ENV`), a start-up guard
+- **Code, when built:** a deploy workflow in `.github/workflows/`, a setup
+  script and server config in `scripts/hosting/` (with `NODE_ENV`), a start-up guard
   against real keys in `server/`, a test shop loader in `scripts/dev/`, and
   runbooks in `docs/runbooks/`. All of these are Mark's files.
-- **Outside accounts:** one host account with managed Postgres, once Jack
-  says yes. Backups stay inside that account, so there is no other account.
+- **Outside accounts:** one DigitalOcean account (server and managed
+  Postgres), opened by Jack with his card once he says yes, with Mark invited
+  to it. Images go to GitHub's own container registry, so there is no other
+  account.

@@ -1,0 +1,21 @@
+#cloud-config
+# First boot of the hosted copy's server (WP-0.5). setup.sh passes this to
+# DigitalOcean when it creates the droplet. Ubuntu 24.04 turns on automatic
+# security updates by default; this adds what the app needs.
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - docker-buildx
+  - git
+  - postgresql-client
+  - unattended-upgrades
+runcmd:
+  # Swap, so building the app's image on a 1GB server doesn't run out of memory.
+  - fallocate -l 2G /swapfile
+  - chmod 600 /swapfile
+  - mkswap /swapfile
+  - swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  - systemctl enable --now docker
+  - mkdir -p /opt/wheelhouse
