@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { prepare, dbExec, runWithShop } from '../db.js';
 import { nowIso, ValidationError } from './http.js';
 import { pushInventoryLevel } from '../shopify.js';
+import { currentShopTimeZone } from '../workshop/jobs.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -180,6 +181,20 @@ export function firePendingShopifyPushes(shopId, pushes) {
     pendingShopifyPushes.add(pending);
     pending.finally(() => pendingShopifyPushes.delete(pending));
   }
+}
+
+// ---------- The shop's day ----------
+
+// Used by the sales list and the dashboard (moved out of server.js, WP-0.4).
+// A timestamp column's rows on one of the shop's days (YYYY-MM-DD): midnight
+// to midnight on the shop's clock, summer time included, not UTC midnight.
+// Returns the SQL condition and its four arguments.
+export async function shopDayWindow(column, date) {
+  const timeZone = await currentShopTimeZone();
+  return {
+    sql: `${column} >= (?::date)::timestamp AT TIME ZONE ? AND ${column} < (?::date + 1)::timestamp AT TIME ZONE ?`,
+    args: [date, timeZone, date, timeZone],
+  };
 }
 
 // ---------- Sales ----------

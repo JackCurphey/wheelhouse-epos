@@ -16,5 +16,6 @@ import * as workshop from './workshop.js';
 import * as workshopSettings from './workshop-settings.js';
 import * as portal from './portal.js';
 import * as customers from './customers.js';
+import * as salesRoutes from './sales.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth, products, workshop, workshopSettings, portal, customers];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes];
