@@ -5,25 +5,28 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** WP-0.4: 57 of 161 routes moved (5 Oct). Next, a spec for
-`server/lib/sales.js` with customers and sales (deferred Shopify pushes),
-then image uploads and booking/portal; the dashboard needs Jack's
-`currentShopToday`. Then WP-0.5. #157 merged (5 Oct), so the types split
-(§4.3) can go. Waiting on Mark: approving Jack's #180–#184, #188, #189;
-re-reviewing #187–#189, #191 (answered 8 Oct); Jack's questions on #180;
-#134's till, sales, Shopify and dashboard part, and where a job's open order
-lives after WP-1.6; #137 for WP-0.5.
-**Jack is on:** WP-0.4's workshop moves (#180–#184, open). OpenSpec specs of
-built areas (#186): workshop-jobs #187 and workshop-diary #191 (open), with
-fixes #188 and #189 found while writing them; #189 also waits on #183. Then
-the stage check, once lines 1–6 of §9 are in.
-**Open for Jack:** ask from Mark #140 (#135 and #137 handed to Mark, 8 Oct;
+**Mark is on:** back 15 Oct (#199). WP-0.5's spec is written (#201,
+answering #137), waiting on Jack's UK-or-EU answer on #137 before he
+brings hosts. WP-0.4: the sale helpers to `server/lib/sales.js` (#202,
+open; unblocks Jack's quote move); then the 15 workshop settings routes
+to his own `server/routes/workshop-settings.js`, a shared
+`server/lib/uploads.js` with image uploads, then booking. #134: where a
+job's open order lives after WP-1.6, and his till, sales, Shopify and
+dashboard part. Still unanswered: Jack's two
+follow-ups on #151.
+**Jack is on:** WP-0.4's workshop moves merged 15 Oct (#180–#184), with
+#187, #188, #189, #191 and #193. Next: answer #137 (where the data
+lives); the test shop loader, #201 tasks group 1 (Mark's area, so his
+approval); the quote move once #202 merges; attachments and deleting a job once
+Mark's `server/lib/uploads.js` is in. Then the stage check once
+lines 1–6 of §9 are in.
+**Open for Jack:** Mark's UK-or-EU question on #137 (15 Oct); ask from Mark #140 (#135 and #137 handed to Mark, 8 Oct;
 #139 answered 8 Oct, with pages to draw before stages 2, 3 and 5; #134's
 workshop part listed 8 Oct, Mark to say where a job's order lives after
 WP-1.6); till job warning for WP-3.1 (#196); a Change requested
 badge on the job window (stage 4, stage 1 gaps decision 25).
 
-**Updated:** 2026-10-08. **Two people build at once** (Jack agreed to Mark's
+**Updated:** 2026-10-15. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
 PR #126): Mark takes the server half of each work package and all hosting;
 Jack takes the screens and the whole workshop. STATUS and the build board are
