@@ -1364,11 +1364,11 @@ export function DiaryPage() {
       <div className="flex items-start gap-4">
         {/* Waiting for you (decision 14). */}
         {/* Boxed in as a panel, its count a badge (Jack, 16 Oct; the layout review, #238). */}
-        <section aria-labelledby="waiting-heading" className="hidden w-[184px] shrink-0 flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-2.5 md:flex lg:w-[224px]">
+        <section aria-labelledby="waiting-heading" className="hidden w-[184px] shrink-0 flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-2.5 md:flex lg:w-[224px]">
           <h2 id="waiting-heading" className="m-0 flex items-center gap-2 text-sm font-bold">
             {/* Screen readers hear the name in one piece: "Waiting for you (2)". */}
             <span aria-hidden="true">Waiting for you</span>
-            <span data-count-badge aria-hidden="true" className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-[13px] font-bold text-[var(--wh-ink)]">{waiting.data?.count ?? items.length}</span>
+            <span data-count-badge aria-hidden="true" className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-[13px] font-bold text-[var(--wh-ink)]">{waiting.data?.count ?? items.length}</span>
             <span className={SR}>{`Waiting for you (${waiting.data?.count ?? items.length})`}</span>
           </h2>
           {items.length === 0 && waiting.isSuccess ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">Nothing waiting.</p> : null}

@@ -9,8 +9,10 @@ recommends the same: box it in so it reads as its own area.
 ## What Changes
 
 - On a computer or tablet, "Waiting for you" sits in a panel: the light
-  panel colour, a thin border and rounded corners, with its heading inside
-  and the count as a small badge (Jack: "1"). The phone's Waiting sheet is
+  soft grey colour used elsewhere in the app (`--wh-surface-muted`), with a
+  thin border and rounded corners, its heading inside and the count as a
+  small light badge, so the light cards stand out inside it (Jack: "1", then
+  the soft grey after the fresh review). The phone's Waiting sheet is
   unchanged.
 - Screen readers still hear "Waiting for you (2)".
 

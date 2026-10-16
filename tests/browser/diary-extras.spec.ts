@@ -254,6 +254,7 @@ test('Waiting for you is a panel with its count as a badge', async ({ page, cont
   const panel = page.getByRole('region', { name: /^Waiting for you/ });
   await expect(panel).toBeVisible();
   await expect(panel).toHaveCSS('border-top-width', '1px');
-  await expect(panel).toHaveCSS('background-color', 'rgb(255, 253, 247)');
+  await expect(panel).toHaveCSS('background-color', 'rgb(240, 234, 220)');
+  await expect(panel.locator('[data-count-badge]')).toHaveCSS('background-color', 'rgb(255, 253, 247)');
   await expect(panel.locator('[data-count-badge]')).toBeVisible();
 });
