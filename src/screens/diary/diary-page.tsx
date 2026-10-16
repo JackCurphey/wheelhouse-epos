@@ -1137,19 +1137,21 @@ export function DiaryPage() {
         ) : null}
 
         <div className="flex flex-col gap-2 border-b border-[var(--wh-border)] px-3.5 py-2.5">
+          {/* The people chip shortens its text, rather than the row running off
+              a narrow phone, when Today is showing (Jack, 16 Oct). */}
           <div className="flex items-center justify-between gap-1.5">
-            <div className="relative">
+            <div className="relative min-w-0">
               <button
                 type="button"
                 aria-expanded={peopleOpen}
                 aria-label={`Showing ${showing}. Change whose jobs are shown`}
                 onClick={() => setPeopleOpen((o) => !o)}
-                className="inline-flex min-h-11 items-center gap-[7px] rounded-full bg-[var(--wh-accent-soft)] py-[5px] pr-2.5 pl-1.5 text-sm font-semibold whitespace-nowrap text-[var(--wh-accent-soft-ink)]"
+                className="inline-flex min-h-11 max-w-full items-center gap-[7px] rounded-full bg-[var(--wh-accent-soft)] py-[5px] pr-2.5 pl-1.5 text-sm font-semibold whitespace-nowrap text-[var(--wh-accent-soft-ink)]"
               >
-                <span aria-hidden="true" className="inline-flex size-6 items-center justify-center rounded-full bg-[var(--wh-panel)]">
+                <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--wh-panel)]">
                   {whoId !== null ? initial(showing) : <NavIcon name="customers" size={14} />}
                 </span>
-                {showing}
+                <span className="min-w-0 truncate">{showing}</span>
                 <Chevron dir="next" />
               </button>
               {peopleOpen ? (
@@ -1169,17 +1171,17 @@ export function DiaryPage() {
                 </div>
               ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0">
               <button type="button" aria-label="Previous week" onClick={() => set({ date: addDays(date, -7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
                 <Chevron dir="prev" />
               </button>
-              <span className="min-w-[74px] text-center text-sm font-bold whitespace-nowrap">{shortWeek(week[0])}</span>
+              <span className="min-w-[66px] text-center text-sm font-bold whitespace-nowrap">{shortWeek(week[0])}</span>
               <button type="button" aria-label="Next week" onClick={() => set({ date: addDays(date, 7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
                 <Chevron dir="next" />
               </button>
               {/* Back to today in one tap, shown only away from it (Jack, 16 Oct; layout review 238, item 9). */}
               {date !== today ? (
-                <button type="button" onClick={() => set({ date: null })} className="min-h-11 rounded-md px-2 text-sm font-semibold">Today</button>
+                <button type="button" onClick={() => set({ date: null })} className="min-h-11 rounded-md px-1.5 text-sm font-semibold">Today</button>
               ) : null}
             </div>
           </div>

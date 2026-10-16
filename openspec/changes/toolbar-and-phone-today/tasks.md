@@ -9,6 +9,11 @@
 
 - [x] 2.1 The toolbar; the phone's Today; the drawing's toolbars; the drawings build and fit (211 boards)
 
+## 2b. After the fresh review
+
+- [x] 2b.1 Test first, watched failing: on a 360px phone with "By mechanic", Today fits and the page doesn't scroll sideways (it reached 399px)
+- [x] 2b.2 The row tightens and the people chip shortens with "…" (Jack: "1")
+
 ## 3. Checks
 
-- [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.1 A fresh review; `npm test` and `npm run test:browser` pass

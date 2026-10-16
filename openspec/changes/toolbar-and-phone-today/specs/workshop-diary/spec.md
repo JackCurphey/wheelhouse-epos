@@ -8,7 +8,7 @@ On a computer or tablet the Week/Day switch SHALL sit next to the date navigatio
 - **THEN** the Day button sits right beside "Previous week"
 
 ### Requirement: The phone has a way back to today
-On a phone, when today isn't the day on screen, a "Today" button SHALL show beside the week arrows; pressing it SHALL show today, and it SHALL go (Jack, 16 Oct).
+On a phone, when today isn't the day on screen, a "Today" button SHALL show beside the week arrows; pressing it SHALL show today, and it SHALL go (Jack, 16 Oct). On a phone 360 pixels wide it SHALL fit without the page scrolling sideways: the row tightens and the people chip shortens its text with "…" if it must.
 
 #### Scenario: Another week
 - **WHEN** a phone shows Tuesday 6 October and today is another day

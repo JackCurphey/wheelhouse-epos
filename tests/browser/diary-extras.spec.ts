@@ -292,3 +292,23 @@ test('the Week/Day switch sits next to the date arrows', async ({ page, context 
   const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
   expect(prev.x - (day.x + day.width)).toBeLessThan(40);
 });
+
+// After the fresh review: on a 360px phone away from today, with "By
+// mechanic" showing, the Today button fits; the row tightens and the people
+// chip shortens rather than the page scrolling sideways (Jack, 16 Oct: "1").
+test('on a 360px phone, Today fits without the page scrolling sideways', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    const today = page.getByRole('button', { name: 'Today' });
+    await expect(today).toBeVisible();
+    const box = (await today.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  } finally {
+    await ctx.close();
+  }
+});
