@@ -137,7 +137,9 @@ Q12: "these are done before switch-over".
 - [ ] **Staff ready** (Jack, 16 Oct): before switch-over, staff practise on
   the online test copy (North Street Cycles, test data only) from a short
   list Claude writes: a sale, a refund, booking a bike in, taking a deposit,
-  handing a bike over. Replaces practice mode, which was dropped.
+  handing a bike over. Claude also writes a one-page guide kept at the till
+  for the first week (Jack, 16 Oct). Replaces practice mode, which was
+  dropped.
 - [ ] **One full trading week, weekend included, on Wheelhouse alone**
   (`docs/superpowers/specs/2026-09-27-release-2-design.md`). That is the
   finish line.
