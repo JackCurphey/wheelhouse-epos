@@ -317,3 +317,36 @@ test('on a 360px phone, Today fits in the top row', async ({ browser }) => {
     await ctx.close();
   }
 });
+
+// The layout review's item 7 (Jack approved the drawing, 16 Oct): on an
+// upright tablet (834 wide) the toolbar sits on two rows and "Waiting for you"
+// is a button opening the phone's list, so the week has the full width.
+// Spec: openspec/changes/upright-tablet-diary
+test('on an upright tablet, Waiting is a button and the toolbar has two rows', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 834, height: 1112 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    await expect(page.getByRole('region', { name: /^Waiting for you/ })).toBeHidden();
+    const waiting = page.getByRole('button', { name: /^Waiting for you, \d+/ });
+    await expect(waiting).toBeVisible();
+    const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+    const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+    expect(newJob.y).toBeGreaterThan(tabs.y + tabs.height - 1);
+    await waiting.click();
+    await expect(page.getByRole('dialog', { name: /^Waiting for you \(\d+\)/ })).toBeVisible();
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('on a computer, Waiting stays a column beside the diary', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await expect(page.getByRole('region', { name: /^Waiting for you/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Waiting for you, \d+/ })).toBeHidden();
+});

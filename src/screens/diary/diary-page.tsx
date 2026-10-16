@@ -586,7 +586,15 @@ function initial(name: string) {
 
 /** True below the tablet width (768px), where the diary is one day at a time. */
 function useIsPhone(): boolean {
-  const query = '(max-width: 767px)';
+  return useMedia('(max-width: 767px)');
+}
+
+/** Narrower than a computer: a phone or an upright tablet (layout review 238, item 7). */
+function useIsNarrow(): boolean {
+  return useMedia('(max-width: 1023px)');
+}
+
+function useMedia(query: string): boolean {
   return useSyncExternalStore(
     (onChange) => {
       const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
@@ -600,6 +608,7 @@ function useIsPhone(): boolean {
 export function DiaryPage() {
   const [params, setParams] = useSearchParams();
   const isPhone = useIsPhone();
+  const isNarrow = useIsNarrow();
   const today = todayIso();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
   // On a phone the diary is always one day (decision 68); the week is the strip of days.
@@ -1101,21 +1110,76 @@ export function DiaryPage() {
     </button>
   );
 
+  // The Waiting list as a sheet: on a phone, and on an upright tablet where
+  // there's no room for its column (Jack, 16 Oct; layout review 238, item 7).
+  const chooseItem = (item: WaitingItem) => {
+    if (chosen === item.jobId) { setOpenItem(item); setSheetOpen(false); return; }
+    setChosen(item.jobId ?? null);
+    const day = cardDay(item);
+    if (day) set({ date: day, who: null });
+    setSheetOpen(false);
+  };
+  // The chosen card with Open, at the foot of a phone or an upright tablet,
+  // where there's no Waiting column to show it in.
+  const chosenItem = items.find((i) => i.jobId === chosen) ?? null;
+  const chosenBar = chosenItem ? (
+    <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
+      <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 grow flex-col gap-[3px]">
+          <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
+          <span className="text-[15px] font-bold">{waitingCard(chosenItem).customer}</span>
+          <span className="text-sm">{waitingCard(chosenItem).detail}</span>
+        </div>
+        <button
+          type="button"
+          aria-label={`Open ${waitingCard(chosenItem).customer}'s request`}
+          onClick={() => setOpenItem(chosenItem)}
+          className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
+        >
+          Open
+        </button>
+      </div>
+      <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
+    </div>
+  ) : null;
+  const waitingSheet = (
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
+        <DialogHeader>
+          <DialogTitle id="waiting-sheet-title">{`Waiting for you (${waiting.data?.count ?? items.length})`}</DialogTitle>
+          <button type="button" aria-label="Close" onClick={() => setSheetOpen(false)} className="inline-flex size-11 items-center justify-center rounded-lg">
+            <NavIcon name="close" size={20} />
+          </button>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-2">
+          {items.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing waiting.</p> : null}
+          {items.map((item) => {
+            const card = waitingCard(item);
+            const on = chosen === item.jobId;
+            return (
+              <button
+                key={`${item.kind}-${item.jobId}`}
+                type="button"
+                aria-pressed={on}
+                onClick={() => chooseItem(item)}
+                className={`flex min-h-11 flex-col gap-1 rounded-lg bg-[var(--wh-panel)] px-3 py-2.5 text-left ${on ? 'border-2 border-[var(--accent)]' : 'border border-[var(--wh-border)]'}`}
+              >
+                <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
+                <span className="text-[15px] font-bold">{card.customer}</span>
+                <span className="text-sm">{card.detail}</span>
+              </button>
+            );
+          })}
+        </DialogBody>
+      </Dialog>
+  );
+
   if (isPhone) {
     const week = weekOf(date);
     const showing = whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';
-    const chosenItem = items.find((i) => i.jobId === chosen) ?? null;
     const hours: number[] = [];
     for (let m = Math.ceil(range.start / 60) * 60; m < range.end; m += 60) hours.push(m);
     const noTime = columns.length === 1 ? shown.filter((j) => j.jobDate === date && !j.startTime) : [];
     const pickPeople = (value: string | null) => { set({ who: value }); setPeopleOpen(false); };
-    const chooseItem = (item: WaitingItem) => {
-      if (chosen === item.jobId) { setOpenItem(item); setSheetOpen(false); return; }
-      setChosen(item.jobId ?? null);
-      const day = cardDay(item);
-      if (day) set({ date: day, who: null });
-      setSheetOpen(false);
-    };
     return (
       <div className="-m-3.5 flex flex-col">
         {headerSlot ? createPortal(
@@ -1269,56 +1333,10 @@ export function DiaryPage() {
             neither covers the other (Jack, 16 Oct). */}
         <div data-phone-foot className="sticky bottom-0 z-30 flex flex-col">
         {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
-        {chosenItem ? (
-          <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
-            <div className="flex items-center gap-2.5">
-              <div className="flex min-w-0 grow flex-col gap-[3px]">
-                <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
-                <span className="text-[15px] font-bold">{waitingCard(chosenItem).customer}</span>
-                <span className="text-sm">{waitingCard(chosenItem).detail}</span>
-              </div>
-              <button
-                type="button"
-                aria-label={`Open ${waitingCard(chosenItem).customer}'s request`}
-                onClick={() => setOpenItem(chosenItem)}
-                className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
-              >
-                Open
-              </button>
-            </div>
-            <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
-          </div>
-        ) : null}
+        {chosenBar}
         </div>
 
-        <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
-          <DialogHeader>
-            <DialogTitle id="waiting-sheet-title">{`Waiting for you (${waiting.data?.count ?? items.length})`}</DialogTitle>
-            <button type="button" aria-label="Close" onClick={() => setSheetOpen(false)} className="inline-flex size-11 items-center justify-center rounded-lg">
-              <NavIcon name="close" size={20} />
-            </button>
-          </DialogHeader>
-          <DialogBody className="flex flex-col gap-2">
-            {items.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing waiting.</p> : null}
-            {items.map((item) => {
-              const card = waitingCard(item);
-              const on = chosen === item.jobId;
-              return (
-                <button
-                  key={`${item.kind}-${item.jobId}`}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => chooseItem(item)}
-                  className={`flex min-h-11 flex-col gap-1 rounded-lg bg-[var(--wh-panel)] px-3 py-2.5 text-left ${on ? 'border-2 border-[var(--accent)]' : 'border border-[var(--wh-border)]'}`}
-                >
-                  <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
-                  <span className="text-[15px] font-bold">{card.customer}</span>
-                  <span className="text-sm">{card.detail}</span>
-                </button>
-              );
-            })}
-          </DialogBody>
-        </Dialog>
+        {waitingSheet}
 
         {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
         {newJobDialog}
@@ -1359,12 +1377,25 @@ export function DiaryPage() {
             Today
           </button>
         </div>
-        <div className="grow" />
+        {/* On an upright tablet this group is its own row: people on the left,
+            Waiting and New job on the right (layout review 238, item 7). */}
+        <div className="flex basis-full items-center gap-3 lg:grow lg:basis-auto">
+        <div className="hidden grow lg:block" />
         <div role="group" aria-label="Mechanic" className="flex flex-wrap items-center gap-1.5">
           {chip('all', 'Everyone', 'Everyone', <NavIcon name="customers" size={13} />, whoId === null)}
           {people.map((m) => chip(String(m.id), m.name.split(' ')[0], m.name, initial(m.name), whoId === m.id))}
         </div>
-        <div className="w-5 shrink-0" />
+        <div className="grow lg:hidden" />
+        <button
+          type="button"
+          aria-label={`Waiting for you, ${waiting.data?.count ?? items.length}`}
+          onClick={() => setSheetOpen(true)}
+          className="inline-flex min-h-11 shrink-0 items-center gap-[7px] rounded-[10px] border border-[var(--wh-input-border)] bg-[var(--wh-panel)] pr-2.5 pl-3 text-[15px] font-semibold lg:hidden"
+        >
+          Waiting
+          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-[13px] font-bold">{waiting.data?.count ?? items.length}</span>
+        </button>
+        <div className="hidden w-5 shrink-0 lg:block" />
         {picking ? (
           <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
             Choose a time
@@ -1375,13 +1406,14 @@ export function DiaryPage() {
             New job
           </button>
         )}
+        </div>
       </div>
-      {floating}
+      {isNarrow ? null : floating}
 
       <div className="flex items-start gap-4">
         {/* Waiting for you (decision 14). */}
         {/* Boxed in as a panel, its count a badge (Jack, 16 Oct; the layout review, pull request 238). */}
-        <section aria-labelledby="waiting-heading" className="hidden w-[184px] shrink-0 flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-2.5 md:flex lg:w-[224px]">
+        <section aria-labelledby="waiting-heading" className="hidden w-[184px] shrink-0 flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-2.5 lg:flex lg:w-[224px]">
           <h2 id="waiting-heading" className="m-0 flex items-center gap-2 text-sm font-bold">
             {/* Screen readers hear the name in one piece: "Waiting for you (2)". */}
             <span aria-hidden="true">Waiting for you</span>
@@ -1454,7 +1486,14 @@ export function DiaryPage() {
           </ul>
         </div>
       </div>
-      {floatingSpacer}
+      {isNarrow ? (
+        // An upright tablet: the foot of the page, as on a phone.
+        <div data-tablet-foot className="sticky bottom-0 z-30 -mx-3.5 flex flex-col md:-mx-[22px]">
+          {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
+          {chosenBar}
+        </div>
+      ) : floatingSpacer}
+      {waitingSheet}
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
       {newJobDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
