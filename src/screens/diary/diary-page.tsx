@@ -151,8 +151,8 @@ function useExtrasHandlers(job: Shown) {
 /** A booking request is answered before it is moved; a cancellation isn't moved at all. */
 const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j.state !== 'cancelled';
 
-function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
-  job: Shown; range: { start: number }; wide: boolean; chosen: boolean; lane?: { lane: number; total: number }; colIndex: number;
+function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
+  job: Shown; range: { start: number }; wide: boolean; chosen: boolean; light?: boolean; lane?: { lane: number; total: number }; colIndex: number;
 }) {
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
@@ -182,7 +182,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
   const laned = !moving && lane && lane.total > 1
     ? 'left-[var(--lane-left)] w-[var(--lane-width)] hover:left-[3px] hover:z-[3] hover:w-[calc(100%-6px)] hover:delay-300 motion-safe:transition-[left,width] motion-reduce:hover:delay-0'
     : '';
-  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
+  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
@@ -374,10 +374,23 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
   );
 }
 
+/** Where a customer asked to move a booking: from the job, or from "Waiting for you" when the job is in another week. */
+type Outline = { id: number; label: string; mechanicId: number | null; requested: { jobDate?: string | null; startTime?: string | null; endTime?: string | null; mechanicId?: number | null } };
+
+/**
+ * The first day to show for a "Waiting for you" card: the booking's own, or
+ * for a change request into another week the day asked for (Jack, 15 Oct).
+ */
+function cardDay(item: WaitingItem): string | null | undefined {
+  const to = item.kind === 'change_request' ? item.to?.jobDate : null;
+  if (to && item.jobDate && weekOf(to)[0] !== weekOf(item.jobDate)[0]) return to;
+  return item.jobDate;
+}
+
 /** A change request's dashed outline at the time the customer asked for. */
-function RequestedOutline({ job, range }: { job: Shown; range: { start: number } }) {
+function RequestedOutline({ outline, range, chosen }: { outline: Outline; range: { start: number }; chosen: boolean }) {
   const SLOT_H = useContext(SlotContext);
-  const r = job.requested;
+  const r = outline.requested;
   if (!r?.startTime) return null;
   const start = toMinutes(r.startTime);
   const end = r.endTime ? toMinutes(r.endTime) : start + 30;
@@ -385,17 +398,17 @@ function RequestedOutline({ job, range }: { job: Shown; range: { start: number }
   const height = Math.max(((end - start) / 30) * SLOT_H - 4, SLOT_H - 6);
   return (
     <div
-      className="absolute right-[3px] left-[3px] overflow-hidden rounded-[5px] border-[1.75px] border-dashed border-[var(--wh-state-hold-ink)] px-1.5 py-[3px] text-[10px] font-bold text-[var(--wh-state-hold-ink)]"
+      className={`absolute right-[3px] left-[3px] overflow-hidden rounded-[5px] border-[1.75px] border-dashed border-[var(--wh-state-hold-ink)] px-1.5 py-[3px] text-[10px] font-bold text-[var(--wh-state-hold-ink)] ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
       style={{ top, height }}
     >
-      <span className={SR}>{`${job.bikeLabel || 'Bike'} asks to move here: ${timeText(r)}`}</span>
+      <span className={SR}>{`${outline.label} asks to move here: ${timeText({ startTime: r.startTime, endTime: r.endTime ?? null })}${chosen ? ', chosen from Waiting for you' : ''}`}</span>
       <span aria-hidden="true" className="block truncate">{`Requested ${r.startTime}`}</span>
     </div>
   );
 }
 
-function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
-  label: string; index: number; jobs: Shown[]; outlines: Shown[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null;
+function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChosen = false }: {
+  label: string; index: number; jobs: Shown[]; outlines: Outline[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null; lightChosen?: boolean;
 }) {
   const SLOT_H = useContext(SlotContext);
   const timed = jobs.filter((j) => j.startTime);
@@ -429,12 +442,12 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
       }}
     >
       {groups.map((g) => (g.ids.length === 1 ? (
-        <JobBlock key={g.id} job={byId.get(g.id) as Shown} range={range} wide={wide} chosen={byId.get(g.id)?.id === chosenId} lane={lanes.get(g.id)} colIndex={index} />
+        <JobBlock key={g.id} job={byId.get(g.id) as Shown} range={range} wide={wide} chosen={byId.get(g.id)?.id === chosenId} light={lightChosen} lane={lanes.get(g.id)} colIndex={index} />
       ) : (
         <StackBlock key={`stack-${g.id}`} jobs={g.ids.map((id) => byId.get(id) as Shown)} start={g.start} end={g.end} range={range} lane={lanes.get(g.id)} colIndex={index} chosen={g.ids.some((id) => byId.get(id)?.id === chosenId)} />
       )))}
-      {outlines.map((j) => (
-        <RequestedOutline key={`req-${j.id}`} job={j} range={range} />
+      {outlines.map((o) => (
+        <RequestedOutline key={`req-${o.id}`} outline={o} range={range} chosen={o.id === chosenId} />
       ))}
     </div>
   );
@@ -587,8 +600,18 @@ export function DiaryPage() {
     .filter((j): j is Shown => j.state !== 'hidden')
     .filter((j) => whoId === null || j.mechanicId === whoId);
   const range = gridRange(settings.data ?? {}, shown);
-  const outlinesFor = (pred: (j: Shown) => boolean) =>
-    shown.filter((j) => j.state === 'hold' && j.requested?.startTime && pred(j));
+  // From the jobs on screen, and from "Waiting for you" for a booking whose
+  // own day is in another week (Jack, 15 Oct).
+  const onScreen = new Set(shown.map((j) => j.id));
+  const outlines: Outline[] = [
+    ...shown.filter((j) => j.state === 'hold' && j.partPos === 1 && j.requested?.startTime)
+      .map((j) => ({ id: j.id, label: j.bikeLabel || 'Bike', mechanicId: j.mechanicId, requested: j.requested ?? {} })),
+    ...(waiting.data?.items ?? [])
+      .filter((i) => i.kind === 'change_request' && i.jobId && !onScreen.has(i.jobId) && i.to?.startTime
+        && (whoId === null || i.mechanicId === whoId))
+      .map((i) => ({ id: i.jobId as number, label: i.customerName || 'Customer', mechanicId: i.mechanicId ?? null, requested: i.to ?? {} })),
+  ];
+  const outlinesFor = (pred: (o: Outline) => boolean) => outlines.filter(pred);
 
   const step = view === 'week' ? 7 : 1;
   const unit = view === 'week' ? 'week' : 'day';
@@ -608,8 +631,11 @@ export function DiaryPage() {
     }
   }
   const jobsIn = (c: Col) => shown.filter((j) => j.jobDate === c.date && (view === 'week' || c.all || j.mechanicId === c.mechanicId));
-  const outlinesIn = (c: Col) => outlinesFor((j) => j.requested?.jobDate === c.date
-    && (view === 'week' || c.all || (j.requested?.mechanicId ?? j.mechanicId) === c.mechanicId));
+  const outlinesIn = (c: Col) => outlinesFor((o) => o.requested.jobDate === c.date
+    && (view === 'week' || c.all || (o.requested.mechanicId ?? o.mechanicId) === c.mechanicId));
+  // With the time asked for on screen, the chosen job takes the drawing's light
+  // mark and the time the strong ring (change-selected).
+  const chosenTimeShown = columns.some((c) => outlinesIn(c).some((o) => o.id === chosen));
 
   // ---- Moving a job (piece 3) ----
   const queryClient = useQueryClient();
@@ -799,7 +825,7 @@ export function DiaryPage() {
       noTime={shown.filter((j) => !j.startTime && (view === 'week' || j.jobDate === date))}
       onOpen={openJob}
       columns={columns.map((c, i) => (
-        <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={view === 'day'} chosenId={chosen} />
+        <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={view === 'day'} chosenId={chosen} lightChosen={chosenTimeShown} />
       ))}
     />
   );
@@ -1020,7 +1046,8 @@ export function DiaryPage() {
     const chooseItem = (item: WaitingItem) => {
       if (chosen === item.jobId) { setOpenItem(item); setSheetOpen(false); return; }
       setChosen(item.jobId ?? null);
-      if (item.jobDate) set({ date: item.jobDate, who: null });
+      const day = cardDay(item);
+      if (day) set({ date: day, who: null });
       setSheetOpen(false);
     };
     return (
@@ -1159,7 +1186,7 @@ export function DiaryPage() {
                   ))}
                 </div>
                 {columns.map((c, i) => (
-                  <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} chosenId={chosen} />
+                  <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} chosenId={chosen} lightChosen={chosenTimeShown} />
                 ))}
               </div>
             </ExtrasContext.Provider></MoveContext.Provider>
@@ -1285,7 +1312,8 @@ export function DiaryPage() {
             const on = chosen === item.jobId;
             const choose = () => {
               setChosen(item.jobId ?? null);
-              if (item.jobDate) set({ date: item.jobDate, who: null });
+              const day = cardDay(item);
+              if (day) set({ date: day, who: null });
             };
             return (
               <div
