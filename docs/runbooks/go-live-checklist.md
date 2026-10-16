@@ -15,10 +15,10 @@ From the build plan §5 ("all of them block going live") and Q10
 (`docs/decisions/2026-10-03-build-plan-questions.md`). Mark sets up each
 account once Jack says yes; Jack says yes to anything that costs money.
 
-- [ ] **Hosting for real shops** (Mark). Where real shops' data may live:
-  **[To decide, Jack]**. The test copy is on DigitalOcean in London
-  (`docs/decisions/2026-10-15-hosted-copy-region.md`), decided for the test
-  copy only.
+- [ ] **Hosting for real shops** (Mark), **in the UK only** (Jack, 16 Oct):
+  the database, backups and stored files. The test copy is already on
+  DigitalOcean in London (`docs/decisions/2026-10-15-hosted-copy-region.md`).
+  The privacy notice says the data is kept in the UK.
 - [ ] **Hosting fit for real shops**: health checks, automatic deploys,
   monitoring and an email provider (PL-11 to PL-14,
   `openspec/changes/add-hosted-copy/design.md`) (Mark).
