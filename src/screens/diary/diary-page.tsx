@@ -394,7 +394,8 @@ function cardDay(item: WaitingItem): string | null | undefined {
  */
 function Floating({ children }: { children: ReactNode }) {
   return createPortal(
-    <div data-floating className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex flex-col items-stretch gap-2 md:right-auto md:left-1/2 md:w-[min(760px,calc(100vw-2rem))] md:-translate-x-1/2">
+    // z-30: under the job menu and chooser (z-40), which open on top of it.
+    <div data-floating className="pointer-events-none fixed inset-x-3 bottom-4 z-30 flex flex-col items-stretch gap-2 md:right-auto md:left-1/2 md:w-[min(760px,calc(100vw-2rem))] md:-translate-x-1/2">
       {children}
     </div>,
     document.body,
@@ -1027,6 +1028,9 @@ export function DiaryPage() {
       setPicking(false);
     },
   } : null;
+  // Keyboard users land on the bar's first button (it is at the end of the page).
+  const enterInsteadRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (picking) enterInsteadRef.current?.focus(); }, [picking]);
   const enterInstead = () => {
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true });
     setPicking(false);
@@ -1047,7 +1051,7 @@ export function DiaryPage() {
   const pickBar = picking ? (
     <div role="status" className="pointer-events-auto flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)] shadow-[0_8px_24px_var(--wh-backdrop)]">
       <span className="grow font-semibold">Choose a time for the new job.</span>
-      <button type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
+      <button ref={enterInsteadRef} type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
       <button type="button" onClick={() => setPicking(false)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
     </div>
   ) : null;
@@ -1060,6 +1064,9 @@ export function DiaryPage() {
     </div>
   ) : null;
   const floating = pickBar || moveErrorBox ? <Floating>{pickBar}{moveErrorBox}</Floating> : null;
+  // Room at the foot of the page, so the floating bar can't hide the last
+  // hour of the diary: scrolling to the bottom brings it above the bar.
+  const floatingSpacer = floating ? <div data-floating-spacer aria-hidden="true" className="h-28" /> : null;
 
   // ---- Phone (piece 4) ----
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -1119,7 +1126,7 @@ export function DiaryPage() {
             type="button"
             aria-label={picking ? 'Choose a time' : 'New job'}
             aria-pressed={picking}
-            onClick={() => setPicking((v) => !v)}
+            onClick={() => { setPicking((v) => !v); setMoveError(null); }}
             className={`inline-flex size-11 items-center justify-center rounded-[10px] text-[22px] ${picking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
           >
             <span aria-hidden="true">+</span>
@@ -1208,7 +1215,6 @@ export function DiaryPage() {
           ) : null}
         </div>
 
-        {floating}
         <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
         <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
 
@@ -1241,8 +1247,13 @@ export function DiaryPage() {
           </SlotContext.Provider>
         </section>
 
+        {/* The foot of the phone page: passing messages sit above the chosen
+            card's bar, at the end of the page, so nothing above moves and
+            neither covers the other (Jack, 16 Oct). */}
+        <div data-phone-foot className="sticky bottom-0 z-30 flex flex-col">
+        {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
         {chosenItem ? (
-          <div role="status" aria-label="Chosen from Waiting for you" className="sticky bottom-0 flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
+          <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
             <div className="flex items-center gap-2.5">
               <div className="flex min-w-0 grow flex-col gap-[3px]">
                 <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
@@ -1261,6 +1272,7 @@ export function DiaryPage() {
             <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
           </div>
         ) : null}
+        </div>
 
         <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
           <DialogHeader>
@@ -1412,6 +1424,7 @@ export function DiaryPage() {
           </ul>
         </div>
       </div>
+      {floatingSpacer}
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
       {newJobDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
