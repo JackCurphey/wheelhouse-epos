@@ -343,6 +343,7 @@ test('on an upright tablet, Waiting is a button and the toolbar has two rows', a
 });
 
 test('on a computer, Waiting stays a column beside the diary', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);

@@ -577,7 +577,15 @@ function initial(name: string) {
 
 /** True below the tablet width (768px), where the diary is one day at a time. */
 function useIsPhone(): boolean {
-  const query = '(max-width: 767px)';
+  return useMedia('(max-width: 767px)');
+}
+
+/** Narrower than a computer: a phone or an upright tablet (layout review 238, item 7). */
+function useIsNarrow(): boolean {
+  return useMedia('(max-width: 1023px)');
+}
+
+function useMedia(query: string): boolean {
   return useSyncExternalStore(
     (onChange) => {
       const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
@@ -591,6 +599,7 @@ function useIsPhone(): boolean {
 export function DiaryPage() {
   const [params, setParams] = useSearchParams();
   const isPhone = useIsPhone();
+  const isNarrow = useIsNarrow();
   const today = todayIso();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
   // On a phone the diary is always one day (decision 68); the week is the strip of days.
@@ -1101,6 +1110,29 @@ export function DiaryPage() {
     if (day) set({ date: day, who: null });
     setSheetOpen(false);
   };
+  // The chosen card with Open, at the foot of a phone or an upright tablet,
+  // where there's no Waiting column to show it in.
+  const chosenItem = items.find((i) => i.jobId === chosen) ?? null;
+  const chosenBar = chosenItem ? (
+    <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
+      <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 grow flex-col gap-[3px]">
+          <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
+          <span className="text-[15px] font-bold">{waitingCard(chosenItem).customer}</span>
+          <span className="text-sm">{waitingCard(chosenItem).detail}</span>
+        </div>
+        <button
+          type="button"
+          aria-label={`Open ${waitingCard(chosenItem).customer}'s request`}
+          onClick={() => setOpenItem(chosenItem)}
+          className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
+        >
+          Open
+        </button>
+      </div>
+      <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
+    </div>
+  ) : null;
   const waitingSheet = (
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
         <DialogHeader>
@@ -1135,7 +1167,6 @@ export function DiaryPage() {
   if (isPhone) {
     const week = weekOf(date);
     const showing = whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';
-    const chosenItem = items.find((i) => i.jobId === chosen) ?? null;
     const hours: number[] = [];
     for (let m = Math.ceil(range.start / 60) * 60; m < range.end; m += 60) hours.push(m);
     const noTime = columns.length === 1 ? shown.filter((j) => j.jobDate === date && !j.startTime) : [];
@@ -1293,26 +1324,7 @@ export function DiaryPage() {
             neither covers the other (Jack, 16 Oct). */}
         <div data-phone-foot className="sticky bottom-0 z-30 flex flex-col">
         {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
-        {chosenItem ? (
-          <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
-            <div className="flex items-center gap-2.5">
-              <div className="flex min-w-0 grow flex-col gap-[3px]">
-                <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
-                <span className="text-[15px] font-bold">{waitingCard(chosenItem).customer}</span>
-                <span className="text-sm">{waitingCard(chosenItem).detail}</span>
-              </div>
-              <button
-                type="button"
-                aria-label={`Open ${waitingCard(chosenItem).customer}'s request`}
-                onClick={() => setOpenItem(chosenItem)}
-                className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
-              >
-                Open
-              </button>
-            </div>
-            <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
-          </div>
-        ) : null}
+        {chosenBar}
         </div>
 
         {waitingSheet}
@@ -1387,7 +1399,7 @@ export function DiaryPage() {
         )}
         </div>
       </div>
-      {floating}
+      {isNarrow ? null : floating}
 
       <div className="flex items-start gap-4">
         {/* Waiting for you (decision 14). */}
@@ -1465,7 +1477,13 @@ export function DiaryPage() {
           </ul>
         </div>
       </div>
-      {floatingSpacer}
+      {isNarrow ? (
+        // An upright tablet: the foot of the page, as on a phone.
+        <div data-tablet-foot className="sticky bottom-0 z-30 -mx-3.5 flex flex-col md:-mx-[22px]">
+          {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
+          {chosenBar}
+        </div>
+      ) : floatingSpacer}
       {waitingSheet}
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
       {newJobDialog}

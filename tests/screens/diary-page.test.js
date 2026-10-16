@@ -78,8 +78,9 @@ function stubServer() {
   };
 }
 
-async function openDiary(query = '?date=2026-10-05', firstBike = 'Trek Domane') {
+async function openDiary(query = '?date=2026-10-05', firstBike = 'Trek Domane', matchMedia = null) {
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
+  if (matchMedia) window.matchMedia = matchMedia;
   // jsdom has no <dialog> methods; the job page opens in one.
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() {
@@ -339,4 +340,19 @@ test('a card chosen from the keyboard after a tap elsewhere says double-click', 
   fireEvent.click(sam, { detail: 1 });
   fireEvent.click(region.getByRole('button', { name: /Lena Fox/ }), { detail: 0 });
   assert.ok(has(region.queryByText('Double-click a card to open it.')));
+});
+
+// After the fresh review of the upright tablet (layout review item 7): a card
+// chosen from the Waiting sheet shows the phone's chosen-card bar with Open,
+// at the foot of the page, since there's no Waiting column to show it in.
+// Spec: openspec/changes/upright-tablet-diary
+test('on an upright tablet, a card chosen from the sheet shows the chosen bar with Open', async () => {
+  const uprightTablet = (q) => ({ matches: q.includes('1023px'), media: q, addEventListener() {}, removeEventListener() {} });
+  const { ui, fireEvent, within } = await openDiary('?date=2026-10-05', 'Trek Domane', uprightTablet);
+  fireEvent.click(ui.getByRole('button', { name: 'Waiting for you, 2' }));
+  const sheet = within(await ui.findByRole('dialog', { name: 'Waiting for you (2)' }));
+  fireEvent.click(sheet.getByRole('button', { name: /Lena Fox/ }));
+  const bar = await ui.findByRole('status', { name: 'Chosen from Waiting for you' });
+  assert.ok(bar.closest('[data-tablet-foot]') !== null, 'the bar sits at the foot of the page');
+  assert.ok(has(within(bar).queryByRole('button', { name: "Open Lena Fox's request" })));
 });
