@@ -168,3 +168,19 @@ test('on a phone, a change request into another week goes to the day asked for a
     WAITING.count = 1;
   }
 });
+
+// After the fresh review: on a phone the "choose a time" bar sits with the
+// chosen Waiting card's bar at the foot of the page, one above the other,
+// rather than floating over it or over the last hour of the day.
+test('on a phone, the choose-a-time bar sits above the chosen card\'s bar, not over it', async () => {
+  const { ui, fireEvent, within } = await openPhone();
+  fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
+  fireEvent.click(within(await ui.findByRole('dialog', { name: 'Waiting for you (1)' })).getByRole('button', { name: /Sam Reed/ }));
+  const chosen = await ui.findByRole('status', { name: 'Chosen from Waiting for you' });
+  fireEvent.click(ui.getByRole('button', { name: 'New job' }));
+  const bar = await ui.findByText(/Tap a free time|Choose a time for the new job/);
+  const foot = bar.closest('[data-phone-foot]');
+  assert.ok(foot !== null, 'the bar is in the foot of the page');
+  assert.ok(foot.contains(chosen), 'with the chosen card\'s bar, one above the other');
+  assert.ok(bar.closest('[data-floating]') === null, 'not floating over the diary');
+});

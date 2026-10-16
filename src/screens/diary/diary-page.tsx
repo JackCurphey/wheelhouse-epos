@@ -387,6 +387,21 @@ function cardDay(item: WaitingItem): string | null | undefined {
   return item.jobDate;
 }
 
+/**
+ * Messages that come and go float at the bottom of the screen, over the
+ * diary, so nothing on the page moves when they appear (Jack, 16 Oct; the
+ * till's drawn "Paid by link" message is the pattern).
+ */
+function Floating({ children }: { children: ReactNode }) {
+  return createPortal(
+    // z-30: under the job menu and chooser (z-40), which open on top of it.
+    <div data-floating className="pointer-events-none fixed inset-x-3 bottom-4 z-30 flex flex-col items-stretch gap-2 md:right-auto md:left-1/2 md:w-[min(760px,calc(100vw-2rem))] md:-translate-x-1/2">
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 /** A change request's dashed outline at the time the customer asked for. */
 function RequestedOutline({ outline, range, chosen }: { outline: Outline; range: { start: number }; chosen: boolean }) {
   const SLOT_H = useContext(SlotContext);
@@ -1013,6 +1028,9 @@ export function DiaryPage() {
       setPicking(false);
     },
   } : null;
+  // Keyboard users land on the bar's first button (it is at the end of the page).
+  const enterInsteadRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (picking) enterInsteadRef.current?.focus(); }, [picking]);
   const enterInstead = () => {
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true });
     setPicking(false);
@@ -1031,12 +1049,24 @@ export function DiaryPage() {
     />
   ) : null;
   const pickBar = picking ? (
-    <div role="status" className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)]">
+    <div role="status" className="pointer-events-auto flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)] shadow-[0_8px_24px_var(--wh-backdrop)]">
       <span className="grow font-semibold">Choose a time for the new job.</span>
-      <button type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
+      <button ref={enterInsteadRef} type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
       <button type="button" onClick={() => setPicking(false)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
     </div>
   ) : null;
+  const moveErrorBox = moveError ? (
+    <div role="alert" className="pointer-events-auto flex items-center gap-2 rounded-md bg-[var(--wh-danger-bg)] py-1 pr-1 pl-3 text-sm text-[var(--wh-danger-hover)] shadow-[0_8px_24px_var(--wh-backdrop)]">
+      <span className="grow py-1">{moveError}</span>
+      <button type="button" aria-label="Close the message" onClick={() => setMoveError(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--wh-hover)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
+  ) : null;
+  const floating = pickBar || moveErrorBox ? <Floating>{pickBar}{moveErrorBox}</Floating> : null;
+  // Room at the foot of the page, so the floating bar can't hide the last
+  // hour of the diary: scrolling to the bottom brings it above the bar.
+  const floatingSpacer = floating ? <div data-floating-spacer aria-hidden="true" className="h-28" /> : null;
 
   // ---- Phone (piece 4) ----
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -1096,7 +1126,7 @@ export function DiaryPage() {
             type="button"
             aria-label={picking ? 'Choose a time' : 'New job'}
             aria-pressed={picking}
-            onClick={() => setPicking((v) => !v)}
+            onClick={() => { setPicking((v) => !v); setMoveError(null); }}
             className={`inline-flex size-11 items-center justify-center rounded-[10px] text-[22px] ${picking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
           >
             <span aria-hidden="true">+</span>
@@ -1185,10 +1215,8 @@ export function DiaryPage() {
           ) : null}
         </div>
 
-        {pickBar ? <div className="px-3.5 pt-2.5">{pickBar}</div> : null}
         <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
         <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
-        {moveError ? <p role="alert" className="m-3.5 mb-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
 
         <section aria-label={`Workshop diary, ${dayLabel(date)}`} className="px-3.5 pb-3.5">
           {columns.length > 1 ? (
@@ -1219,8 +1247,13 @@ export function DiaryPage() {
           </SlotContext.Provider>
         </section>
 
+        {/* The foot of the phone page: passing messages sit above the chosen
+            card's bar, at the end of the page, so nothing above moves and
+            neither covers the other (Jack, 16 Oct). */}
+        <div data-phone-foot className="sticky bottom-0 z-30 flex flex-col">
+        {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
         {chosenItem ? (
-          <div role="status" aria-label="Chosen from Waiting for you" className="sticky bottom-0 flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
+          <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
             <div className="flex items-center gap-2.5">
               <div className="flex min-w-0 grow flex-col gap-[3px]">
                 <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
@@ -1239,6 +1272,7 @@ export function DiaryPage() {
             <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
           </div>
         ) : null}
+        </div>
 
         <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
           <DialogHeader>
@@ -1325,7 +1359,7 @@ export function DiaryPage() {
           </button>
         )}
       </div>
-      {pickBar}
+      {floating}
 
       <div className="flex items-start gap-4">
         {/* Waiting for you (decision 14). */}
@@ -1378,7 +1412,6 @@ export function DiaryPage() {
         <div className="flex min-w-0 grow flex-col gap-2.5">
           <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
           <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
-          {moveError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
           <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</ExtrasContext.Provider></MoveContext.Provider></PickContext.Provider></div>
           {jobs.isError ? <p role="alert">Wheelhouse couldn&apos;t load the diary. Try again in a moment.</p> : null}
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
@@ -1391,6 +1424,7 @@ export function DiaryPage() {
           </ul>
         </div>
       </div>
+      {floatingSpacer}
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
       {newJobDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}

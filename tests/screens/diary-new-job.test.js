@@ -493,3 +493,23 @@ test('pressing a result keeps the focus in the search, so Safari can choose it; 
   const escape = r.fireEvent.keyDown(box, { key: 'Escape' });
   assert.equal(escape, true, 'with nothing showing, Escape is left for New job');
 });
+
+// Jack, 16 Oct: the "choose a time" bar floats at the bottom of the screen.
+// Spec: openspec/changes/floating-diary-messages
+test('the choose-a-time bar floats instead of pushing the diary down', async () => {
+  const r = await openDiary();
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  const bar = r.ui.getByText('Choose a time for the new job.');
+  assert.ok(bar.closest('[data-floating]') !== null, 'the bar floats');
+});
+
+// After the fresh review: keyboard users land on the bar's first button, and
+// the page gains room at the bottom so the bar can't hide the last hour.
+test('New job puts the focus on Enter a time instead, and room is kept at the bottom for the bar', async () => {
+  const r = await openDiary();
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  await r.waitFor(() => assert.equal(document.activeElement?.textContent, 'Enter a time instead'));
+  assert.ok(r.ui.container.querySelector('[data-floating-spacer]') !== null, 'room is kept at the bottom');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Cancel' }));
+  assert.ok(r.ui.container.querySelector('[data-floating-spacer]') === null);
+});
