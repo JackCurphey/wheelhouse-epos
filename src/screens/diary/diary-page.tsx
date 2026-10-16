@@ -601,6 +601,8 @@ export function DiaryPage() {
   // How the last press on a Waiting card was made: a second tap opens the
   // chosen card on a touch screen, a second mouse click doesn't (decision 14).
   const cardPointer = useRef<string>('mouse');
+  // Whether the chosen card was chosen by a tap, for its hint (#238, item 3).
+  const [chosenByTouch, setChosenByTouch] = useState(false);
   const [openItem, setOpenItem] = useState<WaitingItem | null>(null);
 
   const set = (changes: Record<string, string | null>) => {
@@ -1303,7 +1305,7 @@ export function DiaryPage() {
           </DialogBody>
         </Dialog>
 
-        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
+        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
         {newJobDialog}
         {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
         {extrasUi}
@@ -1323,7 +1325,7 @@ export function DiaryPage() {
               role="tab"
               aria-selected={view === v}
               onClick={() => set({ view: v === 'day' ? 'day' : null })}
-              className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-[13px] font-semibold ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
+              className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-[13px] font-semibold pointer-coarse:min-h-11 ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
             >
               {v === 'week' ? 'Week' : 'Day'}
             </button>
@@ -1377,6 +1379,7 @@ export function DiaryPage() {
             const on = chosen === item.jobId;
             const choose = () => {
               setChosen(item.jobId ?? null);
+              setChosenByTouch(cardPointer.current === 'touch');
               const day = cardDay(item);
               if (day) set({ date: day, who: null });
             };
@@ -1396,16 +1399,17 @@ export function DiaryPage() {
                   onDoubleClick={() => { choose(); setOpenItem(item); }}
                   className="flex flex-col gap-[5px] rounded-lg px-3 pt-2.5 pb-2.5 text-left"
                 >
-                  <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-[11px] font-bold ${CHIP[card.tone]}`}>{card.label}</span>
-                  <span className="text-[13px] font-bold">{card.customer}</span>
-                  <span className="text-xs">{card.detail}</span>
+                  {/* Larger on a touch screen, as drawn for the tablet (#238, item 4). */}
+                  <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-[11px] font-bold pointer-coarse:text-xs ${CHIP[card.tone]}`}>{card.label}</span>
+                  <span className="text-[13px] font-bold pointer-coarse:text-[15px]">{card.customer}</span>
+                  <span className="text-xs pointer-coarse:text-[13px]">{card.detail}</span>
                 </button>
                 {on ? (
                   <button
                     type="button"
                     aria-label={`Open ${card.customer}'s request`}
                     onClick={() => setOpenItem(item)}
-                    className="mx-3 mb-2.5 inline-flex min-h-8 self-start items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-bold text-[var(--wh-on-brand)]"
+                    className="mx-3 mb-2.5 inline-flex min-h-8 self-start items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-bold text-[var(--wh-on-brand)] pointer-coarse:min-h-11 pointer-coarse:px-[18px] pointer-coarse:text-sm"
                   >
                     Open
                   </button>
@@ -1413,6 +1417,10 @@ export function DiaryPage() {
               </div>
             );
           })}
+          {/* How to open the chosen card, as drawn (#238, item 3; decision 14). */}
+          {chosen !== null && items.some((i) => i.jobId === chosen) ? (
+            <p className="m-0 text-xs text-[var(--wh-muted)]">{chosenByTouch ? 'Tap the card again to open it.' : 'Double-click a card to open it.'}</p>
+          ) : null}
         </section>
 
         <div className="flex min-w-0 grow flex-col gap-2.5">
@@ -1431,7 +1439,7 @@ export function DiaryPage() {
         </div>
       </div>
       {floatingSpacer}
-      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
+      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
       {newJobDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
       {extrasUi}

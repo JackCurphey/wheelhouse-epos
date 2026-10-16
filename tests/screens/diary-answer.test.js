@@ -262,3 +262,14 @@ test('double-clicking a card opens it straight away', async () => {
   const dlg = await loaded(r);
   assert.ok(has(dlg.queryByRole('heading', { name: 'Cancelled booking' })));
 });
+
+// The layout review (#238, item 8): a change request's pop-up has "Open full
+// job", as drawn on request-change, which closes it and opens the job page.
+// Spec: openspec/changes/review-catch-ups
+test('a change request pop-up opens the full job', async () => {
+  const r = await openDiary();
+  const dlg = await openCard(r, 'Oliver Chen');
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Open full job' }));
+  assert.ok(has(await r.ui.findByRole('dialog', { name: /Full service/ })), 'the job page opens');
+  assert.ok(r.ui.queryByRole('heading', { name: 'Change request' }) === null, 'the request closes');
+});

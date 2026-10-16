@@ -306,3 +306,25 @@ test('Waiting for you shows its count as a badge and keeps its name', async () =
   assert.ok(badge !== null, 'the count is a badge');
   assert.equal(badge.textContent, '2');
 });
+
+// The layout review (#238, item 3): once a card is chosen, the hint drawn
+// under the cards says how to open it. Spec: openspec/changes/review-catch-ups
+test('a chosen Waiting card says how to open it', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  const region = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  assert.ok(region.queryByText('Double-click a card to open it.') === null, 'no hint before a card is chosen');
+  fireEvent.click(region.getByRole('button', { name: /Lena Fox/ }));
+  assert.ok(has(region.queryByText('Double-click a card to open it.')));
+});
+
+// On a touch screen the hint says to tap again, as drawn for the tablet, and
+// the Open button is finger-sized there (#238, items 3 and 4).
+test('chosen by a tap, the hint says tap again, and Open is finger-sized on touch', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  const region = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  const card = region.getByRole('button', { name: /Lena Fox/ });
+  fireEvent.pointerDown(card, { pointerType: 'touch' });
+  fireEvent.click(card, { detail: 1 });
+  assert.ok(has(region.queryByText('Tap the card again to open it.')));
+  assert.match(region.getByRole('button', { name: "Open Lena Fox's request" }).className, /pointer-coarse:min-h-11/);
+});
