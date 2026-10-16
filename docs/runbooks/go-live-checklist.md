@@ -3,9 +3,8 @@
 Everything that has to be true before Jack's shop stops using Citrus Lime and
 runs on Wheelhouse alone (WP-8.3, "Switch-over and one trading week alone").
 Issue #140 asked for it (from Codex's review in #126, finding 15). Each line
-says who does it and where it was decided. **[To decide]** marks what nobody
-has decided yet; those are asked of Jack (or Mark) one at a time and filled
-in here.
+says who does it and where it was decided. Jack answered every open
+question on 16 Oct; the lines without a name to decide are Mark's to set up.
 
 Tick a line only when it is done and checked, not when it is planned.
 
@@ -24,7 +23,11 @@ account once Jack says yes; Jack says yes to anything that costs money.
   `openspec/changes/add-hosted-copy/design.md`) (Mark).
 - [ ] **Stripe**: the card reader and online payments
   (`docs/decisions/2026-10-05-card-payments-provider.md`) (Mark, after
-  Jack's yes). Which reader to buy: **[To decide, Jack]**.
+  Jack's yes). **The reader: a Stripe Reader S700** (£229 when checked on
+  5 Oct), on the shop's Wi-Fi, with a phone hotspot as the fallback for the
+  till and the reader when the shop's internet is down (Jack, 16 Oct).
+  Bought with Jack's yes at the time. (The cheaper WisePad 3 can't be
+  driven from the server.)
 - [ ] **Email sending service** (Mark).
 - [ ] **Staff sign-in (WorkOS)** (Mark).
 - [ ] **Google sign-in for customers**: yes from Jack on 7 Oct
@@ -134,7 +137,8 @@ Q12: "these are done before switch-over".
 - [ ] The switch-over checklist in the app ticks itself: matching weeks, the
   card machine connected, "The website is ready" (decision 7; the website
   is turned on that morning, `docs/decisions/2026-10-02-ux-walkthrough.md`).
-- [ ] **Equipment**: the Stripe reader; receipt and label printers through
+- [ ] **Equipment**: the Stripe Reader S700 and a phone that can share its
+  connection; receipt and label printers through
   the browser and the existing print agent (the printer half of P00b is
   still open, `docs/decisions/2026-09-23-p00b-scanner-evidence.md`);
   scanners set to a UK keyboard layout.
