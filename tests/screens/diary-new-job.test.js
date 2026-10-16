@@ -420,3 +420,37 @@ test('after a move the focus is on the new time, and the automatic choice still 
   await r.waitFor(() => assert.ok(document.activeElement === line));
   assert.ok(has(form.queryByText('Mechanic chosen automatically: most free time on Tuesday.')));
 });
+
+// new-job-pick: the slot under the pointer shows as a solid target with its
+// time, before the click (drawn, not built until 16 Oct; Jack asked for it).
+// Spec: openspec/changes/pick-hover-and-pointer
+test('choosing a time, the slot under the pointer is highlighted with its time', async () => {
+  const r = await openDiary();
+  const col = () => r.ui.getByRole('group', { name: 'Tuesday 6 October' });
+  const slot = () => r.ui.container.querySelector('[data-pick-slot]');
+  r.fireEvent.pointerMove(col(), { pointerType: 'mouse', clientY: 58 });
+  assert.equal(has(slot()), false, 'no highlight before New job');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  r.fireEvent.pointerMove(col(), { pointerType: 'mouse', clientY: 58 });
+  assert.ok(has(slot()), 'the slot under the pointer is highlighted');
+  assert.equal(slot().textContent, '10:00');
+  r.fireEvent.pointerLeave(col(), { pointerType: 'mouse' });
+  assert.equal(has(slot()), false, 'it goes when the pointer leaves');
+});
+
+// After the fresh review: a touch screen sends a pointer move before a tap,
+// which must not show the highlight (on an iPad it could swallow the tap);
+// and a highlight doesn't come back when New job is pressed again.
+test('a touch shows no highlight, and the next New job starts without the last one', async () => {
+  const r = await openDiary();
+  const col = () => r.ui.getByRole('group', { name: 'Tuesday 6 October' });
+  const slot = () => r.ui.container.querySelector('[data-pick-slot]');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  r.fireEvent.pointerMove(col(), { pointerType: 'touch', clientY: 58 });
+  assert.equal(has(slot()), false, 'a touch shows no highlight');
+  r.fireEvent.pointerMove(col(), { pointerType: 'mouse', clientY: 58 });
+  assert.ok(has(slot()));
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Cancel' }));
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  assert.equal(has(slot()), false, 'no highlight left over from last time');
+});

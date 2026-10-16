@@ -185,3 +185,25 @@ test('on a tablet, press and hold lays a stack out on a tray that fits the diary
     await ctx.close();
   }
 });
+
+// Jack, 16 Oct: everything clickable shows the pointing-finger cursor, as the
+// sidebar's links already do (Tailwind 4 leaves buttons with the arrow).
+// Spec: openspec/changes/pick-hover-and-pointer
+test('buttons show the pointing-finger cursor; a disabled one keeps the arrow', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await expect(page.getByRole('button', { name: 'New job' })).toHaveCSS('cursor', 'pointer');
+  await expect(page.getByRole('button', { name: 'Next week' })).toHaveCSS('cursor', 'pointer');
+  // A job that can be dragged keeps its open hand, which says it can move too.
+  await expect(page.getByRole('button', { name: /Puncture repair/ }).first()).toHaveCSS('cursor', 'grab');
+  const disabled = await page.evaluate(() => {
+    const b = document.createElement('button');
+    b.disabled = true;
+    document.body.append(b);
+    const c = getComputedStyle(b).cursor;
+    b.remove();
+    return c;
+  });
+  expect(disabled).toBe('default');
+});
