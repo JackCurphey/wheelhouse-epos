@@ -207,3 +207,18 @@ test('buttons show the pointing-finger cursor; a disabled one keeps the arrow', 
   });
   expect(disabled).toBe('default');
 });
+
+// Jack, 16 Oct: nothing that appears pushes the page. New job's "choose a
+// time" bar floats at the bottom of the screen, so the diary doesn't move.
+// Spec: openspec/changes/floating-diary-messages
+test('pressing New job does not move the diary', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const monday = page.getByRole('group', { name: /^Monday/ });
+  await expect(monday).toBeVisible();
+  const before = (await monday.boundingBox())!.y;
+  await page.getByRole('button', { name: 'New job' }).click();
+  await expect(page.getByText(/Choose a time for the new job\./)).toBeVisible();
+  expect((await monday.boundingBox())!.y).toBe(before);
+});

@@ -454,3 +454,12 @@ test('a touch shows no highlight, and the next New job starts without the last o
   r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
   assert.equal(has(slot()), false, 'no highlight left over from last time');
 });
+
+// Jack, 16 Oct: the "choose a time" bar floats at the bottom of the screen.
+// Spec: openspec/changes/floating-diary-messages
+test('the choose-a-time bar floats instead of pushing the diary down', async () => {
+  const r = await openDiary();
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  const bar = r.ui.getByText('Choose a time for the new job.');
+  assert.ok(bar.closest('[data-floating]') !== null, 'the bar floats');
+});

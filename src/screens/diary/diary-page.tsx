@@ -387,6 +387,20 @@ function cardDay(item: WaitingItem): string | null | undefined {
   return item.jobDate;
 }
 
+/**
+ * Messages that come and go float at the bottom of the screen, over the
+ * diary, so nothing on the page moves when they appear (Jack, 16 Oct; the
+ * till's drawn "Paid by link" message is the pattern).
+ */
+function Floating({ children }: { children: ReactNode }) {
+  return createPortal(
+    <div data-floating className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex flex-col items-stretch gap-2 md:right-auto md:left-1/2 md:w-[min(760px,calc(100vw-2rem))] md:-translate-x-1/2">
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 /** A change request's dashed outline at the time the customer asked for. */
 function RequestedOutline({ outline, range, chosen }: { outline: Outline; range: { start: number }; chosen: boolean }) {
   const SLOT_H = useContext(SlotContext);
@@ -1031,12 +1045,21 @@ export function DiaryPage() {
     />
   ) : null;
   const pickBar = picking ? (
-    <div role="status" className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)]">
+    <div role="status" className="pointer-events-auto flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)] shadow-[0_8px_24px_var(--wh-backdrop)]">
       <span className="grow font-semibold">Choose a time for the new job.</span>
       <button type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
       <button type="button" onClick={() => setPicking(false)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
     </div>
   ) : null;
+  const moveErrorBox = moveError ? (
+    <div role="alert" className="pointer-events-auto flex items-center gap-2 rounded-md bg-[var(--wh-danger-bg)] py-1 pr-1 pl-3 text-sm text-[var(--wh-danger-hover)] shadow-[0_8px_24px_var(--wh-backdrop)]">
+      <span className="grow py-1">{moveError}</span>
+      <button type="button" aria-label="Close the message" onClick={() => setMoveError(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--wh-hover)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
+  ) : null;
+  const floating = pickBar || moveErrorBox ? <Floating>{pickBar}{moveErrorBox}</Floating> : null;
 
   // ---- Phone (piece 4) ----
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -1185,10 +1208,9 @@ export function DiaryPage() {
           ) : null}
         </div>
 
-        {pickBar ? <div className="px-3.5 pt-2.5">{pickBar}</div> : null}
+        {floating}
         <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
         <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
-        {moveError ? <p role="alert" className="m-3.5 mb-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
 
         <section aria-label={`Workshop diary, ${dayLabel(date)}`} className="px-3.5 pb-3.5">
           {columns.length > 1 ? (
@@ -1325,7 +1347,7 @@ export function DiaryPage() {
           </button>
         )}
       </div>
-      {pickBar}
+      {floating}
 
       <div className="flex items-start gap-4">
         {/* Waiting for you (decision 14). */}
@@ -1378,7 +1400,6 @@ export function DiaryPage() {
         <div className="flex min-w-0 grow flex-col gap-2.5">
           <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
           <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
-          {moveError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
           <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</ExtrasContext.Provider></MoveContext.Provider></PickContext.Provider></div>
           {jobs.isError ? <p role="alert">Wheelhouse couldn&apos;t load the diary. Try again in a moment.</p> : null}
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
