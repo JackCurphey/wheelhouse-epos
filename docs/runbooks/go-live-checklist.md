@@ -134,8 +134,10 @@ Q12: "these are done before switch-over".
   the browser and the existing print agent (the printer half of P00b is
   still open, `docs/decisions/2026-09-23-p00b-scanner-evidence.md`);
   scanners set to a UK keyboard layout.
-- [ ] **Staff ready**: practice mode was dropped. How staff get ready
-  instead: **[To decide, Jack]**.
+- [ ] **Staff ready** (Jack, 16 Oct): before switch-over, staff practise on
+  the online test copy (North Street Cycles, test data only) from a short
+  list Claude writes: a sale, a refund, booking a bike in, taking a deposit,
+  handing a bike over. Replaces practice mode, which was dropped.
 - [ ] **One full trading week, weekend included, on Wheelhouse alone**
   (`docs/superpowers/specs/2026-09-27-release-2-design.md`). That is the
   finish line.
