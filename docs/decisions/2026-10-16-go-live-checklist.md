@@ -28,8 +28,10 @@ question each on 16 Oct. Each was Jack's choice from numbered options.
    added the guide).
 9. **WhatsApp is needed on switch-over day** (chosen over texts first and
    WhatsApp after the trading week).
-10. **Google sign-in is needed on switch-over day**, in the shop's business
-    Google account.
+10. **Google sign-in is needed on switch-over day, in a Google account for
+    Wheelhouse itself.** Jack first chose the shop's business Google account;
+    after the fresh review pointed out that the sign-in serves every shop's
+    customers, he chose Wheelhouse's own account instead.
 11. **The card reader is a Stripe Reader S700**, with a phone hotspot as the
     fallback when the shop's internet is down (chosen over the S710 with its
     own mobile signal, £7 a month).

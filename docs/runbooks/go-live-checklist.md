@@ -35,9 +35,10 @@ account once Jack says yes; Jack says yes to anything that costs money.
 - [ ] **Staff sign-in (WorkOS)** (Mark).
 - [ ] **Google sign-in for customers**: yes from Jack on 7 Oct
   (`docs/decisions/2026-10-07-stage-1-drawing-gaps.md`). **Needed on
-  switch-over day, owned by the shop's business Google account** (Jack,
-  16 Oct): Jack tells Mark which account; Mark sets up the Google Cloud
-  project there; it uses the privacy page from the legal drafts.
+  switch-over day, owned by a Google account for Wheelhouse itself**, not
+  one shop's (Jack, 16 Oct), since it serves every shop's customers. Jack
+  makes the account if Wheelhouse has none; Mark sets up the Google Cloud
+  project in it; it uses the privacy page from the legal drafts.
 - [ ] **WhatsApp Business, needed on switch-over day** (Jack, 16 Oct): the
   account (Mark sets it up; Jack says yes to it and its per-message charge
   when it is opened), and Meta's approval of each message template. The
