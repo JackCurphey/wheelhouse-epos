@@ -15,25 +15,31 @@ and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
 move the booking link's quote answer to `portal.js` (after #207); a login
 for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
 the commit in `/healthz`), then the deploy workflow; then #203 step A.
-**Jack is on:** 15 Oct merged: quote routes (#207), test shop loader
-(#216), the five #139 drawings (#217, canvas and mockup republished), diary
-fixes (#218), Enter a time instead (#220) and four job page fixes from #190
-(#223). Open: #225, attachments and deleting a job moved to `workshop.js`
-(the last of his WP-0.4; waits for Mark's approval, as it changes
-`server.js`). Online test copy (#221): yes posted on #137 (15 Oct); his
-DigitalOcean account is made and `doctl` is installed on his Mac, but the
-card was refused by DigitalOcean on 15 Oct, to retry on 16 Oct; then steps
-2–5 of `docs/runbooks/hosted-copy.md` (the repo is at `~/wheelhouse-epos`,
-not the guide's path). Next code in his lane: the rest of #190, #192's
-screen-only items (New job's won't-fit warning, a change request into
-another week); then the stage check once lines 1–6 of §9 are in.
+Also waiting for him: approve #225 (Jack's, changes `server.js`), and the
+server half of #190 A, a guard so a cancelled, declined or expired booking
+can't be booked in or started (the `workshop-jobs` spec allows it today;
+Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5).
+**Jack is on:** 15 Oct (evening) merged, screens only: the rest of #190
+C, refusals in plain words for work and parts, days and diary drags (#227);
+New job's won't-fit warning with "Find the next free" (#228; decision 23,
+Jack's answer in `docs/decisions/2026-10-15-new-job-wont-fit.md`); a change
+request into another week goes to the week asked for (#229; decision 19,
+`docs/decisions/2026-10-15-change-request-other-week.md`). 16 Oct: "Bike
+is here" stays on for an ended booking whose bike is in (no change). Open:
+#225, waiting for Mark's approval (up to date with main on 15 Oct). Online
+test copy (#221): DigitalOcean's page shows an error after the card check
+passes (15 Oct, twice); Jack retries on 16 Oct and opens a support ticket if
+it fails, then steps 2–5 of `docs/runbooks/hosted-copy.md` (repo at
+`~/wheelhouse-epos`). Next code in his lane: what's left of #190 (D,
+carry-over, waits for WP-1.9) and #192; then the stage check once lines 1–6
+of §9 are in.
 **Open for Jack:** labour's VAT rate on #134 (15 Oct); before WP-3.1, two new "check these"
 kinds and deposits on unfinished work (`openspec/changes/wp-1-6-sales-in-pence/design.md`,
 Open Questions); ask from Mark #140; till job warning for WP-3.1 (#196); the test shop's two
 defaults in `decided-while-building.md` (£0.00 unpriced services, the past
 drawn week).
 
-**Updated:** 2026-10-15. **Two people build at once** (Jack agreed to Mark's
+**Updated:** 2026-10-16. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
 PR #126): Mark takes the server half of each work package and all hosting;
 Jack takes the screens and the whole workshop. STATUS and the build board are
