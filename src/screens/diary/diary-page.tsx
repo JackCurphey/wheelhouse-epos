@@ -429,7 +429,15 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChos
   const pick = useContext(PickContext);
   // new-job-pick: the slot under the pointer shows as a solid target with its
   // time before the click (Jack, 16 Oct). A mouse only; touch has no hover.
+  // A touch screen sends a pointer move before each tap; showing the slot
+  // then could make an iPad swallow the tap, so only a mouse shows it.
   const [hoverMin, setHoverMin] = useState<number | null>(null);
+  // Forgotten when choosing ends, so the next New job starts clean.
+  const [wasPicking, setWasPicking] = useState(Boolean(pick));
+  if (wasPicking !== Boolean(pick)) {
+    setWasPicking(Boolean(pick));
+    setHoverMin(null);
+  }
   const pickY = (e: ReactMouseEvent<HTMLDivElement>) => e.clientY - e.currentTarget.getBoundingClientRect().top;
   const pickHint = pick && hoverMin !== null ? hoverMin : null;
   return (
@@ -440,8 +448,8 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChos
       aria-label={label}
       data-diary-col={index}
       onClick={pick ? (e) => pick.onPick(index, pickY(e)) : undefined}
-      onMouseMove={pick ? (e) => setHoverMin(dropStart(pickY(e), range, 30, SLOT_H)) : undefined}
-      onMouseLeave={() => setHoverMin(null)}
+      onPointerMove={pick ? (e) => { if (e.pointerType === 'mouse') setHoverMin(dropStart(pickY(e), range, 30, SLOT_H)); } : undefined}
+      onPointerLeave={() => setHoverMin(null)}
       className={`relative border-l border-[var(--wh-border)] first:border-l-0 ${pick ? 'cursor-pointer bg-[var(--wh-accent-soft)]/30' : ''}`}
       style={{
         height,

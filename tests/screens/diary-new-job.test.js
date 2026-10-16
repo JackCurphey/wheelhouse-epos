@@ -426,15 +426,31 @@ test('after a move the focus is on the new time, and the automatic choice still 
 // Spec: openspec/changes/pick-hover-and-pointer
 test('choosing a time, the slot under the pointer is highlighted with its time', async () => {
   const r = await openDiary();
-  const tue = r.within(r.ui.getByRole('group', { name: 'Tuesday 6 October' }));
-  r.fireEvent.mouseMove(r.ui.getByRole('group', { name: 'Tuesday 6 October' }), { clientY: 58 });
-  assert.equal(has(r.ui.container.querySelector('[data-pick-slot]')), false, 'no highlight before New job');
+  const col = () => r.ui.getByRole('group', { name: 'Tuesday 6 October' });
+  const slot = () => r.ui.container.querySelector('[data-pick-slot]');
+  r.fireEvent.pointerMove(col(), { pointerType: 'mouse', clientY: 58 });
+  assert.equal(has(slot()), false, 'no highlight before New job');
   r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
-  r.fireEvent.mouseMove(r.ui.getByRole('group', { name: 'Tuesday 6 October' }), { clientY: 58 });
-  const slot = r.ui.container.querySelector('[data-pick-slot]');
-  assert.ok(has(slot), 'the slot under the pointer is highlighted');
-  assert.equal(slot.textContent, '10:00');
-  assert.ok(has(tue.queryByText('10:00')));
-  r.fireEvent.mouseLeave(r.ui.getByRole('group', { name: 'Tuesday 6 October' }));
-  assert.equal(has(r.ui.container.querySelector('[data-pick-slot]')), false, 'it goes when the pointer leaves');
+  r.fireEvent.pointerMove(col(), { pointerType: 'mouse', clientY: 58 });
+  assert.ok(has(slot()), 'the slot under the pointer is highlighted');
+  assert.equal(slot().textContent, '10:00');
+  r.fireEvent.pointerLeave(col(), { pointerType: 'mouse' });
+  assert.equal(has(slot()), false, 'it goes when the pointer leaves');
+});
+
+// After the fresh review: a touch screen sends a pointer move before a tap,
+// which must not show the highlight (on an iPad it could swallow the tap);
+// and a highlight doesn't come back when New job is pressed again.
+test('a touch shows no highlight, and the next New job starts without the last one', async () => {
+  const r = await openDiary();
+  const col = () => r.ui.getByRole('group', { name: 'Tuesday 6 October' });
+  const slot = () => r.ui.container.querySelector('[data-pick-slot]');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  r.fireEvent.pointerMove(col(), { pointerType: 'touch', clientY: 58 });
+  assert.equal(has(slot()), false, 'a touch shows no highlight');
+  r.fireEvent.pointerMove(col(), { pointerType: 'mouse', clientY: 58 });
+  assert.ok(has(slot()));
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Cancel' }));
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  assert.equal(has(slot()), false, 'no highlight left over from last time');
 });
