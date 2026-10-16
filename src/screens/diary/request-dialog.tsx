@@ -147,9 +147,9 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob }: { item: 
         </div>
         <span className="text-sm text-[var(--wh-muted)]">{bike}</span>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2.5 gap-y-1 rounded-lg border border-[var(--wh-border)] p-3.5">
-          <span className="text-[11px] font-bold tracking-[0.6px] text-[var(--wh-muted)] uppercase">From</span>
+          <span className="text-xs font-bold tracking-[0.6px] text-[var(--wh-muted)] uppercase">From</span>
           <span />
-          <span className="text-[11px] font-bold tracking-[0.6px] text-[var(--wh-muted)] uppercase">To</span>
+          <span className="text-xs font-bold tracking-[0.6px] text-[var(--wh-muted)] uppercase">To</span>
           <strong className="text-sm">{atWho(item.from)}</strong>
           <span aria-hidden="true">→</span>
           <strong className="text-sm">{atWho(item.to)}</strong>
