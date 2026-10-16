@@ -52,8 +52,10 @@ trading week); SumUp and Paymentsense (after Stripe; #138); Apple sign-in
   confirmed, Quote to approve). Jack.
 - [ ] **Booking terms and privacy notice** behind the booking form's "By
   sending, you agree to our booking terms and privacy notice."
-  (`docs/decisions/2026-10-01-book-a-repair-review.md`). Who drafts them
-  before the solicitor sees them: **[To decide, Jack]**.
+  (`docs/decisions/2026-10-01-book-a-repair-review.md`), with the cookie
+  policy, the returns page and the data agreement for shops: Claude drafts
+  them from Jack's decisions, marked as drafts; Jack reads them; the
+  solicitor checks them (Jack, 16 Oct).
 - No automatic messages go to customers until switch-over day
   (`docs/decisions/2026-10-02-ux-walkthrough.md`).
 
