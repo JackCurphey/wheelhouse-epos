@@ -15,7 +15,7 @@ import { STATE_LABEL, shortDay, todayIso, type DiaryState, type WaitingItem } fr
  *
  * Not here yet, because the server can't do them: choosing the mechanic as
  * you accept (decision 62), "Offer another time", and a message with a
- * decline. "Open full job" waits for the job page.
+ * decline. A change request's "Open full job" opens the job page (layout review 238, item 8).
  */
 
 const CHIP: Record<DiaryState, string> = {
@@ -59,7 +59,7 @@ const TITLE: Record<WaitingItem['kind'], string> = {
   customer_cancelled: 'Cancelled booking',
 };
 
-export function RequestDialog({ item, onClose, onAnswered }: { item: WaitingItem; onClose: () => void; onAnswered?: () => void }) {
+export function RequestDialog({ item, onClose, onAnswered, onOpenJob }: { item: WaitingItem; onClose: () => void; onAnswered?: () => void; onOpenJob?: (jobId: number) => void }) {
   const queryClient = useQueryClient();
   const id = item.jobId as number;
   const jobQuery = useQuery({ queryKey: ['workshop-job', id], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${id}`) });
@@ -160,7 +160,11 @@ export function RequestDialog({ item, onClose, onAnswered }: { item: WaitingItem
     footer = (
       <div className="flex w-full flex-col gap-2">
         <Button variant="accent" block disabled={sending || !job} onClick={() => answer('accept-change')}>Accept</Button>
-        <Button block disabled={sending || !job} onClick={() => answer('decline-change')}>Decline</Button>
+        {/* Decline and "Open full job" share a row, as drawn on request-change (layout review 238, item 8). */}
+        <div className="flex flex-col gap-2 md:flex-row">
+          <Button block disabled={sending || !job} onClick={() => answer('decline-change')}>Decline</Button>
+          {onOpenJob ? <Button variant="ghost" block disabled={sending} onClick={() => onOpenJob(id)}>Open full job</Button> : null}
+        </div>
       </div>
     );
   } else {

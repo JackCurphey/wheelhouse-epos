@@ -258,3 +258,26 @@ test('Waiting for you is a panel with its count as a badge', async ({ page, cont
   await expect(panel.locator('[data-count-badge]')).toHaveCSS('background-color', 'rgb(255, 253, 247)');
   await expect(panel.locator('[data-count-badge]')).toBeVisible();
 });
+
+// The layout review (#238, items 4 and 5): on a tablet, as drawn, the Week /
+// Day buttons and a chosen Waiting card's Open button are 44px finger
+// targets, and the card's text is larger. Spec: openspec/changes/review-catch-ups
+test('on a tablet, the Week and Day buttons are finger-sized', async ({ browser }) => {
+  const r = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Full service', jobDate: MON, startTime: '15:00', endTime: '16:00' } });
+  expect(r.status, JSON.stringify(r.body)).toBe(201);
+  const ctx = await browser.newContext({ hasTouch: true, isMobile: false, viewport: { width: 1024, height: 768 } });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+    test.skip(!coarse, 'this browser does not report a touch pointer');
+    for (const tab of ['Week', 'Day']) {
+      expect((await page.getByRole('tab', { name: tab }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+  } finally {
+    await ctx.close();
+  }
+});
