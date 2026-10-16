@@ -353,6 +353,9 @@ test('a half-hour block shows the bike only; an hour block shows the job too', a
     assert.ok(thu.queryByText('Safety check') === null, 'a half-hour block has no room for the job line');
     const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
     assert.ok(has(tue.queryByText('Brake service')), 'an hour block shows the job');
+    // After the fresh review: lines are 14px, as drawn, so a 45-minute block has room for two.
+    const fri = within(ui.getByRole('group', { name: 'Friday 9 October' }));
+    assert.ok(has(fri.queryByText('Puncture repair')), 'a 45-minute block shows the job');
   } finally {
     JOBS.pop();
   }

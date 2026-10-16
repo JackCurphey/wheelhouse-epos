@@ -186,13 +186,13 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
-      <span aria-hidden="true" className={`truncate text-xs font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
+      <span aria-hidden="true" className={`truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
         {job.bikeLabel || 'Bike'}
       </span>
       {/* A block too short for two 12px lines shows the bike only (drawn, walk 1 M3);
           the job stays in its description and summary. */}
       {height >= TWO_LINES ? (
-        <span aria-hidden="true" className="truncate text-xs leading-tight font-bold">
+        <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">
           {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
         </span>
       ) : null}
@@ -323,15 +323,15 @@ function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: {
           // A click from the keyboard (detail 0) is never a tap.
           extras?.stack(jobs, colIndex, e.currentTarget, e.detail > 0 && lastPointer.current === 'touch');
         }}
-        className={`absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[22px] pl-1.5 text-left ${chosen ? 'shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
+        className={`absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[30px] pl-1.5 text-left ${chosen ? 'shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
       >
         <span aria-hidden="true" className="absolute top-[3px] right-[3px] inline-flex items-center gap-px rounded-full bg-[var(--wh-ink)] px-[5px] py-px text-xs font-bold text-[var(--wh-panel)]">
           {jobs.length}
           <Chevron dir="prev" small />
         </span>
-        <span aria-hidden="true" className="truncate text-xs font-bold text-[var(--wh-ink)]">{front.bikeLabel || 'Bike'}</span>
+        <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]">{front.bikeLabel || 'Bike'}</span>
         {((end - start) / 30) * SLOT_H - 4 >= TWO_LINES ? (
-          <span aria-hidden="true" className="truncate text-xs font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
+          <span aria-hidden="true" className="truncate text-xs leading-[14px] font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
         ) : null}
       </button>
       {/* Hidden (not just see-through) until the 0.3s is up, so a quick

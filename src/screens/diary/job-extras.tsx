@@ -361,7 +361,7 @@ function StackBox({ jobs, time, at, onClose, hints, tiles }: {
       className={`fixed z-40 flex flex-col rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] shadow-[0_12px_32px_var(--wh-backdrop)] ${at.touch ? 'gap-2 p-2.5' : 'gap-1.5 p-2'}`}
       style={{ ...pos, width }}
     >
-      <span id="stack-title" className={`px-1 font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase ${at.touch ? 'text-xs' : 'text-xs'}`}>{`${jobs.length} jobs at ${time}`}</span>
+      <span id="stack-title" className={`px-1 font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase text-xs`}>{`${jobs.length} jobs at ${time}`}</span>
       {hints}
       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(jobs.length, 2)}, ${tileW}px)` }}>{tiles}</div>
     </div>
