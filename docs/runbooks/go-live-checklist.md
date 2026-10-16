@@ -34,8 +34,9 @@ account once Jack says yes; Jack says yes to anything that costs money.
 - [ ] **WhatsApp Business**: waits for Jack's yes. Needed on day one:
   **[To decide, Jack]**.
 - [x] **Texts (Twilio)**: already a real account (build plan §5).
-- [ ] **Accounts software** (Xero or QuickBooks developer access) (Mark).
-  Which one Jack's shop uses: **[To decide, Jack]**.
+- **Accounts software: not needed for switch-over.** Jack's shop uses none;
+  its accountant takes reports straight from Citrus Lime (Jack, 16 Oct). The
+  Xero and QuickBooks connections wait until a shop needs one.
 - [ ] **Citrus Lime's full export** of customers and workshop history
   (Jack asks Citrus Lime when stage 7 starts, #171).
 
@@ -68,6 +69,10 @@ Q12: "these are done before switch-over".
   (`docs/decisions/2026-10-01-reports-and-accounts-review.md`). The VAT
   invoice stays generic for now (`docs/decisions/2026-10-02-leftover-screens-review.md`).
   Which accountant, and by when: **[To decide, Jack]**.
+- [ ] **The accountant's reports**: Wheelhouse's reports give the
+  accountant everything they now take from Citrus Lime. Jack finds out which
+  Citrus Lime reports they use, and the accountant checks Wheelhouse's
+  versions before switch-over.
 - [ ] **What staff must be told about what is recorded about them**
   (build plan, "still to check before release"). Who checks:
   **[To decide, Jack]**.
