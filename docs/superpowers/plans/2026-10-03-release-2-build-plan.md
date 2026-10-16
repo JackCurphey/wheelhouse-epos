@@ -958,7 +958,9 @@ later packages.
 <!-- /screens -->
 
 - **WP-8.3 Switch-over and one trading week alone.** Needs every row of §5
-  real, not a stand-in.
+  real, not a stand-in, except what has moved after the trading week
+  (Lightspeed). Everything it needs is in `docs/runbooks/go-live-checklist.md`
+  (#140).
 
 <!-- screens 8.3 -->
 *Building blocks built here:* none new.
