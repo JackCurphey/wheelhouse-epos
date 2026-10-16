@@ -36,9 +36,11 @@ deposits at any stage), the test shop's two defaults; all in #231. Open:
 #225, #231, #234, waiting for Mark. Next code in his lane: what's left of
 #190 (D, carry-over, waits for WP-1.9) and #192; then the stage check once
 lines 1–6 of §9 are in.
-**Open for Jack:** no decisions waiting. Small to-dos: ask the accountant
+**Open for Jack:** nothing waiting now. Small to-dos: ask the accountant
 which Citrus Lime reports they use; make a Google account for Wheelhouse
-(go-live checklist).
+(go-live checklist). Later: where a mechanic signs off a finished job (stage
+4); ask Citrus Lime for the full export (stage 7, #171); his yes to open
+Stripe and buy the S700.
 
 **Updated:** 2026-10-16 (afternoon). **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
