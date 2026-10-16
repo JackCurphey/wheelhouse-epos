@@ -203,8 +203,8 @@ const RAIL_W = 84;
 export const searchIconBtn = (dark = false) => `<button type="button" aria-label="Search jobs, customers, orders, products" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: ${dark ? '0' : `1px solid ${C.input}`}; background: transparent; color: ${dark ? '#ffffff' : C.ink}">${icon('search', 20)}</button>`;
 export const avatarWithCog = (ini) => `<span style="position: relative; display: inline-block; width: 38px; height: 37px"><span style="position: absolute; top: 0; left: 0; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${ini}</span>${cogBadge()}</span>`;
 export const cogBadge = () => `<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: ${C.accentDark}; border: 1px solid rgba(255,255,255,0.45)">${icon('settings', 11)}</span>`;
-export function shellTablet(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', search = true } = {}) {
-  return `<div style="width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">
+export function shellTablet(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', search = true, width = TW, height = TH } = {}) {
+  return `<div style="width: ${width}px; height: ${height}px; display: flex; background: ${C.bg}">
 <nav aria-label="Main" style="width: ${RAIL_W}px; flex-shrink: 0; min-height: 0; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff; align-items: stretch">
 <div style="display: flex; justify-content: center; padding: 0 0 2px; flex-shrink: 0">${logoSlot('Wheelhouse logo', true)}</div>
 <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${railList(role, active)}</div>
@@ -1524,6 +1524,26 @@ ${legend && !pickMode ? diaryLegend() : ''}`, pickMode ? 8 : 12);
 }
 export const tabletDiary = (opts = {}, shellOpts = {}) => shellTablet('diary', 'Workshop diary', tabletDiaryContent(opts), shellOpts);
 const MECH_SHELL = { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' };
+
+// ---------- Upright (portrait) tablet diary, for Jack to approve ----------
+// The layout review's item 7 (Jack, 16 Oct): nothing was drawn for an upright
+// tablet (about 834 x 1112, an iPad held upright), so the computer layout got
+// squeezed. Proposed: the toolbar on two rows (Week/Day with the dates; the
+// people chips, Waiting and New job), and "Waiting for you" as a button that
+// opens the phone's sheet, so the week has the full width. Not built until
+// Jack approves this drawing.
+export const PW_UP = 834, PH_UP = 1112;
+const uprightWaitingButton = () => `<a href="waiting-open-phone.dc.html" aria-label="Waiting for you, ${WAITING.length}" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 0 10px 0 12px; border-radius: 10px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; flex-shrink: 0">${icon('inbox', 18)}Waiting<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; background: ${C.mutedBg}; color: ${C.ink}; font-size: 13px; font-weight: 700">${WAITING.length}</span></a>`;
+export function uprightTabletDiary() {
+  const size = 'tablet';
+  const top = row(`${viewSwitch('Week', size)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav('Week', size)}`, 0, 'flex-wrap: nowrap');
+  const second = row(`${mechChips('Everyone', TOOLBAR_MECHS, 'Mechanic', size)}<div style="flex-grow: 1"></div>${uprightWaitingButton()}<div style="width: 10px; flex-shrink: 0"></div>${newJobButton('new-job-pick-tablet.dc.html')}`, 0, 'flex-wrap: nowrap');
+  const grid = weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size, slotH: 30, mechFilter: 'Everyone' });
+  return shellTablet('diary', 'Workshop diary', stack(`${top}
+${second}
+${row(grid, 0, 'align-items: flex-start')}
+${diaryLegend()}`, 12), { width: PW_UP, height: PH_UP });
+}
 
 // ---------- Phone diary (one day down a time line) ----------
 const P_SLOT = 44; // 30 minutes = 44px, so an hour-long job is an 84px block
