@@ -207,3 +207,25 @@ test('buttons show the pointing-finger cursor; a disabled one keeps the arrow', 
   });
   expect(disabled).toBe('default');
 });
+
+// Jack, 16 Oct: typing a customer's name doesn't change New job's size.
+// Spec: openspec/changes/new-job-customer-dropdown
+test('New job keeps its size while a customer search shows its results', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await page.getByRole('button', { name: 'New job' }).click();
+  await page.getByRole('button', { name: 'Enter a time instead' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New job' });
+  await expect(dialog).toBeVisible();
+  const before = (await dialog.boundingBox())!.height;
+  await dialog.getByLabel('Find customer by name, phone or email').fill('zz');
+  const list = dialog.locator('[data-customer-results]');
+  await expect(list.getByText('No customer matches “zz”.')).toBeVisible();
+  expect((await dialog.boundingBox())!.height).toBe(before);
+  // Escape in the search closes the list, keeping what was typed and New job.
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(dialog.getByLabel('Find customer by name, phone or email')).toHaveValue('zz');
+  await expect(dialog).toBeVisible();
+});
