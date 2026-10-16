@@ -32,7 +32,7 @@ design (stage 4). Jack, 16 Oct, one question each.
    with the same pills before it finishes the job, so every job that goes
    out is signed, whichever way it was finished. A deposit doesn't finish a
    job, so it doesn't ask (deposits at any stage, Jack, 16 Oct,
-   `2026-10-16-till-paying-orders.md`). Chosen over letting those jobs go
+   `2026-10-16-till-paying-orders.md`, in #231). Chosen over letting those jobs go
    out unsigned.
 6. **No PIN to sign off: tap the name** (Jack: "1"), as the rest of the
    workshop works today. Whether it asks for the PIN once a shop switches the
