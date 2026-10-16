@@ -135,3 +135,8 @@ one.
 **Later change (5 Oct 2026, issue #138):** Jack, 5 Oct: "can we build it so that we can connect differnet kind of payment machines to it? … i dont want this system to only work with paymentsense". Decision 6's card machine link goes through one card machine adapter that names no company: each make of card machine is its own connection behind it, with its own details. Paymentsense (an Ingenico Move/5000 on wifi, #138) is the first; typing the amount in on the machine stays as the fallback.
 
 **Later change (5 Oct 2026, `docs/decisions/2026-10-05-card-payments-provider.md`):** Jack, 5 Oct: "1". The first card machine connection is Stripe (Stripe Terminal), the same company as online payment links; SumUp second; Paymentsense later. Typing the amount in stays the fallback.
+
+**Later change (16 Oct 2026, issue #196):** decision 7's Paid box doesn't
+close by itself when a job changed while it was being paid for: it shows an
+amber line and "Open the job", and stays until staff close it (Jack,
+`2026-10-16-till-job-warning.md`).
