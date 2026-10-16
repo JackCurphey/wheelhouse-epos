@@ -1177,6 +1177,10 @@ export function DiaryPage() {
               <button type="button" aria-label="Next week" onClick={() => set({ date: addDays(date, 7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
                 <Chevron dir="next" />
               </button>
+              {/* Back to today in one tap, shown only away from it (Jack, 16 Oct; layout review 238, item 9). */}
+              {date !== today ? (
+                <button type="button" onClick={() => set({ date: null })} className="min-h-11 rounded-md px-2 text-sm font-semibold">Today</button>
+              ) : null}
             </div>
           </div>
           {/* The week's days replace the Week/Day switch (decision 68). */}
@@ -1315,7 +1319,7 @@ export function DiaryPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Toolbar (decision 60): view · dates · people. */}
+      {/* Toolbar (decision 60): view and dates together · people and New job. */}
       <div className="flex flex-wrap items-center gap-3">
         <div role="tablist" aria-label="Diary view" className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-[10px] bg-[var(--wh-surface-muted)] p-[3px]">
           {(['week', 'day'] as const).map((v) => (
@@ -1331,7 +1335,7 @@ export function DiaryPage() {
             </button>
           ))}
         </div>
-        <div className="grow" />
+        {/* Week/Day and the dates together at the left, one control (Jack, 16 Oct; layout review 238, item 1). */}
         <div className="inline-flex shrink-0 items-center gap-1">
           <button type="button" aria-label={`Previous ${unit}`} onClick={() => set({ date: addDays(date, -step) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
             <Chevron dir="prev" />

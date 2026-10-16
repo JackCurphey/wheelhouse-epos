@@ -184,3 +184,14 @@ test('on a phone, the choose-a-time bar sits above the chosen card\'s bar, not o
   assert.ok(foot.contains(chosen), 'with the chosen card\'s bar, one above the other');
   assert.ok(bar.closest('[data-floating]') === null, 'not floating over the diary');
 });
+
+// The layout review's item 9 (Jack, 16 Oct): on a phone, a Today button beside
+// the week arrows when today isn't on screen; it takes you back and goes.
+// Spec: openspec/changes/toolbar-and-phone-today
+test('on a phone, Today shows away from today and takes you back', async () => {
+  const { ui, fireEvent, waitFor } = await openPhone('?date=2026-10-06');
+  const today = await ui.findByRole('button', { name: 'Today' });
+  fireEvent.click(today);
+  await waitFor(() => assert.ok(ui.queryByRole('button', { name: 'Today' }) === null, 'gone once today is on screen'));
+  assert.equal(new URL(window.location.href).searchParams.get('date'), null, 'the diary is on today');
+});

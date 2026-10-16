@@ -281,3 +281,14 @@ test('on a tablet, the Week and Day buttons are finger-sized', async ({ browser 
     await ctx.close();
   }
 });
+
+// The layout review's item 1 (Jack, 16 Oct): Week/Day sits with the dates at
+// the left, one control, not across a gap. Spec: openspec/changes/toolbar-and-phone-today
+test('the Week/Day switch sits next to the date arrows', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const day = (await page.getByRole('tab', { name: 'Day' }).boundingBox())!;
+  const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
+  expect(prev.x - (day.x + day.width)).toBeLessThan(40);
+});
