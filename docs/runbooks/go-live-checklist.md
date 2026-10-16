@@ -66,11 +66,13 @@ Q12: "these are done before switch-over".
 - [ ] **Solicitor**: privacy, cookie, returns and reminder wording; the
   starting Privacy and Collection and returns pages; the legal set (privacy
   notices, data agreement for shops, cookie policy, terms; WEB-2, Jack's).
-  Which solicitor, and by when: **[To decide, Jack]**.
+  Jack finds a solicitor for small-business privacy work **by the start of
+  stage 7** (Jack, 16 Oct), once the drafts exist.
 - [ ] **Accountant**: the VAT report layout and the accounts mapping
   (`docs/decisions/2026-10-01-reports-and-accounts-review.md`). The VAT
   invoice stays generic for now (`docs/decisions/2026-10-02-leftover-screens-review.md`).
-  Which accountant, and by when: **[To decide, Jack]**.
+  **The shop's own accountant** (Jack, 16 Oct), booked in by the start of
+  stage 7.
 - [ ] **The accountant's reports**: Wheelhouse's reports give the
   accountant everything they now take from Citrus Lime. Jack finds out which
   Citrus Lime reports they use, and the accountant checks Wheelhouse's
