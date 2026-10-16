@@ -26,3 +26,26 @@ these, one question each where there was a choice.
    panel blend in);
    as the layout review (#238) recommends. Chosen over a soft tint with no
    border. Changes the `diary` drawing's Waiting column.
+
+### The diary layout review (#238): Jack's answers, 16 Oct
+
+Items 2, 3, 4, 5 and 8 were built (#240, #241). Jack answered the rest one
+at a time.
+
+7. **Week/Day sits with the dates on the left; the people chips and New
+   job on the right** (review item 1; Jack: "1"). Decision 60's order (view,
+   dates, people and New job) is kept; only the drawing's centred dates
+   change. Chosen over the pair kept in the middle, and over leaving it.
+8. **Every diary label is at least 12 pixels, on every screen** (review
+   item 6; Jack: "1"), checked on screen before it goes in. The job blocks
+   catch up with the drawing (walk 1 M3: block text 12px, never smaller);
+   the day headings and other small labels on a computer go past it.
+   Chosen over the blocks only, and over leaving it.
+9. **An upright (portrait) tablet gets its own drawing, then the build**
+   (review item 7; Jack: "1"): suggested as a two-row toolbar and Waiting
+   for you as a "Waiting (n)" button opening the phone's sheet, so the week
+   has the full width. Jack approves the drawing before it is built. Chosen
+   over the phone layout, and over leaving it.
+10. **The phone gets a Today button beside the week arrows**, shown only
+    when today isn't the day on screen (review item 9; Jack: "1"). Chosen
+    over always showing it, and over leaving it.

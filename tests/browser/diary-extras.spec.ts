@@ -281,3 +281,39 @@ test('on a tablet, the Week and Day buttons are finger-sized', async ({ browser 
     await ctx.close();
   }
 });
+
+// The layout review's item 1 (Jack, 16 Oct): Week/Day sits with the dates at
+// the left, one control, not across a gap. Spec: openspec/changes/toolbar-and-phone-today
+test('the Week/Day switch sits next to the date arrows', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const day = (await page.getByRole('tab', { name: 'Day' }).boundingBox())!;
+  const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
+  expect(prev.x - (day.x + day.width)).toBeLessThan(40);
+});
+
+// After the fresh review: on a 360px phone away from today, with "By
+// mechanic" showing, the Today button fits; the row tightens and the people
+// chip shortens rather than the page scrolling sideways (Jack, 16 Oct: "1").
+test('on a 360px phone, Today fits in the top row', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    const today = page.getByRole('button', { name: 'Today' });
+    await expect(today).toBeVisible();
+    const box = (await today.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+    // The top row itself doesn't run over (the grid below is checked elsewhere).
+    const row = today.locator('xpath=ancestor::div[contains(@class, "justify-between")][1]');
+    expect(await row.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
+    const chip = (await page.getByRole('button', { name: /^Showing By mechanic/ }).boundingBox())!;
+    const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
+    expect(chip.x + chip.width).toBeLessThanOrEqual(prev.x);
+  } finally {
+    await ctx.close();
+  }
+});

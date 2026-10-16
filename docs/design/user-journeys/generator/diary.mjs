@@ -1275,13 +1275,13 @@ function newJobButtonActive() {
 const defaultNewJobHref = (size) => `new-job-pick-${size}.dc.html`;
 // Decision 60: each control gets its own shape, grouped left to right —
 // view (segmented switch) · dates (arrows + label + Today) · people (chips)
-// and New job, alone with a clear gap before it. Two flex-grow spacers put
-// the date group in the middle of the space between the view switch and the
-// people/New job cluster at the right; nowrap (not the old wrap) — the
-// desktop board's width comfortably holds all four groups on one line.
+// and New job, alone with a clear gap before it. The view switch and the
+// dates sit together at the left, as one control (Jack, 16 Oct, the layout
+// review's item 1); one flex-grow spacer puts the people/New job cluster at
+// the right; nowrap — the desktop board holds all four groups on one line.
 function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeView = 'Week', newJob = null } = {}) {
   const nj = newJob === 'active' ? newJobButtonActive() : newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch(activeView, size)}<div style="flex-grow: 1"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+  return row(`${viewSwitch(activeView, size)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
 
@@ -1304,7 +1304,7 @@ const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending:
 // for a mechanic's own single-column view this round).
 function mechToolbar(meSelected, size, { newJob = null } = {}) {
   const nj = newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch('Week', size)}<div style="flex-grow: 1"></div>${dateNav('Week', size)}<div style="flex-grow: 1"></div>${mechChips(meSelected ? 'Me' : 'Everyone', ['Me', 'Everyone'], 'Whose diary', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+  return row(`${viewSwitch('Week', size)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav('Week', size)}<div style="flex-grow: 1"></div>${mechChips(meSelected ? 'Me' : 'Everyone', ['Me', 'Everyone'], 'Whose diary', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
 // ============================================================================
