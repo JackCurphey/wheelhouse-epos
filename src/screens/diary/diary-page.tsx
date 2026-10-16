@@ -427,6 +427,19 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChos
   const byId = new Map(timed.map((j) => [j.partId, j]));
   const height = ((range.end - range.start) / 30) * SLOT_H;
   const pick = useContext(PickContext);
+  // new-job-pick: the slot under the pointer shows as a solid target with its
+  // time before the click (Jack, 16 Oct). A mouse only; touch has no hover.
+  // A touch screen sends a pointer move before each tap; showing the slot
+  // then could make an iPad swallow the tap, so only a mouse shows it.
+  const [hoverMin, setHoverMin] = useState<number | null>(null);
+  // Forgotten when choosing ends, so the next New job starts clean.
+  const [wasPicking, setWasPicking] = useState(Boolean(pick));
+  if (wasPicking !== Boolean(pick)) {
+    setWasPicking(Boolean(pick));
+    setHoverMin(null);
+  }
+  const pickY = (e: ReactMouseEvent<HTMLDivElement>) => e.clientY - e.currentTarget.getBoundingClientRect().top;
+  const pickHint = pick && hoverMin !== null ? hoverMin : null;
   return (
     // While choosing a time for a new job, a click on the column picks the
     // time there; "Enter a time instead" is the keyboard way (decision 22).
@@ -434,7 +447,9 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChos
       role="group"
       aria-label={label}
       data-diary-col={index}
-      onClick={pick ? (e) => pick.onPick(index, e.clientY - e.currentTarget.getBoundingClientRect().top) : undefined}
+      onClick={pick ? (e) => pick.onPick(index, pickY(e)) : undefined}
+      onPointerMove={pick ? (e) => { if (e.pointerType === 'mouse') setHoverMin(dropStart(pickY(e), range, 30, SLOT_H)); } : undefined}
+      onPointerLeave={() => setHoverMin(null)}
       className={`relative border-l border-[var(--wh-border)] first:border-l-0 ${pick ? 'cursor-pointer bg-[var(--wh-accent-soft)]/30' : ''}`}
       style={{
         height,
@@ -449,6 +464,16 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChos
       {outlines.map((o) => (
         <RequestedOutline key={`req-${o.id}`} outline={o} range={range} chosen={o.id === chosenId} />
       ))}
+      {pickHint !== null ? (
+        <div
+          data-pick-slot
+          aria-hidden="true"
+          className="pointer-events-none absolute right-[3px] left-[3px] z-[2] flex items-center justify-center overflow-hidden rounded-[5px] border-[1.5px] border-[var(--accent)] bg-[var(--accent)] px-1 text-xs font-bold whitespace-nowrap text-[var(--wh-on-brand)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--wh-highlight)_40%,transparent)]"
+          style={{ top: ((pickHint - range.start) / 30) * SLOT_H + 2, height: SLOT_H - 4 }}
+        >
+          {hhmm(pickHint)}
+        </div>
+      ) : null}
     </div>
   );
 }

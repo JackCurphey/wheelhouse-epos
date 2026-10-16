@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Everything clickable shows the pointing-finger cursor, as links do
+   (Jack, 16 Oct). Tailwind 4 leaves buttons with the arrow; a disabled
+   control keeps it. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Wheelhouse design tokens for the React/Tailwind bundle (/workshop, /book).
 
