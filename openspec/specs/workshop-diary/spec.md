@@ -823,3 +823,17 @@ The change request pop-up SHALL offer "Open full job" beside Decline, which clos
 #### Scenario: Opening Oliver Chen's job
 - **WHEN** staff open Oliver Chen's change request and press "Open full job"
 - **THEN** the request closes and the job page for his Full service opens
+
+### Requirement: Week/Day sits with the dates
+On a computer or tablet the Week/Day switch SHALL sit next to the date navigation at the left of the toolbar, with the people chips and New job at the right (decision 60's order; Jack, 16 Oct).
+
+#### Scenario: The toolbar
+- **WHEN** staff open the diary on a computer
+- **THEN** the Day button sits right beside "Previous week"
+
+### Requirement: The phone has a way back to today
+On a phone, when today isn't the day on screen, a "Today" button SHALL show beside the week arrows; pressing it SHALL show today, and it SHALL go (Jack, 16 Oct). On a phone 360 pixels wide it SHALL fit without the page scrolling sideways: the row tightens and the people chip shortens its text with "…" if it must.
+
+#### Scenario: Another week
+- **WHEN** a phone shows Tuesday 6 October and today is another day
+- **THEN** "Today" shows, and pressing it shows today and the button goes
