@@ -296,3 +296,13 @@ test('in the Day view, a request from another week for any mechanic shows in the
     assert.ok(has(await jo.findByText('Requested 14:00')));
   });
 });
+
+// Jack, 16 Oct: Waiting for you is a panel, the count a badge; screen readers
+// still hear "Waiting for you (2)". Spec: openspec/changes/waiting-panel
+test('Waiting for you shows its count as a badge and keeps its name', async () => {
+  const { ui } = await openDiary();
+  const region = ui.getByRole('region', { name: 'Waiting for you (2)' });
+  const badge = region.querySelector('[data-count-badge]');
+  assert.ok(badge !== null, 'the count is a badge');
+  assert.equal(badge.textContent, '2');
+});
