@@ -51,3 +51,8 @@ provider is among the accounts Mark sets up), or uses the one Citrus Lime's
 links may already use; like buying a reader, it is a real account and
 money, so it waits for Jack's yes (project rules). Until then Mark builds
 against Stripe's pretend reader.
+
+**Later change (16 Oct 2026, the go-live checklist):** the reader is a
+Stripe Reader S700, with a phone hotspot as the fallback for the till and the
+reader when the shop's internet is down (Jack, `2026-10-16-go-live-checklist.md`
+item 11).
