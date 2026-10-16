@@ -94,8 +94,11 @@ Q12: "these are done before switch-over".
   (`docs/decisions/2026-09-30-customer-service-review.md`).
 - [x] A privacy request is answered within one month (same file).
 - [x] Website history is kept 90 days (Q8).
-- [ ] **Where Jack's real export files are kept**, never in the repository
-  (Q4: "when we get there"): **[To decide, Jack]**.
+- [ ] **Jack's real export files** (Q4; Jack, 16 Oct): kept in a private
+  folder on Jack's Mac, outside the Wheelhouse folder, with FileVault on;
+  never in the repository or uploaded anywhere. Mark gets a single file when
+  he needs one. Deleted once the two matching weeks have passed and Jack
+  says so.
 
 ## 5. Backups and a practice restore
 
