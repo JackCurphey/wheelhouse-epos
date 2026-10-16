@@ -328,3 +328,15 @@ test('chosen by a tap, the hint says tap again, and Open is finger-sized on touc
   assert.ok(has(region.queryByText('Tap the card again to open it.')));
   assert.match(region.getByRole('button', { name: "Open Lena Fox's request" }).className, /pointer-coarse:min-h-11/);
 });
+
+// After the fresh review: a card chosen from the keyboard gets the
+// double-click wording, even after an earlier tap on another card.
+test('a card chosen from the keyboard after a tap elsewhere says double-click', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  const region = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  const sam = region.getByRole('button', { name: /Sam Reed/ });
+  fireEvent.pointerDown(sam, { pointerType: 'touch' });
+  fireEvent.click(sam, { detail: 1 });
+  fireEvent.click(region.getByRole('button', { name: /Lena Fox/ }), { detail: 0 });
+  assert.ok(has(region.queryByText('Double-click a card to open it.')));
+});

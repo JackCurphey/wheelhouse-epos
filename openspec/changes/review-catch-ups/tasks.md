@@ -10,6 +10,11 @@
 
 - [x] 2.1 The hint; the touch sizes; "Open full job"
 
+## 2b. After the fresh review
+
+- [x] 2b.1 Test first, watched failing: a card chosen from the keyboard after a tap elsewhere gets the double-click wording
+- [x] 2b.2 The fix; Decline and Open full job stay stacked on the phone layout up to its widest; Open full job waits while an answer sends (these two not covered by tests)
+
 ## 3. Checks
 
-- [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.1 A fresh review; `npm test` and `npm run test:browser` pass

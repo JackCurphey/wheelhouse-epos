@@ -601,7 +601,7 @@ export function DiaryPage() {
   // How the last press on a Waiting card was made: a second tap opens the
   // chosen card on a touch screen, a second mouse click doesn't (decision 14).
   const cardPointer = useRef<string>('mouse');
-  // Whether the chosen card was chosen by a tap, for its hint (#238, item 3).
+  // Whether the chosen card was chosen by a tap, for its hint (layout review 238, item 3).
   const [chosenByTouch, setChosenByTouch] = useState(false);
   const [openItem, setOpenItem] = useState<WaitingItem | null>(null);
 
@@ -1377,9 +1377,10 @@ export function DiaryPage() {
           {items.map((item) => {
             const card = waitingCard(item);
             const on = chosen === item.jobId;
-            const choose = () => {
+            // byTap: the card was chosen by a finger, not a mouse or the keyboard.
+            const choose = (byTap = false) => {
               setChosen(item.jobId ?? null);
-              setChosenByTouch(cardPointer.current === 'touch');
+              setChosenByTouch(byTap);
               const day = cardDay(item);
               if (day) set({ date: day, who: null });
             };
@@ -1395,11 +1396,11 @@ export function DiaryPage() {
                   type="button"
                   aria-pressed={on}
                   onPointerDown={(e) => { cardPointer.current = e.pointerType; }}
-                  onClick={(e) => { if (on && e.detail > 0 && cardPointer.current === 'touch') setOpenItem(item); else choose(); }}
+                  onClick={(e) => { const tap = e.detail > 0 && cardPointer.current === 'touch'; if (on && tap) setOpenItem(item); else choose(tap); }}
                   onDoubleClick={() => { choose(); setOpenItem(item); }}
                   className="flex flex-col gap-[5px] rounded-lg px-3 pt-2.5 pb-2.5 text-left"
                 >
-                  {/* Larger on a touch screen, as drawn for the tablet (#238, item 4). */}
+                  {/* Larger on a touch screen, as drawn for the tablet (layout review 238, item 4). */}
                   <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-[11px] font-bold pointer-coarse:text-xs ${CHIP[card.tone]}`}>{card.label}</span>
                   <span className="text-[13px] font-bold pointer-coarse:text-[15px]">{card.customer}</span>
                   <span className="text-xs pointer-coarse:text-[13px]">{card.detail}</span>
@@ -1417,7 +1418,7 @@ export function DiaryPage() {
               </div>
             );
           })}
-          {/* How to open the chosen card, as drawn (#238, item 3; decision 14). */}
+          {/* How to open the chosen card, as drawn (layout review 238, item 3; decision 14). */}
           {chosen !== null && items.some((i) => i.jobId === chosen) ? (
             <p className="m-0 text-xs text-[var(--wh-muted)]">{chosenByTouch ? 'Tap the card again to open it.' : 'Double-click a card to open it.'}</p>
           ) : null}
