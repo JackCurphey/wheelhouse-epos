@@ -98,6 +98,9 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   const queryClient = useQueryClient();
   const [newBuild, setNewBuild] = useState(false);
   const [search, setSearch] = useState('');
+  // The matches drop down over the form, so New job keeps one size while
+  // staff type (Jack, 16 Oct).
+  const [listOpen, setListOpen] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [bikeId, setBikeId] = useState<number | null>(null);
   const [kind, setKind] = useState<string | null>(null);
@@ -276,16 +279,34 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
                 <Button variant="ghost" size="sm" onClick={() => setCustomer(null)}>Change</Button>
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5">
+              <div
+                className="relative flex flex-col gap-1.5"
+                onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setListOpen(false); }}
+              >
                 <label htmlFor="nj-find" className={LABEL}>Find customer by name, phone or email</label>
-                <input id="nj-find" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, phone or email" className={INPUT} autoComplete="off" />
-                {(found.data ?? []).map((c) => (
-                  <button key={c.id} type="button" onClick={() => chooseCustomer(c)} className="flex flex-col rounded-md border border-[var(--wh-border)] px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
-                    <span className="text-sm font-bold">{c.name}</span>
-                    <span className="text-[13px] text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
-                  </button>
-                ))}
-                {found.isSuccess && found.data.length === 0 ? <span className="text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
+                <input
+                  id="nj-find"
+                  type="search"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setListOpen(true); }}
+                  onFocus={() => setListOpen(true)}
+                  // Escape closes the list, not New job.
+                  onKeyDown={(e) => { if (e.key === 'Escape' && listOpen) { e.preventDefault(); e.stopPropagation(); setListOpen(false); } }}
+                  placeholder="Search by name, phone or email"
+                  className={INPUT}
+                  autoComplete="off"
+                />
+                {listOpen && found.isSuccess ? (
+                  <div data-customer-results className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-60 flex-col gap-1 overflow-y-auto rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1 shadow-[0_8px_24px_var(--wh-backdrop)]">
+                    {found.data.map((c) => (
+                      <button key={c.id} type="button" onClick={() => chooseCustomer(c)} className="flex flex-col rounded-md px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
+                        <span className="text-sm font-bold">{c.name}</span>
+                        <span className="text-[13px] text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
+                      </button>
+                    ))}
+                    {found.data.length === 0 ? <span role="status" className="px-3 py-1.5 text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
+                  </div>
+                ) : null}
               </div>
             )}
             <div className="flex flex-col gap-1.5">

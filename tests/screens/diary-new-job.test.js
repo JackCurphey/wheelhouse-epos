@@ -420,3 +420,22 @@ test('after a move the focus is on the new time, and the automatic choice still 
   await r.waitFor(() => assert.ok(document.activeElement === line));
   assert.ok(has(form.queryByText('Mechanic chosen automatically: most free time on Tuesday.')));
 });
+
+// Jack, 16 Oct: the customer search drops down over the form, so New job
+// keeps one size as he types (the size itself is checked in a real browser,
+// tests/browser/diary-extras.spec.ts). Spec: openspec/changes/new-job-customer-dropdown
+test('the customer search drops down over the form and closes on Escape', async () => {
+  const r = await openDiary();
+  const form = await pickTuesdayTen(r);
+  const box = form.getByLabelText('Find customer by name, phone or email');
+  r.fireEvent.change(box, { target: { value: 'zz' } });
+  await form.findByText('No customer matches “zz”.');
+  const list = r.ui.container.ownerDocument.querySelector('[data-customer-results]');
+  assert.ok(has(list), 'the results are in their own drop-down');
+  assert.match(list.className, /\babsolute\b/, 'the drop-down floats over the form');
+  r.fireEvent.keyDown(box, { key: 'Escape' });
+  assert.equal(has(form.queryByText('No customer matches “zz”.')), false, 'Escape closes the list');
+  assert.ok(has(r.ui.queryByRole('dialog', { name: 'New job' })), 'and New job stays open');
+  r.fireEvent.change(box, { target: { value: 'zzz' } });
+  assert.ok(has(await form.findByText('No customer matches “zzz”.')), 'typing opens it again');
+});
