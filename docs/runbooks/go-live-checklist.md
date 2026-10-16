@@ -31,8 +31,11 @@ account once Jack says yes; Jack says yes to anything that costs money.
   (`docs/decisions/2026-10-07-stage-1-drawing-gaps.md`). Which business
   Google account owns it, and whether it is needed on day one:
   **[To decide, Jack]**.
-- [ ] **WhatsApp Business**: waits for Jack's yes. Needed on day one:
-  **[To decide, Jack]**.
+- [ ] **WhatsApp Business, needed on switch-over day** (Jack, 16 Oct): the
+  account (Mark sets it up; Jack says yes to it and its per-message charge
+  when it is opened), and Meta's approval of each message template. The
+  templates use the wording Jack reads in Q9's read-through, so that comes
+  first, early enough for Meta's approval to finish before switch-over.
 - [x] **Texts (Twilio)**: already a real account (build plan §5).
 - **Accounts software: not needed for switch-over.** Jack's shop uses none;
   its accountant takes reports straight from Citrus Lime (Jack, 16 Oct). The
