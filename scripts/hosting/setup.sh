@@ -116,7 +116,9 @@ db_port=$(db_field port connection "$db_id")
 db_admin_pw=$(db_field password connection "$db_id")
 app_pw=$(db_field password user get "$db_id" epos_app)
 # A masked password would install an app that can't reach its database.
-case "$db_admin_pw$app_pw" in ''|*'*'*) fail "doctl didn't give the database passwords. Run it again; if it stops here twice, ask Mark." ;; esac
+for pw in "$db_admin_pw" "$app_pw"; do
+  case "$pw" in ''|'********') fail "doctl didn't give the database passwords. Run it again; if it stops here twice, ask Mark." ;; esac
+done
 ca_file=$(mktemp)
 trap 'rm -f "$ca_file"' EXIT
 db_field certificate get-ca "$db_id" | base64 --decode > "$ca_file"
