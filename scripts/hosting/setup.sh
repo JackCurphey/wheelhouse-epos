@@ -21,10 +21,20 @@ SSH_KEY_FILE=${SSH_KEY_FILE:-$HOME/.ssh/id_ed25519}
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 step() { printf '\n==> %s\n' "$*"; }
+# doctl 2.0 (Oct 2026) dropped --format from some database commands and masks
+# database passwords unless --show is passed, so database answers are read
+# as JSON, with --show, and picked out with jq (in macOS since 15; brew install jq).
+# Usage: db_field <field> <doctl databases arguments...>; prints the field of
+# every item, one per line.
+db_field() {
+  local field=$1; shift
+  doctl databases "$@" -o json --show | jq -r --arg f "$field" '(if type == "array" then .[] else . end) | .[$f] // empty'
+}
 fail() { printf '\nStopped: %s\n' "$*" >&2; exit 1; }
 
 step "Checking your setup"
 command -v doctl >/dev/null || fail "doctl isn't installed. Run: brew install doctl"
+command -v jq >/dev/null || fail "jq isn't installed. Run: brew install jq"
 doctl account get >/dev/null 2>&1 || fail "doctl isn't signed in. Run: doctl auth init (and paste your API token)"
 if [ ! -f "$SSH_KEY_FILE.pub" ]; then
   echo "No SSH key found at $SSH_KEY_FILE.pub; making one (press Enter at any questions)."
@@ -79,21 +89,21 @@ else
 fi
 
 step "The database"
-db_id=$(doctl databases list --format ID,Name --no-header | awk -v n="$DB_NAME" '$2==n {print $1}')
+db_id=$(doctl databases list -o json | jq -r --arg n "$DB_NAME" '.[] | select(.name == $n) | .id')
 if [ -z "$db_id" ]; then
   echo "Creating it (this takes 5 to 10 minutes)..."
-  db_id=$(doctl databases create "$DB_NAME" --engine pg --version "$DB_VERSION" --region "$REGION" \
-    --size "$DB_SIZE" --num-nodes 1 --wait --format ID --no-header)
+  db_id=$(db_field id create "$DB_NAME" --engine pg --version "$DB_VERSION" --region "$REGION" \
+    --size "$DB_SIZE" --num-nodes 1 --wait)
 else
   echo "Already exists."
 fi
-if ! doctl databases db list "$db_id" --format Name --no-header | grep -qx epos; then
+if ! db_field name db list "$db_id" | grep -qx epos; then
   doctl databases db create "$db_id" epos >/dev/null
 fi
-if ! doctl databases user list "$db_id" --format Name --no-header | grep -qx epos_app; then
+if ! db_field name user list "$db_id" | grep -qx epos_app; then
   doctl databases user create "$db_id" epos_app >/dev/null
 fi
-if ! doctl databases firewalls list "$db_id" --format Value --no-header | grep -qx "$droplet_id"; then
+if ! db_field value firewalls list "$db_id" | grep -qx "$droplet_id"; then
   doctl databases firewalls append "$db_id" --rule "droplet:$droplet_id" >/dev/null
   echo "Only the server can reach the database."
 fi
@@ -101,13 +111,15 @@ fi
 # app checks the certificate's name). Only the server may connect: the
 # trusted-source rule above. Port 25060 is the direct connection;
 # DigitalOcean's optional pools (25061) aren't used (server/db.js).
-db_host=$(doctl databases connection "$db_id" --format Host --no-header)
-db_port=$(doctl databases connection "$db_id" --format Port --no-header)
-db_admin_pw=$(doctl databases connection "$db_id" --format Password --no-header)
-app_pw=$(doctl databases user get "$db_id" epos_app --format Password --no-header)
+db_host=$(db_field host connection "$db_id")
+db_port=$(db_field port connection "$db_id")
+db_admin_pw=$(db_field password connection "$db_id")
+app_pw=$(db_field password user get "$db_id" epos_app)
+# A masked password would install an app that can't reach its database.
+case "$db_admin_pw$app_pw" in ''|*'*'*) fail "doctl didn't give the database passwords. Run it again; if it stops here twice, ask Mark." ;; esac
 ca_file=$(mktemp)
 trap 'rm -f "$ca_file"' EXIT
-doctl databases get-ca "$db_id" --format Certificate --no-header | base64 --decode > "$ca_file"
+db_field certificate get-ca "$db_id" | base64 --decode > "$ca_file"
 
 step "Installing the app on the server"
 site="$(echo "$ip" | tr . -).sslip.io"
