@@ -429,13 +429,33 @@ test('the customer search drops down over the form and closes on Escape', async 
   const form = await pickTuesdayTen(r);
   const box = form.getByLabelText('Find customer by name, phone or email');
   r.fireEvent.change(box, { target: { value: 'zz' } });
-  await form.findByText('No customer matches “zz”.');
+  await form.findAllByText('No customer matches “zz”.');
   const list = r.ui.container.ownerDocument.querySelector('[data-customer-results]');
   assert.ok(has(list), 'the results are in their own drop-down');
   assert.match(list.className, /\babsolute\b/, 'the drop-down floats over the form');
   r.fireEvent.keyDown(box, { key: 'Escape' });
-  assert.equal(has(form.queryByText('No customer matches “zz”.')), false, 'Escape closes the list');
+  assert.equal(has(r.ui.container.ownerDocument.querySelector('[data-customer-results]')), false, 'Escape closes the list');
   assert.ok(has(r.ui.queryByRole('dialog', { name: 'New job' })), 'and New job stays open');
   r.fireEvent.change(box, { target: { value: 'zzz' } });
-  assert.ok(has(await form.findByText('No customer matches “zzz”.')), 'typing opens it again');
+  assert.ok((await form.findAllByText('No customer matches “zzz”.')).length > 0, 'typing opens it again');
+  assert.ok(has(r.ui.container.ownerDocument.querySelector('[data-customer-results]')));
+});
+
+// After the fresh review. Safari and iPad don't focus a button on click, so
+// the search box loses focus before the click lands: pressing a result must
+// keep the focus where it is, or the list closes and no customer is chosen.
+// Escape only acts when the list is showing; the result is announced.
+test('pressing a result keeps the focus in the search, so Safari can choose it; the list is announced', async () => {
+  const r = await openDiary();
+  const form = await pickTuesdayTen(r);
+  const box = form.getByLabelText('Find customer by name, phone or email');
+  r.fireEvent.change(box, { target: { value: 'Maya' } });
+  const maya = await form.findByRole('button', { name: /Maya Patel/ });
+  assert.equal(r.fireEvent.mouseDown(maya), false, 'pressing a result keeps the focus in the search');
+  assert.ok(has(form.queryByText('1 customer found.')), 'a screen reader hears how many were found');
+  r.fireEvent.change(box, { target: { value: 'zz' } });
+  await form.findAllByText('No customer matches “zz”.');
+  r.fireEvent.change(box, { target: { value: 'z' } });
+  const escape = r.fireEvent.keyDown(box, { key: 'Escape' });
+  assert.equal(escape, true, 'with nothing showing, Escape is left for New job');
 });

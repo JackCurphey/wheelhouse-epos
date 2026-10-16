@@ -9,6 +9,11 @@
 
 - [x] 2.1 The drop-down on New job's customer search
 
+## 2b. After the fresh review
+
+- [x] 2b.1 Tests first, watched failing: pressing a result keeps the focus in the search (Safari and iPad don't focus a clicked button, so the list closed before the click); Escape with nothing showing is left for New job; the count is announced
+- [x] 2b.2 The fixes; Escape from a result closes the list too
+
 ## 3. Checks
 
 - [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass

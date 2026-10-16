@@ -133,6 +133,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
     queryFn: () => apiGet<Customer[]>(`/api/customers?search=${encodeURIComponent(term)}`),
     enabled: !customer && term.length >= 2,
   });
+  const listShown = listOpen && found.isSuccess;
   const bikes = useQuery({
     queryKey: ['customer-bikes', customer?.id],
     queryFn: () => apiGet<Bike[]>(`/api/customers/${customer?.id}/bikes`),
@@ -282,6 +283,9 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               <div
                 className="relative flex flex-col gap-1.5"
                 onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setListOpen(false); }}
+                // Escape closes the list (from the box or a result), not New job,
+                // and only when the list is showing.
+                onKeyDown={(e) => { if (e.key === 'Escape' && listShown) { e.preventDefault(); e.stopPropagation(); setListOpen(false); } }}
               >
                 <label htmlFor="nj-find" className={LABEL}>Find customer by name, phone or email</label>
                 <input
@@ -290,21 +294,23 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setListOpen(true); }}
                   onFocus={() => setListOpen(true)}
-                  // Escape closes the list, not New job.
-                  onKeyDown={(e) => { if (e.key === 'Escape' && listOpen) { e.preventDefault(); e.stopPropagation(); setListOpen(false); } }}
                   placeholder="Search by name, phone or email"
                   className={INPUT}
                   autoComplete="off"
                 />
-                {listOpen && found.isSuccess ? (
+                {/* Said aloud as the results change; the list itself isn't. */}
+                <span role="status" className="sr-only">{listShown ? (found.data?.length ? `${found.data.length} customer${found.data.length === 1 ? '' : 's'} found.` : `No customer matches “${term}”.`) : ''}</span>
+                {listShown ? (
                   <div data-customer-results className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-60 flex-col gap-1 overflow-y-auto rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1 shadow-[0_8px_24px_var(--wh-backdrop)]">
-                    {found.data.map((c) => (
-                      <button key={c.id} type="button" onClick={() => chooseCustomer(c)} className="flex flex-col rounded-md px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
+                    {(found.data ?? []).map((c) => (
+                      // Pressing keeps the focus in the search: Safari and iPad
+                      // don't focus a clicked button, so the list would close first.
+                      <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => chooseCustomer(c)} className="flex flex-col rounded-md px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
                         <span className="text-sm font-bold">{c.name}</span>
                         <span className="text-[13px] text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
                       </button>
                     ))}
-                    {found.data.length === 0 ? <span role="status" className="px-3 py-1.5 text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
+                    {found.data?.length === 0 ? <span className="px-3 py-1.5 text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
                   </div>
                 ) : null}
               </div>

@@ -198,11 +198,12 @@ test('New job keeps its size while a customer search shows its results', async (
   await expect(dialog).toBeVisible();
   const before = (await dialog.boundingBox())!.height;
   await dialog.getByLabel('Find customer by name, phone or email').fill('zz');
-  await expect(dialog.getByText('No customer matches “zz”.')).toBeVisible();
+  const list = dialog.locator('[data-customer-results]');
+  await expect(list.getByText('No customer matches “zz”.')).toBeVisible();
   expect((await dialog.boundingBox())!.height).toBe(before);
   // Escape in the search closes the list, keeping what was typed and New job.
   await page.keyboard.press('Escape');
-  await expect(dialog.getByText('No customer matches “zz”.')).toBeHidden();
+  await expect(list).toBeHidden();
   await expect(dialog.getByLabel('Find customer by name, phone or email')).toHaveValue('zz');
   await expect(dialog).toBeVisible();
 });
