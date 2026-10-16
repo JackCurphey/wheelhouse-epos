@@ -79,9 +79,12 @@ Q12: "these are done before switch-over".
 
 ## 4. Records
 
-- [ ] **How long records are kept** (LEG-05, "[period] until decided",
-  `docs/decisions/2026-10-02-management-oversight-review.md`), and whether
-  Wheelhouse or each shop sets it: **[To decide, Jack]**.
+- [ ] **How long records are kept** (LEG-05,
+  `docs/decisions/2026-10-02-management-oversight-review.md`; Jack, 16 Oct):
+  sales and VAT records are kept 6 years, the same for every shop (HMRC's
+  rule for a limited company). Each shop chooses, in Settings, when a
+  customer who hasn't been in for a while is removed; the solicitor
+  confirms the default during their check. Built before switch-over.
 - [x] Deleting a customer keeps their sales for tax without the name
   (`docs/decisions/2026-09-30-customer-service-review.md`).
 - [x] A privacy request is answered within one month (same file).
