@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError, jobAction } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
+import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
 
 /**
  * New job (journey 12; drawn as new-job and new-job-day in
@@ -16,14 +16,28 @@ import { dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
  * "The bike is here now" (books it in), and New bike build (decision 50:
  * the customer becomes optional).
  *
+ * Decision 23: once work is chosen, the form warns when it is longer than
+ * the mechanic's free time from the start chosen, and "Find the next free"
+ * moves the job to that mechanic's next gap long enough (Jack, 15 Oct).
+ *
  * Not here yet, because the server has nowhere to keep them: storage hooks,
- * separate customer and staff notes, and the free-time warning.
+ * and separate customer and staff notes.
  */
 
 type Person = { id: number; name: string };
 type Service = { id: number; name: string; minutes: number; active: boolean; kind: string | null };
 type Customer = { id: number; name: string; email?: string | null; phone?: string | null };
 type Bike = { id: number; make: string | null; model: string | null; colour: string | null };
+type Capacity = { days: { date: string; mechanics: { mechanicId: number; freeWindows: { start: string; end: string }[] }[] }[] };
+
+/** How far "Find the next free" looks, as Add another day does. */
+const LOOK_AHEAD_DAYS = 60;
+
+/** A mechanic's free stretches on one day, in minutes from midnight. */
+function windowsOf(capacity: Capacity | undefined, day: string, mechanicId: number) {
+  const m = capacity?.days.find((d) => d.date === day)?.mechanics.find((x) => x.mechanicId === mechanicId);
+  return (m?.freeWindows ?? []).map((w) => ({ start: toMinutes(w.start), end: toMinutes(w.end) }));
+}
 
 const KINDS = [
   { kind: 'full', label: 'Full service' },
@@ -77,8 +91,10 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   // diary's day and first hour. From a click on the grid it has the time clicked.
   const [dayBox, setDayBox] = useState(chosenDate);
   const [timeBox, setTimeBox] = useState(hhmm(chosenStart));
-  const date = entered ? dayBox : chosenDate;
-  const startMin = entered && /^\d{2}:\d{2}$/.test(timeBox) ? toMinutes(timeBox) : chosenStart;
+  // Where "Find the next free" moved a job opened from the grid.
+  const [moved, setMoved] = useState<{ date: string; startMin: number } | null>(null);
+  const date = entered ? dayBox : moved?.date ?? chosenDate;
+  const startMin = entered && /^\d{2}:\d{2}$/.test(timeBox) ? toMinutes(timeBox) : moved?.startMin ?? chosenStart;
   const queryClient = useQueryClient();
   const [newBuild, setNewBuild] = useState(false);
   const [search, setSearch] = useState('');
@@ -92,9 +108,15 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   // Picked by hand, the mechanic stays when the date changes; otherwise it is
   // chosen again for the new day (decision 18).
   const [mechByHand, setMechByHand] = useState(false);
+  // The day the automatic choice was made for: "Find the next free" moves
+  // the job but keeps the mechanic (Jack, 15 Oct), so the note keeps its day.
+  const [autoDay, setAutoDay] = useState(chosenDate);
   function changeDay(day: string) {
     setDayBox(day);
-    if (!mechByHand && autoChosen && chooseMechanic && /^\d{4}-\d{2}-\d{2}$/.test(day)) setMech(chooseMechanic(day));
+    if (!mechByHand && autoChosen && chooseMechanic && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      setMech(chooseMechanic(day));
+      setAutoDay(day);
+    }
   }
   const [status, setStatus] = useState<'scheduled' | 'waiting_parts'>('scheduled');
   const [bikeHere, setBikeHere] = useState(false);
@@ -116,7 +138,61 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
 
   const endMin = service ? startMin + service.minutes : null;
   const mechName = mech === null ? 'Shared queue' : people.find((p) => p.id === mech)?.name ?? 'Shared queue';
-  const weekday = dayLabel(date).split(' ')[0];
+
+  // The Shared queue has no free stretches of its own, so it gets no warning.
+  const realDay = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const capacity = useQuery({
+    queryKey: ['workshop-capacity', date, date],
+    queryFn: () => apiGet<Capacity>(`/api/workshop-capacity?start=${date}&end=${date}`),
+    enabled: Boolean(service) && mech !== null && realDay,
+  });
+  const here = mech === null ? undefined : windowsOf(capacity.data, date, mech).find((w) => w.start <= startMin && startMin < w.end);
+  const freeHere = here ? here.end - startMin : 0;
+  const wontFit = Boolean(service && mech !== null && capacity.data && service.minutes > freeHere);
+  // A search's answer belongs to the mechanic, work and time it was asked for.
+  const asked = `${mech} ${service?.id} ${date} ${startMin}`;
+  const latest = useRef(asked);
+  useEffect(() => { latest.current = asked; }, [asked]);
+  const [findNote, setFindNote] = useState<{ asked: string; text: string } | null>(null);
+  const noneFound = findNote?.asked === asked ? findNote.text : null;
+  const timeLine = useRef<HTMLParagraphElement>(null);
+  const startBox = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (moved) timeLine.current?.focus(); }, [moved]);
+
+  async function findNextFree() {
+    if (!service || mech === null) return;
+    const from = asked;
+    const last = addDays(date, LOOK_AHEAD_DAYS - 1);
+    let ahead: Capacity;
+    try {
+      ahead = await queryClient.fetchQuery({
+        queryKey: ['workshop-capacity', date, last],
+        queryFn: () => apiGet<Capacity>(`/api/workshop-capacity?start=${date}&end=${last}`),
+        retry: false,
+      });
+    } catch {
+      if (latest.current === from) setFindNote({ asked: from, text: "Couldn't find free time — try again." });
+      return;
+    }
+    if (latest.current !== from) return;
+    for (let i = 0; i < LOOK_AHEAD_DAYS; i++) {
+      const day = addDays(date, i);
+      for (const w of windowsOf(ahead, day, mech)) {
+        // Later than the chosen start on its own day, on the quarter hour.
+        const at = Math.ceil(Math.max(w.start, i === 0 ? startMin : 0) / 15) * 15;
+        if (w.end - at >= service.minutes) {
+          if (entered) {
+            setDayBox(day);
+            setTimeBox(hhmm(at));
+            startBox.current?.focus();
+          } else setMoved({ date: day, startMin: at });
+          return;
+        }
+      }
+    }
+    setFindNote({ asked: from, text: `${mechName} has no free ${service.minutes} minutes in the next ${LOOK_AHEAD_DAYS} days.` });
+  }
+  const weekday = dayLabel(entered && !autoChosen ? date : autoDay).split(' ')[0];
 
   function chooseCustomer(c: Customer) {
     setCustomer(c);
@@ -255,16 +331,23 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="nj-time" className={LABEL}>Start time</label>
-                  <input id="nj-time" type="time" step={900} value={timeBox} onChange={(e) => setTimeBox(e.target.value)} aria-invalid={error !== null && error.startsWith('Choose a') && (!timeBox || error.includes('quarter')) ? true : undefined} className={INPUT} />
+                  <input id="nj-time" ref={startBox} type="time" step={900} value={timeBox} onChange={(e) => setTimeBox(e.target.value)} aria-invalid={error !== null && error.startsWith('Choose a') && (!timeBox || error.includes('quarter')) ? true : undefined} className={INPUT} />
                 </div>
               </div>
             ) : (
-              <p className="m-0 rounded-md bg-[var(--wh-state-scheduled-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-state-scheduled-ink)]">
+              <p ref={timeLine} tabIndex={-1} className="m-0 rounded-md bg-[var(--wh-state-scheduled-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-state-scheduled-ink)]">
                 {`${shortDay(date)} · ${hhmm(startMin)}${endMin ? `–${hhmm(endMin)}` : ''} · ${mechName}`}
               </p>
             )}
             {/* Chosen for the day shown, until staff pick one themselves. */}
             {autoChosen && !mechByHand ? <span className="text-[13px] text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
+            {wontFit && service ? (
+              <div role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
+                <span>{`${freeHere > 0 ? `Only ${freeHere} minutes free` : 'No free time'} at ${hhmm(startMin)} — this job needs ${service.minutes}. Choose another time, or save anyway and the diary will show the overlap.`}</span>{' '}
+                <button type="button" onClick={() => void findNextFree()} className="font-semibold underline">{`Find the next free ${service.minutes} minutes`}</button>
+                {noneFound ? <span className="mt-1 block">{noneFound}</span> : null}
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <span id="nj-mech" className={LABEL}>Mechanic</span>
               <div role="radiogroup" aria-labelledby="nj-mech" className="flex flex-wrap gap-1.5">

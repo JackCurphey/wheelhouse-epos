@@ -140,3 +140,10 @@ test('a later day can be removed; the first day cannot', async () => {
   await waitFor(() => assert.deepEqual(changes(), ['DELETE /api/workshop-jobs/1/parts/22 {"version":6}']));
   await settled(waitFor, before);
 });
+
+test('removing a day someone else already removed says so', async () => {
+  const { dlg, fireEvent } = await openJob();
+  answer = { status: 404, ok: false, json: async () => ({ error: 'That day of the job was not found' }) };
+  fireEvent.click(dlg.getByRole('button', { name: 'Remove day 2' }));
+  assert.ok(has(await dlg.findByText('That day has already been removed.')));
+});

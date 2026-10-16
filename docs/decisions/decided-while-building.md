@@ -183,6 +183,57 @@ silent:
    booked in ("Bike is here" is off and fixed) and has no Add another day,
    as a booking request can't. *Pattern:* the booking request.
 
+### 15 Oct 2026: the other refusals in plain words (issue 190 C, the rest)
+
+1. **`job-*`: work and parts refusals** read "This job has been paid for,
+   so its work and parts can't change.", "This job's order was cancelled,
+   so its work and parts can't change.", "That service is no longer
+   offered. Choose another.", "The work needs a description.", "The work
+   needs a price of £0.00 or more.", "The work needs a time of at least 1
+   minute.", "Each part needs a quantity of 1 or more.", "That product is
+   no longer sold. Choose another." and "This job's order no longer
+   exists." *Pattern:* the job page's plain refusals, 15 Oct.
+2. **`job-*`: adding or removing a day** reads "That day has already been
+   removed." for a day that has gone, and "This job no longer exists." for
+   a deleted job. *Pattern:* the request pop-up's "This job no longer
+   exists."
+3. **`diary`: dropping finished work** reads "Couldn't move [bike]: The
+   work is already finished. Reopen the job to change it." *Pattern:* the
+   notes box's "Reopen the job to change its notes." Dropping onto a
+   mechanic who has just been made inactive reads "That mechanic is no
+   longer working here. Choose another."
+4. Refusals the server already words in plain English (the diary's rule
+   refusals, "A job's first day can't be removed") still show as sent.
+### 15 Oct 2026: New job's "won't fit" warning (decision 23, issue 192)
+
+1. **`new-job`: no warning for the Shared queue**, which has no free time of
+   its own to compare with. *Pattern:* the server's capacity answer, which
+   gives the queue only a total.
+2. **`new-job`: a start inside busy time reads "No free time at [time] —
+   this job needs [m]. …"** rather than "Only 0 minutes free". *Pattern:*
+   the drawn warning's own wording.
+3. **`new-job`: "Find the next free [m] minutes" looks 60 days ahead**, and
+   with nothing found says "[mechanic] has no free [m] minutes in the next
+   60 days." *Pattern:* Add another day's 60 days.
+4. **`new-job`: the found time is on the quarter hour**, as a grid click
+   snaps to 15 minutes.
+5. **`new-job`: a failed search reads "Couldn't find free time — try
+   again."** *Pattern:* the form's "Couldn't reach the server — try again."
+
+### 15 Oct 2026: a change request into another week (decision 19, issue 192)
+
+1. **`change-selected`: in a week without the booking, a screen reader
+   hears "[customer] asks to move here: [time]"**, as "Waiting for you"
+   gives no bike. *Pattern:* the card, which names the customer.
+2. **`change-selected`: the chosen request's outline is marked** with the
+   chosen block's highlight, and a screen reader hears ", chosen from
+   Waiting for you"; with it on screen the booking's own block takes the
+   drawing's light grey ring. *Pattern:* the drawing's change-selected;
+   decision 19's "highlights the time the customer wants".
+3. **`diary`: a job over several days shows its requested time once**, from
+   its first day, rather than once per day. *Pattern:* the change request
+   pop-up, which moves the booking as a whole.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

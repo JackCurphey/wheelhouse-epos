@@ -68,14 +68,17 @@ function stubServer() {
     if (u.pathname === '/api/employees') return ok(MECHANICS);
     if (u.pathname === '/api/workshop-settings') return ok(SETTINGS);
     if (u.pathname === '/api/workshop-waiting') return ok(WAITING);
-    if (u.pathname === '/api/workshop-jobs') return ok(u.searchParams.get('start') === '2026-10-12' ? NEXT_WEEK : JOBS);
+    if (u.pathname === '/api/workshop-jobs') {
+      const [from, to] = [u.searchParams.get('start'), u.searchParams.get('end')];
+      return ok([...JOBS, ...NEXT_WEEK].filter((j) => j.jobDate >= from && j.jobDate <= to));
+    }
     const one = u.pathname.match(/^\/api\/workshop-jobs\/(\d+)$/);
     if (one) return ok(JOBS.find((j) => j.id === Number(one[1])));
     return { status: 404, ok: false, json: async () => ({ error: 'Not found' }) };
   };
 }
 
-async function openDiary(query = '?date=2026-10-05') {
+async function openDiary(query = '?date=2026-10-05', firstBike = 'Trek Domane') {
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
   // jsdom has no <dialog> methods; the job page opens in one.
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
@@ -89,7 +92,7 @@ async function openDiary(query = '?date=2026-10-05') {
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  await ui.findByText('Trek Domane');
+  if (firstBike) await ui.findByText(firstBike);
   return { ...rtl, ui };
 }
 
@@ -227,4 +230,69 @@ test('a chosen job in a stack marks the stack', async () => {
   } finally {
     NEXT_WEEK.pop();
   }
+});
+
+// Decision 19 for a change request into another week (#192; Jack, 15 Oct,
+// docs/decisions/2026-10-15-change-request-other-week.md: go to the week asked for).
+// Spec: openspec/changes/change-request-other-week
+const OTHER_WEEK = { kind: 'change_request', jobId: 2, reference: 'WH-1002', jobDate: '2026-10-05', startTime: '10:00', endTime: '11:00', mechanicId: 12, customerName: 'Oliver Chen', serviceNames: ['Full service'], services: [], arrivedAt: '2026-10-03T10:00:00Z',
+  from: { jobDate: '2026-10-05', startTime: '10:00', endTime: '11:00', mechanicId: 12, mechanicName: 'Jo Taylor' },
+  to: { jobDate: '2026-10-14', startTime: '14:00', endTime: '15:00', mechanicId: 11, mechanicName: 'Alex Morgan' } };
+
+async function withRequest(to, run) {
+  const request = { ...OTHER_WEEK, to: { ...OTHER_WEEK.to, ...to } };
+  if (request.to.jobDate === '2026-10-05') request.to.startTime = '14:00';
+  const before = JOBS[1].requested;
+  JOBS[1].requested = { jobDate: request.to.jobDate, startTime: request.to.startTime, endTime: request.to.endTime, mechanicId: request.to.mechanicId };
+  WAITING.items.push(request);
+  WAITING.count = 3;
+  try {
+    await run();
+  } finally {
+    WAITING.items.pop();
+    WAITING.count = 2;
+    JOBS[1].requested = before;
+  }
+}
+
+test('choosing a change request into another week goes to the week asked for and marks the time', async () => {
+  await withRequest({}, async () => {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.click(within(ui.getByRole('region', { name: 'Waiting for you (3)' })).getByRole('button', { name: /Oliver Chen/ }));
+    assert.ok(has(await ui.findByText('12–18 October 2026')));
+    const wed = within(ui.getByRole('group', { name: 'Wednesday 14 October' }));
+    assert.ok(has(await wed.findByText('Oliver Chen asks to move here: 14:00–15:00, chosen from Waiting for you')));
+    assert.ok(has(wed.queryByText('Requested 14:00')));
+  });
+});
+
+test('a change request inside its own week still goes to the booking\'s week', async () => {
+  await withRequest({ jobDate: '2026-10-07' }, async () => {
+    const { ui, fireEvent, within } = await openDiary('?date=2026-10-12', 'Cube Attain');
+    fireEvent.click(within(await ui.findByRole('region', { name: 'Waiting for you (3)' })).getByRole('button', { name: /Oliver Chen/ }));
+    assert.ok(has(await ui.findByText('5–11 October 2026')));
+    const wed = within(ui.getByRole('group', { name: 'Wednesday 7 October' }));
+    assert.ok(has(await wed.findByText('Brompton C Line asks to move here: 14:00–15:00, chosen from Waiting for you')));
+  });
+});
+
+// After the fresh review.
+test('with its requested time on screen, the chosen job takes the light mark and the time the strong one, as drawn', async () => {
+  await withRequest({ jobDate: '2026-10-05', mechanicId: 12 }, async () => {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.click(within(ui.getByRole('region', { name: 'Waiting for you (3)' })).getByRole('button', { name: /Oliver Chen/ }));
+    const mon = within(ui.getByRole('group', { name: 'Monday 5 October' }));
+    assert.ok(has(await mon.findByText('Brompton C Line asks to move here: 14:00–15:00, chosen from Waiting for you')));
+    const block = mon.getByRole('button', { name: /^Brompton C Line/ });
+    assert.ok(block.className.includes('0_0_0_2px_var(--wh-muted)'), 'the job has the light mark');
+    assert.equal(block.className.includes('var(--wh-highlight)'), false, 'the strong ring is the time asked for');
+  });
+});
+
+test('in the Day view, a request from another week for any mechanic shows in the booking mechanic\'s column', async () => {
+  await withRequest({ mechanicId: null }, async () => {
+    const { ui, within } = await openDiary('?date=2026-10-14&view=day', null);
+    const jo = within(await ui.findByRole('group', { name: 'Jo Taylor' }));
+    assert.ok(has(await jo.findByText('Requested 14:00')));
+  });
 });

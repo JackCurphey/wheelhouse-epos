@@ -146,3 +146,25 @@ test('Waiting in the top bar opens the list; a card goes to its day and shows th
   // Let the pop-up finish loading the job before the test ends.
   assert.ok(has(await ui.findByRole('button', { name: 'Accept' })));
 });
+
+// Decision 19 for a change request into another week (#192; Jack, 15 Oct).
+// Spec: openspec/changes/change-request-other-week
+test('on a phone, a change request into another week goes to the day asked for and shows the time', async () => {
+  const request = { kind: 'change_request', jobId: 2, reference: 'WH-1002', jobDate: '2026-10-06', startTime: '13:00', endTime: '14:00', mechanicId: 12, customerName: 'Oliver Chen', serviceNames: ['Gear tune'], services: [], arrivedAt: '2026-10-03T10:00:00Z',
+    from: { jobDate: '2026-10-06', startTime: '13:00', endTime: '14:00', mechanicId: 12, mechanicName: 'Jo Taylor' },
+    to: { jobDate: '2026-10-13', startTime: '14:00', endTime: '15:00', mechanicId: 11, mechanicName: 'Alex Morgan' } };
+  WAITING.items.push(request);
+  WAITING.count = 2;
+  try {
+    const { ui, fireEvent, within } = await openPhone();
+    fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 2' }));
+    const sheet = within(await ui.findByRole('dialog', { name: 'Waiting for you (2)' }));
+    fireEvent.click(sheet.getByRole('button', { name: /Oliver Chen/ }));
+    assert.equal((await ui.findByRole('tab', { name: /^Tuesday 13 October/ })).getAttribute('aria-selected'), 'true');
+    assert.ok(has(await ui.findByText('Requested 14:00')));
+    assert.ok(has(ui.queryByText('Oliver Chen asks to move here: 14:00–15:00, chosen from Waiting for you')));
+  } finally {
+    WAITING.items.pop();
+    WAITING.count = 1;
+  }
+});

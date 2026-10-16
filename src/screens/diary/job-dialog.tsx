@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog } from '@/components/ui/dialog.tsx';
 import { shortDay, todayIso } from './rules.ts';
 import { WorkParts } from './work-parts.tsx';
-import { refusalText } from './refusal-words.ts';
+import { jobRefusalText, refusalText } from './refusal-words.ts';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -164,9 +164,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
       await apiMutate(`/api/workshop-jobs/${job.id}/parts/${partId}`, { version: job.version }, { method: 'DELETE' });
       await refresh(job.id);
     } catch (err) {
-      setMessage(err instanceof ApiError
-        ? (err.code === 'stale' ? 'This job changed while you were looking at it.' : err.message)
-        : "Couldn't reach the server — try again.");
+      setMessage(jobRefusalText(err));
       if (err instanceof ApiError && err.code === 'stale') void jobQuery.refetch();
     } finally {
       setSending(false);
@@ -184,9 +182,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
       ]);
     } catch (err) {
-      setMessage(err instanceof ApiError
-        ? (err.code === 'stale' ? 'This job changed while you were looking at it.' : err.message)
-        : "Couldn't reach the server — try again.");
+      setMessage(jobRefusalText(err));
       if (err instanceof ApiError && err.code === 'stale') void jobQuery.refetch();
     } finally {
       setSending(false);

@@ -113,14 +113,18 @@ A job worked over more than one day SHALL have a block on each of its days, at t
 - **THEN** Monday shows it as "day 1 of 2" and Tuesday shows "Day 2 of 2 · [job title]"
 
 ### Requirement: A customer's change request shows where the customer wants to go
-A booking with a customer's change request waiting SHALL show amber at its current time, and a dashed outline reading "Requested [time]" at the time the customer asked for, when that time falls in a day and column on screen. A screen reader SHALL hear "[bike] asks to move here: [time]".
+A booking with a customer's change request waiting SHALL show amber at its current time, and a dashed outline reading "Requested [time]" at the time the customer asked for, when that time falls in a day and column on screen, also in a week where the booking itself is not (Jack, 15 Oct). A screen reader SHALL hear "[bike] asks to move here: [time]", or "[customer] asks to move here: [time]" in a week without the booking. The outline of a request chosen from "Waiting for you" SHALL take the strong mark a chosen block has; when it is on screen, the booking's own block SHALL take only a light grey ring (the drawing's change-selected).
 
 #### Scenario: Oliver Chen asks to move
 - **WHEN** Oliver Chen's Brompton C Line is booked at 10:00 on Monday 5 October and he asks for 14:00 the same day
 - **THEN** the block reads Change requested and Monday shows "Brompton C Line asks to move here: 14:00–15:00"
 
+#### Scenario: Oliver Chen asks for another week
+- **WHEN** Oliver Chen's Brompton C Line is booked at 10:00 on Monday 5 October, he asks for 14:00 on Wednesday 14 October with Alex Morgan, and staff choose his card
+- **THEN** the diary shows "12–18 October 2026" and Wednesday shows "Requested 14:00" and "Oliver Chen asks to move here: 14:00–15:00, chosen from Waiting for you"
+
 ### Requirement: On a phone the diary is one day at a time
-Below tablet width the diary SHALL show one day, chosen from a strip of the week's seven days in place of the Week and Day switch, with arrows that move a week and keep the weekday. One people chip SHALL choose Everyone (one column), By mechanic (a column each) or one person. "Waiting" with its count SHALL sit in the top bar and open the list as a sheet.
+Below tablet width the diary SHALL show one day, chosen from a strip of the week's seven days in place of the Week and Day switch, with arrows that move a week and keep the weekday. One people chip SHALL choose Everyone (one column), By mechanic (a column each) or one person. "Waiting" with its count SHALL sit in the top bar and open the list as a sheet; choosing a card SHALL go to its day, or for a change request into another week to the day asked for (Jack, 15 Oct).
 
 #### Scenario: A phone opens on Tuesday
 - **WHEN** staff open the diary on a phone on Tuesday 6 October
@@ -137,6 +141,10 @@ Below tablet width the diary SHALL show one day, chosen from a strip of the week
 #### Scenario: A waiting card on a phone
 - **WHEN** staff open Waiting and choose the card for a booking request on Thursday 8 October
 - **THEN** the diary goes to Thursday 8 October with a bar at the bottom showing the customer and Open, and Open shows the request
+
+#### Scenario: A change request into another week on a phone
+- **WHEN** Oliver Chen's Brompton C Line is booked on Tuesday 6 October, he asks for 14:00 on Tuesday 13 October, and staff choose his card
+- **THEN** Tuesday 13 October is chosen and shows "Requested 14:00"
 
 ### Requirement: Staff can move a job by dragging it or from the keyboard
 Staff SHALL be able to drag a timed job to another time or day, or, in the Day view, to another mechanic, snapped to 15 minutes and kept inside the grid's hours. From the keyboard, M SHALL pick a job up, the arrows move it 15 minutes or a column, Enter or Space save it and Escape put it back, each step read out. Saving SHALL send the version the diary saw, and the mechanic only when it changed. A later day of a job SHALL move on its own. A click or Enter that is not a move SHALL open the job.
@@ -158,7 +166,7 @@ Staff SHALL be able to drag a timed job to another time or day, or, in the Day v
 - **THEN** only day 2 moves
 
 ### Requirement: A move the shop's rules refuse is put back, and says why
-A move SHALL be checked against the shop's rules for a job's day and time (see `workshop-jobs`). When it is refused, the job SHALL stay where it was and the diary SHALL show "Couldn't move [bike]: " and the server's reason, or "This job changed while you were looking at it." and reload when someone else changed the job first. A booking request, a customer's cancellation and a job with no time SHALL NOT be movable on the diary.
+A move SHALL be checked against the shop's rules for a job's day and time (see `workshop-jobs`). When it is refused, the job SHALL stay where it was and the diary SHALL show "Couldn't move [bike]: " and why: the server's reason when it is already plain English, "The work is already finished. Reopen the job to change it." for finished work, "This job no longer exists." for a deleted job, "That mechanic is no longer working here. Choose another." for a mechanic who has left (Jack, 15 Oct), or "This job changed while you were looking at it." and reload when someone else changed the job first. A booking request, a customer's cancellation and a job with no time SHALL NOT be movable on the diary.
 
 #### Scenario: A clash with another job
 - **WHEN** staff drop a job over another of the same mechanic's jobs
@@ -171,6 +179,10 @@ A move SHALL be checked against the shop's rules for a job's day and time (see `
 #### Scenario: A booking request
 - **WHEN** the Specialized Sirrus booking is still a request
 - **THEN** it cannot be picked up or dragged
+
+#### Scenario: Finished work
+- **WHEN** staff drop a job whose work is finished
+- **THEN** the diary shows "Couldn't move Trek Domane AL 3: The work is already finished. Reopen the job to change it."
 
 ### Requirement: Dropping a job on the customer's requested time accepts the change
 When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop of the job's first day on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
@@ -286,7 +298,7 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 - **THEN** it never appears in this shop's list
 
 ### Requirement: The diary's Waiting column chooses and opens what is waiting
-On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the grid, refreshed every minute, one card per item with its kind, the customer, and the services and time or the move; with nothing waiting it SHALL say "Nothing waiting." One click on a card SHALL choose it: the diary moves to that job's week, shows Everyone, marks its block, and the card shows Open. Open, or a double-click, SHALL open the request. On a touch screen a second tap on the chosen card SHALL open it too (Workshop day decision 14); a second click with a mouse SHALL NOT.
+On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the grid, refreshed every minute, one card per item with its kind, the customer, and the services and time or the move; with nothing waiting it SHALL say "Nothing waiting." One click on a card SHALL choose it: the diary moves to that job's week, or for a change request into another week to the week the customer asked for (Jack, 15 Oct), shows Everyone, marks its block, and the card shows Open. Open, or a double-click, SHALL open the request. On a touch screen a second tap on the chosen card SHALL open it too (Workshop day decision 14); a second click with a mouse SHALL NOT.
 
 #### Scenario: Choosing Sam Reed's request
 - **WHEN** staff click Sam Reed's card, booked for 14 October
@@ -700,3 +712,34 @@ Whether prices show online SHALL save as on or off. The shop's own booking terms
 #### Scenario: Blank terms
 - **WHEN** staff save terms of only spaces
 - **THEN** the shop has no terms of its own again
+
+### Requirement: New job warns when the work won't fit
+Once work is chosen on New job, the form SHALL compare the work's length with the chosen mechanic's free time from the chosen start, to the end of that free stretch, on that day (decision 23). When the work is longer, the form SHALL show "Only [n] minutes free at [time] — this job needs [m]. Choose another time, or save anyway and the diary will show the overlap.", or "No free time at [time] — this job needs [m]. …" when the start is in busy time, with a "Find the next free [m] minutes" button. Save job SHALL stay available. The button SHALL move the job to the same mechanic's first free stretch long enough for the work, starting on the quarter hour, later that day or on a following day within 60 days counting the chosen one, keep the mechanic, put the focus on the new time, and the warning SHALL go (Jack, 15 Oct); when there is none it SHALL say "[mechanic] has no free [m] minutes in the next 60 days.", and when the search fails "Couldn't find free time — try again." Free time here is what the shop's capacity gives as free stretches: it leaves out blocks, closures, days off and timed jobs, but not untimed jobs, the Shared queue's share or the reserve. The Shared queue SHALL get no warning.
+
+#### Scenario: Work longer than the gap
+- **WHEN** staff choose a 90-minute Standard service at 10:00 on Tue 6 Oct for Jo Taylor, who is free 09:00–10:30 and from 12:00
+- **THEN** the form shows "Only 30 minutes free at 10:00 — this job needs 90. Choose another time, or save anyway and the diary will show the overlap." and Save job is still offered
+
+#### Scenario: Work that fits
+- **WHEN** staff choose a 30-minute Brake adjust at the same time
+- **THEN** there is no warning
+
+#### Scenario: Finding the next free time the same day
+- **WHEN** staff press "Find the next free 90 minutes"
+- **THEN** the job moves to Tue 6 Oct 12:00–13:30 with Jo Taylor and the warning goes
+
+#### Scenario: Finding the next free time on a later day
+- **WHEN** Jo has no 90-minute gap left on Tue 6 Oct and is free all of Wed 7 Oct, and staff press "Find the next free 90 minutes"
+- **THEN** the job moves to Wed 7 Oct 09:00–10:30 with Jo Taylor
+
+#### Scenario: Saving anyway
+- **WHEN** staff save with the warning showing
+- **THEN** the job is saved at the time chosen
+
+#### Scenario: The Shared queue
+- **WHEN** the mechanic is the Shared queue
+- **THEN** there is no warning
+
+#### Scenario: The automatic choice after a move
+- **WHEN** Jo Taylor was chosen automatically for Tuesday and "Find the next free 90 minutes" moves the job to Wed 7 Oct
+- **THEN** the form still says "Mechanic chosen automatically: most free time on Tuesday." and the focus is on the new time
