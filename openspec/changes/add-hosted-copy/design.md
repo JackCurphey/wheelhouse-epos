@@ -261,16 +261,18 @@ the week, the pending booking, the change request and the services from
   service 45 min, in Individual service; Gear service, 90 min. Only Standard
   service has a price, £65.00 (`G/diary.mjs:341`). The rest are drawn as
   "[£ price]" (`G/browse.mjs:80`); a price can't hold a placeholder, so they
-  are £0.00, for Jack to overrule (`decided-while-building.md`).
+  are £0.00 (Jack, 16 Oct, `docs/decisions/2026-10-16-test-shop-defaults.md`).
 - **Product:** Shimano brake pads, SKU B05S-RX, £28.00 (`G/diary.mjs:342`).
   No other product has a price in the drawings.
 - **Workshop jobs:** the drawings' example week, Mon 14 to Sun 20 September
-  2026 (`G/diary.mjs:388`), all 37 jobs with their WH numbers, times,
+  2026 (`G/diary.mjs:388`), moved to the week the shop is loaded with each
+  job on its own weekday (Jack, 16 Oct,
+  `docs/decisions/2026-10-16-test-shop-defaults.md`), all 37 jobs with their WH numbers, times,
   mechanics, services and customers (`G/diary.mjs:399`; WH-1038 and WH-1040
   take theirs from `customerBikeOf()`, `G/diary.mjs:467`). WH-1046, a
   Standard service with no time in the shared queue (`G/diary.mjs:504`),
   is drawn on every week's no-time row, so it goes on the drawings' today,
-  Thu 17 Sep. Their colour
+  the Thursday. Their colour
   sets their state (`G/diary.mjs:57`): Expected is a scheduled booking with
   the bike expected; "Booked in" has the bike in the shop; "In the
   workshop" has work in progress; Waiting for parts; Finished; Cancelled,

@@ -114,10 +114,13 @@ silent:
 1. **Services drawn "[£ price]" are £0.00.** Safety check, Gear adjustment,
    Brake service and Gear service have no price in the drawings, and a price
    can't hold a placeholder. *Pattern:* a product added without a price is
-   £0.00 too (the products table's default).
+   £0.00 too (the products table's default). *Jack kept this, 16 Oct
+   (`2026-10-16-test-shop-defaults.md`).*
 2. **Jobs keep the drawn week, Mon 14 to Sun 20 September 2026.** That week
    is in the past now, so the app carries unfinished jobs on by itself: some
    read "Day 1 of 2" on the next day. *Pattern:* the drawings, as drawn.
+   *Overruled by Jack, 16 Oct: the week moves to the week the shop is
+   loaded (`2026-10-16-test-shop-defaults.md`).*
 3. **The change request keeps its own mechanic.** The drawing's dashed 14:00
    names none. *Pattern:* accepting keeps the same work (the pop-up's
    sentence).

@@ -87,10 +87,15 @@ async function counts(url, shopId) {
   });
 }
 
+// The drawn week moves to the week the shop is loaded, each job on its own
+// weekday (Jack, 16 Oct, docs/decisions/2026-10-16-test-shop-defaults.md):
+// loaded on Wed 14 Oct, the drawn Mon 14 to Sun 20 Sep becomes Mon 12 to Sun 18 Oct.
+const LOADED_ON = '2026-10-14T12:00:00Z';
+
 test('loads North Street Cycles from the drawings onto an empty database', async (t) => {
   const db = await scratch(t);
   if (!db) return;
-  const res = load(db.env);
+  const res = load({ ...db.env, WHEELHOUSE_TEST_CLOCK: LOADED_ON });
   assert.ok(res.ok, res.out);
 
   const all = await shops(db.appUrl);
@@ -110,7 +115,7 @@ test('loads North Street Cycles from the drawings onto an empty database', async
          FROM workshop_jobs w JOIN customers c ON c.id = w.customer_id JOIN customer_bikes b ON b.id = w.bike_id
          JOIN employees e ON e.id = w.mechanic_id WHERE w.reference = 'WH-1042'`);
     assert.deepEqual({ ...maya }, {
-      job_date: '2026-09-17', start_time: '11:30', end_time: '13:00',
+      job_date: '2026-10-15', start_time: '11:30', end_time: '13:00',
       booking_state: 'scheduled', work_state: 'in_progress', custody_state: 'in_shop',
       customer: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.test',
       bike: 'Trek Domane AL 3', colour: 'green', mechanic: 'Alex Morgan',
@@ -123,7 +128,7 @@ test('loads North Street Cycles from the drawings onto an empty database', async
     const [change] = await q(
       "SELECT booking_state, requested_job_date, requested_start_time, requested_end_time FROM workshop_jobs WHERE reference = 'WH-1052'");
     assert.deepEqual({ ...change }, {
-      booking_state: 'reschedule_requested', requested_job_date: '2026-09-14', requested_start_time: '14:00', requested_end_time: '15:00',
+      booking_state: 'reschedule_requested', requested_job_date: '2026-10-12', requested_start_time: '14:00', requested_end_time: '15:00',
     });
     const [cancelled] = await q("SELECT booking_state, cancelled_by FROM workshop_jobs WHERE reference = 'WH-1058'");
     assert.deepEqual({ ...cancelled }, { booking_state: 'cancelled', cancelled_by: 'customer' });
@@ -133,7 +138,7 @@ test('loads North Street Cycles from the drawings onto an empty database', async
       `SELECT w.booking_state, w.mechanic_id, w.job_date, w.start_time, w.end_time, c.name AS customer
          FROM workshop_jobs w JOIN customers c ON c.id = w.customer_id WHERE w.title = 'Brake service'`);
     assert.deepEqual({ ...pending }, {
-      booking_state: 'pending', mechanic_id: null, job_date: '2026-09-18', start_time: '10:00', end_time: '10:45', customer: 'Sam Reed',
+      booking_state: 'pending', mechanic_id: null, job_date: '2026-10-16', start_time: '10:00', end_time: '10:45', customer: 'Sam Reed',
     });
     // A customer's request accepts the booking terms, which is what puts it in
     // Waiting for you, as drawn there with the change request and the
@@ -164,7 +169,7 @@ test('loads North Street Cycles from the drawings onto an empty database', async
     // WH-1046 sits in the no-time row, in the shared queue (diary.mjs, UNSCHEDULED).
     const [untimed] = await q(
       `SELECT w.title, w.mechanic_id, w.start_time, w.planned_minutes, w.job_date FROM workshop_jobs w WHERE w.reference = 'WH-1046'`);
-    assert.deepEqual({ ...untimed }, { title: 'Standard service', mechanic_id: null, start_time: null, planned_minutes: 60, job_date: '2026-09-17' });
+    assert.deepEqual({ ...untimed }, { title: 'Standard service', mechanic_id: null, start_time: null, planned_minutes: 60, job_date: '2026-10-15' });
     const [pads] = await q('SELECT name, sku, price::text FROM products');
     assert.deepEqual({ ...pads }, { name: 'Shimano brake pads', sku: 'B05S-RX', price: '28.00' });
 
