@@ -33,4 +33,6 @@ page, one question each. No drawing shows any of them. Built in
    built in #223. No screen change. Stopping the server booking in or
    starting work on an ended booking (the rest of #190 A) is Mark's, when
    he is back. Chosen over showing it off for every ended booking, and over
-   hiding the switch.
+   hiding the switch. This narrows "off and fixed" in Jack's section of
+   `decided-while-building.md` (15 Oct, plain refusals, item 3) to a
+   booking whose bike never came in.

@@ -19,14 +19,14 @@ Also waiting for him: approve #225 (Jack's, changes `server.js`), and the
 server half of #190 A, a guard so a cancelled, declined or expired booking
 can't be booked in or started (the `workshop-jobs` spec allows it today;
 Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5).
-**Jack is on:** 15 Oct (evening) merged, screens only: the rest of #190
+**Jack is on:** merged 15 Oct (evening) and 16 Oct (morning), screens only: the rest of #190
 C, refusals in plain words for work and parts, days and diary drags (#227);
 New job's won't-fit warning with "Find the next free" (#228; decision 23,
 Jack's answer in `docs/decisions/2026-10-15-new-job-wont-fit.md`); a change
 request into another week goes to the week asked for (#229; decision 19,
 `docs/decisions/2026-10-15-change-request-other-week.md`). 16 Oct: "Bike
 is here" stays on for an ended booking whose bike is in (no change). Open:
-#225, waiting for Mark's approval (up to date with main on 15 Oct). Online
+#225, waiting for Mark's approval (brought up to date with main again on 16 Oct). Online
 test copy (#221): DigitalOcean's page shows an error after the card check
 passes (15 Oct, twice); Jack retries on 16 Oct and opens a support ticket if
 it fails, then steps 2–5 of `docs/runbooks/hosted-copy.md` (repo at
