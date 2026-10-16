@@ -420,3 +420,21 @@ test('after a move the focus is on the new time, and the automatic choice still 
   await r.waitFor(() => assert.ok(document.activeElement === line));
   assert.ok(has(form.queryByText('Mechanic chosen automatically: most free time on Tuesday.')));
 });
+
+// new-job-pick: the slot under the pointer shows as a solid target with its
+// time, before the click (drawn, not built until 16 Oct; Jack asked for it).
+// Spec: openspec/changes/pick-hover-and-pointer
+test('choosing a time, the slot under the pointer is highlighted with its time', async () => {
+  const r = await openDiary();
+  const tue = r.within(r.ui.getByRole('group', { name: 'Tuesday 6 October' }));
+  r.fireEvent.mouseMove(r.ui.getByRole('group', { name: 'Tuesday 6 October' }), { clientY: 58 });
+  assert.equal(has(r.ui.container.querySelector('[data-pick-slot]')), false, 'no highlight before New job');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  r.fireEvent.mouseMove(r.ui.getByRole('group', { name: 'Tuesday 6 October' }), { clientY: 58 });
+  const slot = r.ui.container.querySelector('[data-pick-slot]');
+  assert.ok(has(slot), 'the slot under the pointer is highlighted');
+  assert.equal(slot.textContent, '10:00');
+  assert.ok(has(tue.queryByText('10:00')));
+  r.fireEvent.mouseLeave(r.ui.getByRole('group', { name: 'Tuesday 6 October' }));
+  assert.equal(has(r.ui.container.querySelector('[data-pick-slot]')), false, 'it goes when the pointer leaves');
+});
