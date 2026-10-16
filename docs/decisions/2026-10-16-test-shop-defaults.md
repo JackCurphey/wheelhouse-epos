@@ -12,6 +12,8 @@ test shop") for him to overrule. Jack, 16 Oct, one question each.
    each job keeps its weekday and time (the drawn Fri 18 Sep 12:00 becomes
    that week's Friday at 12:00), so the diary opens full. The dates no
    longer match the drawings' exactly; jobs on days already past when the
-   shop is loaded carry on to the next day, as unfinished work does. Chosen
+   shop is loaded carry on to the next day, as unfinished work does, and
+   the customers' requests keep their drawn days even if those have passed
+   (Oliver Chen's change to Monday, Sam Reed's Friday booking). Chosen
    over keeping 14 to 20 Sep (the diary opens empty, the jobs read as late)
    and over a fixed future week (it goes stale again).
