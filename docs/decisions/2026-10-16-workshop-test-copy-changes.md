@@ -20,3 +20,7 @@ these, one question each where there was a choice.
    the `new-job-pick` drawing, which puts the bar above the grid.
 5. **A review of the diary page's layout** (#238), by a separate session
    that only reported. For Jack to read before anything else moves.
+6. **Waiting for you is a panel** (Jack: "1"): the light panel colour, a
+   thin border and rounded corners, heading inside, the count as a badge;
+   as the layout review (#238) recommends. Chosen over a soft tint with no
+   border. Changes the `diary` drawing's Waiting column.

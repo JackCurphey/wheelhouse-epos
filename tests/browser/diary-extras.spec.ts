@@ -244,3 +244,16 @@ test('pressing New job does not move the diary', async ({ page, context }) => {
   await expect(page.getByText(/Choose a time for the new job\./)).toBeVisible();
   expect((await monday.boundingBox())!.y).toBe(before);
 });
+
+// Jack, 16 Oct: Waiting for you is boxed in as a panel, its heading inside
+// and its count as a badge. Spec: openspec/changes/waiting-panel
+test('Waiting for you is a panel with its count as a badge', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const panel = page.getByRole('region', { name: /^Waiting for you/ });
+  await expect(panel).toBeVisible();
+  await expect(panel).toHaveCSS('border-top-width', '1px');
+  await expect(panel).toHaveCSS('background-color', 'rgb(255, 253, 247)');
+  await expect(panel.locator('[data-count-badge]')).toBeVisible();
+});
