@@ -78,8 +78,9 @@ Q12: "these are done before switch-over".
   Citrus Lime reports they use, and the accountant checks Wheelhouse's
   versions before switch-over.
 - [ ] **What staff must be told about what is recorded about them**
-  (build plan, "still to check before release"). Who checks:
-  **[To decide, Jack]**.
+  (build plan, "still to check before release"): part of the solicitor's
+  check (Jack, 16 Oct). If staff need a notice, Claude drafts it like the
+  other legal pages.
 
 ## 4. Records
 
