@@ -340,3 +340,20 @@ test('a card chosen from the keyboard after a tap elsewhere says double-click', 
   fireEvent.click(region.getByRole('button', { name: /Lena Fox/ }), { detail: 0 });
   assert.ok(has(region.queryByText('Double-click a card to open it.')));
 });
+
+// With 12px labels a half-hour block has room for one line, so it shows the
+// bike only, as the drawing does (walk 1 M3); the job stays in its description.
+// Spec: openspec/changes/diary-label-floor
+test('a half-hour block shows the bike only; an hour block shows the job too', async () => {
+  JOBS.push(job({ id: 9, reference: 'WH-1009', title: 'Safety check', bikeLabel: 'Giant Escape', customerName: 'Priya Shah', jobDate: '2026-10-08', startTime: '14:00', endTime: '14:30' }));
+  try {
+    const { ui, within } = await openDiary();
+    const thu = within(ui.getByRole('group', { name: 'Thursday 8 October' }));
+    assert.ok(has(thu.queryByText('Giant Escape')));
+    assert.ok(thu.queryByText('Safety check') === null, 'a half-hour block has no room for the job line');
+    const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
+    assert.ok(has(tue.queryByText('Brake service')), 'an hour block shows the job');
+  } finally {
+    JOBS.pop();
+  }
+});

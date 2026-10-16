@@ -186,12 +186,16 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
-      <span aria-hidden="true" className={`truncate text-[11px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
+      <span aria-hidden="true" className={`truncate text-xs font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
         {job.bikeLabel || 'Bike'}
       </span>
-      <span aria-hidden="true" className="truncate text-[10px] leading-tight font-bold">
-        {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
-      </span>
+      {/* A block too short for two 12px lines shows the bike only (drawn, walk 1 M3);
+          the job stays in its description and summary. */}
+      {height >= TWO_LINES ? (
+        <span aria-hidden="true" className="truncate text-xs leading-tight font-bold">
+          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
+        </span>
+      ) : null}
     </>
   );
   if (!move || !movable(job) || picking) {
@@ -321,12 +325,14 @@ function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: {
         }}
         className={`absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[22px] pl-1.5 text-left ${chosen ? 'shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
       >
-        <span aria-hidden="true" className="absolute top-[3px] right-[3px] inline-flex items-center gap-px rounded-full bg-[var(--wh-ink)] px-[5px] py-px text-[9px] font-bold text-[var(--wh-panel)]">
+        <span aria-hidden="true" className="absolute top-[3px] right-[3px] inline-flex items-center gap-px rounded-full bg-[var(--wh-ink)] px-[5px] py-px text-xs font-bold text-[var(--wh-panel)]">
           {jobs.length}
           <Chevron dir="prev" small />
         </span>
-        <span aria-hidden="true" className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{front.bikeLabel || 'Bike'}</span>
-        <span aria-hidden="true" className="truncate text-[10px] font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
+        <span aria-hidden="true" className="truncate text-xs font-bold text-[var(--wh-ink)]">{front.bikeLabel || 'Bike'}</span>
+        {((end - start) / 30) * SLOT_H - 4 >= TWO_LINES ? (
+          <span aria-hidden="true" className="truncate text-xs font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
+        ) : null}
       </button>
       {/* Hidden (not just see-through) until the 0.3s is up, so a quick
           click lands on the stack, not on a job that hasn't appeared. */}
@@ -402,6 +408,9 @@ function Floating({ children }: { children: ReactNode }) {
   );
 }
 
+/** Room for two 12px lines in a block: its padding and border, and two lines (diary.mjs, D_LINE_H 14). */
+const TWO_LINES = 10 + 2 * 14;
+
 /** A change request's dashed outline at the time the customer asked for. */
 function RequestedOutline({ outline, range, chosen }: { outline: Outline; range: { start: number }; chosen: boolean }) {
   const SLOT_H = useContext(SlotContext);
@@ -413,7 +422,7 @@ function RequestedOutline({ outline, range, chosen }: { outline: Outline; range:
   const height = Math.max(((end - start) / 30) * SLOT_H - 4, SLOT_H - 6);
   return (
     <div
-      className={`absolute right-[3px] left-[3px] overflow-hidden rounded-[5px] border-[1.75px] border-dashed border-[var(--wh-state-hold-ink)] px-1.5 py-[3px] text-[10px] font-bold text-[var(--wh-state-hold-ink)] ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
+      className={`absolute right-[3px] left-[3px] overflow-hidden rounded-[5px] border-[1.75px] border-dashed border-[var(--wh-state-hold-ink)] px-1.5 py-[3px] text-xs font-bold text-[var(--wh-state-hold-ink)] ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
       style={{ top, height }}
     >
       <span className={SR}>{`${outline.label} asks to move here: ${timeText({ startTime: r.startTime, endTime: r.endTime ?? null })}${chosen ? ', chosen from Waiting for you' : ''}`}</span>
@@ -500,7 +509,7 @@ function HourGutter({ range }: { range: { start: number; end: number } }) {
   return (
     <div aria-hidden="true" className="relative bg-[var(--wh-surface-muted)]" style={{ height: ((range.end - range.start) / 30) * SLOT_H }}>
       {hours.map((m) => (
-        <span key={m} className="absolute right-1 font-[family-name:var(--wh-font-mono)] text-[10px] text-[var(--wh-muted)]" style={{ top: Math.max(((m - range.start) / 30) * SLOT_H - 6, 1) }}>
+        <span key={m} className="absolute right-1 font-[family-name:var(--wh-font-mono)] text-xs text-[var(--wh-muted)]" style={{ top: Math.max(((m - range.start) / 30) * SLOT_H - 6, 1) }}>
           {hhmm(m)}
         </span>
       ))}
@@ -525,14 +534,14 @@ function Grid({ heads, columns, noTime, onOpen, range, ariaLabel }: {
         <div className="bg-[var(--wh-surface-muted)]" />
         {heads.map((h) => (
           <div key={h.key} className={`flex flex-col items-center border-l border-[var(--wh-border)] px-2 py-1.5 ${h.today ? 'bg-[var(--wh-surface-muted)]' : ''}`}>
-            {h.top ? <span className="text-[11px] font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">{h.top}</span> : null}
+            {h.top ? <span className="text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">{h.top}</span> : null}
             <span className={`text-sm font-bold ${h.today ? 'text-[var(--accent-dark)]' : ''}`}>{h.main}{h.today ? ' · Today' : ''}</span>
           </div>
         ))}
       </div>
       {noTime ? (
         <div className="grid border-b border-[var(--wh-border)]" style={{ gridTemplateColumns: '44px minmax(0, 1fr)' }}>
-          <div aria-hidden="true" className="bg-[var(--wh-surface-muted)] pt-[3px] text-center text-[9px] leading-tight font-bold text-[var(--wh-muted)]">
+          <div aria-hidden="true" className="bg-[var(--wh-surface-muted)] pt-[3px] text-center text-xs leading-tight font-bold text-[var(--wh-muted)]">
             No
             <br />
             time
@@ -1085,7 +1094,7 @@ export function DiaryPage() {
       onClick={() => set({ who: key === 'all' ? null : key })}
       className={`inline-flex min-h-11 items-center gap-[7px] rounded-full border py-[5px] pr-3.5 pl-[5px] text-[13px] font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
     >
-      <span aria-hidden="true" className={`inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${on ? 'bg-[var(--wh-panel)] text-[var(--wh-accent-soft-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>
+      <span aria-hidden="true" className={`inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-xs font-bold ${on ? 'bg-[var(--wh-panel)] text-[var(--wh-accent-soft-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>
         {badge}
       </span>
       {label}
@@ -1407,7 +1416,7 @@ export function DiaryPage() {
                   className="flex flex-col gap-[5px] rounded-lg px-3 pt-2.5 pb-2.5 text-left"
                 >
                   {/* Larger on a touch screen, as drawn for the tablet (layout review 238, item 4). */}
-                  <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-[11px] font-bold pointer-coarse:text-xs ${CHIP[card.tone]}`}>{card.label}</span>
+                  <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
                   <span className="text-[13px] font-bold pointer-coarse:text-[15px]">{card.customer}</span>
                   <span className="text-xs pointer-coarse:text-[13px]">{card.detail}</span>
                 </button>
