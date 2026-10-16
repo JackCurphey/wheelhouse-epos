@@ -119,3 +119,9 @@ as few clicks as possible).
 **Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 1. What decision 5 and H4 keep for owners and managers (the activity log, the three Today alerts) is also open to a Staff member given "Give everything a Manager can do".
 
 **Later change (8 Oct 2026, issue #139, `docs/decisions/2026-10-08-not-drawn-pages.md`):** Jack, 8 Oct, answer 1. "Sign out everywhere" on a person (decision 3; the drawn `ops-person-everywhere`) comes back into the first release, in WP-5.1 with the person's page, before any shop goes live: Mark builds the server half, Jack the button. It is how a lost phone is handled, as stage 1 gaps decision 14 says (`docs/decisions/2026-10-07-stage-1-drawing-gaps.md`). The Signed-in devices list (`ops-devices`, `ops-devices-signout`, `ops-devices-signed-out`), and with it signing out a single device, stays later.
+
+**Later change (16 Oct 2026, the go-live checklist):** sales and VAT records
+are kept 6 years for every shop; when a customer who hasn't been in for a
+while is removed is set by each shop in Settings, with a default the
+solicitor confirms (Jack, `2026-10-16-go-live-checklist.md` item 3). This
+narrows H3's "one period set by Wheelhouse" to sales records.

@@ -4,7 +4,8 @@ Everything that has to be true before Jack's shop stops using Citrus Lime and
 runs on Wheelhouse alone (WP-8.3, "Switch-over and one trading week alone").
 Issue #140 asked for it (from Codex's review in #126, finding 15). Each line
 says who does it and where it was decided. Jack answered every open
-question on 16 Oct; the lines without a name to decide are Mark's to set up.
+question on 16 Oct (`docs/decisions/2026-10-16-go-live-checklist.md`); the
+lines without a name to decide are Mark's to set up.
 
 Tick a line only when it is done and checked, not when it is planned.
 
@@ -27,7 +28,9 @@ account once Jack says yes; Jack says yes to anything that costs money.
   5 Oct), on the shop's Wi-Fi, with a phone hotspot as the fallback for the
   till and the reader when the shop's internet is down (Jack, 16 Oct).
   Bought with Jack's yes at the time. (The cheaper WisePad 3 can't be
-  driven from the server.)
+  driven from the server: Stripe's server-driven integration supports only
+  its smart readers, docs.stripe.com/terminal/payments/setup-reader, checked
+  16 Oct.)
 - [ ] **Email sending service** (Mark).
 - [ ] **Staff sign-in (WorkOS)** (Mark).
 - [ ] **Google sign-in for customers**: yes from Jack on 7 Oct
@@ -75,8 +78,11 @@ Q12: "these are done before switch-over".
   notices, data agreement for shops, cookie policy, terms; WEB-2, Jack's).
   Jack finds a solicitor for small-business privacy work **by the start of
   stage 7** (Jack, 16 Oct), once the drafts exist.
-- [ ] **Accountant**: the VAT report layout and the accounts mapping
-  (`docs/decisions/2026-10-01-reports-and-accounts-review.md`). The VAT
+- [ ] **Accountant**: the VAT report layout, including where its "Stock
+  purchases" box comes from now that the shop has no accounts software (the
+  build plan points it at accounts software until the supplier invoice
+  check is built) (`docs/decisions/2026-10-01-reports-and-accounts-review.md`).
+  The accounts mapping waits until a shop uses accounts software. The VAT
   invoice stays generic for now (`docs/decisions/2026-10-02-leftover-screens-review.md`).
   **The shop's own accountant** (Jack, 16 Oct), booked in by the start of
   stage 7.
@@ -94,13 +100,14 @@ Q12: "these are done before switch-over".
 - [ ] **How long records are kept** (LEG-05,
   `docs/decisions/2026-10-02-management-oversight-review.md`; Jack, 16 Oct):
   sales and VAT records are kept 6 years, the same for every shop (HMRC's
-  rule for a limited company). Each shop chooses, in Settings, when a
+  rule for a limited company, and for VAT records of any VAT-registered
+  business). Each shop chooses, in Settings, when a
   customer who hasn't been in for a while is removed; the solicitor
   confirms the default during their check. Built before switch-over.
-- [x] Deleting a customer keeps their sales for tax without the name
+- [ ] Deleting a customer keeps their sales for tax without the name
   (`docs/decisions/2026-09-30-customer-service-review.md`).
-- [x] A privacy request is answered within one month (same file).
-- [x] Website history is kept 90 days (Q8).
+- [ ] A privacy request is answered within one month (same file).
+- [ ] Website history is kept 90 days (Q8).
 - [ ] **Jack's real export files** (Q4; Jack, 16 Oct): kept in a private
   folder on Jack's Mac, outside the Wheelhouse folder, with FileVault on;
   never in the repository or uploaded anywhere. Mark gets a single file when
@@ -154,8 +161,8 @@ Q12: "these are done before switch-over".
 
 ## Not part of switch-over
 
-After the trading week: Lightspeed, the supplier browsing screens, stock
-suggestions, service history with rebooking, reminders. Later in Release 2:
+After the trading week: Lightspeed, the three supplier browsing screens,
+and stock suggestions. Later in Release 2:
 the supplier invoice check, oversight extras, the full website editor, the
 shop's own web address. Dropped: practice mode. (Build plan, "After the
 trading week".)
