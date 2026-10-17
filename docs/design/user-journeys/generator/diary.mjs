@@ -3131,3 +3131,39 @@ ${diaryLegend()}`, 12));
     });
   } finally { WAITING.shift(); }
 });
+
+// ---------- Mechanic sign-off, for Jack to approve ----------
+// Workshop day decision 64, designed by Jack on 16 Oct
+// (docs/decisions/2026-10-16-mechanic-sign-off.md): finishing a job asks who
+// is signing it off, with the job's mechanic picked; staff see "Signed off
+// by" on the job; a shop setting chooses whether customers see it (off to
+// start). The till's payment that finishes a job asks with the same pop-up.
+// Not on the canvas until Jack approves these pictures.
+const SIGN_OFF_WHEN = 'Thu 17 Sep, 15:30'; // as finishedStripCompact: "marked it ready at 15:30"
+function signOffDialog() {
+  return `${dialogHeader("Who’s signing this off?", 'job-mechanic-desktop.dc.html', 'Standard service · WH-1042', 'sign-off-title')}
+<div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+${note('Signing off says the work is done and the bike is fine to go out. If it comes back, the job shows who passed it.', 13)}
+<div role="radiogroup" aria-label="Signed off by" style="display: flex; flex-wrap: wrap; gap: 8px">${formPill('Alex Morgan', true)}${formPill('Jo Taylor', false)}</div>
+</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost' })}${button('Sign off and mark ready', { variant: 'primary', href: 'job-finished-desktop.dc.html' })}</div>`;
+}
+export function signOffDrawings() {
+  const popup = dialogOverlay(screens['job-mechanic'].desktop, DW, DH, signOffDialog(), { maxWidth: 460, labelledby: 'sign-off-title' });
+  const signedLine = `<div style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; font-size: 13px; color: ${C.ink}">${icon('check', 16)}<span>Signed off by <strong>Alex Morgan</strong> · ${SIGN_OFF_WHEN}</span></div>`;
+  const finished = buildJobPage({
+    status: 'Finished', tone: 'green',
+    touch: { footer: () => button('Take payment', { variant: 'primary', block: true }), stageTop: () => `${finishedStripCompact()}${signedLine}`, phoneTop: PHONE_STAGE_TOP.finished },
+    desktop: {
+      stageTop: `${finishedStripCompact()}${signedLine}`,
+      customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+      checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+      leftStatus: 'Finished', bikeHere: true,
+      lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+      totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+      footer: button('Take payment', { variant: 'primary', block: true }),
+    },
+  }).desktop;
+  const setting = `<div style="width: 640px; box-sizing: border-box; padding: 20px; background: ${C.bg}">${a11ySettingRow('show-sign-off', 'Show who signed off to customers', 'Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.', false)}</div>`;
+  return { popup, finished, setting };
+}

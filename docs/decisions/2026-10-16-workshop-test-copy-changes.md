@@ -49,3 +49,7 @@ at a time.
 10. **The phone gets a Today button beside the week arrows**, shown only
     when today isn't the day on screen (review item 9; Jack: "1"). Chosen
     over always showing it, and over leaving it.
+12. **The drawn job page has room at its sides** (Jack, 17 Oct): the job
+    number, status and panels sat about 5px from the edge; the body now has
+    12px at the sides and the job details panel 10px more, sides only, so
+    every board still fits. The built job page already had 20px.
