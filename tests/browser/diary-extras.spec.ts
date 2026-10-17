@@ -350,3 +350,68 @@ test('on a computer, Waiting stays a column beside the diary', async ({ page, co
   await expect(page.getByRole('region', { name: /^Waiting for you/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Waiting for you, \d+/ })).toBeHidden();
 });
+
+// Jack, 17 Oct: on a phone, "By mechanic" columns stay readable (at least
+// 96px) and the diary scrolls sideways inside its own area; the page doesn't,
+// the times stay put and the names move with their columns.
+// Spec: openspec/changes/phone-bymech-columns
+test('on a phone, By mechanic columns stay readable and scroll sideways', async ({ browser }) => {
+  for (const extra of ['Ravi Dhar', 'Nell Ames', 'Tom Ruiz', 'Ola Berg']) await seedMechanic(owner.shop.id, { name: extra });
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    const heading = page.locator('[data-mech-headings] span[data-mech]').first();
+    await expect(heading).toBeVisible();
+    expect((await heading.boundingBox())!.width).toBeGreaterThanOrEqual(96);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    const scroller = page.locator('[data-mech-scroll]');
+    expect(await scroller.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+    const time = page.locator('[data-mech-scroll] [data-hours]');
+    const before = (await time.boundingBox())!.x;
+    await scroller.evaluate((e) => { e.scrollLeft = 200; e.dispatchEvent(new Event('scroll')); });
+    await expect.poll(async () => (await time.boundingBox())!.x).toBe(before);
+    await expect.poll(() => page.locator('[data-mech-headings]').evaluate((e) => e.scrollLeft)).toBe(200);
+  } finally {
+    await ctx.close();
+  }
+});
+
+// After the fresh review: a drag only lands on a column you can see. Let go
+// over the times, with Alex's column scrolled under them, and the job stays
+// with its own mechanic. Alfie sorts straight after Alex, so his column is
+// the second one, on screen. Spec: openspec/changes/phone-bymech-columns
+test('on a phone, a drag never lands on a column hidden under the times', async ({ browser }) => {
+  const alfie = await seedMechanic(owner.shop.id, { name: 'Alfie Ash' });
+  // Enough mechanics that the columns scroll, even when this test runs alone.
+  for (const extra of ['Kit Lowe', 'Ana Quist']) await seedMechanic(owner.shop.id, { name: extra });
+  const made = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Wheel true', jobDate: TUE, startTime: '13:00', endTime: '14:00', mechanicId: alfie } });
+  expect(made.status, JSON.stringify(made.body)).toBe(201);
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}&who=bymech`);
+    const column = page.getByRole('group', { name: 'Alfie Ash' });
+    const job = column.getByRole('button', { name: /Wheel true/ });
+    await expect(job).toBeVisible();
+    await page.locator('[data-mech-scroll]').evaluate((e) => { e.scrollLeft = 60; e.dispatchEvent(new Event('scroll')); });
+    const sent: string[] = [];
+    page.on('request', (r) => { if (r.method() === 'PUT') sent.push(r.postData() ?? ''); });
+    const box = (await job.boundingBox())!;
+    const times = (await page.locator('[data-mech-scroll] [data-hours]').boundingBox())!;
+    await page.mouse.move(box.x + 10, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 20, box.y + 10, { steps: 4 });
+    await page.mouse.move(times.x + 20, box.y + 10, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    expect(sent.filter((b) => !b.includes(`"mechanicId":${alfie}`) && b.includes('mechanicId'))).toEqual([]);
+    await expect(column.getByRole('button', { name: /Wheel true/ })).toBeVisible();
+  } finally {
+    await ctx.close();
+  }
+});
