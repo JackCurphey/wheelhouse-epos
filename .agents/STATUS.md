@@ -21,28 +21,35 @@ the load week, `scripts/dev/` is his); #234 (`setup.sh` fixed for doctl
 2.0, which Jack ran from the branch); and the
 server half of #190 A, a guard so a cancelled, declined or expired booking
 can't be booked in or started (the `workshop-jobs` spec allows it today;
-Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5).
+Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5). Also
+his: the bike on "Waiting for you" items (for the tablet cards' drawn bike
+line, #241); a place to keep who signed a job off and when
+(`docs/decisions/2026-10-16-mechanic-sign-off.md`); and Jack's question,
+when the front page switches from the old app to the new one (16 Oct; the
+plans don't say).
 **Jack is on:** 16 Oct: the online test copy is live at
-https://165-22-114-137.sslip.io (#221; droplet `wheelhouse-test` and
-database `wheelhouse-test-db`, lon1), with Jack's shop account on it. The
-setup script broke on doctl 2.0; Jack ran the fix from #234's branch (the
-root checkout is on `jack/setup-doctl-2` until #234 merges). Merged: the
-go-live checklist (#232, `docs/runbooks/go-live-checklist.md`, closes #140,
-Jack's 11 answers in `docs/decisions/2026-10-16-go-live-checklist.md`) and
-the till's job warning (#233, `docs/decisions/2026-10-16-till-job-warning.md`,
-#196 stays open for WP-3.1). Answered and posted for Mark: labour's VAT rate
-(#134: one shop rate), #203's two WP-3.1 questions (both "check these" kinds;
-deposits at any stage), the test shop's two defaults; all in #231. Open:
-#225, #231, #234, waiting for Mark. Next code in his lane: what's left of
-#190 (D, carry-over, waits for WP-1.9) and #192; then the stage check once
-lines 1–6 of §9 are in.
+https://165-22-114-137.sslip.io (#221, lon1), with Jack's shop account on it;
+updates by re-running `setup.sh` from #234's branch until #234 merges. Jack
+tried the workshop there and, with the diary layout review (#238, a report
+by a separate session), these merged on 16 and 17 Oct: the slot under the pointer
+and the pointing finger (#236), New job's customer drop-down (#237), passing
+messages float so nothing pushes the page, a rule for every screen (#239),
+Waiting for you as a panel (#240), the review's four drawing catch-ups
+(#241), Week/Day beside the dates and the phone's Today (#242), every diary
+label at least 12px (#243), the upright tablet, drawn and built (#244), and
+the mechanic sign-off designed (#245). All in
+`docs/decisions/2026-10-16-workshop-test-copy-changes.md` and
+`2026-10-16-mechanic-sign-off.md`. Also merged: the go-live checklist (#232)
+and the till's job warning (#233). Open: #225, #231, #234, waiting for Mark.
+Found, not fixed: the phone's "By mechanic" headings spill over with many
+mechanics (next); then drawing the sign-off screens. The stage check waits
+for lines 4 and 6 of §9.
 **Open for Jack:** nothing waiting now. Small to-dos: ask the accountant
 which Citrus Lime reports they use; make a Google account for Wheelhouse
-(go-live checklist). Later: where a mechanic signs off a finished job (stage
-4); ask Citrus Lime for the full export (stage 7, #171); his yes to open
-Stripe and buy the S700.
+(go-live checklist). Later: ask Citrus Lime for the full export (stage 7,
+#171); his yes to open Stripe and buy the S700.
 
-**Updated:** 2026-10-16 (afternoon). **Two people build at once** (Jack agreed to Mark's
+**Updated:** 2026-10-17. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
 PR #126): Mark takes the server half of each work package and all hosting;
 Jack takes the screens and the whole workshop. STATUS and the build board are

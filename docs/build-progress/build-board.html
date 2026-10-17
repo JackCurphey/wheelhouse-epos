@@ -183,7 +183,7 @@ const BOARD = {
   // Jack (from Mark, or a decision), with a link where there is one, and the
   // next few pieces for each person. Keep it short; the rest is on Detail.
   overview: {
-    now: 'Stage 0. The online test copy is live (16 Oct), with your shop account on it. Mark\'s half of the server split is done; yours waits on his approval of #225. On 16 Oct you also answered every decision Mark and the plans had asked for: the go-live checklist is written (#232), the till\'s job warning is decided (#233), and your other answers wait for Mark in #231.',
+    now: 'Stage 0. The online test copy is live with your shop on it. On 16 Oct you went through the workshop there and with the layout review (#238): eight changes merged, from the floating messages to the upright tablet (#236, #237, #239 to #244), and you designed the mechanic sign-off (#245). Everything else waits on Mark: #225, #231, #234 and his hosting pieces.',
     next: {
       Mark: [
         { what: 'Away after 15 Oct', detail: 'Everything of his is merged. Your quote routes (#207) and test shop loader (#216) are approved, so you can carry on' },
@@ -193,23 +193,25 @@ const BOARD = {
       Jack: [
         { what: 'Try the online test copy', detail: 'It is live at https://165-22-114-137.sslip.io with your shop account. Mark loads North Street Cycles later, which clears it' },
         { what: 'Merge attachments and deleting a job (#225)', detail: 'The last of your server split, waiting for Mark\'s approval. Then your stage check, once lines 1 to 6 are in' },
+        { what: 'The phone\'s By mechanic headings, then the sign-off drawings', detail: 'A small fix for headings spilling over on a narrow phone; then drawing the mechanic sign-off for you to approve (needed before stage 4)' },
         { what: 'What is left of #190 and #192', detail: 'Plain refusals (#223, #227), the won\'t-fit warning (#228) and change requests into another week (#229) are done. Moving unfinished work to the next day waits for the diary updating by itself (WP-1.9); the rest of #192 is settings screens and a few decided items not yet built' },
       ],
     },
     waiting: [
       { what: 'Two small to-dos', detail: 'Ask your accountant which Citrus Lime reports they use, and make a Google account for Wheelhouse (both from the go-live checklist).', links: [140] },
-      { what: 'Still to design', detail: 'Where a mechanic signs off a finished job (stage 4).' },
       { what: 'Later, with the shop', detail: 'Ask Citrus Lime for the full export (stage 7), the Paymentsense questions (when it is added), and your yes to open the Stripe account and buy the S700 reader.', links: [171, 138] },
     ],
     waitingOnMark: [
       { what: 'Approve #225', detail: 'Attachments and deleting a job, the last of your server split. It changes a file Mark looks after, so it needs his yes.', links: [225] },
       { what: 'Approve #231 and #234', detail: 'Your answers of 16 Oct with the test shop loader change (#231), and the setup script fixed for the new doctl (#234). Both change files Mark looks after.', links: [231, 234] },
+      { what: 'When the front page switches to the new app', detail: 'Your question of 16 Oct: the old app is still the front page, and the plans don\'t say when the new one takes over, so nothing old is left up.' },
+      { what: 'Server pieces for your designs', detail: 'The bike on Waiting cards (for the tablet), and keeping who signed a job off and when.' },
       { what: 'Stop moves on ended bookings', detail: 'A server check so a cancelled, declined or expired booking can\'t be booked in or started (#190 A). You kept "Bike is here" on when the bike really is in (16 Oct).', links: [190] },
     ],
   },
-  updated: '16 October 2026, afternoon',
-  lead: 'Stage 0 is still under way. Mark\'s half of the server split is done, and yours waits on his approval of #225. Three screen fixes went in on 15 and 16 Oct (#227, #228, #229). The online test copy is live, and every decision Mark asked for is answered; a few asks for later stages remain.',
-  sub: 'Merged 15 Oct: Mark\'s server split (#202, #205, #209, #210 to #214), your #151 follow-ups (#204, #208), sales in pence and where a job\'s order lives (#203), the online test copy\'s plan and host (#201, #215) and its setup script and guide (#219); your workshop moves (#180 to #184), the job fixes (#188, #189), the two workshop specs (#187, #191) and diary fixes (#193, #218); then your quote routes (#207), the test shop loader (#216), the five pages #139 left undrawn (#217), New job\'s Enter a time instead (#220) and the job page fixes (#223); in the evening, plain refusals (#227) and the won\'t-fit warning (#228); on 16 Oct, change requests into another week (#229), the go-live checklist (#232) and the till\'s job warning (#233). The online test copy went live on 16 Oct. The canvas and clickable mockup are republished.',
+  updated: '17 October 2026',
+  lead: 'Stage 0 is still under way. The online test copy is live, and the workshop has had a day of your changes from trying it (#236, #237, #239 to #245). Mark\'s approvals (#225, #231, #234) and hosting pieces are what\'s next before the stage check.',
+  sub: 'Merged 15 Oct: Mark\'s server split (#202, #205, #209, #210 to #214), your #151 follow-ups (#204, #208), sales in pence and where a job\'s order lives (#203), the online test copy\'s plan and host (#201, #215) and its setup script and guide (#219); your workshop moves (#180 to #184), the job fixes (#188, #189), the two workshop specs (#187, #191) and diary fixes (#193, #218); then your quote routes (#207), the test shop loader (#216), the five pages #139 left undrawn (#217), New job\'s Enter a time instead (#220) and the job page fixes (#223); in the evening, plain refusals (#227) and the won\'t-fit warning (#228); on 16 Oct, change requests into another week (#229), the go-live checklist (#232) and the till\'s job warning (#233); then the workshop changes from the test copy and the layout review (#236, #237, #239 to #244); on 17 Oct, the mechanic sign-off design (#245). The online test copy went live on 16 Oct. The canvas and clickable mockup are republished.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -289,6 +291,9 @@ const BOARD = {
     { status: 'next', what: 'Server split: the rest', detail: 'You: attachments and deleting a job. Mark: the last booking route, now that #207 is in. Then the shared definitions the screens use' },
     { status: 'done', what: 'The go-live checklist', detail: 'Everything for switch-over in one place, with your 11 answers (#140)', pr: 232 },
     { status: 'done', what: 'The till\'s warning when a job changes during payment', detail: 'An amber line on Paid, the countdown stops, Open the job (#196, built in WP-3.1)', pr: 233 },
+    { status: 'done', what: 'Workshop changes from the test copy', detail: 'The slot under the pointer, the pointing finger, the customer drop-down, floating messages, the Waiting panel (#236, #237, #239, #240)', pr: 236 },
+    { status: 'done', what: 'The diary layout review, built', detail: 'Drawing catch-ups, Week/Day by the dates, the phone\'s Today, 12px labels, the upright tablet (#241 to #244)', pr: 241 },
+    { status: 'done', what: 'Mechanic sign-off designed', detail: 'Part of finishing a job; drawings and the server half to come', pr: 245 },
     { status: 'review', what: 'Setup script fixed for the new doctl', detail: 'You ran it from this branch; waits for Mark', pr: 234 },
     { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'Live since 16 Oct with your shop account. Next Mark adds the safety checks and automatic updates, and loads North Street Cycles' },
     { status: 'next', what: 'Stage 0 check', detail: 'You walk booking, the till and the diary in the real app. Waits for everything above' },
