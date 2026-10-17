@@ -619,6 +619,8 @@ export function DiaryPage() {
   // How the last press on a Waiting card was made: a second tap opens the
   // chosen card on a touch screen, a second mouse click doesn't (decision 14).
   const cardPointer = useRef<string>('mouse');
+  // The phone's By mechanic names, kept in step with the columns as they scroll.
+  const mechHeadRef = useRef<HTMLDivElement>(null);
   // Whether the chosen card was chosen by a tap, for its hint (layout review 238, item 3).
   const [chosenByTouch, setChosenByTouch] = useState(false);
   const [openItem, setOpenItem] = useState<WaitingItem | null>(null);
@@ -1300,19 +1302,29 @@ export function DiaryPage() {
         <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
 
         <section aria-label={`Workshop diary, ${dayLabel(date)}`} className="px-3.5 pb-3.5">
+          {/* By mechanic: each column keeps a readable 96px and the diary scrolls
+              sideways in its own area; the times stay put and the names move
+              with their columns (Jack, 17 Oct). */}
           {columns.length > 1 ? (
-            <div className="sticky top-0 z-[4] grid bg-[var(--wh-bg)]" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(0, 1fr))` }}>
-              <span />
-              {columns.map((c) => (
-                <span key={c.key} className="border-b border-l border-[var(--wh-border)] px-1 py-1.5 text-center text-sm font-bold first:border-l-0">{c.label}</span>
-              ))}
+            <div ref={mechHeadRef} data-mech-headings className="sticky top-0 z-[4] overflow-hidden bg-[var(--wh-bg)]">
+              <div className="grid" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(96px, 1fr))` }}>
+                <span className="sticky left-0 z-[1] bg-[var(--wh-bg)]" />
+                {columns.map((c) => (
+                  <span key={c.key} data-mech className="truncate border-b border-l border-[var(--wh-border)] px-1 py-1.5 text-center text-sm font-bold first:border-l-0">{c.label}</span>
+                ))}
+              </div>
             </div>
           ) : null}
           <SlotContext.Provider value={PHONE_SLOT_H}>
             <PickContext.Provider value={pickApi}>
             <MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>
-              <div className="grid pt-2" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(0, 1fr))` }}>
-                <div aria-hidden="true" className="relative" style={{ height: ((range.end - range.start) / 30) * PHONE_SLOT_H }}>
+              <div
+                data-mech-scroll
+                className="overflow-x-auto"
+                onScroll={(e) => { if (mechHeadRef.current) mechHeadRef.current.scrollLeft = e.currentTarget.scrollLeft; }}
+              >
+              <div className="grid pt-2" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(${columns.length > 1 ? 96 : 0}px, 1fr))` }}>
+                <div data-hours aria-hidden="true" className="sticky left-0 z-[3] bg-[var(--wh-bg)]" style={{ height: ((range.end - range.start) / 30) * PHONE_SLOT_H }}>
                   {hours.map((m) => (
                     <span key={m} className="absolute left-0 font-[family-name:var(--wh-font-mono)] text-xs text-[var(--wh-muted)]" style={{ top: Math.max(((m - range.start) / 30) * PHONE_SLOT_H - 8, 0) }}>
                       {hhmm(m)}
@@ -1322,6 +1334,7 @@ export function DiaryPage() {
                 {columns.map((c, i) => (
                   <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} chosenId={chosen} lightChosen={chosenTimeShown} />
                 ))}
+              </div>
               </div>
             </ExtrasContext.Provider></MoveContext.Provider>
             </PickContext.Provider>

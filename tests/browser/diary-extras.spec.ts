@@ -350,3 +350,31 @@ test('on a computer, Waiting stays a column beside the diary', async ({ page, co
   await expect(page.getByRole('region', { name: /^Waiting for you/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Waiting for you, \d+/ })).toBeHidden();
 });
+
+// Jack, 17 Oct: on a phone, "By mechanic" columns stay readable (at least
+// 96px) and the diary scrolls sideways inside its own area; the page doesn't,
+// the times stay put and the names move with their columns.
+// Spec: openspec/changes/phone-bymech-columns
+test('on a phone, By mechanic columns stay readable and scroll sideways', async ({ browser }) => {
+  for (const extra of ['Ravi Dhar', 'Nell Ames', 'Tom Ruiz', 'Ola Berg']) await seedMechanic(owner.shop.id, { name: extra });
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    const heading = page.locator('[data-mech-headings] span[data-mech]').first();
+    await expect(heading).toBeVisible();
+    expect((await heading.boundingBox())!.width).toBeGreaterThanOrEqual(96);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    const scroller = page.locator('[data-mech-scroll]');
+    expect(await scroller.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+    const time = page.locator('[data-mech-scroll] [data-hours]');
+    const before = (await time.boundingBox())!.x;
+    await scroller.evaluate((e) => { e.scrollLeft = 200; e.dispatchEvent(new Event('scroll')); });
+    await expect.poll(async () => (await time.boundingBox())!.x).toBe(before);
+    await expect.poll(() => page.locator('[data-mech-headings]').evaluate((e) => e.scrollLeft)).toBe(200);
+  } finally {
+    await ctx.close();
+  }
+});
