@@ -12,9 +12,11 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST_DIR = path.join(ROOT, 'public', 'dist');
 // A stand-in for a real Vite build artifact: content-hashed filename under
 // public/dist. Kept in its own subdirectory so cleanup never deletes a real
-// build sitting in public/dist alongside it.
-const FIXTURE_SUBDIR = path.join(DIST_DIR, 'assets', 'static-cache-test');
-const FIXTURE_URL_PATH = '/dist/assets/static-cache-test/index-abc12345.js';
+// build sitting in public/dist alongside it, and named for this process so
+// a second test run in the same checkout never deletes this run's copy.
+const FIXTURE_DIR_NAME = `static-cache-test-${process.pid}`;
+const FIXTURE_SUBDIR = path.join(DIST_DIR, 'assets', FIXTURE_DIR_NAME);
+const FIXTURE_URL_PATH = `/dist/assets/${FIXTURE_DIR_NAME}/index-abc12345.js`;
 const FIXTURE_FILE = path.join(FIXTURE_SUBDIR, 'index-abc12345.js');
 
 let child;
