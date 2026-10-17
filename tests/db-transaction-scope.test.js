@@ -311,8 +311,10 @@ test('a sale that fails partway leaves no sale, no sale_items and no stock_movem
       await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT tmp_sale_rollback_probe');
     }
   } finally {
+    // As in run-migrations.js: a failed unlock must not hide the test's own
+    // error, and Postgres frees the lock anyway when the connection closes.
     if (probeLock) {
-      await probeLock.query("SELECT pg_advisory_unlock(hashtext('tmp_sale_rollback_probe'))");
+      await probeLock.query("SELECT pg_advisory_unlock(hashtext('tmp_sale_rollback_probe'))").catch(() => {});
       probeLock.release();
     }
     await deleteTestShop(shop.id);

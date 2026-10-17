@@ -2,7 +2,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, rm, rmdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,7 +74,11 @@ before(async () => {
 after(async () => {
   if (child && child.exitCode === null) child.kill('SIGTERM');
   await rm(FIXTURE_SUBDIR, { recursive: true, force: true });
-  if (distDirCreated) await rm(DIST_DIR, { recursive: true, force: true });
+  // Only the empty folders this run made: another test run in the same
+  // checkout may have its own fixture inside them by now.
+  if (distDirCreated) {
+    for (const dir of [path.join(DIST_DIR, 'assets'), DIST_DIR]) await rmdir(dir).catch(() => {});
+  }
 });
 
 test('a hashed asset under /dist/assets/ is cached immutably', async () => {
@@ -99,7 +103,7 @@ test('index.html is still never cached', async () => {
 });
 
 test('a missing file under /dist/assets/ falls back to index.html and is not cached immutably', async () => {
-  const res = await fetch(`${baseUrl}/dist/assets/static-cache-test/does-not-exist-deadbeef.js`);
+  const res = await fetch(`${baseUrl}/dist/assets/${FIXTURE_DIR_NAME}/does-not-exist-deadbeef.js`);
   await res.arrayBuffer();
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');

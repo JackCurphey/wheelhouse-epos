@@ -6,6 +6,7 @@
 // Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -15,7 +16,6 @@ import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedWorkshopJob } from './helpers/workshopFixtures.js';
 import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
-import { randomBytes } from 'node:crypto';
 import { hashLinkCode } from '../server/booking-link.js';
 
 const UK_TODAY = '2026-09-09';
