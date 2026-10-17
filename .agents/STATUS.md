@@ -31,7 +31,7 @@ plans don't say).
 https://165-22-114-137.sslip.io (#221, lon1), with Jack's shop account on it;
 updates by re-running `setup.sh` from #234's branch until #234 merges. Jack
 tried the workshop there and, with the diary layout review (#238, a report
-by a separate session), these merged on 16 Oct: the slot under the pointer
+by a separate session), these merged on 16 and 17 Oct: the slot under the pointer
 and the pointing finger (#236), New job's customer drop-down (#237), passing
 messages float so nothing pushes the page, a rule for every screen (#239),
 Waiting for you as a panel (#240), the review's four drawing catch-ups
