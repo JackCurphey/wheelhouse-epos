@@ -845,9 +845,15 @@ export function DiaryPage() {
         d.moved = true;
         const cols = [...document.querySelectorAll<HTMLElement>('[data-diary-col]')];
         const x = ev.clientX - overhang;
+        // Only the part of a column you can see counts: on a phone's By
+        // mechanic diary, columns scrolled out of view, or under the times,
+        // can't be dropped on (Jack, 17 Oct).
         const over = cols.find((el) => {
           const r = el.getBoundingClientRect();
-          return x >= r.left && x < r.right;
+          const box = el.closest('[data-mech-scroll]')?.getBoundingClientRect();
+          const left = box ? Math.max(r.left, box.left + 48) : r.left;
+          const right = box ? Math.min(r.right, box.right) : r.right;
+          return x >= left && x < right;
         });
         const colEl = over ?? cols[d.origCol];
         if (!colEl) return;
@@ -1320,7 +1326,7 @@ export function DiaryPage() {
             <MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>
               <div
                 data-mech-scroll
-                className="overflow-x-auto"
+                className="scroll-pl-12 overflow-x-auto"
                 onScroll={(e) => { if (mechHeadRef.current) mechHeadRef.current.scrollLeft = e.currentTarget.scrollLeft; }}
               >
               <div className="grid pt-2" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(${columns.length > 1 ? 96 : 0}px, 1fr))` }}>
