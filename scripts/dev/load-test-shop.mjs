@@ -22,7 +22,8 @@ import '../../server/load-env.js';
 const { pool, prepare, dbExec, runWithShop } = await import('../../server/db.js');
 const { createWorkshopJob, syncJobHold } = await import('../../server/workshop/jobs.js');
 const { nowIso } = await import('../../server/lib/http.js');
-const { DAYS, TODAY, JOBS, UNSCHEDULED, PENDING_DIARY, REQUEST_OUTLINE, SERVICE_OPTIONS, SERVICE_GROUPS, customerBikeOf } =
+const { shopToday } = await import('../../server/clock.js');
+const { TODAY, JOBS, UNSCHEDULED, PENDING_DIARY, REQUEST_OUTLINE, SERVICE_OPTIONS, SERVICE_GROUPS, customerBikeOf } =
   await import('../../docs/design/user-journeys/generator/diary.mjs');
 
 const SHOP = { slug: 'north-street-cycles', name: 'North Street Cycles' }; // app-map.mjs:17
@@ -45,12 +46,17 @@ const CUSTOMERS = [
 ];
 // Only the Standard service has a price in the drawings (diary.mjs:341); the
 // rest are drawn "[£ price]" (browse.mjs:80), and a price can't hold a
-// placeholder, so they are £0.00 (decided-while-building.md, for Jack).
+// placeholder, so they are £0.00 (Jack, 16 Oct, docs/decisions/2026-10-16-test-shop-defaults.md).
 const PRICES = { 'Standard service': '65.00' };
 const PRODUCT = { name: 'Shimano brake pads', sku: 'B05S-RX', price: '28.00' }; // diary.mjs:342
 
-// The drawn week is Mon 14 to Sun 20 September 2026 (diary.mjs:388).
-const dateOf = (day) => `2026-09-${String(DAYS[day][1]).padStart(2, '0')}`;
+// The drawn week is Mon 14 to Sun 20 September 2026 (diary.mjs:388). It moves
+// to the week the shop is loaded, each job on its own weekday, so the diary
+// opens on it (Jack, 16 Oct, docs/decisions/2026-10-16-test-shop-defaults.md).
+// The shop's today is read in its time zone, the default Europe/London (033).
+const today = new Date(`${shopToday('Europe/London')}T00:00:00Z`);
+const monday = new Date(today.getTime() - ((today.getUTCDay() + 6) % 7) * 86_400_000);
+const dateOf = (day) => new Date(monday.getTime() + day * 86_400_000).toISOString().slice(0, 10);
 const hhmm = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
 // A drawn job's colour sets its states (diary.mjs:57); "Booked in" and "In
