@@ -50,3 +50,11 @@ its screen is replaced; it is not changed.
 page's line, the till's question and the shop setting) before it is built in
 stage 4; the sign-off needs a place on the server to keep who and when
 (Mark's half).
+
+**Drawn, 17 Oct:** Jack approved three pictures: the "Who's signing this
+off?" pop-up over the job page (mechanics as pills, the job's mechanic
+picked, Cancel and "Sign off and mark ready"); "Signed off by [name] ·
+[day], [time]" under the finished job's strip; and the shop setting "Show who
+signed off to customers", off. They are `signOffDrawings()` in
+`docs/design/user-journeys/generator/diary.mjs`, not on the canvas yet. The
+till's payment that finishes a job uses the same pop-up.

@@ -53,3 +53,7 @@ at a time.
     at least 96px each, the diary scrolling sideways in its own area with
     the times staying put and the names moving with their columns. Chosen
     over shortening the names and squeezing every column on screen.
+12. **The drawn job page has room at its sides** (Jack, 17 Oct): the job
+    number, status and panels sat about 5px from the edge; the body now has
+    12px at the sides and the job details panel 10px more, sides only, so
+    every board still fits. The built job page already had 20px.
