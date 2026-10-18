@@ -283,6 +283,17 @@ silent:
    later for another day. *Pattern:* the server's opening-hours check. On a day with no opening hours set (closed), it runs to the week's latest
    closing time, as the grid does.
 
+### 18 Oct 2026: month view (`docs/decisions/2026-10-18-old-diary-features.md` answer 1)
+
+1. **`diary-month`: a job with no time sits after the timed ones, reading
+   "No time"** in place of its start. *Pattern:* the No time row.
+2. **New job from the month goes to the Week view to choose a time**, as
+   the month has no times to pick. *Pattern:* "Choose a time" (decision 22).
+3. **The month's jobs can't be dragged or stretched**; they open. *Pattern:*
+   the feature catalogue, CAL-05 ("month is click-to-open").
+4. **A day with no jobs in its list says "No jobs this day."** *Pattern:*
+   "Nothing waiting."
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

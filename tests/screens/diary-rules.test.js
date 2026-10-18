@@ -154,3 +154,23 @@ test('a length reads in hours and minutes', () => {
   assert.equal(lengthText(120), '2 hours');
   assert.equal(lengthText(135), '2 hours 15 minutes');
 });
+
+// Month view (Jack, 18 Oct): the weeks that hold the month, Monday to
+// Sunday, its name, and the arrows' step of a month.
+import { monthOf, monthLabel, addMonths } from '../../src/screens/diary/rules.ts';
+
+test('a month is the weeks that hold it, Monday to Sunday', () => {
+  const sep = monthOf('2026-09-17');
+  assert.equal(sep[0], '2026-08-31');
+  assert.equal(sep.at(-1), '2026-10-04');
+  assert.equal(sep.length, 35);
+  const nov = monthOf('2026-11-30'); // 1 Nov is a Sunday: six weeks
+  assert.equal(nov[0], '2026-10-26');
+  assert.equal(nov.length, 42);
+});
+
+test('a month reads by name, and the arrows move a month from its first day', () => {
+  assert.equal(monthLabel('2026-09-17'), 'September 2026');
+  assert.equal(addMonths('2026-01-31', 1), '2026-02-01');
+  assert.equal(addMonths('2026-01-15', -1), '2025-12-01');
+});

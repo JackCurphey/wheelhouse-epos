@@ -107,6 +107,30 @@ export function weekLabel(monday: string): string {
   return `${a.getUTCDate()} ${ma}${ya} – ${b.getUTCDate()} ${mb} ${b.getUTCFullYear()}`;
 }
 
+/** The month holding `day` as whole weeks, Monday to Sunday (Jack, 18 Oct: month view). */
+export function monthOf(day: string): string[] {
+  const d = utc(day);
+  const first = iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)));
+  const last = iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
+  const start = weekOf(first)[0];
+  const end = weekOf(last)[6];
+  const out: string[] = [];
+  for (let x = start; x <= end; x = addDays(x, 1)) out.push(x);
+  return out;
+}
+
+/** "September 2026" */
+export function monthLabel(day: string): string {
+  const d = utc(day);
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/** The first day of the month `n` months from the one holding `day`. */
+export function addMonths(day: string, n: number): string {
+  const d = utc(day);
+  return iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1)));
+}
+
 export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;

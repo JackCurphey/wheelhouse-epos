@@ -13,7 +13,7 @@ import { jobRefusalText } from './refusal-words.ts';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { HoverSummary, JobMenu, OverviewDialog, StackChooser, tileClass, type ChooserAt, type MenuAt } from './job-extras.tsx';
 import {
-  LEGEND, LEGEND_LABEL, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, lengthText, stackGroups, stretchEnd, todayIso, toMinutes,
+  LEGEND, LEGEND_LABEL, STATE_LABEL, SNAP_MIN, addDays, addMonths, dropStart, monthLabel, monthOf, dayLabel, diaryState, gridRange, hhmm, layoutLanes, lengthText, stackGroups, stretchEnd, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
 } from './rules.ts';
 
@@ -646,6 +646,180 @@ function useMedia(query: string): boolean {
   );
 }
 
+/** A day's jobs for the month: timed ones earliest first, then those with no time. */
+function dayOrder(a: Shown, b: Shown) {
+  if (!a.startTime || !b.startTime) return a.startTime ? -1 : b.startTime ? 1 : 0;
+  return a.startTime.localeCompare(b.startTime);
+}
+const MONTH_CHIPS = 3; // as the old diary and the drawing: three, then "+[n] more"
+const WEEKDAY_HEADS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * Month view (Jack, 18 Oct, docs/decisions/2026-10-18-old-diary-features.md
+ * answer 1, drawn on diary-month): the month's weeks, each day's first three
+ * jobs and "+[n] more", which opens the day's list. The date opens the day
+ * in the Day view. On a touch screen a day's jobs are too small to tap one
+ * by one (decision 68), so the whole day opens its list (diary-month-tablet).
+ */
+function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay }: {
+  days: string[]; month: string; jobs: Shown[]; today: string; coarse: boolean;
+  onOpen: (job: Shown) => void; onOpenDay: (day: string) => void;
+}) {
+  const [listDay, setListDay] = useState<string | null>(null);
+  const inMonth = month.slice(0, 7);
+  const jobsOn = (d: string) => jobs.filter((j) => j.jobDate === d).sort(dayOrder);
+  const chipText = (j: Shown) => (
+    <>
+      <span className="font-mono font-bold">{j.startTime ?? 'No time'}</span>
+      <span className="truncate">{j.bikeLabel || 'Bike'}</span>
+    </>
+  );
+  const chipName = (j: Shown) => `${j.startTime ?? 'No time'}, ${j.bikeLabel || 'Bike'}, ${j.title}, ${j.customerName || 'Customer'}, ${STATE_LABEL[j.state]}`;
+  const chipClass = (j: Shown) => `flex min-w-0 items-center gap-1 rounded-[4px] border-l-[3px] px-1 text-left text-xs leading-[18px] ${CHIP[j.state]} ${j.state === 'cancelled' ? 'line-through' : ''}`;
+  const listJobs = listDay ? jobsOn(listDay) : [];
+  return (
+    <>
+      <div role="grid" aria-label={`Workshop diary, ${monthLabel(month)}`} className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-[var(--wh-border)] bg-[var(--wh-border)]">
+        {WEEKDAY_HEADS.map((h) => (
+          <div key={h} className="bg-[var(--wh-panel)] px-2 py-1.5 text-center text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">{h}</div>
+        ))}
+        {days.map((d) => {
+          const list = jobsOn(d);
+          const shown = list.slice(0, MONTH_CHIPS);
+          const more = list.length - shown.length;
+          const isToday = d === today;
+          const out = d.slice(0, 7) !== inMonth;
+          return (
+            <div
+              key={d}
+              role="group"
+              aria-label={dayLabel(d)}
+              onClick={coarse ? () => setListDay(d) : undefined}
+              className={`flex min-h-[104px] min-w-0 flex-col gap-[3px] px-[5px] py-1 ${isToday ? 'bg-[var(--wh-surface-muted)]' : 'bg-[var(--wh-panel)]'} ${out ? 'opacity-55' : ''} ${coarse ? 'cursor-pointer' : ''}`}
+            >
+              <button
+                type="button"
+                aria-label={`Open ${dayLabel(d)} in the Day view`}
+                onClick={(e) => { e.stopPropagation(); onOpenDay(d); }}
+                className={`self-start text-[13px] leading-[18px] font-bold ${isToday ? 'text-[var(--wh-accent-dark)]' : ''}`}
+              >
+                {Number(d.slice(8))}{isToday ? ' · Today' : ''}
+              </button>
+              {shown.map((j) => (coarse ? (
+                <span key={j.partId} className={chipClass(j)} title={chipName(j)}>{chipText(j)}</span>
+              ) : (
+                <button key={j.partId} type="button" aria-label={chipName(j)} title={chipName(j)} onClick={() => onOpen(j)} className={chipClass(j)}>{chipText(j)}</button>
+              )))}
+              {more > 0 ? (
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={(e) => { e.stopPropagation(); setListDay(d); }}
+                  className="self-start px-0.5 text-xs leading-4 font-bold text-[var(--wh-accent-dark)] underline underline-offset-2"
+                >
+                  +{more} more
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <Dialog open={listDay !== null} onOpenChange={(o) => { if (!o) setListDay(null); }} aria-labelledby="month-day-title">
+        <DialogHeader>
+          <DialogTitle id="month-day-title">{listDay ? dayLabel(listDay) : ''}</DialogTitle>
+          <button type="button" aria-label="Close" onClick={() => setListDay(null)} className="inline-flex size-11 items-center justify-center rounded-lg">
+            <NavIcon name="close" size={20} />
+          </button>
+        </DialogHeader>
+        <DialogBody className="flex flex-col">
+          {listJobs.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">No jobs this day.</p> : null}
+          {listJobs.map((j) => (
+            <button
+              key={j.partId}
+              type="button"
+              onClick={() => { setListDay(null); onOpen(j); }}
+              className="grid min-h-[52px] grid-cols-[48px_1fr_auto] items-center gap-x-2.5 gap-y-0.5 border-t border-[var(--wh-border)] px-2 py-1.5 text-left first:border-t-0"
+            >
+              <span className="font-mono text-[13px] font-bold">{j.startTime ?? 'No time'}</span>
+              <span className={`truncate text-[13px] font-bold ${j.state === 'cancelled' ? 'line-through' : ''}`}>{j.bikeLabel || 'Bike'} · {j.title}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[j.state]}`}>{STATE_LABEL[j.state]}</span>
+              <span />
+              <span className="col-span-2 text-xs text-[var(--wh-muted)]">{j.customerName || 'Customer'} · {j.mechanicName || 'Shared queue'}</span>
+            </button>
+          ))}
+          {listDay ? (
+            <button type="button" onClick={() => { const d = listDay; setListDay(null); onOpenDay(d); }} className="flex min-h-11 items-center border-t border-[var(--wh-border)] px-2 text-left text-[13px] font-semibold text-[var(--wh-accent-dark)] underline underline-offset-2">
+              Open this day in the Day view
+            </button>
+          ) : null}
+        </DialogBody>
+      </Dialog>
+    </>
+  );
+}
+
+/**
+ * The phone's "Choose a day" (Jack, 18 Oct, drawn on diary-month-phone): the
+ * week label opens the month, each day showing how many jobs it has; a tap
+ * on a day goes to it.
+ */
+function ChooseDaySheet({ open, date, who, onClose, onPick }: {
+  open: boolean; date: string; who: (j: Shown) => boolean; onClose: () => void; onPick: (day: string) => void;
+}) {
+  const [month, setMonth] = useState(date);
+  const days = monthOf(month);
+  const jobs = useQuery({
+    queryKey: ['workshop-jobs', days[0], days[days.length - 1]],
+    queryFn: () => apiGet<WorkshopJob[]>(`/api/workshop-jobs?start=${days[0]}&end=${days[days.length - 1]}`),
+    enabled: open,
+  });
+  const counts = new Map<string, number>();
+  for (const j of (jobs.data ?? []).flatMap(blocksOf)) {
+    const shown = { ...j, state: diaryState(j) };
+    if (shown.state === 'hidden' || !who(shown as Shown)) continue;
+    counts.set(j.jobDate, (counts.get(j.jobDate) ?? 0) + 1);
+  }
+  const inMonth = month.slice(0, 7);
+  const today = todayIso();
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="choose-day-title">
+      <DialogHeader>
+        <DialogTitle id="choose-day-title">Choose a day</DialogTitle>
+        <button type="button" aria-label="Close" onClick={onClose} className="inline-flex size-11 items-center justify-center rounded-lg">
+          <NavIcon name="close" size={20} />
+        </button>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <button type="button" aria-label="Previous month" onClick={() => setMonth(addMonths(month, -1))} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]"><Chevron dir="prev" /></button>
+          <span className="text-base font-bold">{monthLabel(month)}</span>
+          <button type="button" aria-label="Next month" onClick={() => setMonth(addMonths(month, 1))} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]"><Chevron dir="next" /></button>
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {WEEKDAY_HEADS.map((h) => <span key={h} aria-hidden="true" className="text-center text-xs font-bold text-[var(--wh-muted)] uppercase">{h.slice(0, 1)}</span>)}
+          {days.map((d) => {
+            const n = counts.get(d) ?? 0;
+            const jobsText = `${n} job${n === 1 ? '' : 's'}`;
+            return (
+              <button
+                key={d}
+                type="button"
+                aria-label={`${dayLabel(d)}${d === today ? ', today' : ''}, ${jobsText}`}
+                onClick={() => onPick(d)}
+                className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-[10px] ${n ? 'bg-[var(--wh-surface-muted)]' : ''} ${d === today ? 'shadow-[inset_0_0_0_2px_var(--accent)]' : ''} ${d.slice(0, 7) === inMonth ? '' : 'text-[var(--wh-muted)]'}`}
+              >
+                <span className="text-base font-bold">{Number(d.slice(8))}</span>
+                <span aria-hidden="true" className="text-xs font-bold text-[var(--wh-accent-dark)]">{n ? jobsText : '\u00a0'}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="m-0 text-[13px] text-[var(--wh-muted)]">Tap a day to open it.</p>
+      </DialogBody>
+    </Dialog>
+  );
+}
+
 export function DiaryPage() {
   const [params, setParams] = useSearchParams();
   const isPhone = useIsPhone();
@@ -653,7 +827,10 @@ export function DiaryPage() {
   const today = todayIso();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
   // On a phone the diary is always one day (decision 68); the week is the strip of days.
-  const view = isPhone || params.get('view') === 'day' ? 'day' : 'week';
+  const askedView = params.get('view');
+  const view: 'week' | 'day' | 'month' = isPhone || askedView === 'day' ? 'day' : askedView === 'month' ? 'month' : 'week';
+  // A day's jobs in the month are too small to tap one by one on a touch screen (decision 68).
+  const coarse = useMedia('(pointer: coarse)');
   const who = params.get('who');
   const slotPx = isPhone ? PHONE_SLOT_H : SLOT_H;
   const [chosen, setChosen] = useState<number | null>(null);
@@ -675,7 +852,7 @@ export function DiaryPage() {
     setParams(next);
   };
 
-  const days = view === 'week' ? weekOf(date) : [date];
+  const days = view === 'week' ? weekOf(date) : view === 'month' ? monthOf(date) : [date];
   // A phone loads the whole week, so tapping another day in the strip is instant.
   const fetchDays = isPhone ? weekOf(date) : days;
   const start = fetchDays[0];
@@ -719,12 +896,13 @@ export function DiaryPage() {
   const outlinesFor = (pred: (o: Outline) => boolean) => outlines.filter(pred);
 
   const step = view === 'week' ? 7 : 1;
-  const unit = view === 'week' ? 'week' : 'day';
+  const unit = view;
+  const shift = (n: -1 | 1) => (view === 'month' ? addMonths(date, n) : addDays(date, n * step));
 
   // The grid's columns: the week's days, or the day's mechanics.
   type Col = { key: string; label: string; date: string; mechanicId: number | null; all?: boolean };
   let columns: Col[];
-  if (view === 'week') {
+  if (view !== 'day') {
     columns = days.map((d) => ({ key: d, label: dayLabel(d), date: d, mechanicId: null }));
   } else if (shared) {
     columns = [{ key: 'none', label: 'Shared queue', date, mechanicId: null }];
@@ -737,9 +915,9 @@ export function DiaryPage() {
       columns.push({ key: 'none', label: 'Not assigned yet', date, mechanicId: null });
     }
   }
-  const jobsIn = (c: Col) => shown.filter((j) => j.jobDate === c.date && (view === 'week' || c.all || j.mechanicId === c.mechanicId));
+  const jobsIn = (c: Col) => shown.filter((j) => j.jobDate === c.date && (view !== 'day' || c.all || j.mechanicId === c.mechanicId));
   const outlinesIn = (c: Col) => outlinesFor((o) => o.requested.jobDate === c.date
-    && (view === 'week' || c.all || (o.requested.mechanicId ?? o.mechanicId) === c.mechanicId));
+    && (view !== 'day' || c.all || (o.requested.mechanicId ?? o.mechanicId) === c.mechanicId));
   // With the time asked for on screen, the chosen job takes the drawing's light
   // mark and the time the strong ring (change-selected).
   const chosenTimeShown = columns.some((c) => outlinesIn(c).some((o) => o.id === chosen));
@@ -1046,7 +1224,9 @@ export function DiaryPage() {
     },
   };
 
-  const grid: ReactNode = (
+  const grid: ReactNode = view === 'month' ? (
+    <MonthGrid days={days} month={date} jobs={shown} today={today} coarse={coarse} onOpen={openJob} onOpenDay={(d) => set({ view: 'day', date: d })} />
+  ) : (
     <Grid
       ariaLabel={view === 'week' ? `Workshop diary, week of ${dayLabel(start)}` : `Workshop diary, ${dayLabel(date)}, by mechanic`}
       range={range}
@@ -1267,6 +1447,7 @@ export function DiaryPage() {
   // ---- Phone (piece 4) ----
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [chooseOpen, setChooseOpen] = useState(false);
   // The top bar's action slot, drawn by the frame outside this page.
   const headerSlot = useContext(HeaderSlotContext);
   const items = waiting.data?.items ?? [];
@@ -1424,7 +1605,7 @@ export function DiaryPage() {
               <button type="button" aria-label="Previous week" onClick={() => set({ date: addDays(date, -7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
                 <Chevron dir="prev" />
               </button>
-              <span className="min-w-[66px] text-center text-sm font-bold whitespace-nowrap">{shortWeek(week[0])}</span>
+              <button type="button" aria-haspopup="dialog" aria-label={`Choose a day. Showing ${shortWeek(week[0])}`} onClick={() => setChooseOpen(true)} className="inline-flex min-h-11 min-w-[66px] items-center justify-center text-sm font-bold whitespace-nowrap">{shortWeek(week[0])}</button>
               <button type="button" aria-label="Next week" onClick={() => set({ date: addDays(date, 7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
                 <Chevron dir="next" />
               </button>
@@ -1524,6 +1705,7 @@ export function DiaryPage() {
         </div>
 
         {waitingSheet}
+        <ChooseDaySheet key={chooseOpen ? `open-${date}` : 'closed'} open={chooseOpen} date={date} who={(j) => (shared ? j.mechanicId === null : whoId === null || j.mechanicId === whoId)} onClose={() => setChooseOpen(false)} onPick={(d) => { setChooseOpen(false); set({ date: d }); }} />
 
         {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
         {newJobDialog}
@@ -1540,26 +1722,26 @@ export function DiaryPage() {
           so four people buttons fit one row; tablets keep their drawn spacing. */}
       <div className="flex flex-wrap items-center gap-3 xl:gap-x-1">
         <div role="tablist" aria-label="Diary view" className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-[10px] bg-[var(--wh-surface-muted)] p-[3px]">
-          {(['week', 'day'] as const).map((v) => (
+          {(['week', 'day', 'month'] as const).map((v) => (
             <button
               key={v}
               type="button"
               role="tab"
               aria-selected={view === v}
-              onClick={() => set({ view: v === 'day' ? 'day' : null })}
+              onClick={() => set({ view: v === 'week' ? null : v })}
               className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-[13px] font-semibold pointer-coarse:min-h-11 ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
             >
-              {v === 'week' ? 'Week' : 'Day'}
+              {v === 'week' ? 'Week' : v === 'day' ? 'Day' : 'Month'}
             </button>
           ))}
         </div>
         {/* Week/Day and the dates together at the left, one control (Jack, 16 Oct; layout review 238, item 1). */}
         <div className="inline-flex shrink-0 items-center gap-1">
-          <button type="button" aria-label={`Previous ${unit}`} onClick={() => set({ date: addDays(date, -step) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
+          <button type="button" aria-label={`Previous ${unit}`} onClick={() => set({ date: shift(-1) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
             <Chevron dir="prev" />
           </button>
-          <span className="min-w-[164px] text-center text-sm font-semibold whitespace-nowrap">{view === 'week' ? weekLabel(start) : dayLabel(date)}</span>
-          <button type="button" aria-label={`Next ${unit}`} onClick={() => set({ date: addDays(date, step) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
+          <span className="min-w-[164px] text-center text-sm font-semibold whitespace-nowrap">{view === 'week' ? weekLabel(start) : view === 'month' ? monthLabel(date) : dayLabel(date)}</span>
+          <button type="button" aria-label={`Next ${unit}`} onClick={() => set({ date: shift(1) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
             <Chevron dir="next" />
           </button>
           <button type="button" onClick={() => set({ date: null })} className="ml-0.5 min-h-11 rounded-md px-2.5 text-[13px] font-semibold">
@@ -1591,7 +1773,7 @@ export function DiaryPage() {
             Choose a time
           </button>
         ) : (
-          <button type="button" onClick={() => { setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
+          <button type="button" onClick={() => { if (view === 'month') set({ view: null }); setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
             <span aria-hidden="true">+</span>
             New job
           </button>
