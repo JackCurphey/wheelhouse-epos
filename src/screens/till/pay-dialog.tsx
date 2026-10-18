@@ -165,7 +165,10 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     description = step.sale ? `${step.how} · Sale ${step.sale.id}` : step.how;
     const paidSale = step.sale;
     // Print, then the next sale, as No receipt (Jack, 18 Oct, till-receipt-print).
-    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName, job: job?.receipt }); onNextSale(); } : null;
+    // A reply that warns the job wasn't signed off names nobody (piece 3).
+    const warned = Boolean((paidSale as { jobWarning?: string } | null)?.jobWarning);
+    const receiptJob = job?.receipt && warned ? { ...job.receipt, checkedBy: null } : job?.receipt;
+    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName, job: receiptJob }); onNextSale(); } : null;
     body = <PaidStep total={total} change={step.change} note={step.note} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 

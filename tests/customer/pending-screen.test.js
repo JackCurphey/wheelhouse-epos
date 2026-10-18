@@ -179,3 +179,18 @@ test('any other failure offers Try again, which asks again', async () => {
   await waitFor(() => assert.ok(quoteAsked));
   await new Promise((r) => setTimeout(r, 20));
 });
+
+// The mechanic sign-off, piece 3 (Jack, 18 Oct; drawn as cp-summary-checked's
+// line): with the shop's setting on, a ready bike's link says who checked it.
+test('a ready bike’s link says who checked it, when the shop shows it', async () => {
+  const { ui } = await open({ ...LINK, stage: 'ready_to_collect', checkedBy: 'Alex Morgan' });
+  assert.ok(await heading(ui, 'Ready to collect'));
+  const line = ui.getByText((_, el) => el?.getAttribute('data-checked-by') === 'true');
+  assert.equal(line.textContent, 'Checked by Alex Morgan');
+});
+
+test('with no one to name, the link names nobody', async () => {
+  const { ui } = await open({ ...LINK, stage: 'ready_to_collect', checkedBy: null });
+  assert.ok(await heading(ui, 'Ready to collect'));
+  assert.ok(ui.queryByText(/Checked by/) === null);
+});
