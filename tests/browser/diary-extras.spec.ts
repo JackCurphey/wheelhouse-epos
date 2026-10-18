@@ -342,6 +342,24 @@ test('on an upright tablet, Waiting is a button and the toolbar has two rows', a
   }
 });
 
+// Jack, 18 Oct: Shared queue is a fourth button after the mechanics; the
+// toolbar still fits one row on a 1280px laptop and wider. (At 1024px it
+// was already two rows before Shared queue.)
+for (const width of [1280, 1366]) {
+  test(`at ${width}px, the toolbar with Shared queue stays one row`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    const shared = page.getByRole('button', { name: 'Shared queue' });
+    await expect(shared).toBeVisible();
+    const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+    const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+    expect(Math.abs(newJob.y + newJob.height / 2 - (tabs.y + tabs.height / 2))).toBeLessThan(4);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}
+
 test('on a computer, Waiting stays a column beside the diary', async ({ page, context }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const [name, value] = owner.cookie.split('=');

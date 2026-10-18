@@ -133,6 +133,20 @@ test('one people chip chooses Everyone, By mechanic, or one person', async () =>
   assert.ok(has(ui.queryByText('Brompton C Line')));
 });
 
+// Jack, 18 Oct: on a phone, Shared queue is the people list's last line.
+test('the people chip\'s last line, Shared queue, shows only the jobs no mechanic has yet', async () => {
+  const { ui, fireEvent } = await openPhone();
+  fireEvent.click(ui.getByRole('button', { name: 'Showing Everyone. Change whose jobs are shown' }));
+  const lines = ui.getAllByRole('menuitemradio').map((b) => b.textContent);
+  assert.equal(lines[lines.length - 1], 'Shared queue');
+  fireEvent.click(ui.getByRole('menuitemradio', { name: 'Shared queue' }));
+  assert.ok(has(await ui.findByRole('button', { name: 'Showing Shared queue. Change whose jobs are shown' })));
+  assert.equal(has(ui.queryByText('Trek Domane')), false);
+  assert.equal(has(ui.queryByText('Ribble CGR')), false);
+  fireEvent.click(ui.getByRole('tab', { name: /^Thursday 8 October/ }));
+  assert.ok(has(await ui.findByText('Specialized Sirrus')));
+});
+
 test('Waiting in the top bar opens the list; a card goes to its day and shows the chosen bar, and Open opens it', async () => {
   const { ui, fireEvent, within } = await openPhone();
   fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
