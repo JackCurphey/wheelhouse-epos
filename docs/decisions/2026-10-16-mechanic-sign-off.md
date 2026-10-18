@@ -94,3 +94,7 @@ Mechanics and Checked by on the receipt and booking link, for my approval,
 then build it"). Chosen over leaving piece 3 until the Settings pages are
 built (WP-5.1). The switch stays off at a real shop until the solicitor's
 check (answer 3).
+
+**Piece 3's drawings approved** (Jack, 18 Oct: "Approve all three drawings;
+go ahead and build piece 3, flagging Mark's two files for him"):
+`set-workshop-sign-off`, `till-receipt-paper-checked`, `cp-summary-checked`.
