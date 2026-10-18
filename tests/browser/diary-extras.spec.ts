@@ -185,3 +185,301 @@ test('on a tablet, press and hold lays a stack out on a tray that fits the diary
     await ctx.close();
   }
 });
+
+// Jack, 16 Oct: everything clickable shows the pointing-finger cursor, as the
+// sidebar's links already do (Tailwind 4 leaves buttons with the arrow).
+// Spec: openspec/changes/pick-hover-and-pointer
+test('buttons show the pointing-finger cursor; a disabled one keeps the arrow', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await expect(page.getByRole('button', { name: 'New job' })).toHaveCSS('cursor', 'pointer');
+  await expect(page.getByRole('button', { name: 'Next week' })).toHaveCSS('cursor', 'pointer');
+  // A job that can be dragged keeps its open hand, which says it can move too.
+  await expect(page.getByRole('button', { name: /Puncture repair/ }).first()).toHaveCSS('cursor', 'grab');
+  const disabled = await page.evaluate(() => {
+    const b = document.createElement('button');
+    b.disabled = true;
+    document.body.append(b);
+    const c = getComputedStyle(b).cursor;
+    b.remove();
+    return c;
+  });
+  expect(disabled).toBe('default');
+});
+
+// Jack, 16 Oct: typing a customer's name doesn't change New job's size.
+// Spec: openspec/changes/new-job-customer-dropdown
+test('New job keeps its size while a customer search shows its results', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await page.getByRole('button', { name: 'New job' }).click();
+  await page.getByRole('button', { name: 'Enter a time instead' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New job' });
+  await expect(dialog).toBeVisible();
+  const before = (await dialog.boundingBox())!.height;
+  await dialog.getByLabel('Find customer by name, phone or email').fill('zz');
+  const list = dialog.locator('[data-customer-results]');
+  await expect(list.getByText('No customer matches “zz”.')).toBeVisible();
+  expect((await dialog.boundingBox())!.height).toBe(before);
+  // Escape in the search closes the list, keeping what was typed and New job.
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(dialog.getByLabel('Find customer by name, phone or email')).toHaveValue('zz');
+  await expect(dialog).toBeVisible();
+});
+
+// Jack, 16 Oct: nothing that appears pushes the page. New job's "choose a
+// time" bar floats at the bottom of the screen, so the diary doesn't move.
+// Spec: openspec/changes/floating-diary-messages
+test('pressing New job does not move the diary', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const monday = page.getByRole('group', { name: /^Monday/ });
+  await expect(monday).toBeVisible();
+  const before = (await monday.boundingBox())!.y;
+  await page.getByRole('button', { name: 'New job' }).click();
+  await expect(page.getByText(/Choose a time for the new job\./)).toBeVisible();
+  expect((await monday.boundingBox())!.y).toBe(before);
+});
+
+// Jack, 16 Oct: Waiting for you is boxed in as a panel, its heading inside
+// and its count as a badge. Spec: openspec/changes/waiting-panel
+test('Waiting for you is a panel with its count as a badge', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const panel = page.getByRole('region', { name: /^Waiting for you/ });
+  await expect(panel).toBeVisible();
+  await expect(panel).toHaveCSS('border-top-width', '1px');
+  await expect(panel).toHaveCSS('background-color', 'rgb(240, 234, 220)');
+  await expect(panel.locator('[data-count-badge]')).toHaveCSS('background-color', 'rgb(255, 253, 247)');
+  await expect(panel.locator('[data-count-badge]')).toBeVisible();
+});
+
+// The layout review (#238, items 4 and 5): on a tablet, as drawn, the Week /
+// Day buttons and a chosen Waiting card's Open button are 44px finger
+// targets, and the card's text is larger. Spec: openspec/changes/review-catch-ups
+test('on a tablet, the Week and Day buttons are finger-sized', async ({ browser }) => {
+  const r = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Full service', jobDate: MON, startTime: '15:00', endTime: '16:00' } });
+  expect(r.status, JSON.stringify(r.body)).toBe(201);
+  const ctx = await browser.newContext({ hasTouch: true, isMobile: false, viewport: { width: 1024, height: 768 } });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+    test.skip(!coarse, 'this browser does not report a touch pointer');
+    for (const tab of ['Week', 'Day']) {
+      expect((await page.getByRole('tab', { name: tab }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+  } finally {
+    await ctx.close();
+  }
+});
+
+// The layout review's item 1 (Jack, 16 Oct): Week/Day sits with the dates at
+// the left, one control, not across a gap. Spec: openspec/changes/toolbar-and-phone-today
+test('the Week/Day switch sits next to the date arrows', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  // The switch's last tab is Month since 18 Oct (Jack: month view).
+  const last = (await page.getByRole('tab', { name: 'Month' }).boundingBox())!;
+  const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
+  expect(prev.x - (last.x + last.width)).toBeLessThan(40);
+});
+
+// After the fresh review: on a 360px phone away from today, with "By
+// mechanic" showing, the Today button fits; the row tightens and the people
+// chip shortens rather than the page scrolling sideways (Jack, 16 Oct: "1").
+test('on a 360px phone, Today fits in the top row', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    const today = page.getByRole('button', { name: 'Today' });
+    await expect(today).toBeVisible();
+    const box = (await today.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+    // The top row itself doesn't run over (the grid below is checked elsewhere).
+    const row = today.locator('xpath=ancestor::div[contains(@class, "justify-between")][1]');
+    expect(await row.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
+    const chip = (await page.getByRole('button', { name: /^Showing By mechanic/ }).boundingBox())!;
+    const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
+    expect(chip.x + chip.width).toBeLessThanOrEqual(prev.x);
+  } finally {
+    await ctx.close();
+  }
+});
+
+// The layout review's item 7 (Jack approved the drawing, 16 Oct): on an
+// upright tablet (834 wide) the toolbar sits on two rows and "Waiting for you"
+// is a button opening the phone's list, so the week has the full width.
+// Spec: openspec/changes/upright-tablet-diary
+test('on an upright tablet, Waiting is a button and the toolbar has two rows', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 834, height: 1112 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    await expect(page.getByRole('region', { name: /^Waiting for you/ })).toBeHidden();
+    const waiting = page.getByRole('button', { name: /^Waiting for you, \d+/ });
+    await expect(waiting).toBeVisible();
+    const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+    const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+    expect(newJob.y).toBeGreaterThan(tabs.y + tabs.height - 1);
+    await waiting.click();
+    await expect(page.getByRole('dialog', { name: /^Waiting for you \(\d+\)/ })).toBeVisible();
+  } finally {
+    await ctx.close();
+  }
+});
+
+// Jack, 18 Oct: Shared queue is a fourth button after the mechanics; the
+// toolbar fits one row from 1366px, with Month too (Jack, 18 Oct: below
+// that, the people buttons and New job take a second row).
+for (const width of [1366, 1440]) {
+  test(`at ${width}px, the toolbar with Shared queue stays one row`, async ({ page, context }) => {
+    // Its own shop with two mechanics (four people buttons): other tests
+    // here add more mechanics to the shared shop, and more buttons wrap.
+    const shop = await staffSignup(server!.baseUrl, { shopName: 'Toolbar Cycles' });
+    try {
+      await seedMechanic(shop.shop.id, { name: 'Alex Morgan' });
+      await seedMechanic(shop.shop.id, { name: 'Jo Taylor' });
+      await page.setViewportSize({ width, height: 800 });
+      const [name, value] = shop.cookie.split('=');
+      await context.addCookies([{ name, value, url: server!.baseUrl }]);
+      await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+      await expect(page.getByRole('button', { name: 'Shared queue' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Jo Taylor' })).toBeVisible();
+      const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+      const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+      expect(Math.abs(newJob.y + newJob.height / 2 - (tabs.y + tabs.height / 2))).toBeLessThan(4);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    } finally {
+      await deleteTestShop(shop.shop.id);
+    }
+  });
+}
+
+test('at 1280px with two mechanics, the people buttons and New job take a second row', async ({ page, context }) => {
+  const shop = await staffSignup(server!.baseUrl, { shopName: 'Two Row Cycles' });
+  try {
+    await seedMechanic(shop.shop.id, { name: 'Alex Morgan' });
+    await seedMechanic(shop.shop.id, { name: 'Jo Taylor' });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const [name, value] = shop.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    await expect(page.getByRole('button', { name: 'Jo Taylor' })).toBeVisible();
+    const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+    const everyone = (await page.getByRole('button', { name: 'Everyone' }).boundingBox())!;
+    const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+    expect(everyone.y).toBeGreaterThan(tabs.y + tabs.height - 1);
+    expect(Math.abs(newJob.y + newJob.height / 2 - (everyone.y + everyone.height / 2))).toBeLessThan(4);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
+
+// The tighter spacing is the desktop drawing's only; tablets keep theirs
+// (12px from Week/Day to the dates, 6px between people buttons).
+for (const width of [834, 1024]) {
+  test(`at ${width}px, the toolbar keeps the tablet drawing's spacing`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    await expect(page.getByRole('button', { name: 'Shared queue' })).toBeVisible();
+    const gaps = await page.evaluate(() => {
+      const tabs = document.querySelector('[role="tablist"][aria-label="Diary view"]')!.getBoundingClientRect();
+      const prev = document.querySelector('button[aria-label="Previous week"]')!.getBoundingClientRect();
+      const chips = [...document.querySelectorAll('[role="group"][aria-label="Mechanic"] > button')].map((b) => b.getBoundingClientRect());
+      return { toDates: Math.round(prev.left - tabs.right), chip: Math.round(chips[1].left - chips[0].right) };
+    });
+    expect(gaps).toEqual({ toDates: 12, chip: 6 });
+  });
+}
+
+test('on a computer, Waiting stays a column beside the diary', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await expect(page.getByRole('region', { name: /^Waiting for you/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Waiting for you, \d+/ })).toBeHidden();
+});
+
+// Jack, 17 Oct: on a phone, "By mechanic" columns stay readable (at least
+// 96px) and the diary scrolls sideways inside its own area; the page doesn't,
+// the times stay put and the names move with their columns.
+// Spec: openspec/changes/phone-bymech-columns
+test('on a phone, By mechanic columns stay readable and scroll sideways', async ({ browser }) => {
+  for (const extra of ['Ravi Dhar', 'Nell Ames', 'Tom Ruiz', 'Ola Berg']) await seedMechanic(owner.shop.id, { name: extra });
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    const heading = page.locator('[data-mech-headings] span[data-mech]').first();
+    await expect(heading).toBeVisible();
+    expect((await heading.boundingBox())!.width).toBeGreaterThanOrEqual(96);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    const scroller = page.locator('[data-mech-scroll]');
+    expect(await scroller.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+    const time = page.locator('[data-mech-scroll] [data-hours]');
+    const before = (await time.boundingBox())!.x;
+    await scroller.evaluate((e) => { e.scrollLeft = 200; e.dispatchEvent(new Event('scroll')); });
+    await expect.poll(async () => (await time.boundingBox())!.x).toBe(before);
+    await expect.poll(() => page.locator('[data-mech-headings]').evaluate((e) => e.scrollLeft)).toBe(200);
+  } finally {
+    await ctx.close();
+  }
+});
+
+// After the fresh review: a drag only lands on a column you can see. Let go
+// over the times, with Alex's column scrolled under them, and the job stays
+// with its own mechanic. Alfie sorts straight after Alex, so his column is
+// the second one, on screen. Spec: openspec/changes/phone-bymech-columns
+test('on a phone, a drag never lands on a column hidden under the times', async ({ browser }) => {
+  const alfie = await seedMechanic(owner.shop.id, { name: 'Alfie Ash' });
+  // Enough mechanics that the columns scroll, even when this test runs alone.
+  for (const extra of ['Kit Lowe', 'Ana Quist']) await seedMechanic(owner.shop.id, { name: extra });
+  const made = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Wheel true', jobDate: TUE, startTime: '13:00', endTime: '14:00', mechanicId: alfie } });
+  expect(made.status, JSON.stringify(made.body)).toBe(201);
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}&who=bymech`);
+    const column = page.getByRole('group', { name: 'Alfie Ash' });
+    const job = column.getByRole('button', { name: /Wheel true/ });
+    await expect(job).toBeVisible();
+    await page.locator('[data-mech-scroll]').evaluate((e) => { e.scrollLeft = 60; e.dispatchEvent(new Event('scroll')); });
+    const sent: string[] = [];
+    page.on('request', (r) => { if (r.method() === 'PUT') sent.push(r.postData() ?? ''); });
+    const box = (await job.boundingBox())!;
+    const times = (await page.locator('[data-mech-scroll] [data-hours]').boundingBox())!;
+    await page.mouse.move(box.x + 10, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 20, box.y + 10, { steps: 4 });
+    await page.mouse.move(times.x + 20, box.y + 10, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    expect(sent.filter((b) => !b.includes(`"mechanicId":${alfie}`) && b.includes('mechanicId'))).toEqual([]);
+    await expect(column.getByRole('button', { name: /Wheel true/ })).toBeVisible();
+  } finally {
+    await ctx.close();
+  }
+});

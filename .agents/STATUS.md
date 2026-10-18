@@ -15,31 +15,48 @@ and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
 move the booking link's quote answer to `portal.js` (after #207); a login
 for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
 the commit in `/healthz`), then the deploy workflow; then #203 step A.
-Also waiting for him: approve #225 (Jack's, changes `server.js`), and the
+Also waiting for him: approve #225 (Jack's, changes `server.js`); #231
+(Jack's 16 Oct answers, and the test shop loader moving the drawn week to
+the load week, `scripts/dev/` is his); #234 (`setup.sh` fixed for doctl
+2.0, which Jack ran from the branch); and the
 server half of #190 A, a guard so a cancelled, declined or expired booking
 can't be booked in or started (the `workshop-jobs` spec allows it today;
-Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5).
-**Jack is on:** merged 15 Oct (evening) and 16 Oct (morning), screens only: the rest of #190
-C, refusals in plain words for work and parts, days and diary drags (#227);
-New job's won't-fit warning with "Find the next free" (#228; decision 23,
-Jack's answer in `docs/decisions/2026-10-15-new-job-wont-fit.md`); a change
-request into another week goes to the week asked for (#229; decision 19,
-`docs/decisions/2026-10-15-change-request-other-week.md`). 16 Oct: "Bike
-is here" stays on for an ended booking whose bike is in (no change). Open:
-#225, waiting for Mark's approval (brought up to date with main again on 16 Oct). Online
-test copy (#221): DigitalOcean's page shows an error after the card check
-passes (15 Oct, twice); Jack retries on 16 Oct and opens a support ticket if
-it fails, then steps 2–5 of `docs/runbooks/hosted-copy.md` (repo at
-`~/wheelhouse-epos`). Next code in his lane: what's left of #190 (D,
-carry-over, waits for WP-1.9) and #192; then the stage check once lines 1–6
-of §9 are in.
-**Open for Jack:** labour's VAT rate on #134 (15 Oct); before WP-3.1, two new "check these"
-kinds and deposits on unfinished work (`openspec/changes/wp-1-6-sales-in-pence/design.md`,
-Open Questions); ask from Mark #140; till job warning for WP-3.1 (#196); the test shop's two
-defaults in `decided-while-building.md` (£0.00 unpriced services, the past
-drawn week).
+Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5). Also
+his: the bike on "Waiting for you" items (for the tablet cards' drawn bike
+line, #241); a place to keep who signed a job off and when
+(`docs/decisions/2026-10-16-mechanic-sign-off.md`); and Jack's question,
+when the front page switches from the old app to the new one (16 Oct; the
+plans don't say). Also #249 (the tests' fixed names and codes, his test
+files), #250 (two same-named shops signing up at once, `server/auth.js`)
+and #256 (Jack's 18 Oct answers: Release 2's finish line, stage 8 and the
+go-live checklist; it changes the shared plans, so it needs his yes).
+**Jack is on:** 18 Oct merged: the old app's workshop diary is retired
+and its Workshop tab opens the new diary (#252,
+`docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
+(#253, #254, #258, #260; `docs/decisions/2026-10-18-old-diary-features.md`)
+and built into the new diary: the Shared queue button (#255), stretching a
+job by its bottom edge (#257), month view (#259), Change details on the job
+page (#261) with a note when a change request is waiting (#262), and Accept
+or decline from a booking request's menu (#263). The menu's "Open in the
+till" and "Print receipt" wait for the till, which can't open an order or
+print a receipt yet (Jack, 18 Oct). Jack also decided Wheelhouse is built for
+every shop, not to move his own shop first (#254,
+`docs/decisions/2026-10-18-build-for-every-shop.md`); his answers on Release
+2's finish line (built and checked, ready to sell), the all-in-one coming
+first with Lightspeed after, stage 8 and the go-live checklist are in #256,
+waiting for Mark. Earlier: the online test copy is live at
+https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
+(#236, #237, #239 to #245, #247, #248). Open, waiting for Mark: #225, #231,
+#234, #249 (his test files), #250 (`server/auth.js`), #256 (the shared
+plans). #238, the diary layout review, is a report, all of it now built or
+decided. Next in his lane without Mark: see the build board's "Next up".
+The stage check waits for lines 4 and 6 of §9.
+**Open for Jack:** nothing waiting now. Small to-do: make a Google account
+for Wheelhouse (go-live checklist). Later: his yes to open Stripe and buy the
+S700. (Asking the accountant about Citrus Lime reports was dropped, #254;
+#171 and #138 were closed with #256's answers, 18 Oct, waiting for Mark.)
 
-**Updated:** 2026-10-16. **Two people build at once** (Jack agreed to Mark's
+**Updated:** 2026-10-18. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
 PR #126): Mark takes the server half of each work package and all hosting;
 Jack takes the screens and the whole workshop. STATUS and the build board are

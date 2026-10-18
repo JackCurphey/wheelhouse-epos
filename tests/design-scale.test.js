@@ -25,10 +25,9 @@ test('a type scale exists with paired line-heights', () => {
 });
 
 test('dense components pin a tight line-height so the grids do not grow', () => {
-  // body gets --leading-body (1.55) for running text. The calendar chips, job
-  // blocks and badges live in fixed-height boxes - a 30-minute week-grid slot
-  // is 24px tall - so they must opt out or they overflow.
-  for (const sel of ['.wk-job-block', '.job-card', '.badge']) {
+  // body gets --leading-body (1.55) for running text. A status badge is one
+  // tight line, so it opts out. (The old diary's job blocks went with it.)
+  for (const sel of ['.badge']) {
     const rules = findDeclarations(styles, 'line-height').filter((d) => d.selector.includes(sel));
     assert.ok(rules.length > 0, `${sel} must pin a line-height, not inherit --leading-body`);
   }

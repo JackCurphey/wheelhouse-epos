@@ -229,6 +229,7 @@ test('COMMIT or ROLLBACK with nothing open, or against an already-released savep
 // coverage is the point, and it is enough.
 test('a sale that fails partway leaves no sale, no sale_items and no stock_movements behind', async () => {
   const shop = await createTestShop();
+  let probeLock;
   try {
     // A CHECK that only a deliberately absurd quantity can violate, so it
     // fires on the SECOND line's stock_movements insert - after the sale row,
@@ -249,6 +250,12 @@ test('a sale that fails partway leaves no sale, no sale_items and no stock_movem
     // stock_qty is int4, so stock_qty - qty is never negative. The attempt
     // fails with ValidationError "Not enough stock" BEFORE the BEGIN, leaving
     // zero rows and therefore no partway state at all.
+    //
+    // The constraint is on the shared table, so another test run using this
+    // database could add or drop it mid-test. A lock held on its own
+    // connection makes a second run wait until this one has dropped it.
+    probeLock = await pool.connect();
+    await probeLock.query("SELECT pg_advisory_lock(hashtext('tmp_sale_rollback_probe'))");
     await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS tmp_sale_rollback_probe');
     await pool.query(
       'ALTER TABLE stock_movements ADD CONSTRAINT tmp_sale_rollback_probe CHECK (change_qty <> -424242) NOT VALID'
@@ -304,6 +311,12 @@ test('a sale that fails partway leaves no sale, no sale_items and no stock_movem
       await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT tmp_sale_rollback_probe');
     }
   } finally {
+    // As in run-migrations.js: a failed unlock must not hide the test's own
+    // error, and Postgres frees the lock anyway when the connection closes.
+    if (probeLock) {
+      await probeLock.query("SELECT pg_advisory_unlock(hashtext('tmp_sale_rollback_probe'))").catch(() => {});
+      probeLock.release();
+    }
     await deleteTestShop(shop.id);
   }
 });

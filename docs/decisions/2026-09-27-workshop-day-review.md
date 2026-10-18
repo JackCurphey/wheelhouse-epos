@@ -144,6 +144,8 @@ answers, in the order given.
     (e.g. "Mechanic: Alex Morgan");
     New job takes the mechanic from where you clicked (or the automatic
     choice in the Everyone view, item 18) without a select.
+    *(Changed 18 Oct by Jack: the job page's "Change details" pop-up also
+    offers the mechanic, as pills; `2026-10-18-old-diary-features.md` answer 3.)*
 33. **The job page is a refined version of Citrus Lime's job page** (Jack,
     28 Sep, after comparing options 5 and 6): he prefers option 5, and
     seeing the work and parts list straight away is part of why. Work and
@@ -401,3 +403,8 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (3 Oct 2026, third walk, taken without a question, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** following Jack's 3 Oct "yes you can go ahead and make some text bigger", the desktop diary's block text is at least 12px. A block too short for two lines shows only the bike; the service is in the hover summary and the quick look. Other jobs' blocks no longer use Maya Patel's name. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.
 
 **Later change (5 Oct 2026, issue #133, `docs/decisions/2026-10-05-shops-and-sites.md`):** Jack, 5 Oct, answer 1. With more than one shop: storage slots (decision 27) and where "Take payment" goes (decision 1) are set per site; what a diary block shows (decision 17) stays one setting for the business.
+
+**Later change (16 Oct 2026, decision 64 designed):** mechanic sign-off is
+part of finishing a job, with the job's mechanic picked; staff always see it
+and each shop chooses whether customers do; reopening clears it; paying for
+an unfinished job asks for it too (Jack, `2026-10-16-mechanic-sign-off.md`).

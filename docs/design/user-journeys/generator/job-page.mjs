@@ -21,7 +21,7 @@ const DISPLAY_FONT_STYLE = THEME === 'sand' ? `font-family: ${FONT_DISPLAY}; ` :
 // ---------- small layout helpers (as job-options.mjs's copies) ----------
 export const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
 export const h2 = (t, size = 16) => `<h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: ${size}px; line-height: 1.3; font-weight: 700">${esc(t)}</h2>`;
-export const panel = (inner, extra = '', pad = 16, gap = 10) => card(`<div style="padding: ${pad}px; display: flex; flex-direction: column; gap: ${gap}px; box-sizing: border-box; min-height: 0">${inner}</div>`, `box-sizing: border-box; ${extra}`);
+export const panel = (inner, extra = '', pad = 16, gap = 10, padX = pad) => card(`<div style="padding: ${pad}px ${padX}px; display: flex; flex-direction: column; gap: ${gap}px; box-sizing: border-box; min-height: 0">${inner}</div>`, `box-sizing: border-box; ${extra}`);
 export const row = (inner, gap = 12, extra = '') => `<div style="display: flex; align-items: center; gap: ${gap}px; ${extra}">${inner}</div>`;
 export const grid = (cols, inner, gap = 16, extra = '') => `<div style="display: grid; grid-template-columns: ${cols}; gap: ${gap}px; align-items: start; min-height: 0; ${extra}">${inner}</div>`;
 const ghostBtn = (text, iconName, extra = '') => `<button type="button" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 13px; font-weight: 600; ${extra}">${icon(iconName, 16)}${esc(text)}</button>`;
@@ -42,7 +42,7 @@ export const togglePill = (label, on, id, extra = '') => `<button type="button" 
 export const selectFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 3px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><select id="${id}" style="width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"><option>${esc(value)}</option></select></div>`;
 export const staticFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 1px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><div id="${id}" style="min-height: 20px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.bg}; display: flex; align-items: center; font-size: 13px; color: ${C.ink}">${esc(value)}</div></div>`;
 
-export const dialogBody = (inner, pad = 4, gap = 3) => `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: ${pad}px; display: flex; flex-direction: column; gap: ${gap}px">${inner}</div>`;
+export const dialogBody = (inner, pad = 4, gap = 3, padX = pad) => `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: ${pad}px ${padX}px; display: flex; flex-direction: column; gap: ${gap}px">${inner}</div>`;
 // Vertical padding trimmed to 6px (from 10px, S2/decision 58 follow-up): the
 // footer's own 44px buttons set its floor, same reasoning as
 // finalTitleBar/finalCustStripTwoRow above — reclaiming the two-row header's
@@ -299,11 +299,13 @@ export function jobPopupContent({
 }) {
   const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${left}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref })}</div>`, 24);
   const metaLimit = limit !== undefined ? limit : SPEND_LIMIT;
-  const jobSection = panel(`${jobMetaRow(jobNum, created, twoRowHeader ? '' : readyByBadge, twoRowHeader ? '' : totalBadge, twoRowHeader ? '' : metaLimit)}${jobBody}`, '', 2, 2);
+  // Jack, 17 Oct: room at the sides so the job number, status and strips
+  // aren't against the edge; only the sides, so the board's height still fits.
+  const jobSection = panel(`${jobMetaRow(jobNum, created, twoRowHeader ? '' : readyByBadge, twoRowHeader ? '' : totalBadge, twoRowHeader ? '' : metaLimit)}${jobBody}`, '', 2, 2, 10);
   const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction, doneH }), grow: false });
   // pad trimmed to 2px (from 4px, S2/decision 58 follow-up — same reclaim as
   // dialogFooter/finalCustStripTwoRow above).
-  const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 2, 1);
+  const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 2, 1, 12);
   const headerTags = twoRowHeader ? `${metaLimit ? limitBadge(metaLimit) : ''}${readyByBadge}${totalBadge}` : '';
   const custStripHtml = twoRowHeader ? finalCustStripTwoRow(customer, mechanicName, custHref, headerTags, touchLinks) : finalCustStrip(customer, mechanicName, custHref);
   return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${custStripHtml}${body}${footer ? dialogFooter(footer) : ''}`;
