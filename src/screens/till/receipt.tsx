@@ -56,14 +56,14 @@ function Barcode({ value }: { value: string }) {
 
 export function ReceiptPaper({ sale, shopName, job }: ReceiptProps) {
   return (
-    <article aria-label="Receipt" className="flex w-[72mm] flex-col gap-2.5 bg-white p-4 text-[13px] leading-snug text-black">
+    <article aria-label="Receipt" className="flex w-[72mm] flex-col gap-2.5 p-4 text-[13px] leading-snug">
       <strong className="text-center text-[17px]">{shopName}</strong>
       <div className="flex flex-col items-center gap-1 text-center">
         <span>{`Sale ${sale.id}`}</span>
         <span>{when(sale.createdAt)}</span>
         <Barcode value={String(sale.id)} />
       </div>
-      <div className="flex flex-col gap-1 border-t border-dashed border-black pt-2">
+      <div className="flex flex-col gap-1 border-t border-dashed border-current pt-2">
         {job ? <span className="font-bold">{job.bikeLabel ? `${job.reference} · ${job.bikeLabel}` : job.reference}</span> : null}
         {sale.items.map((it) => (
           <Row key={it.id} left={it.qty > 1 ? `${it.name} ${it.qty} × ${money(it.unitPrice)}` : it.name} right={money(it.lineTotal)} />
@@ -71,7 +71,7 @@ export function ReceiptPaper({ sale, shopName, job }: ReceiptProps) {
         {sale.discount > 0 ? <Row left="Discount" right={`−${money(sale.discount)}`} /> : null}
         {sale.groupDiscountAmount > 0 ? <Row left={sale.groupDiscountName || 'Customer discount'} right={`−${money(sale.groupDiscountAmount)}`} /> : null}
       </div>
-      <div className="flex flex-col gap-1 border-t border-dashed border-black pt-2">
+      <div className="flex flex-col gap-1 border-t border-dashed border-current pt-2">
         <Row left="Total" right={money(sale.total)} strong />
         {sale.cashAmount > 0 ? <Row left="Paid by cash" right={money(sale.cashAmount)} /> : null}
         {sale.cardAmount > 0 ? <Row left="Paid by card" right={money(sale.cardAmount)} /> : null}

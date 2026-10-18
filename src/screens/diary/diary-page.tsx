@@ -5,6 +5,8 @@ import { ROUTES } from '@/staff/routes.ts';
 import { createPortal } from 'react-dom';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
+import { useSession } from '@/lib/auth/use-session.ts';
+import { printReceipt, type ReceiptSale } from '@/screens/till/receipt.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
@@ -949,6 +951,20 @@ export function DiaryPage() {
   previewRef.current = preview;
   const [moveNote, setMoveNote] = useState('');
   const [moveError, setMoveError] = useState<string | null>(null);
+  const session = useSession();
+  // "Print receipt" (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
+  // the paid order names its sale; that sale is the receipt.
+  async function printJobReceipt(j: { orderId: number | null; reference: string; bikeLabel?: string | null }) {
+    setMoveError(null);
+    try {
+      const order = await apiGet<{ convertedSaleId: number | null }>(`/api/sale-documents/${j.orderId}`);
+      if (!order.convertedSaleId) throw new Error('no sale');
+      const sale = await apiGet<ReceiptSale>(`/api/sales/${order.convertedSaleId}`);
+      printReceipt({ sale, shopName: session.status === 'signed-in' ? session.shop.name : '', job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null } });
+    } catch {
+      setMoveError('Wheelhouse couldn’t get this job’s receipt to print. Try again in a moment.');
+    }
+  }
   const drag = useRef<{ job: Shown; origCol: number; x: number; y: number; grab: number; moved: boolean } | null>(null);
 
   const durationOf = (j: Shown) => {
@@ -1374,6 +1390,12 @@ export function DiaryPage() {
             if (j.orderStatus === 'cancelled') return { reason: 'Order cancelled' };
             if (j.orderStatus !== 'open') return { reason: 'Already paid' };
             return { onOpen: () => { setMenuFor(null); navigate(`${ROUTES.till}?job=${j.id}`); } };
+          })()}
+          print={(() => {
+            const j = menuFor.job;
+            if (j.orderStatus === 'cancelled') return { reason: 'Order cancelled' };
+            if (!j.orderId || j.orderStatus !== 'converted') return { reason: 'Not paid yet' };
+            return { onPrint: () => { setMenuFor(null); void printJobReceipt(j); } };
           })()}
           onAnswer={menuFor.job.state === 'pending' ? () => {
             // The request's own card from Waiting for you, or one made from the job.

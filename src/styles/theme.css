@@ -284,7 +284,8 @@
 
 /* Printing a receipt (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
    printReceipt draws it into #wh-print, the only thing the printer gets. */
-#wh-print { display: none; }
+/* Paper is black on white whatever the screen's look. */
+#wh-print { display: none; color: #000; background: #fff; }
 @media print {
   body > *:not(#wh-print) { display: none !important; }
   #wh-print { display: block; }

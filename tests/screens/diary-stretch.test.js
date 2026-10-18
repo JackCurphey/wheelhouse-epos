@@ -46,6 +46,9 @@ let calls;
 let answer;
 let hours = [];
 let waitingItems = [];
+let saleFails = false;
+const PAID_SALE = { id: 601, createdAt: '2026-10-06T10:45:00.000Z', subtotal: 65, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 65, paymentMethod: 'Card', cashAmount: 0, cardAmount: 65, cashTendered: null, extraPayments: [],
+  items: [{ id: 1, name: 'Brake service', qty: 1, unitPrice: 65, lineTotal: 65 }] };
 afterEach(async () => {
   hours = [];
   waitingItems = [];
@@ -70,6 +73,8 @@ function stubServer() {
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: hours });
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: waitingItems.length, items: waitingItems });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
+    if (u.pathname === '/api/sale-documents/40') return reply(200, { id: 40, kind: 'order', status: 'converted', convertedSaleId: 601, items: [] });
+    if (u.pathname === '/api/sales/601') return saleFails ? reply(500, { error: 'Internal error' }) : reply(200, PAID_SALE);
     return reply(404, { error: 'Not found' });
   };
 }
@@ -170,7 +175,7 @@ test('a booking request\'s menu offers Accept or decline, which opens its pop-up
   fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
   const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
   // "Open in the till" is greyed on a request (Jack, 18 Oct), its reason underneath.
-  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Accept or decline', 'View overview', 'Open in the tillNot booked yet']);
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Accept or decline', 'View overview', 'Open in the tillNot booked yet', 'Print receiptNot paid yet']);
   fireEvent.click(menu.getByRole('menuitem', { name: 'Accept or decline' }));
   const dlg = within(await ui.findByRole('dialog', { name: /Sam Reed/ }));
   assert.ok(has(dlg.queryByRole('button', { name: 'Accept' })));
@@ -257,5 +262,75 @@ test('a cancelled order\'s Open in the till is greyed: Order cancelled', async (
     assert.ok(has(within(menu.getByRole('menuitem', { name: /^Open in the till/ })).queryByText('Order cancelled')));
   } finally {
     JOBS[0] = keep;
+  }
+});
+
+// Printing a receipt (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
+// "Print receipt" prints the receipt of the sale that paid the job's order;
+// greyed "Not paid yet" until then, as drawn (diary-menu-job).
+test('a paid job\'s Print receipt prints its sale\'s receipt, with the job and bike', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted' };
+  let printed = null;
+  try {
+    const { ui, fireEvent, within, waitFor } = await openDiary();
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    fireEvent.click(menu.getByRole('menuitem', { name: 'Print receipt' }));
+    await waitFor(() => assert.ok(printed !== null, 'nothing was printed'));
+    for (const want of ['North Street Cycles', 'Sale 601', 'WH-1001 · Trek Domane', 'Brake service£65.00', 'Total£65.00', 'Paid by card£65.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
+    assert.equal(has(ui.queryByRole('menu', { name: 'Job actions' })), false);
+  } finally {
+    JOBS[0] = keep;
+  }
+});
+
+test('an open order\'s Print receipt is greyed: Not paid yet', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'open' };
+  try {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    const print = menu.getByRole('menuitem', { name: /^Print receipt/ });
+    assert.equal(print.getAttribute('aria-disabled'), 'true');
+    assert.ok(has(within(print).queryByText('Not paid yet')));
+  } finally {
+    JOBS[0] = keep;
+  }
+});
+
+test('a cancelled order\'s Print receipt is greyed: Order cancelled', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'cancelled' };
+  try {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    const print = menu.getByRole('menuitem', { name: /^Print receipt/ });
+    assert.equal(print.getAttribute('aria-disabled'), 'true');
+    assert.ok(has(within(print).queryByText('Order cancelled')));
+  } finally {
+    JOBS[0] = keep;
+  }
+});
+
+test('if the receipt can\'t be fetched, the diary says so and nothing prints', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted' };
+  saleFails = true;
+  let printed = false;
+  try {
+    const { ui, fireEvent, within } = await openDiary();
+    window.print = () => { printed = true; };
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    fireEvent.click(menu.getByRole('menuitem', { name: 'Print receipt' }));
+    assert.ok(has(await ui.findByText('Wheelhouse couldn’t get this job’s receipt to print. Try again in a moment.', {}, { timeout: 15000 })));
+    assert.equal(printed, false);
+  } finally {
+    JOBS[0] = keep;
+    saleFails = false;
   }
 });
