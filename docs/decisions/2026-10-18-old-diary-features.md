@@ -71,11 +71,18 @@ and the Shared queue, `stretchTabletBoard`, `stretchPhoneBoard`,
 the canvas yet.
 
 - **Stretching on a touch screen: the grip shows only on the chosen job**
-  (Jack: "1"). One tap chooses the job, as today; a finger-sized grip (a
-  44px touch area) then shows on its bottom edge, and the times and length
-  show while dragging, beside the job on a tablet and inside it on a phone.
-  Dragging to scroll can't stretch a job by accident. Chosen over a grip on
-  every job, and over no stretching on touch screens (Change details only).
+  (Jack: "1"). A finger-sized grip (a 44px touch area) shows on that job's
+  bottom edge, and the times and length show while dragging, beside the job
+  on a tablet and inside it on a phone. Dragging to scroll can't stretch a
+  job by accident. Chosen over a grip on every job, and over no stretching
+  on touch screens (Change details only).
+- **Corrected, 18 Oct: how a job is chosen for it.** The note above first
+  said "one tap chooses the job, as today", but on the diary a tap opens a
+  job; only Waiting cards are chosen by a tap. Asked again, Jack chose
+  **holding the job, then "Change length" in its menu** (Jack: "1"), which
+  shows the grip on that job; a tap still opens a job in one tap. Chosen
+  over first tap chooses and second opens (two taps to open any job), and
+  over no dragging on touch screens.
 - **Shared queue on a tablet** is a fourth button after the mechanics, as on
   desktop; **on a phone** it is the last line of the "whose jobs" list,
   after Everyone, By mechanic and each mechanic.
