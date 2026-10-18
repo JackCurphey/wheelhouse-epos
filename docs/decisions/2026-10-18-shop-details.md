@@ -18,3 +18,13 @@ decision 2, `2026-10-05-shops-and-sites.md` answers 1 and 3).
    decision; it holds the details until sites can. Chosen over storing them
    per site now (part of Mark's WP-1.4) and over waiting for it. The printed
    receipt is drawn with them first.
+2. **The receipt's layout: the shop's name at the top; the address, phone,
+   VAT number and then the barcode at the bottom** (Jack: "1: shop name at
+   the top; address, phone, VAT number and then the barcode at the bottom.
+   Move the barcode on today's other receipt drawings too"), after research
+   on how receipts are laid out: till makers put the barcode at the bottom,
+   for scanning a refund; HMRC asks for the shop's name, address and VAT
+   number on a VAT receipt but not where. Chosen over the details at the
+   top, and over address and phone at the top with the VAT number at the
+   bottom. This moves the barcode on the approved `till-receipt-paper` and
+   `till-receipt-paper-checked` too (`2026-10-18-print-receipt.md`).
