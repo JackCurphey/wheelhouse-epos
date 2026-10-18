@@ -159,6 +159,30 @@ test('choosing a mechanic shows only their jobs; a request with no mechanic yet 
   assert.equal(has(ui.queryByText('Specialized Sirrus')), false);
 });
 
+// Jack, 18 Oct (docs/decisions/2026-10-18-old-diary-features.md, answer 5):
+// a Shared queue button after the mechanics shows only the jobs no mechanic
+// has yet, for the old diary's "Unassigned" pill.
+test('Shared queue shows only the jobs no mechanic has yet', async () => {
+  const { ui, fireEvent } = await openDiary();
+  const shared = ui.getByRole('button', { name: 'Shared queue' });
+  assert.equal(shared.getAttribute('aria-pressed'), 'false');
+  fireEvent.click(shared);
+  assert.equal(shared.getAttribute('aria-pressed'), 'true');
+  assert.equal(ui.getByRole('button', { name: 'Everyone' }).getAttribute('aria-pressed'), 'false');
+  assert.ok(has(ui.queryByText('Specialized Sirrus')));
+  assert.equal(has(ui.queryByText('Trek Domane')), false);
+  assert.equal(has(ui.queryByText('Brompton C Line')), false);
+  assert.equal(has(ui.queryByText('Ribble CGR')), false);
+});
+
+test('in the Day view, Shared queue is one column of the jobs no mechanic has yet', async () => {
+  const { ui, within } = await openDiary('?date=2026-10-09&view=day&who=shared', 'Specialized Sirrus');
+  const column = within(await ui.findByRole('group', { name: 'Shared queue' }));
+  assert.ok(has(column.queryByText('Specialized Sirrus')));
+  assert.equal(has(ui.queryByRole('group', { name: 'Alex Morgan' })), false);
+  assert.equal(has(ui.queryByRole('group', { name: 'Jo Taylor' })), false);
+});
+
 test('Next week loads the next week', async () => {
   const { ui, fireEvent } = await openDiary();
   fireEvent.click(ui.getByRole('button', { name: 'Next week' }));

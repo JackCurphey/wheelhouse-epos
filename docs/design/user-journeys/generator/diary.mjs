@@ -1173,8 +1173,9 @@ ${days.map((d, i) => dayColumn(d, i)).join('')}
 // segmented switch (a tablist) rather than two separate buttons, so it reads
 // as a single control with two positions, distinct in shape from the date
 // arrows and the mechanic chips either side of it in the toolbar.
-function viewSwitch(active, size) {
-  const items = [['Week', `diary-${size}.dc.html`], ['Day', `diary-day-${size}.dc.html`]];
+// views: the month drawing (for Jack to approve, 18 Oct) adds 'Month'.
+function viewSwitch(active, size, views = ['Week', 'Day']) {
+  const items = [['Week', `diary-${size}.dc.html`], ['Day', `diary-day-${size}.dc.html`], ['Month', `diary-month-${size}.dc.html`]].filter(([t]) => views.includes(t));
   return `<div role="tablist" aria-label="Diary view" style="display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; box-sizing: border-box; min-height: 44px; padding: 3px; border-radius: 10px; background: ${C.mutedBg}">${items.map(([t, href]) => {
     const on = t === active;
     return `<a href="${href}" role="tab" aria-selected="${on}" style="min-height: ${size === 'desktop' ? 38 : 44}px; padding: 0 16px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; background: ${on ? C.panel : 'transparent'}; color: ${C.ink}; ${on ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.14);' : ''}">${t}</a>`;
@@ -1194,10 +1195,11 @@ const dateArrow = (dir, label) => `<button type="button" aria-label="${esc(label
 // mechanic diary, pick mode) shows the same text.
 function dateNav(activeView, size = 'desktop') {
   const isDay = activeView === 'Day';
-  const label = isDay ? 'Thursday 17 September' : '14–20 September 2026';
-  const unit = isDay ? 'day' : 'week';
+  const isMonth = activeView === 'Month';
+  const label = isDay ? 'Thursday 17 September' : isMonth ? 'September 2026' : '14–20 September 2026';
+  const unit = isDay ? 'day' : isMonth ? 'month' : 'week';
   return `<div style="display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0">${dateArrow('prev', `Previous ${unit}`)}
-<span style="min-width: ${isDay ? 146 : 164}px; text-align: center; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${esc(label)}</span>
+<span style="min-width: ${isDay ? 146 : isMonth ? 130 : 164}px; text-align: center; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${esc(label)}</span>
 ${dateArrow('next', `Next ${unit}`)}
 <button type="button" style="min-height: ${size === 'desktop' ? 36 : 44}px; padding: 0 10px; margin-left: 2px; border-radius: 6px; font-family: inherit; font-size: ${size === 'desktop' ? 13 : 14}px; font-weight: 600; border: 1px solid transparent; background: transparent; color: ${C.ink}">Today</button></div>`;
 }
@@ -1279,9 +1281,9 @@ const defaultNewJobHref = (size) => `new-job-pick-${size}.dc.html`;
 // dates sit together at the left, as one control (Jack, 16 Oct, the layout
 // review's item 1); one flex-grow spacer puts the people/New job cluster at
 // the right; nowrap — the desktop board holds all four groups on one line.
-function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeView = 'Week', newJob = null } = {}) {
+function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeView = 'Week', newJob = null, views } = {}) {
   const nj = newJob === 'active' ? newJobButtonActive() : newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch(activeView, size)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+  return row(`${viewSwitch(activeView, size, views)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
 
@@ -1440,8 +1442,7 @@ function touchSummaryHeader(size) {
 // The long-press menu (decision 37's right-click menu, decision 65: long-press
 // on touch). Keep holding = the summary straight away (decision 37's "hold
 // the right mouse button" on a touch screen).
-function touchMenuItems(size, onKey = null) {
-  const items = [['open', 'Open job', `job-overview-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]];
+function touchMenuItems(size, onKey = null, items = [['open', 'Open job', `job-overview-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]]) {
   return items.map(([k, label, href]) => `<a role="menuitem" href="${href}" style="display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; color: ${C.ink}; ${k === onKey ? `background: ${C.hover}; outline: 2px solid ${C.accent}; outline-offset: -2px;` : ''}">${esc(label)}</a>`).join('');
 }
 const TOUCH_MENU_TIP = 'Tip: keep holding to see the job’s summary straight away.';
@@ -1548,8 +1549,11 @@ ${diaryLegend()}`, 12), { width: PW_UP, height: PH_UP });
 // ---------- Phone diary (one day down a time line) ----------
 const P_SLOT = 44; // 30 minutes = 44px, so an hour-long job is an 84px block
 const P_GUTTER = 48;
+// The week label opens "Choose a day" (diary-month-phone, Jack, 18 Oct): a
+// 44px tap target. It links there once that board is on the canvas; until
+// then the clickable mockup would count the link as a dead end.
 function phoneWeekNav() {
-  return `<div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0">${dateArrow('prev', 'Previous week')}<span style="min-width: 74px; text-align: center; font-size: 14px; font-weight: 700; color: ${C.ink}; white-space: nowrap">14–20 Sep</span>${dateArrow('next', 'Next week')}</div>`;
+  return `<div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0">${dateArrow('prev', 'Previous week')}<span style="min-width: 74px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 700; color: ${C.ink}; white-space: nowrap">14–20 Sep</span>${dateArrow('next', 'Next week')}</div>`;
 }
 // Replaces the Week/Day switch on a phone (decision 68): the week's seven days,
 // the chosen one raised like the desktop view switch's selected half.
@@ -3166,4 +3170,342 @@ export function signOffDrawings() {
   }).desktop;
   const setting = `<div style="width: 640px; box-sizing: border-box; padding: 20px; background: ${C.bg}">${a11ySettingRow('show-sign-off', 'Show who signed off to customers', 'Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.', false)}</div>`;
   return { popup, finished, setting };
+}
+
+// ---------- What only the old diary did, for Jack to approve ----------
+// Jack, 18 Oct (docs/decisions/2026-10-18-retire-old-diary.md item 2): the
+// old app's diary is retired, and what only it did is built into this one
+// instead, each piece drawn for Jack to approve first. The old app's way
+// (public/app.js before 78960ef) is followed where the new diary has no
+// pattern of its own. Desktop only, as decision 25 did while a design is
+// agreed. Jack approved all five as drawn on 18 Oct
+// (docs/decisions/2026-10-18-old-diary-features.md); not on the canvas yet.
+const MONTH_FIRST = { date: 31, inMonth: false }; // Mon 31 Aug: the week holding 1 Sep (a Tuesday)
+const MONTH_CHIPS = 3; // as the old diary: three jobs, then "+[n] more"
+const MONTH_WEEKS = 5; // 31 Aug to 4 Oct
+// Only the drawn week (14–20 Sep) has example jobs; every other day is empty
+// rather than filled with invented ones.
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const cellDayName = (c) => `${DAY_NAMES[c.idx % 7]} ${c.date} ${c.inMonth ? 'September' : c.date > 20 ? 'August' : 'October'}`;
+function monthDays() {
+  const out = [];
+  for (let i = 0; i < MONTH_WEEKS * 7; i++) {
+    const n = i; // day of September, 0 = 31 Aug
+    if (n < 1) out.push({ idx: i, date: MONTH_FIRST.date, inMonth: false });
+    else if (n > 30) out.push({ idx: i, date: n - 30, inMonth: false });
+    else out.push({ idx: i, date: n, inMonth: true, weekDay: n >= 14 && n <= 20 ? n - 14 : null });
+  }
+  return out;
+}
+// A booking request sits in the month as in the week (decision 12): Sam
+// Reed's pending request, Fri 18 Sep 10:00, purple, no mechanic yet.
+const PENDING_AS_JOB = () => ({ day: PENDING_DIARY.day, start: PENDING_DIARY.start, dur: PENDING_DIARY.dur, mech: '', key: 'pending', job: 'WH-request', svc: PENDING_DIARY.jobTitle, title: `${PENDING_DIARY.customer} · ${PENDING_DIARY.bike}`, detail: PENDING_DIARY.detail, href: 'request-new-desktop.dc.html' });
+const dayJobs = (d) => [...JOBS.filter((j) => j.day === d), ...(PENDING_DIARY.day === d ? [PENDING_AS_JOB()] : [])].sort((a, b) => a.start - b.start || a.mech.localeCompare(b.mech));
+function monthChip(j) {
+  const [bg, ink] = ST[j.key];
+  const [customer, bike] = customerBikeOf(j);
+  const strike = j.key === 'cancelled' ? 'text-decoration: line-through;' : '';
+  return `<a href="${j.href || 'job-overview-desktop.dc.html'}" title="${esc(hhmm(j.start))} · ${esc(bike)} · ${esc(j.svc)} · ${esc(customer)} · ${esc(stageOf(j))}" aria-label="${esc(hhmm(j.start))}, ${esc(bike)}, ${esc(j.svc)}, ${esc(customer)}, ${esc(stageOf(j))}" style="display: block; box-sizing: border-box; padding: 1px 5px; border-radius: 4px; border-left: 3px solid ${ink}; background: ${bg}; font-size: 12px; line-height: 16px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}"><strong style="font-weight: 700">${hhmm(j.start)}</strong> ${esc(bike)}</a>`;
+}
+function monthGrid({ moreOpen = null, touch = false } = {}) {
+  const heads = DAYS.map(([name]) => `<div style="padding: 6px 8px; font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; background: ${C.panel}">${name}</div>`).join('');
+  const cells = monthDays().map((c) => {
+    const isToday = c.weekDay === TODAY;
+    const jobs = c.weekDay == null ? [] : dayJobs(c.weekDay);
+    const shown = jobs.slice(0, MONTH_CHIPS);
+    const more = jobs.length - shown.length;
+    const label = `${c.date}${isToday ? ' · Today' : ''}`;
+    if (touch) {
+      // Decision 68: a day's jobs are too small to tap one by one, so the
+      // whole day is one button that opens its list (Jack, 18 Oct).
+      const plain = (html) => html.replace(/^<a href="[^"]*" title="[^"]*" aria-label="[^"]*"/, '<span').replace(/<\/a>$/, '</span>');
+      return `<div style="position: relative; min-width: 0; background: ${isToday ? C.mutedBg : C.panel}; ${c.inMonth ? '' : 'opacity: 0.55;'}">
+<button type="button" aria-haspopup="dialog" aria-label="${esc(cellDayName(c))}${isToday ? ', today' : ''}, ${jobs.length} job${jobs.length === 1 ? '' : 's'}" style="width: 100%; height: 100%; box-sizing: border-box; padding: 4px 5px; display: flex; flex-direction: column; gap: 3px; border: 0; background: transparent; font-family: inherit; text-align: left; color: inherit">
+<span style="font-size: 13px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}; line-height: 18px">${label}</span>
+${shown.map((j) => plain(monthChip(j))).join('')}
+${more ? `<span style="padding: 0 2px; font-size: 12px; font-weight: 700; line-height: 16px; color: ${C.accentDark}">+${more} more</span>` : ''}
+</button>
+${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay, touch) : ''}
+</div>`;
+    }
+    return `<div style="position: relative; min-width: 0; box-sizing: border-box; padding: 4px 5px; display: flex; flex-direction: column; gap: 3px; background: ${isToday ? C.mutedBg : C.panel}; ${c.inMonth ? '' : 'opacity: 0.55;'}">
+<a href="diary-day-desktop.dc.html" aria-label="Open ${esc(cellDayName(c))} in the Day view" style="align-self: flex-start; font-size: 13px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}; text-decoration: none; line-height: 18px">${label}</a>
+${shown.map(monthChip).join('')}
+${more ? `<button type="button" aria-haspopup="dialog" style="align-self: flex-start; padding: 0 2px; border: 0; background: transparent; font-family: inherit; font-size: 12px; font-weight: 700; line-height: 16px; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 2px">+${more} more</button>` : ''}
+${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay, touch) : ''}
+</div>`;
+  }).join('');
+  return `<div role="grid" aria-label="Workshop diary, September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(${MONTH_WEEKS}, 104px); gap: 1px; background: ${C.border}; border: 1px solid ${C.border}; border-radius: 10px; overflow: visible">${heads}${cells}</div>`;
+}
+const MECH_NAME = { Alex: 'Alex Morgan', Jo: 'Jo Taylor' };
+// "+[n] more": the busy day's whole list, opening over the month from its cell (the old diary
+// opened a pop-up with the same rows: time, job, status, customer · bike,
+// mechanic). Clicking a row opens the job.
+function monthMorePopover(d, touch = false) {
+  const [, date] = DAYS[d];
+  const rows = dayJobs(d).map((j) => {
+    const [customer, bike] = customerBikeOf(j);
+    return `<a href="${j.href || `job-overview-${touch ? 'tablet' : 'desktop'}.dc.html`}" style="display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 10px; align-items: center; ${touch ? 'min-height: 52px; ' : ''}padding: 6px 8px; border-radius: 6px; text-decoration: none; color: ${C.ink}; border-top: 1px solid ${C.border}">
+<span style="font-family: ${MONO}; font-size: 13px; font-weight: 700">${hhmm(j.start)}</span>
+<span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)} · ${esc(j.svc)}</span>
+${statusBadge(j.key, stageOf(j))}
+<span></span><span style="grid-column: 2 / span 2; font-size: 12px; color: ${C.muted}">${esc(customer)} · ${esc(MECH_NAME[j.mech] || 'Booking request, no mechanic yet')}</span>
+</a>`;
+  }).join('');
+  return `<div role="dialog" aria-labelledby="month-more-title" style="position: absolute; left: 0; top: ${touch ? '-160px; max-height: 500px; overflow: hidden' : '0'}; width: 420px; z-index: 6; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 8px; display: flex; flex-direction: column; gap: 0">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 6px 8px"><h2 id="month-more-title" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 15px; font-weight: 700">${DAY_NAMES[d]} ${date} September</h2><button type="button" aria-label="Close" style="width: ${touch ? 44 : 40}px; height: ${touch ? 44 : 40}px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${C.ink}">${icon('close', 18)}</button></div>
+${rows}
+<a href="diary-day-${touch ? 'tablet' : 'desktop'}.dc.html" style="${touch ? 'display: flex; align-items: center; min-height: 44px; padding: 0 8px;' : 'padding: 8px 8px 2px;'} border-top: 1px solid ${C.border}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">Open this day in the Day view</a>
+</div>`;
+}
+const monthBoard = (opts = {}) => shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { activeView: 'Month', views: ['Week', 'Day', 'Month'], newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`${waitingColumn('desktop', -1)}${monthGrid(opts)}`, 16, 'align-items: flex-start')}`, 12));
+
+// Stretching a job: drag its bottom edge. Drawn mid-drag: Maya Patel's
+// WH-1042, 11:30–13:00, pulled down to 13:30 (15-minute steps, as the old
+// diary), with the new times beside the pointer.
+function stretchBoard() {
+  const j = JOBS.find((x) => x.job === 'WH-1042');
+  const was = { dur: j.dur, detail: j.detail };
+  const slotH = 29;
+  const newDur = 120;
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const bottom = top + (newDur / 30) * slotH - 4;
+  const handle = `<div aria-hidden="true" style="position: absolute; left: 3px; right: 3px; top: ${bottom - 7}px; height: 10px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; z-index: 4"><span style="width: 28px; height: 4px; border-radius: 2px; background: ${ST.scheduled[1]}"></span></div>`;
+  const label = `<div role="status" style="position: absolute; left: calc(100% + 6px); top: ${bottom - 14}px; z-index: 5; white-space: nowrap; box-sizing: border-box; padding: 5px 9px; border-radius: 6px; background: ${C.ink}; color: #ffffff; font-size: 13px; font-weight: 700; box-shadow: 0 6px 16px rgba(28,30,25,0.25)"><span style="font-family: ${MONO}">11:30–13:30</span> · 2 hours</div>`;
+  j.dur = newDur; j.detail = '11:30–13:30 · approved £111';
+  try {
+    return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'job', job: 'WH-1042' }, overlayFor: { day: TODAY, html: `${handle}${label}` } })}`, 16, 'align-items: flex-start')}
+${note('Drag the bottom edge of a job to make it longer or shorter, in 15-minute steps. It can’t go past closing time or shorter than 15 minutes.', 13)}`, 12));
+  } finally { Object.assign(j, was); }
+}
+
+// Changing a job's details after it is made: "Change details" on the job
+// page opens the New job form's fields, filled in. The old diary's "Edit job"
+// form had the same fields (title, date, start and end time, customer, bike,
+// mechanic). The mechanic is pills in the booking pop-up's style (decision
+// 62), with full names, as the job page's "Mechanic: Alex Morgan".
+// The job shown, or (request) Oliver Chen's WH-1052, whose customer asked to
+// move it from Mon 14 Sep 10:00 to 14:00 (the drawn week's change request).
+const CD_JOB = { title: 'Standard service', ref: 'WH-1042', customer: 'Maya Patel', bike: 'Trek Domane AL 3 · green', date: 'Thu 17 Sep', start: '11:30', end: '13:00', mech: 'Alex Morgan' };
+const CD_REQUEST_JOB = { title: 'Gear adjustment', ref: 'WH-1052', customer: 'Oliver Chen', bike: 'Brompton C Line', date: 'Mon 14 Sep', start: '10:00', end: '11:00', mech: 'Jo Taylor' };
+// Jack, 18 Oct: when a customer's change request is waiting, Change details
+// says so, in the request's amber. On the desktop board the job page behind
+// is the standard WH-1042 drawing, only scenery (Jack was told when he
+// approved it).
+const requestNote = () => `<div role="note" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${C.ink}; font-size: 14px; line-height: 1.4">
+<strong style="color: ${ST.hold[1]}">Change requested</strong>
+<span>Oliver Chen asked to move this to Mon 14 Sep, 14:00. Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.</span>
+</div>`;
+function changeDetailsDialog(size = 'desktop', request = false) {
+  const J = request ? CD_REQUEST_JOB : CD_JOB;
+  const mechs = [['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
+  const left = `<div style="display: flex; flex-direction: column; gap: 10px">
+${field('Job title', { value: J.title, id: 'cd-title', hint: 'Shown on the diary block.' })}
+${field('Customer', { value: J.customer, id: 'cd-customer' })}
+${select('Bike', [J.bike], 'cd-bike')}
+</div>`;
+  const right = `<div style="display: flex; flex-direction: column; gap: 10px">
+${field('Date', { value: J.date, id: 'cd-date' })}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">${field('Start time', { value: J.start, id: 'cd-start' })}${field('End time', { value: J.end, id: 'cd-end' })}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span id="cd-mech-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="cd-mech-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechs.map(([k, i]) => mechanicPill(k, i, k === J.mech, size)).join('')}</div></div>
+</div>`;
+  // A phone has one column, the fields in the same order (Jack, 18 Oct).
+  const cols = size === 'phone' ? 'flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px' : 'padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px';
+  return `${dialogHeader('Change details', `job-overview-${size}.dc.html`, `${J.title} · ${J.ref}`, 'change-details-title', size)}
+<div style="${cols}">${request ? requestNote() : ''}${left}${right}</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: `job-overview-${size}.dc.html` })}${button('Save changes', { variant: 'primary', href: `job-overview-${size}.dc.html` })}</div>`;
+}
+const CHANGE_BTN = button('Change details', { variant: 'default' });
+function jobPageWithChangeButton(size = 'desktop') {
+  const page = screens['job-overview'][size];
+  if (size === 'phone') {
+    // On a phone it sits in the job's details box, under Diary time and
+    // Ready by, the things it changes, so the top bar keeps the job's name
+    // readable (Jack, 18 Oct: "1").
+    const here = '<button type="button" id="jp-phone-here"';
+    if (page.split(here).length !== 2) throw new Error('job-overview phone: Bike is here not found');
+    return page.replace(here, `<a href="job-change-details-phone.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 14px; font-weight: 600; text-decoration: none">Change details</a>\n${here}`);
+  }
+  const close = `<a href="diary-${size}.dc.html" aria-label="Close, back to the diary"`;
+  if (!page.includes(close)) throw new Error(`job-overview ${size}: close button not found`);
+  return page.replace(close, `<div style="display: flex; align-items: center; gap: 8px">${CHANGE_BTN}${close}`).replace(/(aria-label="Close, back to the diary"[\s\S]*?<\/a>)/, '$1</div>');
+}
+const changeDetailsBoard = () => dialogOverlay(jobPageWithChangeButton(), DW, DH, changeDetailsDialog(), { maxWidth: 760, labelledby: 'change-details-title' });
+// Tablet and phone (drawn 18 Oct for Jack to approve): the same pop-up at
+// touch sizes; on a phone it fills the screen, one column.
+const changeDetailsTabletBoard = () => dialogOverlay(jobPageWithChangeButton('tablet'), TW, TH, changeDetailsDialog('tablet'), { maxWidth: 760, labelledby: 'change-details-title' });
+const changeDetailsPhoneBoard = () => dialogOverlay(jobPageWithChangeButton('phone'), PW, PH, changeDetailsDialog('phone'), { full: true, pad: 0, labelledby: 'change-details-title' });
+
+// The right-click menu gains the old menu's three actions. Greyed out, with
+// the reason, when they can't be done yet (the old diary: "No order linked
+// to this job"). Accepting a booking opens its pop-up (Accept, Another time,
+// Decline), as the Waiting for you card does.
+function jobMenu(anchor, items) {
+  return `<div role="menu" aria-label="Job actions" style="position: absolute; left: ${anchor.left}px; top: ${anchor.top}px; width: 236px; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 5">
+${items.map((it) => (it === '-' ? `<div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>` : it.off
+    ? `<div role="menuitem" aria-disabled="true" style="display: flex; flex-direction: column; justify-content: center; min-height: 40px; padding: 2px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; color: ${C.muted}">${esc(it.label)}<span style="font-size: 12px; font-weight: 400">${esc(it.off)}</span></div>`
+    : `<a role="menuitem" href="${it.href}" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(it.label)}</a>`)).join('')}
+</div>`;
+}
+const menuBoard = (highlightJob, anchor, items) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob }))}${jobMenu(anchor, items)}</div>`;
+const menuJobBoard = () => menuBoard({ type: 'job', job: 'WH-1042' }, CONTEXT_MENU_ANCHOR, [
+  { label: 'Open job', href: 'job-overview-desktop.dc.html' },
+  { label: 'View overview', href: 'job-quick-overview-desktop.dc.html' },
+  '-',
+  { label: 'Open in the till', href: '#' },
+  { label: 'Print receipt', off: 'Not paid yet' },
+]);
+const menuPendingBoard = () => menuBoard({ type: 'pending' }, { left: 713, top: 268 }, [ // left of Friday's block, so it stays on the board
+  { label: 'Accept or decline', href: 'request-new-desktop.dc.html' },
+  { label: 'View overview', href: 'job-quick-overview-desktop.dc.html' },
+  '-',
+  { label: 'Open in the till', off: 'Not booked yet' },
+  { label: 'Print receipt', off: 'Not paid yet' },
+]);
+
+// Showing only the jobs nobody is assigned to: "Shared queue" joins the
+// mechanic chips (the old diary's "Unassigned" pill). Here only WH-1046, in
+// the No time row, is in the shared queue this week.
+function sharedQueueBoard() {
+  const was = TOOLBAR_MECHS;
+  TOOLBAR_MECHS = ['Everyone', 'Alex', 'Jo', 'Shared queue'];
+  CHIP_INITIAL['Shared queue'] = 'group'; // the group icon, as Everyone; this board only
+  try {
+    // A fourth chip needs 25px more than the toolbar has: its two spacers
+    // and the chips' gap close up a little on this board only.
+    const toolbar = diaryToolbar('Shared queue', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })
+      .replace('width: 12px; flex-shrink: 0', 'width: 4px; flex-shrink: 0').replace('width: 20px; flex-shrink: 0', 'width: 8px; flex-shrink: 0')
+      .replace('aria-label="Mechanic" style="display: inline-flex; align-items: center; gap: 6px', 'aria-label="Mechanic" style="display: inline-flex; align-items: center; gap: 4px');
+    return shellDesktop('diary', 'Workshop diary', stack(`${toolbar}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Shared queue' })}`, 16, 'align-items: flex-start')}
+${note('Shared queue: only the jobs no mechanic has yet.', 13)}`, 12));
+  } finally { TOOLBAR_MECHS = was; delete CHIP_INITIAL['Shared queue']; }
+}
+
+// Tablet and phone versions of stretching and the Shared queue (Jack,
+// 18 Oct, `2026-10-18-old-diary-features.md`). On a touch screen the grip
+// shows only on the chosen job (Jack: "1"), chosen by holding it and picking
+// "Change length" (Jack's corrected answer); a finger-sized grip appears on
+// its bottom edge, so dragging to scroll can never stretch a job by accident.
+function touchStretchParts(slotH, newDur, labelSide) {
+  const j = JOBS.find((x) => x.job === 'WH-1042');
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const bottom = top + (newDur / 30) * slotH - 4;
+  // A 44px-tall touch area centred on the bottom edge, with a visible bar.
+  const handle = `<div aria-hidden="true" style="position: absolute; left: 3px; right: 3px; top: ${bottom - 22}px; height: 44px; display: flex; align-items: center; justify-content: center; z-index: 4"><span style="width: 40px; height: 6px; border-radius: 3px; background: ${ST.scheduled[1]}; box-shadow: 0 0 0 2px #ffffff"></span></div>`;
+  const where = labelSide === 'right' ? 'left: calc(100% + 6px);' : 'right: 6px;';
+  const label = `<div role="status" style="position: absolute; ${where} top: ${labelSide === 'right' ? bottom - 16 : bottom - 58}px; z-index: 5; white-space: nowrap; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; background: ${C.ink}; color: #ffffff; font-size: 14px; font-weight: 700; box-shadow: 0 6px 16px rgba(28,30,25,0.25)"><span style="font-family: ${MONO}">11:30–13:30</span> · 2 hours</div>`;
+  return { j, html: `${handle}${label}` };
+}
+function withStretched(j, newDur, fn) {
+  const was = { dur: j.dur, detail: j.detail };
+  j.dur = newDur; j.detail = '11:30–13:30 · approved £111';
+  try { return fn(); } finally { Object.assign(j, was); }
+}
+function stretchTabletBoard() {
+  const { j, html } = touchStretchParts(30, 120, 'right');
+  return withStretched(j, 120, () => tabletDiary({
+    highlightJob: { type: 'job', job: 'WH-1042' },
+    overlayFor: { day: TODAY, html },
+  }));
+}
+function stretchPhoneBoard() {
+  const { j, html } = touchStretchParts(P_SLOT, 120, 'inside');
+  return withStretched(j, 120, () => phoneDiary({
+    day: TODAY,
+    highlightJob: { type: 'job', job: 'WH-1042' },
+    overlayFor: { col: 0, html },
+  }));
+}
+function sharedQueueTabletBoard() {
+  const was = TOOLBAR_MECHS;
+  TOOLBAR_MECHS = ['Everyone', 'Alex', 'Jo', 'Shared queue'];
+  CHIP_INITIAL['Shared queue'] = 'group';
+  try {
+    return tabletDiary({ mechFilter: 'Shared queue' });
+  } finally { TOOLBAR_MECHS = was; delete CHIP_INITIAL['Shared queue']; }
+}
+// The phone's people chip opens its list (Everyone, By mechanic, each
+// mechanic); Shared queue is its last line.
+function sharedQueuePhoneBoard() {
+  const opts = [['Everyone', 'group'], ['By mechanic', 'group'], ['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
+  const badge = (ini) => ini === 'group'
+    ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: ${C.accentSoft}; color: ${C.accentSoftInk}; flex-shrink: 0">${icon('customers', 15)}</span>`
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: ${C.accentSoft}; color: ${C.accentSoftInk}; font-size: 13px; font-weight: 700; flex-shrink: 0">${esc(ini)}</span>`;
+  const list = `<div role="listbox" aria-label="Whose jobs are shown" style="position: absolute; left: 14px; top: 114px; z-index: 20; width: 230px; box-sizing: border-box; padding: 6px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.22); display: flex; flex-direction: column; gap: 2px">${opts.map(([label, ini]) => {
+    const on = label === 'Everyone'; // what is showing now; Shared queue is the new last line
+    return `<div role="option" aria-selected="${on}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 8px; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${badge(ini)}<span style="flex-grow: 1">${esc(label)}</span>${on ? icon('check', 18) : ''}</div>`;
+  }).join('')}</div>`;
+  return phoneDiary({ day: TODAY }, { overlay: list });
+}
+
+// Month view on touch screens (drawn 18 Oct for Jack to approve). Tablet:
+// the desktop month at tablet size; the jobs in a day are too small to tap
+// one by one (decision 68's 44px), so a tap anywhere in a day opens that
+// day's list, finger-sized, as "+[n] more" does on desktop. Phone: no room
+// for jobs in a month, so the week label opens a sheet with the month, each
+// day showing how many jobs it has; a tap on a day goes to that day.
+const monthTabletBoard = (opts = {}) => shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { activeView: 'Month', views: ['Week', 'Day', 'Month'], newJob: 'new-job-pick-tablet.dc.html' })}
+${row(`${waitingColumn('tablet', -1, T_WAIT_W)}${monthGrid({ ...opts, touch: true })}`, 14, 'align-items: flex-start')}
+${note('Tap a day to see its jobs.', 13)}`, 12));
+function phoneMonthSheet() {
+  const heads = DAYS.map(([name]) => `<span style="text-align: center; font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase">${name.slice(0, 1)}</span>`).join('');
+  const cells = monthDays().map((c) => {
+    const isToday = c.weekDay === TODAY;
+    const inWeek = c.weekDay != null;
+    const n = inWeek ? dayJobs(c.weekDay).length : 0;
+    const label = `${cellDayName(c)}${isToday ? ', today' : ''}${inWeek ? `, ${n} job${n === 1 ? '' : 's'}` : ''}`;
+    return `<a href="diary-phone.dc.html" aria-label="${esc(label)}" style="min-height: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 10px; text-decoration: none; ${inWeek ? `background: ${C.mutedBg};` : ''} ${isToday ? `box-shadow: inset 0 0 0 2px ${C.accent};` : ''} color: ${c.inMonth ? C.ink : C.muted}">
+<span style="font-size: 16px; font-weight: 700">${c.date}</span>${inWeek && n ? `<span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">${n} job${n === 1 ? '' : 's'}</span>` : '<span style="font-size: 12px">&nbsp;</span>'}</a>`;
+  }).join('');
+  const body = `<div style="display: flex; align-items: center; justify-content: space-between">${dateArrow('prev', 'Previous month')}<span style="font-size: 16px; font-weight: 700">September 2026</span>${dateArrow('next', 'Next month')}</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">${heads}${cells}</div>
+<span style="font-size: 13px; color: ${C.muted}">Tap a day to open it.</span>`;
+  return phoneSheet({ id: 'month-sheet-title', title: 'Choose a day', sub: 'Jobs in each day, everyone', body, closeHref: 'diary-phone.dc.html', maxH: 600 });
+}
+const monthPhoneBoard = () => phoneDiary({ day: TODAY }, { overlay: phoneMonthSheet() });
+
+// A booking request's long-press menu on touch screens (Jack, 18 Oct): its
+// first item is "Accept or decline", which opens the request pop-up. "Open in
+// the till" and "Print receipt" join when the till can do them (Jack: "1").
+const PENDING_MENU = (size) => [['accept', 'Accept or decline', `request-new-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]];
+function tabletPendingMenu() {
+  const top = ((PENDING_DIARY.start - GRID_START) / 30) * 30 + 2;
+  return `<div role="menu" aria-label="Job actions" style="position: absolute; right: calc(100% + 4px); top: ${top}px; width: 236px; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 6px; z-index: 8; display: flex; flex-direction: column; gap: 2px">
+${touchMenuItems('tablet', null, PENDING_MENU('tablet'))}
+<div style="padding: 8px 12px 4px; border-top: 1px solid ${C.border}; margin-top: 4px; font-size: 12px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</div>
+</div>`;
+}
+const menuPendingTabletBoard = () => tabletDiary({ highlightJob: { type: 'pending' }, overlayFor: { day: PENDING_DIARY.day, html: tabletPendingMenu() } });
+const menuPendingPhoneBoard = () => phoneDiary({ day: PENDING_DIARY.day, highlightJob: { type: 'pending' } }, {
+  overlay: phoneSheet({ id: 'job-menu-title', title: `${PENDING_DIARY.jobTitle} · booking request`, sub: `${PENDING_DIARY.customer} · ${PENDING_DIARY.bike}`, closeHref: 'diary-phone.dc.html',
+    body: `<div role="menu" aria-label="Job actions" style="display: flex; flex-direction: column; gap: 4px">${touchMenuItems('phone', null, PENDING_MENU('phone'))}</div><p style="margin: 0; font-size: 13px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</p>` }),
+});
+
+export function oldDiaryFeatureDrawings() {
+  return {
+    'diary-month': monthBoard(),
+    'diary-month-more': monthBoard({ moreOpen: 0 }),
+    'diary-month-tablet': monthTabletBoard(),
+    'diary-month-more-tablet': monthTabletBoard({ moreOpen: 3 }),
+    'diary-month-phone': monthPhoneBoard(),
+    'diary-stretch': stretchBoard(),
+    'job-change-details': changeDetailsBoard(),
+    'job-change-details-tablet': changeDetailsTabletBoard(),
+    'job-change-details-phone': changeDetailsPhoneBoard(),
+    'job-change-button-phone': jobPageWithChangeButton('phone'),
+    'job-change-details-request': dialogOverlay(jobPageWithChangeButton(), DW, DH, changeDetailsDialog('desktop', true), { maxWidth: 760, labelledby: 'change-details-title' }),
+    'job-change-details-request-phone': dialogOverlay(jobPageWithChangeButton('phone'), PW, PH, changeDetailsDialog('phone', true), { full: true, pad: 0, labelledby: 'change-details-title' }),
+    'diary-menu-job': menuJobBoard(),
+    'diary-menu-pending': menuPendingBoard(),
+    'diary-menu-pending-tablet': menuPendingTabletBoard(),
+    'diary-menu-pending-phone': menuPendingPhoneBoard(),
+    'diary-shared-queue': sharedQueueBoard(),
+    'diary-stretch-tablet': stretchTabletBoard(),
+    'diary-stretch-phone': stretchPhoneBoard(),
+    'diary-shared-queue-tablet': sharedQueueTabletBoard(),
+    'diary-shared-queue-phone': sharedQueuePhoneBoard(),
+  };
 }

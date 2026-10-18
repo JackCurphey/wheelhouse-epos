@@ -116,7 +116,8 @@ test('right-click shows Job actions; View overview shows notes, line items and t
   const { ui, fireEvent, within } = await openDiary([FULL]);
   fireEvent.contextMenu(await block(ui), { clientX: 200, clientY: 200 });
   const menu = within(ui.getByRole('menu', { name: 'Job actions' }));
-  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Open job', 'View overview']);
+  // A job that can be moved can have its length changed too (Jack, 18 Oct).
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Open job', 'View overview', 'Change length']);
   assert.ok(has(menu.queryByText('Tip: hold the right mouse button to open the overview straight away.')));
   fireEvent.click(menu.getByRole('menuitem', { name: 'View overview' }));
   const box = within(await ui.findByRole('dialog', { name: 'Standard service · WH-1042' }));

@@ -144,6 +144,8 @@ answers, in the order given.
     (e.g. "Mechanic: Alex Morgan");
     New job takes the mechanic from where you clicked (or the automatic
     choice in the Everyone view, item 18) without a select.
+    *(Changed 18 Oct by Jack: the job page's "Change details" pop-up also
+    offers the mechanic, as pills; `2026-10-18-old-diary-features.md` answer 3.)*
 33. **The job page is a refined version of Citrus Lime's job page** (Jack,
     28 Sep, after comparing options 5 and 6): he prefers option 5, and
     seeing the work and parts list straight away is part of why. Work and

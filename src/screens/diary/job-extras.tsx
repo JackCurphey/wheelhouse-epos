@@ -145,8 +145,12 @@ export type MenuAt = { x: number; y: number; touch: boolean; phone: boolean };
  * Decision 37: Open job and View overview. Arrow keys move through it,
  * Escape or a click elsewhere closes it, and focus goes back to the job.
  */
-export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
+export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, onAnswer }: {
   job: WorkshopJob; at: MenuAt; onClose: (returnFocus: boolean) => void; onOpenJob: () => void; onOverview: () => void;
+  /** A booking request (Jack, 18 Oct): "Accept or decline" in place of Open job, opening its pop-up. */
+  onAnswer?: () => void;
+  /** "Change length" (Jack, 18 Oct): only for a job that can be moved. */
+  onStretch?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: at.x, top: at.y });
@@ -217,12 +221,16 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
         // As drawn (diary-context-menu, phone): the job, then whose it is. A
         // menu holds only menu items, so this is the menu's description.
         <span id="job-menu-head" aria-hidden="true" className="flex flex-col gap-0.5 px-4 pt-3.5 pb-2">
-          <span className="text-base font-bold">{headOf(job)}</span>
+          {/* A booking request has no job yet to number: "[job] · booking request", as drawn (Jack, 18 Oct). */}
+          <span className="text-base font-bold">{job.bookingState === 'pending' ? `${job.title} · booking request` : headOf(job)}</span>
           <span className="text-sm text-[var(--wh-muted)]">{whoOf(job)}</span>
         </span>
       ) : null}
-      <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOpenJob}>Open job</button>
+      {onAnswer
+        ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onAnswer}>Accept or decline</button>
+        : <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOpenJob}>Open job</button>}
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOverview}>View overview</button>
+      {onStretch ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onStretch}>Change length</button> : null}
       <p className="m-0 border-t border-[var(--wh-border)] px-3.5 pt-2 pb-1.5 text-xs leading-snug text-[var(--wh-muted)]">{tip}</p>
     </div>
   );
