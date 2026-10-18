@@ -58,8 +58,8 @@ left empty rather than filled with made-up jobs.
    queue" is the new app's word for them already. Chosen over leaving it to
    the Overview page's Shared queue tab.
 
-**Still to do:** the tablet and phone versions of month view, Change details
-and the menu, drawn before each piece is built; an OpenSpec change for each piece (each touches the
+**Still to do:** the tablet and phone versions of Change details and the
+menu, drawn before each piece is built; an OpenSpec change for each piece (each touches the
 `workshop-diary` spec). How the menu prints a paid job's till receipt
 is settled when it is built (the old diary built the receipt in the browser
 from the sale and printed the page). Deleting a job and
@@ -86,3 +86,17 @@ the canvas yet.
 - **Shared queue on a tablet** is a fourth button after the mechanics, as on
   desktop; **on a phone** it is the last line of the "whose jobs" list,
   after Everyone, By mechanic and each mechanic.
+
+**Month view on tablet and phone, 18 Oct** (Jack approved all three
+drawings: "1"): `monthTabletBoard` and `monthPhoneBoard` in `diary.mjs`,
+not on the canvas yet.
+
+- **Tablet:** the desktop month at tablet size (Week, Day, Month; up to three
+  jobs a day and "+[n] more"). A day's jobs are too small to tap one by one
+  (decision 68's 44px), so a tap anywhere in a day opens that day's list
+  with finger-sized rows; a row opens its job, and the last line opens the
+  day in the Day view.
+- **Phone:** no room for jobs in a month, so a tap on the week label opens
+  a "Choose a day" sheet with the month, each day showing how many jobs it
+  has; a tap on a day goes to that day. Chosen over no month view on the
+  phone.
