@@ -3287,7 +3287,7 @@ ${note('Drag the bottom edge of a job to make it longer or shorter, in 15-minute
 // form had the same fields (title, date, start and end time, customer, bike,
 // mechanic). The mechanic is pills in the booking pop-up's style (decision
 // 62), with full names, as the job page's "Mechanic: Alex Morgan".
-function changeDetailsDialog() {
+function changeDetailsDialog(size = 'desktop') {
   const mechs = [['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
   const left = `<div style="display: flex; flex-direction: column; gap: 10px">
 ${field('Job title', { value: 'Standard service', id: 'cd-title', hint: 'Shown on the diary block.' })}
@@ -3297,20 +3297,34 @@ ${select('Bike', ['Trek Domane AL 3 · green'], 'cd-bike')}
   const right = `<div style="display: flex; flex-direction: column; gap: 10px">
 ${field('Date', { value: 'Thu 17 Sep', id: 'cd-date' })}
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">${field('Start time', { value: '11:30', id: 'cd-start' })}${field('End time', { value: '13:00', id: 'cd-end' })}</div>
-<div style="display: flex; flex-direction: column; gap: 6px"><span id="cd-mech-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="cd-mech-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechs.map(([k, i]) => mechanicPill(k, i, k === 'Alex Morgan')).join('')}</div></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span id="cd-mech-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="cd-mech-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechs.map(([k, i]) => mechanicPill(k, i, k === 'Alex Morgan', size)).join('')}</div></div>
 </div>`;
-  return `${dialogHeader('Change details', 'job-overview-desktop.dc.html', 'Standard service · WH-1042', 'change-details-title')}
-<div style="padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px">${left}${right}</div>
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: 'job-overview-desktop.dc.html' })}${button('Save changes', { variant: 'primary', href: 'job-overview-desktop.dc.html' })}</div>`;
+  // A phone has one column, the fields in the same order (Jack, 18 Oct).
+  const cols = size === 'phone' ? 'flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px' : 'padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px';
+  return `${dialogHeader('Change details', 'job-overview-${size}.dc.html', 'Standard service · WH-1042', 'change-details-title', size)}
+<div style="${cols}">${left}${right}</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: 'job-overview-${size}.dc.html' })}${button('Save changes', { variant: 'primary', href: 'job-overview-${size}.dc.html' })}</div>`;
 }
 const CHANGE_BTN = button('Change details', { variant: 'default' });
-function jobPageWithChangeButton() {
-  const page = screens['job-overview'].desktop;
-  const close = '<a href="diary-desktop.dc.html" aria-label="Close, back to the diary"';
-  if (!page.includes(close)) throw new Error('job-overview desktop: close button not found');
+function jobPageWithChangeButton(size = 'desktop') {
+  const page = screens['job-overview'][size];
+  if (size === 'phone') {
+    // On a phone it sits in the job's details box, under Diary time and
+    // Ready by, the things it changes, so the top bar keeps the job's name
+    // readable (Jack, 18 Oct: "1").
+    const here = '<button type="button" id="jp-phone-here"';
+    if (page.split(here).length !== 2) throw new Error('job-overview phone: Bike is here not found');
+    return page.replace(here, `<a href="job-change-details-phone.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 14px; font-weight: 600; text-decoration: none">Change details</a>\n${here}`);
+  }
+  const close = `<a href="diary-${size}.dc.html" aria-label="Close, back to the diary"`;
+  if (!page.includes(close)) throw new Error(`job-overview ${size}: close button not found`);
   return page.replace(close, `<div style="display: flex; align-items: center; gap: 8px">${CHANGE_BTN}${close}`).replace(/(aria-label="Close, back to the diary"[\s\S]*?<\/a>)/, '$1</div>');
 }
 const changeDetailsBoard = () => dialogOverlay(jobPageWithChangeButton(), DW, DH, changeDetailsDialog(), { maxWidth: 760, labelledby: 'change-details-title' });
+// Tablet and phone (drawn 18 Oct for Jack to approve): the same pop-up at
+// touch sizes; on a phone it fills the screen, one column.
+const changeDetailsTabletBoard = () => dialogOverlay(jobPageWithChangeButton('tablet'), TW, TH, changeDetailsDialog('tablet'), { maxWidth: 760, labelledby: 'change-details-title' });
+const changeDetailsPhoneBoard = () => dialogOverlay(jobPageWithChangeButton('phone'), PW, PH, changeDetailsDialog('phone'), { full: true, pad: 0, labelledby: 'change-details-title' });
 
 // The right-click menu gains the old menu's three actions. Greyed out, with
 // the reason, when they can't be done yet (the old diary: "No order linked
@@ -3450,6 +3464,9 @@ export function oldDiaryFeatureDrawings() {
     'diary-month-phone': monthPhoneBoard(),
     'diary-stretch': stretchBoard(),
     'job-change-details': changeDetailsBoard(),
+    'job-change-details-tablet': changeDetailsTabletBoard(),
+    'job-change-details-phone': changeDetailsPhoneBoard(),
+    'job-change-button-phone': jobPageWithChangeButton('phone'),
     'diary-menu-job': menuJobBoard(),
     'diary-menu-pending': menuPendingBoard(),
     'diary-shared-queue': sharedQueueBoard(),
