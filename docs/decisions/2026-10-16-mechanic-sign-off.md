@@ -84,3 +84,13 @@ in the status update"), as #265 and #267 were.
 **Piece 2, the till asking too, merged with its `sales.js` change flagged for
 Mark** (Jack, 18 Oct: "Yes: merge #273 once GitHub's checks pass, and flag
 the sales.js change for Mark in the status update").
+
+## Piece 3: showing customers who signed off (18 Oct 2026)
+
+Piece 3 needs a settings page the new app doesn't have yet, and "Checked by"
+on a receipt and on the booking link, neither drawn. Jack chose to **draw
+first, then build** (Jack: "1: draw the switch in Settings › Workshop ›
+Mechanics and Checked by on the receipt and booking link, for my approval,
+then build it"). Chosen over leaving piece 3 until the Settings pages are
+built (WP-5.1). The switch stays off at a real shop until the solicitor's
+check (answer 3).
