@@ -288,9 +288,10 @@ test('the Week/Day switch sits next to the date arrows', async ({ page, context 
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
-  const day = (await page.getByRole('tab', { name: 'Day' }).boundingBox())!;
+  // The switch's last tab is Month since 18 Oct (Jack: month view).
+  const last = (await page.getByRole('tab', { name: 'Month' }).boundingBox())!;
   const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
-  expect(prev.x - (day.x + day.width)).toBeLessThan(40);
+  expect(prev.x - (last.x + last.width)).toBeLessThan(40);
 });
 
 // After the fresh review: on a 360px phone away from today, with "By

@@ -679,9 +679,11 @@ function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay }: {
   const listJobs = listDay ? jobsOn(listDay) : [];
   return (
     <>
-      <div role="grid" aria-label={`Workshop diary, ${monthLabel(month)}`} className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-[var(--wh-border)] bg-[var(--wh-border)]">
+      {/* A region of day groups, as the week's grid (fresh review): each day's
+          name carries its weekday, so the headings are hidden from readers. */}
+      <section aria-label={`Workshop diary, ${monthLabel(month)}`} className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-[var(--wh-border)] bg-[var(--wh-border)]">
         {WEEKDAY_HEADS.map((h) => (
-          <div key={h} className="bg-[var(--wh-panel)] px-2 py-1.5 text-center text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">{h}</div>
+          <div key={h} aria-hidden="true" className="bg-[var(--wh-panel)] px-2 py-1.5 text-center text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">{h}</div>
         ))}
         {days.map((d) => {
           const list = jobsOn(d);
@@ -694,27 +696,37 @@ function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay }: {
               key={d}
               role="group"
               aria-label={dayLabel(d)}
-              onClick={coarse ? () => setListDay(d) : undefined}
-              className={`flex min-h-[104px] min-w-0 flex-col gap-[3px] px-[5px] py-1 ${isToday ? 'bg-[var(--wh-surface-muted)]' : 'bg-[var(--wh-panel)]'} ${out ? 'opacity-55' : ''} ${coarse ? 'cursor-pointer' : ''}`}
+              className={`flex min-h-[104px] min-w-0 flex-col gap-[3px] px-[5px] py-1 ${isToday ? 'bg-[var(--wh-surface-muted)]' : 'bg-[var(--wh-panel)]'} ${out ? 'opacity-55' : ''}`}
             >
               <button
                 type="button"
                 aria-label={`Open ${dayLabel(d)} in the Day view`}
-                onClick={(e) => { e.stopPropagation(); onOpenDay(d); }}
-                className={`self-start text-[13px] leading-[18px] font-bold ${isToday ? 'text-[var(--wh-accent-dark)]' : ''}`}
+                onClick={() => onOpenDay(d)}
+                className={`self-start text-[13px] leading-[18px] font-bold ${coarse ? 'min-h-11 min-w-11 text-left' : ''} ${isToday ? 'text-[var(--wh-accent-dark)]' : ''}`}
               >
                 {Number(d.slice(8))}{isToday ? ' · Today' : ''}
               </button>
-              {shown.map((j) => (coarse ? (
-                <span key={j.partId} className={chipClass(j)} title={chipName(j)}>{chipText(j)}</span>
-              ) : (
-                <button key={j.partId} type="button" aria-label={chipName(j)} title={chipName(j)} onClick={() => onOpen(j)} className={chipClass(j)}>{chipText(j)}</button>
-              )))}
-              {more > 0 ? (
+              {coarse ? (
+                // On a touch screen the rest of the day is one button that
+                // opens its list (diary-month-tablet), so every way in works.
                 <button
                   type="button"
                   aria-haspopup="dialog"
-                  onClick={(e) => { e.stopPropagation(); setListDay(d); }}
+                  aria-label={`Show ${dayLabel(d)}’s jobs, ${list.length} job${list.length === 1 ? '' : 's'}`}
+                  onClick={() => setListDay(d)}
+                  className="flex min-h-11 grow flex-col gap-[3px] text-left"
+                >
+                  {shown.map((j) => <span key={j.partId} className={chipClass(j)}>{chipText(j)}</span>)}
+                  {more > 0 ? <span className="px-0.5 text-xs leading-4 font-bold text-[var(--wh-accent-dark)]">+{more} more</span> : null}
+                </button>
+              ) : shown.map((j) => (
+                <button key={j.partId} type="button" aria-label={chipName(j)} title={chipName(j)} onClick={() => onOpen(j)} className={chipClass(j)}>{chipText(j)}</button>
+              ))}
+              {!coarse && more > 0 ? (
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => setListDay(d)}
                   className="self-start px-0.5 text-xs leading-4 font-bold text-[var(--wh-accent-dark)] underline underline-offset-2"
                 >
                   +{more} more
@@ -723,7 +735,8 @@ function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay }: {
             </div>
           );
         })}
-      </div>
+      </section>
+      {coarse ? <p className="m-0 mt-2 text-[13px] text-[var(--wh-muted)]">Tap a day to see its jobs.</p> : null}
       <Dialog open={listDay !== null} onOpenChange={(o) => { if (!o) setListDay(null); }} aria-labelledby="month-day-title">
         <DialogHeader>
           <DialogTitle id="month-day-title">{listDay ? dayLabel(listDay) : ''}</DialogTitle>
@@ -763,8 +776,8 @@ function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay }: {
  * week label opens the month, each day showing how many jobs it has; a tap
  * on a day goes to it.
  */
-function ChooseDaySheet({ open, date, who, onClose, onPick }: {
-  open: boolean; date: string; who: (j: Shown) => boolean; onClose: () => void; onPick: (day: string) => void;
+function ChooseDaySheet({ open, date, who, whose, onClose, onPick }: {
+  open: boolean; date: string; who: (j: Shown) => boolean; whose: string; onClose: () => void; onPick: (day: string) => void;
 }) {
   const [month, setMonth] = useState(date);
   const days = monthOf(month);
@@ -784,7 +797,10 @@ function ChooseDaySheet({ open, date, who, onClose, onPick }: {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="choose-day-title">
       <DialogHeader>
-        <DialogTitle id="choose-day-title">Choose a day</DialogTitle>
+        <span className="flex flex-col gap-0.5">
+          <DialogTitle id="choose-day-title">Choose a day</DialogTitle>
+          <span className="text-[13px] text-[var(--wh-muted)]">Jobs in each day, {whose}</span>
+        </span>
         <button type="button" aria-label="Close" onClick={onClose} className="inline-flex size-11 items-center justify-center rounded-lg">
           <NavIcon name="close" size={20} />
         </button>
@@ -1705,7 +1721,7 @@ export function DiaryPage() {
         </div>
 
         {waitingSheet}
-        <ChooseDaySheet key={chooseOpen ? `open-${date}` : 'closed'} open={chooseOpen} date={date} who={(j) => (shared ? j.mechanicId === null : whoId === null || j.mechanicId === whoId)} onClose={() => setChooseOpen(false)} onPick={(d) => { setChooseOpen(false); set({ date: d }); }} />
+        <ChooseDaySheet key={chooseOpen ? `open-${date}` : 'closed'} open={chooseOpen} date={date} who={(j) => (shared ? j.mechanicId === null : whoId === null || j.mechanicId === whoId)} whose={shared ? 'Shared queue' : whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'everyone' : 'everyone'} onClose={() => setChooseOpen(false)} onPick={(d) => { setChooseOpen(false); set({ date: d }); }} />
 
         {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
         {newJobDialog}
@@ -1728,7 +1744,7 @@ export function DiaryPage() {
               type="button"
               role="tab"
               aria-selected={view === v}
-              onClick={() => set({ view: v === 'week' ? null : v })}
+              onClick={() => { if (v === 'month') setPicking(false); set({ view: v === 'week' ? null : v }); }}
               className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-[13px] font-semibold pointer-coarse:min-h-11 ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
             >
               {v === 'week' ? 'Week' : v === 'day' ? 'Day' : 'Month'}

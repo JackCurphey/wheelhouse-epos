@@ -53,7 +53,12 @@ test('on a tablet, a tap on a day opens its list, with finger-sized rows', async
     await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
     const page = await ctx.newPage();
     await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}&view=month`);
-    await page.getByRole('group', { name: 'Tuesday 13 October' }).tap();
+    const tue = page.getByRole('group', { name: 'Tuesday 13 October' });
+    // On a tablet the jobs inside a day aren't tapped one by one.
+    await expect(tue.getByRole('button', { name: /^09:00,/ })).toHaveCount(0);
+    // The date's tap area is finger-sized.
+    expect((await tue.getByRole('button', { name: /in the Day view$/ }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await tue.getByText('+1 more').tap();
     const list = page.getByRole('dialog', { name: 'Tuesday 13 October' });
     await expect(list).toBeVisible();
     const row = list.getByRole('button', { name: /Safety check/ });

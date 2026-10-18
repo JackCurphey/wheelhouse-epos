@@ -147,9 +147,28 @@ test('Next month loads the next month', async () => {
 test('on a touch screen, a tap anywhere in a day opens its list', async () => {
   const coarse = (q) => ({ matches: q.includes('pointer: coarse'), media: q, addEventListener() {}, removeEventListener() {} });
   const { ui, within, fireEvent } = await openDiary(MONTH_Q, null, coarse);
-  fireEvent.click(await ui.findByRole('group', { name: 'Thursday 8 October' }));
+  // A real button over the day's jobs, so a keyboard, Switch Control or
+  // Voice Control can open it too (fresh review).
+  const thu = within(await ui.findByRole('group', { name: 'Thursday 8 October' }));
+  fireEvent.click(thu.getByRole('button', { name: /^Show Thursday 8 October’s jobs/ }));
   assert.ok(has(await ui.findByRole('dialog', { name: 'Thursday 8 October' })));
+  assert.ok(has(ui.queryByText('Tap a day to see its jobs.')));
   // The list's rows are the way to a job here; so the chips aren't tapped one by one.
   const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
   assert.equal(has(tue.queryByRole('button', { name: /^10:00, Trek Domane/ })), false);
+});
+
+test('the month is a plain region, not a grid that arrow keys can\'t move in', async () => {
+  const { ui } = await openDiary(MONTH_Q, null);
+  assert.ok(has(await ui.findByRole('region', { name: 'Workshop diary, October 2026' })));
+  assert.equal(has(ui.queryByRole('grid')), false);
+});
+
+test('switching to Month while choosing a time for New job stops choosing', async () => {
+  const { ui, fireEvent } = await openDiary('?date=2026-10-06', 'Trek Domane');
+  fireEvent.click(ui.getByRole('button', { name: 'New job' }));
+  assert.ok(has(ui.queryByText('Choose a time for the new job.')));
+  fireEvent.click(ui.getByRole('tab', { name: 'Month' }));
+  await ui.findByText('October 2026');
+  assert.equal(has(ui.queryByText(/Choose a time for the new job/)), false);
 });

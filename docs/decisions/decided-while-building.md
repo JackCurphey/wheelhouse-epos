@@ -293,6 +293,12 @@ silent:
    the feature catalogue, CAL-05 ("month is click-to-open").
 4. **A day with no jobs in its list says "No jobs this day."** *Pattern:*
    "Nothing waiting."
+5. **The day's list names a job with no mechanic "Shared queue"**, where the
+   drawing says "Booking request, no mechanic yet". *Pattern:* answer 5's
+   Shared queue, the new app's word for jobs no mechanic has yet.
+6. **On a touch screen the date has a 44px tap area** and still opens the
+   Day view; the rest of the day is one button that opens its list.
+   *Pattern:* decision 68; the drawing keeps the date as its own link.
 
 ## Decided here, for Jack to overrule
 
