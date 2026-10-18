@@ -321,6 +321,10 @@ silent:
 6. **The note adds "with [mechanic]" when the request also moves the job to
    another mechanic**, as accepting it needs that mechanic too. *Pattern:*
    the change request pop-up's From and To, which name the mechanic.
+7. **No note for a request for a drop-off day with no time**, and on a job
+   over several days the note ends "Answer it from Waiting for you.", since
+   its dates change in the diary and a save here can't accept it.
+   *Pattern:* the several-days rule above (item 2).
 
 ## Decided here, for Jack to overrule
 

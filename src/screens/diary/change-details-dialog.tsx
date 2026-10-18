@@ -148,7 +148,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
         {asked?.jobDate && asked.startTime ? (
           <div role="note" className="flex flex-col gap-1 rounded-lg border border-[var(--wh-state-hold-ink)] bg-[var(--wh-state-hold-bg)] px-3 py-2.5 text-sm leading-snug md:col-span-2">
             <strong className="text-[var(--wh-state-hold-ink)]">Change requested</strong>
-            <span>{`${job.customerName || 'The customer'} asked to move this to ${shortDay(asked.jobDate)}, ${asked.startTime}${askedWho ? ` with ${askedWho}` : ''}. Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.`}</span>
+            <span>{`${job.customerName || 'The customer'} asked to move this to ${shortDay(asked.jobDate)}, ${asked.startTime}${askedWho ? ` with ${askedWho}` : ''}. ${manyDays ? 'Answer it from Waiting for you.' : 'Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.'}`}</span>
           </div>
         ) : null}
         <div className="flex min-w-0 flex-col gap-2.5">

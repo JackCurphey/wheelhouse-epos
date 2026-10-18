@@ -3292,7 +3292,9 @@ ${note('Drag the bottom edge of a job to make it longer or shorter, in 15-minute
 const CD_JOB = { title: 'Standard service', ref: 'WH-1042', customer: 'Maya Patel', bike: 'Trek Domane AL 3 · green', date: 'Thu 17 Sep', start: '11:30', end: '13:00', mech: 'Alex Morgan' };
 const CD_REQUEST_JOB = { title: 'Gear adjustment', ref: 'WH-1052', customer: 'Oliver Chen', bike: 'Brompton C Line', date: 'Mon 14 Sep', start: '10:00', end: '11:00', mech: 'Jo Taylor' };
 // Jack, 18 Oct: when a customer's change request is waiting, Change details
-// says so, in the request's amber.
+// says so, in the request's amber. On the desktop board the job page behind
+// is the standard WH-1042 drawing, only scenery (Jack was told when he
+// approved it).
 const requestNote = () => `<div role="note" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${C.ink}; font-size: 14px; line-height: 1.4">
 <strong style="color: ${ST.hold[1]}">Change requested</strong>
 <span>Oliver Chen asked to move this to Mon 14 Sep, 14:00. Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.</span>

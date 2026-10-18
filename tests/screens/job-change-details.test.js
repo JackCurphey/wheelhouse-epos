@@ -234,3 +234,28 @@ test('no request, no note', async () => {
   const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
   assert.equal(has(dlg.queryByRole('note')), false);
 });
+
+test('a request for a drop-off day with no time asked for shows no note', async () => {
+  const { ui, page, fireEvent, within } = await openChange({
+    bookingState: 'reschedule_requested', customerName: 'Oliver Chen',
+    requested: { jobDate: '2026-10-07', startTime: '', endTime: '', mechanicId: 11 },
+  });
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  await dlg.findByLabelText('Job title');
+  assert.equal(has(dlg.queryByRole('note')), false);
+});
+
+test('on a job over several days the note says to answer it from Waiting for you', async () => {
+  const { ui, page, fireEvent, within } = await openChange({
+    bookingState: 'reschedule_requested', customerName: 'Oliver Chen',
+    requested: { jobDate: '2026-10-07', startTime: '14:00', endTime: '15:00', mechanicId: 11 },
+    parts: [
+      { id: 21, position: 1, date: '2026-10-06', startTime: '10:00', endTime: '11:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
+      { id: 22, position: 2, date: '2026-10-07', startTime: '10:00', endTime: '11:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
+    ],
+  });
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  assert.ok(has(within(dlg.getByRole('note')).queryByText('Oliver Chen asked to move this to Wed 7 Oct, 14:00. Answer it from Waiting for you.')));
+});
