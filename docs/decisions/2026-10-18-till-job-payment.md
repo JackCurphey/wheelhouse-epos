@@ -24,3 +24,12 @@ till").
 The drawings it follows: `till-job` (desktop, tablet, phone, `till.mjs`),
 the job page's "Take payment" (`job-finished`, `diary.mjs`) and
 `diary-menu-job` (desktop).
+3. **Two small server changes, flagged for Mark** (Jack: "1"; found by the
+   fresh review): paying a job's order could charge the card and then be
+   refused, when the customer or order has a discount the till didn't know
+   of, or when a fitted part is out of stock. So the till asks the server
+   for the amount actually due (discounts included) before taking payment,
+   and paying a job's order sells past zero stock as the plain till does
+   (journey 11 decision 5), the line warning "Stock says [n] — sold anyway".
+   Both change `server/routes/sales.js`, Mark's; STATUS tells him. Chosen
+   over guarding on the screen only, and over holding the work for Mark.

@@ -25,6 +25,7 @@ let calls;
 let JOB;
 let ORDER;
 let convertReply;
+let DUE;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -65,14 +66,16 @@ function stubServer(employee) {
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
+    if (u.pathname === '/api/sale-documents/40/due') return reply(200, DUE);
     return reply(404, { error: 'Not found' });
   };
 }
 
-async function openJobTill({ jobOver = {}, orderOver = {} } = {}) {
+async function openJobTill({ jobOver = {}, orderOver = {}, dueOver = {} } = {}) {
   JOB = job(jobOver);
   ORDER = order(orderOver);
   convertReply = null;
+  DUE = { subtotal: 83, discount: 0, groupDiscount: 0, groupName: '', total: 83, stock: { 7: 5 }, ...dueOver };
   uninstall = installDom('http://localhost/workshop/till?job=1');
   window.WH_TILL_TICK_MS = 20;
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
@@ -88,7 +91,10 @@ async function openJobTill({ jobOver = {}, orderOver = {} } = {}) {
 const has = (q) => Boolean(q);
 const posts = (path) => calls.filter((c) => c.method === 'POST' && c.url === path).map((c) => c.body);
 async function payByCard(t) {
-  t.fireEvent.click(await t.sale.findByRole('button', { name: /^Take payment/ }));
+  const take = await t.sale.findByRole('button', { name: /^Take payment/ });
+  // It waits for the amount due to arrive.
+  await t.waitFor(() => assert.equal(take.disabled, false));
+  t.fireEvent.click(take);
   const dlg = t.within(await t.ui.findByRole('dialog'));
   t.fireEvent.click(dlg.getByRole('button', { name: /^Card · / }));
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Card approved' }));
@@ -111,7 +117,7 @@ test('paying pays the whole order, then records the bike as collected', async ()
   await t.sale.findByText('Maya Patel · workshop job WH-1042');
   await payByCard(t);
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
-  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21 });
+  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true });
   await t.waitFor(() => assert.deepEqual(posts('/api/workshop-jobs/1/collect'), [{ version: 8 }]));
   assert.equal(posts('/api/sales').length, 0);
 });
@@ -168,4 +174,21 @@ test('a cancelled order is not called paid', async () => {
   const { sale } = await openJobTill({ jobOver: { orderStatus: 'cancelled' }, orderOver: { status: 'cancelled' } });
   assert.ok(has(await sale.findByText('This job’s order was cancelled, so there’s nothing to pay here.')));
   assert.equal(has(sale.queryByText('This job’s order is already paid.')), false);
+});
+
+// Jack, 18 Oct (answer 3): the till pays the amount due, with the order's and
+// the customer's discounts taken off, and sells past zero stock, warning.
+test('a customer group and an order discount come off, and the card is asked for what is due', async () => {
+  const t = await openJobTill({ dueOver: { discount: 2, groupDiscount: 8.1, groupName: 'Blue Light (10%)', total: 72.9 } });
+  assert.ok(has(await t.sale.findByText('Blue Light (10%)')));
+  assert.ok(has(t.sale.queryByText('−£8.10')));
+  assert.ok(has(t.sale.queryByText('−£2.00')));
+  assert.ok(has(await t.sale.findByRole('button', { name: 'Take payment · £72.90' })));
+  await payByCard(t);
+  await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert')[0]?.cardAmount, 72.9));
+});
+
+test('a part out of stock is sold anyway, and says so', async () => {
+  const { sale } = await openJobTill({ dueOver: { stock: { 7: 0 } } });
+  assert.ok(has(await sale.findByText('Stock says 0 — sold anyway')));
 });

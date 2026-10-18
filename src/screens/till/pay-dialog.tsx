@@ -42,7 +42,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * paying converts the order, which charges its own saved lines, and then
  * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
  */
-type JobPayment = { orderId: number; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
+type JobPayment = { orderId: number; total: number; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
 export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
   const session = useSession();
@@ -51,7 +51,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const total = saleTotal(lines);
+  // A job's order is paid at the amount due, discounts taken off on the server.
+  const total = job ? job.total : saleTotal(lines);
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const sub = serving ? `${serving.name} serving · ${items(count)}` : items(count);
 
@@ -63,7 +64,7 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       // To the penny: the screen rounds what staff type, so the record must too.
       const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, cashierId: serving.id };
       let note: string | null = null;
-      if (job) note = await job.afterPaid(await apiMutate<{ jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, amounts));
+      if (job) note = await job.afterPaid(await apiMutate<{ jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true }));
       else await apiMutate('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
       setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note });
     } catch (err) {

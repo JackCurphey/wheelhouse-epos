@@ -9,7 +9,7 @@
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
-  serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow,
+  serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, resolveGroupDiscount,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
 import { work } from '../workshop/state-machines.js';
@@ -352,6 +352,29 @@ export function register(route) {
     sendJson(res, 200, serializeSaleDocument(row, savedItems));
   });
 
+  // What paying an order takes now (Jack, 18 Oct, docs/decisions/2026-10-18-till-job-payment.md):
+  // the till asks before the card machine is keyed, since the order's own
+  // discount and the customer's group discount come off here, as in createSale.
+  // Also each part's stock, so the till can say "sold anyway".
+  route('GET', '/api/sale-documents/:id/due', async (req, res, params) => {
+    const id = Number(params.id);
+    const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
+    if (!doc) return notFound(res, 'Not found');
+    const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+    const subtotal = items.reduce((sum, it) => sum + Number(it.unit_price) * it.qty, 0);
+    const group = await resolveGroupDiscount(doc.customer_id, subtotal);
+    const discount = Number(doc.discount) || 0;
+    const total = Math.max(0, subtotal - discount - group.amount);
+    const stock = {};
+    for (const it of items) {
+      if (!it.product_id) continue;
+      const product = await db.prepare('SELECT stock_qty FROM products WHERE id = ?').get(it.product_id);
+      if (product) stock[it.product_id] = product.stock_qty;
+    }
+    const round = (n) => Math.round(n * 100) / 100;
+    sendJson(res, 200, { subtotal: round(subtotal), discount: round(discount), groupDiscount: group.amount, groupName: group.name, total: round(total), stock });
+  });
+
   route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
@@ -438,6 +461,9 @@ export function register(route) {
           cardAmount,
           cashTendered,
           payments,
+          // The till paying a workshop job sells past zero stock, as it does
+          // any sale (journey 11 decision 5; Jack, 18 Oct).
+          sellPastStock: body.sellPastStock === true,
           note: `Converted from ${doc.kind} #${doc.id}`,
         },
         { deferShopifyPushesTo: shopifyPushes }

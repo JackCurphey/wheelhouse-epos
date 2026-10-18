@@ -257,7 +257,7 @@ export async function resolveCashierId(rawId) {
 // the customer's groups carries the highest discount_percent, so a sale's
 // group discount can't be tampered with via the API. Applies to the same net
 // subtotal (after any per-line price overrides) that the flat discount does.
-async function resolveGroupDiscount(customerId, subtotal) {
+export async function resolveGroupDiscount(customerId, subtotal) {
   if (!customerId) return { amount: 0, name: '' };
   const top = await db
     .prepare(

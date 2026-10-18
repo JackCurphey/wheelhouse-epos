@@ -191,6 +191,7 @@ function LineDialog({ line, onClose, onSave, onRemove }: { line: TillLine; onClo
 
 type OrderItem = { id: number; productId: number | null; name: string; sku?: string | null; unitPrice: number; qty: number; lineType: string | null; serviceId: number | null; minutes: number | null };
 type Order = { id: number; status: string; items: OrderItem[] };
+type Due = { subtotal: number; discount: number; groupDiscount: number; groupName: string; total: number; stock: Record<string, number> };
 // The work can be paid for once it's under way or finished; paying work in
 // progress finishes it (2026-10-08-paying-for-finished-work.md).
 const PAYABLE = new Set(['in_progress', 'complete']);
@@ -213,6 +214,14 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
     enabled: Boolean(job?.orderId),
   });
   const order = orderQuery.data;
+  // The amount actually due, with the order's and the customer's discounts
+  // off, and each part's stock (Jack, 18 Oct, answer 3).
+  const dueQuery = useQuery({
+    queryKey: ['sale-document-due', job?.orderId],
+    queryFn: () => apiGet<Due>(`/api/sale-documents/${job?.orderId}/due`),
+    enabled: Boolean(job?.orderId) && order?.status === 'open',
+  });
+  const due = dueQuery.data;
   const [collect, setCollect] = useState(true);
   const [paying, setPaying] = useState(false);
   const lines: TillLine[] = (order?.items ?? []).map((it, i) => ({
@@ -226,8 +235,9 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
     minutes: it.minutes,
     productId: it.productId ?? undefined,
     sku: it.sku ?? null,
+    stockQty: it.productId != null && due ? due.stock[String(it.productId)] : undefined,
   }));
-  const total = saleTotal(lines);
+  const total = due ? due.total : saleTotal(lines);
   const inShop = job?.custodyState === 'in_shop';
   const paid = order?.status === 'converted';
   const cancelled = order?.status === 'cancelled';
@@ -271,15 +281,27 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
         {job && !job.orderId ? <p className="m-0 text-sm">This job has no order to pay.</p> : null}
         {order ? (
           <ul className="m-0 flex list-none flex-col p-0">
-            {lines.map((l) => (
-              <li key={l.key} className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5">
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-[15px] font-semibold">{l.name}</span>
-                  <span className="text-[13px] text-[var(--wh-muted)]">{`${lineSub(l)}${l.qty > 1 ? ` · ${l.qty} × ${money(l.unitPrice)}` : ''} · agreed on the job`}</span>
-                </span>
-                <span className="font-mono text-base">{money(lineTotal(l))}</span>
-              </li>
-            ))}
+            {lines.map((l) => {
+              const warn = stockWarning(l);
+              return (
+                <li key={l.key} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] py-2.5">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-[15px] font-semibold">{l.name}</span>
+                      <span className="text-[13px] text-[var(--wh-muted)]">{`${lineSub(l)}${l.qty > 1 ? ` · ${l.qty} × ${money(l.unitPrice)}` : ''} · agreed on the job`}</span>
+                    </span>
+                    <span className="font-mono text-base">{money(lineTotal(l))}</span>
+                  </div>
+                  {warn ? <span className="self-start rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">{warn}</span> : null}
+                </li>
+              );
+            })}
+            {due && due.discount > 0 ? (
+              <li className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5 text-sm"><span>Discount on the order</span><span className="font-mono">{`−${money(due.discount)}`}</span></li>
+            ) : null}
+            {due && due.groupDiscount > 0 ? (
+              <li className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5 text-sm"><span>{due.groupName}</span><span className="font-mono">{`−${money(due.groupDiscount)}`}</span></li>
+            ) : null}
           </ul>
         ) : null}
         {paid ? <p className="m-0 text-sm font-semibold">This job’s order is already paid.</p> : null}
@@ -300,13 +322,13 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
           <span className="font-mono text-[26px]">{money(total)}</span>
         </div>
         {order && order.status === 'open' ? (
-          <Button variant="primary" block disabled={!payable || lines.length === 0} onClick={() => setPaying(true)}>{`Take payment · ${money(total)}`}</Button>
+          <Button variant="primary" block disabled={!payable || lines.length === 0 || !due} onClick={() => setPaying(true)}>{`Take payment · ${money(total)}`}</Button>
         ) : null}
       </section>
       {paying && job?.orderId ? (
         <PayDialog
           lines={lines}
-          job={{ orderId: job.orderId, afterPaid }}
+          job={{ orderId: job.orderId, total, afterPaid }}
           onClose={() => setPaying(false)}
           onNextSale={() => { setPaying(false); onDone(); }}
         />

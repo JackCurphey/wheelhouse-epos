@@ -15,6 +15,7 @@ chose to build the full payment now and the rest as its server pieces arrive
   - "Take payment" pays the whole order by card, cash or both (`POST /api/sale-documents/:id/convert`), which finishes work in progress. Then the bike is recorded as collected (`POST /api/workshop-jobs/:id/collect`) unless the pill is off.
   - An order already paid says so. Work not yet in progress or finished can't be paid.
   - Extras are added on the job's Work and parts, as paying charges the order's own lines.
+- **The amount due, and stock:** the till asks the server what paying the order takes, with the order's and the customer's group discounts off (`GET /api/sale-documents/:id/due`, new). Paying a job's order sells past zero stock, as the plain till does (`sellPastStock` on convert). Both change `server/routes/sales.js`, Mark's, on Jack's 18 Oct answer.
 - **The diary menu's "Open in the till"** opens it. It's greyed with "Not booked yet" on a request, "Already paid" once paid, or "No order on this job".
 - **The job page's "Take payment"** replaces "Hand over" on finished work whose order isn't paid (collect and pay decision 3). Paid work keeps "Hand over".
 
