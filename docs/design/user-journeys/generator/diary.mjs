@@ -1442,8 +1442,7 @@ function touchSummaryHeader(size) {
 // The long-press menu (decision 37's right-click menu, decision 65: long-press
 // on touch). Keep holding = the summary straight away (decision 37's "hold
 // the right mouse button" on a touch screen).
-function touchMenuItems(size, onKey = null) {
-  const items = [['open', 'Open job', `job-overview-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]];
+function touchMenuItems(size, onKey = null, items = [['open', 'Open job', `job-overview-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]]) {
   return items.map(([k, label, href]) => `<a role="menuitem" href="${href}" style="display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; color: ${C.ink}; ${k === onKey ? `background: ${C.hover}; outline: 2px solid ${C.accent}; outline-offset: -2px;` : ''}">${esc(label)}</a>`).join('');
 }
 const TOUCH_MENU_TIP = 'Tip: keep holding to see the job’s summary straight away.';
@@ -3468,6 +3467,23 @@ function phoneMonthSheet() {
 }
 const monthPhoneBoard = () => phoneDiary({ day: TODAY }, { overlay: phoneMonthSheet() });
 
+// A booking request's long-press menu on touch screens (Jack, 18 Oct): its
+// first item is "Accept or decline", which opens the request pop-up. "Open in
+// the till" and "Print receipt" join when the till can do them (Jack: "1").
+const PENDING_MENU = (size) => [['accept', 'Accept or decline', `request-new-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]];
+function tabletPendingMenu() {
+  const top = ((PENDING_DIARY.start - GRID_START) / 30) * 30 + 2;
+  return `<div role="menu" aria-label="Job actions" style="position: absolute; right: calc(100% + 4px); top: ${top}px; width: 236px; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 6px; z-index: 8; display: flex; flex-direction: column; gap: 2px">
+${touchMenuItems('tablet', null, PENDING_MENU('tablet'))}
+<div style="padding: 8px 12px 4px; border-top: 1px solid ${C.border}; margin-top: 4px; font-size: 12px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</div>
+</div>`;
+}
+const menuPendingTabletBoard = () => tabletDiary({ highlightJob: { type: 'pending' }, overlayFor: { day: PENDING_DIARY.day, html: tabletPendingMenu() } });
+const menuPendingPhoneBoard = () => phoneDiary({ day: PENDING_DIARY.day, highlightJob: { type: 'pending' } }, {
+  overlay: phoneSheet({ id: 'job-menu-title', title: `${PENDING_DIARY.jobTitle} · booking request`, sub: `${PENDING_DIARY.customer} · ${PENDING_DIARY.bike}`, closeHref: 'diary-phone.dc.html',
+    body: `<div role="menu" aria-label="Job actions" style="display: flex; flex-direction: column; gap: 4px">${touchMenuItems('phone', null, PENDING_MENU('phone'))}</div><p style="margin: 0; font-size: 13px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</p>` }),
+});
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
@@ -3484,6 +3500,8 @@ export function oldDiaryFeatureDrawings() {
     'job-change-details-request-phone': dialogOverlay(jobPageWithChangeButton('phone'), PW, PH, changeDetailsDialog('phone', true), { full: true, pad: 0, labelledby: 'change-details-title' }),
     'diary-menu-job': menuJobBoard(),
     'diary-menu-pending': menuPendingBoard(),
+    'diary-menu-pending-tablet': menuPendingTabletBoard(),
+    'diary-menu-pending-phone': menuPendingPhoneBoard(),
     'diary-shared-queue': sharedQueueBoard(),
     'diary-stretch-tablet': stretchTabletBoard(),
     'diary-stretch-phone': stretchPhoneBoard(),
