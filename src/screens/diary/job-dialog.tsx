@@ -7,6 +7,7 @@ import { Dialog } from '@/components/ui/dialog.tsx';
 import { shortDay, todayIso } from './rules.ts';
 import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
+import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -101,6 +102,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   // The notes as typed, until saved (null: nothing typed since the last save).
   const [draft, setDraft] = useState<string | null>(null);
   const [notesNote, setNotesNote] = useState('');
+  // "Change details" (Jack, 18 Oct): not for finished work, which is frozen until reopened.
+  const [changing, setChanging] = useState(false);
 
   async function run(action: string) {
     if (!job) return;
@@ -207,6 +210,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
           <h2 id="job-title" className="m-0 min-w-0 truncate text-lg font-bold">{job?.title ?? 'Job'}</h2>
           {job ? <span className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${BADGE[stage]}`}>{stage}</span> : null}
           <span className="grow" />
+          {/* Beside Close on a computer or tablet; on a phone it sits in the job's details box (Jack, 18 Oct). */}
+          {job && !finished ? <Button className="hidden md:inline-flex" onClick={() => setChanging(true)}>Change details</Button> : null}
           <button type="button" aria-label="Close" onClick={onClose} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
@@ -259,6 +264,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                     {!ended && (stageActions(job).length || job.custodyState !== 'collected') ? (
                       <Button size="sm" className="self-start" disabled={sending} onClick={addDay}>Add another day</Button>
                     ) : null}
+                    {!finished ? <Button className="self-start md:hidden" onClick={() => setChanging(true)}>Change details</Button> : null}
                     {/* Decision 50: a toggle pill. Turning it on books the bike in; it can't be turned back off here. */}
                     {(() => {
                       const here = job.custodyState !== 'expected';
@@ -328,6 +334,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
           </>
         ) : null}
       </div>
+      {changing && job ? <ChangeDetailsDialog job={job} onClose={() => setChanging(false)} /> : null}
     </Dialog>
   );
 }

@@ -300,6 +300,19 @@ silent:
    Day view; the rest of the day is one button that opens its list.
    *Pattern:* decision 68; the drawing keeps the date as its own link.
 
+### 18 Oct 2026: Change details (`docs/decisions/2026-10-18-old-diary-features.md` answer 3)
+
+1. **Not offered for finished work**, which is frozen until reopened.
+   *Pattern:* the notes, read-only on finished work (Jack, 15 Oct).
+2. **A job over several days changes its title, customer, bike and mechanic
+   here; each day's date and time are changed in the diary** ("Each day's
+   date and time are changed in the diary."). *Pattern:* moving a later
+   day on its own (decision 52).
+3. **A new customer's only bike is chosen for them**, and the old customer's
+   bike is never sent. *Pattern:* New job.
+4. **The customer is shown with "Change customer"**, which opens the same
+   search as New job. *Pattern:* New job's chosen customer.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
