@@ -484,6 +484,11 @@ merges first (§4.4). "Whole" means one person builds both halves.
 
 ### Stage 8 — The move and the trading week
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answer 5): 8.2 and 8.3 move to the selling stage, after Release 2, with
+> whichever shop goes first; 8.1 stays.
+
+
 | Package | Mark | Jack |
 |---|---|---|
 | 8.1 Citrus Lime import, second half | weekly refresh, the weekly check, switch-over, workshop-job import | `mv-change-day`, `mv-both`, `mv-weeks`, `mv-pick-day` and the `mv-start` situations |
