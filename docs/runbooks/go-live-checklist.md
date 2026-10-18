@@ -86,7 +86,7 @@ Q12: "these are done before switch-over".
   Jack finds a solicitor for small-business privacy work **by the start of
   stage 7** (Jack, 16 Oct), once the drafts exist.
 - [ ] **Accountant**: the VAT report layout, including where its "Stock
-  purchases" box comes from now that the shop has no accounts software (the
+  purchases" box comes from where the shop has no accounts software (the
   build plan points it at accounts software until the supplier invoice
   check is built) (`docs/decisions/2026-10-01-reports-and-accounts-review.md`).
   The accounts mapping waits until a shop uses accounts software. The VAT
@@ -114,11 +114,12 @@ Q12: "these are done before switch-over".
   (`docs/decisions/2026-09-30-customer-service-review.md`).
 - [ ] A privacy request is answered within one month (same file).
 - [ ] Website history is kept 90 days (Q8).
-- [ ] **The shop's real export files** (Q4; Jack, 16 Oct): kept in a private
-  folder on Jack's Mac, outside the Wheelhouse folder, with FileVault on;
-  never in the repository or uploaded anywhere. Mark gets a single file when
-  he needs one. Deleted once the two matching weeks have passed and the
-  shop says so.
+- [ ] **Real export files** (Q4; Jack, 16 Oct, said of his shop's files):
+  kept in a private folder on Jack's Mac, outside the Wheelhouse folder,
+  with FileVault on; never in the repository or uploaded anywhere. Mark gets
+  a single file when he needs one. Deleted once the two matching weeks have
+  passed and Jack says so. Where another shop's files are kept is still for
+  Jack to decide.
 
 ## 5. Backups and a practice restore
 
@@ -167,6 +168,10 @@ Q12: "these are done before switch-over".
   answer 4).
 
 ## Not part of switch-over
+
+Since the trading week moved after Release 2 (18 Oct), whether the items
+below are still in Release 2 is open for Jack
+(`docs/decisions/2026-10-18-build-for-every-shop.md`, open questions).
 
 After the trading week: Lightspeed, the three supplier browsing screens,
 and stock suggestions. Later in Release 2:

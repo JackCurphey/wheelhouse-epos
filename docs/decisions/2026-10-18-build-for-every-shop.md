@@ -35,14 +35,14 @@ nothing else in them changes until he has.
    `docs/superpowers/specs/2026-09-27-release-2-design.md`; build plan §2).
    A real shop trying it first would be better, and is welcome, but is not
    part of the finish line: Jack doesn't expect his own shop to move, and
-   there is no other shop lined up. Chosen over a first real shop trading
+   there is no plan yet for how to get one. Chosen over a first real shop trading
    on it for a week, and over the first paying shop going live.
 
 5. **Stage 8: the Citrus Lime move tools stay in Release 2** (Jack: "1").
    WP-8.1 (the move page, weekly refresh, weekly check, switch-over
    checklist, switch-over morning, the first week) is still built, tested
-   on made-up files shaped like Citrus Lime's real exports (their columns
-   were read from the real thing, `docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`);
+   on made-up files shaped like Citrus Lime's screen reports, whose columns
+   were read from the real thing (`docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`);
    a ready-made way off Citrus Lime helps sell to Citrus Lime shops. **WP-8.2
    (running alongside) and WP-8.3 (switch-over and a trading week) move to
    the selling stage**, as they need a real shop. Chosen over building only
@@ -55,5 +55,18 @@ nothing else in them changes until he has.
    #138 (Jack's shop's Paymentsense machine) are closed, to be written again
    as general research if a shop needs them. Chosen over splitting it into
    "ready to sell" and "first shop's move", and over leaving it as it was.
+
+## Open, for Jack (found by the fresh review, 18 Oct)
+
+- **What was "after the trading week" or "after switch-over"**: Lightspeed,
+  the three supplier browsing screens, stock suggestions, online service
+  history and reminders (build plan "After the trading week"; programme spec
+  §1), and the "later in Release 2" items ordered after switch-over. Now the
+  trading week is after Release 2, are they in Release 2 or after it?
+- **Citrus Lime's full export and the workshop job history**: nobody has
+  seen the full export's shape (the exports spec lists it as "No export
+  button"), so WP-8.1's import of it and of workshop history can't be
+  tested on files shaped like the real thing. Does that part move with 8.2,
+  or is it built against a guessed shape?
 
 The plans are shared, so Mark is told.
