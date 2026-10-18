@@ -33,6 +33,13 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
+**Check #277 too** (Jack, 18 Oct, `docs/decisions/2026-10-18-shop-details.md`:
+build it "flagging Mark's files for him"): migration 042 adds `address`,
+`phone`, `email` and `vat_number` to `shops`, one set for the whole business
+for now; your `server/routes/shop-settings.js` gains `GET`/`PUT
+/api/shop-details` (the session's own row; no role check, as elsewhere).
+When your WP-1.4 gives shops their sites, Jack's answer is that address and
+phone move onto the first site and the VAT number stays on the business.
 **Check #275 too** (Jack, 18 Oct: build piece 3 "flagging Mark's two
 files for him"): migration 041 adds `workshop_settings.show_sign_off_to_customers`
 (off); your `server/routes/workshop-settings.js` sends and saves
@@ -83,7 +90,11 @@ sign-off keeps the mechanic's name (#271). Then the till asks too, when a
 payment finishes work still in progress (#273). Then showing customers who
 signed off: a first Settings page (Workshop › Mechanics) with the switch,
 off, and "Checked by [name]" on the receipt and booking link when it's on
-(#275); turning it on at a real shop waits for the solicitor's check. Then Files and photos on the job page,
+(#275); turning it on at a real shop waits for the solicitor's check. Then
+Shop details on the Settings page (shop name, address, phone, email, VAT
+number), and receipts with the shop's name at the top and the address,
+phone, VAT number and barcode at the bottom, after research on receipt
+layouts (#277). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
