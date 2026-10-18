@@ -145,12 +145,14 @@ export type MenuAt = { x: number; y: number; touch: boolean; phone: boolean };
  * Decision 37: Open job and View overview. Arrow keys move through it,
  * Escape or a click elsewhere closes it, and focus goes back to the job.
  */
-export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, onAnswer, till }: {
+export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, onAnswer, till, print }: {
   job: WorkshopJob; at: MenuAt; onClose: (returnFocus: boolean) => void; onOpenJob: () => void; onOverview: () => void;
   /** A booking request (Jack, 18 Oct): "Accept or decline" in place of Open job, opening its pop-up. */
   onAnswer?: () => void;
   /** "Open in the till" (Jack, 18 Oct): opens the till with the job, or greyed with why. */
   till?: { onOpen?: () => void; reason?: string };
+  /** "Print receipt" (Jack, 18 Oct, 2026-10-18-print-receipt.md): prints the paid job's receipt, or greyed with why. */
+  print?: { onPrint?: () => void; reason?: string };
   /** "Change length" (Jack, 18 Oct): only for a job that can be moved. */
   onStretch?: () => void;
 }) {
@@ -241,6 +243,16 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, on
           <div role="menuitem" tabIndex={-1} aria-disabled="true" className={`${item} flex-col !items-start justify-center gap-0.5 border-t border-[var(--wh-border)] py-1.5 text-[var(--wh-muted)]`}>
             <span>Open in the till</span>
             <span className="text-xs font-normal">{till.reason}</span>
+          </div>
+        )
+      ) : null}
+      {print ? (
+        print.onPrint ? (
+          <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={print.onPrint}>Print receipt</button>
+        ) : (
+          <div role="menuitem" tabIndex={-1} aria-disabled="true" className={`${item} flex-col !items-start justify-center gap-0.5 py-1.5 text-[var(--wh-muted)]`}>
+            <span>Print receipt</span>
+            <span className="text-xs font-normal">{print.reason}</span>
           </div>
         )
       ) : null}

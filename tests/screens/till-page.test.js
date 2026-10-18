@@ -323,3 +323,24 @@ test('a typed split cash part is sent to the penny', async () => {
   const [s] = sales();
   assert.deepEqual([s.cashAmount, s.cardAmount, s.cashTendered], [20, 26, 20]);
 });
+
+// Printing a receipt (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md;
+// drawn as till-receipt-print): Paid offers Print beside No receipt; Print
+// prints the saved sale's receipt, then the next sale starts.
+test('Print on Paid prints the sale’s receipt, then the next sale starts', async () => {
+  const t = await openTill();
+  saleReply = { status: 201, ok: true, json: async () => ({ id: 501, createdAt: '2026-10-06T10:45:00.000Z', items: [{ id: 1, name: 'Fit & adjust brakes', qty: 1, unitPrice: 18, lineTotal: 18 }], subtotal: 18, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 18, paymentMethod: 'Card', cashAmount: 0, cardAmount: 18, cashTendered: null, extraPayments: [] }) };
+  let printed = null;
+  window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+  await addService(t);
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  // As drawn (till-receipt-print): the sale's number under Paid.
+  assert.ok(has(await pay.findByText('Card · £18.00 · Sale 501')));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Print' }));
+  assert.ok(printed !== null, 'nothing was printed');
+  for (const want of ['North Street Cycles', 'Sale 501', 'Fit & adjust brakes£18.00', 'Total£18.00', 'Paid by card£18.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
+  assert.equal(has(t.ui.queryByRole('dialog')), false);
+});

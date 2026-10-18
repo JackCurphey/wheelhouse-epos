@@ -494,7 +494,7 @@ later packages.
 - **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
 - **`till-pay-cash`** (block 20, Payment step) — no other situations.
 - **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
-- **`till-receipt`** (block 20, Payment step) — 1 of its 3 situations here: `till-receipt-split`.
+- **`till-receipt`** (block 20, Payment step) — 3 of its 5 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper` (the last two built early: Jack, 18 Oct, print receipt decision).
 - **`till-giftcard`** (block 20, Payment step) — no other situations.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.

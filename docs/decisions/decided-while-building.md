@@ -370,6 +370,24 @@ silent:
    machine took the payment, reverse it on the machine." *Pattern:* the
    work-not-finished message and its reversal advice (fresh re-review).
 
+### 18 Oct 2026: printing a receipt (`docs/decisions/2026-10-18-print-receipt.md`)
+
+1. **Print receipt on a cancelled order is greyed "Order cancelled"**, besides
+   the drawn "Not paid yet". *Pattern:* Open in the till's reasons.
+2. **If the diary can't fetch the receipt: "Wheelhouse couldn't get this
+   job's receipt to print. Try again in a moment."**, in the diary's message
+   box. *Pattern:* the diary's move-refused message.
+3. **Discount rows on the receipt read "Discount" and the customer group's
+   name** (for example "Blue Light (10%)"), as the till's job basket shows
+   them. *Pattern:* the till's discount rows (#267); the receipt email's
+   "Discount · [reason]" waits for discount reasons.
+4. **A part bought more than once reads "Shimano brake pads 2 × £28.00"**, as
+   the receipt email's till-sale lines do. *Pattern:* `collect.mjs` tillLines.
+5. **A tender the shop added (the old app's extra payments, for example a
+   gift card) prints as "Paid by [its name]"**, so the payments add up to
+   the total on a reprint. *Pattern:* "Paid by card" and "Paid by cash"
+   (fresh review).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

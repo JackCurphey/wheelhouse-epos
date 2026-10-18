@@ -335,7 +335,7 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
       {paying && job?.orderId ? (
         <PayDialog
           lines={lines}
-          job={{ orderId: job.orderId, total, afterPaid }}
+          job={{ orderId: job.orderId, total, receipt: { reference: job.reference, bikeLabel: job.bikeLabel ?? null }, afterPaid }}
           onClose={() => setPaying(false)}
           onNextSale={() => { setPaying(false); onDone(); }}
         />
