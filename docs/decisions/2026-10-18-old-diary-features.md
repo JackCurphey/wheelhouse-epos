@@ -18,8 +18,8 @@ left empty rather than filled with made-up jobs.
    "Month" joins Week and Day; the dates read "September 2026". Each day
    shows up to three jobs, earliest first, as the start time and the bike
    (decision 29: bike first), coloured by status as in the week view. A
-   busy day ends with "+[n] more", which opens a list beside the day: time,
-   bike and job title, status, customer and mechanic, with a link to open
+   busy day ends with "+[n] more", which opens a list over the month from
+   that day: time, bike and job title, status, customer and mechanic, with a link to open
    that day in the Day view. Clicking a row opens the job; clicking a day's
    date opens that day in the Day view. The Waiting for you column stays.
    Chosen over "+[n] more" going straight to the Day view, and over no
@@ -33,7 +33,8 @@ left empty rather than filled with made-up jobs.
 3. **"Change details" on the job page, with the mechanic** (Jack: "1",
    include it). A "Change details" button in the job page's title bar opens
    a pop-up: job title, customer, bike, date, start time, end time, and the
-   mechanic as pills (Alex Morgan, Jo Taylor, Shared queue; as decision 62)
+   mechanic as pills (Alex Morgan, Jo Taylor, Shared queue; in the booking
+   pop-up's style, decision 62)
    with the job's mechanic picked. Cancel and "Save changes". **This changes
    Workshop day decision 32** (`2026-09-27-workshop-day-review.md`): the job
    page itself still has no mechanic field and shows the mechanic as plain
@@ -47,7 +48,10 @@ left empty rather than filled with made-up jobs.
    "Not paid yet", "Not booked yet", as the old diary's "No order linked to
    this job". On a booking request the old "Approve" is "Accept or
    decline", which opens the request's usual pop-up (Accept, Another time,
-   Decline). Chosen over hiding what can't be used.
+   Decline). Chosen over hiding what can't be used. The old menu also
+   approved a pending job staff had made; staff can't make one in the new
+   diary, so that case has nothing to do (`decided-while-building.md`,
+   18 Oct).
 5. **A "Shared queue" button beside the mechanics** (Jack: "1", as drawn),
    for the old "Unassigned" pill: Everyone, each mechanic, then Shared
    queue. Picked, the diary shows only the jobs no mechanic has yet. "Shared

@@ -3183,22 +3183,27 @@ const MONTH_CHIPS = 3; // as the old diary: three jobs, then "+[n] more"
 const MONTH_WEEKS = 5; // 31 Aug to 4 Oct
 // Only the drawn week (14–20 Sep) has example jobs; every other day is empty
 // rather than filled with invented ones.
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const cellDayName = (c) => `${DAY_NAMES[c.idx % 7]} ${c.date} ${c.inMonth ? 'September' : c.date > 20 ? 'August' : 'October'}`;
 function monthDays() {
   const out = [];
   for (let i = 0; i < MONTH_WEEKS * 7; i++) {
     const n = i; // day of September, 0 = 31 Aug
-    if (n < 1) out.push({ date: MONTH_FIRST.date, inMonth: false });
-    else if (n > 30) out.push({ date: n - 30, inMonth: false });
-    else out.push({ date: n, inMonth: true, weekDay: n >= 14 && n <= 20 ? n - 14 : null });
+    if (n < 1) out.push({ idx: i, date: MONTH_FIRST.date, inMonth: false });
+    else if (n > 30) out.push({ idx: i, date: n - 30, inMonth: false });
+    else out.push({ idx: i, date: n, inMonth: true, weekDay: n >= 14 && n <= 20 ? n - 14 : null });
   }
   return out;
 }
-const dayJobs = (d) => JOBS.filter((j) => j.day === d).sort((a, b) => a.start - b.start || a.mech.localeCompare(b.mech));
+// A booking request sits in the month as in the week (decision 12): Sam
+// Reed's pending request, Fri 18 Sep 10:00, purple, no mechanic yet.
+const PENDING_AS_JOB = () => ({ day: PENDING_DIARY.day, start: PENDING_DIARY.start, dur: PENDING_DIARY.dur, mech: '', key: 'pending', job: 'WH-request', svc: PENDING_DIARY.jobTitle, title: `${PENDING_DIARY.customer} · ${PENDING_DIARY.bike}`, detail: PENDING_DIARY.detail, href: 'request-new-desktop.dc.html' });
+const dayJobs = (d) => [...JOBS.filter((j) => j.day === d), ...(PENDING_DIARY.day === d ? [PENDING_AS_JOB()] : [])].sort((a, b) => a.start - b.start || a.mech.localeCompare(b.mech));
 function monthChip(j) {
   const [bg, ink] = ST[j.key];
   const [customer, bike] = customerBikeOf(j);
   const strike = j.key === 'cancelled' ? 'text-decoration: line-through;' : '';
-  return `<a href="job-overview-desktop.dc.html" title="${esc(hhmm(j.start))} · ${esc(bike)} · ${esc(j.svc)} · ${esc(customer)} · ${esc(stageOf(j))}" aria-label="${esc(hhmm(j.start))}, ${esc(bike)}, ${esc(j.svc)}, ${esc(customer)}, ${esc(stageOf(j))}" style="display: block; box-sizing: border-box; padding: 1px 5px; border-radius: 4px; border-left: 3px solid ${ink}; background: ${bg}; font-size: 12px; line-height: 16px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}"><strong style="font-weight: 700">${hhmm(j.start)}</strong> ${esc(bike)}</a>`;
+  return `<a href="${j.href || 'job-overview-desktop.dc.html'}" title="${esc(hhmm(j.start))} · ${esc(bike)} · ${esc(j.svc)} · ${esc(customer)} · ${esc(stageOf(j))}" aria-label="${esc(hhmm(j.start))}, ${esc(bike)}, ${esc(j.svc)}, ${esc(customer)}, ${esc(stageOf(j))}" style="display: block; box-sizing: border-box; padding: 1px 5px; border-radius: 4px; border-left: 3px solid ${ink}; background: ${bg}; font-size: 12px; line-height: 16px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}"><strong style="font-weight: 700">${hhmm(j.start)}</strong> ${esc(bike)}</a>`;
 }
 function monthGrid({ moreOpen = null } = {}) {
   const heads = DAYS.map(([name]) => `<div style="padding: 6px 8px; font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; background: ${C.panel}">${name}</div>`).join('');
@@ -3209,7 +3214,7 @@ function monthGrid({ moreOpen = null } = {}) {
     const more = jobs.length - shown.length;
     const label = `${c.date}${isToday ? ' · Today' : ''}`;
     return `<div style="position: relative; min-width: 0; box-sizing: border-box; padding: 4px 5px; display: flex; flex-direction: column; gap: 3px; background: ${isToday ? C.mutedBg : C.panel}; ${c.inMonth ? '' : 'opacity: 0.55;'}">
-<a href="diary-day-desktop.dc.html" aria-label="Open ${c.inMonth ? '' : 'the '}${esc(String(c.date))} in the Day view" style="align-self: flex-start; font-size: 13px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}; text-decoration: none; line-height: 18px">${label}</a>
+<a href="diary-day-desktop.dc.html" aria-label="Open ${esc(cellDayName(c))} in the Day view" style="align-self: flex-start; font-size: 13px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}; text-decoration: none; line-height: 18px">${label}</a>
 ${shown.map(monthChip).join('')}
 ${more ? `<button type="button" aria-haspopup="dialog" style="align-self: flex-start; padding: 0 2px; border: 0; background: transparent; font-family: inherit; font-size: 12px; font-weight: 700; line-height: 16px; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 2px">+${more} more</button>` : ''}
 ${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay) : ''}
@@ -3217,20 +3222,19 @@ ${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay) : ''
   }).join('');
   return `<div role="grid" aria-label="Workshop diary, September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(${MONTH_WEEKS}, 104px); gap: 1px; background: ${C.border}; border: 1px solid ${C.border}; border-radius: 10px; overflow: visible">${heads}${cells}</div>`;
 }
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MECH_NAME = { Alex: 'Alex Morgan', Jo: 'Jo Taylor' };
-// "+[n] more": the busy day's whole list beside its cell (the old diary
+// "+[n] more": the busy day's whole list, opening over the month from its cell (the old diary
 // opened a pop-up with the same rows: time, job, status, customer · bike,
 // mechanic). Clicking a row opens the job.
 function monthMorePopover(d) {
   const [, date] = DAYS[d];
   const rows = dayJobs(d).map((j) => {
     const [customer, bike] = customerBikeOf(j);
-    return `<a href="job-overview-desktop.dc.html" style="display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 10px; align-items: center; padding: 6px 8px; border-radius: 6px; text-decoration: none; color: ${C.ink}; border-top: 1px solid ${C.border}">
+    return `<a href="${j.href || 'job-overview-desktop.dc.html'}" style="display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 10px; align-items: center; padding: 6px 8px; border-radius: 6px; text-decoration: none; color: ${C.ink}; border-top: 1px solid ${C.border}">
 <span style="font-family: ${MONO}; font-size: 13px; font-weight: 700">${hhmm(j.start)}</span>
 <span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)} · ${esc(j.svc)}</span>
 ${statusBadge(j.key, stageOf(j))}
-<span></span><span style="grid-column: 2 / span 2; font-size: 12px; color: ${C.muted}">${esc(customer)} · ${esc(MECH_NAME[j.mech])}</span>
+<span></span><span style="grid-column: 2 / span 2; font-size: 12px; color: ${C.muted}">${esc(customer)} · ${esc(MECH_NAME[j.mech] || 'Booking request, no mechanic yet')}</span>
 </a>`;
   }).join('');
   return `<div role="dialog" aria-labelledby="month-more-title" style="position: absolute; left: 0; top: 0; width: 420px; z-index: 6; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 8px; display: flex; flex-direction: column; gap: 0">
@@ -3265,7 +3269,8 @@ ${note('Drag the bottom edge of a job to make it longer or shorter, in 15-minute
 // Changing a job's details after it is made: "Change details" on the job
 // page opens the New job form's fields, filled in. The old diary's "Edit job"
 // form had the same fields (title, date, start and end time, customer, bike,
-// mechanic). The mechanic is pills, as the booking pop-up (decision 62).
+// mechanic). The mechanic is pills in the booking pop-up's style (decision
+// 62), with full names, as the job page's "Mechanic: Alex Morgan".
 function changeDetailsDialog() {
   const mechs = [['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
   const left = `<div style="display: flex; flex-direction: column; gap: 10px">
@@ -3324,6 +3329,7 @@ const menuPendingBoard = () => menuBoard({ type: 'pending' }, { left: 713, top: 
 function sharedQueueBoard() {
   const was = TOOLBAR_MECHS;
   TOOLBAR_MECHS = ['Everyone', 'Alex', 'Jo', 'Shared queue'];
+  CHIP_INITIAL['Shared queue'] = 'group'; // the group icon, as Everyone; this board only
   try {
     // A fourth chip needs 25px more than the toolbar has: its two spacers
     // and the chips' gap close up a little on this board only.
@@ -3333,9 +3339,8 @@ function sharedQueueBoard() {
     return shellDesktop('diary', 'Workshop diary', stack(`${toolbar}
 ${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Shared queue' })}`, 16, 'align-items: flex-start')}
 ${note('Shared queue: only the jobs no mechanic has yet.', 13)}`, 12));
-  } finally { TOOLBAR_MECHS = was; }
+  } finally { TOOLBAR_MECHS = was; delete CHIP_INITIAL['Shared queue']; }
 }
-CHIP_INITIAL['Shared queue'] = 'group';
 
 export function oldDiaryFeatureDrawings() {
   return {
