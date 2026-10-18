@@ -14,10 +14,11 @@ answer 5, and its tablet and phone section).
   one column of them, named "Shared queue". Its place in the address is
   `?who=shared`.
 - **Phone:** "Shared queue" is the last line of the "whose jobs" list.
-- **Toolbar spacing** follows the drawing so four people buttons fit one row
-  on a 1280px screen: 4px between the toolbar's groups, 4px between the
-  people buttons, and 8px before New job. Below 1024px the toolbar is two
-  rows, as it already was.
+- **Toolbar spacing** follows the desktop drawing from 1280px, so four people
+  buttons fit one row: 4px between the toolbar's groups, 4px between the
+  people buttons, and 8px before New job. Tablets keep their drawn spacing;
+  below 1280px the toolbar is two rows, as it already was at 1024px. With
+  three or more mechanics it is two rows at 1280px too.
 
 ## Lane, drawings and decisions
 

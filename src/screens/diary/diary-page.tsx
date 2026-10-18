@@ -1372,9 +1372,9 @@ export function DiaryPage() {
   return (
     <div className="flex flex-col gap-3">
       {/* Toolbar (decision 60): view and dates together · people and New job.
-          Spaced as the Shared queue drawing (Jack, 18 Oct), so four people
-          buttons still fit one row on a 1280px screen. */}
-      <div className="flex flex-wrap items-center gap-x-1 gap-y-3">
+          From 1280px, spaced as the desktop Shared queue drawing (Jack, 18 Oct)
+          so four people buttons fit one row; tablets keep their drawn spacing. */}
+      <div className="flex flex-wrap items-center gap-3 xl:gap-x-1">
         <div role="tablist" aria-label="Diary view" className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-[10px] bg-[var(--wh-surface-muted)] p-[3px]">
           {(['week', 'day'] as const).map((v) => (
             <button
@@ -1404,9 +1404,9 @@ export function DiaryPage() {
         </div>
         {/* On an upright tablet this group is its own row: people on the left,
             Waiting and New job on the right (layout review 238, item 7). */}
-        <div className="flex basis-full items-center gap-3 lg:grow lg:basis-auto lg:gap-0">
+        <div className="flex basis-full items-center gap-3 lg:grow lg:basis-auto xl:gap-0">
         <div className="hidden grow lg:block" />
-        <div role="group" aria-label="Mechanic" className="flex flex-wrap items-center gap-1">
+        <div role="group" aria-label="Mechanic" className="flex flex-wrap items-center gap-1.5 xl:gap-1">
           {chip('all', 'Everyone', 'Everyone', <NavIcon name="customers" size={13} />, whoId === null && !shared)}
           {people.map((m) => chip(String(m.id), m.name.split(' ')[0], m.name, initial(m.name), whoId === m.id))}
           {chip('shared', 'Shared queue', 'Shared queue', <NavIcon name="customers" size={13} />, shared)}
@@ -1421,7 +1421,7 @@ export function DiaryPage() {
           Waiting
           <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-[13px] font-bold">{waiting.data?.count ?? items.length}</span>
         </button>
-        <div className="hidden w-2 shrink-0 lg:block" />
+        <div className="hidden w-5 shrink-0 lg:block xl:w-2" />
         {picking ? (
           <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
             Choose a time
