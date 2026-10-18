@@ -4,6 +4,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession, type SessionEmployee } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
+import { printReceipt, type ReceiptJob, type ReceiptSale } from './receipt.tsx';
 import { asSaleItem, money, noteButtons, pence, saleTotal, type TillLine } from './rules.ts';
 
 /**
@@ -23,7 +24,7 @@ type Step =
   | { kind: 'card'; amount: number; cashPart: number }
   | { kind: 'cash' }
   | { kind: 'split' }
-  | { kind: 'paid'; how: string; change: number; note: string | null };
+  | { kind: 'paid'; how: string; change: number; note: string | null; sale: ReceiptSale | null };
 
 declare global {
   interface Window { WH_TILL_TICK_MS?: number }
@@ -42,11 +43,12 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * paying converts the order, which charges its own saved lines, and then
  * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
  */
-type JobPayment = { orderId: number; total: number; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
+type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
 export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
+  const shopName = session.status === 'signed-in' ? session.shop.name : '';
   const [serving, setServing] = useState<SessionEmployee | null>(me && me.isCashier ? me : null);
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
@@ -64,9 +66,13 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       // To the penny: the screen rounds what staff type, so the record must too.
       const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, cashierId: serving.id };
       let note: string | null = null;
-      if (job) note = await job.afterPaid(await apiMutate<{ jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true }));
-      else await apiMutate('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
-      setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note });
+      // Both reply with the whole sale, which is what the receipt prints.
+      let sale: ReceiptSale & { jobWarning?: string };
+      if (job) {
+        sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true });
+        note = await job.afterPaid(sale);
+      } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
+      setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null });
     } catch (err) {
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
@@ -152,7 +158,10 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
   } else {
     title = 'Paid';
     description = step.how;
-    body = <PaidStep total={total} change={step.change} note={step.note} onNextSale={onNextSale} />;
+    const paidSale = step.sale;
+    // Print, then the next sale, as No receipt (Jack, 18 Oct, till-receipt-print).
+    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName, job: job?.receipt }); onNextSale(); } : null;
+    body = <PaidStep total={total} change={step.change} note={step.note} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 
   return (
@@ -253,7 +262,7 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
   );
 }
 
-function PaidStep({ total, change, note, onNextSale }: { total: number; change: number; note: string | null; onNextSale: () => void }) {
+function PaidStep({ total, change, note, onPrint, onNextSale }: { total: number; change: number; note: string | null; onPrint: (() => void) | null; onNextSale: () => void }) {
   const [left, setLeft] = useState(5);
   // With a note to read, Paid waits for No receipt (as the job warning, 16 Oct).
   const counting = !note;
@@ -274,7 +283,10 @@ function PaidStep({ total, change, note, onNextSale }: { total: number; change: 
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
         {note ? <span role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-warn-ink)]">{note}</span> : null}
       </div>
-      <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>No receipt</Button>
+      <div role="group" aria-label="Receipt" className="grid grid-cols-2 gap-2.5">
+        <Button className="min-h-[60px]" disabled={!onPrint} onClick={() => onPrint?.()}>Print</Button>
+        <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>No receipt</Button>
+      </div>
       {counting ? <p role="timer" className="m-0 text-center text-sm text-[var(--wh-muted)]">{`Next sale starts in ${left} second${left === 1 ? '' : 's'}`}</p> : null}
     </>
   );

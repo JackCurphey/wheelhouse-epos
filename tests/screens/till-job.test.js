@@ -26,6 +26,9 @@ let JOB;
 let ORDER;
 let convertReply;
 let DUE;
+// What paying the order returns: the whole sale (serializeSale).
+const SALE = { id: 601, createdAt: '2026-10-06T10:45:00.000Z', subtotal: 83, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 83, paymentMethod: 'Card', cashAmount: 0, cardAmount: 83, cashTendered: null, extraPayments: [],
+  items: [{ id: 1, name: 'Standard service', qty: 1, unitPrice: 65, lineTotal: 65 }, { id: 2, name: 'Shimano brake pads', qty: 1, unitPrice: 18, lineTotal: 18 }] };
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -57,7 +60,7 @@ function stubServer(employee) {
     if (method === 'POST' && u.pathname === '/api/sale-documents/40/convert') {
       if (convertReply) return convertReply;
       JOB = { ...JOB, workState: 'complete', version: JOB.version + 1, orderStatus: 'converted' };
-      return reply(201, { id: 601 });
+      return reply(201, SALE);
     }
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, { ...JOB, custodyState: 'collected', version: JOB.version + 1 });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
@@ -213,4 +216,17 @@ test('a server fault on the amount due says try again, not change the job, and T
   assert.ok(has(await sale.findByText('Wheelhouse couldn’t work out the amount due. Try again in a moment.', {}, { timeout: 15000 })));
   assert.equal(has(sale.queryByText(/Change it in the job’s Work and parts/)), false);
   assert.equal((await sale.findByRole('button', { name: /^Take payment/ })).disabled, true);
+});
+
+// Printing a receipt (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
+// a job's receipt names the job and bike.
+test('Print on Paid prints the job’s receipt, with the job and bike, then the next sale', async () => {
+  const t = await openJobTill();
+  let printed = null;
+  window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+  const dlg = await payByCard(t);
+  t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+  assert.ok(printed !== null, 'nothing was printed');
+  for (const want of ['North Street Cycles', 'Sale 601', 'WH-1042 · Trek Domane AL 3', 'Standard service£65.00', 'Total£83.00', 'Paid by card£83.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
+  await t.waitFor(() => assert.equal(has(t.ui.queryByRole('dialog')), false));
 });
