@@ -48,5 +48,12 @@ nothing else in them changes until he has.
    the selling stage**, as they need a real shop. Chosen over building only
    the import and leaving the rest of 8.1 for a real move, and over moving
    all Citrus Lime importing out of Release 2.
+6. **The go-live checklist becomes "the first shop going live", for any
+   shop** (Jack: "1"). Its general lines stay; the ones about Jack's shop
+   (its accountant, its export files, its staff, Citrus Lime's full export)
+   now say "the first shop". #171 (asking Citrus Lime for a full export) and
+   #138 (Jack's shop's Paymentsense machine) are closed, to be written again
+   as general research if a shop needs them. Chosen over splitting it into
+   "ready to sell" and "first shop's move", and over leaving it as it was.
 
 The plans are shared, so Mark is told.

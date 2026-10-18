@@ -1,7 +1,12 @@
-# Go-live checklist: switching Jack's shop from Citrus Lime (stage 8)
+# Go-live checklist: the first shop going live
 
-Everything that has to be true before Jack's shop stops using Citrus Lime and
-runs on Wheelhouse alone (WP-8.3, "Switch-over and one trading week alone").
+Everything that has to be true before the first shop runs on Wheelhouse
+alone (WP-8.3, "Switch-over and one trading week alone", now in the selling
+stage after Release 2). Until 18 Oct this was written for Jack's shop; Jack
+then decided Wheelhouse is built for every shop and his shop goes through
+the same handover as any other, so the lines below are for whichever shop
+goes live first (`docs/decisions/2026-10-18-build-for-every-shop.md`,
+answers 4 to 6).
 Issue #140 asked for it (from Codex's review in #126, finding 15). Each line
 says who does it and where it was decided. Jack answered every open
 question on 16 Oct (`docs/decisions/2026-10-16-go-live-checklist.md`); the
@@ -45,14 +50,15 @@ account once Jack says yes; Jack says yes to anything that costs money.
   templates use the wording Jack reads in Q9's read-through, so that comes
   first, early enough for Meta's approval to finish before switch-over.
 - [x] **Texts (Twilio)**: already a real account (build plan §5).
-- **Accounts software: not needed for switch-over.** Jack's shop uses none;
-  its accountant takes reports straight from Citrus Lime (Jack, 16 Oct). The
-  Xero and QuickBooks connections wait until a shop needs one.
-- [ ] **Citrus Lime's full export** of customers and workshop history
-  (Jack asks Citrus Lime when stage 7 starts, #171).
+- **Accounts software: not needed for switch-over** unless the first shop
+  uses some (Jack, 16 Oct, said of his shop, which uses none). The Xero and
+  QuickBooks connections wait until a shop needs one.
+- [ ] **If the first shop is moving from Citrus Lime: Citrus Lime's full
+  export** of its customers and workshop history, asked for by that shop
+  (#171, closed 18 Oct when it stopped being Jack's shop's to-do).
 
 **Not needed for switch-over** (moved later): Lightspeed (Q5, after the
-trading week); SumUp and Paymentsense (after Stripe; #138); Apple sign-in
+trading week); SumUp and Paymentsense (after Stripe; #138, closed 18 Oct); Apple sign-in
 (once the business has income, `docs/decisions/2026-09-29-signing-in-review.md`).
 
 ## 2. Wording checks
@@ -85,12 +91,11 @@ Q12: "these are done before switch-over".
   check is built) (`docs/decisions/2026-10-01-reports-and-accounts-review.md`).
   The accounts mapping waits until a shop uses accounts software. The VAT
   invoice stays generic for now (`docs/decisions/2026-10-02-leftover-screens-review.md`).
-  **The shop's own accountant** (Jack, 16 Oct), booked in by the start of
-  stage 7.
-- [ ] **The accountant's reports**: Wheelhouse's reports give the
-  accountant everything they now take from Citrus Lime. Jack finds out which
-  Citrus Lime reports they use, and the accountant checks Wheelhouse's
-  versions before switch-over.
+  **The first shop's own accountant** (Jack, 16 Oct, said of his shop's).
+- [ ] **The accountant's reports**: Wheelhouse's reports give the first
+  shop's accountant what they now take from the shop's old system, and the
+  accountant checks Wheelhouse's versions before switch-over. (Asking Jack's
+  shop's accountant which Citrus Lime reports they use was dropped, 18 Oct.)
 - [ ] **What staff must be told about what is recorded about them**
   (build plan, "still to check before release"): part of the solicitor's
   check (Jack, 16 Oct). If staff need a notice, Claude drafts it like the
@@ -109,11 +114,11 @@ Q12: "these are done before switch-over".
   (`docs/decisions/2026-09-30-customer-service-review.md`).
 - [ ] A privacy request is answered within one month (same file).
 - [ ] Website history is kept 90 days (Q8).
-- [ ] **Jack's real export files** (Q4; Jack, 16 Oct): kept in a private
+- [ ] **The shop's real export files** (Q4; Jack, 16 Oct): kept in a private
   folder on Jack's Mac, outside the Wheelhouse folder, with FileVault on;
   never in the repository or uploaded anywhere. Mark gets a single file when
-  he needs one. Deleted once the two matching weeks have passed and Jack
-  says so.
+  he needs one. Deleted once the two matching weeks have passed and the
+  shop says so.
 
 ## 5. Backups and a practice restore
 
@@ -126,7 +131,7 @@ Q12: "these are done before switch-over".
 - [ ] **Photos and attachments kept somewhere that survives an update**
   (`openspec/changes/add-hosted-copy/design.md`) (Mark).
 
-## 6. Data checks for the move from Citrus Lime
+## 6. Data checks for a move from Citrus Lime
 
 `docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` unless noted.
 
@@ -150,15 +155,16 @@ Q12: "these are done before switch-over".
   the browser and the existing print agent (the printer half of P00b is
   still open, `docs/decisions/2026-09-23-p00b-scanner-evidence.md`);
   scanners set to a UK keyboard layout.
-- [ ] **Staff ready** (Jack, 16 Oct): before switch-over, staff practise on
+- [ ] **The shop's staff ready** (Jack, 16 Oct): before switch-over, they practise on
   the online test copy (North Street Cycles, test data only) from a short
   list Claude writes: a sale, a refund, booking a bike in, taking a deposit,
   handing a bike over. Claude also writes a one-page guide kept at the till
   for the first week (Jack, 16 Oct). Replaces practice mode, which was
   dropped.
-- [ ] **One full trading week, weekend included, on Wheelhouse alone**
-  (`docs/superpowers/specs/2026-09-27-release-2-design.md`). That is the
-  finish line.
+- [ ] **One full trading week, weekend included, on Wheelhouse alone.** No
+  longer Release 2's finish line: since 18 Oct Release 2 is done when it is
+  built and checked, ready to sell (`docs/decisions/2026-10-18-build-for-every-shop.md`
+  answer 4).
 
 ## Not part of switch-over
 
