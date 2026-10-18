@@ -22,8 +22,7 @@ server half of #190 A, a guard so a cancelled, declined or expired booking
 can't be booked in or started (the `workshop-jobs` spec allows it today;
 Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5). Also
 his: the bike on "Waiting for you" items (for the tablet cards' drawn bike
-line, #241); a place to keep who signed a job off and when
-(`docs/decisions/2026-10-16-mechanic-sign-off.md`); and Jack's question,
+line, #241); and Jack's question,
 when the front page switches from the old app to the new one (16 Oct; the
 plans don't say). The day's merges change his work: read #231 (his
 `add-hosted-copy` design now loads the drawn week into the week the shop is
@@ -34,7 +33,15 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #267 too** (Jack chose to make it and flag it, 18 Oct,
+**Check #271 too** (Jack chose to merge it and flag it, 18 Oct,
+`docs/decisions/2026-10-16-mechanic-sign-off.md`): migration 040 adds
+`workshop_jobs.signed_off_by` (ON DELETE SET NULL), `signed_off_name` and
+`signed_off_at`, and a new `workshop_job_sign_offs` table with row
+security; `POST /api/workshop-jobs/:id/finish` now needs `signedOffBy`, an
+active mechanic (400 `sign_off_required`); reopening, and the old app's
+save that reopens, clear it. Reset any local database that ran the branch's
+earlier 040. The till's question (answer 5) is a later piece in your
+`sales.js`. **Check #267 too** (Jack chose to make it and flag it, 18 Oct,
 `docs/decisions/2026-10-18-till-job-payment.md` answer 3): `server/routes/sales.js`
 gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
@@ -56,7 +63,11 @@ through the browser: Print on the Paid box and Print receipt in the diary
 menu, the receipt drawn first and approved; no VAT line or B1 number until
 Mark's sales-in-pence work records them (#269,
 `docs/decisions/2026-10-18-print-receipt.md`). Email and Text receipts stay
-in their packages. Then Files and photos on the job page,
+in their packages. Then the mechanic sign-off's first piece: "Mark ready
+for collection" asks "Who's signing this off?", the job's mechanic picked,
+and the finished job shows "Signed off by [name] · [day], [time]"; each
+sign-off keeps the mechanic's name (#271). The till's question and showing
+it to customers are later pieces. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
