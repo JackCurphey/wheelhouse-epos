@@ -169,7 +169,8 @@ test('a booking request\'s menu offers Accept or decline, which opens its pop-up
   const { ui, fireEvent, within } = await openDiary();
   fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
   const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
-  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Accept or decline', 'View overview']);
+  // "Open in the till" is greyed on a request (Jack, 18 Oct), its reason underneath.
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Accept or decline', 'View overview', 'Open in the tillNot booked yet']);
   fireEvent.click(menu.getByRole('menuitem', { name: 'Accept or decline' }));
   const dlg = within(await ui.findByRole('dialog', { name: /Sam Reed/ }));
   assert.ok(has(dlg.queryByRole('button', { name: 'Accept' })));
@@ -203,4 +204,45 @@ test('on a phone, a booking request\'s menu is headed "[job] · booking request"
   fireEvent.contextMenu(await ui.findByTitle(/^Specialized Sirrus/));
   const menu = await ui.findByRole('menu', { name: 'Job actions' });
   assert.ok(has(within(menu).queryByText('Brake service · booking request')));
+});
+
+// Jack, 18 Oct (docs/decisions/2026-10-18-till-job-payment.md): "Open in the
+// till" opens the till with the job's order; a booking request's is greyed,
+// "Not booked yet", as drawn (diary-menu-job, diary-menu-pending).
+test('Open in the till opens the till with the job', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'open' };
+  try {
+    const { ui, fireEvent, within, waitFor } = await openDiary();
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    fireEvent.click(menu.getByRole('menuitem', { name: 'Open in the till' }));
+    await waitFor(() => assert.equal(`${window.location.pathname}${window.location.search}`, '/workshop/till?job=1'));
+  } finally {
+    JOBS[0] = keep;
+  }
+});
+
+test('a booking request\'s Open in the till is greyed: Not booked yet', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
+  const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+  const till = menu.getByRole('menuitem', { name: /^Open in the till/ });
+  assert.equal(till.getAttribute('aria-disabled'), 'true');
+  assert.ok(has(within(till).queryByText('Not booked yet')));
+});
+
+test('a paid job\'s Open in the till is greyed: Already paid', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted' };
+  try {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    const till = menu.getByRole('menuitem', { name: /^Open in the till/ });
+    assert.equal(till.getAttribute('aria-disabled'), 'true');
+    assert.ok(has(within(till).queryByText('Already paid')));
+  } finally {
+    JOBS[0] = keep;
+  }
 });

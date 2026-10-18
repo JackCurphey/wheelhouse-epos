@@ -178,3 +178,19 @@ test('if the server says settle up first, the page says so', async () => {
   assert.ok(has(box.queryByText('Refund what was paid — then delete.')));
   assert.equal(has(box.queryByText('Bike in the shop')), false);
 });
+
+// Jack, 18 Oct (docs/decisions/2026-10-18-till-job-payment.md; drawn on
+// job-finished): finished work whose order isn't paid offers "Take payment",
+// which opens the till with the job; paying records the hand-over.
+test('finished, unpaid work offers Take payment, which opens the till', async () => {
+  const { page, fireEvent, waitFor } = await openJob({ workState: 'complete', custodyState: 'in_shop', orderId: 40, orderStatus: 'open' });
+  fireEvent.click(await page.findByRole('button', { name: 'Take payment' }));
+  assert.equal(page.queryAllByRole('button', { name: 'Hand over' }).length, 0);
+  await waitFor(() => assert.equal(`${window.location.pathname}${window.location.search}`, '/workshop/till?job=1'));
+});
+
+test('finished work already paid still offers Hand over', async () => {
+  const { page } = await openJob({ workState: 'complete', custodyState: 'in_shop', orderId: 40, orderStatus: 'converted' });
+  assert.ok(has(await page.findByRole('button', { name: 'Hand over' })));
+  assert.equal(page.queryAllByRole('button', { name: 'Take payment' }).length, 0);
+});

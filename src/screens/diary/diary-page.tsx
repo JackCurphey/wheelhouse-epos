@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { createPortal } from 'react-dom';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
@@ -839,6 +840,7 @@ function ChooseDaySheet({ open, date, who, whose, onClose, onPick }: {
 
 export function DiaryPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const isPhone = useIsPhone();
   const isNarrow = useIsNarrow();
   const today = todayIso();
@@ -1365,6 +1367,13 @@ export function DiaryPage() {
           onOpenJob={() => { setMenuFor(null); setOpenJobId(menuFor.job.id); }}
           onOverview={() => showOverview(menuFor.job)}
           onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
+          till={(() => {
+            const j = menuFor.job;
+            if (j.state === 'pending') return { reason: 'Not booked yet' };
+            if (!j.orderId) return { reason: 'No order on this job' };
+            if (j.orderStatus !== 'open') return { reason: 'Already paid' };
+            return { onOpen: () => { setMenuFor(null); navigate(`${ROUTES.till}?job=${j.id}`); } };
+          })()}
           onAnswer={menuFor.job.state === 'pending' ? () => {
             // The request's own card from Waiting for you, or one made from the job.
             const j = menuFor.job;
