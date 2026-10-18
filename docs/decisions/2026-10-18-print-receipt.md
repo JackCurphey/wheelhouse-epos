@@ -23,3 +23,7 @@ is server work in Mark's lane in stage 3 (WP-1.11, WP-3.1).
    working VAT out from each item's current rate, which a reprint could get
    wrong. This holds the 2 Oct decision's VAT line back until the data
    exists; it doesn't drop it.
+3. **The drawings approved** (Jack: "Approve both drawings; go ahead and
+   build printing"): `till-receipt-print`, the Paid box with Print and No
+   receipt, and `till-receipt-paper`, the printed receipt. The diary menu's
+   Print receipt is already drawn (`diary-menu-job`).
