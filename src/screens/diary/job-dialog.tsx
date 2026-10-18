@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError, jobAction } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
@@ -61,7 +63,13 @@ function stageActions(j: WorkshopJob): Action[] {
     ];
     case 'waiting_parts': return [{ label: 'Parts arrived', action: 'parts-arrived', primary: true }, hold];
     case 'on_hold': return [{ label: 'Resume', action: 'resume', primary: true }];
-    case 'complete': return [{ label: 'Hand over', action: 'collect', primary: true }];
+    // Unpaid finished work is paid at the till, which records the hand-over
+    // (collect and pay decision 3; Jack, 18 Oct); paid work is handed over.
+    // A cancelled order is neither paid nor payable here (fresh review).
+    case 'complete': return j.orderId && j.orderStatus === 'cancelled' ? []
+      : j.orderId && j.orderStatus === 'open'
+        ? [{ label: 'Take payment', action: 'pay', primary: true }]
+        : [{ label: 'Hand over', action: 'collect', primary: true }];
     default: return [];
   }
 }
@@ -87,6 +95,7 @@ const Tag = ({ children }: { children: ReactNode }) => (
 
 export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const jobQuery = useQuery({ queryKey: ['workshop-job', jobId], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${jobId}`) });
   const job = jobQuery.data;
   // A booking that ended can't be booked in or given another day, though its page still opens (fresh review, 15 Oct).
@@ -366,7 +375,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
               ))}
               {actions.filter((a) => a.primary).map((a) => (
-                <Button key={a.action} variant="accent" disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
+                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : run(a.action))}>{a.label}</Button>
               ))}
             </footer>
           </>

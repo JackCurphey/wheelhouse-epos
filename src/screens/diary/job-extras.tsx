@@ -145,10 +145,12 @@ export type MenuAt = { x: number; y: number; touch: boolean; phone: boolean };
  * Decision 37: Open job and View overview. Arrow keys move through it,
  * Escape or a click elsewhere closes it, and focus goes back to the job.
  */
-export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, onAnswer }: {
+export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, onAnswer, till }: {
   job: WorkshopJob; at: MenuAt; onClose: (returnFocus: boolean) => void; onOpenJob: () => void; onOverview: () => void;
   /** A booking request (Jack, 18 Oct): "Accept or decline" in place of Open job, opening its pop-up. */
   onAnswer?: () => void;
+  /** "Open in the till" (Jack, 18 Oct): opens the till with the job, or greyed with why. */
+  till?: { onOpen?: () => void; reason?: string };
   /** "Change length" (Jack, 18 Oct): only for a job that can be moved. */
   onStretch?: () => void;
 }) {
@@ -231,6 +233,17 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, on
         : <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOpenJob}>Open job</button>}
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOverview}>View overview</button>
       {onStretch ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onStretch}>Change length</button> : null}
+      {till ? (
+        till.onOpen ? (
+          <button type="button" role="menuitem" tabIndex={-1} className={`${item} border-t border-[var(--wh-border)]`} onClick={till.onOpen}>Open in the till</button>
+        ) : (
+          // Greyed with the reason underneath, as drawn (diary-menu-pending).
+          <div role="menuitem" tabIndex={-1} aria-disabled="true" className={`${item} flex-col !items-start justify-center gap-0.5 border-t border-[var(--wh-border)] py-1.5 text-[var(--wh-muted)]`}>
+            <span>Open in the till</span>
+            <span className="text-xs font-normal">{till.reason}</span>
+          </div>
+        )
+      ) : null}
       <p className="m-0 border-t border-[var(--wh-border)] px-3.5 pt-2 pb-1.5 text-xs leading-snug text-[var(--wh-muted)]">{tip}</p>
     </div>
   );

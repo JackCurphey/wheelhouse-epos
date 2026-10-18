@@ -348,6 +348,28 @@ silent:
 6. **A paid job can't be deleted yet**, since the new app has no refund; the
    "Refund what was paid" step arrives with the till's refunds.
 
+### 18 Oct 2026: paying a job's order at the till (`docs/decisions/2026-10-18-till-job-payment.md`)
+
+1. **The till opened with a job shows only its locked lines**, with "To add
+   anything to this job, add it in the job's Work and parts." and "Start a
+   new sale instead", since paying the order charges its own saved lines.
+   *Pattern:* till-job's locked lines; the drawing's extras wait for the
+   till paying more than the order.
+2. **"Bike collected when paid" shows only while the bike is in the shop.**
+   *Pattern:* the server can only collect a bike that's in.
+3. **"Open in the till" is greyed "Already paid" or "No order on this job"**
+   besides the drawn "Not booked yet". *Pattern:* diary-menu-pending.
+4. **On a tablet or phone the hold menu has "Open in the till" too.**
+   *Pattern:* the same menu at touch sizes (diary-context-menu).
+5. **Work not yet in progress or finished: "The work isn't finished, so
+   this job can't be paid yet."** *Pattern:* the 8 Oct rule.
+6. **A line the server won't sell (a retired service or part): "This job
+   can't be paid here yet: [reason]. Change it in the job's Work and
+   parts.", with Take payment greyed**, so the card is never taken first.
+   Any refusal after the card step adds "No sale was recorded: if the card
+   machine took the payment, reverse it on the machine." *Pattern:* the
+   work-not-finished message and its reversal advice (fresh re-review).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

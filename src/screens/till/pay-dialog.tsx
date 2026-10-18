@@ -23,7 +23,7 @@ type Step =
   | { kind: 'card'; amount: number; cashPart: number }
   | { kind: 'cash' }
   | { kind: 'split' }
-  | { kind: 'paid'; how: string; change: number };
+  | { kind: 'paid'; how: string; change: number; note: string | null };
 
 declare global {
   interface Window { WH_TILL_TICK_MS?: number }
@@ -37,14 +37,22 @@ const parse = (raw: string) => {
 
 const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[18px] py-3.5 text-left';
 
-export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void }) {
+/**
+ * A workshop job's order (Jack, 18 Oct, docs/decisions/2026-10-18-till-job-payment.md):
+ * paying converts the order, which charges its own saved lines, and then
+ * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
+ */
+type JobPayment = { orderId: number; total: number; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
+
+export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const [serving, setServing] = useState<SessionEmployee | null>(me && me.isCashier ? me : null);
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const total = saleTotal(lines);
+  // A job's order is paid at the amount due, discounts taken off on the server.
+  const total = job ? job.total : saleTotal(lines);
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const sub = serving ? `${serving.name} serving · ${items(count)}` : items(count);
 
@@ -53,18 +61,18 @@ export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; o
     setSaving(true);
     setError(null);
     try {
-      await apiMutate('/api/sales', {
-        items: lines.map(asSaleItem),
-        // To the penny: the screen rounds what staff type, so the record must too.
-        cashAmount: pence(cash) / 100,
-        cardAmount: pence(card) / 100,
-        cashTendered: tendered === null ? null : pence(tendered) / 100,
-        cashierId: serving.id,
-        sellPastStock: true,
-      });
-      setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100 });
+      // To the penny: the screen rounds what staff type, so the record must too.
+      const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, cashierId: serving.id };
+      let note: string | null = null;
+      if (job) note = await job.afterPaid(await apiMutate<{ jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true }));
+      else await apiMutate('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
+      setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
+      // A job whose work can't be finished yet is refused before anything is taken.
+      // The card machine may already have taken it: say so (fresh review).
+      if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
+      else if (job && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
+      else setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {
       setSaving(false);
     }
@@ -144,7 +152,7 @@ export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; o
   } else {
     title = 'Paid';
     description = step.how;
-    body = <PaidStep total={total} change={step.change} onNextSale={onNextSale} />;
+    body = <PaidStep total={total} change={step.change} note={step.note} onNextSale={onNextSale} />;
   }
 
   return (
@@ -245,25 +253,29 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
   );
 }
 
-function PaidStep({ total, change, onNextSale }: { total: number; change: number; onNextSale: () => void }) {
+function PaidStep({ total, change, note, onNextSale }: { total: number; change: number; note: string | null; onNextSale: () => void }) {
   const [left, setLeft] = useState(5);
+  // With a note to read, Paid waits for No receipt (as the job warning, 16 Oct).
+  const counting = !note;
   // Kept in a ref so a new callback from the page doesn't restart the count.
   const next = useRef(onNextSale);
   useEffect(() => { next.current = onNextSale; });
   useEffect(() => {
+    if (!counting) return;
     if (left <= 0) { next.current(); return; }
     const t = setTimeout(() => setLeft((n) => n - 1), window.WH_TILL_TICK_MS ?? 1000);
     return () => clearTimeout(t);
-  }, [left]);
+  }, [left, counting]);
   return (
     <>
       <div className="flex flex-col items-center gap-2 text-center">
         <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--wh-state-ready-bg)] text-3xl text-[var(--wh-state-ready-ink)]">✓</span>
         <span className="font-mono text-[30px]">{money(total)}</span>
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
+        {note ? <span role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-warn-ink)]">{note}</span> : null}
       </div>
       <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>No receipt</Button>
-      <p role="timer" className="m-0 text-center text-sm text-[var(--wh-muted)]">{`Next sale starts in ${left} second${left === 1 ? '' : 's'}`}</p>
+      {counting ? <p role="timer" className="m-0 text-center text-sm text-[var(--wh-muted)]">{`Next sale starts in ${left} second${left === 1 ? '' : 's'}`}</p> : null}
     </>
   );
 }
