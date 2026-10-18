@@ -58,3 +58,25 @@ picked, Cancel and "Sign off and mark ready"); "Signed off by [name] ·
 signed off to customers", off. They are `signOffDrawings()` in
 `docs/design/user-journeys/generator/diary.mjs`, not on the canvas yet. The
 till's payment that finishes a job uses the same pop-up.
+
+## Building it (18 Oct 2026)
+
+Jack, 18 Oct, asked what the first piece covers: **piece 1, the sign-off on
+"Mark ready for collection" and the "Signed off by" line, including two
+columns on the job and a new table keeping every sign-off** (Jack: "Yes:
+start with piece 1, the sign-off on Mark ready for collection and the Signed
+off line, including the two job columns and the new sign-off history
+table"). The table keeps answer 4's earlier sign-offs before the job history
+(WP-1.2) exists. Chosen over the columns alone. The till's question (answer
+5) and the customer setting (answer 3) are later pieces; until the till's is
+built, a job finished by paying at the till goes out unsigned.
+
+**A deleted mechanic's sign-offs keep their name** (Jack, 18 Oct, after the
+fresh review found a mechanic who had signed off couldn't be deleted: "1:
+keep their name. Each sign-off saves the mechanic's name when they sign, so
+deleting them later still works and old jobs still say who signed off").
+Chosen over refusing the delete and over forgetting who.
+
+**Merged with the server change flagged for Mark** (Jack, 18 Oct: "1: merge
+once GitHub's checks pass, and flag the server and database change for Mark
+in the status update"), as #265 and #267 were.

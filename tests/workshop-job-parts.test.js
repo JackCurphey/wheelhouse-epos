@@ -143,7 +143,7 @@ test('a job is not carried over if the bike never came in, or the work is finish
   const done = await newJob({ jobDate: '2026-08-25', startTime: '09:00', endTime: '10:00' });
   let v = (await staff(`/api/workshop-jobs/${done.id}/book-in`, { method: 'POST', body: { version: done.version } })).body.version;
   v = (await staff(`/api/workshop-jobs/${done.id}/start`, { method: 'POST', body: { version: v } })).body.version;
-  await staff(`/api/workshop-jobs/${done.id}/finish`, { method: 'POST', body: { version: v } });
+  await staff(`/api/workshop-jobs/${done.id}/finish`, { method: 'POST', body: { version: v, signedOffBy: sam } });
   await staff('/api/workshop-jobs?start=2026-09-01&end=2026-09-01');
   for (const id of [notHere.id, done.id]) {
     assert.equal((await staff(`/api/workshop-jobs/${id}`)).body.parts.length, 1, `job ${id} was carried over`);

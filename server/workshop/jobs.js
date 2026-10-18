@@ -76,6 +76,11 @@ export function serializeWorkshopJob(row) {
     orderTotal: row.order_total,
     // The job's current quote (its latest revision), or null (journey 4).
     quote: row.quote_id ? { id: row.quote_id, state: row.quote_state, revision: row.quote_revision } : null,
+    // Who signed the finished work off, and when (migration 040); null until
+    // it's finished and again once reopened.
+    signedOffBy: row.signed_off_by ?? null,
+    signedOffByName: row.signed_off_name ?? null,
+    signedOffAt: row.signed_off_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

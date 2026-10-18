@@ -49,6 +49,10 @@ export type WorkshopJob = {
   /** What the customer wrote when booking online, if anything. */
   customerDescription?: string | null;
   notes: string | null;
+  /** Who signed the finished work off, and when (Jack, 16 Oct): null until finished, and again once reopened. */
+  signedOffBy?: number | null;
+  signedOffByName?: string | null;
+  signedOffAt?: string | null;
   orderId: number | null;
   orderStatus: string | null;
   /** Totalled in SQL. No screen adds money up. */

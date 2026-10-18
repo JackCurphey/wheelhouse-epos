@@ -109,7 +109,7 @@ test('the job shows its number, the customer\'s words, its notes, and its work a
 const STAGES = [
   ['an expected bike is booked in', {}, 'Book in', 'book-in'],
   ['a bike in the shop has its work started', { custodyState: 'in_shop' }, 'Start work', 'start'],
-  ['work in progress is marked ready', { custodyState: 'in_shop', workState: 'in_progress' }, 'Mark ready for collection', 'finish'],
+  // Mark ready for collection asks who is signing it off first: tests/screens/job-sign-off.test.js.
   ['work in progress can wait for parts', { custodyState: 'in_shop', workState: 'in_progress' }, 'Waiting for parts', 'await-parts'],
   ['parts arriving restarts the work', { custodyState: 'in_shop', workState: 'waiting_parts' }, 'Parts arrived', 'parts-arrived'],
   ['paused work is resumed', { custodyState: 'in_shop', workState: 'on_hold' }, 'Resume', 'resume'],
@@ -231,10 +231,14 @@ test('a cancelled job opened from its menu reads Cancelled and can\'t be booked 
 
 // Notes typed but not saved don't stay in a box that has become read-only.
 test('notes not saved before the work is finished are not shown as if saved', async () => {
-  const { dlg, fireEvent, waitFor } = await openJob({ custodyState: 'in_shop', workState: 'in_progress' });
+  const { dlg, ui, within, fireEvent, waitFor } = await openJob({ custodyState: 'in_shop', workState: 'in_progress' });
   fireEvent.change(dlg.getByRole('textbox', { name: 'Notes' }), { target: { value: 'Typed, never saved' } });
   JOB = { ...JOB, workState: 'complete', version: 4 };
   fireEvent.click(dlg.getByRole('button', { name: 'Mark ready for collection' }));
+  // It asks who is signing it off first (Jack, 16 Oct): Alex Morgan, the job's mechanic, is picked.
+  const pop = within(await ui.findByRole('dialog', { name: 'Who’s signing this off?' }));
+  await waitFor(() => assert.equal(pop.getByRole('button', { name: 'Sign off and mark ready' }).disabled, false));
+  fireEvent.click(pop.getByRole('button', { name: 'Sign off and mark ready' }));
   await waitFor(() => assert.ok(has(dlg.queryByText('Reopen the job to change its notes.'))));
   assert.equal(dlg.getByRole('textbox', { name: 'Notes' }).value, 'Check the rear hub too.');
 });

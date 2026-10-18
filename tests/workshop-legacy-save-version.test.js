@@ -87,8 +87,9 @@ test('a version that is not a whole number is refused', async () => {
 // its dropdown's status on every Save, and the old statuses have no "in
 // progress", so every Save put work in progress back to "not started". A
 // status that matches what the job already reads now leaves its states alone.
+// Finishing needs a mechanic to sign it off (Jack, 16 Oct, mechanic sign-off).
 const act = (id, action, version) =>
-  staff(`/api/workshop-jobs/${id}/${action}`, { method: 'POST', body: { version } });
+  staff(`/api/workshop-jobs/${id}/${action}`, { method: 'POST', body: action === 'finish' ? { version, signedOffBy: sam } : { version } });
 
 async function startedJob() {
   const created = await staff('/api/workshop-jobs', {
