@@ -51,8 +51,12 @@ or decline from a booking request's menu (#263). The till now pays a job's
 order: "Open in the till" from the diary menu and "Take payment" on a
 finished job open it with the job's lines locked, the discounts taken off,
 and the bike recorded as collected (#267,
-`docs/decisions/2026-10-18-till-job-payment.md`). "Print receipt" waits for
-receipts. Then Files and photos on the job page,
+`docs/decisions/2026-10-18-till-job-payment.md`). Then printing a receipt
+through the browser: Print on the Paid box and Print receipt in the diary
+menu, the receipt drawn first and approved; no VAT line or B1 number until
+Mark's sales-in-pence work records them (#269,
+`docs/decisions/2026-10-18-print-receipt.md`). Email and Text receipts stay
+in their packages. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
