@@ -15,6 +15,17 @@ The old app's Workshop tab, and any old `#workshop` address, SHALL open the new 
 - **WHEN** staff open an order's workshop job with "View / edit workshop job"
 - **THEN** the job form's mechanic list has the shop's mechanics
 
+### Requirement: The old job form refuses a save on a job changed elsewhere
+The old job form, opened from an order, SHALL refuse a save or "Mark complete" on a job someone else changed after it opened, say "This job changed while you were looking at it." and close (kept from the retired review pop-up requirement, which also said this).
+
+#### Scenario: Marking complete
+- **WHEN** staff press "Mark complete" on a job someone else saved after the form opened
+- **THEN** it says "This job changed while you were looking at it." and the form closes
+
+#### Scenario: Saving
+- **WHEN** staff save a job someone else saved after the form opened
+- **THEN** it says "This job changed while you were looking at it." and the form closes
+
 ## REMOVED Requirements
 
 ### Requirement: The old app's Workshop diary shows what is waiting

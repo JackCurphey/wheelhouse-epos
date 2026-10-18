@@ -10,6 +10,10 @@
 - [x] 2.2 The old job form loads mechanics itself and no longer draws the old diary after a save or delete
 - [x] 2.3 The tests that covered only the old diary removed; the design-scale test keeps only the badge
 
+## 2b. After the fresh review
+
+- [x] 2b.1 The old job form's refused save kept in the spec and tested again, opened from an order: "Mark complete" and Save on a job changed elsewhere say so and close (both failed with the form's close removed)
+
 ## 3. Checks
 
-- [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.1 A fresh review; `npm test` and `npm run test:browser` pass

@@ -606,8 +606,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .badge.status-pending { background: var(--status-pending-bg); color: var(--status-pending-ink); }
 /* The online booking pages' My Bookings renders one of these for every job
    status. Only .status-pending existed, so four of the five showed as bare
-   text. Tokens are the staff diary's own (.job-card.status-* uses the same
-   pairs) and design-contrast.test.js already gates each ink/bg pair for AA. */
+   text. Tokens are the old staff diary's (retired 18 Oct) and design-contrast.test.js already gates each ink/bg pair for AA. */
 .badge.status-scheduled { background: var(--status-scheduled-bg); color: var(--status-scheduled-ink); }
 .badge.status-waiting_parts { background: var(--status-waiting_parts-bg); color: var(--status-waiting_parts-ink); }
 .badge.status-on_hold { background: var(--status-on_hold-bg); color: var(--status-on_hold-ink); }
