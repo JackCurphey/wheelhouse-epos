@@ -58,9 +58,24 @@ left empty rather than filled with made-up jobs.
    queue" is the new app's word for them already. Chosen over leaving it to
    the Overview page's Shared queue tab.
 
-**Still to do:** the tablet and phone versions, drawn before each piece is
-built; an OpenSpec change for each piece (each touches the
+**Still to do:** the tablet and phone versions of month view, Change details
+and the menu, drawn before each piece is built; an OpenSpec change for each piece (each touches the
 `workshop-diary` spec). How the menu prints a paid job's till receipt
 is settled when it is built (the old diary built the receipt in the browser
 from the sale and printed the page). Deleting a job and
 attachments still wait for #225.
+
+**Tablet and phone, 18 Oct** (Jack approved all four drawings): stretching
+and the Shared queue, `stretchTabletBoard`, `stretchPhoneBoard`,
+`sharedQueueTabletBoard` and `sharedQueuePhoneBoard` in `diary.mjs`, not on
+the canvas yet.
+
+- **Stretching on a touch screen: the grip shows only on the chosen job**
+  (Jack: "1"). One tap chooses the job, as today; a finger-sized grip (a
+  44px touch area) then shows on its bottom edge, and the times and length
+  show while dragging, beside the job on a tablet and inside it on a phone.
+  Dragging to scroll can't stretch a job by accident. Chosen over a grip on
+  every job, and over no stretching on touch screens (Change details only).
+- **Shared queue on a tablet** is a fourth button after the mechanics, as on
+  desktop; **on a phone** it is the last line of the "whose jobs" list,
+  after Everyone, By mechanic and each mechanic.

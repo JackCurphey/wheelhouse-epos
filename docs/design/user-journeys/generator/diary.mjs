@@ -3342,6 +3342,63 @@ ${note('Shared queue: only the jobs no mechanic has yet.', 13)}`, 12));
   } finally { TOOLBAR_MECHS = was; delete CHIP_INITIAL['Shared queue']; }
 }
 
+// Tablet and phone versions of stretching and the Shared queue (Jack,
+// 18 Oct, `2026-10-18-old-diary-features.md`). On a touch screen the grip
+// shows only on the chosen job (Jack: "1"): one tap chooses the job, as
+// today, and a finger-sized grip appears on its bottom edge, so dragging to
+// scroll can never stretch a job by accident.
+function touchStretchParts(slotH, newDur, labelSide) {
+  const j = JOBS.find((x) => x.job === 'WH-1042');
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const bottom = top + (newDur / 30) * slotH - 4;
+  // A 44px-tall touch area centred on the bottom edge, with a visible bar.
+  const handle = `<div aria-hidden="true" style="position: absolute; left: 3px; right: 3px; top: ${bottom - 22}px; height: 44px; display: flex; align-items: center; justify-content: center; z-index: 4"><span style="width: 40px; height: 6px; border-radius: 3px; background: ${ST.scheduled[1]}; box-shadow: 0 0 0 2px #ffffff"></span></div>`;
+  const where = labelSide === 'right' ? 'left: calc(100% + 6px);' : 'right: 6px;';
+  const label = `<div role="status" style="position: absolute; ${where} top: ${labelSide === 'right' ? bottom - 16 : bottom - 58}px; z-index: 5; white-space: nowrap; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; background: ${C.ink}; color: #ffffff; font-size: 14px; font-weight: 700; box-shadow: 0 6px 16px rgba(28,30,25,0.25)"><span style="font-family: ${MONO}">11:30–13:30</span> · 2 hours</div>`;
+  return { j, html: `${handle}${label}` };
+}
+function withStretched(j, newDur, fn) {
+  const was = { dur: j.dur, detail: j.detail };
+  j.dur = newDur; j.detail = '11:30–13:30 · approved £111';
+  try { return fn(); } finally { Object.assign(j, was); }
+}
+function stretchTabletBoard() {
+  const { j, html } = touchStretchParts(30, 120, 'right');
+  return withStretched(j, 120, () => tabletDiary({
+    highlightJob: { type: 'job', job: 'WH-1042' },
+    overlayFor: { day: TODAY, html },
+  }));
+}
+function stretchPhoneBoard() {
+  const { j, html } = touchStretchParts(P_SLOT, 120, 'inside');
+  return withStretched(j, 120, () => phoneDiary({
+    day: TODAY,
+    highlightJob: { type: 'job', job: 'WH-1042' },
+    overlayFor: { col: 0, html },
+  }));
+}
+function sharedQueueTabletBoard() {
+  const was = TOOLBAR_MECHS;
+  TOOLBAR_MECHS = ['Everyone', 'Alex', 'Jo', 'Shared queue'];
+  CHIP_INITIAL['Shared queue'] = 'group';
+  try {
+    return tabletDiary({ mechFilter: 'Shared queue' });
+  } finally { TOOLBAR_MECHS = was; delete CHIP_INITIAL['Shared queue']; }
+}
+// The phone's people chip opens its list (Everyone, By mechanic, each
+// mechanic); Shared queue is its last line.
+function sharedQueuePhoneBoard() {
+  const opts = [['Everyone', 'group'], ['By mechanic', 'group'], ['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
+  const badge = (ini) => ini === 'group'
+    ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: ${C.accentSoft}; color: ${C.accentSoftInk}; flex-shrink: 0">${icon('customers', 15)}</span>`
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: ${C.accentSoft}; color: ${C.accentSoftInk}; font-size: 13px; font-weight: 700; flex-shrink: 0">${esc(ini)}</span>`;
+  const list = `<div role="listbox" aria-label="Whose jobs are shown" style="position: absolute; left: 14px; top: 114px; z-index: 20; width: 230px; box-sizing: border-box; padding: 6px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.22); display: flex; flex-direction: column; gap: 2px">${opts.map(([label, ini]) => {
+    const on = label === 'Everyone'; // what is showing now; Shared queue is the new last line
+    return `<div role="option" aria-selected="${on}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 8px; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${badge(ini)}<span style="flex-grow: 1">${esc(label)}</span>${on ? icon('check', 18) : ''}</div>`;
+  }).join('')}</div>`;
+  return phoneDiary({ day: TODAY }, { overlay: list });
+}
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
@@ -3351,5 +3408,9 @@ export function oldDiaryFeatureDrawings() {
     'diary-menu-job': menuJobBoard(),
     'diary-menu-pending': menuPendingBoard(),
     'diary-shared-queue': sharedQueueBoard(),
+    'diary-stretch-tablet': stretchTabletBoard(),
+    'diary-stretch-phone': stretchPhoneBoard(),
+    'diary-shared-queue-tablet': sharedQueueTabletBoard(),
+    'diary-shared-queue-phone': sharedQueuePhoneBoard(),
   };
 }
