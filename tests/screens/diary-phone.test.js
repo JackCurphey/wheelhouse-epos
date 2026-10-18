@@ -147,6 +147,18 @@ test('the people chip\'s last line, Shared queue, shows only the jobs no mechani
   assert.ok(has(await ui.findByText('Specialized Sirrus')));
 });
 
+// Jack, 18 Oct: on a phone the week label opens "Choose a day", the month
+// with each day's number of jobs; a tap on a day goes to it.
+test('the week label opens Choose a day, with each day\'s jobs; a day goes there', async () => {
+  const { ui, fireEvent, within } = await openPhone();
+  fireEvent.click(ui.getByRole('button', { name: /^Choose a day/ }));
+  const sheet = within(await ui.findByRole('dialog', { name: 'Choose a day' }));
+  assert.ok(has(await sheet.findByText('October 2026')));
+  fireEvent.click(await sheet.findByRole('button', { name: /^Monday 5 October, 1 job$/ }));
+  assert.ok(has(await ui.findByText('Giant Escape')));
+  assert.equal(has(ui.queryByRole('dialog', { name: 'Choose a day' })), false);
+});
+
 test('Waiting in the top bar opens the list; a card goes to its day and shows the chosen bar, and Open opens it', async () => {
   const { ui, fireEvent, within } = await openPhone();
   fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
