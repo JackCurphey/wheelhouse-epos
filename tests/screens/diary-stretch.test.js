@@ -44,7 +44,9 @@ let uninstall;
 let shell;
 let calls;
 let answer;
+let hours = [];
 afterEach(async () => {
+  hours = [];
   const { cleanup } = await import('@testing-library/react');
   cleanup();
   shell?.queryClient.clear();
@@ -63,7 +65,7 @@ function stubServer() {
     if (method === 'PUT') return answer ? reply(answer.status, answer.body) : reply(200, { ...JOBS[0], version: 4 });
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
-    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
+    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: hours });
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     return reply(404, { error: 'Not found' });
@@ -140,4 +142,15 @@ test('a booking request\'s menu has no Change length', async () => {
   const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
   assert.ok(has(menu.queryByRole('menuitem', { name: 'Open job' })));
   assert.equal(has(menu.queryByRole('menuitem', { name: 'Change length' })), false);
+});
+
+// Fresh review: the grid runs to the latest closing of the week, but a job
+// stops at its own day's closing time.
+test('a job stops at its own day\'s closing time, not the latest in the week', async () => {
+  hours = [1, 2, 3, 4, 5].map((weekday) => ({ weekday, open: '09:00', close: weekday === 2 ? '16:00' : '18:00' }));
+  const { ui, fireEvent } = await openDiary();
+  await openLength(ui, fireEvent, 'Trek Domane');
+  const b = block(ui, 'Trek Domane');
+  for (let i = 0; i < 40; i += 1) fireEvent.keyDown(b, { key: 'ArrowDown' });
+  assert.ok(has(ui.queryByText(/10:00–16:00 · 6 hours\./)));
 });

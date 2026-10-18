@@ -3344,9 +3344,9 @@ ${note('Shared queue: only the jobs no mechanic has yet.', 13)}`, 12));
 
 // Tablet and phone versions of stretching and the Shared queue (Jack,
 // 18 Oct, `2026-10-18-old-diary-features.md`). On a touch screen the grip
-// shows only on the chosen job (Jack: "1"): one tap chooses the job, as
-// today, and a finger-sized grip appears on its bottom edge, so dragging to
-// scroll can never stretch a job by accident.
+// shows only on the chosen job (Jack: "1"), chosen by holding it and picking
+// "Change length" (Jack's corrected answer); a finger-sized grip appears on
+// its bottom edge, so dragging to scroll can never stretch a job by accident.
 function touchStretchParts(slotH, newDur, labelSide) {
   const j = JOBS.find((x) => x.job === 'WH-1042');
   const top = ((j.start - GRID_START) / 30) * slotH + 2;

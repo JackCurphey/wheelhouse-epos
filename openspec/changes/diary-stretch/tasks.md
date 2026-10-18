@@ -12,6 +12,12 @@
 - [x] 2.2 The edge with a mouse; the finger-sized grip and the times label while stretching; the chosen ring, as drawn
 - [x] 2.3 "Change length" in the job's menu, the keyboard steps, and a tap elsewhere leaving it
 
+## 2b. After the fresh review
+
+- [x] 2b.1 Tests first, watched failing: a job stops at its own day's closing time (it ran to the week's latest); grabbed at the top of the edge, an hour's drag adds exactly an hour, and a 2px wobble saves nothing and leaves no grip (the end followed the pointer)
+- [x] 2b.2 The end follows the edge; a 4px threshold; a cancelled touch saves nothing; the label wraps inside a narrow column; a stack's jobs use Change length (logged)
+- [x] 2b.3 The existing menu test lists Change length for a movable job
+
 ## 3. Checks
 
 - [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass

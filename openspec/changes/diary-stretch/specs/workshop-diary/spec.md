@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: A job's length changes by its bottom edge
-Staff SHALL be able to make a timed job longer or shorter by dragging its bottom edge, in 15-minute steps, no shorter than 15 minutes and ending no later than closing time (Jack, 18 Oct, `docs/decisions/2026-10-18-old-diary-features.md` answer 2). The new times and length SHALL show while it changes, and letting go SHALL save the new end time with the version the diary saw. With a mouse the edge SHALL always work.
+Staff SHALL be able to make a timed job longer or shorter by dragging its bottom edge, in 15-minute steps, no shorter than 15 minutes and ending no later than closing time (Jack, 18 Oct, `docs/decisions/2026-10-18-old-diary-features.md` answer 2). The new times and length SHALL show while it changes, and letting go SHALL save the new end time with the version the diary saw. With a mouse the edge SHALL work on any job shown on its own (a job in a stack uses Change length), following the edge wherever it was grabbed, and a press that moves less than 4 pixels SHALL change nothing. A job SHALL stop at its own day's closing time.
 
 #### Scenario: Dragging with a mouse
 - **WHEN** staff drag the bottom edge of a 10:00–11:00 Brake service down two half-hour rows

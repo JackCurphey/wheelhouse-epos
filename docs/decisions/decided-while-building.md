@@ -262,6 +262,26 @@ silent:
    the booking request's "Accept or decline" is drawn. *Pattern:* New job's
    starting status pills (decision 66; 3 Oct answer 11).
 
+### 18 Oct 2026: stretching a job (`docs/decisions/2026-10-18-old-diary-features.md` answer 2)
+
+1. **`diary-stretch`: with a mouse, the grip shows on hover**; the bottom
+   8px of every job shown on its own stretches it. *Pattern:* decision 59's
+   hover-to-widen; the drawing shows the grip on the job being stretched.
+2. **A job in a stack has no edge**; its menu's "Change length" stretches
+   it (it leaves the stack while it does). *Pattern:* moving a job from its
+   stack's chooser.
+3. **`diary-menu-job`: "Change length" is in the menu on a computer too**,
+   so it can be done from the keyboard (the Menu key, then up and down,
+   Enter, Escape), each step read out. *Pattern:* moving with M and the
+   arrows; accessibility first.
+4. **The times label sits inside the job in the week's last column and on
+   a phone**, wrapping in a narrow column, so it doesn't run off the diary
+   or over the times. *Pattern:* the phone drawing.
+5. **While stretching, the job wears the chosen ring**, not the lifted look
+   of a job being moved. *Pattern:* the three stretch drawings.
+6. **A job stops at its own day's closing time**, though the grid may run
+   later for another day. *Pattern:* the server's opening-hours check.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

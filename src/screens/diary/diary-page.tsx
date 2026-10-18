@@ -227,8 +227,8 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
       </div>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute z-[4] rounded-md bg-[var(--wh-ink)] px-2.5 py-1.5 text-sm font-bold whitespace-nowrap text-[var(--wh-panel)] shadow-[0_6px_16px_var(--wh-backdrop)]"
-        style={move.labelInside(colIndex) ? { top: top + height - 58, right: 6 } : { top: top + height - 16, left: 'calc(100% + 6px)' }}
+        className={`pointer-events-none absolute z-[4] rounded-md bg-[var(--wh-ink)] px-2.5 py-1.5 text-sm font-bold text-[var(--wh-panel)] shadow-[0_6px_16px_var(--wh-backdrop)] ${move.labelInside(colIndex) ? 'max-w-[calc(100%-12px)]' : 'whitespace-nowrap'}`}
+        style={move.labelInside(colIndex) ? { bottom: `calc(100% - ${top + height - 30}px)`, right: 6 } : { top: top + height - 16, left: 'calc(100% + 6px)' }}
       >
         <span className="font-mono">{hhmm(stretching.startMin)}–{hhmm(stretching.startMin + stretching.durationMin)}</span> · {lengthText(stretching.durationMin)}
       </div>
@@ -801,6 +801,14 @@ export function DiaryPage() {
 
   // ---- Changing a job's length (Jack, 18 Oct) ----
   const lengthAt = (p: Preview) => `${hhmm(p.startMin)}–${hhmm(p.startMin + p.durationMin)}`;
+  // A job stops at its own day's closing time; the grid can run later for
+  // another day (fresh review). A job already past it keeps its end.
+  const latestEnd = (job: Shown, colIndex: number) => {
+    const weekday = new Date(`${columns[colIndex].date}T12:00:00Z`).getUTCDay();
+    const close = settings.data?.openingHours?.find((h) => h.weekday === weekday)?.close;
+    const limit = close ? Math.min(range.end, toMinutes(close)) : range.end;
+    return Math.max(limit, toMinutes(job.startTime as string) + durationOf(job));
+  };
   async function saveLength(job: Shown, p: Preview) {
     if (p.durationMin === durationOf(job)) {
       setPreview(null);
@@ -883,7 +891,7 @@ export function DiaryPage() {
       if (preview?.stretch && preview.partId === job.partId) {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
-          const most = range.end - preview.startMin;
+          const most = latestEnd(job, colIndex) - preview.startMin;
           const next = { ...preview, durationMin: Math.max(SNAP_MIN, Math.min(most, preview.durationMin + (e.key === 'ArrowUp' ? -SNAP_MIN : SNAP_MIN))) };
           setPreview(next);
           setMoveNote(`Changing ${bike}’s length. ${lengthAt(next)} · ${lengthText(next.durationMin)}.`);
@@ -942,26 +950,46 @@ export function DiaryPage() {
       const colEl = document.querySelector<HTMLElement>(`[data-diary-col="${colIndex}"]`);
       if (!colEl) return;
       const startMin = toMinutes(job.startTime as string);
+      const wasStretching = Boolean(preview?.stretch && preview.partId === job.partId);
+      const length = wasStretching && preview ? preview.durationMin : durationOf(job);
+      // The end follows the edge, wherever on it the press was (fresh review).
+      const colTop = colEl.getBoundingClientRect().top;
+      const grab = e.clientY - (colTop + ((startMin + length - range.start) / 30) * slotPx);
+      const limits = { start: range.start, end: latestEnd(job, colIndex) };
+      const y0 = e.clientY;
       let moved = false;
+      const stop = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onCancel);
+      };
       const onMove = (ev: globalThis.PointerEvent) => {
+        // A wobble of a few pixels isn't a drag (as moving a job).
+        if (!moved && Math.abs(ev.clientY - y0) < 4) return;
         moved = true;
-        const end = stretchEnd(ev.clientY - colEl.getBoundingClientRect().top, range, startMin, slotPx);
+        const end = stretchEnd(ev.clientY - colEl.getBoundingClientRect().top - grab, limits, startMin, slotPx);
         setPreview({ ...startOf(job, colIndex), durationMin: end - startMin, stretch: true });
       };
       const onUp = () => {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onUp);
-        justDragged.current = true;
-        setTimeout(() => { justDragged.current = false; }, 0);
+        stop();
         const p = previewRef.current;
-        if (moved && p?.stretch) void saveLength(job, p);
-        else if (!previewRef.current?.stretch) setPreview(null);
+        if (moved) {
+          justDragged.current = true;
+          setTimeout(() => { justDragged.current = false; }, 0);
+          if (p?.stretch) void saveLength(job, p);
+        } else if (!wasStretching) {
+          setPreview(null);
+        }
       };
-      if (!preview?.stretch) setPreview({ ...startOf(job, colIndex), stretch: true });
+      // A touch the browser takes back (a swipe, a second finger) saves nothing.
+      const onCancel = () => {
+        stop();
+        setPreview(null);
+      };
+      if (!wasStretching) setPreview({ ...startOf(job, colIndex), stretch: true });
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onUp);
+      window.addEventListener('pointercancel', onCancel);
     },
     onPointerDown(job, colIndex, e) {
       if (e.button !== 0) return;

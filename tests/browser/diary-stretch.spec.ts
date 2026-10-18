@@ -33,6 +33,11 @@ test.beforeAll(async () => {
   });
   expect(created.status, JSON.stringify(created.body)).toBe(201);
   jobId = created.body.id;
+  const other = await staff('/api/workshop-jobs', {
+    method: 'POST',
+    body: { title: 'Gear tune', jobDate: MON, startTime: '14:00', endTime: '15:00', mechanicId: alex },
+  });
+  expect(other.status, JSON.stringify(other.body)).toBe(201);
 });
 
 test.afterAll(async () => {
@@ -61,6 +66,34 @@ test('dragging a job\'s bottom edge down an hour makes it an hour longer', async
   expect(body).toMatchObject({ jobDate: TUE, startTime: '10:00', endTime: '12:00' });
   // It was a stretch, not an opened job.
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+// Fresh review: grabbed anywhere on the edge, the end follows the edge, not
+// the pointer, and a press with only a tiny wobble changes nothing.
+test('grabbed at the top of the edge, an hour\'s drag adds an hour; a wobble changes nothing', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const block = page.getByRole('button', { name: /^Bike, Gear tune/ });
+  await expect(block).toBeVisible();
+  const box = (await block.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height - 7; // the top of the 8px edge
+  const puts: string[] = [];
+  page.on('request', (r) => { if (r.method() === 'PUT') puts.push(r.postData() ?? ''); });
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 2);
+  await page.mouse.up();
+  await expect(page.locator('[data-stretch-grip]')).toHaveCount(0);
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 58, { steps: 8 });
+  await expect(page.getByText('14:00–16:00 · 2 hours')).toBeVisible();
+  // Back where it started: nothing to save.
+  await page.mouse.move(x, y, { steps: 8 });
+  await page.mouse.up();
+  expect(puts).toEqual([]);
 });
 
 test('on a tablet, the grip shows only after Change length, and is finger-sized', async ({ browser }) => {
