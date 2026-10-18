@@ -58,8 +58,8 @@ left empty rather than filled with made-up jobs.
    queue" is the new app's word for them already. Chosen over leaving it to
    the Overview page's Shared queue tab.
 
-**Still to do:** the tablet and phone versions of Change details and the
-menu, drawn before each piece is built; an OpenSpec change for each piece (each touches the
+**Still to do:** the tablet and phone versions of the menu, drawn before
+it is built; an OpenSpec change for each piece (each touches the
 `workshop-diary` spec). How the menu prints a paid job's till receipt
 is settled when it is built (the old diary built the receipt in the browser
 from the sale and printed the page). Deleting a job and
@@ -107,3 +107,16 @@ toolbar no longer fits one row. There the people buttons and New job move
 to a second row, as on a tablet; from 1366px it stays one row. Chosen over
 squeezing it to fit, and over a people drop-down below 1366px (an extra
 click). This changes the Shared queue change's "one row at 1280px".
+
+**Change details on tablet and phone, 18 Oct** (Jack: "1", twice):
+`changeDetailsTabletBoard`, `changeDetailsPhoneBoard` and
+`job-change-button-phone` in `diary.mjs`, not on the canvas yet.
+
+- **Tablet:** "Change details" beside the job page's close button, and the
+  desktop pop-up at tablet size.
+- **Phone:** the pop-up fills the screen, one column, the fields in the same
+  order. The button sits in the job's details box, under Diary time and
+  Ready by, so the top bar keeps the job's name readable. Chosen over a
+  button in the top bar (the name shortens) and a "⋯" menu (an extra tap).
+  (A first answer put it in the job page's ≡ menu; that button is Notes,
+  not a menu, so Jack was asked again.)
