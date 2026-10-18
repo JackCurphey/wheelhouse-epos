@@ -203,3 +203,34 @@ test('Escape in the customer search closes its list, not the pop-up', async () =
   assert.equal(has(dlg.queryByRole('button', { name: /Oliver Chen/ })), false);
   assert.ok(has(ui.queryByRole('dialog', { name: 'Change details' })));
 });
+
+// Jack, 18 Oct: a waiting change request is noted at the top of Change
+// details, as an addition; it is still answered from Waiting for you.
+test('a waiting change request is noted at the top', async () => {
+  const { ui, page, fireEvent, within } = await openChange({
+    bookingState: 'reschedule_requested', customerName: 'Oliver Chen',
+    requested: { jobDate: '2026-10-07', startTime: '14:00', endTime: '15:00', mechanicId: 11 },
+  });
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  const note = dlg.getByRole('note');
+  assert.ok(has(within(note).queryByText('Change requested')));
+  assert.ok(has(within(note).queryByText('Oliver Chen asked to move this to Wed 7 Oct, 14:00. Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.')));
+});
+
+test('a request to another mechanic names them', async () => {
+  const { ui, page, fireEvent, within } = await openChange({
+    bookingState: 'reschedule_requested', customerName: 'Oliver Chen',
+    requested: { jobDate: '2026-10-07', startTime: '14:00', endTime: '15:00', mechanicId: 12 },
+  });
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  assert.ok(has(within(dlg.getByRole('note')).queryByText(/to Wed 7 Oct, 14:00 with Jo Taylor\./)));
+});
+
+test('no request, no note', async () => {
+  const { ui, page, fireEvent, within } = await openChange();
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  assert.equal(has(dlg.queryByRole('note')), false);
+});

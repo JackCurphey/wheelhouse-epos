@@ -315,8 +315,12 @@ silent:
 5. **A booking with a change request waiting shows no notice in Change
    details.** Saving exactly the requested day, start and mechanic accepts
    the request, as a diary drop does; any other save leaves it standing.
-   *Pattern:* the diary's drop (Jack, 8 Oct). For Jack to say whether the
-   pop-up should mention the waiting request.
+   *Pattern:* the diary's drop (Jack, 8 Oct). **Settled 18 Oct:** Jack
+   chose a note (`2026-10-18-old-diary-features.md`, "A waiting change
+   request in Change details").
+6. **The note adds "with [mechanic]" when the request also moves the job to
+   another mechanic**, as accepting it needs that mechanic too. *Pattern:*
+   the change request pop-up's From and To, which name the mechanic.
 
 ## Decided here, for Jack to overrule
 

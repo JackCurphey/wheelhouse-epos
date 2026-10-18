@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { jobRefusalText } from './refusal-words.ts';
+import { shortDay } from './rules.ts';
 
 /**
  * "Change details" on the job page (Jack, 18 Oct,
@@ -78,6 +79,13 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
     enabled: Boolean(customer),
   });
   const bikeList = bikes.data ?? [];
+  // A customer's change request waiting (Jack, 18 Oct): noted at the top, as an
+  // addition; it is still answered from Waiting for you. The server accepts it
+  // when a save lands on exactly the day, start and mechanic asked for.
+  const asked = job.bookingState === 'reschedule_requested' ? job.requested : null;
+  const askedWho = asked?.mechanicId != null && asked.mechanicId !== job.mechanicId
+    ? people.find((p) => p.id === asked.mechanicId)?.name ?? null
+    : null;
 
   function chooseCustomer(c: Customer) {
     setCustomer(c);
@@ -137,6 +145,12 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
         </button>
       </DialogHeader>
       <DialogBody className="grid content-start gap-6 max-md:min-h-0 max-md:grow max-md:overflow-y-auto md:grid-cols-2">
+        {asked?.jobDate && asked.startTime ? (
+          <div role="note" className="flex flex-col gap-1 rounded-lg border border-[var(--wh-state-hold-ink)] bg-[var(--wh-state-hold-bg)] px-3 py-2.5 text-sm leading-snug md:col-span-2">
+            <strong className="text-[var(--wh-state-hold-ink)]">Change requested</strong>
+            <span>{`${job.customerName || 'The customer'} asked to move this to ${shortDay(asked.jobDate)}, ${asked.startTime}${askedWho ? ` with ${askedWho}` : ''}. Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.`}</span>
+          </div>
+        ) : null}
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="cd-title" className={LABEL}>Job title</label>
