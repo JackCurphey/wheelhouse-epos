@@ -288,9 +288,10 @@ test('the Week/Day switch sits next to the date arrows', async ({ page, context 
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
-  const day = (await page.getByRole('tab', { name: 'Day' }).boundingBox())!;
+  // The switch's last tab is Month since 18 Oct (Jack: month view).
+  const last = (await page.getByRole('tab', { name: 'Month' }).boundingBox())!;
   const prev = (await page.getByRole('button', { name: 'Previous week' }).boundingBox())!;
-  expect(prev.x - (day.x + day.width)).toBeLessThan(40);
+  expect(prev.x - (last.x + last.width)).toBeLessThan(40);
 });
 
 // After the fresh review: on a 360px phone away from today, with "By
@@ -341,6 +342,73 @@ test('on an upright tablet, Waiting is a button and the toolbar has two rows', a
     await ctx.close();
   }
 });
+
+// Jack, 18 Oct: Shared queue is a fourth button after the mechanics; the
+// toolbar fits one row from 1366px, with Month too (Jack, 18 Oct: below
+// that, the people buttons and New job take a second row).
+for (const width of [1366, 1440]) {
+  test(`at ${width}px, the toolbar with Shared queue stays one row`, async ({ page, context }) => {
+    // Its own shop with two mechanics (four people buttons): other tests
+    // here add more mechanics to the shared shop, and more buttons wrap.
+    const shop = await staffSignup(server!.baseUrl, { shopName: 'Toolbar Cycles' });
+    try {
+      await seedMechanic(shop.shop.id, { name: 'Alex Morgan' });
+      await seedMechanic(shop.shop.id, { name: 'Jo Taylor' });
+      await page.setViewportSize({ width, height: 800 });
+      const [name, value] = shop.cookie.split('=');
+      await context.addCookies([{ name, value, url: server!.baseUrl }]);
+      await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+      await expect(page.getByRole('button', { name: 'Shared queue' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Jo Taylor' })).toBeVisible();
+      const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+      const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+      expect(Math.abs(newJob.y + newJob.height / 2 - (tabs.y + tabs.height / 2))).toBeLessThan(4);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    } finally {
+      await deleteTestShop(shop.shop.id);
+    }
+  });
+}
+
+test('at 1280px with two mechanics, the people buttons and New job take a second row', async ({ page, context }) => {
+  const shop = await staffSignup(server!.baseUrl, { shopName: 'Two Row Cycles' });
+  try {
+    await seedMechanic(shop.shop.id, { name: 'Alex Morgan' });
+    await seedMechanic(shop.shop.id, { name: 'Jo Taylor' });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const [name, value] = shop.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    await expect(page.getByRole('button', { name: 'Jo Taylor' })).toBeVisible();
+    const tabs = (await page.getByRole('tablist', { name: 'Diary view' }).boundingBox())!;
+    const everyone = (await page.getByRole('button', { name: 'Everyone' }).boundingBox())!;
+    const newJob = (await page.getByRole('button', { name: 'New job' }).boundingBox())!;
+    expect(everyone.y).toBeGreaterThan(tabs.y + tabs.height - 1);
+    expect(Math.abs(newJob.y + newJob.height / 2 - (everyone.y + everyone.height / 2))).toBeLessThan(4);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
+
+// The tighter spacing is the desktop drawing's only; tablets keep theirs
+// (12px from Week/Day to the dates, 6px between people buttons).
+for (const width of [834, 1024]) {
+  test(`at ${width}px, the toolbar keeps the tablet drawing's spacing`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    await expect(page.getByRole('button', { name: 'Shared queue' })).toBeVisible();
+    const gaps = await page.evaluate(() => {
+      const tabs = document.querySelector('[role="tablist"][aria-label="Diary view"]')!.getBoundingClientRect();
+      const prev = document.querySelector('button[aria-label="Previous week"]')!.getBoundingClientRect();
+      const chips = [...document.querySelectorAll('[role="group"][aria-label="Mechanic"] > button')].map((b) => b.getBoundingClientRect());
+      return { toDates: Math.round(prev.left - tabs.right), chip: Math.round(chips[1].left - chips[0].right) };
+    });
+    expect(gaps).toEqual({ toDates: 12, chip: 6 });
+  });
+}
 
 test('on a computer, Waiting stays a column beside the diary', async ({ page, context }) => {
   await page.setViewportSize({ width: 1280, height: 800 });

@@ -264,7 +264,7 @@ Save job SHALL create the job with what the form holds and, when work was chosen
 - **THEN** the form says "Give the job a title, and choose a customer or turn on New bike build."
 
 ### Requirement: Staff can open a job's menu, summary and overview from the diary
-Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shift+F10, SHALL open "Job actions" with Open job and View overview; holding the right mouse button SHALL open the overview straight away. Resting the mouse on a job for about 0.6 seconds (at once when motion is reduced) SHALL show its summary. The summary and View overview SHALL show the job, customer and bike, the notes, the work and parts, and the cost.
+Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shift+F10, SHALL open "Job actions" with Open job and View overview, or on a booking request "Accept or decline" (opening its request pop-up, Jack, 18 Oct) and View overview; holding the right mouse button SHALL open the overview straight away. Resting the mouse on a job for about 0.6 seconds (at once when motion is reduced) SHALL show its summary. The summary and View overview SHALL show the job, customer and bike, the notes, the work and parts, and the cost.
 
 #### Scenario: View overview
 - **WHEN** staff right-click Maya Patel's Trek Domane AL 3 (WH-1042, Standard service) and choose View overview
@@ -277,6 +277,10 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 #### Scenario: From the keyboard
 - **WHEN** staff press Shift+F10 on a job, move with the arrow keys and press Escape
 - **THEN** the menu opens on Open job, moves to View overview, closes, and focus returns to the job
+
+#### Scenario: A booking request
+- **WHEN** staff right-click Sam Reed's booking request and choose "Accept or decline"
+- **THEN** its request pop-up opens, with Accept
 
 ### Requirement: "Waiting for you" lists what customers are waiting on staff for
 "Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer and the services in order; a change request SHALL also carry where the customer wants it.
@@ -416,32 +420,6 @@ A save from the old app's job form SHALL keep a customer's change request and it
 #### Scenario: The shop cancels a requested booking
 - **WHEN** staff cancel a booking whose customer asked to move it
 - **THEN** no request and no held time remain
-
-### Requirement: The old app's Workshop diary shows what is waiting
-The old app's Workshop diary SHALL show a "Waiting for you ([n])" column, oldest first, each card with its kind, the customer and job number, the services, when (or the move, naming a new mechanic) and how long ago it arrived, or "Nothing waiting". It SHALL check for new items every minute without a click, and stop checking at logout. Clicking a card SHALL jump to the job's week and highlight it.
-
-#### Scenario: Arrival wording
-- **WHEN** a change request from Wednesday 7 October at 10:00 to Friday 9 October at 14:00 arrived 40 minutes ago
-- **THEN** its card reads "Wed 7 Oct 10:00 → Fri 9 Oct 14:00" and "Arrived 40 minutes ago"
-
-#### Scenario: A move to another mechanic
-- **WHEN** the same request also moves the job to Jo
-- **THEN** the card reads "Wed 7 Oct 10:00 → Fri 9 Oct 14:00 with Jo"
-
-#### Scenario: A new booking arrives
-- **WHEN** a customer books online while the old diary is open
-- **THEN** the card appears within a minute without a click
-
-### Requirement: The old app answers what is waiting in a review pop-up
-In the old app a job that is waiting SHALL open a review pop-up headed "New online booking", "Change request" or "Cancelled by customer" with the job number, showing the customer's answers grouped under each service, their photos and notes, with Open full job and either Accept and Decline (a new booking's Decline asking first) or Seen. A diary drag on a job someone else changed SHALL be refused and the diary reload; marking such a job complete from its form SHALL be refused and the form close.
-
-#### Scenario: A heading
-- **WHEN** staff open the change request for WH-1052
-- **THEN** the pop-up is headed "Change request · WH-1052"
-
-#### Scenario: An old copy
-- **WHEN** staff drag a job someone else has changed since the diary loaded
-- **THEN** the move is refused and the diary reloads
 
 ### Requirement: Each weekday can have its own opening hours
 The server SHALL accept which weekdays are open and each open day's hours, on the hour (no screen sets a day's own hours yet); a day without its own hours SHALL use the usual hours. A new shop SHALL be open every day, 09:00 to 18:00. Changing only the usual hours SHALL keep a day's own hours. Hours that close before they open SHALL be refused with "Closing time must be after opening time". A staff job outside a day's own hours SHALL be refused naming that day's hours.
@@ -862,3 +840,118 @@ On a phone, each "By mechanic" column SHALL be at least 96 pixels wide; when the
 #### Scenario: Six mechanics on a 360px phone
 - **WHEN** a 360-pixel phone shows By mechanic for six mechanics
 - **THEN** each column is at least 96 pixels wide, the diary area swipes sideways, and the page itself doesn't
+
+### Requirement: The old app's Workshop tab opens the new diary
+The old app's Workshop tab, and any old `#workshop` address, SHALL open the new diary at `/workshop/diary` (Jack, 18 Oct, `docs/decisions/2026-10-18-retire-old-diary.md`). The old job form, still opened from an order, SHALL list the shop's mechanics without the diary having been opened first.
+
+#### Scenario: An old bookmark
+- **WHEN** staff open the old app at `#workshop`
+- **THEN** the new diary opens at `/workshop/diary`
+
+#### Scenario: The tab
+- **WHEN** staff click Workshop in the old app's top bar
+- **THEN** the new diary opens
+
+#### Scenario: A job opened from its order
+- **WHEN** staff open an order's workshop job with "View / edit workshop job"
+- **THEN** the job form's mechanic list has the shop's mechanics
+
+### Requirement: The old job form refuses a save on a job changed elsewhere
+The old job form, opened from an order, SHALL refuse a save or "Mark complete" on a job someone else changed after it opened, say "This job changed while you were looking at it." and close (kept from the retired review pop-up requirement, which also said this).
+
+#### Scenario: Marking complete
+- **WHEN** staff press "Mark complete" on a job someone else saved after the form opened
+- **THEN** it says "This job changed while you were looking at it." and the form closes
+
+#### Scenario: Saving
+- **WHEN** staff save a job someone else saved after the form opened
+- **THEN** it says "This job changed while you were looking at it." and the form closes
+
+### Requirement: Shared queue shows only the jobs no mechanic has yet
+The diary SHALL offer "Shared queue" after the mechanics: a button on desktop and tablet, and the last line of the phone's "whose jobs" list (Jack, 18 Oct, `docs/decisions/2026-10-18-old-diary-features.md` answer 5). Picked, the diary SHALL show only the jobs with no mechanic. The Day view SHALL be one column of them, named "Shared queue", and the choice SHALL be kept in the address as `?who=shared`. With Week, Day and Month and four people buttons, the toolbar SHALL stay one row on a screen 1366 pixels wide; on a narrower screen the people buttons and New job SHALL move to a second row, as on a tablet (Jack, 18 Oct, when Month was added).
+
+#### Scenario: The week
+- **WHEN** staff pick Shared queue in a week where Sam Reed's Specialized Sirrus has no mechanic and Maya Patel's Trek Domane is Alex Morgan's
+- **THEN** the Specialized Sirrus shows and the Trek Domane does not
+
+#### Scenario: The Day view
+- **WHEN** staff open the Day view with Shared queue picked
+- **THEN** there is one column, named "Shared queue", and no column for each mechanic
+
+#### Scenario: A phone
+- **WHEN** staff open the phone's "whose jobs" list
+- **THEN** its last line is "Shared queue", and picking it shows only the jobs with no mechanic
+
+#### Scenario: A 1366-pixel screen
+- **WHEN** the diary is open on a screen 1366 pixels wide
+- **THEN** the view switch, the dates, Everyone, each mechanic, Shared queue and New job sit on one row
+
+#### Scenario: A 1280-pixel screen
+- **WHEN** the diary is open on a screen 1280 pixels wide with two mechanics
+- **THEN** the people buttons and New job sit on a second row, under the view switch and the dates, and nothing scrolls sideways
+
+### Requirement: A job's length changes by its bottom edge
+Staff SHALL be able to make a timed job longer or shorter by dragging its bottom edge, in 15-minute steps, no shorter than 15 minutes and ending no later than closing time (Jack, 18 Oct, `docs/decisions/2026-10-18-old-diary-features.md` answer 2). The new times and length SHALL show while it changes, and letting go SHALL save the new end time with the version the diary saw.
+
+#### Scenario: Dragging with a mouse
+- **WHEN** staff drag the bottom edge of a 10:00–11:00 Brake service down two half-hour rows
+- **THEN** it reads "10:00–12:00 · 2 hours" while dragging, and letting go saves the end time 12:00
+
+#### Scenario: The limits
+- **WHEN** staff shorten a job below 15 minutes or stretch it past closing time
+- **THEN** it stops at 15 minutes, or at closing time
+
+### Requirement: The edge follows the pointer fairly
+With a mouse the edge SHALL work on any job shown on its own; a job in a stack uses Change length. The end SHALL follow the edge wherever on it the press was, a press that moves less than 4 pixels SHALL change nothing, and a job SHALL stop at its own day's closing time even when the grid runs later for another day.
+
+#### Scenario: Grabbed at the top of the edge
+- **WHEN** staff grab the top of a 14:00–15:00 job's edge and drag it down two half-hour rows
+- **THEN** it reads "14:00–16:00 · 2 hours"
+
+#### Scenario: A shorter day
+- **WHEN** Tuesday closes at 16:00, other days at 18:00, and staff lengthen a Tuesday 10:00 job as far as it goes
+- **THEN** it stops at 16:00
+
+### Requirement: Change length in the job's menu, for touch and the keyboard
+On a touch screen the grip SHALL show only after "Change length" in the job's menu (opened by holding the job). It SHALL be at least 44 pixels tall, and a tap elsewhere SHALL leave the length as it was. From the keyboard, "Change length", then up, down, Enter and Escape, SHALL do the same. A booking request or a cancelled booking SHALL NOT offer it.
+
+#### Scenario: A tablet
+- **WHEN** staff on a tablet hold a job and choose "Change length"
+- **THEN** a grip at least 44 pixels tall shows on its bottom edge; before that, none shows
+
+#### Scenario: The keyboard
+- **WHEN** staff choose "Change length" for the 10:00–11:00 Trek Domane, press down twice and Enter
+- **THEN** its end time is saved as 11:30 and "Trek Domane now 10:00–11:30." is read out
+
+#### Scenario: A booking request
+- **WHEN** staff open a booking request's menu
+- **THEN** it has no "Change length"
+
+### Requirement: Month view shows each day's first jobs
+The diary SHALL offer "Month" beside Week and Day on desktop and tablet (Jack, 18 Oct, `docs/decisions/2026-10-18-old-diary-features.md` answer 1). It SHALL show the weeks that hold the month, Monday to Sunday, with other months' days dimmed, and each day's first three jobs, earliest first, as start time and bike coloured by status, then "+[n] more". The arrows SHALL move a month at a time.
+
+#### Scenario: A busy day
+- **WHEN** Tuesday 6 October has jobs at 09:00, 10:00 and 14:00 and one with no time
+- **THEN** its day shows 09:00 Cube Attain, 10:00 Trek Domane, 14:00 Giant Escape and "+1 more"
+
+#### Scenario: The next month
+- **WHEN** staff press Next month from October 2026
+- **THEN** the diary shows "November 2026", from Monday 26 October to Sunday 6 December
+
+### Requirement: A month's day opens its list or the Day view
+"+[n] more" SHALL open the day's list: each job's time, bike and job, status, customer and mechanic, and "Open this day in the Day view". A job SHALL open its page, and a day's date SHALL open that day in the Day view. On a touch screen a tap anywhere in a day SHALL open its list, with rows at least 44 pixels tall, and its jobs SHALL NOT be tapped one by one.
+
+#### Scenario: The day's list
+- **WHEN** staff press "+1 more" on Tuesday 6 October
+- **THEN** a list titled "Tuesday 6 October" shows all four jobs, and its last line opens that day in the Day view
+
+#### Scenario: A tablet
+- **WHEN** staff on a tablet tap anywhere in Thursday 8 October
+- **THEN** that day's list opens
+
+### Requirement: A phone chooses a day from the month
+On a phone the week label SHALL open "Choose a day", the month with each day's number of jobs, and a tap on a day SHALL go to that day.
+
+#### Scenario: Choosing a day
+- **WHEN** staff tap the week label and then Monday 5 October, which has one job
+- **THEN** the diary shows Monday 5 October
