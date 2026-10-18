@@ -99,7 +99,7 @@ export function JobFiles({ jobId }: { jobId: number }) {
       ) : null}
       {others.map((a) => (
         <div key={a.id} className="flex min-h-11 items-center gap-2.5 border-t border-[var(--wh-border)] text-sm">
-          <a href={url(a)} download={a.originalName} className="flex min-h-11 min-w-0 grow items-center truncate underline underline-offset-2">{a.originalName}</a>
+          <a href={url(a)} download={a.originalName} className="flex min-h-11 min-w-0 grow items-center underline underline-offset-2"><span className="truncate">{a.originalName}</span></a>
           <span className="shrink-0 text-[var(--wh-muted)]">{`· ${sizeText(a.sizeBytes)}`}</span>
           {a.fromCustomer ? <span className="shrink-0 text-xs text-[var(--wh-muted)]">From the customer</span> : null}
           <button type="button" aria-label={`Remove ${a.originalName}`} onClick={() => setRemoving(a)} className={REMOVE}>Remove</button>
