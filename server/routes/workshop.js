@@ -922,6 +922,18 @@ export function register(route) {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Job not found');
+    // Jack, 18 Oct (docs/decisions/2026-10-18-attachments-and-delete.md): not
+    // while money has been paid on its order or the bike is in the shop. The
+    // reply says which, so the job page can say "Settle up first".
+    const order = await db.prepare('SELECT status FROM sale_documents WHERE workshop_job_id = ?').get(id);
+    const paid = order?.status === 'converted';
+    const inShop = existing.custody_state === 'in_shop';
+    if (paid || inShop) {
+      return sendJson(res, 409, {
+        error: `Settle up first: ${paid && inShop ? 'refund what was paid and hand the bike back' : paid ? 'refund what was paid' : 'hand the bike back'}, then delete.`,
+        code: 'settle_first', paid, inShop,
+      });
+    }
     // The attachments row is ON DELETE CASCADE, but that only removes the DB
     // record - the file on disk needs its own cleanup or it just sits there
     // forever with nothing pointing at it.
