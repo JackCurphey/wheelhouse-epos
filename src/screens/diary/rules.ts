@@ -235,3 +235,22 @@ export function stackGroups(items: { id: number; start: number; end: number }[])
   }
   return [...byStart.values()];
 }
+
+/**
+ * Where a stretched job ends (Jack, 18 Oct): its bottom edge dragged to `y`
+ * pixels down its column, snapped to 15 minutes, at least 15 minutes after
+ * the start and no later than the grid's end (closing time).
+ */
+export function stretchEnd(y: number, range: { start: number; end: number }, startMin: number, slotPx = SLOT_PX): number {
+  const snapped = Math.round((range.start + (y / slotPx) * 30) / SNAP_MIN) * SNAP_MIN;
+  return Math.max(startMin + SNAP_MIN, Math.min(range.end, snapped));
+}
+
+/** A job's length in words: "45 minutes", "1 hour", "1 hour 30 minutes". */
+export function lengthText(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const hours = h ? `${h} hour${h === 1 ? '' : 's'}` : '';
+  const mins = m ? `${m} minutes` : '';
+  return [hours, mins].filter(Boolean).join(' ');
+}
