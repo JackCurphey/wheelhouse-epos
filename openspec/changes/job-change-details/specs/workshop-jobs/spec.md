@@ -11,7 +11,7 @@ The job page SHALL offer "Change details" (Jack, 18 Oct, `docs/decisions/2026-10
 - **WHEN** staff open a job on a phone
 - **THEN** "Change details" sits in the job's details box, and its pop-up fills the screen
 
-### Requirement: Change details saves every field safely
+### Requirement: Change details saves only what changed, safely
 "Save changes" SHALL send the title, date, times (empty for none) and mechanic with the version the pop-up opened with, and the customer and bike only when they change; a new customer SHALL always send the bike (none when there is none), so it never keeps the old customer's bike. A refusal SHALL show in plain words with the pop-up still open; one because someone else changed the job SHALL say so and reload it. A job over several days SHALL change its date, times and later days' mechanics in the diary; here its mechanic is day 1's.
 
 #### Scenario: Changing the end time and the mechanic

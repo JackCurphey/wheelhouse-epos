@@ -2,8 +2,9 @@
 // docs/decisions/2026-10-18-old-diary-features.md answer 3, and its tablet and
 // phone section): the job's title, customer, bike, date, times and mechanic,
 // changed after it is made, in a pop-up filled in from the job. Saving is
-// PUT /api/workshop-jobs/:id with every field and the version the page saw
-// (the bike always, so a new customer never keeps the old one's bike).
+// PUT /api/workshop-jobs/:id with the version the pop-up opened with; the
+// customer and bike go only when they change (a new customer always sends
+// its bike, so it never keeps the old one's).
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
@@ -90,7 +91,7 @@ async function openChange(over = {}) {
 const puts = () => calls.filter((c) => c.method === 'PUT').map((c) => c.body);
 const has = (q) => Boolean(q);
 
-test('Change details opens filled in; Save changes sends every field with the version', async () => {
+test('Change details opens filled in; Save changes sends the changes with the version', async () => {
   const { ui, page, fireEvent, waitFor, within } = await openChange();
   fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
   const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
@@ -172,14 +173,21 @@ test('a job with no set time sends empty times, which the server reads as none',
 });
 
 test('a refusal because someone else changed the job says so and reloads it', async () => {
-  const { ui, page, fireEvent, within } = await openChange();
+  const { ui, page, fireEvent, within, waitFor } = await openChange();
   answer = { status: 409, ok: false, json: async () => ({ error: 'This job changed while you were looking at it. Reload and try again.', code: 'stale' }) };
   fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
   const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
-  const before = calls.filter((c) => c.url === '/api/workshop-jobs/1').length;
+  const gets = () => calls.filter((c) => c.url === '/api/workshop-jobs/1' && c.method === 'GET').length;
+  const before = gets();
+  // The page reloads the job at a newer version; the pop-up keeps the one it
+  // opened with, so a second save can't overwrite what changed meanwhile.
+  JOB = { ...JOB, version: 4 };
   fireEvent.click(dlg.getByRole('button', { name: 'Save changes' }));
   assert.ok(has(await dlg.findByText('This job changed while you were looking at it. Close this and open it again to see the latest.')));
-  assert.ok(calls.filter((c) => c.url === '/api/workshop-jobs/1').length > before);
+  await waitFor(() => assert.ok(gets() > before));
+  fireEvent.click(dlg.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => assert.equal(puts().length, 2));
+  assert.deepEqual(puts().map((b) => b.version), [3, 3]);
 });
 
 test('Escape in the customer search closes its list, not the pop-up', async () => {

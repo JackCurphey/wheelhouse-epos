@@ -124,7 +124,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
   }
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="change-details-title" className="max-md:flex max-md:h-full max-md:max-h-none max-md:max-w-none max-md:flex-col max-md:rounded-none md:max-w-[760px]">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="change-details-title" className="max-md:open:flex max-md:h-full max-md:max-h-none max-md:max-w-none max-md:flex-col max-md:rounded-none md:max-w-[760px]">
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="change-details-title">Change details</DialogTitle>

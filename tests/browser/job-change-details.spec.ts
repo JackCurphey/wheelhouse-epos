@@ -81,7 +81,7 @@ test('on a phone, Change details sits in the job\'s details box and the pop-up f
 
 // Fresh review: the real server refused a job with no time ("Start time must
 // be in HH:MM format"), and an end time cleared to get the automatic hour.
-test('a job with no set time saves; clearing the end gives it an hour', async ({ page, context }) => {
+test('a job with no set time saves; a start with no end gets an hour', async ({ page, context }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
@@ -101,4 +101,23 @@ test('a job with no set time saves; clearing the end gives it an hour', async ({
   await dlg.getByRole('button', { name: 'Save changes' }).click();
   await expect(dlg).toHaveCount(0);
   await expect.poll(async () => (await staff(`/api/workshop-jobs/${untimedId}`)).body.endTime).toBe('16:00');
+});
+
+// Fresh review: in a real browser, Escape in the customer search closes its
+// list and leaves the pop-up open.
+test('Escape in the customer search closes its list, not Change details', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const made = await staff('/api/customers', { method: 'POST', body: { name: 'Oliver Chen' } });
+  expect(made.status, JSON.stringify(made.body)).toBeLessThan(300);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}`);
+  await page.getByRole('button', { name: /^Bike, Brake service/ }).click();
+  await page.getByRole('dialog', { name: /Brake service/ }).getByRole('button', { name: 'Change details' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Change details' });
+  await dlg.getByLabel('Find customer by name, phone or email').fill('Oli');
+  await expect(dlg.getByRole('button', { name: /Oliver Chen/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dlg.getByRole('button', { name: /Oliver Chen/ })).toHaveCount(0);
+  await expect(dlg).toBeVisible();
 });
