@@ -694,6 +694,8 @@ export function DiaryPage() {
 
   const people = (mechanics.data ?? []).filter((m) => m.active);
   const whoId = who && people.some((m) => String(m.id) === who) ? Number(who) : null;
+  // Only the jobs no mechanic has yet (Jack, 18 Oct, docs/decisions/2026-10-18-old-diary-features.md answer 5).
+  const shared = who === 'shared';
   // A phone shows Everyone in one column unless "By mechanic" is chosen.
   const byMechanic = !isPhone || who === 'bymech';
 
@@ -701,7 +703,7 @@ export function DiaryPage() {
     .flatMap(blocksOf)
     .map((j) => ({ ...j, state: diaryState(j) }))
     .filter((j): j is Shown => j.state !== 'hidden')
-    .filter((j) => whoId === null || j.mechanicId === whoId);
+    .filter((j) => (shared ? j.mechanicId === null : whoId === null || j.mechanicId === whoId));
   const range = gridRange(settings.data ?? {}, shown);
   // From the jobs on screen, and from "Waiting for you" for a booking whose
   // own day is in another week (Jack, 15 Oct).
@@ -711,7 +713,7 @@ export function DiaryPage() {
       .map((j) => ({ id: j.id, label: j.bikeLabel || 'Bike', mechanicId: j.mechanicId, requested: j.requested ?? {} })),
     ...(waiting.data?.items ?? [])
       .filter((i) => i.kind === 'change_request' && i.jobId && !onScreen.has(i.jobId) && i.to?.startTime
-        && (whoId === null || i.mechanicId === whoId))
+        && (shared ? !i.mechanicId : whoId === null || i.mechanicId === whoId))
       .map((i) => ({ id: i.jobId as number, label: i.customerName || 'Customer', mechanicId: i.mechanicId ?? null, requested: i.to ?? {} })),
   ];
   const outlinesFor = (pred: (o: Outline) => boolean) => outlines.filter(pred);
@@ -724,6 +726,8 @@ export function DiaryPage() {
   let columns: Col[];
   if (view === 'week') {
     columns = days.map((d) => ({ key: d, label: dayLabel(d), date: d, mechanicId: null }));
+  } else if (shared) {
+    columns = [{ key: 'none', label: 'Shared queue', date, mechanicId: null }];
   } else if (whoId === null && !byMechanic) {
     columns = [{ key: 'all', label: 'Everyone', date, mechanicId: null, all: true }];
   } else {
@@ -1347,7 +1351,7 @@ export function DiaryPage() {
 
   if (isPhone) {
     const week = weekOf(date);
-    const showing = whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';
+    const showing = shared ? 'Shared queue' : whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';
     const hours: number[] = [];
     for (let m = Math.ceil(range.start / 60) * 60; m < range.end; m += 60) hours.push(m);
     const noTime = columns.length === 1 ? shown.filter((j) => j.jobDate === date && !j.startTime) : [];
@@ -1401,7 +1405,7 @@ export function DiaryPage() {
               </button>
               {peopleOpen ? (
                 <div role="menu" aria-label="Whose jobs to show" className="absolute top-full left-0 z-20 mt-1 flex min-w-[200px] flex-col rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1 shadow-[0_10px_26px_var(--wh-backdrop)]">
-                  {[{ v: null as string | null, label: 'Everyone' }, { v: 'bymech', label: 'By mechanic' }, ...people.map((m) => ({ v: String(m.id), label: m.name }))].map((o) => (
+                  {[{ v: null as string | null, label: 'Everyone' }, { v: 'bymech', label: 'By mechanic' }, ...people.map((m) => ({ v: String(m.id), label: m.name })), { v: 'shared', label: 'Shared queue' }].map((o) => (
                     <button
                       key={o.label}
                       type="button"
@@ -1531,8 +1535,10 @@ export function DiaryPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Toolbar (decision 60): view and dates together · people and New job. */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Toolbar (decision 60): view and dates together · people and New job.
+          From 1280px, spaced as the desktop Shared queue drawing (Jack, 18 Oct)
+          so four people buttons fit one row; tablets keep their drawn spacing. */}
+      <div className="flex flex-wrap items-center gap-3 xl:gap-x-1">
         <div role="tablist" aria-label="Diary view" className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-[10px] bg-[var(--wh-surface-muted)] p-[3px]">
           {(['week', 'day'] as const).map((v) => (
             <button
@@ -1562,11 +1568,12 @@ export function DiaryPage() {
         </div>
         {/* On an upright tablet this group is its own row: people on the left,
             Waiting and New job on the right (layout review 238, item 7). */}
-        <div className="flex basis-full items-center gap-3 lg:grow lg:basis-auto">
+        <div className="flex basis-full items-center gap-3 lg:grow lg:basis-auto xl:gap-0">
         <div className="hidden grow lg:block" />
-        <div role="group" aria-label="Mechanic" className="flex flex-wrap items-center gap-1.5">
-          {chip('all', 'Everyone', 'Everyone', <NavIcon name="customers" size={13} />, whoId === null)}
+        <div role="group" aria-label="Mechanic" className="flex flex-wrap items-center gap-1.5 xl:gap-1">
+          {chip('all', 'Everyone', 'Everyone', <NavIcon name="customers" size={13} />, whoId === null && !shared)}
           {people.map((m) => chip(String(m.id), m.name.split(' ')[0], m.name, initial(m.name), whoId === m.id))}
+          {chip('shared', 'Shared queue', 'Shared queue', <NavIcon name="customers" size={13} />, shared)}
         </div>
         <div className="grow lg:hidden" />
         <button
@@ -1578,7 +1585,7 @@ export function DiaryPage() {
           Waiting
           <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-[13px] font-bold">{waiting.data?.count ?? items.length}</span>
         </button>
-        <div className="hidden w-5 shrink-0 lg:block" />
+        <div className="hidden w-5 shrink-0 lg:block xl:w-2" />
         {picking ? (
           <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
             Choose a time
