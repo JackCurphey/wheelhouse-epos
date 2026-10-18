@@ -16,6 +16,10 @@ const SERVICES = [
   { id: 2, name: 'Retired service', price: 5, minutes: 10, active: false },
 ];
 const PADS = { id: 40, sku: 'B05S-RX', barcode: '4524667', name: 'Shimano brake pads', price: 28, stockQty: 1, active: true };
+const MECHANICS = [
+  { id: 11, name: 'Alex Morgan', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true },
+  { id: 12, name: 'Jo Taylor', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true },
+];
 const CASHIERS = [{ id: 31, name: 'Sam Lee', isMechanic: false, isCashier: true, workingDays: [1, 2, 3, 4, 5], active: true }];
 
 const realFetch = globalThis.fetch;
@@ -64,7 +68,7 @@ function stubServer(employee) {
     }
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, { ...JOB, custodyState: 'collected', version: JOB.version + 1 });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
-    if (u.pathname === '/api/employees') return reply(200, CASHIERS);
+    if (u.pathname === '/api/employees') return reply(200, u.searchParams.get('role') === 'mechanic' ? MECHANICS : CASHIERS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
@@ -120,7 +124,7 @@ test('paying pays the whole order, then records the bike as collected', async ()
   await t.sale.findByText('Maya Patel · workshop job WH-1042');
   await payByCard(t);
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
-  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true });
+  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: null });
   await t.waitFor(() => assert.deepEqual(posts('/api/workshop-jobs/1/collect'), [{ version: 8 }]));
   assert.equal(posts('/api/sales').length, 0);
 });
@@ -230,4 +234,45 @@ test('Print on Paid prints the job’s receipt, with the job and bike, then the 
   assert.ok(printed !== null, 'nothing was printed');
   for (const want of ['North Street Cycles', 'Sale 601', 'WH-1042 · Trek Domane AL 3', 'Standard service£65.00', 'Total£83.00', 'Paid by card£83.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
   await t.waitFor(() => assert.equal(has(t.ui.queryByRole('dialog')), false));
+});
+
+// The mechanic sign-off, piece 2 (Jack, 16 Oct, answer 5,
+// docs/decisions/2026-10-16-mechanic-sign-off.md): a payment that finishes
+// work still in progress asks who is signing it off first, with the same
+// pop-up; finished work is paid without asking.
+test('work in progress asks who is signing it off before the payment opens, the job’s mechanic picked', async () => {
+  const t = await openJobTill({ jobOver: { workState: 'in_progress' } });
+  const take = await t.sale.findByRole('button', { name: /^Take payment/ });
+  await t.waitFor(() => assert.equal(take.disabled, false));
+  t.fireEvent.click(take);
+  const pop = t.within(await t.ui.findByRole('dialog', { name: 'Who’s signing this off?' }));
+  await t.waitFor(() => assert.equal(pop.getByRole('radio', { name: 'Alex Morgan' }).getAttribute('aria-checked'), 'true'));
+  assert.equal(has(t.ui.queryByRole('button', { name: /^Card · / })), false);
+  t.fireEvent.click(pop.getByRole('radio', { name: 'Jo Taylor' }));
+  t.fireEvent.click(pop.getByRole('button', { name: 'Sign off and mark ready' }));
+  const dlg = t.within(await t.ui.findByRole('dialog', { name: /^Take payment/ }));
+  t.fireEvent.click(dlg.getByRole('button', { name: /^Card · / }));
+  t.fireEvent.click(await dlg.findByRole('button', { name: 'Card approved' }));
+  await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
+  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: 12 });
+});
+
+test('Cancel on the sign-off takes nothing', async () => {
+  const t = await openJobTill({ jobOver: { workState: 'in_progress' } });
+  const take = await t.sale.findByRole('button', { name: /^Take payment/ });
+  await t.waitFor(() => assert.equal(take.disabled, false));
+  t.fireEvent.click(take);
+  const pop = t.within(await t.ui.findByRole('dialog', { name: 'Who’s signing this off?' }));
+  t.fireEvent.click(pop.getByRole('button', { name: 'Cancel' }));
+  assert.equal(has(t.ui.queryByRole('dialog')), false);
+  assert.equal(posts('/api/sale-documents/40/convert').length, 0);
+});
+
+test('finished work is paid without asking, and says nobody was asked', async () => {
+  const t = await openJobTill();
+  await payByCard(t);
+  assert.equal(has(t.ui.queryByRole('dialog', { name: 'Who’s signing this off?' })), false);
+  await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
+  // null: the till didn't ask, so the server can warn if the work was reopened meanwhile.
+  assert.equal(posts('/api/sale-documents/40/convert')[0].signedOffBy, null);
 });

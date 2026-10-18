@@ -43,7 +43,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * paying converts the order, which charges its own saved lines, and then
  * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
  */
-type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
+type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
 export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
   const session = useSession();
@@ -69,7 +69,11 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       // Both reply with the whole sale, which is what the receipt prints.
       let sale: ReceiptSale & { jobWarning?: string };
       if (job) {
-        sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true });
+        // Who signed the work off, when paying finishes it (mechanic sign-off answer 5).
+        // null when it didn't ask (the work read as finished), so the server can
+        // warn if it was reopened in between (fresh review).
+        const signOff = { signedOffBy: job.signedOffBy ?? null };
+        sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true, ...signOff });
         note = await job.afterPaid(sale);
       } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
       setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null });

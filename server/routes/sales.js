@@ -14,6 +14,7 @@ import {
 import { currentShopToday } from '../workshop/jobs.js';
 import { work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
+import { signOffMechanic, recordSignOff } from '../workshop/sign-off.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -511,6 +512,28 @@ export function register(route) {
       // uncompleted job is exactly the ambiguity the state machines exist to
       // remove.
       if (!finished.ok) jobWarning = finished.message;
+      // The till asks who is signing the job off before the card is taken
+      // (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md answer 5).
+      // The payment already stands, so a sign-off that is no longer valid only
+      // leaves the work unsigned, and the reply says so.
+      // The new till always sends the key: null means it didn't ask because the
+      // work read as finished, so finishing it here means it was reopened in
+      // between (answer 8: finishing again asks again). The old app sends no key.
+      else if (body.signedOffBy === null) {
+        jobWarning = 'Paid and finished, but not signed off: the work was reopened while the till was open.';
+      } else if (body.signedOffBy !== undefined) {
+        const signer = await signOffMechanic(body.signedOffBy);
+        if (signer === null) jobWarning = 'Paid and finished, but not signed off: that mechanic isn’t active any more.';
+        else {
+          // A fault here must not turn a taken payment into an error (fresh review).
+          try {
+            await recordSignOff(jobToFinish.id, signer);
+          } catch (err) {
+            console.error('sign-off after payment failed', err);
+            jobWarning = 'Paid and finished, but not signed off: the sign-off couldn’t be saved.';
+          }
+        }
+      }
     }
     // The same race for work that was already finished at the check: if someone
     // reopened it before the sale was made, the record no longer says the work

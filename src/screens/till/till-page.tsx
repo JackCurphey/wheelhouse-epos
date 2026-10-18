@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
 import { PayDialog } from './pay-dialog.tsx';
+import { SignOffDialog } from '@/screens/diary/sign-off-dialog.tsx';
 import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
 
 /**
@@ -200,8 +201,9 @@ const PAYABLE = new Set(['in_progress', 'complete']);
  * Paying a workshop job's order (Jack, 18 Oct, docs/decisions/2026-10-18-till-job-payment.md;
  * drawn as till-job): the job's agreed lines, locked, and "Bike collected
  * when paid", on by default (Workshop day decision 63). Paying converts the
- * order, then records the bike as collected unless the pill is off. Deposits,
- * the sign-off question and the job-changed warning come later; extras are
+ * order, then records the bike as collected unless the pill is off. Work
+ * still in progress asks who is signing it off first (mechanic sign-off
+ * answer 5). Deposits and the job-changed warning come later; extras are
  * added on the job's Work and parts, since paying the order charges its lines.
  */
 function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
@@ -224,6 +226,10 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
   const due = dueQuery.data;
   const [collect, setCollect] = useState(true);
   const [paying, setPaying] = useState(false);
+  // Work still in progress is finished by paying, so the till asks who is
+  // signing it off first (Jack, 16 Oct, mechanic sign-off answer 5).
+  const [signing, setSigning] = useState(false);
+  const [signedOffBy, setSignedOffBy] = useState<number | null>(null);
   const lines: TillLine[] = (order?.items ?? []).map((it, i) => ({
     key: i + 1,
     kind: it.lineType === 'labour' ? 'labour' : 'part',
@@ -329,13 +335,16 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
           <span className="font-mono text-[26px]">{money(total)}</span>
         </div>
         {order && order.status === 'open' ? (
-          <Button variant="primary" block disabled={!payable || lines.length === 0 || !due || dueQuery.isError} onClick={() => setPaying(true)}>{`Take payment · ${money(total)}`}</Button>
+          <Button variant="primary" block disabled={!payable || lines.length === 0 || !due || dueQuery.isError} onClick={() => (job?.workState === 'in_progress' ? setSigning(true) : setPaying(true))}>{`Take payment · ${money(total)}`}</Button>
         ) : null}
       </section>
+      {signing && job ? (
+        <SignOffDialog job={job} busy={false} onClose={() => setSigning(false)} onSign={(id) => { setSignedOffBy(id); setSigning(false); setPaying(true); }} />
+      ) : null}
       {paying && job?.orderId ? (
         <PayDialog
           lines={lines}
-          job={{ orderId: job.orderId, total, receipt: { reference: job.reference, bikeLabel: job.bikeLabel ?? null }, afterPaid }}
+          job={{ orderId: job.orderId, total, receipt: { reference: job.reference, bikeLabel: job.bikeLabel ?? null }, signedOffBy: job.workState === 'in_progress' ? signedOffBy : null, afterPaid }}
           onClose={() => setPaying(false)}
           onNextSale={() => { setPaying(false); onDone(); }}
         />
