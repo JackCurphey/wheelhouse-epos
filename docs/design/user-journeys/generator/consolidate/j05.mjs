@@ -6,6 +6,7 @@ export default {
   // The customer's link: the one customer job page, ready to collect
   'cp-summary': keep(37), // Quote 7 H4 keeps the two-column ready page as a drawing
   'cp-summary-said-yes': into('cp-summary', 'Quote 1', "'You’ll get a reminder when the next service is due. Change' — no tick box"),
+  'cp-summary-checked': into('cp-summary', 'Mechanic sign-off 3 (Jack, 18 Oct)', "'Checked by Alex Morgan' under What we did"),
   'cp-summary-deposit': into('cp-summary', 'Quote 1', "'Deposit paid £[deposit] · [date], when you booked'; 'Pay £[rest] now'"),
   'cp-pay': keep(39),
   'cp-pay-failed': into('cp-pay', 'Collect 2, 5 H1', "'The card didn’t go through.' Nothing was taken; 'Try again'"),

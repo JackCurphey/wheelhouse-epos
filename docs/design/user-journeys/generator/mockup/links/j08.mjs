@@ -123,6 +123,7 @@ export default {
     '+ Add a service': notDrawn('Adding a workshop service: the service box, empty'),
   },
   'set-workshop-mechanics': { 'Change in Staff and roles': go('set-staff') },
+  'set-workshop-sign-off': { 'Change in Staff and roles': go('set-staff') },
   'set-workshop-diary': {
     'Remove Hook 1': STAY, 'Remove Hook 2': STAY, 'Remove Hook 3': STAY, 'Remove Hook 4': STAY,
     'Remove Hook 5': STAY, 'Remove Hook 6': STAY, 'Remove Workshop floor': STAY, 'Remove Front window': STAY,

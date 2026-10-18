@@ -494,7 +494,7 @@ later packages.
 - **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
 - **`till-pay-cash`** (block 20, Payment step) — no other situations.
 - **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
-- **`till-receipt`** (block 20, Payment step) — 3 of its 5 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper` (the last two built early: Jack, 18 Oct, print receipt decision).
+- **`till-receipt`** (block 20, Payment step) — 4 of its 6 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper`, `till-receipt-paper-checked` (the last three built early: Jack, 18 Oct, print receipt and mechanic sign-off decisions).
 - **`till-giftcard`** (block 20, Payment step) — no other situations.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
@@ -620,7 +620,7 @@ later packages.
 
 *Screens it builds (5) and the situations it covers:*
 
-- **`cp-summary`** (block 37, Customer job page) — 9 of its 12 situations here: `dq-ready`, `customer-message`, `cp-summary-said-yes`, `cp-summary-deposit`, `cp-summary-paid`, `cp-summary-counter`, `cp-summary-inshop`, `cp-expired`, `ready`.
+- **`cp-summary`** (block 37, Customer job page) — 10 of its 13 situations here: `dq-ready`, `customer-message`, `cp-summary-said-yes`, `cp-summary-deposit`, `cp-summary-checked`, `cp-summary-paid`, `cp-summary-counter`, `cp-summary-inshop`, `cp-expired`, `ready` (the Checked by line built early on today's booking link: Jack, 18 Oct, mechanic sign-off).
 - **`cp-pay`** (block 39, Card payment box) — 4 situations: `cp-pay-failed`, `cp-pay-balance`, `cp-paid`, `cp-paid-balance`.
 - **`cp-receipt-email`** (block 41, Receipt and printed documents) — 4 situations: `cp-receipt-email-guest`, `cp-invoice-email`, `cp-receipt-email-till`, `cp-receipt-email-deposit`.
 - **`cp-receipt-text`** (block 41, Receipt and printed documents) — 1 situation: `cp-receipt-text-email`.
@@ -708,7 +708,7 @@ later packages.
 - Brought back from later (Jack, 8 Oct, #139): the two situations above, "Sign Jo Taylor out everywhere?" on a person's page. The button is drawn (Jack, 15 Oct): a row under Till PIN, "Signed in somewhere?", and the box reads "Every till, phone and computer". The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
-- **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).
+- **`set-workshop-services`** (block 1, Settings page) — 4 of its 6 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`, `set-workshop-sign-off` (its switch built early: Jack, 18 Oct, mechanic sign-off); plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).
 - **`set-data-export`** (block 1, Settings page) — no other situations.
 - **`set-data-history`** (block 14, Activity list) — no other situations.
 - Added to the `set-till-quick` board (built in WP-1.3) — 6 situations: `set-till-reasons`, `set-till-receipts`, `set-till-printer`, `set-till-tills`, `set-till-tills-owner`, `set-till-remove`; plus 2 written lines.

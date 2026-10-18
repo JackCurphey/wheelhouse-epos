@@ -9,6 +9,7 @@
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
+import { rowSwitch } from './settings-frame.mjs';
 import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO, TILL_INTRO, tillFolds, EOD_INTRO, eodFolds, STAFF_INTRO, staffFolds, SHOP_INTRO, shopFolds, MSG_INTRO, msgFolds, DATA_INTRO, dataFolds, MANAGER, MANAGER_VIEW } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
 import { lightspeedShop } from './shop-mode.mjs';
@@ -330,6 +331,13 @@ const mechanicsOpen = () => `${mechRow('Alex Morgan', 'Mechanic', true)}${mechRo
 const workshopPage = (open) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds(open));
 def('set-workshop-services', () => workshopPage({ services: servicesOpen() }));
 def('set-workshop-mechanics', () => workshopPage({ mechanics: mechanicsOpen() }));
+// The mechanic sign-off, piece 3 (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
+// answer 3): the switch that shows customers who signed their job off sits
+// with the mechanics, off to start. Worded as the approved row (diary.mjs
+// signOffDrawings), drawn as the settings pages' own switch.
+const signOffSetting = () => `<div style="padding-top: 10px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 6px">${rowSwitch('Show who signed off to customers', false)}
+${note('Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.')}</div>`;
+def('set-workshop-sign-off', () => workshopPage({ mechanics: `${mechanicsOpen()}${signOffSetting()}` }));
 def('set-workshop-diary', () => diaryScreens['diary-settings'][size()]);
 
 // ---------- Messages (decision 14) ----------
@@ -588,6 +596,7 @@ Object.assign(TITLES, {
   'fr-step': 'A step opened from the checklist',
   'fr-done': 'All set up — the checklist goes',
   'set-workshop-mechanics': 'Workshop › Mechanics',
+  'set-workshop-sign-off': 'Workshop › Mechanics: show customers who signed off',
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
 export const ROWS = [
@@ -596,7 +605,7 @@ export const ROWS = [
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-eod-close', 'set-save-failed', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles', 'set-staff-invite', 'set-staff-invited', 'set-staff-invite-expired', 'set-staff-invite-till-only'] }, // UX walk-through 4 M2, M3
   { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },
-  { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-diary'] },
+  { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-sign-off', 'set-workshop-diary'] },
   { label: 'Messages', screens: ['set-msg-list', 'set-msg-edit', 'set-msg-new', 'set-msg-alongside'] }, // UX walk-through 4 H3
   { label: 'Your data', screens: ['set-data-export', 'set-data-history'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
