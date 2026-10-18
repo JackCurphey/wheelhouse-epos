@@ -326,3 +326,29 @@ test('with the setting off, the receipt names no staff', async () => {
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
   assert.ok(printed !== null && !printed.includes('Checked by'), String(printed));
 });
+
+// Fresh review: a reply warning that the job wasn't signed off names nobody,
+// even with the setting on and a mechanic picked at the till.
+test('a payment that comes back unsigned puts no Checked by on the receipt', async () => {
+  SHOW_SIGN_OFF = true;
+  try {
+    const t = await openJobTill({ jobOver: { workState: 'in_progress' } });
+    convertReply = { status: 201, ok: true, json: async () => ({ ...SALE, jobWarning: 'Paid and finished, but not signed off: the work was reopened while the till was open.' }) };
+    let printed = null;
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    const take = await t.sale.findByRole('button', { name: /^Take payment/ });
+    await t.waitFor(() => assert.equal(take.disabled, false));
+    t.fireEvent.click(take);
+    const pop = t.within(await t.ui.findByRole('dialog', { name: 'Who’s signing this off?' }));
+    t.fireEvent.click(await pop.findByRole('radio', { name: 'Jo Taylor' }));
+    t.fireEvent.click(pop.getByRole('button', { name: 'Sign off and mark ready' }));
+    await t.ui.findByRole('dialog', { name: /^Take payment/ });
+    const dlg = t.within(t.ui.getByRole('dialog'));
+    t.fireEvent.click(dlg.getByRole('button', { name: /^Card · / }));
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Card approved' }));
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+    assert.ok(printed !== null && !printed.includes('Checked by'), String(printed));
+  } finally {
+    SHOW_SIGN_OFF = false;
+  }
+});

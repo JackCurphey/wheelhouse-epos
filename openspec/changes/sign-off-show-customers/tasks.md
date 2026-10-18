@@ -9,8 +9,8 @@
 
 - [x] 2.1 Tests first, watched failing: the Settings page's switch reads and saves the setting; the receipt's Checked by line; the till and diary pass it only with the setting on; the booking link shows it
 - [x] 2.2 Settings page; receipt; till; diary; booking link
-- [x] 2.3 Browser: turn the switch on, and a signed-off job's booking link says Checked by
+- [x] 2.3 Browser: turn the switch on in Settings, and a signed-off job's printed receipt from the diary says Checked by (the booking link is covered by its server and screen tests)
 
 ## 3. Checks
 
-- [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
