@@ -1550,8 +1550,11 @@ ${diaryLegend()}`, 12), { width: PW_UP, height: PH_UP });
 // ---------- Phone diary (one day down a time line) ----------
 const P_SLOT = 44; // 30 minutes = 44px, so an hour-long job is an 84px block
 const P_GUTTER = 48;
+// The week label opens "Choose a day" (diary-month-phone, Jack, 18 Oct): a
+// 44px tap target. It links there once that board is on the canvas; until
+// then the clickable mockup would count the link as a dead end.
 function phoneWeekNav() {
-  return `<div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0">${dateArrow('prev', 'Previous week')}<a href="diary-month-phone.dc.html" aria-haspopup="dialog" aria-label="Choose a day, 14 to 20 September" style="min-width: 74px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 700; color: ${C.ink}; text-decoration: none; white-space: nowrap">14–20 Sep</a>${dateArrow('next', 'Next week')}</div>`;
+  return `<div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0">${dateArrow('prev', 'Previous week')}<span style="min-width: 74px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 700; color: ${C.ink}; white-space: nowrap">14–20 Sep</span>${dateArrow('next', 'Next week')}</div>`;
 }
 // Replaces the Week/Day switch on a phone (decision 68): the week's seven days,
 // the chosen one raised like the desktop view switch's selected half.
