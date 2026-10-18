@@ -63,8 +63,13 @@ nothing else in them changes until he has.
    we have already built for Lightspeed rather than the other way
    around"). This reverses the order in the programme spec ("Release 1
    carries on… as a workshop add-on for Lightspeed shops", with the
-   all-in-one second): the Lightspeed connection (journey 21) is built
-   after the all-in-one is ready to sell, by adapting it.
+   all-in-one second), and the order in `2026-09-02-lightspeed-first-platform.md`
+   (Lightspeed the first platform) and `2026-09-10-release-1-scope-reduction.md`
+   (Release 1 as the Lightspeed add-on): the Lightspeed connection
+   (journey 21) is built after the all-in-one is ready to sell, by adapting
+   it.
+8. **Stock suggestions are in the all-in-one** (Jack: "pretty simple, and
+   we can have that in release 1"), not after the trading week.
 9. **The names stay; a note says which comes first** (Jack: "keeping the
    name files and just adding a note"). "Release 2" stays the name of the
    all-in-one build in the plans, specs and pull requests, with a dated note
@@ -72,14 +77,12 @@ nothing else in them changes until he has.
    saying it now comes first and the Lightspeed version follows it. Chosen
    over renaming everywhere, and over new plain names in the live
    documents.
-8. **Stock suggestions are in the all-in-one** (Jack: "pretty simple, and
-   we can have that in release 1"), not after the trading week.
 
 10. **Importing Citrus Lime's full export and the workshop job history
     moves to the selling stage** (Jack: "1"), built against the real file
     when the first Citrus Lime shop moves and asks Citrus Lime for it.
     Until then a moving shop brings across what the screen reports hold
-    (recent customers, no workshop history), and the weekly check's
+    (customers who have bought, no workshop history), and the weekly check's
     customer count can't fully match. Chosen over building it now against a
     guessed shape, and over dropping it.
 

@@ -987,6 +987,11 @@ later packages.
 
 ### After the trading week (not in this plan's order)
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answers 7 and 8): Lightspeed comes after the all-in-one is ready to sell;
+> **stock suggestions are in Release 2**, in a stage still to be placed (for
+> Jack and Mark). The supplier screens stay held.
+
 - Lightspeed shops (journey 21) (Jack, Q5). Every Lightspeed situation line
   on the one canvas is tagged "after the trading week" where it sits
   (Lightspeed shops, later change, walk-through 6 M4), and its edge cases wait

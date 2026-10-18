@@ -43,7 +43,9 @@ reports; Xero and QuickBooks; a deeply customisable website with click and
 collect and online payments; Cycle to Work (Jack's own design, to be explained);
 multiple sites; the Citrus Lime import; a till that keeps selling offline.
 After switch-over: online service history with rebooking, service reminders,
-stock suggestions.
+stock suggestions. *(Changed 18 Oct 2026, Jack, answer 8 of
+`docs/decisions/2026-10-18-build-for-every-shop.md`: all three are in Release
+2; service history and reminders are in WP-4.5.)*
 
 **Out of scope for Release 2:** eBay and Amazon listings.
 
