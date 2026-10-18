@@ -1,5 +1,10 @@
 # Release 2 — the whole shop, replacing Citrus Lime
 
+> **Which comes first (18 Oct 2026, Jack):** "Release 2" is the name of the
+> all-in-one build, and it now comes first; the Lightspeed version is
+> adapted from it afterwards (`docs/decisions/2026-10-18-build-for-every-shop.md`,
+> answers 7 to 9). The name is kept so links and history still match.
+
 **Date:** 27 September 2026
 **Status:** approved by Jack, 27 Sep 2026 (business plan gates in §5 still open with Mark)
 **Kind:** programme spec — the map of Release 2. Each piece below gets its own
@@ -45,6 +50,10 @@ stock suggestions.
 **Not decided here:** price. The business plan's £49–79 a month
 (`docs/decisions/2026-08-31-business-plan.md`) was set before the website and
 multiple sites came in; it needs revisiting on its own.
+
+> **Changed 18 Oct 2026** (Jack, answer 7 of `docs/decisions/2026-10-18-build-for-every-shop.md`):
+> the all-in-one comes first, and the Lightspeed version is adapted from it
+> afterwards. The paragraph below is history.
 
 **Release 1 carries on.** Release 1 still ships as a workshop add-on for
 Lightspeed shops. Release 2 is built in the same codebase and shares the same

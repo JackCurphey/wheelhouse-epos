@@ -1,5 +1,10 @@
 # Release 2 build plan — from here to the trading week
 
+> **Which comes first (18 Oct 2026, Jack):** "Release 2" is the name of the
+> all-in-one build, and it now comes first; the Lightspeed version is
+> adapted from it afterwards (`docs/decisions/2026-10-18-build-for-every-shop.md`,
+> answers 7 to 9). The name is kept so links and history still match.
+
 > **From 8 Oct 2026 this plan sets the order of work and the lanes only.**
 > How each piece is specified and built is in `CLAUDE.md` and OpenSpec
 > (`openspec/`); an OpenSpec change replaces §4 step 2's short spec in

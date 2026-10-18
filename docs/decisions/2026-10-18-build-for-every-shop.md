@@ -64,8 +64,14 @@ nothing else in them changes until he has.
    around"). This reverses the order in the programme spec ("Release 1
    carries on… as a workshop add-on for Lightspeed shops", with the
    all-in-one second): the Lightspeed connection (journey 21) is built
-   after the all-in-one is ready to sell, by adapting it. What the two are
-   called in the plans is settled separately.
+   after the all-in-one is ready to sell, by adapting it.
+9. **The names stay; a note says which comes first** (Jack: "keeping the
+   name files and just adding a note"). "Release 2" stays the name of the
+   all-in-one build in the plans, specs and pull requests, with a dated note
+   at the top of the build plan, the programme spec and the split plan
+   saying it now comes first and the Lightspeed version follows it. Chosen
+   over renaming everywhere, and over new plain names in the live
+   documents.
 8. **Stock suggestions are in the all-in-one** (Jack: "pretty simple, and
    we can have that in release 1"), not after the trading week.
 
