@@ -388,6 +388,20 @@ silent:
    the total on a reprint. *Pattern:* "Paid by card" and "Paid by cash"
    (fresh review).
 
+### 18 Oct 2026: the mechanic sign-off, piece 1 (`docs/decisions/2026-10-16-mechanic-sign-off.md`)
+
+1. **"Who's signing this off?" on a tablet or phone is the same pop-up**, at
+   the job page's pop-up sizes; only the computer size is drawn. *Pattern:*
+   Change details and the other job page pop-ups.
+2. **"Signed off by [name] · [day], [time]" sits in a strip under the
+   customer strip**, since the built job page has no finished strip yet.
+   *Pattern:* the drawing's place, under the finished strip.
+3. **A job finished before the sign-off existed, or paid at the till, shows
+   no "Signed off by" line.** *Pattern:* nothing shown that wasn't recorded.
+4. **If the mechanics can't load: "Wheelhouse couldn't load the mechanics.
+   Try again in a moment."**, and Sign off waits. *Pattern:* the job page's
+   load messages.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

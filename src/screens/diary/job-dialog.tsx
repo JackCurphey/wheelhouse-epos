@@ -11,6 +11,7 @@ import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
+import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -151,12 +152,15 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     }
   }
 
-  async function run(action: string) {
+  // "Mark ready for collection" asks who is signing it off first (Jack, 16 Oct).
+  const [signing, setSigning] = useState(false);
+
+  async function run(action: string, extra: object = {}) {
     if (!job) return;
     setSending(true);
     setMessage(null);
     try {
-      await jobAction(job.id, action, job.version);
+      await jobAction(job.id, action, job.version, extra);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
@@ -285,6 +289,13 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               </div>
             </div>
 
+            {/* Who signed the finished work off (Jack, 16 Oct, answer 3; drawn under the finished strip). */}
+            {finished && job.signedOffByName && job.signedOffAt ? (
+              <p className="m-0 flex shrink-0 items-center gap-2 border-b border-[var(--wh-border)] px-5 py-1.5 text-[13px]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
+                <span data-sign-off="true">Signed off by <strong>{job.signedOffByName}</strong>{` · ${signedOffWhen(job.signedOffAt)}`}</span>
+              </p>
+            ) : null}
             <div className="min-h-0 grow overflow-y-auto px-5 py-4">
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
                 <div className="flex min-w-0 flex-col gap-4">
@@ -375,13 +386,14 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
               ))}
               {actions.filter((a) => a.primary).map((a) => (
-                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : run(a.action))}>{a.label}</Button>
+                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : a.action === 'finish' ? setSigning(true) : run(a.action))}>{a.label}</Button>
               ))}
             </footer>
           </>
         ) : null}
       </div>
       {changing && job ? <ChangeDetailsDialog job={job} onClose={() => setChanging(false)} /> : null}
+      {signing && job ? <SignOffDialog job={job} busy={sending} onClose={() => setSigning(false)} onSign={(id) => { setSigning(false); void run('finish', { signedOffBy: id }); }} /> : null}
       <Dialog open={deleting === 'ask'} onOpenChange={(o) => { if (!o) setDeleting(null); }} aria-labelledby="delete-job-title">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
