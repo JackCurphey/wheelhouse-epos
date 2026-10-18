@@ -14,6 +14,7 @@ import {
 import { currentShopToday } from '../workshop/jobs.js';
 import { work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
+import { signOffMechanic, recordSignOff } from '../workshop/sign-off.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -511,6 +512,15 @@ export function register(route) {
       // uncompleted job is exactly the ambiguity the state machines exist to
       // remove.
       if (!finished.ok) jobWarning = finished.message;
+      // The till asks who is signing the job off before the card is taken
+      // (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md answer 5).
+      // The payment already stands, so a sign-off that is no longer valid only
+      // leaves the work unsigned, and the reply says so.
+      else if (body.signedOffBy !== undefined && body.signedOffBy !== null) {
+        const signer = await signOffMechanic(body.signedOffBy);
+        if (signer === null) jobWarning = 'Paid and finished, but not signed off: that mechanic isn’t active any more. Check the job.';
+        else await recordSignOff(jobToFinish.id, signer);
+      }
     }
     // The same race for work that was already finished at the check: if someone
     // reopened it before the sale was made, the record no longer says the work

@@ -401,6 +401,13 @@ silent:
 4. **If the mechanics can't load: "Wheelhouse couldn't load the mechanics.
    Try again in a moment."**, and Sign off waits. *Pattern:* the job page's
    load messages.
+5. **At the till the pop-up keeps "Sign off and mark ready"**, then the
+   payment opens; Cancel takes nothing. *Pattern:* the decision's "uses the
+   same pop-up" (answer 5).
+6. **A sign-off that's no longer valid when the payment lands doesn't refuse
+   it: "Paid and finished, but not signed off: that mechanic isn't active any
+   more. Check the job."** on Paid. *Pattern:* the till's job-changed warning
+   (the card is taken first; #267).
 
 ## Decided here, for Jack to overrule
 
