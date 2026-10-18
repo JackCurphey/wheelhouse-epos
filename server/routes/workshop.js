@@ -22,6 +22,7 @@ import {
 } from '../workshop/quotes.js';
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
+import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -660,6 +661,8 @@ export function register(route) {
           legacyStates?.workState ?? null,
           id
         );
+        // The old form's "Reopen job" takes finished work back: its sign-off goes (answer 4).
+        if (current?.work_state === 'complete' && legacyStates?.workState && legacyStates.workState !== 'complete') await clearSignOff(id);
         await syncJobHold(id);
         const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
         return { status: 200, body: serializeWorkshopJob(row) };
@@ -705,7 +708,31 @@ export function register(route) {
           });
         }
       }
-      const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+      // Finishing the work needs a mechanic to sign it off, and reopening it
+      // clears the sign-off (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
+      // answers 1 and 4), in the same transaction as the move.
+      const signing = machine === work && event === 'finish';
+      const unsigning = machine === work && event === 'reopen';
+      let signer = null;
+      if (signing) {
+        signer = await signOffMechanic(body.signedOffBy);
+        if (signer === null) return sendJson(res, 400, SIGN_OFF_REQUIRED);
+      }
+      let result;
+      if (signing || unsigning) {
+        await db.exec('BEGIN');
+        try {
+          result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+          if (result.ok && signing) await recordSignOff(id, signer);
+          if (result.ok && unsigning) await clearSignOff(id);
+          await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
+        } catch (err) {
+          await db.exec('ROLLBACK');
+          throw err;
+        }
+      } else {
+        result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+      }
       if (!result.ok) {
         if (result.code === 'not_found') return notFound(res, 'Job not found');
         // `code` is what a screen branches on: 'stale' means reload and look

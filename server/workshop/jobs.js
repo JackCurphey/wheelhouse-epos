@@ -76,16 +76,22 @@ export function serializeWorkshopJob(row) {
     orderTotal: row.order_total,
     // The job's current quote (its latest revision), or null (journey 4).
     quote: row.quote_id ? { id: row.quote_id, state: row.quote_state, revision: row.quote_revision } : null,
+    // Who signed the finished work off, and when (migration 040); null until
+    // it's finished and again once reopened.
+    signedOffBy: row.signed_off_by ?? null,
+    signedOffByName: row.signed_off_by_name ?? null,
+    signedOffAt: row.signed_off_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
+export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, so.name AS signed_off_by_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
   FROM workshop_jobs w
   LEFT JOIN customers c ON c.id = w.customer_id
   LEFT JOIN customer_bikes b ON b.id = w.bike_id
   LEFT JOIN employees mech ON mech.id = w.mechanic_id
+  LEFT JOIN employees so ON so.id = w.signed_off_by
   LEFT JOIN sale_documents d ON d.workshop_job_id = w.id
   LEFT JOIN LATERAL (SELECT id, state, revision FROM workshop_quotes q
                      WHERE q.workshop_job_id = w.id ORDER BY revision DESC LIMIT 1) lq ON true`;

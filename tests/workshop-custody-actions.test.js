@@ -29,14 +29,16 @@ after(async () => {
 
 async function newShop() {
   const { cookie, shop } = await staffSignup(server.baseUrl);
-  await seedMechanic(shop.id);
+  signer.set(cookie, await seedMechanic(shop.id));
   return { cookie, shop };
 }
 
+// Finishing needs a mechanic to sign it off (Jack, 16 Oct, mechanic sign-off).
+const signer = new Map();
 const act = (cookie, jobId, action, version) =>
   staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${jobId}/${action}`, {
     method: 'POST',
-    body: { version },
+    body: action === 'finish' ? { version, signedOffBy: signer.get(cookie) } : { version },
   });
 
 // Walks a job through a sequence of actions, carrying the version forward.

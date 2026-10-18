@@ -31,7 +31,7 @@ test.beforeAll(async () => {
   const items = await staff(`/api/sale-documents/${job.orderId}/items`, { method: 'PUT', body: { items: [{ lineType: 'labour', serviceId: service.id, name: 'Fit & adjust brakes', unitPrice: 18, minutes: 30 }] } });
   expect(items.status, JSON.stringify(items.body)).toBe(200);
   for (const step of ['book-in', 'start', 'finish']) {
-    const r = await staff(`/api/workshop-jobs/${jobId}/${step}`, { method: 'POST', body: { version: job.version } });
+    const r = await staff(`/api/workshop-jobs/${jobId}/${step}`, { method: 'POST', body: step === 'finish' ? { version: job.version, signedOffBy: alex } : { version: job.version } });
     expect(r.status, `${step}: ${JSON.stringify(r.body)}`).toBe(200);
     job = r.body;
   }
