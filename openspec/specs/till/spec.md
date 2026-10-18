@@ -1,7 +1,7 @@
 # till Specification
 
 ## Purpose
-TBD - created by archiving change till-job-payment. Update Purpose after archive.
+The till takes payment at the front desk: a sale of parts and products, or a workshop job's order paid when the work is done. This spec so far covers paying a job's order; the plain sale is described as each piece of it is next changed.
 
 ## Requirements
 
