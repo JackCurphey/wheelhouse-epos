@@ -3205,7 +3205,7 @@ function monthChip(j) {
   const strike = j.key === 'cancelled' ? 'text-decoration: line-through;' : '';
   return `<a href="${j.href || 'job-overview-desktop.dc.html'}" title="${esc(hhmm(j.start))} · ${esc(bike)} · ${esc(j.svc)} · ${esc(customer)} · ${esc(stageOf(j))}" aria-label="${esc(hhmm(j.start))}, ${esc(bike)}, ${esc(j.svc)}, ${esc(customer)}, ${esc(stageOf(j))}" style="display: block; box-sizing: border-box; padding: 1px 5px; border-radius: 4px; border-left: 3px solid ${ink}; background: ${bg}; font-size: 12px; line-height: 16px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}"><strong style="font-weight: 700">${hhmm(j.start)}</strong> ${esc(bike)}</a>`;
 }
-function monthGrid({ moreOpen = null } = {}) {
+function monthGrid({ moreOpen = null, touch = false } = {}) {
   const heads = DAYS.map(([name]) => `<div style="padding: 6px 8px; font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; background: ${C.panel}">${name}</div>`).join('');
   const cells = monthDays().map((c) => {
     const isToday = c.weekDay === TODAY;
@@ -3217,7 +3217,7 @@ function monthGrid({ moreOpen = null } = {}) {
 <a href="diary-day-desktop.dc.html" aria-label="Open ${esc(cellDayName(c))} in the Day view" style="align-self: flex-start; font-size: 13px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}; text-decoration: none; line-height: 18px">${label}</a>
 ${shown.map(monthChip).join('')}
 ${more ? `<button type="button" aria-haspopup="dialog" style="align-self: flex-start; padding: 0 2px; border: 0; background: transparent; font-family: inherit; font-size: 12px; font-weight: 700; line-height: 16px; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 2px">+${more} more</button>` : ''}
-${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay) : ''}
+${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay, touch) : ''}
 </div>`;
   }).join('');
   return `<div role="grid" aria-label="Workshop diary, September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(${MONTH_WEEKS}, 104px); gap: 1px; background: ${C.border}; border: 1px solid ${C.border}; border-radius: 10px; overflow: visible">${heads}${cells}</div>`;
@@ -3226,18 +3226,18 @@ const MECH_NAME = { Alex: 'Alex Morgan', Jo: 'Jo Taylor' };
 // "+[n] more": the busy day's whole list, opening over the month from its cell (the old diary
 // opened a pop-up with the same rows: time, job, status, customer · bike,
 // mechanic). Clicking a row opens the job.
-function monthMorePopover(d) {
+function monthMorePopover(d, touch = false) {
   const [, date] = DAYS[d];
   const rows = dayJobs(d).map((j) => {
     const [customer, bike] = customerBikeOf(j);
-    return `<a href="${j.href || 'job-overview-desktop.dc.html'}" style="display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 10px; align-items: center; padding: 6px 8px; border-radius: 6px; text-decoration: none; color: ${C.ink}; border-top: 1px solid ${C.border}">
+    return `<a href="${j.href || `job-overview-${touch ? 'tablet' : 'desktop'}.dc.html`}" style="display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 10px; align-items: center; ${touch ? 'min-height: 52px; ' : ''}padding: 6px 8px; border-radius: 6px; text-decoration: none; color: ${C.ink}; border-top: 1px solid ${C.border}">
 <span style="font-family: ${MONO}; font-size: 13px; font-weight: 700">${hhmm(j.start)}</span>
 <span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)} · ${esc(j.svc)}</span>
 ${statusBadge(j.key, stageOf(j))}
 <span></span><span style="grid-column: 2 / span 2; font-size: 12px; color: ${C.muted}">${esc(customer)} · ${esc(MECH_NAME[j.mech] || 'Booking request, no mechanic yet')}</span>
 </a>`;
   }).join('');
-  return `<div role="dialog" aria-labelledby="month-more-title" style="position: absolute; left: 0; top: 0; width: 420px; z-index: 6; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 8px; display: flex; flex-direction: column; gap: 0">
+  return `<div role="dialog" aria-labelledby="month-more-title" style="position: absolute; left: 0; top: ${touch ? '-160px; max-height: 500px; overflow: hidden' : '0'}; width: 420px; z-index: 6; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 8px; display: flex; flex-direction: column; gap: 0">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 6px 8px"><h2 id="month-more-title" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 15px; font-weight: 700">${DAY_NAMES[d]} ${date} September</h2><button type="button" aria-label="Close" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${C.ink}">${icon('close', 18)}</button></div>
 ${rows}
 <a href="diary-day-desktop.dc.html" style="padding: 8px 8px 2px; border-top: 1px solid ${C.border}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">Open this day in the Day view</a>
@@ -3399,10 +3399,39 @@ function sharedQueuePhoneBoard() {
   return phoneDiary({ day: TODAY }, { overlay: list });
 }
 
+// Month view on touch screens (drawn 18 Oct for Jack to approve). Tablet:
+// the desktop month at tablet size; the jobs in a day are too small to tap
+// one by one (decision 68's 44px), so a tap anywhere in a day opens that
+// day's list, finger-sized, as "+[n] more" does on desktop. Phone: no room
+// for jobs in a month, so the week label opens a sheet with the month, each
+// day showing how many jobs it has; a tap on a day goes to that day.
+const monthTabletBoard = (opts = {}) => shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { activeView: 'Month', views: ['Week', 'Day', 'Month'], newJob: 'new-job-pick-tablet.dc.html' })}
+${row(`${waitingColumn('tablet', -1, T_WAIT_W)}${monthGrid({ ...opts, touch: true })}`, 14, 'align-items: flex-start')}
+${note('Tap a day to see its jobs.', 13)}`, 12));
+function phoneMonthSheet() {
+  const heads = DAYS.map(([name]) => `<span style="text-align: center; font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase">${name.slice(0, 1)}</span>`).join('');
+  const cells = monthDays().map((c) => {
+    const isToday = c.weekDay === TODAY;
+    const inWeek = c.weekDay != null;
+    const n = inWeek ? dayJobs(c.weekDay).length : 0;
+    const label = `${cellDayName(c)}${isToday ? ', today' : ''}${inWeek ? `, ${n} job${n === 1 ? '' : 's'}` : ''}`;
+    return `<a href="${inWeek ? 'diary-phone.dc.html' : '#'}" aria-label="${esc(label)}" style="min-height: 52px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 10px; text-decoration: none; ${inWeek ? `background: ${C.mutedBg};` : ''} ${isToday ? `box-shadow: inset 0 0 0 2px ${C.accent};` : ''} color: ${c.inMonth ? C.ink : C.muted}">
+<span style="font-size: 16px; font-weight: 700">${c.date}</span>${inWeek && n ? `<span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">${n} job${n === 1 ? '' : 's'}</span>` : '<span style="font-size: 12px">&nbsp;</span>'}</a>`;
+  }).join('');
+  const body = `<div style="display: flex; align-items: center; justify-content: space-between">${dateArrow('prev', 'Previous month')}<span style="font-size: 16px; font-weight: 700">September 2026</span>${dateArrow('next', 'Next month')}</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">${heads}${cells}</div>
+<span style="font-size: 13px; color: ${C.muted}">Tap a day to open it.</span>`;
+  return phoneSheet({ id: 'month-sheet-title', title: 'Choose a day', sub: 'Jobs in each day, everyone', body, closeHref: 'diary-phone.dc.html', maxH: 600 });
+}
+const monthPhoneBoard = () => phoneDiary({ day: TODAY }, { overlay: phoneMonthSheet() });
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
     'diary-month-more': monthBoard({ moreOpen: 0 }),
+    'diary-month-tablet': monthTabletBoard(),
+    'diary-month-more-tablet': monthTabletBoard({ moreOpen: 3 }),
+    'diary-month-phone': monthPhoneBoard(),
     'diary-stretch': stretchBoard(),
     'job-change-details': changeDetailsBoard(),
     'diary-menu-job': menuJobBoard(),
