@@ -280,7 +280,8 @@ silent:
 5. **While stretching, the job wears the chosen ring**, not the lifted look
    of a job being moved. *Pattern:* the three stretch drawings.
 6. **A job stops at its own day's closing time**, though the grid may run
-   later for another day. *Pattern:* the server's opening-hours check.
+   later for another day. *Pattern:* the server's opening-hours check. On a day with no opening hours set (closed), it runs to the week's latest
+   closing time, as the grid does.
 
 ## Decided here, for Jack to overrule
 
