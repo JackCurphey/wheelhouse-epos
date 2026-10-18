@@ -75,6 +75,14 @@ nothing else in them changes until he has.
 8. **Stock suggestions are in the all-in-one** (Jack: "pretty simple, and
    we can have that in release 1"), not after the trading week.
 
+10. **Importing Citrus Lime's full export and the workshop job history
+    moves to the selling stage** (Jack: "1"), built against the real file
+    when the first Citrus Lime shop moves and asks Citrus Lime for it.
+    Until then a moving shop brings across what the screen reports hold
+    (recent customers, no workshop history), and the weekly check's
+    customer count can't fully match. Chosen over building it now against a
+    guessed shape, and over dropping it.
+
 ## Open, for Jack (found by the fresh review, 18 Oct)
 
 - ~~What was "after the trading week"~~: settled by answers 7 and 8
@@ -82,10 +90,7 @@ nothing else in them changes until he has.
   screens stay held by Jack, and the "later in Release 2" items stay where
   they were. Online service history and reminders are already in WP-4.5
   (Account, history and reminders), so they are in.
-- **Citrus Lime's full export and the workshop job history**: nobody has
-  seen the full export's shape (the exports spec lists it as "No export
-  button"), so WP-8.1's import of it and of workshop history can't be
-  tested on files shaped like the real thing. Does that part move with 8.2,
-  or is it built against a guessed shape?
+- ~~Citrus Lime's full export and the workshop job history~~: settled by
+  answer 10.
 
 The plans are shared, so Mark is told.

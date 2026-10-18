@@ -923,9 +923,10 @@ later packages.
 ### Stage 8 — The move, the switch-over and the trading week
 
 > **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
-> answer 5): WP-8.1 stays in Release 2, tested on made-up files shaped like
-> the reports whose columns were read (the full export and workshop history
-> are an open question there);
+> answers 5 and 10): WP-8.1 stays in Release 2, tested on made-up files
+> shaped like the reports whose columns were read; importing Citrus Lime's
+> full export and the workshop job history moves to the selling stage, with
+> the first Citrus Lime shop that moves;
 > WP-8.2 and WP-8.3 move to the selling stage, after Release 2.
 
 - **WP-8.1 Citrus Lime import, second half** (journey 9, pieces 5–11):
