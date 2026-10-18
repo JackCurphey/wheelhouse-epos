@@ -309,26 +309,31 @@ def('till-receipt-print', () => overlay(() => tillPage(leftSide(), jobBasket()),
 <p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)));
 // The printed receipt, on an 80 mm till roll or the top of an A4 page. The
 // contents follow the receipt email's (collect.mjs receiptBody): the shop's
-// name, the sale number and barcode, when, the job, the lines and how it
-// was paid. The shop's address, phone and VAT number print once Shop details
-// holds them; the VAT line once VAT is recorded (answer 2). Nothing else is
+// name, the sale number, when, the job, the lines and how it was paid, then
+// the barcode last (shop details answer 2, 18 Oct). The shop's address, phone
+// and VAT number print above the barcode once Shop details holds them; the
+// VAT line once VAT is recorded (print receipt answer 2). Nothing else is
 // added: no staff name, no change, no words at the bottom yet.
 const paperRow = (l, r, strong = false) => `<div style="display: flex; justify-content: space-between; gap: 12px; ${strong ? 'font-weight: 700; font-size: 15px' : ''}"><span>${l}</span><span style="font-family: ${MONO}">${r}</span></div>`;
 // With "Show who signed off to customers" on (Jack, 18 Oct, mechanic sign-off
 // piece 3), the job's line is followed by "Checked by [name]".
-const receiptPaper = (checked) => () => {
+// With Shop details filled in (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md),
+// the address, phone and VAT number go at the bottom, above the barcode,
+// which prints last (answer 2); a detail left blank is left out.
+const receiptPaper = (checked, details = false) => () => {
   const [W, H] = WH();
   const lines = LINES_APPROVED.filter((l) => l.approval === 'Approved');
   return `<div style="width: ${W}px; height: ${H}px; box-sizing: border-box; padding: ${CUR === 'phone' ? 16 : 40}px; display: flex; justify-content: center; align-items: flex-start; background: ${C.bg}; overflow: hidden">
 <article aria-label="Printed receipt" style="width: 302px; box-sizing: border-box; padding: 18px 16px 22px; background: #ffffff; box-shadow: 0 2px 10px rgba(28,30,25,0.18); display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.45; color: #111111">
-<div style="display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center"><strong style="font-size: 17px">North Street Cycles</strong></div>
-<div style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center"><span>Sale ${mono('[n]')}</span><span>[date] · [time]</span>${barcode128('[n]', 180, 34)}</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center"><strong style="font-size: 17px">North Street Cycles</strong><span>Sale ${mono('[n]')}</span><span>[date] · [time]</span></div>
 <div style="border-top: 1px dashed #111111; padding-top: 8px; display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 700">${mono('WH-1042')} · Trek Domane AL 3</span>${checked ? '<span>Checked by Alex Morgan</span>' : ''}${lines.map((l) => paperRow(esc(l.work), money(l.price))).join('')}</div>
 <div style="border-top: 1px dashed #111111; padding-top: 8px; display: flex; flex-direction: column; gap: 4px">${paperRow('Total', money(WORK_TOTAL_APPROVED), true)}${paperRow('Paid by card', money(WORK_TOTAL_APPROVED))}</div>
+<div style="border-top: 1px dashed #111111; padding-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center">${details ? '<span>[Shop address]</span><span>[shop phone]</span><span>VAT number [VAT number]</span>' : ''}<span style="margin-top: ${details ? 8 : 0}px">${barcode128('[n]', 180, 34)}</span></div>
 </article></div>`;
 };
 def('till-receipt-paper', receiptPaper(false));
 def('till-receipt-paper-checked', receiptPaper(true));
+def('till-receipt-paper-details', receiptPaper(false, true));
 
 // ---------- Other ways to pay (decision 8) ----------
 // Balances, limits and point values are placeholders — nothing real exists.
@@ -653,6 +658,7 @@ export const TITLES = {
   'till-receipt-print': 'Paid — Print or No receipt, for now',
   'till-receipt-paper': 'The printed receipt',
   'till-receipt-paper-checked': 'The printed receipt, showing who signed the job off',
+  'till-receipt-paper-details': 'The printed receipt, with the shop’s address, phone and VAT number',
   'till-receipt-split': 'Paid — the discounted £70.00, cash and card', // UX walk-through 2 H1 (third walk)
   'till-giftcard': 'Gift card or store credit',
   'till-account': 'Put on account — pay later',
@@ -696,7 +702,7 @@ export const TITLES = {
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-serving-pills', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split', 'till-receipt-print', 'till-receipt-paper', 'till-receipt-paper-checked'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split', 'till-receipt-print', 'till-receipt-paper', 'till-receipt-paper-checked', 'till-receipt-paper-details'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit', 'till-pay-link', 'till-pay-link-waiting', 'till-pay-link-paid'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },
   // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.

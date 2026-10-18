@@ -109,3 +109,29 @@ test('with no one to name, the receipt names no staff', async () => {
   const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', job: { reference: 'WH-1042', bikeLabel: 'Trek Domane AL 3', checkedBy: null } });
   assert.equal(/Checked by/.test(text(paper)), false);
 });
+
+// Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md answer 2;
+// drawn as till-receipt-paper-details): the shop's name at the top; the address,
+// phone and VAT number at the bottom, each left out when blank; the barcode last.
+const DETAILS = { address: '[Shop address]', phone: '[shop phone]', vatNumber: '[VAT number]' };
+test('the shop’s details print at the bottom, after Paid by, then the barcode last', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', details: DETAILS });
+  const t = text(paper);
+  assert.ok(t.startsWith('North Street CyclesSale 601'), t);
+  assert.ok(t.endsWith('Paid by card£111.00[Shop address][shop phone]VAT number [VAT number]'), t);
+  const bars = paper.querySelector('svg[aria-label="Barcode for sale 601"]');
+  assert.ok(bars !== null && paper.lastElementChild.lastElementChild.contains(bars), 'the barcode is the last thing on the receipt');
+});
+
+test('a detail left blank is left out; with none, the barcode follows Paid by', async () => {
+  const some = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', details: { address: '[Shop address]', phone: null, vatNumber: null } });
+  assert.ok(text(some).endsWith('Paid by card£111.00[Shop address]'), text(some));
+  assert.equal(/VAT number/.test(text(some)), false);
+  const { cleanup } = await import('@testing-library/react');
+  cleanup(); uninstall?.();
+  const none = await render({ sale: JOB_SALE, shopName: 'North Street Cycles' });
+  assert.ok(text(none).endsWith('Paid by card£111.00'), text(none));
+  const bars = none.querySelector('svg[aria-label="Barcode for sale 601"]');
+  const paid = [...none.querySelectorAll('span')].find((el) => el.textContent === 'Paid by card');
+  assert.ok(paid.compareDocumentPosition(bars) & 4, 'the barcode comes after Paid by');
+});

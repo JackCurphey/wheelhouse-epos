@@ -422,6 +422,18 @@ silent:
    wasn't signed off names nobody.** *Pattern:* nothing shown that wasn't
    recorded.
 
+### 18 Oct 2026: Shop details (`docs/decisions/2026-10-18-shop-details.md`)
+
+1. **Each box saves when it's left, if it changed, and says "Saved."**; a
+   failed save says "Wheelhouse couldn't save that. Try again in a moment."
+   and keeps what was typed. No Undo yet. *Pattern:* the settings pages save
+   as you go; the sign-off switch's messages.
+2. **The email is kept but not printed**, since the receipt drawing doesn't
+   show it. *Pattern:* till-receipt-paper-details.
+3. **"Shop and sites" shows only Shop details** until opening hours and
+   Sites are built (WP-5.1, WP-5.2). *Pattern:* the drawn page, cut to
+   what's built, as Workshop on the same page.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

@@ -129,6 +129,8 @@ GET /api/workshop-services
 POST /api/workshop-services
 PUT /api/workshop-services/:id
 DELETE /api/workshop-services/:id
+GET /api/shop-details
+PUT /api/shop-details
 GET /api/label-settings
 PUT /api/label-settings
 GET /api/shop-theme

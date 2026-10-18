@@ -33,6 +33,7 @@ export default {
   'till-pay-split': keep(20),
   'till-receipt': keep(20),
   'till-receipt-print': into('till-receipt', 'Print receipt 1, 2 (Jack, 18 Oct)', "Workshop job WH-1042 paid, £111.00; only 'Print' and 'No receipt'; 'Sale [n]' instead of the receipt number"),
+  'till-receipt-paper-details': into('till-receipt', 'Shop details 1 (Jack, 18 Oct)', "The printed receipt with '[Shop address]', '[shop phone]' and 'VAT number [VAT number]' at the bottom, above the barcode"),
   'till-receipt-paper-checked': into('till-receipt', 'Mechanic sign-off 3 (Jack, 18 Oct)', "The printed receipt with 'Checked by Alex Morgan' under the job"),
   'till-receipt-paper': into('till-receipt', 'Print receipt 1, 2 (Jack, 18 Oct)', "The printed receipt: North Street Cycles, 'Sale [n]', barcode, the job's lines, Total and 'Paid by card'; no VAT line yet"),
   'till-receipt-split': into('till-receipt', 'UX walk-through decision 6 (2 Oct); 3 Oct (third walk, walk-through 2 H1)', "Discounted basket; 'Paid' £70.00 with 'Cash £20.00' and 'Card £50.00' rows, not 'Card · £74.00'"),
