@@ -3287,22 +3287,35 @@ ${note('Drag the bottom edge of a job to make it longer or shorter, in 15-minute
 // form had the same fields (title, date, start and end time, customer, bike,
 // mechanic). The mechanic is pills in the booking pop-up's style (decision
 // 62), with full names, as the job page's "Mechanic: Alex Morgan".
-function changeDetailsDialog(size = 'desktop') {
+// The job shown, or (request) Oliver Chen's WH-1052, whose customer asked to
+// move it from Mon 14 Sep 10:00 to 14:00 (the drawn week's change request).
+const CD_JOB = { title: 'Standard service', ref: 'WH-1042', customer: 'Maya Patel', bike: 'Trek Domane AL 3 · green', date: 'Thu 17 Sep', start: '11:30', end: '13:00', mech: 'Alex Morgan' };
+const CD_REQUEST_JOB = { title: 'Gear adjustment', ref: 'WH-1052', customer: 'Oliver Chen', bike: 'Brompton C Line', date: 'Mon 14 Sep', start: '10:00', end: '11:00', mech: 'Jo Taylor' };
+// Jack, 18 Oct: when a customer's change request is waiting, Change details
+// says so, in the request's amber. On the desktop board the job page behind
+// is the standard WH-1042 drawing, only scenery (Jack was told when he
+// approved it).
+const requestNote = () => `<div role="note" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${C.ink}; font-size: 14px; line-height: 1.4">
+<strong style="color: ${ST.hold[1]}">Change requested</strong>
+<span>Oliver Chen asked to move this to Mon 14 Sep, 14:00. Setting that time here accepts it; any other change leaves the request waiting in Waiting for you.</span>
+</div>`;
+function changeDetailsDialog(size = 'desktop', request = false) {
+  const J = request ? CD_REQUEST_JOB : CD_JOB;
   const mechs = [['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
   const left = `<div style="display: flex; flex-direction: column; gap: 10px">
-${field('Job title', { value: 'Standard service', id: 'cd-title', hint: 'Shown on the diary block.' })}
-${field('Customer', { value: 'Maya Patel', id: 'cd-customer' })}
-${select('Bike', ['Trek Domane AL 3 · green'], 'cd-bike')}
+${field('Job title', { value: J.title, id: 'cd-title', hint: 'Shown on the diary block.' })}
+${field('Customer', { value: J.customer, id: 'cd-customer' })}
+${select('Bike', [J.bike], 'cd-bike')}
 </div>`;
   const right = `<div style="display: flex; flex-direction: column; gap: 10px">
-${field('Date', { value: 'Thu 17 Sep', id: 'cd-date' })}
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">${field('Start time', { value: '11:30', id: 'cd-start' })}${field('End time', { value: '13:00', id: 'cd-end' })}</div>
-<div style="display: flex; flex-direction: column; gap: 6px"><span id="cd-mech-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="cd-mech-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechs.map(([k, i]) => mechanicPill(k, i, k === 'Alex Morgan', size)).join('')}</div></div>
+${field('Date', { value: J.date, id: 'cd-date' })}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">${field('Start time', { value: J.start, id: 'cd-start' })}${field('End time', { value: J.end, id: 'cd-end' })}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span id="cd-mech-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="cd-mech-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechs.map(([k, i]) => mechanicPill(k, i, k === J.mech, size)).join('')}</div></div>
 </div>`;
   // A phone has one column, the fields in the same order (Jack, 18 Oct).
   const cols = size === 'phone' ? 'flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px' : 'padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px';
-  return `${dialogHeader('Change details', `job-overview-${size}.dc.html`, 'Standard service · WH-1042', 'change-details-title', size)}
-<div style="${cols}">${left}${right}</div>
+  return `${dialogHeader('Change details', `job-overview-${size}.dc.html`, `${J.title} · ${J.ref}`, 'change-details-title', size)}
+<div style="${cols}">${request ? requestNote() : ''}${left}${right}</div>
 <div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: `job-overview-${size}.dc.html` })}${button('Save changes', { variant: 'primary', href: `job-overview-${size}.dc.html` })}</div>`;
 }
 const CHANGE_BTN = button('Change details', { variant: 'default' });
@@ -3467,6 +3480,8 @@ export function oldDiaryFeatureDrawings() {
     'job-change-details-tablet': changeDetailsTabletBoard(),
     'job-change-details-phone': changeDetailsPhoneBoard(),
     'job-change-button-phone': jobPageWithChangeButton('phone'),
+    'job-change-details-request': dialogOverlay(jobPageWithChangeButton(), DW, DH, changeDetailsDialog('desktop', true), { maxWidth: 760, labelledby: 'change-details-title' }),
+    'job-change-details-request-phone': dialogOverlay(jobPageWithChangeButton('phone'), PW, PH, changeDetailsDialog('phone', true), { full: true, pad: 0, labelledby: 'change-details-title' }),
     'diary-menu-job': menuJobBoard(),
     'diary-menu-pending': menuPendingBoard(),
     'diary-shared-queue': sharedQueueBoard(),
