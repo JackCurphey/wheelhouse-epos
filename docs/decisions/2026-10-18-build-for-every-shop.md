@@ -13,12 +13,13 @@ Jack, 18 Oct, choosing the next piece of work:
    not shaped around moving Jack's own shop off Citrus Lime first.
 2. **Jack's shop is no longer the first switch-over.** If it moves to
    Wheelhouse, it goes through the same handover as any other shop.
-3. **Dropped:** asking Jack's shop's accountant which Citrus Lime reports
-   they use (go-live checklist, `2026-10-16-go-live-checklist.md` answer 1,
-   and the to-do on the build board).
+3. **Dropped:** the to-do that followed from answer 1 of
+   `2026-10-16-go-live-checklist.md`: asking Jack's shop's accountant which
+   Citrus Lime reports they use (also on the build board). Answer 1 itself
+   is not changed by this.
 
 This changes earlier records that treat Jack's shop as the shop Release 2
 must replace (for example the go-live checklist,
 `docs/runbooks/go-live-checklist.md`, "switching Jack's shop from Citrus
-Lime"). Which of them change, and how, is listed for Jack to settle one at a
-time; nothing else in them is changed by this note until he has.
+Lime"). Which of them change, and how, is for Jack to settle one at a time;
+nothing else in them changes until he has.
