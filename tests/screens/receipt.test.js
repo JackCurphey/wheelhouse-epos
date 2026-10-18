@@ -73,12 +73,27 @@ test('a customer group discount shows with its name', async () => {
   assert.ok(t.includes('Discount−£2.00'), t);
 });
 
-test('printReceipt puts only the receipt on the page being printed, then clears it', async () => {
+// Fresh review: a tender the shop added (the old app's extra payments) is
+// printed with its own name, so the payments add up to the total.
+test('an extra payment prints as Paid by its own name', async () => {
+  const paper = await render({ sale: { ...JOB_SALE, cardAmount: 100, extraPayments: [{ tenderType: 'Gift card', amount: 11 }] }, shopName: 'North Street Cycles' });
+  const t = text(paper);
+  assert.ok(t.includes('Paid by card£100.00'), t);
+  assert.ok(t.includes('Paid by Gift card£11.00'), t);
+});
+
+// Fresh review: the receipt stays in place after the print box returns (a
+// browser that prints afterwards would otherwise get a blank page); the next
+// print replaces it, so only one receipt is ever there.
+test('printReceipt puts only the receipt on the page being printed, and the next print replaces it', async () => {
   uninstall = installDom('http://localhost/workshop/till');
   const { printReceipt } = await importFresh(RECEIPT);
   let seen = null;
   window.print = () => { seen = document.getElementById('wh-print')?.textContent ?? null; };
   printReceipt({ sale: JOB_SALE, shopName: 'North Street Cycles' });
   assert.ok(seen !== null && seen.includes('Sale 601') && seen.includes('Total£111.00'), String(seen));
-  assert.equal(document.getElementById('wh-print').textContent, '');
+  assert.ok(document.getElementById('wh-print').textContent.includes('Sale 601'));
+  printReceipt({ sale: TILL_SALE, shopName: 'North Street Cycles' });
+  assert.ok(seen.includes('Sale 602') && !seen.includes('Sale 601'), seen);
+  assert.equal(document.querySelectorAll('#wh-print article').length, 1);
 });

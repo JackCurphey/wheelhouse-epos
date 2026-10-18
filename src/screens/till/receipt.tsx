@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import JsBarcode from 'jsbarcode';
 import { money } from './rules.ts';
@@ -24,6 +24,8 @@ export type ReceiptSale = {
   total: number;
   cashAmount: number;
   cardAmount: number;
+  /** Tenders the shop added (the old app's extra payments), each by its own name. */
+  extraPayments?: { tenderType: string; amount: number }[];
 };
 export type ReceiptJob = { reference: string; bikeLabel: string | null };
 export type ReceiptProps = { sale: ReceiptSale; shopName: string; job?: ReceiptJob };
@@ -75,15 +77,21 @@ export function ReceiptPaper({ sale, shopName, job }: ReceiptProps) {
         <Row left="Total" right={money(sale.total)} strong />
         {sale.cashAmount > 0 ? <Row left="Paid by cash" right={money(sale.cashAmount)} /> : null}
         {sale.cardAmount > 0 ? <Row left="Paid by card" right={money(sale.cardAmount)} /> : null}
+        {(sale.extraPayments ?? []).map((p, i) => <Row key={i} left={`Paid by ${p.tenderType}`} right={money(p.amount)} />)}
       </div>
     </article>
   );
 }
 
+let printRoot: Root | null = null;
+let printHost: HTMLElement | null = null;
+
 /**
  * Prints the receipt on the computer's own printer: drawn into #wh-print,
  * which the print styles (theme.css) make the only thing on the page, then
- * the browser's print box, then cleared.
+ * the browser's print box. It stays there, hidden on screen, until the next
+ * print replaces it: a browser that prints after print() returns would
+ * otherwise get a blank page (fresh review).
  */
 export function printReceipt(props: ReceiptProps) {
   let host = document.getElementById('wh-print');
@@ -92,12 +100,12 @@ export function printReceipt(props: ReceiptProps) {
     host.id = 'wh-print';
     document.body.appendChild(host);
   }
-  const root = createRoot(host);
-  try {
-    flushSync(() => root.render(<ReceiptPaper {...props} />));
-    window.print();
-  } finally {
-    root.unmount();
-    host.textContent = '';
+  // One root per #wh-print: a fresh page (or test) gets a fresh one.
+  if (!printRoot || printHost !== host) {
+    printRoot = createRoot(host);
+    printHost = host;
   }
+  const root = printRoot;
+  flushSync(() => root.render(<ReceiptPaper {...props} />));
+  window.print();
 }

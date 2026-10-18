@@ -383,6 +383,10 @@ silent:
    "Discount · [reason]" waits for discount reasons.
 4. **A part bought more than once reads "Shimano brake pads 2 × £28.00"**, as
    the receipt email's till-sale lines do. *Pattern:* `collect.mjs` tillLines.
+5. **A tender the shop added (the old app's extra payments, for example a
+   gift card) prints as "Paid by [its name]"**, so the payments add up to
+   the total on a reprint. *Pattern:* "Paid by card" and "Paid by cash"
+   (fresh review).
 
 ## Decided here, for Jack to overrule
 

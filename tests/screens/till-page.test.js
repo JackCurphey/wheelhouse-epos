@@ -336,6 +336,8 @@ test('Print on Paid prints the sale’s receipt, then the next sale starts', asy
   const pay = await openPay(t);
   t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  // As drawn (till-receipt-print): the sale's number under Paid.
+  assert.ok(has(await pay.findByText('Card · £18.00 · Sale 501')));
   t.fireEvent.click(await pay.findByRole('button', { name: 'Print' }));
   assert.ok(printed !== null, 'nothing was printed');
   for (const want of ['North Street Cycles', 'Sale 501', 'Fit & adjust brakes£18.00', 'Total£18.00', 'Paid by card£18.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);

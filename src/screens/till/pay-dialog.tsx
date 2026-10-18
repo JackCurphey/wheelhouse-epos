@@ -157,7 +157,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     body = <SplitStep total={total} onBack={() => go({ kind: 'methods' })} onCard={(cashPart, rest) => go({ kind: 'card', amount: rest, cashPart })} />;
   } else {
     title = 'Paid';
-    description = step.how;
+    // As drawn (till-receipt-print): the sale's number after how it was paid.
+    description = step.sale ? `${step.how} · Sale ${step.sale.id}` : step.how;
     const paidSale = step.sale;
     // Print, then the next sale, as No receipt (Jack, 18 Oct, till-receipt-print).
     const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName, job: job?.receipt }); onNextSale(); } : null;

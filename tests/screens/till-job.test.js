@@ -225,6 +225,7 @@ test('Print on Paid prints the job’s receipt, with the job and bike, then the 
   let printed = null;
   window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
   const dlg = await payByCard(t);
+  assert.ok(has(await dlg.findByText('Card · £83.00 · Sale 601')));
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
   assert.ok(printed !== null, 'nothing was printed');
   for (const want of ['North Street Cycles', 'Sale 601', 'WH-1042 · Trek Domane AL 3', 'Standard service£65.00', 'Total£83.00', 'Paid by card£83.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);

@@ -45,7 +45,7 @@ test.afterAll(async () => {
   }
 });
 
-type Printed = { text: string; bars: number; onlyReceipt: boolean };
+type Printed = { text: string; bars: number };
 declare global { interface Window { __printed: Printed[] } }
 
 test('Print on Paid prints the job’s receipt; then the diary menu prints it again', async ({ page, context }) => {
@@ -55,11 +55,7 @@ test('Print on Paid prints the job’s receipt; then the diary menu prints it ag
     window.__printed = [];
     window.print = () => {
       const host = document.getElementById('wh-print');
-      // Under the print styles, everything but the receipt is hidden.
-      const shown = [...document.styleSheets].some((sheet) => {
-        try { return [...sheet.cssRules].some((r) => r.cssText.includes('@media print') && r.cssText.includes('#wh-print')); } catch { return false; }
-      });
-      window.__printed.push({ text: host?.innerText ?? '', bars: host?.querySelectorAll('svg rect').length ?? 0, onlyReceipt: shown });
+      window.__printed.push({ text: host?.innerText ?? '', bars: host?.querySelectorAll('svg rect').length ?? 0 });
     };
   });
 
@@ -69,6 +65,19 @@ test('Print on Paid prints the job’s receipt; then the diary menu prints it ag
   const pay = page.getByRole('dialog');
   await pay.getByRole('button', { name: /^Card · £18.00/ }).click();
   await pay.getByRole('button', { name: 'Card approved' }).click();
+  await expect(pay.getByText(/^Card · £18\.00 · Sale \d+$/)).toBeVisible();
+  // With print styles on and the Paid box still open, only #wh-print shows.
+  await page.evaluate(() => {
+    let host = document.getElementById('wh-print');
+    if (!host) { host = document.createElement('div'); host.id = 'wh-print'; document.body.appendChild(host); }
+    host.textContent = 'receipt';
+  });
+  await page.emulateMedia({ media: 'print' });
+  await expect(pay).toBeHidden();
+  const visible = await page.evaluate(() => [...document.body.children].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.id));
+  expect(visible).toEqual(['wh-print']);
+  await page.emulateMedia({ media: 'screen' });
+  await expect(pay).toBeVisible();
   await pay.getByRole('button', { name: 'Print' }).click();
   await expect(page).toHaveURL(/\/workshop\/till$/);
   let printed = await page.evaluate(() => window.__printed);
@@ -77,15 +86,6 @@ test('Print on Paid prints the job’s receipt; then the diary menu prints it ag
   expect(printed[0].text).toMatch(/Sale \d+/);
   expect(printed[0].text).not.toContain('VAT');
   expect(printed[0].bars).toBeGreaterThan(10);
-  expect(printed[0].onlyReceipt).toBe(true);
-
-  // With print styles on, only #wh-print shows.
-  await page.evaluate(() => { document.getElementById('wh-print')!.textContent = 'receipt'; });
-  await page.emulateMedia({ media: 'print' });
-  const visible = await page.evaluate(() => [...document.body.children].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.id));
-  expect(visible).toEqual(['wh-print']);
-  await page.emulateMedia({ media: 'screen' });
-  await page.evaluate(() => { document.getElementById('wh-print')!.textContent = ''; });
 
   await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}`);
   await page.getByRole('button', { name: /^Bike, Brake service/ }).click({ button: 'right' });
