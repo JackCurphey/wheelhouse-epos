@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: The till pays a workshop job's order
-Opened with a job (Jack, 18 Oct, `docs/decisions/2026-10-18-till-job-payment.md`), the till SHALL show the job's order lines locked, each marked "agreed on the job", with the customer and job, and "Bike collected when paid", on by default while the bike is in the shop. Take payment SHALL pay the whole order. Then, unless the pill is off, it SHALL record the bike as collected. An order already paid SHALL say "This job’s order is already paid.", and work not yet in progress or finished SHALL say "The work isn’t finished, so this job can’t be paid yet." with Take payment unavailable.
+Opened with a job (Jack, 18 Oct, `docs/decisions/2026-10-18-till-job-payment.md`), the till SHALL show the job's order lines locked, each marked "agreed on the job", with the customer and job, and "Bike collected when paid", on by default while the bike is in the shop. Take payment SHALL pay the whole order. Then, unless the pill is off, it SHALL record the bike as collected.
 
 #### Scenario: Paying for a finished job
 - **WHEN** staff open WH-1042 in the till and pay its £83.00 by card
@@ -10,6 +10,9 @@ Opened with a job (Jack, 18 Oct, `docs/decisions/2026-10-18-till-job-payment.md`
 #### Scenario: The bike stays
 - **WHEN** staff switch off "Bike collected when paid" and pay
 - **THEN** the order is paid and the bike stays in the shop
+
+### Requirement: The till says when a job can't be paid
+An order already paid SHALL say "This job’s order is already paid." with nothing to take. Work not yet in progress or finished SHALL say "The work isn’t finished, so this job can’t be paid yet." with Take payment unavailable.
 
 #### Scenario: Work not started
 - **WHEN** the job's work hasn't started
