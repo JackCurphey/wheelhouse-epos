@@ -100,3 +100,10 @@ not on the canvas yet.
   a "Choose a day" sheet with the month, each day showing how many jobs it
   has; a tap on a day goes to that day. Chosen over no month view on the
   phone.
+
+**The toolbar with Month, 18 Oct** (Jack: "1"): Month makes Week, Day and
+Month about 70px wider, so on a 1280px screen with two mechanics the
+toolbar no longer fits one row. There the people buttons and New job move
+to a second row, as on a tablet; from 1366px it stays one row. Chosen over
+squeezing it to fit, and over a people drop-down below 1366px (an extra
+click). This changes the Shared queue change's "one row at 1280px".
