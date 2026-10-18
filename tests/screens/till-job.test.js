@@ -124,7 +124,7 @@ test('paying pays the whole order, then records the bike as collected', async ()
   await t.sale.findByText('Maya Patel · workshop job WH-1042');
   await payByCard(t);
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
-  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true });
+  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: null });
   await t.waitFor(() => assert.deepEqual(posts('/api/workshop-jobs/1/collect'), [{ version: 8 }]));
   assert.equal(posts('/api/sales').length, 0);
 });
@@ -268,10 +268,11 @@ test('Cancel on the sign-off takes nothing', async () => {
   assert.equal(posts('/api/sale-documents/40/convert').length, 0);
 });
 
-test('finished work is paid without asking, and sends no sign-off', async () => {
+test('finished work is paid without asking, and says nobody was asked', async () => {
   const t = await openJobTill();
   await payByCard(t);
   assert.equal(has(t.ui.queryByRole('dialog', { name: 'Who’s signing this off?' })), false);
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
-  assert.equal('signedOffBy' in posts('/api/sale-documents/40/convert')[0], false);
+  // null: the till didn't ask, so the server can warn if the work was reopened meanwhile.
+  assert.equal(posts('/api/sale-documents/40/convert')[0].signedOffBy, null);
 });

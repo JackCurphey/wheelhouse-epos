@@ -70,7 +70,9 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       let sale: ReceiptSale & { jobWarning?: string };
       if (job) {
         // Who signed the work off, when paying finishes it (mechanic sign-off answer 5).
-        const signOff = job.signedOffBy ? { signedOffBy: job.signedOffBy } : {};
+        // null when it didn't ask (the work read as finished), so the server can
+        // warn if it was reopened in between (fresh review).
+        const signOff = { signedOffBy: job.signedOffBy ?? null };
         sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true, ...signOff });
         note = await job.afterPaid(sale);
       } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });

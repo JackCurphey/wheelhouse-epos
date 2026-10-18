@@ -52,7 +52,8 @@ test('a sign-off that is no longer valid never refuses the payment: finished uns
     await runWithShop(shop.id, () => prepare('UPDATE employees SET active = 0 WHERE id = ?').run(alex));
     const paid = await pay({ signedOffBy: alex });
     assert.equal(paid.status, 201, JSON.stringify(paid.body));
-    assert.match(paid.body.jobWarning, /^Paid and finished, but not signed off: .+\. Check the job\.$/);
+    assert.match(paid.body.jobWarning, /^Paid and finished, but not signed off: .+\.$/);
+    assert.equal(/Check the job/.test(paid.body.jobWarning), false, 'Paid adds its own check-the-job words');
     const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
     assert.deepEqual([now.workState, now.signedOffBy], ['complete', null]);
     assert.deepEqual(await history(shop.id, job.id), []);
@@ -85,6 +86,21 @@ test('paying for work already signed off keeps that sign-off', async () => {
     const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
     assert.equal(now.signedOffByName, 'Alex Morgan');
     assert.equal((await history(shop.id, job.id)).length, 1);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Fresh review: the till sends signedOffBy: null when it didn't ask (the work
+// read as finished). If the work was reopened meanwhile, paying finishes it
+// unsigned, and the reply says so; the old app, which sends no key, doesn't warn.
+test('a till that saw finished work, reopened since, gets a warning that nobody signed it off', async () => {
+  const { shop, req, job, pay } = await jobInProgress();
+  try {
+    const paid = await pay({ signedOffBy: null });
+    assert.equal(paid.status, 201, JSON.stringify(paid.body));
+    assert.equal(paid.body.jobWarning, 'Paid and finished, but not signed off: the work was reopened while the till was open.');
+    assert.equal((await req(`/api/workshop-jobs/${job.id}`)).body.signedOffBy, null);
   } finally {
     await deleteTestShop(shop.id);
   }

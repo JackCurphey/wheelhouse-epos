@@ -12,7 +12,7 @@ paying at the till goes out unsigned. Jack chose this piece next on 18 Oct.
 
 - **The till asks first.** When the job's work is still in progress, Take payment opens "Who’s signing this off?" (the job's mechanic picked, nobody on a shared-queue job). Signing off opens the payment; Cancel takes nothing. Work already finished is paid without asking (it was signed off when it was marked ready). A deposit doesn't finish a job, so it wouldn't ask (deposits aren't built yet).
 - **Paying records the sign-off.** `POST /api/sale-documents/:id/convert` takes `signedOffBy`; when paying finishes the job, the sign-off is recorded with it.
-- **The payment always stands.** The card is taken before the sale is recorded, so the server never refuses a payment over the sign-off. If `signedOffBy` is given but isn't an active mechanic any more, the job is finished unsigned and the reply's `jobWarning` says so (Paid shows it, and the bike isn't handed over automatically). With no `signedOffBy` (the old app), the job finishes unsigned, as today.
+- **The payment always stands.** The card is taken before the sale is recorded, so the server never refuses a payment over the sign-off. If `signedOffBy` is given but isn't an active mechanic any more, the job is finished unsigned and the reply's `jobWarning` says so (Paid shows it, and the bike isn't handed over automatically). The till sends `signedOffBy: null` when it didn't ask (the work read as finished); if the work was reopened meanwhile, it finishes unsigned with a warning. With no `signedOffBy` at all (the old app), the job finishes unsigned, as today.
 
 ## Lane, work package, drawings and decisions
 
@@ -29,4 +29,4 @@ paying at the till goes out unsigned. Jack chose this piece next on 18 Oct.
 ## Impact
 
 - `server/routes/sales.js`; `src/screens/till/till-page.tsx`, `pay-dialog.tsx`
-- `tests/sale-documents-sign-off.test.js` (new), `tests/screens/till-job.test.js`, `tests/browser/till-job.spec.ts`
+- `tests/sale-documents-sign-off.test.js` (new), `tests/screens/till-job.test.js`, `tests/browser/till-sign-off.spec.ts`

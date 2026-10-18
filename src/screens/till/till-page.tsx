@@ -201,8 +201,9 @@ const PAYABLE = new Set(['in_progress', 'complete']);
  * Paying a workshop job's order (Jack, 18 Oct, docs/decisions/2026-10-18-till-job-payment.md;
  * drawn as till-job): the job's agreed lines, locked, and "Bike collected
  * when paid", on by default (Workshop day decision 63). Paying converts the
- * order, then records the bike as collected unless the pill is off. Deposits,
- * the sign-off question and the job-changed warning come later; extras are
+ * order, then records the bike as collected unless the pill is off. Work
+ * still in progress asks who is signing it off first (mechanic sign-off
+ * answer 5). Deposits and the job-changed warning come later; extras are
  * added on the job's Work and parts, since paying the order charges its lines.
  */
 function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {

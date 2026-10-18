@@ -406,7 +406,8 @@ silent:
    same pop-up" (answer 5).
 6. **A sign-off that's no longer valid when the payment lands doesn't refuse
    it: "Paid and finished, but not signed off: that mechanic isn't active any
-   more. Check the job."** on Paid. *Pattern:* the till's job-changed warning
+   more."** on Paid; the same for a till left open on finished work that was
+   reopened meanwhile ("…the work was reopened while the till was open"). *Pattern:* the till's job-changed warning
    (the card is taken first; #267).
 
 ## Decided here, for Jack to overrule

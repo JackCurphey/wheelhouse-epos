@@ -4,8 +4,9 @@
 
 `POST /api/sale-documents/:id/convert` gains an optional `signedOffBy`.
 - When the order's job is in progress and paying finishes it (the existing `applyEvent(... 'finish')`), and `signedOffBy` is an active mechanic of the shop, the sign-off is recorded (`recordSignOff`: the job's `signed_off_by`, `signed_off_name`, `signed_off_at`, and a `workshop_job_sign_offs` row).
-- `signedOffBy` given but not an active mechanic: the job still finishes, unsigned, and the reply carries `jobWarning: "Paid and finished, but not signed off: [reason]. Check the job."`.
-- No `signedOffBy`: finishes unsigned, as today (the old app).
+- `signedOffBy` given but not an active mechanic, or the sign-off can't be saved: the job still finishes, unsigned, and the reply carries `jobWarning: "Paid and finished, but not signed off: [reason]."` (Paid adds its own "check the job").
+- `signedOffBy: null` (the till didn't ask, because the work read as finished) and paying finishes it: unsigned, with `jobWarning: "Paid and finished, but not signed off: the work was reopened while the till was open."`.
+- No `signedOffBy` key: finishes unsigned, as today (the old app).
 - Work already finished: `signedOffBy` is ignored; its sign-off stands.
 - Never a refusal over the sign-off: the card is taken before this call (the 18 Oct till review).
 
