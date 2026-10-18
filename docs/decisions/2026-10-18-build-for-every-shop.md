@@ -56,13 +56,26 @@ nothing else in them changes until he has.
    as general research if a shop needs them. Chosen over splitting it into
    "ready to sell" and "first shop's move", and over leaving it as it was.
 
+7. **The all-in-one comes first; the Lightspeed version after** (Jack,
+   18 Oct: "having the entire all-in-one epos technically will be release
+   1, and then afterwards we can adapt it so that it will work with
+   Lightspeed, and that will be release 2… it will be easier to adapt what
+   we have already built for Lightspeed rather than the other way
+   around"). This reverses the order in the programme spec ("Release 1
+   carries on… as a workshop add-on for Lightspeed shops", with the
+   all-in-one second): the Lightspeed connection (journey 21) is built
+   after the all-in-one is ready to sell, by adapting it. What the two are
+   called in the plans is settled separately.
+8. **Stock suggestions are in the all-in-one** (Jack: "pretty simple, and
+   we can have that in release 1"), not after the trading week.
+
 ## Open, for Jack (found by the fresh review, 18 Oct)
 
-- **What was "after the trading week" or "after switch-over"**: Lightspeed,
-  the three supplier browsing screens, stock suggestions, online service
-  history and reminders (build plan "After the trading week"; programme spec
-  §1), and the "later in Release 2" items ordered after switch-over. Now the
-  trading week is after Release 2, are they in Release 2 or after it?
+- ~~What was "after the trading week"~~: settled by answers 7 and 8
+  (Lightspeed after, stock suggestions in). The three supplier browsing
+  screens stay held by Jack, and the "later in Release 2" items stay where
+  they were. Online service history and reminders are already in WP-4.5
+  (Account, history and reminders), so they are in.
 - **Citrus Lime's full export and the workshop job history**: nobody has
   seen the full export's shape (the exports spec lists it as "No export
   button"), so WP-8.1's import of it and of workshop history can't be
