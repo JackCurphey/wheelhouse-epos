@@ -712,10 +712,11 @@ function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay }: {
                 <button
                   type="button"
                   aria-haspopup="dialog"
-                  aria-label={`Show ${dayLabel(d)}’s jobs, ${list.length} job${list.length === 1 ? '' : 's'}`}
                   onClick={() => setListDay(d)}
                   className="flex min-h-11 grow flex-col gap-[3px] text-left"
                 >
+                  {/* The name keeps the words on screen, for Voice Control (WCAG 2.5.3). */}
+                  <span className={SR}>{`Show ${dayLabel(d)}’s jobs, ${list.length} job${list.length === 1 ? '' : 's'}:`}</span>
                   {shown.map((j) => <span key={j.partId} className={chipClass(j)}>{chipText(j)}</span>)}
                   {more > 0 ? <span className="px-0.5 text-xs leading-4 font-bold text-[var(--wh-accent-dark)]">+{more} more</span> : null}
                 </button>

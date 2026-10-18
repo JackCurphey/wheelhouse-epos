@@ -156,6 +156,8 @@ test('on a touch screen, a tap anywhere in a day opens its list', async () => {
   // The list's rows are the way to a job here; so the chips aren't tapped one by one.
   const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
   assert.equal(has(tue.queryByRole('button', { name: /^10:00, Trek Domane/ })), false);
+  // Its name keeps the words on screen, so "tap Trek Domane" works (WCAG 2.5.3).
+  assert.ok(has(tue.getByRole('button', { name: /^Show Tuesday 6 October’s jobs.*Trek Domane.*\+1 more/ })));
 });
 
 test('the month is a plain region, not a grid that arrow keys can\'t move in', async () => {

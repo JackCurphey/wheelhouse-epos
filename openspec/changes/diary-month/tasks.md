@@ -17,7 +17,9 @@
 - [x] 2b.1 Tests first, watched failing: on a touch screen a real button over each day's jobs opens its list, and the date's tap area is 44px; the month is a region, not a grid; switching to Month stops choosing a time for New job
 - [x] 2b.2 The fixes; the tablet note and the phone sheet's subtitle, as drawn; "Shared queue" for a job with no mechanic, logged
 - [x] 2b.3 The Week/Day test measures from Month, now the switch's last tab
+- [x] 2b.4 Jack, 18 Oct: below 1366px the toolbar takes two rows; test first at 1280px (one row on main), the one-row test moved to 1366 and 1440px; the Shared queue requirement modified
+- [x] 2b.5 Second review: the touch day button's name keeps its visible words (test watched failing with an aria-label)
 
 ## 3. Checks
 
-- [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 3.1 A fresh review; `npm test` and `npm run test:browser` pass
