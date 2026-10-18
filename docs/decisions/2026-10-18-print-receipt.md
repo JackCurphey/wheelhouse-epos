@@ -14,3 +14,12 @@ is server work in Mark's lane in stage 3 (WP-1.11, WP-3.1).
    (about twice the work) and over leaving receipts for stage 3. Email,
    Text, the print agent and reprinting from past sales stay in their
    packages.
+2. **No VAT line until VAT is recorded; "Sale [n]" until receipt numbers
+   exist** (Jack: "1: leave the VAT line off for now and print just the
+   Total; it appears once Mark's pence work records VAT on each sale.
+   Receipts print 'Sale [n]' until real receipt numbers exist"). Today's
+   sales keep neither their VAT nor a B1-style receipt number; both come
+   with WP-1.6 (`openspec/changes/wp-1-6-sales-in-pence`). Chosen over
+   working VAT out from each item's current rate, which a reprint could get
+   wrong. This holds the 2 Oct decision's VAT line back until the data
+   exists; it doesn't drop it.

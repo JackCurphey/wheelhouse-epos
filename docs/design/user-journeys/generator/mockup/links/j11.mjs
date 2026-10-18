@@ -116,6 +116,8 @@ export default {
   'till-pay-link': { Back: go('till-pay-other'), 'Send the link': go('till-pay-link-waiting') },
   'till-pay-link-waiting': { 'Send again': STAY, Resume: go('till-sale') },
   'till-receipt-split': { Close: go('till-empty') },
+  // Printing a receipt (Jack, 18 Oct): Print prints, then the next sale.
+  'till-receipt-print': { Print: go('till-receipt-paper'), 'No receipt': go('till-empty') },
   'till-find-customer': { Refund: go('till-refund-older'), Change: STAY },
   'till-account': { Change: go('till-customer') },
   // Paying with only the certificate: the paid box with nothing from Maya

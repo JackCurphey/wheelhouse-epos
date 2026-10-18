@@ -714,6 +714,8 @@ export const journeys = [
         sc("till-pay-split", "Split payment: part paid, the rest by card", "Staff"),
         sc("till-receipt", "Paid: receipt choices, closes by itself", "Staff"),
         sc("till-receipt-split", "Paid: the discounted £70.00, cash and card", "Staff"),
+        sc("till-receipt-print", "Paid: Print or No receipt, for now", "Staff"),
+        sc("till-receipt-paper", "The printed receipt", "Staff"),
       ] },
       { label: "Other ways to pay", screens: [
         sc("till-giftcard", "Gift card or store credit", "Staff"),
