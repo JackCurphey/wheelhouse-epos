@@ -19,8 +19,12 @@ import { jsonRequest } from './http.js';
 // Creates a shop with an owner and returns their session cookie.
 export async function staffSignup(baseUrl, overrides = {}) {
   const suffix = randomUUID().slice(0, 8);
+  // A name a test asks for still gets the suffix. The shop's web address
+  // comes from its name and must be unique across every shop, and two test
+  // runs can share one database: two "Till Cycles" made at the same moment
+  // both passed createShop's free-address check, and the second failed.
   const created = await createShop({
-    shopName: overrides.shopName || `Test Shop ${suffix}`,
+    shopName: overrides.shopName ? `${overrides.shopName} ${suffix}` : `Test Shop ${suffix}`,
     ownerName: overrides.ownerName || 'Test Owner',
     email: overrides.email || `owner-${suffix}@example.com`,
     password: overrides.password || 'password123',

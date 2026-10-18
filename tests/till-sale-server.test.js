@@ -3,6 +3,7 @@
 // Spec: docs/superpowers/specs/2026-10-03-till-sale-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -17,7 +18,7 @@ before(async () => {
   owner = await staffSignup(server.baseUrl, { shopName: 'Till Cycles' });
   const made = await staffRequest(server.baseUrl, owner.cookie, '/api/team', {
     method: 'POST',
-    body: { name: 'Jo Taylor', isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' },
+    body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID()}@example.test`, password: 'password123' },
   });
   assert.equal(made.status, 201);
   jo = { ...made.body, cookie: await staffFreshCookie(made.body.loginId) };

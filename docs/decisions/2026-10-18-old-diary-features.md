@@ -58,8 +58,8 @@ left empty rather than filled with made-up jobs.
    queue" is the new app's word for them already. Chosen over leaving it to
    the Overview page's Shared queue tab.
 
-**Still to do:** the tablet and phone versions of month view, Change details
-and the menu, drawn before each piece is built; an OpenSpec change for each piece (each touches the
+**Still to do:** the tablet and phone versions of the menu, drawn before
+it is built; an OpenSpec change for each piece (each touches the
 `workshop-diary` spec). How the menu prints a paid job's till receipt
 is settled when it is built (the old diary built the receipt in the browser
 from the sale and printed the page). Deleting a job and
@@ -71,11 +71,76 @@ and the Shared queue, `stretchTabletBoard`, `stretchPhoneBoard`,
 the canvas yet.
 
 - **Stretching on a touch screen: the grip shows only on the chosen job**
-  (Jack: "1"). One tap chooses the job, as today; a finger-sized grip (a
-  44px touch area) then shows on its bottom edge, and the times and length
-  show while dragging, beside the job on a tablet and inside it on a phone.
-  Dragging to scroll can't stretch a job by accident. Chosen over a grip on
-  every job, and over no stretching on touch screens (Change details only).
+  (Jack: "1"). A finger-sized grip (a 44px touch area) shows on that job's
+  bottom edge, and the times and length show while dragging, beside the job
+  on a tablet and inside it on a phone. Dragging to scroll can't stretch a
+  job by accident. Chosen over a grip on every job, and over no stretching
+  on touch screens (Change details only).
+- **Corrected, 18 Oct: how a job is chosen for it.** The note above first
+  said "one tap chooses the job, as today", but on the diary a tap opens a
+  job; only Waiting cards are chosen by a tap. Asked again, Jack chose
+  **holding the job, then "Change length" in its menu** (Jack: "1"), which
+  shows the grip on that job; a tap still opens a job in one tap. Chosen
+  over first tap chooses and second opens (two taps to open any job), and
+  over no dragging on touch screens.
 - **Shared queue on a tablet** is a fourth button after the mechanics, as on
   desktop; **on a phone** it is the last line of the "whose jobs" list,
   after Everyone, By mechanic and each mechanic.
+
+**Month view on tablet and phone, 18 Oct** (Jack approved all three
+drawings: "1"): `monthTabletBoard` and `monthPhoneBoard` in `diary.mjs`,
+not on the canvas yet.
+
+- **Tablet:** the desktop month at tablet size (Week, Day, Month; up to three
+  jobs a day and "+[n] more"). A day's jobs are too small to tap one by one
+  (decision 68's 44px), so a tap anywhere in a day opens that day's list
+  with finger-sized rows; a row opens its job, and the last line opens the
+  day in the Day view.
+- **Phone:** no room for jobs in a month, so a tap on the week label opens
+  a "Choose a day" sheet with the month, each day showing how many jobs it
+  has; a tap on a day goes to that day. Chosen over no month view on the
+  phone.
+
+**The toolbar with Month, 18 Oct** (Jack: "1"): Month makes Week, Day and
+Month about 70px wider, so on a 1280px screen with two mechanics the
+toolbar no longer fits one row. There the people buttons and New job move
+to a second row, as on a tablet; from 1366px it stays one row. Chosen over
+squeezing it to fit, and over a people drop-down below 1366px (an extra
+click). This changes the Shared queue change's "one row at 1280px".
+
+**Change details on tablet and phone, 18 Oct** (Jack: "1", twice):
+`changeDetailsTabletBoard`, `changeDetailsPhoneBoard` and
+`job-change-button-phone` in `diary.mjs`, not on the canvas yet.
+
+- **Tablet:** "Change details" beside the job page's close button, and the
+  desktop pop-up at tablet size.
+- **Phone:** the pop-up fills the screen, one column, the fields in the same
+  order. The button sits in the job's details box, under Diary time and
+  Ready by, so the top bar keeps the job's name readable. Chosen over a
+  button in the top bar (the name shortens) and a "⋯" menu (an extra tap).
+  (A first answer put it in the job page's ≡ menu; that button is Notes,
+  not a menu, so Jack was asked again.)
+
+**A waiting change request in Change details, 18 Oct** (Jack: "1"; drawn
+as `job-change-details-request` and `-request-phone` in `diary.mjs`): when a
+customer's change request is waiting, Change details says so at its top,
+in the request's amber: "[customer] asked to move this to [day], [time].
+Setting that time here accepts it; any other change leaves the request
+waiting in Waiting for you." It is an addition only (Jack: "I would like it
+to just be kind of an addition"): the request still shows in Waiting for
+you and is accepted or declined there as before.
+
+**The menu's till actions wait for the till, 18 Oct** (Jack: "1"): the new
+till can't open a job's order or print a receipt yet (both are on the
+till's own plan; paying orders follows Jack's 16 Oct answers in #231). So
+the menu gets "Accept or decline" on a booking request now, and "Open in
+the till" and "Print receipt" join, as drawn, when the till can do them.
+Chosen over showing them greyed ("Not in the till yet") and over building
+the till's order and receipt pieces now.
+
+**"Accept or decline" on touch screens, 18 Oct** (Jack: "1"; drawn as
+`diary-menu-pending-tablet` and `-phone` in `diary.mjs`): a booking request's
+long-press menu has "Accept or decline", which opens the request pop-up
+(as answering it from Waiting for you), and "View overview". It has nothing
+to do with the till; it was drawn with the till items only because all
+three were new menu items.

@@ -2,7 +2,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, rm, rmdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,9 +12,11 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST_DIR = path.join(ROOT, 'public', 'dist');
 // A stand-in for a real Vite build artifact: content-hashed filename under
 // public/dist. Kept in its own subdirectory so cleanup never deletes a real
-// build sitting in public/dist alongside it.
-const FIXTURE_SUBDIR = path.join(DIST_DIR, 'assets', 'static-cache-test');
-const FIXTURE_URL_PATH = '/dist/assets/static-cache-test/index-abc12345.js';
+// build sitting in public/dist alongside it, and named for this process so
+// a second test run in the same checkout never deletes this run's copy.
+const FIXTURE_DIR_NAME = `static-cache-test-${process.pid}`;
+const FIXTURE_SUBDIR = path.join(DIST_DIR, 'assets', FIXTURE_DIR_NAME);
+const FIXTURE_URL_PATH = `/dist/assets/${FIXTURE_DIR_NAME}/index-abc12345.js`;
 const FIXTURE_FILE = path.join(FIXTURE_SUBDIR, 'index-abc12345.js');
 
 let child;
@@ -72,7 +74,11 @@ before(async () => {
 after(async () => {
   if (child && child.exitCode === null) child.kill('SIGTERM');
   await rm(FIXTURE_SUBDIR, { recursive: true, force: true });
-  if (distDirCreated) await rm(DIST_DIR, { recursive: true, force: true });
+  // Only the empty folders this run made: another test run in the same
+  // checkout may have its own fixture inside them by now.
+  if (distDirCreated) {
+    for (const dir of [path.join(DIST_DIR, 'assets'), DIST_DIR]) await rmdir(dir).catch(() => {});
+  }
 });
 
 test('a hashed asset under /dist/assets/ is cached immutably', async () => {
@@ -97,7 +103,7 @@ test('index.html is still never cached', async () => {
 });
 
 test('a missing file under /dist/assets/ falls back to index.html and is not cached immutably', async () => {
-  const res = await fetch(`${baseUrl}/dist/assets/static-cache-test/does-not-exist-deadbeef.js`);
+  const res = await fetch(`${baseUrl}/dist/assets/${FIXTURE_DIR_NAME}/does-not-exist-deadbeef.js`);
   await res.arrayBuffer();
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');

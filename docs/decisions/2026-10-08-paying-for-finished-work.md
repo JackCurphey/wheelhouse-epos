@@ -23,3 +23,7 @@ and adding a "Reopen work" button to the job page. This is also what Collect
 and pay decision 3 needs: it draws "Take payment" as the main button on the
 "Ready for collection" board, where the work is already finished
 (`2026-09-30-collect-and-pay-review.md`).
+
+**Narrowed by Jack, 16 Oct** (`2026-10-16-till-paying-orders.md`, item 2):
+a deposit may be taken at any stage; this rule now applies to the payment
+that clears the balance.

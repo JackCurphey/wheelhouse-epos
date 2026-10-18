@@ -114,10 +114,13 @@ silent:
 1. **Services drawn "[£ price]" are £0.00.** Safety check, Gear adjustment,
    Brake service and Gear service have no price in the drawings, and a price
    can't hold a placeholder. *Pattern:* a product added without a price is
-   £0.00 too (the products table's default).
+   £0.00 too (the products table's default). *Jack kept this, 16 Oct
+   (`2026-10-16-test-shop-defaults.md`).*
 2. **Jobs keep the drawn week, Mon 14 to Sun 20 September 2026.** That week
    is in the past now, so the app carries unfinished jobs on by itself: some
    read "Day 1 of 2" on the next day. *Pattern:* the drawings, as drawn.
+   *Overruled by Jack, 16 Oct: the week moves to the week the shop is
+   loaded (`2026-10-16-test-shop-defaults.md`).*
 3. **The change request keeps its own mechanic.** The drawing's dashed 14:00
    names none. *Pattern:* accepting keeps the same work (the pop-up's
    sentence).
@@ -261,6 +264,70 @@ silent:
    menu's "Approve" for a staff-made pending job has nothing to do; only
    the booking request's "Accept or decline" is drawn. *Pattern:* New job's
    starting status pills (decision 66; 3 Oct answer 11).
+
+### 18 Oct 2026: stretching a job (`docs/decisions/2026-10-18-old-diary-features.md` answer 2)
+
+1. **`diary-stretch`: with a mouse, the grip shows on hover**; the bottom
+   8px of every job shown on its own stretches it. *Pattern:* decision 59's
+   hover-to-widen; the drawing shows the grip on the job being stretched.
+2. **A job in a stack has no edge**; its menu's "Change length" stretches
+   it (it leaves the stack while it does). *Pattern:* moving a job from its
+   stack's chooser.
+3. **`diary-menu-job`: "Change length" is in the menu on a computer too**,
+   so it can be done from the keyboard (the Menu key, then up and down,
+   Enter, Escape), each step read out. *Pattern:* moving with M and the
+   arrows; accessibility first.
+4. **The times label sits inside the job in the week's last column and on
+   a phone**, wrapping in a narrow column, so it doesn't run off the diary
+   or over the times. *Pattern:* the phone drawing.
+5. **While stretching, the job wears the chosen ring**, not the lifted look
+   of a job being moved. *Pattern:* the three stretch drawings.
+6. **A job stops at its own day's closing time**, though the grid may run
+   later for another day. *Pattern:* the server's opening-hours check. On a day with no opening hours set (closed), it runs to the week's latest
+   closing time, as the grid does.
+
+### 18 Oct 2026: month view (`docs/decisions/2026-10-18-old-diary-features.md` answer 1)
+
+1. **`diary-month`: a job with no time sits after the timed ones, reading
+   "No time"** in place of its start. *Pattern:* the No time row.
+2. **New job from the month goes to the Week view to choose a time**, as
+   the month has no times to pick. *Pattern:* "Choose a time" (decision 22).
+3. **The month's jobs can't be dragged or stretched**; they open. *Pattern:*
+   the feature catalogue, CAL-05 ("month is click-to-open").
+4. **A day with no jobs in its list says "No jobs this day."** *Pattern:*
+   "Nothing waiting."
+5. **The day's list names a job with no mechanic "Shared queue"**, where the
+   drawing says "Booking request, no mechanic yet". *Pattern:* answer 5's
+   Shared queue, the new app's word for jobs no mechanic has yet.
+6. **On a touch screen the date has a 44px tap area** and still opens the
+   Day view; the rest of the day is one button that opens its list.
+   *Pattern:* decision 68; the drawing keeps the date as its own link.
+
+### 18 Oct 2026: Change details (`docs/decisions/2026-10-18-old-diary-features.md` answer 3)
+
+1. **Not offered for finished work**, which is frozen until reopened.
+   *Pattern:* the notes, read-only on finished work (Jack, 15 Oct).
+2. **A job over several days changes its title, customer, bike and day 1's
+   mechanic here ("Mechanic, day 1"); each day's date and time, and later
+   days' mechanics, are changed in the diary.** *Pattern:* moving a later
+   day on its own (decision 52).
+3. **A new customer's only bike is chosen for them**, and the old customer's
+   bike is never sent. *Pattern:* New job.
+4. **The customer is shown with "Change customer"**, which opens the same
+   search as New job. *Pattern:* New job's chosen customer.
+5. **A booking with a change request waiting shows no notice in Change
+   details.** Saving exactly the requested day, start and mechanic accepts
+   the request, as a diary drop does; any other save leaves it standing.
+   *Pattern:* the diary's drop (Jack, 8 Oct). **Settled 18 Oct:** Jack
+   chose a note (`2026-10-18-old-diary-features.md`, "A waiting change
+   request in Change details").
+6. **The note adds "with [mechanic]" when the request also moves the job to
+   another mechanic**, as accepting it needs that mechanic too. *Pattern:*
+   the change request pop-up's From and To, which name the mechanic.
+7. **No note for a request for a drop-off day with no time**, and on a job
+   over several days the note ends "Answer it from Waiting for you.", since
+   its dates change in the diary and a save here can't accept it.
+   *Pattern:* the several-days rule above (item 2).
 
 ## Decided here, for Jack to overrule
 

@@ -107,6 +107,30 @@ export function weekLabel(monday: string): string {
   return `${a.getUTCDate()} ${ma}${ya} – ${b.getUTCDate()} ${mb} ${b.getUTCFullYear()}`;
 }
 
+/** The month holding `day` as whole weeks, Monday to Sunday (Jack, 18 Oct: month view). */
+export function monthOf(day: string): string[] {
+  const d = utc(day);
+  const first = iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)));
+  const last = iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
+  const start = weekOf(first)[0];
+  const end = weekOf(last)[6];
+  const out: string[] = [];
+  for (let x = start; x <= end; x = addDays(x, 1)) out.push(x);
+  return out;
+}
+
+/** "September 2026" */
+export function monthLabel(day: string): string {
+  const d = utc(day);
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/** The first day of the month `n` months from the one holding `day`. */
+export function addMonths(day: string, n: number): string {
+  const d = utc(day);
+  return iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1)));
+}
+
 export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
@@ -234,4 +258,23 @@ export function stackGroups(items: { id: number; start: number; end: number }[])
     }
   }
   return [...byStart.values()];
+}
+
+/**
+ * Where a stretched job ends (Jack, 18 Oct): its bottom edge dragged to `y`
+ * pixels down its column, snapped to 15 minutes, at least 15 minutes after
+ * the start and no later than the grid's end (closing time).
+ */
+export function stretchEnd(y: number, range: { start: number; end: number }, startMin: number, slotPx = SLOT_PX): number {
+  const snapped = Math.round((range.start + (y / slotPx) * 30) / SNAP_MIN) * SNAP_MIN;
+  return Math.max(startMin + SNAP_MIN, Math.min(range.end, snapped));
+}
+
+/** A job's length in words: "45 minutes", "1 hour", "1 hour 30 minutes". */
+export function lengthText(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const hours = h ? `${h} hour${h === 1 ? '' : 's'}` : '';
+  const mins = m ? `${m} minutes` : '';
+  return [hours, mins].filter(Boolean).join(' ');
 }
