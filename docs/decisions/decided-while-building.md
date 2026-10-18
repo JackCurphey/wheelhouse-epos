@@ -234,6 +234,18 @@ silent:
    its first day, rather than once per day. *Pattern:* the change request
    pop-up, which moves the booking as a whole.
 
+### 18 Oct 2026: retiring the old diary (`docs/decisions/2026-10-18-retire-old-diary.md`)
+
+1. **The old app's Workshop tab stays, and opens the new diary**, as does
+   an old `#workshop` bookmark, rather than the tab going. *Pattern:* the
+   old app has no other way into the new app; rule 5 replaces a screen, it
+   doesn't strand the people using it.
+2. **The old job form, opened from an order, loads the shop's mechanics
+   itself**; it used to rely on the old diary having loaded them, so from an
+   order its mechanic list was empty. Deleting a job there refreshes the
+   orders list. *Pattern:* the order screen's own refresh
+   (`refreshDocListAfterChange`).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

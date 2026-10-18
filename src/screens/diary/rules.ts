@@ -34,8 +34,8 @@ type JobStates = {
 };
 
 /**
- * How the diary draws a job, or 'hidden'. The old diary's rules
- * (public/diary-marks.js): a customer's cancellation stays, struck through,
+ * How the diary draws a job, or 'hidden'. The old diary's rules, kept when
+ * it was retired (18 Oct): a customer's cancellation stays, struck through,
  * until someone marks it seen; other ended bookings are not drawn.
  */
 export function diaryState(job: JobStates): DiaryState | 'hidden' {
