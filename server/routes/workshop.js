@@ -922,6 +922,18 @@ export function register(route) {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Job not found');
+    // Jack, 18 Oct (docs/decisions/2026-10-18-attachments-and-delete.md): not
+    // while money has been paid on its order or the bike is in the shop. The
+    // reply says which, so the job page can say "Settle up first".
+    // Any paid order linked to the job counts (a job can have more than one).
+    const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
+    const inShop = existing.custody_state === 'in_shop';
+    if (paid || inShop) {
+      return sendJson(res, 409, {
+        error: `Settle up first: ${paid && inShop ? 'refund what was paid and hand the bike back' : paid ? 'refund what was paid' : 'hand the bike back'}, then delete.`,
+        code: 'settle_first', paid, inShop,
+      });
+    }
     // The attachments row is ON DELETE CASCADE, but that only removes the DB
     // record - the file on disk needs its own cleanup or it just sits there
     // forever with nothing pointing at it.
@@ -932,6 +944,11 @@ export function register(route) {
     // a record of a slot the shop gave back, and there is no longer a booking for
     // it to be a record of.
     await db.prepare('DELETE FROM workshop_capacity_holds WHERE workshop_job_id = ?').run(id);
+    // Its quotes and print tasks point at it with no cascade, so they go first
+    // too (fresh review: a job with a quote couldn't be deleted at all).
+    await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
+    await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
+    await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
     await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
     await Promise.all(attachments.map((a) => unlink(path.join(UPLOADS_DIR, a.storage_key)).catch(() => {})));
     sendJson(res, 200, { ok: true });

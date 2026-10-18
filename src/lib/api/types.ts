@@ -61,7 +61,7 @@ export type WorkshopJob = {
  * `reused_key`: a booking's request key was sent again with different details. */
 export type ApiErrorBody = {
   error: string;
-  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key';
+  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key' | 'settle_first';
 };
 
 /** WP-0.2, added to the online booking's body (POST /api/portal/:shopSlug/bookings).

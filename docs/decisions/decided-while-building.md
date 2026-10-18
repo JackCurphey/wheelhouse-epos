@@ -329,6 +329,25 @@ silent:
    its dates change in the diary and a save here can't accept it.
    *Pattern:* the several-days rule above (item 2).
 
+### 18 Oct 2026: files and photos, and deleting a job (`docs/decisions/2026-10-18-attachments-and-delete.md`)
+
+1. **"Remove" asks "Remove [file]?"**, "It is removed from this job. This
+   can't be undone.", with "Keep it" and "Remove". *Pattern:* "Delete [job]?".
+2. **"Settle up first" names only what applies**: "Refund what was paid —
+   then delete.", "Hand the bike back — then delete.", or both as drawn.
+   *Pattern:* the drawing's sentence, cut to the case.
+3. **Money paid means the job's order has been paid** (deposits aren't taken
+   yet; when they are, a deposit counts too). *Pattern:* the order's paid
+   state, as the till shows it.
+4. **A file other than a photo downloads under its own name**; a photo
+   opens larger in a pop-up. *Pattern:* the server sends files to download.
+5. **A quote, sent or answered, doesn't stop a delete**: with nothing paid
+   and the bike not in, the job goes and its quote with it. *Pattern:*
+   answer 1 names money paid and the bike in the shop, nothing else. For
+   Jack to overrule if a sent quote should count as at stake.
+6. **A paid job can't be deleted yet**, since the new app has no refund; the
+   "Refund what was paid" step arrives with the till's refunds.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
