@@ -15,10 +15,9 @@ and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
 move the booking link's quote answer to `portal.js` (after #207); a login
 for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
 the commit in `/healthz`), then the deploy workflow; then #203 step A.
-Also waiting for him: approve #225 (Jack's, changes `server.js`); #231
-(Jack's 16 Oct answers, and the test shop loader moving the drawn week to
-the load week, `scripts/dev/` is his); #234 (`setup.sh` fixed for doctl
-2.0, which Jack ran from the branch); and the
+On 18 Oct Mark said, through Jack, that the pull requests waiting for his
+approval could merge without it: #225, #231, #234, #249, #250 and #256 are
+merged. Still his: the
 server half of #190 A, a guard so a cancelled, declined or expired booking
 can't be booked in or started (the `workshop-jobs` spec allows it today;
 Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5). Also
@@ -26,10 +25,15 @@ his: the bike on "Waiting for you" items (for the tablet cards' drawn bike
 line, #241); a place to keep who signed a job off and when
 (`docs/decisions/2026-10-16-mechanic-sign-off.md`); and Jack's question,
 when the front page switches from the old app to the new one (16 Oct; the
-plans don't say). Also #249 (the tests' fixed names and codes, his test
-files), #250 (two same-named shops signing up at once, `server/auth.js`)
-and #256 (Jack's 18 Oct answers: Release 2's finish line, stage 8 and the
-go-live checklist; it changes the shared plans, so it needs his yes).
+plans don't say). The day's merges change his work: read #231 (his
+`add-hosted-copy` design now loads the drawn week into the week the shop is
+loaded; the test shop's prices are Jack's 16 Oct decision), #256 (Release 2
+is done when built and checked, ready to sell; the all-in-one first and
+Lightspeed after; stage 8's alongside and trading week move to the selling
+stage). **Check #265:** it changed his server file without his approval,
+merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
+job with money paid on its order or the bike in the shop (409
+`settle_first`), and deletes the job's quotes and print tasks first.
 **Jack is on:** 18 Oct merged: the old app's workshop diary is retired
 and its Workshop tab opens the new diary (#252,
 `docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
@@ -39,22 +43,25 @@ job by its bottom edge (#257), month view (#259), Change details on the job
 page (#261) with a note when a change request is waiting (#262), and Accept
 or decline from a booking request's menu (#263). The menu's "Open in the
 till" and "Print receipt" wait for the till, which can't open an order or
-print a receipt yet (Jack, 18 Oct). Jack also decided Wheelhouse is built for
-every shop, not to move his own shop first (#254,
-`docs/decisions/2026-10-18-build-for-every-shop.md`); his answers on Release
-2's finish line (built and checked, ready to sell), the all-in-one coming
-first with Lightspeed after, stage 8 and the go-live checklist are in #256,
-waiting for Mark. Earlier: the online test copy is live at
+print a receipt yet (Jack, 18 Oct). Then Files and photos on the job page,
+and Delete job, refused with "Settle up first" while money has been paid or
+the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
+Jack also decided Wheelhouse is built for every shop, not to move his own
+shop first (#254), and Release 2 is done when built and checked, ready to
+sell, the all-in-one first with Lightspeed after (#256,
+`docs/decisions/2026-10-18-build-for-every-shop.md`). All of Mark's waiting
+pull requests merged on his word (#225, #231, #234, #249, #250, #256).
+Earlier: the online test copy is live at
 https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
-(#236, #237, #239 to #245, #247, #248). Open, waiting for Mark: #225, #231,
-#234, #249 (his test files), #250 (`server/auth.js`), #256 (the shared
-plans). #238, the diary layout review, is a report, all of it now built or
+(#236, #237, #239 to #245, #247, #248). No pull request waits for Mark's
+approval; #265 changed his server file after his go-ahead, so he checks it.
+#238, the diary layout review, is a report, all of it now built or
 decided. Next in his lane without Mark: see the build board's "Next up".
 The stage check waits for lines 4 and 6 of §9.
 **Open for Jack:** nothing waiting now. Small to-do: make a Google account
 for Wheelhouse (go-live checklist). Later: his yes to open Stripe and buy the
 S700. (Asking the accountant about Citrus Lime reports was dropped, #254;
-#171 and #138 were closed with #256's answers, 18 Oct, waiting for Mark.)
+#171 and #138 were closed with #256's answers, 18 Oct.)
 
 **Updated:** 2026-10-18. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
