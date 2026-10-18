@@ -70,3 +70,9 @@ table"). The table keeps answer 4's earlier sign-offs before the job history
 (WP-1.2) exists. Chosen over the columns alone. The till's question (answer
 5) and the customer setting (answer 3) are later pieces; until the till's is
 built, a job finished by paying at the till goes out unsigned.
+
+**A deleted mechanic's sign-offs keep their name** (Jack, 18 Oct, after the
+fresh review found a mechanic who had signed off couldn't be deleted: "1:
+keep their name. Each sign-off saves the mechanic's name when they sign, so
+deleting them later still works and old jobs still say who signed off").
+Chosen over refusing the delete and over forgetting who.

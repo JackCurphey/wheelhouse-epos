@@ -3,17 +3,22 @@
 -- which mechanic signed it off and when. Reopening clears the two columns;
 -- every sign-off stays in workshop_job_sign_offs, stamped cleared_at when the
 -- work is reopened, so a job that comes back still shows who passed it
--- (answer 4) before the job history (WP-1.2) exists. Additive only.
+-- (answer 4) before the job history (WP-1.2) exists. Each keeps the
+-- mechanic's name as it was when they signed, so deleting the person later
+-- unlinks them and the job still says who signed it off (Jack, 18 Oct, after
+-- the fresh review). Additive only.
 -- Spec: openspec/changes/mechanic-sign-off/design.md
 ALTER TABLE workshop_jobs
-  ADD COLUMN signed_off_by INTEGER REFERENCES employees(id),
+  ADD COLUMN signed_off_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+  ADD COLUMN signed_off_name TEXT,
   ADD COLUMN signed_off_at TIMESTAMPTZ;
 
 CREATE TABLE workshop_job_sign_offs (
   id SERIAL PRIMARY KEY,
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
   workshop_job_id INTEGER NOT NULL REFERENCES workshop_jobs(id) ON DELETE CASCADE,
-  employee_id INTEGER NOT NULL REFERENCES employees(id),
+  employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+  employee_name TEXT NOT NULL,
   signed_off_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   cleared_at TIMESTAMPTZ
 );

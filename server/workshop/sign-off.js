@@ -13,12 +13,15 @@ export async function signOffMechanic(raw) {
   return row ? row.id : null;
 }
 
+// The name is kept as it was when they signed, so the sign-off still says who
+// after the person is deleted (Jack, 18 Oct).
 export async function recordSignOff(jobId, employeeId) {
-  await prepare('UPDATE workshop_jobs SET signed_off_by = ?, signed_off_at = now() WHERE id = ?').run(employeeId, jobId);
-  await prepare('INSERT INTO workshop_job_sign_offs (workshop_job_id, employee_id) VALUES (?, ?)').run(jobId, employeeId);
+  const { name } = await prepare('SELECT name FROM employees WHERE id = ?').get(employeeId);
+  await prepare('UPDATE workshop_jobs SET signed_off_by = ?, signed_off_name = ?, signed_off_at = now() WHERE id = ?').run(employeeId, name, jobId);
+  await prepare('INSERT INTO workshop_job_sign_offs (workshop_job_id, employee_id, employee_name) VALUES (?, ?, ?)').run(jobId, employeeId, name);
 }
 
 export async function clearSignOff(jobId) {
-  await prepare('UPDATE workshop_jobs SET signed_off_by = NULL, signed_off_at = NULL WHERE id = ?').run(jobId);
+  await prepare('UPDATE workshop_jobs SET signed_off_by = NULL, signed_off_name = NULL, signed_off_at = NULL WHERE id = ?').run(jobId);
   await prepare('UPDATE workshop_job_sign_offs SET cleared_at = now() WHERE workshop_job_id = ? AND cleared_at IS NULL').run(jobId);
 }

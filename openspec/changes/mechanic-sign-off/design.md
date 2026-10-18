@@ -5,7 +5,7 @@
 **Finish asks who.** `POST /api/workshop-jobs/:id/finish` with body
 `{ version, signedOffBy }`:
 - `signedOffBy` must be an active mechanic of the shop (`employees.active = 1 AND is_mechanic = 1`). Missing or not a mechanic → 400 `{ error: 'Choose who is signing this off', code: 'sign_off_required' }`, and nothing changes.
-- On success, in one transaction with the work move: `workshop_jobs.signed_off_by` and `signed_off_at = now()` are set, and a row goes into `workshop_job_sign_offs` (job, mechanic, time).
+- On success, in one transaction with the work move: `workshop_jobs.signed_off_by`, `signed_off_name` and `signed_off_at = now()` are set, and a row goes into `workshop_job_sign_offs` (job, mechanic, their name, time).
 - The reply is the job as now, with the three fields below.
 
 **Reopening clears it.** `POST /api/workshop-jobs/:id/reopen-work`, and the
@@ -24,18 +24,23 @@ stays (answer 4: "the earlier sign-off stays in the job's history").
 
 ```sql
 ALTER TABLE workshop_jobs
-  ADD COLUMN signed_off_by INTEGER REFERENCES employees(id),
+  ADD COLUMN signed_off_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+  ADD COLUMN signed_off_name TEXT,
   ADD COLUMN signed_off_at TIMESTAMPTZ;
 CREATE TABLE workshop_job_sign_offs (
   id SERIAL PRIMARY KEY,
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
   workshop_job_id INTEGER NOT NULL REFERENCES workshop_jobs(id) ON DELETE CASCADE,
-  employee_id INTEGER NOT NULL REFERENCES employees(id),
+  employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+  employee_name TEXT NOT NULL,
   signed_off_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   cleared_at TIMESTAMPTZ
 );
 ```
 with the shop index and row security every shop table has. Additive only.
+Each sign-off keeps the mechanic's name as it was when they signed, so
+deleting the person later unlinks them and the job still says who (Jack,
+18 Oct, after the fresh review).
 
 ## Screens
 

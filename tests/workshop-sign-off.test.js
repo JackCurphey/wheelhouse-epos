@@ -137,3 +137,25 @@ test('an old-form save that leaves finished work finished keeps the sign-off', a
     await deleteTestShop(shop.id);
   }
 });
+
+// Jack, 18 Oct, after the fresh review: each sign-off keeps the mechanic's
+// name, so deleting them later still works and the job still says who.
+test('a mechanic who signed off can be deleted; the job and the history keep their name', async () => {
+  const { shop, req, job } = await shopWithJob();
+  try {
+    // Jo has no diary time of their own: a mechanic with booked time can't be
+    // deleted anyway (team.js), which is not what this checks.
+    const jo = await seedMechanic(shop.id, { name: 'Jo Taylor' });
+    await req(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: jo } });
+    const gone = await req(`/api/employees/${jo}/permanent`, { method: 'DELETE' });
+    assert.equal(gone.status, 200, JSON.stringify(gone.body));
+    const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
+    assert.equal(now.signedOffBy, null);
+    assert.equal(now.signedOffByName, 'Jo Taylor');
+    assert.ok(now.signedOffAt !== null);
+    const rows = await runWithShop(shop.id, () => prepare('SELECT employee_id, employee_name FROM workshop_job_sign_offs WHERE workshop_job_id = ?').all(job.id));
+    assert.deepEqual(rows, [{ employee_id: null, employee_name: 'Jo Taylor' }]);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});

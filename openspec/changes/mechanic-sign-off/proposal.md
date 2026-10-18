@@ -32,5 +32,5 @@ first, with a table keeping every sign-off (that file's "Building it").
 ## Impact
 
 - `server/migrations/040_job_sign_off.sql` (new), `server/routes/workshop.js`, `server/workshop/jobs.js`
-- `src/lib/api/types.ts`, `src/lib/api/client.ts`, `src/screens/diary/job-dialog.tsx`, `src/screens/diary/sign-off-dialog.tsx` (new)
+- `src/lib/api/types.ts`, `src/screens/diary/job-dialog.tsx`, `src/screens/diary/sign-off-dialog.tsx` (new)
 - `tests/workshop-sign-off.test.js` (new), `tests/screens/job-sign-off.test.js` (new), a browser test

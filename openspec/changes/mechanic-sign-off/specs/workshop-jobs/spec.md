@@ -28,3 +28,10 @@ Reopening the work SHALL clear the job's sign-off, so finishing again asks again
 #### Scenario: Reopened
 - **WHEN** a signed-off job's work is reopened
 - **THEN** the job shows no sign-off, and the history still holds the earlier one, marked cleared
+
+### Requirement: A sign-off keeps the mechanic's name
+Each sign-off SHALL keep the mechanic's name as it was when they signed, so deleting the person later still works and the job still says who signed it off (Jack, 18 Oct).
+
+#### Scenario: Jo is deleted
+- **WHEN** Jo Taylor signed off a job and is later deleted from the team
+- **THEN** the delete goes through, and the job still shows "Signed off by Jo Taylor"
