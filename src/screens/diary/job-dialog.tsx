@@ -3,11 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError, jobAction } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
-import { Dialog } from '@/components/ui/dialog.tsx';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { shortDay, todayIso } from './rules.ts';
 import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
+import { JobFiles } from './job-files.tsx';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -104,6 +105,42 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const [notesNote, setNotesNote] = useState('');
   // "Change details" (Jack, 18 Oct): not for finished work, which is frozen until reopened.
   const [changing, setChanging] = useState(false);
+  // Deleting a job (Jack, 18 Oct, docs/decisions/2026-10-18-attachments-and-delete.md):
+  // asks first, or says "Settle up first" while money has been paid on its
+  // order or the bike is in the shop. The server refuses the same cases.
+  const [deleting, setDeleting] = useState<'ask' | 'blocked' | null>(null);
+  const [blockedBy, setBlockedBy] = useState<{ paid: boolean; inShop: boolean }>({ paid: false, inShop: false });
+  function askDelete() {
+    if (!job) return;
+    const paid = job.orderStatus === 'converted';
+    const inShop = job.custodyState === 'in_shop';
+    setBlockedBy({ paid, inShop });
+    setDeleting(paid || inShop ? 'blocked' : 'ask');
+  }
+  async function deleteJob() {
+    if (!job) return;
+    setSending(true);
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}`, undefined, { method: 'DELETE' });
+      setDeleting(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
+      ]);
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'settle_first') {
+        const body = err.body as { paid?: boolean; inShop?: boolean } | undefined;
+        setBlockedBy({ paid: Boolean(body?.paid), inShop: Boolean(body?.inShop) });
+        setDeleting('blocked');
+      } else {
+        setDeleting(null);
+        setMessage(refusalText(err));
+      }
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function run(action: string) {
     if (!job) return;
@@ -312,6 +349,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                       </div>
                     )}
                   </section>
+                  <JobFiles jobId={job.id} />
                 </div>
                 <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>
@@ -321,20 +359,56 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
             </div>
 
             {message ? <p role="alert" className="mx-5 mb-2 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
-            {actions.length ? (
-              <footer className="flex shrink-0 flex-wrap justify-end gap-2.5 border-t border-[var(--wh-border)] px-5 py-3.5">
-                {actions.filter((a) => !a.primary).map((a) => (
-                  <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
-                ))}
-                {actions.filter((a) => a.primary).map((a) => (
-                  <Button key={a.action} variant="accent" disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
-                ))}
-              </footer>
-            ) : null}
+            {/* Always shown, so "Delete job" is in view without scrolling (Jack, 18 Oct). */}
+            <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-[var(--wh-border)] px-5 py-3.5">
+              <Button variant="danger" className="mr-auto min-h-11" disabled={sending} onClick={askDelete}>Delete job</Button>
+              {actions.filter((a) => !a.primary).map((a) => (
+                <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
+              ))}
+              {actions.filter((a) => a.primary).map((a) => (
+                <Button key={a.action} variant="accent" disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
+              ))}
+            </footer>
           </>
         ) : null}
       </div>
       {changing && job ? <ChangeDetailsDialog job={job} onClose={() => setChanging(false)} /> : null}
+      <Dialog open={deleting === 'ask'} onOpenChange={(o) => { if (!o) setDeleting(null); }} aria-labelledby="delete-job-title">
+        <DialogHeader>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle id="delete-job-title">{`Delete ${job?.title ?? 'this job'}?`}</DialogTitle>
+            <span className="text-[13px] text-[var(--wh-muted)]">{[job?.reference, job?.customerName, job?.bikeLabel].filter(Boolean).join(' · ')}</span>
+          </div>
+        </DialogHeader>
+        <DialogBody><p className="m-0 text-sm">The job, its diary time and its files and photos are removed. This can’t be undone.</p></DialogBody>
+        <DialogFooter className="flex justify-between gap-2.5">
+          <Button variant="ghost" className="min-h-11" onClick={() => setDeleting(null)}>Keep the job</Button>
+          <Button variant="danger" className="min-h-11" disabled={sending} onClick={() => void deleteJob()}>Delete job</Button>
+        </DialogFooter>
+      </Dialog>
+      <Dialog open={deleting === 'blocked'} onOpenChange={(o) => { if (!o) setDeleting(null); }} aria-labelledby="delete-blocked-title">
+        <DialogHeader>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle id="delete-blocked-title">Settle up first</DialogTitle>
+            <span className="text-[13px] text-[var(--wh-muted)]">{`Before ${[job?.title, job?.reference].filter(Boolean).join(' · ')} can be deleted`}</span>
+          </div>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-2 text-sm">
+          <p className="m-0">Deleting it now would lose what’s still open:</p>
+          <div className="flex flex-col">
+            {blockedBy.paid ? (
+              <div className="flex min-h-10 items-center justify-between gap-3 border-t border-[var(--wh-border)]"><span>Paid on its order</span><span className="font-mono font-semibold">{job?.orderTotal ? money(job.orderTotal) : 'Paid'}</span></div>
+            ) : null}
+            {blockedBy.inShop ? (
+              <div className="flex min-h-10 items-center justify-between gap-3 border-t border-[var(--wh-border)]"><span>Bike in the shop</span><span className="font-semibold">{job?.bikeLabel || 'Bike'}</span></div>
+            ) : null}
+          </div>
+          <p className="m-0">{blockedBy.paid && blockedBy.inShop ? 'Refund what was paid and hand the bike back — then delete.' : blockedBy.paid ? 'Refund what was paid — then delete.' : 'Hand the bike back — then delete.'}</p>
+        </DialogBody>
+        <DialogFooter className="flex justify-end">
+          <Button className="min-h-11" onClick={() => setDeleting(null)}>OK</Button>
+        </DialogFooter>
+      </Dialog>
     </Dialog>
   );
 }

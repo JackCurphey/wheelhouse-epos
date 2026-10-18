@@ -24,6 +24,8 @@ export type ApiErrorCode =
   | 'stale'
   | 'illegal'
   | 'capacity'
+  // Deleting a job with money paid or the bike in (Jack, 18 Oct).
+  | 'settle_first'
   | 'not_found'
   | 'bad_request'
   | 'unauthorized'
@@ -62,7 +64,7 @@ function classify(status: number, serverCode: ApiErrorBody['code']): ApiErrorCod
   // stale would reload and invite a retry of something that may never be
   // allowed.
   if (status === 409) {
-    return serverCode === 'stale' || serverCode === 'illegal' || serverCode === 'capacity' ? serverCode : 'unknown';
+    return serverCode === 'stale' || serverCode === 'illegal' || serverCode === 'capacity' || serverCode === 'settle_first' ? serverCode : 'unknown';
   }
   if (status === 404) return 'not_found';
   if (status === 401) return 'unauthorized';
