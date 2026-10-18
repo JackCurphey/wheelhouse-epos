@@ -29,7 +29,9 @@ export type ReceiptSale = {
 };
 /** checkedBy: who signed the job off, only when the shop shows it (mechanic sign-off piece 3). */
 export type ReceiptJob = { reference: string; bikeLabel: string | null; checkedBy?: string | null };
-export type ReceiptProps = { sale: ReceiptSale; shopName: string; job?: ReceiptJob };
+/** The shop's details from Settings › Shop details (Jack, 18 Oct); each left out when blank. */
+export type ShopDetails = { address?: string | null; phone?: string | null; vatNumber?: string | null };
+export type ReceiptProps = { sale: ReceiptSale; shopName: string; job?: ReceiptJob; details?: ShopDetails };
 
 const when = (iso: string) => {
   const d = new Date(iso);
@@ -57,14 +59,14 @@ function Barcode({ value }: { value: string }) {
   return <svg ref={ref} role="img" aria-label={`Barcode for sale ${value}`} />;
 }
 
-export function ReceiptPaper({ sale, shopName, job }: ReceiptProps) {
+export function ReceiptPaper({ sale, shopName, job, details }: ReceiptProps) {
   return (
     <article aria-label="Receipt" className="flex w-[72mm] flex-col gap-2.5 p-4 text-[13px] leading-snug">
-      <strong className="text-center text-[17px]">{shopName}</strong>
+      {/* The shop's name at the top; its details and the barcode at the bottom (shop details answer 2). */}
       <div className="flex flex-col items-center gap-1 text-center">
+        <strong className="text-[17px]">{shopName}</strong>
         <span>{`Sale ${sale.id}`}</span>
         <span>{when(sale.createdAt)}</span>
-        <Barcode value={String(sale.id)} />
       </div>
       <div className="flex flex-col gap-1 border-t border-dashed border-current pt-2">
         {job ? <span className="font-bold">{job.bikeLabel ? `${job.reference} · ${job.bikeLabel}` : job.reference}</span> : null}
@@ -80,6 +82,12 @@ export function ReceiptPaper({ sale, shopName, job }: ReceiptProps) {
         {sale.cashAmount > 0 ? <Row left="Paid by cash" right={money(sale.cashAmount)} /> : null}
         {sale.cardAmount > 0 ? <Row left="Paid by card" right={money(sale.cardAmount)} /> : null}
         {(sale.extraPayments ?? []).map((p, i) => <Row key={i} left={`Paid by ${p.tenderType}`} right={money(p.amount)} />)}
+      </div>
+      <div className="flex flex-col items-center gap-0.5 border-t border-dashed border-current pt-2.5 text-center">
+        {details?.address ? <span>{details.address}</span> : null}
+        {details?.phone ? <span>{details.phone}</span> : null}
+        {details?.vatNumber ? <span>{`VAT number ${details.vatNumber}`}</span> : null}
+        <span className={details?.address || details?.phone || details?.vatNumber ? 'mt-2' : ''}><Barcode value={String(sale.id)} /></span>
       </div>
     </article>
   );

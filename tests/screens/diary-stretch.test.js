@@ -74,6 +74,7 @@ function stubServer() {
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: hours, showSignOffToCustomers: showSignOff });
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: waitingItems.length, items: waitingItems });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
+    if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: null });
     if (u.pathname === '/api/sale-documents/40') return reply(200, { id: 40, kind: 'order', status: 'converted', convertedSaleId: 601, items: [] });
     if (u.pathname === '/api/sales/601') return saleFails ? reply(500, { error: 'Internal error' }) : reply(200, PAID_SALE);
     return reply(404, { error: 'Not found' });
@@ -354,5 +355,23 @@ test('with the setting on, the diary’s Print receipt says who signed the job o
   } finally {
     JOBS[0] = keep;
     showSignOff = false;
+  }
+});
+
+// Shop details (Jack, 18 Oct): the diary's receipt carries them too; a blank one is left out.
+test('the diary’s Print receipt carries the shop’s details at the bottom', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted' };
+  let printed = null;
+  try {
+    const { ui, fireEvent, within, waitFor } = await openDiary();
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    fireEvent.click(menu.getByRole('menuitem', { name: 'Print receipt' }));
+    await waitFor(() => assert.ok(printed !== null, 'nothing was printed'));
+    assert.ok(printed.endsWith('Paid by card£65.00[Shop address][shop phone]'), printed);
+  } finally {
+    JOBS[0] = keep;
   }
 });

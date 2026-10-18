@@ -13,6 +13,8 @@ let shell;
 let calls;
 let settings;
 let putFails;
+let details;
+let detailsFail;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -25,6 +27,8 @@ async function openSettings() {
   calls = [];
   settings = { openingHours: [], showSignOffToCustomers: false };
   putFails = false;
+  details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null };
+  detailsFail = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -32,6 +36,12 @@ async function openSettings() {
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
+    if (u.pathname === '/api/shop-details' && method === 'PUT') {
+      if (detailsFail) return reply(500, { error: 'Internal error' });
+      details = { ...details, ...body };
+      return reply(200, details);
+    }
+    if (u.pathname === '/api/shop-details') return reply(200, details);
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') {
       if (putFails) return reply(500, { error: 'Internal error' });
       settings = { ...settings, ...body };
@@ -78,4 +88,35 @@ test('if it can’t be saved, it says so and stays as it was', async () => {
   fireEvent.click(sw);
   assert.ok(has(await ui.findByText('Wheelhouse couldn’t save that. Try again in a moment.')));
   await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'false'));
+});
+
+// Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md; drawn
+// as set-shop-details): five boxes, each saved when it's left if it changed.
+test('Shop and sites › Shop details shows the five boxes and the note', async () => {
+  const { ui } = await openSettings();
+  assert.ok(has(ui.queryByRole('heading', { name: 'Shop and sites' })));
+  assert.ok(has(ui.queryByRole('heading', { name: 'Shop details' })));
+  assert.equal((await ui.findByLabelText('Shop name')).value, 'North Street Cycles');
+  for (const label of ['Address', 'Phone', 'Email', 'VAT number']) assert.equal(ui.getByLabelText(label).value, '', label);
+  assert.ok(has(ui.queryByText('These show on receipts, emails and the website.')));
+});
+
+test('a box saves when it’s left, only if it changed, and says Saved', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const address = await ui.findByLabelText('Address');
+  fireEvent.blur(ui.getByLabelText('Phone'));
+  fireEvent.change(address, { target: { value: '[Shop address]' } });
+  fireEvent.blur(address);
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && c.url === '/api/shop-details').map((c) => c.body), [{ address: '[Shop address]' }]));
+  assert.ok(has(await ui.findByText('Saved.')));
+});
+
+test('if a box can’t be saved, it says so and keeps what was typed', async () => {
+  const { ui, fireEvent } = await openSettings();
+  detailsFail = true;
+  const vat = await ui.findByLabelText('VAT number');
+  fireEvent.change(vat, { target: { value: '[VAT number]' } });
+  fireEvent.blur(vat);
+  assert.ok(has(await ui.findByText('Wheelhouse couldn’t save that. Try again in a moment.')));
+  assert.equal(vat.value, '[VAT number]');
 });

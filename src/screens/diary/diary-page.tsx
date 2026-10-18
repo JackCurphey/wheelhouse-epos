@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
-import { printReceipt, type ReceiptSale } from '@/screens/till/receipt.tsx';
+import { printReceipt, type ReceiptSale, type ShopDetails } from '@/screens/till/receipt.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
@@ -960,7 +960,9 @@ export function DiaryPage() {
       const order = await apiGet<{ convertedSaleId: number | null }>(`/api/sale-documents/${j.orderId}`);
       if (!order.convertedSaleId) throw new Error('no sale');
       const sale = await apiGet<ReceiptSale>(`/api/sales/${order.convertedSaleId}`);
-      printReceipt({ sale, shopName: session.status === 'signed-in' ? session.shop.name : '', job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null, checkedBy: settings.data?.showSignOffToCustomers ? j.signedOffByName ?? null : null } });
+      // The shop's address, phone and VAT number (Shop details, 18 Oct).
+      const details = await queryClient.fetchQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails & { name: string }>('/api/shop-details') }).catch(() => undefined);
+      printReceipt({ details, sale, shopName: details?.name ?? (session.status === 'signed-in' ? session.shop.name : ''), job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null, checkedBy: settings.data?.showSignOffToCustomers ? j.signedOffByName ?? null : null } });
     } catch {
       setMoveError('Wheelhouse couldn’t get this job’s receipt to print. Try again in a moment.');
     }

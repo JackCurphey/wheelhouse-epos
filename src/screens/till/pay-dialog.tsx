@@ -4,7 +4,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession, type SessionEmployee } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
-import { printReceipt, type ReceiptJob, type ReceiptSale } from './receipt.tsx';
+import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
 import { asSaleItem, money, noteButtons, pence, saleTotal, type TillLine } from './rules.ts';
 
 /**
@@ -49,6 +49,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
+  // The shop's address, phone and VAT number for the receipt (Shop details, 18 Oct).
+  const shopDetails = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails & { name: string }>('/api/shop-details') });
   const [serving, setServing] = useState<SessionEmployee | null>(me && me.isCashier ? me : null);
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +170,7 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     // A reply that warns the job wasn't signed off names nobody (piece 3).
     const warned = Boolean((paidSale as { jobWarning?: string } | null)?.jobWarning);
     const receiptJob = job?.receipt && warned ? { ...job.receipt, checkedBy: null } : job?.receipt;
-    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName, job: receiptJob }); onNextSale(); } : null;
+    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); onNextSale(); } : null;
     body = <PaidStep total={total} change={step.change} note={step.note} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 

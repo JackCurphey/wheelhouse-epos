@@ -74,6 +74,7 @@ function stubServer(employee) {
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
+    if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]' });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], showSignOffToCustomers: SHOW_SIGN_OFF });
     if (u.pathname === '/api/sale-documents/40/due') return DUE.error ? reply(DUE.status ?? 400, DUE) : reply(200, DUE);
     return reply(404, { error: 'Not found' });
@@ -351,4 +352,14 @@ test('a payment that comes back unsigned puts no Checked by on the receipt', asy
   } finally {
     SHOW_SIGN_OFF = false;
   }
+});
+
+// Shop details (Jack, 18 Oct): the receipt carries them at the bottom, above the barcode.
+test('the till’s receipt carries the shop’s details at the bottom', async () => {
+  const t = await openJobTill();
+  let printed = null;
+  window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+  const dlg = await payByCard(t);
+  t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+  assert.ok(printed?.endsWith('Paid by card£83.00[Shop address][shop phone]VAT number [VAT number]'), String(printed));
 });

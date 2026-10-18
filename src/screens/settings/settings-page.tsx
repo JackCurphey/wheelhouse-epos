@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -10,6 +10,63 @@ import { apiGet, apiMutate } from '@/lib/api/client.ts';
  * WP-5.1.
  */
 type WorkshopSettings = { showSignOffToCustomers?: boolean };
+type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null };
+type DetailKey = keyof ShopDetails;
+const DETAIL_ROWS: [DetailKey, string, string][] = [
+  ['name', 'Shop name', 'organization'], ['address', 'Address', 'street-address'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email'], ['vatNumber', 'VAT number', 'off'],
+];
+
+/**
+ * Settings › Shop and sites › Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md;
+ * drawn as set-shop-details): one set for the whole business, for now. Each
+ * box saves when it's left, if it changed, as the settings pages save as you go.
+ */
+function ShopDetailsBox() {
+  const queryClient = useQueryClient();
+  const details = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails>('/api/shop-details') });
+  const [typed, setTyped] = useState<Partial<Record<DetailKey, string>>>({});
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const valueOf = (key: DetailKey) => typed[key] ?? details.data?.[key] ?? '';
+
+  async function save(key: DetailKey) {
+    const value = typed[key];
+    if (value === undefined || value.trim() === (details.data?.[key] ?? '')) return;
+    setNote(null);
+    try {
+      const saved = await apiMutate<ShopDetails>('/api/shop-details', { [key]: value }, { method: 'PUT' });
+      queryClient.setQueryData(['shop-details'], saved);
+      setTyped((t) => { const next = { ...t }; delete next[key]; return next; });
+      setNote({ ok: true, text: 'Saved.' });
+      // A new name shows across the app (the session carries it).
+      if (key === 'name') void queryClient.invalidateQueries({ queryKey: ['session'] });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    }
+  }
+
+  return (
+    <section aria-labelledby="set-shop-details" className="flex flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
+      <h3 id="set-shop-details" className="m-0 mb-2 text-base font-bold">Shop details</h3>
+      {details.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the shop’s details. Try again in a moment.</p> : null}
+      {DETAIL_ROWS.map(([key, label, autoComplete]) => (
+        <div key={key} className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3 md:py-0">
+          <label htmlFor={`shop-${key}`} className="shrink-0 text-[15px] font-semibold md:w-40">{label}</label>
+          <input
+            id={`shop-${key}`}
+            value={valueOf(key)}
+            autoComplete={autoComplete}
+            disabled={!details.data}
+            onChange={(e) => setTyped((t) => ({ ...t, [key]: e.target.value }))}
+            onBlur={() => void save(key)}
+            className="min-h-11 grow rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]"
+          />
+        </div>
+      ))}
+      <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">These show on receipts, emails and the website.</p>
+      {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 mt-1 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </section>
+  );
+}
 
 // The settings pages' own switch (settings-frame.mjs rowSwitch): the label,
 // On or Off in words, and the track; the whole row is the control.
@@ -58,6 +115,13 @@ export function SettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 p-5">
       {/* The staff frame's header already says "Settings". */}
+      <section aria-labelledby="set-shop" className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 id="set-shop" className="m-0 text-xl font-bold">Shop and sites</h2>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">The shop’s details, its sites and their opening hours.</p>
+        </div>
+        <ShopDetailsBox />
+      </section>
       <section aria-labelledby="set-workshop" className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h2 id="set-workshop" className="m-0 text-xl font-bold">Workshop</h2>
