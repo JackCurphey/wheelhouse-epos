@@ -1,5 +1,10 @@
 # Release 2 — the whole shop, replacing Citrus Lime
 
+> **Which comes first (18 Oct 2026, Jack):** "Release 2" is the name of the
+> all-in-one build, and it now comes first; the Lightspeed version is
+> adapted from it afterwards (`docs/decisions/2026-10-18-build-for-every-shop.md`,
+> answers 7 to 9). The name is kept so links and history still match.
+
 **Date:** 27 September 2026
 **Status:** approved by Jack, 27 Sep 2026 (business plan gates in §5 still open with Mark)
 **Kind:** programme spec — the map of Release 2. Each piece below gets its own
@@ -18,6 +23,11 @@ Citrus Lime, and to beat it on, in Jack's order of importance:
 5. we do the move for the shop
 6. open data
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`):
+> Wheelhouse is built for every shop, not to move Jack's shop first, and
+> Release 2 is done when everything is built and every stage check has passed
+> on the test copy, ready to sell. The first shop and finish line below are history.
+
 **First shop.** Jack's shop, which runs on Citrus Lime today and uses its till,
 stock, supplier feeds and purchase orders, stock take, workshop, customers,
 website, reports, and more than one site.
@@ -33,13 +43,19 @@ reports; Xero and QuickBooks; a deeply customisable website with click and
 collect and online payments; Cycle to Work (Jack's own design, to be explained);
 multiple sites; the Citrus Lime import; a till that keeps selling offline.
 After switch-over: online service history with rebooking, service reminders,
-stock suggestions.
+stock suggestions. *(Changed 18 Oct 2026, Jack, answer 8 of
+`docs/decisions/2026-10-18-build-for-every-shop.md`: all three are in Release
+2; service history and reminders are in WP-4.5.)*
 
 **Out of scope for Release 2:** eBay and Amazon listings.
 
 **Not decided here:** price. The business plan's £49–79 a month
 (`docs/decisions/2026-08-31-business-plan.md`) was set before the website and
 multiple sites came in; it needs revisiting on its own.
+
+> **Changed 18 Oct 2026** (Jack, answer 7 of `docs/decisions/2026-10-18-build-for-every-shop.md`):
+> the all-in-one comes first, and the Lightspeed version is adapted from it
+> afterwards. The paragraph below is history.
 
 **Release 1 carries on.** Release 1 still ships as a workshop add-on for
 Lightspeed shops. Release 2 is built in the same codebase and shares the same

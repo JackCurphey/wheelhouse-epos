@@ -1,5 +1,10 @@
 # Release 2 build — splitting the work between Mark and Jack
 
+> **Which comes first (18 Oct 2026, Jack):** "Release 2" is the name of the
+> all-in-one build, and it now comes first; the Lightspeed version is
+> adapted from it afterwards (`docs/decisions/2026-10-18-build-for-every-shop.md`,
+> answers 7 to 9). The name is kept so links and history still match.
+
 > **From 8 Oct 2026 this plan sets the order of work and the lanes only.**
 > How each piece is specified and built is in `CLAUDE.md` and OpenSpec
 > (`openspec/`) (`docs/decisions/2026-10-08-openspec-only.md`).
@@ -483,6 +488,11 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | 7.1 Cycle to Work | order stages, holds, the ordering rule, what's owed, payments, messages, the report data | 20 screens and the Cycle to Work lines on earlier screens |
 
 ### Stage 8 — The move and the trading week
+
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answer 5): 8.2 and 8.3 move to the selling stage, after Release 2, with
+> whichever shop goes first; 8.1 stays.
+
 
 | Package | Mark | Jack |
 |---|---|---|

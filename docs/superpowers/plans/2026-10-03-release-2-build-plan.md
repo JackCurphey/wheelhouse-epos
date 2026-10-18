@@ -1,5 +1,10 @@
 # Release 2 build plan — from here to the trading week
 
+> **Which comes first (18 Oct 2026, Jack):** "Release 2" is the name of the
+> all-in-one build, and it now comes first; the Lightspeed version is
+> adapted from it afterwards (`docs/decisions/2026-10-18-build-for-every-shop.md`,
+> answers 7 to 9). The name is kept so links and history still match.
+
 > **From 8 Oct 2026 this plan sets the order of work and the lanes only.**
 > How each piece is specified and built is in `CLAUDE.md` and OpenSpec
 > (`openspec/`); an OpenSpec change replaces §4 step 2's short spec in
@@ -45,7 +50,11 @@ that should have everything from me in them." Before this plan, the build
 went journey by journey with no recorded order past Workshop day, so each
 session had to ask what came next.
 
-## 2. Finish line (unchanged)
+## 2. Finish line (changed 18 Oct)
+
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answer 4): Release 2 is done when everything is built and every stage check
+> has passed on the test copy, ready to sell. The paragraph below is history.
 
 From the programme spec §1: Release 2 is ready when Jack's shop has switched
 Citrus Lime off and traded for one full trading week, including a weekend, on
@@ -913,6 +922,13 @@ later packages.
 
 ### Stage 8 — The move, the switch-over and the trading week
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answers 5 and 10): WP-8.1 stays in Release 2, tested on made-up files
+> shaped like the reports whose columns were read; importing Citrus Lime's
+> full export and the workshop job history moves to the selling stage, with
+> the first Citrus Lime shop that moves;
+> WP-8.2 and WP-8.3 move to the selling stage, after Release 2.
+
 - **WP-8.1 Citrus Lime import, second half** (journey 9, pieces 5–11):
   weekly refresh; the move page; the weekly check; the switch-over
   checklist; switch-over morning; the first week. At switch-over it brings
@@ -970,6 +986,11 @@ later packages.
 <!-- /screens -->
 
 ### After the trading week (not in this plan's order)
+
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answers 7 and 8): Lightspeed comes after the all-in-one is ready to sell;
+> **stock suggestions are in Release 2**, in a stage still to be placed (for
+> Jack and Mark). The supplier screens stay held.
 
 - Lightspeed shops (journey 21) (Jack, Q5). Every Lightspeed situation line
   on the one canvas is tagged "after the trading week" where it sits
