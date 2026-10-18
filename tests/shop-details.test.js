@@ -68,3 +68,9 @@ test('one shop never sees or changes another’s details', async () => {
   assert.equal((await as(b)('/api/shop-details')).body.phone, '[other phone]');
   assert.equal((await as(b)('/api/shop-details')).body.name, bName);
 });
+
+// Fresh review: a body that isn't an object is refused plainly, not a 500.
+test('a body that isn’t an object is refused in plain words', async () => {
+  const res = await as(a)('/api/shop-details', { method: 'PUT', body: null });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+});

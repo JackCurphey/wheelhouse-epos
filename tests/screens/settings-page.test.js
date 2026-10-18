@@ -15,6 +15,7 @@ let settings;
 let putFails;
 let details;
 let detailsFail;
+let holdDetails = null;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -39,7 +40,9 @@ async function openSettings() {
     if (u.pathname === '/api/shop-details' && method === 'PUT') {
       if (detailsFail) return reply(500, { error: 'Internal error' });
       details = { ...details, ...body };
-      return reply(200, details);
+      const answer = reply(200, { ...details });
+      if (holdDetails) { const wait = holdDetails; holdDetails = null; await wait; }
+      return answer;
     }
     if (u.pathname === '/api/shop-details') return reply(200, details);
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') {
@@ -119,4 +122,22 @@ test('if a box can’t be saved, it says so and keeps what was typed', async () 
   fireEvent.blur(vat);
   assert.ok(has(await ui.findByText('Wheelhouse couldn’t save that. Try again in a moment.')));
   assert.equal(vat.value, '[VAT number]');
+});
+
+// Fresh review: what's typed while a save is on its way isn't lost, and a
+// reply only updates the box it saved.
+test('typing more while a box is saving keeps the new words, and they save too', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  let release;
+  holdDetails = new Promise((r) => { release = r; });
+  const address = await ui.findByLabelText('Address');
+  fireEvent.change(address, { target: { value: '12 High St' } });
+  fireEvent.blur(address);
+  await waitFor(() => assert.equal(calls.filter((c) => c.method === 'PUT').length, 1));
+  fireEvent.change(address, { target: { value: '12 High St, Leeds' } });
+  release();
+  assert.ok(has(await ui.findByText('Saved.')));
+  assert.equal(address.value, '12 High St, Leeds');
+  fireEvent.blur(address);
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ address: '12 High St' }, { address: '12 High St, Leeds' }]));
 });

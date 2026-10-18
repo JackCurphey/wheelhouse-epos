@@ -34,8 +34,11 @@ function ShopDetailsBox() {
     setNote(null);
     try {
       const saved = await apiMutate<ShopDetails>('/api/shop-details', { [key]: value }, { method: 'PUT' });
-      queryClient.setQueryData(['shop-details'], saved);
-      setTyped((t) => { const next = { ...t }; delete next[key]; return next; });
+      // Only the box that was saved, so replies arriving out of order can't
+      // put back an older value in another box (fresh review).
+      queryClient.setQueryData<ShopDetails>(['shop-details'], (old) => (old ? { ...old, [key]: saved[key] } : saved));
+      // Anything typed since this save went keeps its place (fresh review).
+      setTyped((t) => { if (t[key] !== value) return t; const next = { ...t }; delete next[key]; return next; });
       setNote({ ok: true, text: 'Saved.' });
       // A new name shows across the app (the session carries it).
       if (key === 'name') void queryClient.invalidateQueries({ queryKey: ['session'] });

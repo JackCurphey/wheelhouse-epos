@@ -78,6 +78,7 @@ export function register(route) {
 
   route('PUT', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
     const body = await readJsonBody(req);
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the shop’s details');
     const sets = [];
     const values = [];
     for (const [key, column, label, max] of SHOP_DETAIL_FIELDS) {
