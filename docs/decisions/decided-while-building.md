@@ -363,6 +363,12 @@ silent:
    *Pattern:* the same menu at touch sizes (diary-context-menu).
 5. **Work not yet in progress or finished: "The work isn't finished, so
    this job can't be paid yet."** *Pattern:* the 8 Oct rule.
+6. **A line the server won't sell (a retired service or part): "This job
+   can't be paid here yet: [reason]. Change it in the job's Work and
+   parts.", with Take payment greyed**, so the card is never taken first.
+   Any refusal after the card step adds "No sale was recorded: if the card
+   machine took the payment, reverse it on the machine." *Pattern:* the
+   work-not-finished message and its reversal advice (fresh re-review).
 
 ## Decided here, for Jack to overrule
 

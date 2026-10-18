@@ -66,7 +66,7 @@ function stubServer(employee) {
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
-    if (u.pathname === '/api/sale-documents/40/due') return reply(200, DUE);
+    if (u.pathname === '/api/sale-documents/40/due') return DUE.error ? reply(400, DUE) : reply(200, DUE);
     return reply(404, { error: 'Not found' });
   };
 }
@@ -191,4 +191,19 @@ test('a customer group and an order discount come off, and the card is asked for
 test('a part out of stock is sold anyway, and says so', async () => {
   const { sale } = await openJobTill({ dueOver: { stock: { 7: 0 } } });
   assert.ok(has(await sale.findByText('Stock says 0 — sold anyway')));
+});
+
+// Fresh re-review, 18 Oct: the card must never be taken for a sale the server
+// would refuse, and if it is refused after the card step, say to reverse it.
+test('an order the server won\'t pay (a retired part) says why, and Take payment stays off', async () => {
+  const { sale } = await openJobTill({ dueOver: { error: 'Product 7 not found or inactive' } });
+  assert.ok(has(await sale.findByText('This job can’t be paid here yet: Product 7 not found or inactive. Change it in the job’s Work and parts.')));
+  assert.equal((await sale.findByRole('button', { name: /^Take payment/ })).disabled, true);
+});
+
+test('any refusal after the card step says no sale was recorded and to reverse the card', async () => {
+  const t = await openJobTill();
+  convertReply = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted' }) };
+  const dlg = await payByCard(t);
+  assert.ok(has(await dlg.findByText('This order is already converted. No sale was recorded: if the card machine took the payment, reverse it on the machine.')));
 });

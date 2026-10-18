@@ -306,6 +306,7 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
         ) : null}
         {paid ? <p className="m-0 text-sm font-semibold">This job’s order is already paid.</p> : null}
         {cancelled ? <p className="m-0 text-sm font-semibold">This job’s order was cancelled, so there’s nothing to pay here.</p> : null}
+        {order && order.status === 'open' && dueQuery.error instanceof ApiError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">{`This job can’t be paid here yet: ${dueQuery.error.message}. Change it in the job’s Work and parts.`}</p> : null}
         {order && order.status === 'open' && !payable ? <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">The work isn’t finished, so this job can’t be paid yet.</p> : null}
         {order && order.status === 'open' && inShop ? (
           <button

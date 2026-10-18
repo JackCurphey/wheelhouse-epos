@@ -361,6 +361,20 @@ export function register(route) {
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
     const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+    // Paying re-checks every line (a retired service or product is refused),
+    // so the same check here keeps the till from taking a card payment for a
+    // sale the server would then refuse.
+    for (const it of items) {
+      try {
+        await loadDocumentLine({
+          lineType: it.line_type, productId: it.product_id, qty: it.qty, unitPrice: it.unit_price,
+          name: it.name, serviceId: it.service_id, minutes: it.minutes,
+        }, { checkStock: false });
+      } catch (err) {
+        if (err instanceof ValidationError) return badRequest(res, err.message);
+        throw err;
+      }
+    }
     const subtotal = items.reduce((sum, it) => sum + Number(it.unit_price) * it.qty, 0);
     const group = await resolveGroupDiscount(doc.customer_id, subtotal);
     const discount = Number(doc.discount) || 0;

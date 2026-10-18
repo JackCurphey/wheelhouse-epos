@@ -24,3 +24,14 @@ The till SHALL ask the server for the amount due on a job's order, the order's a
 #### Scenario: A discount
 - **WHEN** Maya Patel is in Blue Light (10%) and her order has £2.00 off
 - **THEN** the till shows both discounts and asks the card machine for the amount due, not the lines' sum
+
+### Requirement: The till never takes a card for a sale the server would refuse
+If the server won't pay a job's order (a retired service or product on it), the till SHALL say why, "This job can't be paid here yet: [reason]. Change it in the job's Work and parts.", and keep Take payment greyed. A refusal after the card step SHALL add "No sale was recorded: if the card machine took the payment, reverse it on the machine."
+
+#### Scenario: A retired part
+- **WHEN** a part on the order has been retired
+- **THEN** the till says why and Take payment stays greyed
+
+#### Scenario: Paid in another tab
+- **WHEN** the card is approved but the order was already paid elsewhere
+- **THEN** the till says no sale was recorded and to reverse the card on the machine

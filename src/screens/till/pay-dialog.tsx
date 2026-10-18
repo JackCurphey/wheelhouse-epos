@@ -71,6 +71,7 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
       if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
+      else if (job && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
       else setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {
       setSaving(false);

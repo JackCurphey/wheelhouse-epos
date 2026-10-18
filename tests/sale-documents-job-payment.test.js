@@ -62,3 +62,16 @@ test('paying a job\'s order sells past zero stock when asked, for the amount due
     await deleteTestShop(shop.id);
   }
 });
+
+test('the amount due refuses an order whose product was retired, so the card is never taken for a sale that would be refused', async () => {
+  const { req, shop, job, product } = await setUp();
+  try {
+    const retired = await req(`/api/products/${product.id}`, { method: 'DELETE' });
+    assert.ok(retired.status < 300, JSON.stringify(retired.body));
+    const due = await req(`/api/sale-documents/${job.orderId}/due`);
+    assert.equal(due.status, 400, JSON.stringify(due.body));
+    assert.match(due.body.error, /not found or inactive/);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
