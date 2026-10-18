@@ -264,7 +264,7 @@ Save job SHALL create the job with what the form holds and, when work was chosen
 - **THEN** the form says "Give the job a title, and choose a customer or turn on New bike build."
 
 ### Requirement: Staff can open a job's menu, summary and overview from the diary
-Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shift+F10, SHALL open "Job actions" with Open job and View overview; holding the right mouse button SHALL open the overview straight away. Resting the mouse on a job for about 0.6 seconds (at once when motion is reduced) SHALL show its summary. The summary and View overview SHALL show the job, customer and bike, the notes, the work and parts, and the cost.
+Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shift+F10, SHALL open "Job actions" with Open job and View overview, or on a booking request "Accept or decline" (opening its request pop-up, Jack, 18 Oct) and View overview; holding the right mouse button SHALL open the overview straight away. Resting the mouse on a job for about 0.6 seconds (at once when motion is reduced) SHALL show its summary. The summary and View overview SHALL show the job, customer and bike, the notes, the work and parts, and the cost.
 
 #### Scenario: View overview
 - **WHEN** staff right-click Maya Patel's Trek Domane AL 3 (WH-1042, Standard service) and choose View overview
@@ -277,6 +277,10 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 #### Scenario: From the keyboard
 - **WHEN** staff press Shift+F10 on a job, move with the arrow keys and press Escape
 - **THEN** the menu opens on Open job, moves to View overview, closes, and focus returns to the job
+
+#### Scenario: A booking request
+- **WHEN** staff right-click Sam Reed's booking request and choose "Accept or decline"
+- **THEN** its request pop-up opens, with Accept
 
 ### Requirement: "Waiting for you" lists what customers are waiting on staff for
 "Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer and the services in order; a change request SHALL also carry where the customer wants it.
