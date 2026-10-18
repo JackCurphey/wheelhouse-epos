@@ -379,6 +379,9 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
             <DialogTitle id="delete-job-title">{`Delete ${job?.title ?? 'this job'}?`}</DialogTitle>
             <span className="text-[13px] text-[var(--wh-muted)]">{[job?.reference, job?.customerName, job?.bikeLabel].filter(Boolean).join(' · ')}</span>
           </div>
+          <button type="button" aria-label="Close" onClick={() => setDeleting(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
         </DialogHeader>
         <DialogBody><p className="m-0 text-sm">The job, its diary time and its files and photos are removed. This can’t be undone.</p></DialogBody>
         <DialogFooter className="flex justify-between gap-2.5">
@@ -392,6 +395,9 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
             <DialogTitle id="delete-blocked-title">Settle up first</DialogTitle>
             <span className="text-[13px] text-[var(--wh-muted)]">{`Before ${[job?.title, job?.reference].filter(Boolean).join(' · ')} can be deleted`}</span>
           </div>
+          <button type="button" aria-label="Close" onClick={() => setDeleting(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-2 text-sm">
           <p className="m-0">Deleting it now would lose what’s still open:</p>

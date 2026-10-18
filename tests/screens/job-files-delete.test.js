@@ -172,5 +172,9 @@ test('if the server says settle up first, the page says so', async () => {
   answer = { status: 409, ok: false, json: async () => ({ error: 'Settle up first: refund what was paid and hand the bike back, then delete.', code: 'settle_first', paid: true, inShop: false }) };
   fireEvent.click(await page.findByRole('button', { name: 'Delete job' }));
   fireEvent.click(within(await ui.findByRole('dialog', { name: 'Delete Brake service?' })).getByRole('button', { name: 'Delete job' }));
-  assert.ok(has(await ui.findByRole('dialog', { name: 'Settle up first' })));
+  // It names what the server said is open: here, money paid, not the bike.
+  const box = within(await ui.findByRole('dialog', { name: 'Settle up first' }));
+  assert.ok(has(box.queryByText('Paid on its order')));
+  assert.ok(has(box.queryByText('Refund what was paid — then delete.')));
+  assert.equal(has(box.queryByText('Bike in the shop')), false);
 });

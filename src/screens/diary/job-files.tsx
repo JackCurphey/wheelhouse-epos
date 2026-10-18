@@ -73,11 +73,11 @@ export function JobFiles({ jobId }: { jobId: number }) {
   const photos = list.filter(isPhoto);
   const others = list.filter((a) => !isPhoto(a));
   return (
-    <section aria-labelledby="job-files" className="flex flex-col gap-2">
+    <section aria-labelledby="job-files" className="flex flex-col gap-2 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 pt-2.5 pb-3">
       <div className="flex items-center justify-between gap-2">
         <h3 id="job-files" className="m-0 text-sm font-bold">Files and photos</h3>
         {/* A file input behind the button: on a tablet or phone it offers the camera too. */}
-        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold">
+        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]">
           {busy ? 'Adding…' : 'Add file or photo'}
           <input ref={input} type="file" className="sr-only" disabled={busy} aria-label="Add file or photo" onChange={(e) => void add(e.target.files?.[0])} />
         </label>
@@ -99,7 +99,7 @@ export function JobFiles({ jobId }: { jobId: number }) {
       ) : null}
       {others.map((a) => (
         <div key={a.id} className="flex min-h-11 items-center gap-2.5 border-t border-[var(--wh-border)] text-sm">
-          <a href={url(a)} download={a.originalName} className="min-w-0 grow truncate underline underline-offset-2">{a.originalName}</a>
+          <a href={url(a)} download={a.originalName} className="flex min-h-11 min-w-0 grow items-center truncate underline underline-offset-2">{a.originalName}</a>
           <span className="shrink-0 text-[var(--wh-muted)]">{`· ${sizeText(a.sizeBytes)}`}</span>
           {a.fromCustomer ? <span className="shrink-0 text-xs text-[var(--wh-muted)]">From the customer</span> : null}
           <button type="button" aria-label={`Remove ${a.originalName}`} onClick={() => setRemoving(a)} className={REMOVE}>Remove</button>

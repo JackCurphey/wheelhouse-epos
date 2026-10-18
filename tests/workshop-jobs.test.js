@@ -173,6 +173,38 @@ test('a job whose order is paid is not deleted: settle up first', async () => {
   }
 });
 
+// Fresh review: a job that ever had a quote couldn't be deleted (its quotes
+// pointed at it), so the page showed a database error.
+test('a job with a quote is deleted, its quote with it', async () => {
+  const { cookie, shop, mechanicId } = await newShop();
+  try {
+    const created = await createJob(cookie, mechanicId);
+    const quote = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Bleed brakes', unitAmount: 20 }] } });
+    assert.equal(quote.status, 201, JSON.stringify(quote.body));
+    const removed = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`, { method: 'DELETE' });
+    assert.equal(removed.status, 200, JSON.stringify(removed.body));
+    const left = await runWithShop(shop.id, () => prepare('SELECT count(*)::int AS n FROM workshop_quotes WHERE workshop_job_id = ?').get(created.body.id));
+    assert.equal(left.n, 0);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('any paid order linked to the job counts, not just the first found', async () => {
+  const { cookie, shop, mechanicId } = await newShop();
+  try {
+    const created = await createJob(cookie, mechanicId);
+    await runWithShop(shop.id, async () => {
+      await prepare("INSERT INTO sale_documents (kind, subtotal, discount, total, note, title, workshop_job_id, status, updated_at) VALUES ('order', 0, 0, 0, '', 'Paid one', ?, 'converted', now())").run(created.body.id);
+    });
+    const removed = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`, { method: 'DELETE' });
+    assert.equal(removed.status, 409);
+    assert.equal(removed.body.paid, true);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('deleting a job that does not exist is a 404, not a crash', async () => {
   const { cookie, shop } = await newShop();
   try {
