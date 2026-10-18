@@ -417,32 +417,6 @@ A save from the old app's job form SHALL keep a customer's change request and it
 - **WHEN** staff cancel a booking whose customer asked to move it
 - **THEN** no request and no held time remain
 
-### Requirement: The old app's Workshop diary shows what is waiting
-The old app's Workshop diary SHALL show a "Waiting for you ([n])" column, oldest first, each card with its kind, the customer and job number, the services, when (or the move, naming a new mechanic) and how long ago it arrived, or "Nothing waiting". It SHALL check for new items every minute without a click, and stop checking at logout. Clicking a card SHALL jump to the job's week and highlight it.
-
-#### Scenario: Arrival wording
-- **WHEN** a change request from Wednesday 7 October at 10:00 to Friday 9 October at 14:00 arrived 40 minutes ago
-- **THEN** its card reads "Wed 7 Oct 10:00 → Fri 9 Oct 14:00" and "Arrived 40 minutes ago"
-
-#### Scenario: A move to another mechanic
-- **WHEN** the same request also moves the job to Jo
-- **THEN** the card reads "Wed 7 Oct 10:00 → Fri 9 Oct 14:00 with Jo"
-
-#### Scenario: A new booking arrives
-- **WHEN** a customer books online while the old diary is open
-- **THEN** the card appears within a minute without a click
-
-### Requirement: The old app answers what is waiting in a review pop-up
-In the old app a job that is waiting SHALL open a review pop-up headed "New online booking", "Change request" or "Cancelled by customer" with the job number, showing the customer's answers grouped under each service, their photos and notes, with Open full job and either Accept and Decline (a new booking's Decline asking first) or Seen. A diary drag on a job someone else changed SHALL be refused and the diary reload; marking such a job complete from its form SHALL be refused and the form close.
-
-#### Scenario: A heading
-- **WHEN** staff open the change request for WH-1052
-- **THEN** the pop-up is headed "Change request · WH-1052"
-
-#### Scenario: An old copy
-- **WHEN** staff drag a job someone else has changed since the diary loaded
-- **THEN** the move is refused and the diary reloads
-
 ### Requirement: Each weekday can have its own opening hours
 The server SHALL accept which weekdays are open and each open day's hours, on the hour (no screen sets a day's own hours yet); a day without its own hours SHALL use the usual hours. A new shop SHALL be open every day, 09:00 to 18:00. Changing only the usual hours SHALL keep a day's own hours. Hours that close before they open SHALL be refused with "Closing time must be after opening time". A staff job outside a day's own hours SHALL be refused naming that day's hours.
 
@@ -862,3 +836,29 @@ On a phone, each "By mechanic" column SHALL be at least 96 pixels wide; when the
 #### Scenario: Six mechanics on a 360px phone
 - **WHEN** a 360-pixel phone shows By mechanic for six mechanics
 - **THEN** each column is at least 96 pixels wide, the diary area swipes sideways, and the page itself doesn't
+
+### Requirement: The old app's Workshop tab opens the new diary
+The old app's Workshop tab, and any old `#workshop` address, SHALL open the new diary at `/workshop/diary` (Jack, 18 Oct, `docs/decisions/2026-10-18-retire-old-diary.md`). The old job form, still opened from an order, SHALL list the shop's mechanics without the diary having been opened first.
+
+#### Scenario: An old bookmark
+- **WHEN** staff open the old app at `#workshop`
+- **THEN** the new diary opens at `/workshop/diary`
+
+#### Scenario: The tab
+- **WHEN** staff click Workshop in the old app's top bar
+- **THEN** the new diary opens
+
+#### Scenario: A job opened from its order
+- **WHEN** staff open an order's workshop job with "View / edit workshop job"
+- **THEN** the job form's mechanic list has the shop's mechanics
+
+### Requirement: The old job form refuses a save on a job changed elsewhere
+The old job form, opened from an order, SHALL refuse a save or "Mark complete" on a job someone else changed after it opened, say "This job changed while you were looking at it." and close (kept from the retired review pop-up requirement, which also said this).
+
+#### Scenario: Marking complete
+- **WHEN** staff press "Mark complete" on a job someone else saved after the form opened
+- **THEN** it says "This job changed while you were looking at it." and the form closes
+
+#### Scenario: Saving
+- **WHEN** staff save a job someone else saved after the form opened
+- **THEN** it says "This job changed while you were looking at it." and the form closes
