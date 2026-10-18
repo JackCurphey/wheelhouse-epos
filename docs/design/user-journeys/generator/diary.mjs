@@ -3484,6 +3484,60 @@ const menuPendingPhoneBoard = () => phoneDiary({ day: PENDING_DIARY.day, highlig
     body: `<div role="menu" aria-label="Job actions" style="display: flex; flex-direction: column; gap: 4px">${touchMenuItems('phone', null, PENDING_MENU('phone'))}</div><p style="margin: 0; font-size: 13px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</p>` }),
 });
 
+// A job's files and deleting a job (Jack, 18 Oct,
+// docs/decisions/2026-10-18-attachments-and-delete.md): "Files and photos"
+// under Notes, then "Delete job" (outlined red). Unknown files stay as
+// bracketed placeholders; nothing here is real customer data.
+function filesSection(size) {
+  const touch = size !== 'desktop';
+  const thumb = (label, from) => `<figure style="margin: 0; display: flex; flex-direction: column; gap: 4px; width: ${touch ? 96 : 88}px">
+<button type="button" aria-label="Open ${esc(label)} larger" style="width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.mutedBg}; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-family: inherit; font-size: 12px">[photo]</button>
+${from ? `<figcaption style="font-size: 12px; color: ${C.muted}">From the customer</figcaption>` : ''}
+<button type="button" style="align-self: flex-start; min-height: ${touch ? 44 : 32}px; padding: 0 2px; border: 0; background: transparent; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.danger}; text-decoration: underline; text-underline-offset: 2px">Remove</button>
+</figure>`;
+  const fileRow = `<div style="display: flex; align-items: center; gap: 10px; min-height: 44px; border-top: 1px solid ${C.border}"><span style="flex-grow: 1; font-size: 14px">[file name].pdf <span style="color: ${C.muted}">· [n] KB</span></span><button type="button" style="min-height: ${touch ? 44 : 32}px; padding: 0 2px; border: 0; background: transparent; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.danger}; text-decoration: underline; text-underline-offset: 2px">Remove</button></div>`;
+  return `<section aria-labelledby="jp-files-${size}" style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 id="jp-files-${size}" style="margin: 0; font-size: 15px; font-weight: 700">Files and photos</h2>${button('Add file or photo', { variant: 'default' })}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">${thumb('the customer’s photo', true)}${thumb('a photo', false)}</div>
+${fileRow}
+</section>`;
+}
+// Jack, 18 Oct (changing answer 2): "Delete job" sits small at the left of the
+// page's bottom bar, beside a shorter "Book in", so it is always in view.
+const deleteJobButton = (size) => `<a href="job-delete-confirm${size === 'phone' ? '-phone' : ''}.dc.html" style="flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.danger}; background: transparent; color: ${C.danger}; font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap">Delete job</a>`;
+function jobPageWithFiles(size) {
+  const page = screens['job-overview'][size];
+  // Straight after the Notes panel (its checklist row closes it).
+  const notesEnd = '0 of 10 done · 0 notes</span>\n</button>\n</div>';
+  if (page.split(notesEnd).length !== 2) throw new Error(`job-overview ${size}: the end of Notes not found`);
+  // On a computer the Notes panel sits in the right-hand column; the files
+  // go inside it, under the checklist, so they read as under Notes.
+  let out = page.replace(notesEnd, `${notesEnd}\n${size === 'phone' ? filesSection(size) : `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px">${filesSection(size)}</div>`}`);
+  const bookIn = `<a href="job-book-in-${size}.dc.html" style="display: flex; width: 100%;`;
+  if (out.split(bookIn).length !== 2) throw new Error(`job-overview ${size}: Book in not found`);
+  out = out.replace(bookIn, `${deleteJobButton(size)}<a href="job-book-in-${size}.dc.html" style="display: flex; flex: 1 1 auto; min-width: 0;`);
+  if (size === 'phone') {
+    const bar = 'display: flex; flex-direction: column; gap: 8px; border-top: 1px solid';
+    if (out.split(bar).length !== 2) throw new Error('job-overview phone: bottom bar not found');
+    out = out.replace(bar, 'display: flex; flex-direction: row; gap: 8px; border-top: 1px solid');
+    // Drawn scrolled down to Notes, as the page would be after scrolling.
+    const main = '<main data-scroll="page" style="';
+    out = out.replace(main, `${main}overflow: hidden !important; `).replace(/(<main data-scroll="page" style="[^"]*">)/, '$1<div style="display: flex; flex-direction: column; gap: 10px; margin-top: -500px">').replace('</main>', '</div></main>');
+  }
+  return out;
+}
+function deleteConfirm(size) {
+  return `${dialogHeader('Delete Standard service?', `job-files-${size}.dc.html`, 'WH-1042 · Maya Patel · Trek Domane AL 3', 'del-job-title', size)}
+${dialogBody(note('The job, its diary time and its files and photos are removed. This can’t be undone.', 14))}
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Keep the job', { variant: 'ghost', href: `job-files-${size}.dc.html` })}${button('Delete job', { variant: 'danger', href: `diary-${size}.dc.html` })}</div>`;
+}
+function deleteBlocked(size) {
+  const fact = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; min-height: 40px; align-items: center; border-top: 1px solid ${C.border}; font-size: 14px"><span>${esc(k)}</span><span style="font-weight: 600">${v}</span></div>`;
+  return `${dialogHeader('Settle up first', `job-files-${size}.dc.html`, 'Before Standard service · WH-1042 can be deleted', 'del-job-blocked-title', size)}
+${dialogBody(`${note('Deleting it now would lose what’s still open:', 14)}<div style="display: flex; flex-direction: column">${fact('Paid on its order', `<span style="font-family: ${MONO}">[£ paid]</span>`)}${fact('Bike in the shop', 'Trek Domane AL 3')}</div>${note('Refund what was paid and hand the bike back — then delete.', 14)}`)}
+<div style="display: flex; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('OK', { variant: 'default', href: `job-files-${size}.dc.html` })}</div>`;
+}
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
@@ -3502,6 +3556,11 @@ export function oldDiaryFeatureDrawings() {
     'diary-menu-pending': menuPendingBoard(),
     'diary-menu-pending-tablet': menuPendingTabletBoard(),
     'diary-menu-pending-phone': menuPendingPhoneBoard(),
+    'job-files': jobPageWithFiles('desktop'),
+    'job-files-phone': jobPageWithFiles('phone'),
+    'job-delete-confirm': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteConfirm('desktop'), { maxWidth: 520, labelledby: 'del-job-title' }),
+    'job-delete-blocked': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteBlocked('desktop'), { maxWidth: 560, labelledby: 'del-job-blocked-title' }),
+    'job-delete-confirm-phone': dialogOverlay(jobPageWithFiles('phone'), PW, PH, deleteConfirm('phone'), { pad: 16, maxWidth: 360, labelledby: 'del-job-title' }),
     'diary-shared-queue': sharedQueueBoard(),
     'diary-stretch-tablet': stretchTabletBoard(),
     'diary-stretch-phone': stretchPhoneBoard(),
