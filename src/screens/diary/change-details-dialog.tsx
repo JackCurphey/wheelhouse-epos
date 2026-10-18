@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
@@ -15,9 +15,12 @@ import { jobRefusalText } from './refusal-words.ts';
  * changes Workshop day decision 32: the page itself still shows the mechanic
  * as plain text, and dragging in the Day view still works.
  *
- * Saving sends every field and the version the page saw. The bike always
- * goes too (null when there is none): the server keeps a field that isn't
- * sent, so a new customer would otherwise keep the old customer's bike.
+ * Saving sends the fields and the version the pop-up opened with (not a
+ * later one the page reloaded, which would let a colleague's change be
+ * overwritten). The customer and bike go only when they change, so a bike or
+ * customer since removed doesn't refuse every save; a new customer always
+ * sends the bike (none when there is none), since the server keeps a field
+ * that isn't sent. Times go as text, empty for none (fresh review).
  */
 type Person = { id: number; name: string; active?: boolean };
 type Customer = { id: number; name: string; email?: string | null; phone?: string | null };
@@ -56,6 +59,10 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
   const [mech, setMech] = useState<number | null>(job.mechanicId ?? null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [version] = useState(job.version);
+  const [listOpen, setListOpen] = useState(false);
+  // The customer whose bikes are wanted now, so a slow reply for another is ignored.
+  const wantBikesOf = useRef<number | null>(null);
 
   const mechanics = useQuery({ queryKey: ['mechanics'], queryFn: () => apiGet<Person[]>('/api/employees?role=mechanic') });
   const people = (mechanics.data ?? []).filter((m) => m.active !== false);
@@ -75,26 +82,27 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
   function chooseCustomer(c: Customer) {
     setCustomer(c);
     setFinding(false);
+    setListOpen(false);
     setSearch('');
     // A new customer's only bike is chosen for them once their bikes arrive (as New job).
     setBikeId(null);
+    wantBikesOf.current = c.id;
     void queryClient.fetchQuery({
       queryKey: ['customer-bikes', c.id],
       queryFn: () => apiGet<Bike[]>(`/api/customers/${c.id}/bikes`),
-    }).then((list) => { if (list.length === 1) setBikeId(list[0].id); }).catch(() => {});
+    }).then((list) => { if (wantBikesOf.current === c.id && list.length === 1) setBikeId(list[0].id); }).catch(() => {});
   }
+  const customerChanged = (customer?.id ?? null) !== (job.customerId ?? null);
 
   async function save() {
     setSaving(true);
     setError(null);
-    const body: Record<string, unknown> = {
-      title: title.trim(),
-      customerId: customer?.id ?? null,
-      bikeId: customer ? bikeId : null,
-      ...(manyDays ? {} : { jobDate: date, startTime: start || null, endTime: start ? end || null : null }),
-      mechanicId: mech,
-      version: job.version,
-    };
+    const body: Record<string, unknown> = { title: title.trim() };
+    if (customerChanged) body.customerId = customer?.id ?? null;
+    if (customerChanged || bikeId !== (job.bikeId ?? null)) body.bikeId = customer ? bikeId : null;
+    if (!manyDays) Object.assign(body, { jobDate: date, startTime: start, endTime: start ? end : '' });
+    body.mechanicId = mech;
+    body.version = version;
     try {
       await apiMutate(`/api/workshop-jobs/${job.id}`, body, { method: 'PUT' });
       await Promise.all([
@@ -104,14 +112,19 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
       ]);
       onClose();
     } catch (err) {
-      setError(jobRefusalText(err));
+      if (err instanceof ApiError && err.code === 'stale') {
+        setError('This job changed while you were looking at it. Close this and open it again to see the latest.');
+        void queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] });
+      } else {
+        setError(jobRefusalText(err));
+      }
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="change-details-title" className="max-md:h-full max-md:max-h-none max-md:max-w-none max-md:rounded-none md:max-w-[760px]">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="change-details-title" className="max-md:flex max-md:h-full max-md:max-h-none max-md:max-w-none max-md:flex-col max-md:rounded-none md:max-w-[760px]">
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="change-details-title">Change details</DialogTitle>
@@ -123,7 +136,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
           </svg>
         </button>
       </DialogHeader>
-      <DialogBody className="grid gap-6 md:grid-cols-2">
+      <DialogBody className="grid content-start gap-6 max-md:min-h-0 max-md:grow max-md:overflow-y-auto md:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="cd-title" className={LABEL}>Job title</label>
@@ -135,15 +148,22 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
               <span className={LABEL}>Customer</span>
               <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5">
                 <span className="truncate text-sm">{customer.name}</span>
-                <Button variant="ghost" size="sm" onClick={() => setFinding(true)}>Change customer</Button>
+                <Button variant="ghost" className="min-h-11" onClick={() => setFinding(true)}>Change customer</Button>
               </div>
             </div>
           ) : (
-            <div className="relative flex flex-col gap-1.5">
+            <div
+              className="relative flex flex-col gap-1.5"
+              // As New job: leaving the search closes its list, and Escape
+              // closes the list (not the pop-up) while it shows.
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setListOpen(false); }}
+              onKeyDown={(e) => { if (e.key === 'Escape' && listOpen && found.isSuccess) { e.preventDefault(); e.stopPropagation(); setListOpen(false); } }}
+            >
               <label htmlFor="cd-find" className={LABEL}>Find customer by name, phone or email</label>
-              <input id="cd-find" type="search" value={search} autoComplete="off" onChange={(e) => { setSearch(e.target.value); setFinding(true); }} placeholder="Search by name, phone or email" className={INPUT} />
-              <span role="status" className="sr-only">{found.isSuccess ? `${found.data.length} customer${found.data.length === 1 ? '' : 's'} found.` : ''}</span>
-              {found.isSuccess ? (
+              {/* It takes the focus when it appears, so the place isn't lost (fresh review). */}
+              <input id="cd-find" type="search" autoFocus value={search} autoComplete="off" onChange={(e) => { setSearch(e.target.value); setFinding(true); setListOpen(true); }} onFocus={() => setListOpen(true)} placeholder="Search by name, phone or email" className={INPUT} />
+              <span role="status" className="sr-only">{listOpen && found.isSuccess ? `${found.data.length} customer${found.data.length === 1 ? '' : 's'} found.` : ''}</span>
+              {listOpen && found.isSuccess ? (
                 <div className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-60 flex-col gap-1 overflow-y-auto rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1 shadow-[0_8px_24px_var(--wh-backdrop)]">
                   {found.data.map((c) => (
                     // Pressing keeps the focus in the search (Safari, iPad), as New job.
@@ -167,7 +187,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
         </div>
         <div className="flex min-w-0 flex-col gap-2.5">
           {manyDays ? (
-            <p className="m-0 text-sm text-[var(--wh-muted)]">Each day’s date and time are changed in the diary.</p>
+            <p className="m-0 text-sm text-[var(--wh-muted)]">Each day’s date and time, and the mechanic after day 1, are changed in the diary.</p>
           ) : (
             <>
               <div className="flex flex-col gap-1.5">
@@ -187,7 +207,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
             </>
           )}
           <div className="flex flex-col gap-1.5">
-            <span id="cd-mech" className={LABEL}>Mechanic</span>
+            <span id="cd-mech" className={LABEL}>{manyDays ? 'Mechanic, day 1' : 'Mechanic'}</span>
             <div role="radiogroup" aria-labelledby="cd-mech" className="flex flex-wrap gap-1.5">
               {people.map((p) => <Pill key={p.id} on={mech === p.id} onClick={() => setMech(p.id)}>{p.name}</Pill>)}
               <Pill on={mech === null} onClick={() => setMech(null)}>Shared queue</Pill>
@@ -197,8 +217,8 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
         {error ? <p role="alert" className="m-0 text-sm text-[var(--wh-danger)] md:col-span-2">{error}</p> : null}
       </DialogBody>
       <DialogFooter className="flex justify-between gap-2.5">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={saving || !title.trim()} onClick={save}>Save changes</Button>
+        <Button variant="ghost" className="min-h-11" onClick={onClose}>Cancel</Button>
+        <Button className="min-h-11" disabled={saving || !title.trim()} onClick={save}>Save changes</Button>
       </DialogFooter>
     </Dialog>
   );

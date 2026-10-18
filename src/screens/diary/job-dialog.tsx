@@ -264,7 +264,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                     {!ended && (stageActions(job).length || job.custodyState !== 'collected') ? (
                       <Button size="sm" className="self-start" disabled={sending} onClick={addDay}>Add another day</Button>
                     ) : null}
-                    {!finished ? <Button className="self-start md:hidden" onClick={() => setChanging(true)}>Change details</Button> : null}
+                    {!finished ? <Button className="min-h-11 self-start md:hidden" onClick={() => setChanging(true)}>Change details</Button> : null}
                     {/* Decision 50: a toggle pill. Turning it on books the bike in; it can't be turned back off here. */}
                     {(() => {
                       const here = job.custodyState !== 'expected';

@@ -11,6 +11,7 @@ import { deleteTestShop } from '../helpers/testShop.js';
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
 let jobId: number;
+let untimedId: number;
 const TUE = '2026-10-13';
 
 test.describe.configure({ timeout: 90_000 });
@@ -25,6 +26,9 @@ test.beforeAll(async () => {
   const made = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Brake service', jobDate: TUE, startTime: '10:00', endTime: '11:00', mechanicId: alex } });
   expect(made.status, JSON.stringify(made.body)).toBe(201);
   jobId = made.body.id;
+  const untimed = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Puncture repair', jobDate: TUE, mechanicId: null } });
+  expect(untimed.status, JSON.stringify(untimed.body)).toBe(201);
+  untimedId = untimed.body.id;
 });
 
 test.afterAll(async () => {
@@ -73,4 +77,28 @@ test('on a phone, Change details sits in the job\'s details box and the pop-up f
   } finally {
     await ctx.close();
   }
+});
+
+// Fresh review: the real server refused a job with no time ("Start time must
+// be in HH:MM format"), and an end time cleared to get the automatic hour.
+test('a job with no set time saves; clearing the end gives it an hour', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}`);
+  await page.getByRole('group', { name: 'No time' }).getByRole('button', { name: /Puncture repair/ }).click();
+  const jobPage = page.getByRole('dialog', { name: /Puncture repair/ });
+  await jobPage.getByRole('button', { name: 'Change details' }).click();
+  let dlg = page.getByRole('dialog', { name: 'Change details' });
+  await dlg.getByLabel('Job title').fill('Puncture and tube');
+  await dlg.getByRole('button', { name: 'Save changes' }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(async () => (await staff(`/api/workshop-jobs/${untimedId}`)).body.title).toBe('Puncture and tube');
+  // The page is named after the new title now.
+  await page.getByRole('dialog', { name: /Puncture and tube/ }).getByRole('button', { name: 'Change details' }).click();
+  dlg = page.getByRole('dialog', { name: 'Change details' });
+  await dlg.getByLabel('Start time').fill('15:00');
+  await dlg.getByRole('button', { name: 'Save changes' }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(async () => (await staff(`/api/workshop-jobs/${untimedId}`)).body.endTime).toBe('16:00');
 });

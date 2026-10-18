@@ -103,7 +103,9 @@ test('Change details opens filled in; Save changes sends every field with the ve
   fireEvent.change(dlg.getByLabelText('End time'), { target: { value: '12:00' } });
   fireEvent.click(dlg.getByRole('radio', { name: 'Jo Taylor' }));
   fireEvent.click(dlg.getByRole('button', { name: 'Save changes' }));
-  await waitFor(() => assert.deepEqual(puts(), [{ title: 'Brake bleed', customerId: 5, bikeId: 7, jobDate: '2026-10-06', startTime: '10:00', endTime: '12:00', mechanicId: 12, version: 3 }]));
+  // The customer and bike go only when they change (fresh review: a removed
+  // bike or customer would otherwise refuse every save).
+  await waitFor(() => assert.deepEqual(puts(), [{ title: 'Brake bleed', jobDate: '2026-10-06', startTime: '10:00', endTime: '12:00', mechanicId: 12, version: 3 }]));
   await waitFor(() => assert.equal(has(ui.queryByRole('dialog', { name: 'Change details' })), false));
 });
 
@@ -145,7 +147,7 @@ test('finished work offers no Change details', async () => {
 });
 
 test('a job over several days changes its date and times in the diary, not here', async () => {
-  const { ui, page, fireEvent, within } = await openChange({
+  const { ui, page, fireEvent, within, waitFor } = await openChange({
     parts: [
       { id: 21, position: 1, date: '2026-10-06', startTime: '10:00', endTime: '11:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
       { id: 22, position: 2, date: '2026-10-07', startTime: '10:00', endTime: '11:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
@@ -154,5 +156,42 @@ test('a job over several days changes its date and times in the diary, not here'
   fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
   const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
   assert.equal(has(dlg.queryByLabelText('Date')), false);
-  assert.ok(has(dlg.queryByText('Each day’s date and time are changed in the diary.')));
+  assert.ok(has(dlg.queryByText('Each day’s date and time, and the mechanic after day 1, are changed in the diary.')));
+  assert.ok(has(dlg.queryByText('Mechanic, day 1')));
+  fireEvent.click(dlg.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => assert.deepEqual(puts(), [{ title: 'Brake service', mechanicId: 11, version: 3 }]));
+});
+
+// Fresh review, 18 Oct.
+test('a job with no set time sends empty times, which the server reads as none', async () => {
+  const { ui, page, fireEvent, waitFor, within } = await openChange({ startTime: null, endTime: null });
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  fireEvent.click(dlg.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => assert.deepEqual([puts()[0]?.startTime, puts()[0]?.endTime], ['', '']));
+});
+
+test('a refusal because someone else changed the job says so and reloads it', async () => {
+  const { ui, page, fireEvent, within } = await openChange();
+  answer = { status: 409, ok: false, json: async () => ({ error: 'This job changed while you were looking at it. Reload and try again.', code: 'stale' }) };
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  const before = calls.filter((c) => c.url === '/api/workshop-jobs/1').length;
+  fireEvent.click(dlg.getByRole('button', { name: 'Save changes' }));
+  assert.ok(has(await dlg.findByText('This job changed while you were looking at it. Close this and open it again to see the latest.')));
+  assert.ok(calls.filter((c) => c.url === '/api/workshop-jobs/1').length > before);
+});
+
+test('Escape in the customer search closes its list, not the pop-up', async () => {
+  const { ui, page, fireEvent, within } = await openChange();
+  fireEvent.click((await page.findAllByRole('button', { name: 'Change details' }))[0]);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Change details' }));
+  fireEvent.click(dlg.getByRole('button', { name: 'Change customer' }));
+  const box = dlg.getByLabelText('Find customer by name, phone or email');
+  assert.ok(box === box.ownerDocument.activeElement, 'the search takes the focus');
+  fireEvent.change(box, { target: { value: 'Oli' } });
+  await dlg.findByRole('button', { name: /Oliver Chen/ });
+  fireEvent.keyDown(box, { key: 'Escape' });
+  assert.equal(has(dlg.queryByRole('button', { name: /Oliver Chen/ })), false);
+  assert.ok(has(ui.queryByRole('dialog', { name: 'Change details' })));
 });

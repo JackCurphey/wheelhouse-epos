@@ -304,14 +304,19 @@ silent:
 
 1. **Not offered for finished work**, which is frozen until reopened.
    *Pattern:* the notes, read-only on finished work (Jack, 15 Oct).
-2. **A job over several days changes its title, customer, bike and mechanic
-   here; each day's date and time are changed in the diary** ("Each day's
-   date and time are changed in the diary."). *Pattern:* moving a later
+2. **A job over several days changes its title, customer, bike and day 1's
+   mechanic here ("Mechanic, day 1"); each day's date and time, and later
+   days' mechanics, are changed in the diary.** *Pattern:* moving a later
    day on its own (decision 52).
 3. **A new customer's only bike is chosen for them**, and the old customer's
    bike is never sent. *Pattern:* New job.
 4. **The customer is shown with "Change customer"**, which opens the same
    search as New job. *Pattern:* New job's chosen customer.
+5. **A booking with a change request waiting shows no notice in Change
+   details.** Saving exactly the requested day, start and mechanic accepts
+   the request, as a diary drop does; any other save leaves it standing.
+   *Pattern:* the diary's drop (Jack, 8 Oct). For Jack to say whether the
+   pop-up should mention the waiting request.
 
 ## Decided here, for Jack to overrule
 

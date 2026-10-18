@@ -12,11 +12,11 @@ The job page SHALL offer "Change details" (Jack, 18 Oct, `docs/decisions/2026-10
 - **THEN** "Change details" sits in the job's details box, and its pop-up fills the screen
 
 ### Requirement: Change details saves every field safely
-"Save changes" SHALL send every field with the version the page saw, and the bike always (none when there is none), so a new customer never keeps the old customer's bike. A refusal SHALL show in plain words with the pop-up still open. A job over several days SHALL change its date and times in the diary, not here.
+"Save changes" SHALL send the title, date, times (empty for none) and mechanic with the version the pop-up opened with, and the customer and bike only when they change; a new customer SHALL always send the bike (none when there is none), so it never keeps the old customer's bike. A refusal SHALL show in plain words with the pop-up still open; one because someone else changed the job SHALL say so and reload it. A job over several days SHALL change its date, times and later days' mechanics in the diary; here its mechanic is day 1's.
 
 #### Scenario: Changing the end time and the mechanic
 - **WHEN** staff change the Brake service's end time from 11:00 to 12:00 and its mechanic from Alex Morgan to Jo Taylor, and save
-- **THEN** the save sends the title, customer, bike, date, 10:00, 12:00, Jo Taylor and the version
+- **THEN** the save sends the title, date, 10:00, 12:00, Jo Taylor and the version, and not the unchanged customer or bike
 
 #### Scenario: Another customer
 - **WHEN** staff change the customer to Oliver Chen, who has one bike
