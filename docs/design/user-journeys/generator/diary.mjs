@@ -1173,8 +1173,9 @@ ${days.map((d, i) => dayColumn(d, i)).join('')}
 // segmented switch (a tablist) rather than two separate buttons, so it reads
 // as a single control with two positions, distinct in shape from the date
 // arrows and the mechanic chips either side of it in the toolbar.
-function viewSwitch(active, size) {
-  const items = [['Week', `diary-${size}.dc.html`], ['Day', `diary-day-${size}.dc.html`]];
+// views: the month drawing (for Jack to approve, 18 Oct) adds 'Month'.
+function viewSwitch(active, size, views = ['Week', 'Day']) {
+  const items = [['Week', `diary-${size}.dc.html`], ['Day', `diary-day-${size}.dc.html`], ['Month', `diary-month-${size}.dc.html`]].filter(([t]) => views.includes(t));
   return `<div role="tablist" aria-label="Diary view" style="display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; box-sizing: border-box; min-height: 44px; padding: 3px; border-radius: 10px; background: ${C.mutedBg}">${items.map(([t, href]) => {
     const on = t === active;
     return `<a href="${href}" role="tab" aria-selected="${on}" style="min-height: ${size === 'desktop' ? 38 : 44}px; padding: 0 16px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; background: ${on ? C.panel : 'transparent'}; color: ${C.ink}; ${on ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.14);' : ''}">${t}</a>`;
@@ -1194,10 +1195,11 @@ const dateArrow = (dir, label) => `<button type="button" aria-label="${esc(label
 // mechanic diary, pick mode) shows the same text.
 function dateNav(activeView, size = 'desktop') {
   const isDay = activeView === 'Day';
-  const label = isDay ? 'Thursday 17 September' : '14–20 September 2026';
-  const unit = isDay ? 'day' : 'week';
+  const isMonth = activeView === 'Month';
+  const label = isDay ? 'Thursday 17 September' : isMonth ? 'September 2026' : '14–20 September 2026';
+  const unit = isDay ? 'day' : isMonth ? 'month' : 'week';
   return `<div style="display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0">${dateArrow('prev', `Previous ${unit}`)}
-<span style="min-width: ${isDay ? 146 : 164}px; text-align: center; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${esc(label)}</span>
+<span style="min-width: ${isDay ? 146 : isMonth ? 130 : 164}px; text-align: center; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${esc(label)}</span>
 ${dateArrow('next', `Next ${unit}`)}
 <button type="button" style="min-height: ${size === 'desktop' ? 36 : 44}px; padding: 0 10px; margin-left: 2px; border-radius: 6px; font-family: inherit; font-size: ${size === 'desktop' ? 13 : 14}px; font-weight: 600; border: 1px solid transparent; background: transparent; color: ${C.ink}">Today</button></div>`;
 }
@@ -1279,9 +1281,9 @@ const defaultNewJobHref = (size) => `new-job-pick-${size}.dc.html`;
 // dates sit together at the left, as one control (Jack, 16 Oct, the layout
 // review's item 1); one flex-grow spacer puts the people/New job cluster at
 // the right; nowrap — the desktop board holds all four groups on one line.
-function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeView = 'Week', newJob = null } = {}) {
+function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeView = 'Week', newJob = null, views } = {}) {
   const nj = newJob === 'active' ? newJobButtonActive() : newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch(activeView, size)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+  return row(`${viewSwitch(activeView, size, views)}<div style="width: 12px; flex-shrink: 0"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
 
@@ -3166,4 +3168,188 @@ export function signOffDrawings() {
   }).desktop;
   const setting = `<div style="width: 640px; box-sizing: border-box; padding: 20px; background: ${C.bg}">${a11ySettingRow('show-sign-off', 'Show who signed off to customers', 'Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.', false)}</div>`;
   return { popup, finished, setting };
+}
+
+// ---------- What only the old diary did, for Jack to approve ----------
+// Jack, 18 Oct (docs/decisions/2026-10-18-retire-old-diary.md item 2): the
+// old app's diary is retired, and what only it did is built into this one
+// instead, each piece drawn for Jack to approve first. The old app's way
+// (public/app.js before 78960ef) is followed where the new diary has no
+// pattern of its own. Desktop only, as decision 25 did while a design is
+// agreed. Jack approved all five as drawn on 18 Oct
+// (docs/decisions/2026-10-18-old-diary-features.md); not on the canvas yet.
+const MONTH_FIRST = { date: 31, inMonth: false }; // Mon 31 Aug: the week holding 1 Sep (a Tuesday)
+const MONTH_CHIPS = 3; // as the old diary: three jobs, then "+[n] more"
+const MONTH_WEEKS = 5; // 31 Aug to 4 Oct
+// Only the drawn week (14–20 Sep) has example jobs; every other day is empty
+// rather than filled with invented ones.
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const cellDayName = (c) => `${DAY_NAMES[c.idx % 7]} ${c.date} ${c.inMonth ? 'September' : c.date > 20 ? 'August' : 'October'}`;
+function monthDays() {
+  const out = [];
+  for (let i = 0; i < MONTH_WEEKS * 7; i++) {
+    const n = i; // day of September, 0 = 31 Aug
+    if (n < 1) out.push({ idx: i, date: MONTH_FIRST.date, inMonth: false });
+    else if (n > 30) out.push({ idx: i, date: n - 30, inMonth: false });
+    else out.push({ idx: i, date: n, inMonth: true, weekDay: n >= 14 && n <= 20 ? n - 14 : null });
+  }
+  return out;
+}
+// A booking request sits in the month as in the week (decision 12): Sam
+// Reed's pending request, Fri 18 Sep 10:00, purple, no mechanic yet.
+const PENDING_AS_JOB = () => ({ day: PENDING_DIARY.day, start: PENDING_DIARY.start, dur: PENDING_DIARY.dur, mech: '', key: 'pending', job: 'WH-request', svc: PENDING_DIARY.jobTitle, title: `${PENDING_DIARY.customer} · ${PENDING_DIARY.bike}`, detail: PENDING_DIARY.detail, href: 'request-new-desktop.dc.html' });
+const dayJobs = (d) => [...JOBS.filter((j) => j.day === d), ...(PENDING_DIARY.day === d ? [PENDING_AS_JOB()] : [])].sort((a, b) => a.start - b.start || a.mech.localeCompare(b.mech));
+function monthChip(j) {
+  const [bg, ink] = ST[j.key];
+  const [customer, bike] = customerBikeOf(j);
+  const strike = j.key === 'cancelled' ? 'text-decoration: line-through;' : '';
+  return `<a href="${j.href || 'job-overview-desktop.dc.html'}" title="${esc(hhmm(j.start))} · ${esc(bike)} · ${esc(j.svc)} · ${esc(customer)} · ${esc(stageOf(j))}" aria-label="${esc(hhmm(j.start))}, ${esc(bike)}, ${esc(j.svc)}, ${esc(customer)}, ${esc(stageOf(j))}" style="display: block; box-sizing: border-box; padding: 1px 5px; border-radius: 4px; border-left: 3px solid ${ink}; background: ${bg}; font-size: 12px; line-height: 16px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}"><strong style="font-weight: 700">${hhmm(j.start)}</strong> ${esc(bike)}</a>`;
+}
+function monthGrid({ moreOpen = null } = {}) {
+  const heads = DAYS.map(([name]) => `<div style="padding: 6px 8px; font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; background: ${C.panel}">${name}</div>`).join('');
+  const cells = monthDays().map((c) => {
+    const isToday = c.weekDay === TODAY;
+    const jobs = c.weekDay == null ? [] : dayJobs(c.weekDay);
+    const shown = jobs.slice(0, MONTH_CHIPS);
+    const more = jobs.length - shown.length;
+    const label = `${c.date}${isToday ? ' · Today' : ''}`;
+    return `<div style="position: relative; min-width: 0; box-sizing: border-box; padding: 4px 5px; display: flex; flex-direction: column; gap: 3px; background: ${isToday ? C.mutedBg : C.panel}; ${c.inMonth ? '' : 'opacity: 0.55;'}">
+<a href="diary-day-desktop.dc.html" aria-label="Open ${esc(cellDayName(c))} in the Day view" style="align-self: flex-start; font-size: 13px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}; text-decoration: none; line-height: 18px">${label}</a>
+${shown.map(monthChip).join('')}
+${more ? `<button type="button" aria-haspopup="dialog" style="align-self: flex-start; padding: 0 2px; border: 0; background: transparent; font-family: inherit; font-size: 12px; font-weight: 700; line-height: 16px; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 2px">+${more} more</button>` : ''}
+${moreOpen === c.weekDay && c.weekDay != null ? monthMorePopover(c.weekDay) : ''}
+</div>`;
+  }).join('');
+  return `<div role="grid" aria-label="Workshop diary, September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(${MONTH_WEEKS}, 104px); gap: 1px; background: ${C.border}; border: 1px solid ${C.border}; border-radius: 10px; overflow: visible">${heads}${cells}</div>`;
+}
+const MECH_NAME = { Alex: 'Alex Morgan', Jo: 'Jo Taylor' };
+// "+[n] more": the busy day's whole list, opening over the month from its cell (the old diary
+// opened a pop-up with the same rows: time, job, status, customer · bike,
+// mechanic). Clicking a row opens the job.
+function monthMorePopover(d) {
+  const [, date] = DAYS[d];
+  const rows = dayJobs(d).map((j) => {
+    const [customer, bike] = customerBikeOf(j);
+    return `<a href="${j.href || 'job-overview-desktop.dc.html'}" style="display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 10px; align-items: center; padding: 6px 8px; border-radius: 6px; text-decoration: none; color: ${C.ink}; border-top: 1px solid ${C.border}">
+<span style="font-family: ${MONO}; font-size: 13px; font-weight: 700">${hhmm(j.start)}</span>
+<span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)} · ${esc(j.svc)}</span>
+${statusBadge(j.key, stageOf(j))}
+<span></span><span style="grid-column: 2 / span 2; font-size: 12px; color: ${C.muted}">${esc(customer)} · ${esc(MECH_NAME[j.mech] || 'Booking request, no mechanic yet')}</span>
+</a>`;
+  }).join('');
+  return `<div role="dialog" aria-labelledby="month-more-title" style="position: absolute; left: 0; top: 0; width: 420px; z-index: 6; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 8px; display: flex; flex-direction: column; gap: 0">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 6px 8px"><h2 id="month-more-title" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 15px; font-weight: 700">${DAY_NAMES[d]} ${date} September</h2><button type="button" aria-label="Close" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${C.ink}">${icon('close', 18)}</button></div>
+${rows}
+<a href="diary-day-desktop.dc.html" style="padding: 8px 8px 2px; border-top: 1px solid ${C.border}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">Open this day in the Day view</a>
+</div>`;
+}
+const monthBoard = (opts = {}) => shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { activeView: 'Month', views: ['Week', 'Day', 'Month'], newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`${waitingColumn('desktop', -1)}${monthGrid(opts)}`, 16, 'align-items: flex-start')}`, 12));
+
+// Stretching a job: drag its bottom edge. Drawn mid-drag: Maya Patel's
+// WH-1042, 11:30–13:00, pulled down to 13:30 (15-minute steps, as the old
+// diary), with the new times beside the pointer.
+function stretchBoard() {
+  const j = JOBS.find((x) => x.job === 'WH-1042');
+  const was = { dur: j.dur, detail: j.detail };
+  const slotH = 29;
+  const newDur = 120;
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const bottom = top + (newDur / 30) * slotH - 4;
+  const handle = `<div aria-hidden="true" style="position: absolute; left: 3px; right: 3px; top: ${bottom - 7}px; height: 10px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; z-index: 4"><span style="width: 28px; height: 4px; border-radius: 2px; background: ${ST.scheduled[1]}"></span></div>`;
+  const label = `<div role="status" style="position: absolute; left: calc(100% + 6px); top: ${bottom - 14}px; z-index: 5; white-space: nowrap; box-sizing: border-box; padding: 5px 9px; border-radius: 6px; background: ${C.ink}; color: #ffffff; font-size: 13px; font-weight: 700; box-shadow: 0 6px 16px rgba(28,30,25,0.25)"><span style="font-family: ${MONO}">11:30–13:30</span> · 2 hours</div>`;
+  j.dur = newDur; j.detail = '11:30–13:30 · approved £111';
+  try {
+    return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'job', job: 'WH-1042' }, overlayFor: { day: TODAY, html: `${handle}${label}` } })}`, 16, 'align-items: flex-start')}
+${note('Drag the bottom edge of a job to make it longer or shorter, in 15-minute steps. It can’t go past closing time or shorter than 15 minutes.', 13)}`, 12));
+  } finally { Object.assign(j, was); }
+}
+
+// Changing a job's details after it is made: "Change details" on the job
+// page opens the New job form's fields, filled in. The old diary's "Edit job"
+// form had the same fields (title, date, start and end time, customer, bike,
+// mechanic). The mechanic is pills in the booking pop-up's style (decision
+// 62), with full names, as the job page's "Mechanic: Alex Morgan".
+function changeDetailsDialog() {
+  const mechs = [['Alex Morgan', 'A'], ['Jo Taylor', 'J'], ['Shared queue', 'group']];
+  const left = `<div style="display: flex; flex-direction: column; gap: 10px">
+${field('Job title', { value: 'Standard service', id: 'cd-title', hint: 'Shown on the diary block.' })}
+${field('Customer', { value: 'Maya Patel', id: 'cd-customer' })}
+${select('Bike', ['Trek Domane AL 3 · green'], 'cd-bike')}
+</div>`;
+  const right = `<div style="display: flex; flex-direction: column; gap: 10px">
+${field('Date', { value: 'Thu 17 Sep', id: 'cd-date' })}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">${field('Start time', { value: '11:30', id: 'cd-start' })}${field('End time', { value: '13:00', id: 'cd-end' })}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span id="cd-mech-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="cd-mech-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechs.map(([k, i]) => mechanicPill(k, i, k === 'Alex Morgan')).join('')}</div></div>
+</div>`;
+  return `${dialogHeader('Change details', 'job-overview-desktop.dc.html', 'Standard service · WH-1042', 'change-details-title')}
+<div style="padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px">${left}${right}</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: 'job-overview-desktop.dc.html' })}${button('Save changes', { variant: 'primary', href: 'job-overview-desktop.dc.html' })}</div>`;
+}
+const CHANGE_BTN = button('Change details', { variant: 'default' });
+function jobPageWithChangeButton() {
+  const page = screens['job-overview'].desktop;
+  const close = '<a href="diary-desktop.dc.html" aria-label="Close, back to the diary"';
+  if (!page.includes(close)) throw new Error('job-overview desktop: close button not found');
+  return page.replace(close, `<div style="display: flex; align-items: center; gap: 8px">${CHANGE_BTN}${close}`).replace(/(aria-label="Close, back to the diary"[\s\S]*?<\/a>)/, '$1</div>');
+}
+const changeDetailsBoard = () => dialogOverlay(jobPageWithChangeButton(), DW, DH, changeDetailsDialog(), { maxWidth: 760, labelledby: 'change-details-title' });
+
+// The right-click menu gains the old menu's three actions. Greyed out, with
+// the reason, when they can't be done yet (the old diary: "No order linked
+// to this job"). Accepting a booking opens its pop-up (Accept, Another time,
+// Decline), as the Waiting for you card does.
+function jobMenu(anchor, items) {
+  return `<div role="menu" aria-label="Job actions" style="position: absolute; left: ${anchor.left}px; top: ${anchor.top}px; width: 236px; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 5">
+${items.map((it) => (it === '-' ? `<div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>` : it.off
+    ? `<div role="menuitem" aria-disabled="true" style="display: flex; flex-direction: column; justify-content: center; min-height: 40px; padding: 2px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; color: ${C.muted}">${esc(it.label)}<span style="font-size: 12px; font-weight: 400">${esc(it.off)}</span></div>`
+    : `<a role="menuitem" href="${it.href}" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(it.label)}</a>`)).join('')}
+</div>`;
+}
+const menuBoard = (highlightJob, anchor, items) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob }))}${jobMenu(anchor, items)}</div>`;
+const menuJobBoard = () => menuBoard({ type: 'job', job: 'WH-1042' }, CONTEXT_MENU_ANCHOR, [
+  { label: 'Open job', href: 'job-overview-desktop.dc.html' },
+  { label: 'View overview', href: 'job-quick-overview-desktop.dc.html' },
+  '-',
+  { label: 'Open in the till', href: '#' },
+  { label: 'Print receipt', off: 'Not paid yet' },
+]);
+const menuPendingBoard = () => menuBoard({ type: 'pending' }, { left: 713, top: 268 }, [ // left of Friday's block, so it stays on the board
+  { label: 'Accept or decline', href: 'request-new-desktop.dc.html' },
+  { label: 'View overview', href: 'job-quick-overview-desktop.dc.html' },
+  '-',
+  { label: 'Open in the till', off: 'Not booked yet' },
+  { label: 'Print receipt', off: 'Not paid yet' },
+]);
+
+// Showing only the jobs nobody is assigned to: "Shared queue" joins the
+// mechanic chips (the old diary's "Unassigned" pill). Here only WH-1046, in
+// the No time row, is in the shared queue this week.
+function sharedQueueBoard() {
+  const was = TOOLBAR_MECHS;
+  TOOLBAR_MECHS = ['Everyone', 'Alex', 'Jo', 'Shared queue'];
+  CHIP_INITIAL['Shared queue'] = 'group'; // the group icon, as Everyone; this board only
+  try {
+    // A fourth chip needs 25px more than the toolbar has: its two spacers
+    // and the chips' gap close up a little on this board only.
+    const toolbar = diaryToolbar('Shared queue', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })
+      .replace('width: 12px; flex-shrink: 0', 'width: 4px; flex-shrink: 0').replace('width: 20px; flex-shrink: 0', 'width: 8px; flex-shrink: 0')
+      .replace('aria-label="Mechanic" style="display: inline-flex; align-items: center; gap: 6px', 'aria-label="Mechanic" style="display: inline-flex; align-items: center; gap: 4px');
+    return shellDesktop('diary', 'Workshop diary', stack(`${toolbar}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Shared queue' })}`, 16, 'align-items: flex-start')}
+${note('Shared queue: only the jobs no mechanic has yet.', 13)}`, 12));
+  } finally { TOOLBAR_MECHS = was; delete CHIP_INITIAL['Shared queue']; }
+}
+
+export function oldDiaryFeatureDrawings() {
+  return {
+    'diary-month': monthBoard(),
+    'diary-month-more': monthBoard({ moreOpen: 0 }),
+    'diary-stretch': stretchBoard(),
+    'job-change-details': changeDetailsBoard(),
+    'diary-menu-job': menuJobBoard(),
+    'diary-menu-pending': menuPendingBoard(),
+    'diary-shared-queue': sharedQueueBoard(),
+  };
 }

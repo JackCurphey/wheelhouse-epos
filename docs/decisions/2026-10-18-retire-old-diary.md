@@ -35,3 +35,7 @@ screen once its new replacement is merged).
 The old diary's booking pop-up (Accept, Decline, Seen), its "Waiting for
 you" column, week grid, mechanic pills, dragging and hover summary all
 already have their new versions (`src/screens/diary/`).
+
+**Drawn, 18 Oct:** Jack approved the drawings of the month view, stretching,
+changing a job's details, the menu's three actions and the Shared queue
+button: `2026-10-18-old-diary-features.md`.

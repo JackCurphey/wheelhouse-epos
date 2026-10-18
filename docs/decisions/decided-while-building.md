@@ -246,6 +246,22 @@ silent:
    orders list. *Pattern:* the order screen's own refresh
    (`refreshDocListAfterChange`).
 
+### 18 Oct 2026: drawings of what only the old diary did (`docs/decisions/2026-10-18-old-diary-features.md`)
+
+1. **`diary-month`: a booking request shows in the month**, purple, at its
+   asked-for time (Sam Reed, Fri 18 Sep 10:00); clicking it opens the
+   request's pop-up, and in the "+[n] more" list it reads "Booking request,
+   no mechanic yet". *Pattern:* the week view's pending block (decision 12).
+2. **`diary-shared-queue`: booking requests are not in the Shared queue**,
+   which shows jobs with no mechanic; a request is not a job until it is
+   accepted, and it stays in Waiting for you. *Pattern:* the week view shows
+   requests in Everyone only (decision 12).
+3. **Staff can't make a job "pending" in the new diary** (its starting
+   statuses, drawn and built, have no Pending), so the old
+   menu's "Approve" for a staff-made pending job has nothing to do; only
+   the booking request's "Accept or decline" is drawn. *Pattern:* New job's
+   starting status pills (decision 66; 3 Oct answer 11).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
