@@ -27,24 +27,34 @@ line, #241); a place to keep who signed a job off and when
 (`docs/decisions/2026-10-16-mechanic-sign-off.md`); and Jack's question,
 when the front page switches from the old app to the new one (16 Oct; the
 plans don't say). Also #249 (the tests' fixed names and codes, his test
-files) and #250 (two same-named shops signing up at once, `server/auth.js`).
-**Jack is on:** 17 Oct merged: the phone's By mechanic columns stay readable
-and scroll sideways (#247); the mechanic sign-off drawn, Jack approved, and
-the drawn job page given room at its sides (#248). Earlier: the online test
-copy is live at https://165-22-114-137.sslip.io (#221), and 16 and 17 Oct's workshop
-changes (#236, #237, #239 to #245; `docs/decisions/2026-10-16-workshop-test-copy-changes.md`).
-A side session traced the local suite's intermittent failures to two test
-runs sharing one database or checkout; fixed in the tests (#249). It also
-found two real sign-ups with the same shop name at the same instant can give
-the second an error; fixed in #250. Open, waiting for Mark: #225, #231, #234,
-#249 (his test files), #250 (`server/auth.js`). #238, the diary layout
-review, is a report, all of it now built or decided. Next in his lane
-without Mark: see the build board's "Next up". The stage check waits for
-lines 4 and 6 of §9.
-**Open for Jack:** nothing waiting now. Small to-dos: ask the accountant
-which Citrus Lime reports they use; make a Google account for Wheelhouse
-(go-live checklist). Later: ask Citrus Lime for the full export (stage 7,
-#171); his yes to open Stripe and buy the S700.
+files), #250 (two same-named shops signing up at once, `server/auth.js`)
+and #256 (Jack's 18 Oct answers: Release 2's finish line, stage 8 and the
+go-live checklist; it changes the shared plans, so it needs his yes).
+**Jack is on:** 18 Oct merged: the old app's workshop diary is retired
+and its Workshop tab opens the new diary (#252,
+`docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
+(#253, #254, #258, #260; `docs/decisions/2026-10-18-old-diary-features.md`)
+and built into the new diary: the Shared queue button (#255), stretching a
+job by its bottom edge (#257), month view (#259), Change details on the job
+page (#261) with a note when a change request is waiting (#262), and Accept
+or decline from a booking request's menu (#263). The menu's "Open in the
+till" and "Print receipt" wait for the till, which can't open an order or
+print a receipt yet (Jack, 18 Oct). Jack also decided Wheelhouse is built for
+every shop, not to move his own shop first (#254,
+`docs/decisions/2026-10-18-build-for-every-shop.md`); his answers on Release
+2's finish line (built and checked, ready to sell), the all-in-one coming
+first with Lightspeed after, stage 8 and the go-live checklist are in #256,
+waiting for Mark. Earlier: the online test copy is live at
+https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
+(#236, #237, #239 to #245, #247, #248). Open, waiting for Mark: #225, #231,
+#234, #249 (his test files), #250 (`server/auth.js`), #256 (the shared
+plans). #238, the diary layout review, is a report, all of it now built or
+decided. Next in his lane without Mark: see the build board's "Next up".
+The stage check waits for lines 4 and 6 of §9.
+**Open for Jack:** nothing waiting now. Small to-do: make a Google account
+for Wheelhouse (go-live checklist). Later: his yes to open Stripe and buy the
+S700. (Asking the accountant about Citrus Lime reports was dropped and #171
+closed, 18 Oct.)
 
 **Updated:** 2026-10-18. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
