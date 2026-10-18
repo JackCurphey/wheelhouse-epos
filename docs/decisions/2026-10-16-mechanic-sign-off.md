@@ -80,3 +80,7 @@ Chosen over refusing the delete and over forgetting who.
 **Merged with the server change flagged for Mark** (Jack, 18 Oct: "1: merge
 once GitHub's checks pass, and flag the server and database change for Mark
 in the status update"), as #265 and #267 were.
+
+**Piece 2, the till asking too, merged with its `sales.js` change flagged for
+Mark** (Jack, 18 Oct: "Yes: merge #273 once GitHub's checks pass, and flag
+the sales.js change for Mark in the status update").
