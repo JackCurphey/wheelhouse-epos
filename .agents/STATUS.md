@@ -34,6 +34,12 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
+**Check #267 too** (Jack chose to make it and flag it, 18 Oct,
+`docs/decisions/2026-10-18-till-job-payment.md` answer 3): `server/routes/sales.js`
+gains `GET /api/sale-documents/:id/due` (the amount due after the order's
+and the customer's group discounts, stock levels, and paying's line checks),
+convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
+`resolveGroupDiscount`.
 **Jack is on:** 18 Oct merged: the old app's workshop diary is retired
 and its Workshop tab opens the new diary (#252,
 `docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
@@ -41,9 +47,12 @@ and its Workshop tab opens the new diary (#252,
 and built into the new diary: the Shared queue button (#255), stretching a
 job by its bottom edge (#257), month view (#259), Change details on the job
 page (#261) with a note when a change request is waiting (#262), and Accept
-or decline from a booking request's menu (#263). The menu's "Open in the
-till" and "Print receipt" wait for the till, which can't open an order or
-print a receipt yet (Jack, 18 Oct). Then Files and photos on the job page,
+or decline from a booking request's menu (#263). The till now pays a job's
+order: "Open in the till" from the diary menu and "Take payment" on a
+finished job open it with the job's lines locked, the discounts taken off,
+and the bike recorded as collected (#267,
+`docs/decisions/2026-10-18-till-job-payment.md`). "Print receipt" waits for
+receipts. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
@@ -54,7 +63,7 @@ pull requests merged on his word (#225, #231, #234, #249, #250, #256).
 Earlier: the online test copy is live at
 https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
 (#236, #237, #239 to #245, #247, #248). No pull request waits for Mark's
-approval; #265 changed his server file after his go-ahead, so he checks it.
+approval; #265 and #267 changed his server files after his go-ahead, so he checks them.
 #238, the diary layout review, is a report, all of it now built or
 decided. Next in his lane without Mark: see the build board's "Next up".
 The stage check waits for lines 4 and 6 of §9.
