@@ -1365,6 +1365,14 @@ export function DiaryPage() {
           onOpenJob={() => { setMenuFor(null); setOpenJobId(menuFor.job.id); }}
           onOverview={() => showOverview(menuFor.job)}
           onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
+          onAnswer={menuFor.job.state === 'pending' ? () => {
+            // The request's own card from Waiting for you, or one made from the job.
+            const j = menuFor.job;
+            const fromFeed = (waiting.data?.items ?? []).find((i) => i.jobId === j.id && i.kind === 'new_booking');
+            setMenuFor(null);
+            const made: WaitingItem = { kind: 'new_booking', jobId: j.id, reference: j.reference, customerName: j.customerName ?? null, serviceNames: [], mechanicId: j.mechanicId ?? null, jobDate: j.jobDate, startTime: j.startTime ?? null, endTime: j.endTime ?? null };
+            setOpenItem(fromFeed ?? made);
+          } : undefined}
         />
       ) : null}
       {overview ? (

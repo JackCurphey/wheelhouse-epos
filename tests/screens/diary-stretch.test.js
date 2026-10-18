@@ -45,8 +45,10 @@ let shell;
 let calls;
 let answer;
 let hours = [];
+let waitingItems = [];
 afterEach(async () => {
   hours = [];
+  waitingItems = [];
   const { cleanup } = await import('@testing-library/react');
   cleanup();
   shell?.queryClient.clear();
@@ -66,20 +68,25 @@ function stubServer() {
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: hours });
-    if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
+    if (u.pathname === '/api/workshop-waiting') return reply(200, { count: waitingItems.length, items: waitingItems });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     return reply(404, { error: 'Not found' });
   };
 }
 
-async function openDiary(query = '?date=2026-10-05') {
+async function openDiary(query = '?date=2026-10-05', matchMedia = null) {
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
+  if (matchMedia) window.matchMedia = matchMedia;
+  // jsdom has no <dialog> methods; the request pop-up opens in one.
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   stubServer();
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  await ui.findByText('Trek Domane');
+  // A phone shows one day; the tests that use it open on the request's.
+  if (!matchMedia) await ui.findByText('Trek Domane');
   return { ...rtl, ui };
 }
 
@@ -140,7 +147,7 @@ test('a booking request\'s menu has no Change length', async () => {
   const { ui, fireEvent, within } = await openDiary();
   fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
   const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
-  assert.ok(has(menu.queryByRole('menuitem', { name: 'Open job' })));
+  assert.ok(has(menu.queryByRole('menuitem', { name: 'Accept or decline' })));
   assert.equal(has(menu.queryByRole('menuitem', { name: 'Change length' })), false);
 });
 
@@ -153,4 +160,47 @@ test('a job stops at its own day\'s closing time, not the latest in the week', a
   const b = block(ui, 'Trek Domane');
   for (let i = 0; i < 40; i += 1) fireEvent.keyDown(b, { key: 'ArrowDown' });
   assert.ok(has(ui.queryByText(/10:00–16:00 · 6 hours\./)));
+});
+
+// Jack, 18 Oct (docs/decisions/2026-10-18-old-diary-features.md answer 4 and
+// its touch section): a booking request's menu offers "Accept or decline",
+// which opens the request pop-up, as from Waiting for you.
+test('a booking request\'s menu offers Accept or decline, which opens its pop-up', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
+  const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Accept or decline', 'View overview']);
+  fireEvent.click(menu.getByRole('menuitem', { name: 'Accept or decline' }));
+  const dlg = within(await ui.findByRole('dialog', { name: /Sam Reed/ }));
+  assert.ok(has(dlg.queryByRole('button', { name: 'Accept' })));
+  assert.equal(has(ui.queryByRole('menu', { name: 'Job actions' })), false);
+});
+
+test('a booked job\'s menu still starts with Open job', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+  const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+  assert.equal(menu.getAllByRole('menuitem')[0].textContent, 'Open job');
+  assert.equal(has(menu.queryByRole('menuitem', { name: 'Accept or decline' })), false);
+});
+
+// Fresh review: a real customer request comes from Waiting for you, with its services.
+test('Accept or decline opens the request\'s own Waiting card, with its services', async () => {
+  waitingItems = [{ kind: 'new_booking', jobId: 3, reference: 'WH-1003', jobDate: '2026-10-08', startTime: '10:00', endTime: '11:00', mechanicId: null, customerName: 'Sam Reed', serviceNames: ['Brake service', 'Gear tune'], services: [], arrivedAt: '2026-10-03T08:00:00Z' }];
+  const { ui, fireEvent, within, waitFor } = await openDiary();
+  // The Waiting list has loaded once its card shows.
+  await ui.findByRole('button', { name: /New booking request/ });
+  fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
+  const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+  fireEvent.click(menu.getByRole('menuitem', { name: 'Accept or decline' }));
+  const dlg = await ui.findByRole('dialog', { name: /Sam Reed/ });
+  await waitFor(() => assert.ok(dlg.textContent.includes('Brake service, Gear tune')));
+});
+
+test('on a phone, a booking request\'s menu is headed "[job] · booking request", as drawn', async () => {
+  const phone = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} });
+  const { ui, fireEvent, within } = await openDiary('?date=2026-10-08', phone);
+  fireEvent.contextMenu(await ui.findByTitle(/^Specialized Sirrus/));
+  const menu = await ui.findByRole('menu', { name: 'Job actions' });
+  assert.ok(has(within(menu).queryByText('Brake service · booking request')));
 });

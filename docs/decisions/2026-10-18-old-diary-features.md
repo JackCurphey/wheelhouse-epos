@@ -129,3 +129,18 @@ Setting that time here accepts it; any other change leaves the request
 waiting in Waiting for you." It is an addition only (Jack: "I would like it
 to just be kind of an addition"): the request still shows in Waiting for
 you and is accepted or declined there as before.
+
+**The menu's till actions wait for the till, 18 Oct** (Jack: "1"): the new
+till can't open a job's order or print a receipt yet (both are on the
+till's own plan; paying orders follows Jack's 16 Oct answers in #231). So
+the menu gets "Accept or decline" on a booking request now, and "Open in
+the till" and "Print receipt" join, as drawn, when the till can do them.
+Chosen over showing them greyed ("Not in the till yet") and over building
+the till's order and receipt pieces now.
+
+**"Accept or decline" on touch screens, 18 Oct** (Jack: "1"; drawn as
+`diary-menu-pending-tablet` and `-phone` in `diary.mjs`): a booking request's
+long-press menu has "Accept or decline", which opens the request pop-up
+(as answering it from Waiting for you), and "View overview". It has nothing
+to do with the till; it was drawn with the till items only because all
+three were new menu items.
