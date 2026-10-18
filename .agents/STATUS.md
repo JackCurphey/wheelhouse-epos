@@ -25,11 +25,15 @@ his: the bike on "Waiting for you" items (for the tablet cards' drawn bike
 line, #241); a place to keep who signed a job off and when
 (`docs/decisions/2026-10-16-mechanic-sign-off.md`); and Jack's question,
 when the front page switches from the old app to the new one (16 Oct; the
-plans don't say). The day's merges change his plans: read #256 (Release 2
+plans don't say). The day's merges change his work: read #231 (his
+`add-hosted-copy` design now loads the drawn week into the week the shop is
+loaded; the test shop's prices are Jack's 16 Oct decision), #256 (Release 2
 is done when built and checked, ready to sell; the all-in-one first and
 Lightspeed after; stage 8's alongside and trading week move to the selling
-stage) and #265 (the delete route now refuses a job with money paid or the
-bike in, `settle_first`).
+stage). **Check #265:** it changed his server file without his approval,
+merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
+job with money paid on its order or the bike in the shop (409
+`settle_first`), and deletes the job's quotes and print tasks first.
 **Jack is on:** 18 Oct merged: the old app's workshop diary is retired
 and its Workshop tab opens the new diary (#252,
 `docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
@@ -49,7 +53,9 @@ sell, the all-in-one first with Lightspeed after (#256,
 pull requests merged on his word (#225, #231, #234, #249, #250, #256).
 Earlier: the online test copy is live at
 https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
-(#236, #237, #239 to #245, #247, #248). Nothing is waiting for Mark. #238, the diary layout review, is a report, all of it now built or
+(#236, #237, #239 to #245, #247, #248). No pull request waits for Mark's
+approval; #265 changed his server file after his go-ahead, so he checks it.
+#238, the diary layout review, is a report, all of it now built or
 decided. Next in his lane without Mark: see the build board's "Next up".
 The stage check waits for lines 4 and 6 of §9.
 **Open for Jack:** nothing waiting now. Small to-do: make a Google account
