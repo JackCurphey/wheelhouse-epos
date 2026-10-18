@@ -28,3 +28,8 @@ decision 2, `2026-10-05-shops-and-sites.md` answers 1 and 3).
    top, and over address and phone at the top with the VAT number at the
    bottom. This moves the barcode on the approved `till-receipt-paper` and
    `till-receipt-paper-checked` too (`2026-10-18-print-receipt.md`).
+3. **The redrawn receipts approved; build it** (Jack: "Approve the redrawn
+   receipts; build Shop details on the Settings page, the receipt lines and
+   the barcode at the bottom, flagging Mark's files for him"):
+   `till-receipt-paper`, `till-receipt-paper-checked`,
+   `till-receipt-paper-details`.
