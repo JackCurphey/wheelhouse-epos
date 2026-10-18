@@ -120,3 +120,12 @@ click). This changes the Shared queue change's "one row at 1280px".
   button in the top bar (the name shortens) and a "⋯" menu (an extra tap).
   (A first answer put it in the job page's ≡ menu; that button is Notes,
   not a menu, so Jack was asked again.)
+
+**A waiting change request in Change details, 18 Oct** (Jack: "1"; drawn
+as `job-change-details-request` and `-request-phone` in `diary.mjs`): when a
+customer's change request is waiting, Change details says so at its top,
+in the request's amber: "[customer] asked to move this to [day], [time].
+Setting that time here accepts it; any other change leaves the request
+waiting in Waiting for you." It is an addition only (Jack: "I would like it
+to just be kind of an addition"): the request still shows in Waiting for
+you and is accepted or declined there as before.
