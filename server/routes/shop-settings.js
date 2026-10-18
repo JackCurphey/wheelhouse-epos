@@ -55,7 +55,45 @@ async function getOrCreateShopTheme() {
   return row;
 }
 
+// Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md): one
+// set for the whole business, for now, on the shops row (migration 042).
+// shops is the tenant table, with no row security, so these read and write
+// the session's own row by its id.
+const SHOP_DETAIL_FIELDS = [
+  ['name', 'name', 'Shop name', 120],
+  ['address', 'address', 'Address', 300],
+  ['phone', 'phone', 'Phone', 40],
+  ['email', 'email', 'Email', 200],
+  ['vatNumber', 'vat_number', 'VAT number', 30],
+];
+function serializeShopDetails(row) {
+  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null };
+}
+const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number FROM shops WHERE id = ?';
+
 export function register(route) {
+  route('GET', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
+    sendJson(res, 200, serializeShopDetails(await db.prepare(SHOP_DETAILS_SELECT).get(shopId)));
+  });
+
+  route('PUT', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
+    const body = await readJsonBody(req);
+    const sets = [];
+    const values = [];
+    for (const [key, column, label, max] of SHOP_DETAIL_FIELDS) {
+      if (body[key] === undefined) continue;
+      if (body[key] !== null && typeof body[key] !== 'string') return badRequest(res, `${label} must be text`);
+      const text = (body[key] ?? '').trim();
+      if (key === 'name' && text === '') return badRequest(res, 'The shop needs a name');
+      if (text.length > max) return badRequest(res, `${label} can be up to ${max} characters`);
+      sets.push(`${column} = ?`);
+      values.push(text === '' ? null : text);
+    }
+    // The column names come from SHOP_DETAIL_FIELDS above, never from the request.
+    if (sets.length) await db.prepare(`UPDATE shops SET ${sets.join(', ')} WHERE id = ?`).run(...values, shopId);
+    sendJson(res, 200, serializeShopDetails(await db.prepare(SHOP_DETAILS_SELECT).get(shopId)));
+  });
+
   route('GET', '/api/label-settings', async (req, res) => {
     sendJson(res, 200, serializeLabelSettings(await getOrCreateLabelSettings()));
   });
