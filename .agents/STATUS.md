@@ -53,8 +53,8 @@ decided. Next in his lane without Mark: see the build board's "Next up".
 The stage check waits for lines 4 and 6 of §9.
 **Open for Jack:** nothing waiting now. Small to-do: make a Google account
 for Wheelhouse (go-live checklist). Later: his yes to open Stripe and buy the
-S700. (Asking the accountant about Citrus Lime reports was dropped and #171
-closed, 18 Oct.)
+S700. (Asking the accountant about Citrus Lime reports was dropped, #254;
+#171 and #138 were closed with #256's answers, 18 Oct, waiting for Mark.)
 
 **Updated:** 2026-10-18. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
