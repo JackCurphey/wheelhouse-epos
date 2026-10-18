@@ -221,7 +221,8 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, on
         // As drawn (diary-context-menu, phone): the job, then whose it is. A
         // menu holds only menu items, so this is the menu's description.
         <span id="job-menu-head" aria-hidden="true" className="flex flex-col gap-0.5 px-4 pt-3.5 pb-2">
-          <span className="text-base font-bold">{headOf(job)}</span>
+          {/* A booking request has no job yet to number: "[job] · booking request", as drawn (Jack, 18 Oct). */}
+          <span className="text-base font-bold">{job.bookingState === 'pending' ? `${job.title} · booking request` : headOf(job)}</span>
           <span className="text-sm text-[var(--wh-muted)]">{whoOf(job)}</span>
         </span>
       ) : null}
