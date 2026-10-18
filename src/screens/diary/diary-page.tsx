@@ -13,7 +13,7 @@ import { jobRefusalText } from './refusal-words.ts';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { HoverSummary, JobMenu, OverviewDialog, StackChooser, tileClass, type ChooserAt, type MenuAt } from './job-extras.tsx';
 import {
-  LEGEND, LEGEND_LABEL, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, stackGroups, todayIso, toMinutes,
+  LEGEND, LEGEND_LABEL, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, lengthText, stackGroups, stretchEnd, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
 } from './rules.ts';
 
@@ -90,7 +90,8 @@ function describe(j: Shown, chosen: boolean) {
     .filter(Boolean).join(', ') + (chosen ? ', chosen from Waiting for you' : '');
 }
 
-type Preview = { partId: number; colIndex: number; startMin: number; durationMin: number };
+/** A job on the move, or (stretch) having its length changed: then only durationMin changes. */
+type Preview = { partId: number; colIndex: number; startMin: number; durationMin: number; stretch?: boolean };
 
 /**
  * Moving a job (piece 3): by dragging, or from the keyboard (Enter picks it
@@ -105,6 +106,10 @@ type MoveApi = {
   onPointerDown: (job: Shown, colIndex: number, e: PointerEvent<HTMLElement>) => void;
   /** A click (not a drag) or Enter opens the job page. */
   onOpen: (job: Shown) => void;
+  /** Stretching (Jack, 18 Oct): the bottom edge's grip, dragged. */
+  onStretchDown: (job: Shown, colIndex: number, e: PointerEvent<HTMLElement>) => void;
+  /** Where the times and length show while stretching: inside the column on a phone or the last column. */
+  labelInside: (colIndex: number) => boolean;
 };
 const MoveContext = createContext<MoveApi | null>(null);
 
@@ -182,7 +187,7 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
   const laned = !moving && lane && lane.total > 1
     ? 'left-[var(--lane-left)] w-[var(--lane-width)] hover:left-[3px] hover:z-[3] hover:w-[calc(100%-6px)] hover:delay-300 motion-safe:transition-[left,width] motion-reduce:hover:delay-0'
     : '';
-  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
+  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving?.stretch ? 'z-[2] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
@@ -205,7 +210,32 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
       </div>
     );
   }
+  const stretching = moving?.stretch ? moving : null;
+  // While stretching, a finger-sized grip on the bottom edge (a 44px touch
+  // area, as drawn for tablets and phones) and the times and length beside
+  // the job, or inside it on a phone or the last column (Jack, 18 Oct).
+  const stretchUi = stretching ? (
+    <>
+      <div
+        data-stretch-grip
+        aria-hidden="true"
+        onPointerDown={(e) => move.onStretchDown(job, colIndex, e)}
+        className="absolute z-[3] flex h-11 cursor-ns-resize touch-none items-center justify-center"
+        style={{ top: top + height - 22, left: 3, right: 3 }}
+      >
+        <span className="h-1.5 w-10 rounded-[3px] bg-[var(--wh-state-scheduled-ink)] shadow-[0_0_0_2px_var(--wh-panel)]" />
+      </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute z-[4] rounded-md bg-[var(--wh-ink)] px-2.5 py-1.5 text-sm font-bold whitespace-nowrap text-[var(--wh-panel)] shadow-[0_6px_16px_var(--wh-backdrop)]"
+        style={move.labelInside(colIndex) ? { top: top + height - 58, right: 6 } : { top: top + height - 16, left: 'calc(100% + 6px)' }}
+      >
+        <span className="font-mono">{hhmm(stretching.startMin)}–{hhmm(stretching.startMin + stretching.durationMin)}</span> · {lengthText(stretching.durationMin)}
+      </div>
+    </>
+  ) : null;
   return (
+    <>
     <button
       type="button"
       title={describe(job, false)}
@@ -215,12 +245,23 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
       onKeyUp={(e) => { if (moving && e.key === ' ') e.preventDefault(); }}
       onPointerDown={(e) => { onPress?.(e); move.onPointerDown(job, colIndex, e); }}
       onClick={() => move.onOpen(job)}
-      className={`${className} cursor-grab touch-none`}
+      className={`${className} group cursor-grab touch-none`}
       style={style}
       {...hover}
     >
       {inner}
+      {/* With a mouse, the bottom edge stretches the job (drawn, diary-stretch). */}
+      <span
+        data-stretch-edge
+        aria-hidden="true"
+        onPointerDown={(e) => { if (e.pointerType === 'mouse') move.onStretchDown(job, colIndex, e); }}
+        className="absolute inset-x-0 bottom-0 flex h-2 cursor-ns-resize items-end justify-center pointer-coarse:hidden"
+      >
+        <span className="mb-px h-1 w-7 rounded-sm bg-[var(--wh-state-scheduled-ink)] opacity-0 group-hover:opacity-100" />
+      </span>
     </button>
+    {stretchUi}
+    </>
   );
 }
 
@@ -758,6 +799,53 @@ export function DiaryPage() {
     }
   }
 
+  // ---- Changing a job's length (Jack, 18 Oct) ----
+  const lengthAt = (p: Preview) => `${hhmm(p.startMin)}–${hhmm(p.startMin + p.durationMin)}`;
+  async function saveLength(job: Shown, p: Preview) {
+    if (p.durationMin === durationOf(job)) {
+      setPreview(null);
+      return;
+    }
+    const c = columns[p.colIndex];
+    const body = { jobDate: c.date, startTime: hhmm(p.startMin), endTime: hhmm(p.startMin + p.durationMin), version: job.version };
+    setMoveError(null);
+    try {
+      const path = job.partPos > 1 ? `/api/workshop-jobs/${job.id}/parts/${job.partId}` : `/api/workshop-jobs/${job.id}`;
+      await apiMutate(path, body, { method: 'PUT' });
+      setMoveNote(`${job.bikeLabel || 'Bike'} now ${lengthAt(p)}.`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
+      ]);
+    } catch (err) {
+      setMoveError(`Couldn't change ${job.bikeLabel || 'Bike'}’s length: ${jobRefusalText(err)}`);
+      if (err instanceof ApiError && err.code === 'stale') void queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
+    } finally {
+      setPreview(null);
+    }
+  }
+  /** "Change length" in the job's menu: the grip shows, and up and down change it. */
+  const startStretch = (job: Shown) => {
+    const colIndex = columns.findIndex((c) => jobsIn(c).some((j) => j.partId === job.partId));
+    if (colIndex < 0) return;
+    const p = { ...startOf(job, colIndex), stretch: true };
+    setPreview(p);
+    setMoveError(null);
+    setMoveNote(`Changing ${job.bikeLabel || 'Bike'}’s length. ${lengthAt(p)} · ${lengthText(p.durationMin)}. Use the up and down arrows to change it, Enter to save, Escape to leave it.`);
+    followPart.current = job.partId;
+  };
+  // A tap or click anywhere but the grip leaves the length as it was.
+  const stretchingPart = preview?.stretch ? preview.partId : null;
+  useEffect(() => {
+    if (stretchingPart === null) return;
+    const away = (e: globalThis.PointerEvent) => {
+      if ((e.target as Element | null)?.closest('[data-stretch-grip]')) return;
+      setPreview(null);
+    };
+    document.addEventListener('pointerdown', away, true);
+    return () => document.removeEventListener('pointerdown', away, true);
+  }, [stretchingPart]);
+
   const [openJobId, setOpenJobId] = useState<number | null>(null);
   // The click that follows the end of a drag must not open the job.
   const justDragged = useRef(false);
@@ -792,6 +880,23 @@ export function DiaryPage() {
     onOpen: openJob,
     onKeyDown(job, colIndex, e) {
       const bike = job.bikeLabel || 'Bike';
+      if (preview?.stretch && preview.partId === job.partId) {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const most = range.end - preview.startMin;
+          const next = { ...preview, durationMin: Math.max(SNAP_MIN, Math.min(most, preview.durationMin + (e.key === 'ArrowUp' ? -SNAP_MIN : SNAP_MIN))) };
+          setPreview(next);
+          setMoveNote(`Changing ${bike}’s length. ${lengthAt(next)} · ${lengthText(next.durationMin)}.`);
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          void saveLength(job, preview);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setPreview(null);
+          setMoveNote(`Length unchanged. ${bike} stays ${lengthAt(startOf(job, colIndex))}.`);
+        }
+        return;
+      }
       const hint = 'Use the arrow keys to move it, Enter to save, Escape to cancel.';
       if (!preview || preview.partId !== job.partId) {
         if (e.key === 'Enter') {
@@ -827,6 +932,36 @@ export function DiaryPage() {
         setPreview(next);
         setMoveNote(`Moving ${bike}. ${whereText(next)}. ${hint}`);
       }
+    },
+    labelInside: (colIndex) => isPhone || colIndex === columns.length - 1,
+    onStretchDown(job, colIndex, e) {
+      if (e.button !== 0) return;
+      // The grip, not the block: no move, and no long press for the menu.
+      e.stopPropagation();
+      e.preventDefault();
+      const colEl = document.querySelector<HTMLElement>(`[data-diary-col="${colIndex}"]`);
+      if (!colEl) return;
+      const startMin = toMinutes(job.startTime as string);
+      let moved = false;
+      const onMove = (ev: globalThis.PointerEvent) => {
+        moved = true;
+        const end = stretchEnd(ev.clientY - colEl.getBoundingClientRect().top, range, startMin, slotPx);
+        setPreview({ ...startOf(job, colIndex), durationMin: end - startMin, stretch: true });
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        justDragged.current = true;
+        setTimeout(() => { justDragged.current = false; }, 0);
+        const p = previewRef.current;
+        if (moved && p?.stretch) void saveLength(job, p);
+        else if (!previewRef.current?.stretch) setPreview(null);
+      };
+      if (!preview?.stretch) setPreview({ ...startOf(job, colIndex), stretch: true });
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
     },
     onPointerDown(job, colIndex, e) {
       if (e.button !== 0) return;
@@ -1000,6 +1135,7 @@ export function DiaryPage() {
           onClose={(back) => { const el = menuFor.opener; setMenuFor(null); if (back) el?.focus(); }}
           onOpenJob={() => { setMenuFor(null); setOpenJobId(menuFor.job.id); }}
           onOverview={() => showOverview(menuFor.job)}
+          onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
         />
       ) : null}
       {overview ? (

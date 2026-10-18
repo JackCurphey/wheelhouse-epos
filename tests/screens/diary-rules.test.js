@@ -134,3 +134,23 @@ test('jobs that start at the same time make one stack; a partly overlapping job 
     { id: 3, ids: [3], start: 630, end: 700 },
   ]);
 });
+
+// Stretching a job by its bottom edge (Jack, 18 Oct): the end snaps to 15
+// minutes, at least 15 minutes after the start and no later than closing.
+import { stretchEnd, lengthText } from '../../src/screens/diary/rules.ts';
+
+test('a stretched job ends on the quarter hour under the pointer', () => {
+  const range = { start: 540, end: 1080 }; // 09:00–18:00, 29px a half hour
+  assert.equal(stretchEnd(4 * 29, range, 600), 660); // 11:00
+  assert.equal(stretchEnd(4 * 29 + 8, range, 600), 675); // a little after: 11:15
+  assert.equal(stretchEnd(0, range, 600), 615); // above the start: 15 minutes
+  assert.equal(stretchEnd(40 * 29, range, 600), 1080); // past closing: closing
+});
+
+test('a length reads in hours and minutes', () => {
+  assert.equal(lengthText(15), '15 minutes');
+  assert.equal(lengthText(60), '1 hour');
+  assert.equal(lengthText(90), '1 hour 30 minutes');
+  assert.equal(lengthText(120), '2 hours');
+  assert.equal(lengthText(135), '2 hours 15 minutes');
+});
