@@ -3301,9 +3301,9 @@ ${field('Date', { value: 'Thu 17 Sep', id: 'cd-date' })}
 </div>`;
   // A phone has one column, the fields in the same order (Jack, 18 Oct).
   const cols = size === 'phone' ? 'flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px' : 'padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px';
-  return `${dialogHeader('Change details', 'job-overview-${size}.dc.html', 'Standard service · WH-1042', 'change-details-title', size)}
+  return `${dialogHeader('Change details', `job-overview-${size}.dc.html`, 'Standard service · WH-1042', 'change-details-title', size)}
 <div style="${cols}">${left}${right}</div>
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: 'job-overview-${size}.dc.html' })}${button('Save changes', { variant: 'primary', href: 'job-overview-${size}.dc.html' })}</div>`;
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: `job-overview-${size}.dc.html` })}${button('Save changes', { variant: 'primary', href: `job-overview-${size}.dc.html` })}</div>`;
 }
 const CHANGE_BTN = button('Change details', { variant: 'default' });
 function jobPageWithChangeButton(size = 'desktop') {
