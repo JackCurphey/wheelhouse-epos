@@ -74,6 +74,9 @@ function stubServer() {
 
 async function openDiary(query = '?date=2026-10-05') {
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
+  // jsdom has no <dialog> methods; the request pop-up opens in one.
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   stubServer();
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
@@ -140,7 +143,7 @@ test('a booking request\'s menu has no Change length', async () => {
   const { ui, fireEvent, within } = await openDiary();
   fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
   const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
-  assert.ok(has(menu.queryByRole('menuitem', { name: 'Open job' })));
+  assert.ok(has(menu.queryByRole('menuitem', { name: 'Accept or decline' })));
   assert.equal(has(menu.queryByRole('menuitem', { name: 'Change length' })), false);
 });
 
@@ -153,4 +156,26 @@ test('a job stops at its own day\'s closing time, not the latest in the week', a
   const b = block(ui, 'Trek Domane');
   for (let i = 0; i < 40; i += 1) fireEvent.keyDown(b, { key: 'ArrowDown' });
   assert.ok(has(ui.queryByText(/10:00–16:00 · 6 hours\./)));
+});
+
+// Jack, 18 Oct (docs/decisions/2026-10-18-old-diary-features.md answer 4 and
+// its touch section): a booking request's menu offers "Accept or decline",
+// which opens the request pop-up, as from Waiting for you.
+test('a booking request\'s menu offers Accept or decline, which opens its pop-up', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  fireEvent.contextMenu(ui.getByTitle(/^Specialized Sirrus/));
+  const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Accept or decline', 'View overview']);
+  fireEvent.click(menu.getByRole('menuitem', { name: 'Accept or decline' }));
+  const dlg = within(await ui.findByRole('dialog', { name: /Sam Reed/ }));
+  assert.ok(has(dlg.queryByRole('button', { name: 'Accept' })));
+  assert.equal(has(ui.queryByRole('menu', { name: 'Job actions' })), false);
+});
+
+test('a booked job\'s menu still starts with Open job', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+  const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+  assert.equal(menu.getAllByRole('menuitem')[0].textContent, 'Open job');
+  assert.equal(has(menu.queryByRole('menuitem', { name: 'Accept or decline' })), false);
 });

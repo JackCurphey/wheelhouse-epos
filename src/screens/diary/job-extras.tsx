@@ -145,8 +145,10 @@ export type MenuAt = { x: number; y: number; touch: boolean; phone: boolean };
  * Decision 37: Open job and View overview. Arrow keys move through it,
  * Escape or a click elsewhere closes it, and focus goes back to the job.
  */
-export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch }: {
+export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, onAnswer }: {
   job: WorkshopJob; at: MenuAt; onClose: (returnFocus: boolean) => void; onOpenJob: () => void; onOverview: () => void;
+  /** A booking request (Jack, 18 Oct): "Accept or decline" in place of Open job, opening its pop-up. */
+  onAnswer?: () => void;
   /** "Change length" (Jack, 18 Oct): only for a job that can be moved. */
   onStretch?: () => void;
 }) {
@@ -223,7 +225,9 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch }: 
           <span className="text-sm text-[var(--wh-muted)]">{whoOf(job)}</span>
         </span>
       ) : null}
-      <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOpenJob}>Open job</button>
+      {onAnswer
+        ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onAnswer}>Accept or decline</button>
+        : <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOpenJob}>Open job</button>}
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOverview}>View overview</button>
       {onStretch ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onStretch}>Change length</button> : null}
       <p className="m-0 border-t border-[var(--wh-border)] px-3.5 pt-2 pb-1.5 text-xs leading-snug text-[var(--wh-muted)]">{tip}</p>
