@@ -31,7 +31,7 @@ files) and #250 (two same-named shops signing up at once, `server/auth.js`).
 **Jack is on:** 17 Oct merged: the phone's By mechanic columns stay readable
 and scroll sideways (#247); the mechanic sign-off drawn, Jack approved, and
 the drawn job page given room at its sides (#248). Earlier: the online test
-copy is live at https://165-22-114-137.sslip.io (#221), and 16 Oct's workshop
+copy is live at https://165-22-114-137.sslip.io (#221), and 16 and 17 Oct's workshop
 changes (#236, #237, #239 to #245; `docs/decisions/2026-10-16-workshop-test-copy-changes.md`).
 A side session traced the local suite's intermittent failures to two test
 runs sharing one database or checkout; fixed in the tests (#249). It also
