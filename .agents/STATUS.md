@@ -33,6 +33,12 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
+**Check #273 too** (Jack chose to merge it and flag it, 18 Oct): your
+`server/routes/sales.js` convert takes an optional `signedOffBy` and, when
+paying finishes a job, records the sign-off (`recordSignOff`); it never
+refuses a payment over it, warning instead (an inactive mechanic, a failed
+save, or `signedOffBy: null` from a till that saw finished work reopened
+since). No key, as the old app sends, finishes unsigned as before.
 **Check #271 too** (Jack chose to merge it and flag it, 18 Oct,
 `docs/decisions/2026-10-16-mechanic-sign-off.md`): migration 040 adds
 `workshop_jobs.signed_off_by` (ON DELETE SET NULL), `signed_off_name` and
@@ -66,8 +72,9 @@ Mark's sales-in-pence work records them (#269,
 in their packages. Then the mechanic sign-off's first piece: "Mark ready
 for collection" asks "Who's signing this off?", the job's mechanic picked,
 and the finished job shows "Signed off by [name] · [day], [time]"; each
-sign-off keeps the mechanic's name (#271). The till's question and showing
-it to customers are later pieces. Then Files and photos on the job page,
+sign-off keeps the mechanic's name (#271). Then the till asks too, when a
+payment finishes work still in progress (#273). Showing it to customers is
+a later piece. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
