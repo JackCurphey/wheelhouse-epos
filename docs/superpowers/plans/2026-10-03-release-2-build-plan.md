@@ -47,6 +47,10 @@ session had to ask what came next.
 
 ## 2. Finish line (unchanged)
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answer 4): Release 2 is done when everything is built and every stage check
+> has passed on the test copy, ready to sell. The paragraph below is history.
+
 From the programme spec §1: Release 2 is ready when Jack's shop has switched
 Citrus Lime off and traded for one full trading week, including a weekend, on
 Wheelhouse alone.

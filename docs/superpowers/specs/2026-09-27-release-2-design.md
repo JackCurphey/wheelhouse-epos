@@ -18,6 +18,11 @@ Citrus Lime, and to beat it on, in Jack's order of importance:
 5. we do the move for the shop
 6. open data
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`):
+> Wheelhouse is built for every shop, not to move Jack's shop first, and
+> Release 2 is done when everything is built and every stage check has passed
+> on the test copy, ready to sell. The first shop and finish line below are history.
+
 **First shop.** Jack's shop, which runs on Citrus Lime today and uses its till,
 stock, supplier feeds and purchase orders, stock take, workshop, customers,
 website, reports, and more than one site.

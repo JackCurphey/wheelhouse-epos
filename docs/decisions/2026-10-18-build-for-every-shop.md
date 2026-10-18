@@ -23,3 +23,22 @@ must replace (for example the go-live checklist,
 `docs/runbooks/go-live-checklist.md`, "switching Jack's shop from Citrus
 Lime"). Which of them change, and how, is for Jack to settle one at a time;
 nothing else in them changes until he has.
+
+## Release 2's finish line (Jack, 18 Oct)
+
+4. **Release 2 is done when everything is built and every stage check has
+   passed on the test copy**, so it is ready to sell (Jack: "two, where
+   everything is completely built… consider it done when it's ready to
+   sell"). Selling it and getting shops to use it is the stage after.
+   This replaces "Jack's shop has switched Citrus Lime off and traded for
+   one full trading week" (programme spec §1,
+   `docs/superpowers/specs/2026-09-27-release-2-design.md`; build plan §2).
+   A real shop trying it first would be better, and is welcome, but is not
+   part of the finish line: Jack doesn't expect his own shop to move, and
+   there is no other shop lined up. Chosen over a first real shop trading
+   on it for a week, and over the first paying shop going live.
+
+What this means for stage 8 (the move, the switch-over and the trading
+week) and the Citrus Lime import, which were built around one shop moving,
+is for Jack to settle next, one at a time. The plans are shared, so Mark is
+told.
