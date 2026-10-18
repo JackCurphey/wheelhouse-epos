@@ -306,7 +306,13 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
         ) : null}
         {paid ? <p className="m-0 text-sm font-semibold">This job’s order is already paid.</p> : null}
         {cancelled ? <p className="m-0 text-sm font-semibold">This job’s order was cancelled, so there’s nothing to pay here.</p> : null}
-        {order && order.status === 'open' && dueQuery.error instanceof ApiError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">{`This job can’t be paid here yet: ${dueQuery.error.message}. Change it in the job’s Work and parts.`}</p> : null}
+        {order && order.status === 'open' && dueQuery.isError ? (
+          <p role="alert" className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">
+            {dueQuery.error instanceof ApiError && dueQuery.error.status < 500 && dueQuery.error.hasServerMessage
+              ? `This job can’t be paid here yet: ${dueQuery.error.message}. Change it in the job’s Work and parts.`
+              : 'Wheelhouse couldn’t work out the amount due. Try again in a moment.'}
+          </p>
+        ) : null}
         {order && order.status === 'open' && !payable ? <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">The work isn’t finished, so this job can’t be paid yet.</p> : null}
         {order && order.status === 'open' && inShop ? (
           <button
@@ -323,7 +329,7 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
           <span className="font-mono text-[26px]">{money(total)}</span>
         </div>
         {order && order.status === 'open' ? (
-          <Button variant="primary" block disabled={!payable || lines.length === 0 || !due} onClick={() => setPaying(true)}>{`Take payment · ${money(total)}`}</Button>
+          <Button variant="primary" block disabled={!payable || lines.length === 0 || !due || dueQuery.isError} onClick={() => setPaying(true)}>{`Take payment · ${money(total)}`}</Button>
         ) : null}
       </section>
       {paying && job?.orderId ? (

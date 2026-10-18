@@ -66,7 +66,7 @@ function stubServer(employee) {
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
-    if (u.pathname === '/api/sale-documents/40/due') return DUE.error ? reply(400, DUE) : reply(200, DUE);
+    if (u.pathname === '/api/sale-documents/40/due') return DUE.error ? reply(DUE.status ?? 400, DUE) : reply(200, DUE);
     return reply(404, { error: 'Not found' });
   };
 }
@@ -206,4 +206,11 @@ test('any refusal after the card step says no sale was recorded and to reverse t
   convertReply = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted' }) };
   const dlg = await payByCard(t);
   assert.ok(has(await dlg.findByText('This order is already converted. No sale was recorded: if the card machine took the payment, reverse it on the machine.')));
+});
+
+test('a server fault on the amount due says try again, not change the job, and Take payment stays off', async () => {
+  const { sale } = await openJobTill({ dueOver: { error: 'Internal error', status: 500 } });
+  assert.ok(has(await sale.findByText('Wheelhouse couldn’t work out the amount due. Try again in a moment.', {}, { timeout: 15000 })));
+  assert.equal(has(sale.queryByText(/Change it in the job’s Work and parts/)), false);
+  assert.equal((await sale.findByRole('button', { name: /^Take payment/ })).disabled, true);
 });
