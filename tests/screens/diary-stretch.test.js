@@ -47,6 +47,7 @@ let answer;
 let hours = [];
 let waitingItems = [];
 let saleFails = false;
+let showSignOff = false;
 const PAID_SALE = { id: 601, createdAt: '2026-10-06T10:45:00.000Z', subtotal: 65, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 65, paymentMethod: 'Card', cashAmount: 0, cardAmount: 65, cashTendered: null, extraPayments: [],
   items: [{ id: 1, name: 'Brake service', qty: 1, unitPrice: 65, lineTotal: 65 }] };
 afterEach(async () => {
@@ -70,7 +71,7 @@ function stubServer() {
     if (method === 'PUT') return answer ? reply(answer.status, answer.body) : reply(200, { ...JOBS[0], version: 4 });
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
-    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: hours });
+    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: hours, showSignOffToCustomers: showSignOff });
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: waitingItems.length, items: waitingItems });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/sale-documents/40') return reply(200, { id: 40, kind: 'order', status: 'converted', convertedSaleId: 601, items: [] });
@@ -332,5 +333,26 @@ test('if the receipt can\'t be fetched, the diary says so and nothing prints', a
   } finally {
     JOBS[0] = keep;
     saleFails = false;
+  }
+});
+
+// The mechanic sign-off, piece 3 (Jack, 18 Oct): with the setting on, the
+// diary's Print receipt says who signed the job off.
+test('with the setting on, the diary’s Print receipt says who signed the job off', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted', signedOffBy: 11, signedOffByName: 'Alex Morgan', signedOffAt: '2026-10-06T10:00:00Z' };
+  showSignOff = true;
+  let printed = null;
+  try {
+    const { ui, fireEvent, within, waitFor } = await openDiary();
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    fireEvent.click(menu.getByRole('menuitem', { name: 'Print receipt' }));
+    await waitFor(() => assert.ok(printed !== null, 'nothing was printed'));
+    assert.ok(printed.includes('WH-1001 · Trek DomaneChecked by Alex Morgan'), printed);
+  } finally {
+    JOBS[0] = keep;
+    showSignOff = false;
   }
 });

@@ -80,6 +80,8 @@ test('a booking returns a booking link, and the link reads the booking back', as
     bikeNote: null,
     bike: { make: 'Dawes', model: 'Galaxy' },
     stage: 'awaiting_confirmation',
+    // Who signed it off, only once ready and if the shop shows it (mechanic sign-off, piece 3).
+    checkedBy: null,
     answers: [],
     photoCount: 0,
     services: [{ name: 'Test service', price: null }],

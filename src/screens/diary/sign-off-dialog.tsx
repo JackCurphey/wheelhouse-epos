@@ -28,7 +28,7 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
   );
 }
 
-export function SignOffDialog({ job, busy, onSign, onClose }: { job: WorkshopJob; busy: boolean; onSign: (mechanicId: number) => void; onClose: () => void }) {
+export function SignOffDialog({ job, busy, onSign, onClose }: { job: WorkshopJob; busy: boolean; onSign: (mechanicId: number, name: string) => void; onClose: () => void }) {
   const mechanics = useQuery({ queryKey: ['mechanics'], queryFn: () => apiGet<Person[]>('/api/employees?role=mechanic') });
   const people = (mechanics.data ?? []).filter((m) => m.active !== false);
   const [picked, setPicked] = useState<number | null>(job.mechanicId ?? null);
@@ -51,7 +51,7 @@ export function SignOffDialog({ job, busy, onSign, onClose }: { job: WorkshopJob
       </DialogBody>
       <DialogFooter className="flex justify-between gap-2.5">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={chosen === null || busy} onClick={() => { if (chosen !== null) onSign(chosen); }}>Sign off and mark ready</Button>
+        <Button variant="primary" disabled={chosen === null || busy} onClick={() => { const p = people.find((m) => m.id === chosen); if (p) onSign(p.id, p.name); }}>Sign off and mark ready</Button>
       </DialogFooter>
     </Dialog>
   );

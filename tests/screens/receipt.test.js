@@ -97,3 +97,15 @@ test('printReceipt puts only the receipt on the page being printed, and the next
   assert.ok(seen.includes('Sale 602') && !seen.includes('Sale 601'), seen);
   assert.equal(document.querySelectorAll('#wh-print article').length, 1);
 });
+
+// The mechanic sign-off, piece 3 (Jack, 18 Oct; drawn as till-receipt-paper-checked):
+// with the shop's setting on, "Checked by [name]" under the job and bike.
+test('a job’s receipt can say who checked it, under the job and bike', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', job: { reference: 'WH-1042', bikeLabel: 'Trek Domane AL 3', checkedBy: 'Alex Morgan' } });
+  assert.ok(text(paper).includes('WH-1042 · Trek Domane AL 3Checked by Alex MorganStandard service'), text(paper));
+});
+
+test('with no one to name, the receipt names no staff', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', job: { reference: 'WH-1042', bikeLabel: 'Trek Domane AL 3', checkedBy: null } });
+  assert.equal(/Checked by/.test(text(paper)), false);
+});

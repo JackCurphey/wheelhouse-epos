@@ -30,6 +30,7 @@ let JOB;
 let ORDER;
 let convertReply;
 let DUE;
+let SHOW_SIGN_OFF = false;
 // What paying the order returns: the whole sale (serializeSale).
 const SALE = { id: 601, createdAt: '2026-10-06T10:45:00.000Z', subtotal: 83, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 83, paymentMethod: 'Card', cashAmount: 0, cardAmount: 83, cashTendered: null, extraPayments: [],
   items: [{ id: 1, name: 'Standard service', qty: 1, unitPrice: 65, lineTotal: 65 }, { id: 2, name: 'Shimano brake pads', qty: 1, unitPrice: 18, lineTotal: 18 }] };
@@ -73,6 +74,7 @@ function stubServer(employee) {
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
+    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], showSignOffToCustomers: SHOW_SIGN_OFF });
     if (u.pathname === '/api/sale-documents/40/due') return DUE.error ? reply(DUE.status ?? 400, DUE) : reply(200, DUE);
     return reply(404, { error: 'Not found' });
   };
@@ -275,4 +277,78 @@ test('finished work is paid without asking, and says nobody was asked', async ()
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
   // null: the till didn't ask, so the server can warn if the work was reopened meanwhile.
   assert.equal(posts('/api/sale-documents/40/convert')[0].signedOffBy, null);
+});
+
+// The mechanic sign-off, piece 3 (Jack, 18 Oct): with "Show who signed off to
+// customers" on, the receipt says who checked the job.
+test('with the setting on, a finished job’s receipt says who signed it off', async () => {
+  SHOW_SIGN_OFF = true;
+  try {
+    const t = await openJobTill({ jobOver: { signedOffBy: 11, signedOffByName: 'Alex Morgan', signedOffAt: '2026-10-06T10:00:00Z' } });
+    let printed = null;
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    const dlg = await payByCard(t);
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+    assert.ok(printed?.includes('WH-1042 · Trek Domane AL 3Checked by Alex Morgan'), String(printed));
+  } finally {
+    SHOW_SIGN_OFF = false;
+  }
+});
+
+test('with the setting on, paying for work in progress puts the mechanic picked on the receipt', async () => {
+  SHOW_SIGN_OFF = true;
+  try {
+    const t = await openJobTill({ jobOver: { workState: 'in_progress' } });
+    let printed = null;
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    const take = await t.sale.findByRole('button', { name: /^Take payment/ });
+    await t.waitFor(() => assert.equal(take.disabled, false));
+    t.fireEvent.click(take);
+    const pop = t.within(await t.ui.findByRole('dialog', { name: 'Who’s signing this off?' }));
+    t.fireEvent.click(await pop.findByRole('radio', { name: 'Jo Taylor' }));
+    t.fireEvent.click(pop.getByRole('button', { name: 'Sign off and mark ready' }));
+    await t.ui.findByRole('dialog', { name: /^Take payment/ });
+    const dlg = t.within(t.ui.getByRole('dialog'));
+    t.fireEvent.click(dlg.getByRole('button', { name: /^Card · / }));
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Card approved' }));
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+    assert.ok(printed?.includes('Checked by Jo Taylor'), String(printed));
+  } finally {
+    SHOW_SIGN_OFF = false;
+  }
+});
+
+test('with the setting off, the receipt names no staff', async () => {
+  const t = await openJobTill({ jobOver: { signedOffBy: 11, signedOffByName: 'Alex Morgan', signedOffAt: '2026-10-06T10:00:00Z' } });
+  let printed = null;
+  window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+  const dlg = await payByCard(t);
+  t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+  assert.ok(printed !== null && !printed.includes('Checked by'), String(printed));
+});
+
+// Fresh review: a reply warning that the job wasn't signed off names nobody,
+// even with the setting on and a mechanic picked at the till.
+test('a payment that comes back unsigned puts no Checked by on the receipt', async () => {
+  SHOW_SIGN_OFF = true;
+  try {
+    const t = await openJobTill({ jobOver: { workState: 'in_progress' } });
+    convertReply = { status: 201, ok: true, json: async () => ({ ...SALE, jobWarning: 'Paid and finished, but not signed off: the work was reopened while the till was open.' }) };
+    let printed = null;
+    window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+    const take = await t.sale.findByRole('button', { name: /^Take payment/ });
+    await t.waitFor(() => assert.equal(take.disabled, false));
+    t.fireEvent.click(take);
+    const pop = t.within(await t.ui.findByRole('dialog', { name: 'Who’s signing this off?' }));
+    t.fireEvent.click(await pop.findByRole('radio', { name: 'Jo Taylor' }));
+    t.fireEvent.click(pop.getByRole('button', { name: 'Sign off and mark ready' }));
+    await t.ui.findByRole('dialog', { name: /^Take payment/ });
+    const dlg = t.within(t.ui.getByRole('dialog'));
+    t.fireEvent.click(dlg.getByRole('button', { name: /^Card · / }));
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Card approved' }));
+    t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+    assert.ok(printed !== null && !printed.includes('Checked by'), String(printed));
+  } finally {
+    SHOW_SIGN_OFF = false;
+  }
 });

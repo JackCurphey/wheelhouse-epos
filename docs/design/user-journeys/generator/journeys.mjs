@@ -363,6 +363,7 @@ export const journeys = [
         sd5("cp-summary", "The “Bike ready” link: what we did, and Pay now", "Customer"),
         sd5("cp-summary-said-yes", "Said yes to reminders when booking: not asked again", "Customer"),
         sd5("cp-summary-deposit", "The same link, after a deposit: only the rest to pay", "Customer"),
+        sd5("cp-summary-checked", "The link, showing who signed the job off", "Customer"),
         sd5("cp-pay", "Pay online", "Customer"),
         sd5("cp-pay-failed", "Pay online: the card didn’t go through", "Customer"),
         sd5("cp-pay-balance", "Pay online after a deposit: only the rest", "Customer"),
@@ -599,6 +600,7 @@ export const journeys = [
       { label: "Workshop settings", screens: [
         sd8("set-workshop-services", "Workshop › Services, by group", "Manager"),
         sd8("set-workshop-mechanics", "Workshop › Mechanics", "Manager"),
+        sd8("set-workshop-sign-off", "Workshop › Mechanics: show customers who signed off", "Manager"),
         sd8("set-workshop-diary", "Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)", "Manager"),
       ] },
       { label: "Messages", screens: [
@@ -716,6 +718,7 @@ export const journeys = [
         sc("till-receipt-split", "Paid: the discounted £70.00, cash and card", "Staff"),
         sc("till-receipt-print", "Paid: Print or No receipt, for now", "Staff"),
         sc("till-receipt-paper", "The printed receipt", "Staff"),
+        sc("till-receipt-paper-checked", "The printed receipt, showing who signed the job off", "Staff"),
       ] },
       { label: "Other ways to pay", screens: [
         sc("till-giftcard", "Gift card or store credit", "Staff"),

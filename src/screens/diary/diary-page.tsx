@@ -31,7 +31,7 @@ import {
  */
 
 type Mechanic = { id: number; name: string; active: boolean; workingDays?: number[] };
-type Settings = { openingHours?: { weekday: number; open: string; close: string }[] };
+type Settings = { openingHours?: { weekday: number; open: string; close: string }[]; showSignOffToCustomers?: boolean };
 type Waiting = { count: number; items: WaitingItem[] };
 
 const SLOT_H = 29; // one 30-minute row, as drawn (desktop and tablet)
@@ -954,13 +954,13 @@ export function DiaryPage() {
   const session = useSession();
   // "Print receipt" (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
   // the paid order names its sale; that sale is the receipt.
-  async function printJobReceipt(j: { orderId: number | null; reference: string; bikeLabel?: string | null }) {
+  async function printJobReceipt(j: { orderId: number | null; reference: string; bikeLabel?: string | null; signedOffByName?: string | null }) {
     setMoveError(null);
     try {
       const order = await apiGet<{ convertedSaleId: number | null }>(`/api/sale-documents/${j.orderId}`);
       if (!order.convertedSaleId) throw new Error('no sale');
       const sale = await apiGet<ReceiptSale>(`/api/sales/${order.convertedSaleId}`);
-      printReceipt({ sale, shopName: session.status === 'signed-in' ? session.shop.name : '', job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null } });
+      printReceipt({ sale, shopName: session.status === 'signed-in' ? session.shop.name : '', job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null, checkedBy: settings.data?.showSignOffToCustomers ? j.signedOffByName ?? null : null } });
     } catch {
       setMoveError('Wheelhouse couldn’t get this job’s receipt to print. Try again in a moment.');
     }

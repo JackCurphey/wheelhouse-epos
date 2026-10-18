@@ -35,6 +35,8 @@ export type BookingLink = {
   bike: { make: string | null; model: string | null } | null;
   stage: BookingStage;
   photoCount: number;
+  /** Who signed the job off, once ready, if the shop shows it (mechanic sign-off piece 3). */
+  checkedBy?: string | null;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
 };

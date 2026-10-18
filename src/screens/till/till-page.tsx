@@ -230,6 +230,10 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
   // signing it off first (Jack, 16 Oct, mechanic sign-off answer 5).
   const [signing, setSigning] = useState(false);
   const [signedOffBy, setSignedOffBy] = useState<number | null>(null);
+  const [signerName, setSignerName] = useState<string | null>(null);
+  // "Checked by [name]" on the receipt, if the shop shows who signed off (piece 3).
+  const shopSettings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ showSignOffToCustomers?: boolean }>('/api/workshop-settings') });
+  const showSignOff = shopSettings.data?.showSignOffToCustomers === true;
   const lines: TillLine[] = (order?.items ?? []).map((it, i) => ({
     key: i + 1,
     kind: it.lineType === 'labour' ? 'labour' : 'part',
@@ -339,12 +343,12 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
         ) : null}
       </section>
       {signing && job ? (
-        <SignOffDialog job={job} busy={false} onClose={() => setSigning(false)} onSign={(id) => { setSignedOffBy(id); setSigning(false); setPaying(true); }} />
+        <SignOffDialog job={job} busy={false} onClose={() => setSigning(false)} onSign={(id, name) => { setSignedOffBy(id); setSignerName(name); setSigning(false); setPaying(true); }} />
       ) : null}
       {paying && job?.orderId ? (
         <PayDialog
           lines={lines}
-          job={{ orderId: job.orderId, total, receipt: { reference: job.reference, bikeLabel: job.bikeLabel ?? null }, signedOffBy: job.workState === 'in_progress' ? signedOffBy : null, afterPaid }}
+          job={{ orderId: job.orderId, total, receipt: { reference: job.reference, bikeLabel: job.bikeLabel ?? null, checkedBy: showSignOff ? (signerName ?? job.signedOffByName ?? null) : null }, signedOffBy: job.workState === 'in_progress' ? signedOffBy : null, afterPaid }}
           onClose={() => setPaying(false)}
           onNextSale={() => { setPaying(false); onDone(); }}
         />

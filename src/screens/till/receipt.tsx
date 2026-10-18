@@ -27,7 +27,8 @@ export type ReceiptSale = {
   /** Tenders the shop added (the old app's extra payments), each by its own name. */
   extraPayments?: { tenderType: string; amount: number }[];
 };
-export type ReceiptJob = { reference: string; bikeLabel: string | null };
+/** checkedBy: who signed the job off, only when the shop shows it (mechanic sign-off piece 3). */
+export type ReceiptJob = { reference: string; bikeLabel: string | null; checkedBy?: string | null };
 export type ReceiptProps = { sale: ReceiptSale; shopName: string; job?: ReceiptJob };
 
 const when = (iso: string) => {
@@ -67,6 +68,7 @@ export function ReceiptPaper({ sale, shopName, job }: ReceiptProps) {
       </div>
       <div className="flex flex-col gap-1 border-t border-dashed border-current pt-2">
         {job ? <span className="font-bold">{job.bikeLabel ? `${job.reference} · ${job.bikeLabel}` : job.reference}</span> : null}
+        {job?.checkedBy ? <span>{`Checked by ${job.checkedBy}`}</span> : null}
         {sale.items.map((it) => (
           <Row key={it.id} left={it.qty > 1 ? `${it.name} ${it.qty} × ${money(it.unitPrice)}` : it.name} right={money(it.lineTotal)} />
         ))}

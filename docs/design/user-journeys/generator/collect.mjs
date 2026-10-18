@@ -50,8 +50,11 @@ const approved = LINES_APPROVED.filter((l) => l.approval === 'Approved');
 const declined = LINES_APPROVED.filter((l) => l.approval === 'Declined');
 // Drop off and approve the quote audit H4: the quote's photo carries through.
 const padsPhoto = `<button type="button" aria-label="Photo of Shimano brake pads: rear pads worn — open larger photo" style="position: relative; flex-shrink: 0; width: 96px; height: 72px; display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 12px; text-align: center">[Photo of the worn rear pads]</button>`;
-const work = () => box('What we did', `<div role="list">${approved.map((l) => row(esc(l.work), sub(l.note ? esc(l.note) : ''), l.code === 'B05S-RX' ? `<span style="display: inline-flex; align-items: flex-start; gap: 12px">${padsPhoto}${mono(money(l.price), 'font-size: 15px')}</span>` : mono(money(l.price), 'font-size: 15px'))).join('')}</div>
-${declined.map((l) => `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Not done — you said no thanks: ${esc(l.work)} (${money(l.price)})</p>`).join('')}`);
+// With "Show who signed off to customers" on (Jack, 18 Oct, mechanic sign-off
+// piece 3): who checked the work, under what was done.
+const checkedLine = `<p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px">${icon('check', 16, C.successInk)}<span>Checked by <strong>Alex Morgan</strong></span></p>`;
+const work = (checked = false) => box('What we did', `<div role="list">${approved.map((l) => row(esc(l.work), sub(l.note ? esc(l.note) : ''), l.code === 'B05S-RX' ? `<span style="display: inline-flex; align-items: flex-start; gap: 12px">${padsPhoto}${mono(money(l.price), 'font-size: 15px')}</span>` : mono(money(l.price), 'font-size: 15px'))).join('')}</div>
+${declined.map((l) => `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Not done — you said no thanks: ${esc(l.work)} (${money(l.price)})</p>`).join('')}${checked ? checkedLine : ''}`);
 // Workshop day 21: a ticked item with no note reads "All working well".
 // Audit M1: a note is labelled as what the mechanic found; the count says
 // how many of the checks were done (wording confirmed by Jack, 30 Sep).
@@ -100,9 +103,9 @@ const trackerDone = () => `<ol aria-label="Where your bike is" style="list-style
 const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your repair · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
 // Audit L1: the pay card comes first in reading order; on a wide screen it
 // sits in the right-hand column.
-function summary(state, remind = true) {
-  if (isPhone()) return site(`${heading()}${pay(state, remind)}${work()}${checks()}${yourNote()}`);
-  return site(`${heading()}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state, remind)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work()}${checks()}${yourNote()}</div></div>`);
+function summary(state, remind = true, checked = false) {
+  if (isPhone()) return site(`${heading()}${pay(state, remind)}${work(checked)}${checks()}${yourNote()}`);
+  return site(`${heading()}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state, remind)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work(checked)}${checks()}${yourNote()}</div></div>`);
 }
 
 // Paying online: the payment provider's own card form sits inside the page
@@ -148,6 +151,7 @@ ${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collec
 
 def('cp-summary', () => summary('pay'));
 def('cp-summary-deposit', () => summary('deposit'));
+def('cp-summary-checked', () => summary('pay', true, true));
 def('cp-summary-said-yes', () => summary('pay', 'yes'));
 def('cp-pay', () => payOnline());
 def('cp-pay-failed', () => payOnline(true));
@@ -263,6 +267,7 @@ export const TITLES = {
   'cp-summary': 'The “Bike ready” link: what we did, and Pay now',
   'cp-summary-said-yes': 'Said yes to reminders when booking: not asked again',
   'cp-summary-deposit': 'The same link, after a deposit: only the rest to pay',
+  'cp-summary-checked': 'The link, showing who signed the job off',
   'cp-pay': 'Pay online',
   'cp-pay-failed': 'Pay online: the card didn’t go through',
   'cp-pay-balance': 'Pay online after a deposit: only the rest',
@@ -299,7 +304,7 @@ export const TITLES = {
   'cp-receipt-address-offline': 'The till is offline: it sends when back online',
 };
 export const ROWS = [
-  { label: 'The customer’s link', screens: ['cp-summary', 'cp-summary-said-yes', 'cp-summary-deposit', 'cp-pay', 'cp-pay-failed', 'cp-pay-balance', 'cp-paid', 'cp-paid-balance', 'cp-summary-paid', 'cp-summary-counter', 'cp-summary-inshop', 'cp-expired'] },
+  { label: 'The customer’s link', screens: ['cp-summary', 'cp-summary-said-yes', 'cp-summary-deposit', 'cp-summary-checked', 'cp-pay', 'cp-pay-failed', 'cp-pay-balance', 'cp-paid', 'cp-paid-balance', 'cp-summary-paid', 'cp-summary-counter', 'cp-summary-inshop', 'cp-expired'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['cp-summary-ls', 'cp-summary-ls-paid'] },
   { label: 'At the counter', screens: ['cp-ready-unpaid', 'cp-ready-deposit', 'cp-till', 'cp-ready-paid', 'cp-ready-ticks', 'cp-collected'] },

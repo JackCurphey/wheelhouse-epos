@@ -79,6 +79,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         <p className="m-0">{whenLine(link)}</p>
         {link.bikeNote && <p className="m-0">{link.bikeNote}</p>}
         {link.description && <p className="m-0">{link.description}</p>}
+        {/* Who checked it, once ready, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
+        {link.checkedBy && <p className="m-0" data-checked-by="true">Checked by <strong>{link.checkedBy}</strong></p>}
         {answers.length > 0 && (
           <dl className="m-0 mt-2">
             {answers.map((a, i) => (

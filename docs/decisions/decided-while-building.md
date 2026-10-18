@@ -407,8 +407,20 @@ silent:
 6. **A sign-off that's no longer valid when the payment lands doesn't refuse
    it: "Paid and finished, but not signed off: that mechanic isn't active any
    more."** on Paid; the same for a till left open on finished work that was
-   reopened meanwhile ("…the work was reopened while the till was open"). *Pattern:* the till's job-changed warning
-   (the card is taken first; #267).
+   reopened meanwhile ("…the work was reopened while the till was open").
+   *Pattern:* the till's job-changed warning (the card is taken first; #267).
+7. **The first Settings page shows only Workshop › Mechanics' sign-off
+   switch**, without the drawn area list or the other sections, until the
+   rest of Settings is built (WP-5.1). Switching saves at once; if it can't:
+   "Wheelhouse couldn't save that. Try again in a moment." *Pattern:* the
+   drawn set-workshop-sign-off, cut to what's built.
+8. **Today's booking link shows "Checked by [name]" as a line in its summary
+   box**, since its drawn ready page (cp-summary) isn't built; ready or
+   collected only. *Pattern:* cp-summary-checked's line.
+9. **The till's receipt names the mechanic picked in its pop-up, or the
+   job's sign-off if the work was already finished; a reply warning that it
+   wasn't signed off names nobody.** *Pattern:* nothing shown that wasn't
+   recorded.
 
 ## Decided here, for Jack to overrule
 
