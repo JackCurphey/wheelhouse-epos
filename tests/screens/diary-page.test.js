@@ -78,8 +78,9 @@ function stubServer() {
   };
 }
 
-async function openDiary(query = '?date=2026-10-05', firstBike = 'Trek Domane') {
+async function openDiary(query = '?date=2026-10-05', firstBike = 'Trek Domane', matchMedia = null) {
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
+  if (matchMedia) window.matchMedia = matchMedia;
   // jsdom has no <dialog> methods; the job page opens in one.
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() {
@@ -156,6 +157,30 @@ test('choosing a mechanic shows only their jobs; a request with no mechanic yet 
   assert.ok(has(ui.queryByText('Trek Domane')));
   assert.equal(has(ui.queryByText('Brompton C Line')), false);
   assert.equal(has(ui.queryByText('Specialized Sirrus')), false);
+});
+
+// Jack, 18 Oct (docs/decisions/2026-10-18-old-diary-features.md, answer 5):
+// a Shared queue button after the mechanics shows only the jobs no mechanic
+// has yet, for the old diary's "Unassigned" pill.
+test('Shared queue shows only the jobs no mechanic has yet', async () => {
+  const { ui, fireEvent } = await openDiary();
+  const shared = ui.getByRole('button', { name: 'Shared queue' });
+  assert.equal(shared.getAttribute('aria-pressed'), 'false');
+  fireEvent.click(shared);
+  assert.equal(shared.getAttribute('aria-pressed'), 'true');
+  assert.equal(ui.getByRole('button', { name: 'Everyone' }).getAttribute('aria-pressed'), 'false');
+  assert.ok(has(ui.queryByText('Specialized Sirrus')));
+  assert.equal(has(ui.queryByText('Trek Domane')), false);
+  assert.equal(has(ui.queryByText('Brompton C Line')), false);
+  assert.equal(has(ui.queryByText('Ribble CGR')), false);
+});
+
+test('in the Day view, Shared queue is one column of the jobs no mechanic has yet', async () => {
+  const { ui, within } = await openDiary('?date=2026-10-09&view=day&who=shared', 'Specialized Sirrus');
+  const column = within(await ui.findByRole('group', { name: 'Shared queue' }));
+  assert.ok(has(column.queryByText('Specialized Sirrus')));
+  assert.equal(has(ui.queryByRole('group', { name: 'Alex Morgan' })), false);
+  assert.equal(has(ui.queryByRole('group', { name: 'Jo Taylor' })), false);
 });
 
 test('Next week loads the next week', async () => {
@@ -295,4 +320,83 @@ test('in the Day view, a request from another week for any mechanic shows in the
     const jo = within(await ui.findByRole('group', { name: 'Jo Taylor' }));
     assert.ok(has(await jo.findByText('Requested 14:00')));
   });
+});
+
+// Jack, 16 Oct: Waiting for you is a panel, the count a badge; screen readers
+// still hear "Waiting for you (2)". Spec: openspec/changes/waiting-panel
+test('Waiting for you shows its count as a badge and keeps its name', async () => {
+  const { ui } = await openDiary();
+  const region = ui.getByRole('region', { name: 'Waiting for you (2)' });
+  const badge = region.querySelector('[data-count-badge]');
+  assert.ok(badge !== null, 'the count is a badge');
+  assert.equal(badge.textContent, '2');
+});
+
+// The layout review (#238, item 3): once a card is chosen, the hint drawn
+// under the cards says how to open it. Spec: openspec/changes/review-catch-ups
+test('a chosen Waiting card says how to open it', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  const region = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  assert.ok(region.queryByText('Double-click a card to open it.') === null, 'no hint before a card is chosen');
+  fireEvent.click(region.getByRole('button', { name: /Lena Fox/ }));
+  assert.ok(has(region.queryByText('Double-click a card to open it.')));
+});
+
+// On a touch screen the hint says to tap again, as drawn for the tablet, and
+// the Open button is finger-sized there (#238, items 3 and 4).
+test('chosen by a tap, the hint says tap again, and Open is finger-sized on touch', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  const region = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  const card = region.getByRole('button', { name: /Lena Fox/ });
+  fireEvent.pointerDown(card, { pointerType: 'touch' });
+  fireEvent.click(card, { detail: 1 });
+  assert.ok(has(region.queryByText('Tap the card again to open it.')));
+  assert.match(region.getByRole('button', { name: "Open Lena Fox's request" }).className, /pointer-coarse:min-h-11/);
+});
+
+// After the fresh review: a card chosen from the keyboard gets the
+// double-click wording, even after an earlier tap on another card.
+test('a card chosen from the keyboard after a tap elsewhere says double-click', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  const region = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  const sam = region.getByRole('button', { name: /Sam Reed/ });
+  fireEvent.pointerDown(sam, { pointerType: 'touch' });
+  fireEvent.click(sam, { detail: 1 });
+  fireEvent.click(region.getByRole('button', { name: /Lena Fox/ }), { detail: 0 });
+  assert.ok(has(region.queryByText('Double-click a card to open it.')));
+});
+
+// With 12px labels a half-hour block has room for one line, so it shows the
+// bike only, as the drawing does (walk 1 M3); the job stays in its description.
+// Spec: openspec/changes/diary-label-floor
+test('a half-hour block shows the bike only; an hour block shows the job too', async () => {
+  JOBS.push(job({ id: 9, reference: 'WH-1009', title: 'Safety check', bikeLabel: 'Giant Escape', customerName: 'Priya Shah', jobDate: '2026-10-08', startTime: '14:00', endTime: '14:30' }));
+  try {
+    const { ui, within } = await openDiary();
+    const thu = within(ui.getByRole('group', { name: 'Thursday 8 October' }));
+    assert.ok(has(thu.queryByText('Giant Escape')));
+    assert.ok(thu.queryByText('Safety check') === null, 'a half-hour block has no room for the job line');
+    const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
+    assert.ok(has(tue.queryByText('Brake service')), 'an hour block shows the job');
+    // After the fresh review: lines are 14px, as drawn, so a 45-minute block has room for two.
+    const fri = within(ui.getByRole('group', { name: 'Friday 9 October' }));
+    assert.ok(has(fri.queryByText('Puncture repair')), 'a 45-minute block shows the job');
+  } finally {
+    JOBS.pop();
+  }
+});
+
+// After the fresh review of the upright tablet (layout review item 7): a card
+// chosen from the Waiting sheet shows the phone's chosen-card bar with Open,
+// at the foot of the page, since there's no Waiting column to show it in.
+// Spec: openspec/changes/upright-tablet-diary
+test('on an upright tablet, a card chosen from the sheet shows the chosen bar with Open', async () => {
+  const uprightTablet = (q) => ({ matches: q.includes('1023px'), media: q, addEventListener() {}, removeEventListener() {} });
+  const { ui, fireEvent, within } = await openDiary('?date=2026-10-05', 'Trek Domane', uprightTablet);
+  fireEvent.click(ui.getByRole('button', { name: 'Waiting for you, 2' }));
+  const sheet = within(await ui.findByRole('dialog', { name: 'Waiting for you (2)' }));
+  fireEvent.click(sheet.getByRole('button', { name: /Lena Fox/ }));
+  const bar = await ui.findByRole('status', { name: 'Chosen from Waiting for you' });
+  assert.ok(bar.closest('[data-tablet-foot]') !== null, 'the bar sits at the foot of the page');
+  assert.ok(has(within(bar).queryByRole('button', { name: "Open Lena Fox's request" })));
 });

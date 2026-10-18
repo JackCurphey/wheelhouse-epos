@@ -6,6 +6,7 @@
 // Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -40,7 +41,9 @@ const as = (path, options) => staffRequest(server.baseUrl, owner.cookie, path, o
 test('a booking link expires on the shop\'s date, not the UTC date', async () => {
   // Links last 30 days after the booked date: a job on 9 August has 8
   // September as its last day, so it has expired on the UK's 9 September.
-  const code = 'a'.repeat(64);
+  // A fresh code each run: link hashes are unique across every shop, and
+  // another test run may share this database.
+  const code = randomBytes(32).toString('hex');
   const { jobId } = await seedWorkshopJob({ shopId: owner.shop.id, customerId: null, mechanicId: sam, jobDate: '2026-08-09' });
   await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_jobs SET link_token_hash = ? WHERE id = ?').run(hashLinkCode(code), jobId));
   const read = () => jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${code}`);

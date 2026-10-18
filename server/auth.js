@@ -46,14 +46,21 @@ function slugify(name) {
   );
 }
 
-async function uniqueSlug(client, name) {
+// Inserts the shop at the first free address: name, name-2, name-3...
+// Checking first and inserting after let two sign-ups with the same name at
+// the same moment both pick the same address, and the second failed on
+// shops_slug_key. ON CONFLICT waits for the other sign-up's transaction and,
+// if it took the address, inserts nothing, so this one tries the next.
+async function insertShopAtFreeSlug(client, name) {
   const base = slugify(name);
-  let slug = base;
-  let n = 2;
-  while ((await client.query('SELECT id FROM shops WHERE slug = $1', [slug])).rows[0]) {
-    slug = `${base}-${n++}`;
+  for (let n = 1; ; n++) {
+    const slug = n === 1 ? base : `${base}-${n}`;
+    const { rows: [shop] } = await client.query(
+      'INSERT INTO shops (slug, name) VALUES ($1, $2) ON CONFLICT (slug) DO NOTHING RETURNING *',
+      [slug, name]
+    );
+    if (shop) return shop;
   }
-  return slug;
 }
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,11 +97,7 @@ export async function createShop({ shopName, ownerName, email, password }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const slug = await uniqueSlug(client, shopName);
-    const { rows: [shop] } = await client.query(
-      'INSERT INTO shops (slug, name) VALUES ($1, $2) RETURNING *',
-      [slug, shopName]
-    );
+    const shop = await insertShopAtFreeSlug(client, shopName);
     // The seed inserts below hit RLS-protected tables (customer_groups,
     // workshop_settings) - their WITH CHECK policy evaluates
     // current_setting('app.current_shop_id') regardless of whether shop_id

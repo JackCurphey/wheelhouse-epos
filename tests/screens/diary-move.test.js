@@ -184,3 +184,19 @@ test('a booking request and a cancelled booking cannot be moved', async () => {
   assert.equal(has(ui.queryByRole('button', { name: /^Specialized Sirrus/ })), false);
   assert.equal(has(ui.queryByRole('button', { name: /^Cannondale Quick/ })), false);
 });
+
+// Jack, 16 Oct: a refused move's message floats at the bottom of the screen
+// instead of pushing the diary down, and can be closed.
+// Spec: openspec/changes/floating-diary-messages
+test('a refused move floats its message, which can be closed', async () => {
+  const { ui, fireEvent, within } = await openDiary();
+  answer = { status: 400, body: { error: 'Alex Morgan already has a job at that time' } };
+  const b = block(ui, 'Trek Domane');
+  fireEvent.keyDown(b, { key: 'm' });
+  fireEvent.keyDown(b, { key: 'ArrowDown' });
+  fireEvent.keyDown(b, { key: 'Enter' });
+  const message = await ui.findByText("Couldn't move Trek Domane: Alex Morgan already has a job at that time");
+  assert.ok(message.closest('[data-floating]') !== null, 'the message floats');
+  fireEvent.click(within(message.closest('[data-floating]')).getByRole('button', { name: 'Close the message' }));
+  assert.ok(ui.queryByText("Couldn't move Trek Domane: Alex Morgan already has a job at that time") === null);
+});
