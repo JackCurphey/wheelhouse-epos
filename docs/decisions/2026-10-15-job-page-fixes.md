@@ -24,3 +24,15 @@ page, one question each. No drawing shows any of them. Built in
    "Expired" in its grey. This answers stage 1 gaps decision 25 (a Change
    requested badge on the job window). Chosen over showing declined and
    expired bookings as "Cancelled".
+
+### 16 Oct 2026: "Bike is here" on an ended booking (issue 190 A)
+
+5. **An ended booking whose bike is in the shop keeps "Bike is here" on,
+   greyed and fixed** (Jack: "1"), because the bike really is there. A
+   booking that ended before the bike came in stays off and fixed, as
+   built in #223. No screen change. Stopping the server booking in or
+   starting work on an ended booking (the rest of #190 A) is Mark's, when
+   he is back. Chosen over showing it off for every ended booking, and over
+   hiding the switch. This narrows "off and fixed" in Jack's section of
+   `decided-while-building.md` (15 Oct, plain refusals, item 3) to a
+   booking whose bike never came in.

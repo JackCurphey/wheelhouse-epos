@@ -339,3 +339,7 @@ sign-in screen requirements (not yet checked against Google's own pages):
   connection; later, the Apple Developer Program ($99 a year).
 
 *Note (15 Oct):* decision 25's open question, a Change requested badge on the job window, is answered: the job page reads "Change requested" in the diary's amber (`2026-10-15-job-page-fixes.md`, decision 4).
+
+**Later change (16 Oct 2026, the go-live checklist):** Google sign-in is
+needed on switch-over day, in a Google account for Wheelhouse itself, not
+one shop's (Jack, `2026-10-16-go-live-checklist.md` item 10).

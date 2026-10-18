@@ -52,18 +52,7 @@ let customerBikes = []; // bikes belonging to whichever customer is currently in
 let customerGroups = []; // shop-wide list of groups (e.g. "Blue Light", "ACC") customers can be tagged with
 let customerMessages = []; // texts sent to whichever customer is currently in view
 
-let workshopView = 'week'; // 'week' | 'month'
-let workshopWeekStart = null; // 'YYYY-MM-DD' for the Monday of the displayed week
-let workshopMonthStart = null; // 'YYYY-MM-01' for the displayed month
-let workshopJobs = [];
-let workshopPlacing = false; // true while "Create job" is armed, waiting for a diary click
-let workshopMechanicFilter = 'all'; // 'all' | 'unassigned' | mechanic id | array of mechanic ids
-let workshopMechanicFilterInitialized = false; // true once the default below (every mechanic, split view) has been applied - so it only happens once, not every re-render, and a later manual choice (incl. picking "All" back) sticks
-let waitingFeed = { count: 0, items: [] }; // GET /api/workshop-waiting - shop-wide, oldest first; powers "Waiting for you"
-let waitingIds = new Set(); // job ids in waitingFeed - a job in here opens the review pop-up
-let waitingTimer = null; // the column's minute check while #workshop is showing
-
-let mechanics = []; // employees with isMechanic=true, active only - used by the Workshop diary
+let mechanics = []; // employees with isMechanic=true, active only - used by the old job form's mechanic list
 let activeCashiers = []; // employees with isCashier=true, active only - used by the Till
 let activeCashierId = null;
 let team = []; // merged roster + login list - used by Office > Edit Shop > Office
@@ -121,7 +110,6 @@ async function api(path, { method = 'GET', body } = {}) {
     // login screen instead of letting every in-flight view render an opaque
     // "Request failed (401)" error.
     currentUser = null;
-    stopWaitingTimer();
     renderAuthScreen();
   }
   if (!res.ok) {
@@ -185,19 +173,6 @@ function toDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
-function fmtDayShort(dateStr) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' });
-}
-
-function startOfWeek(d) {
-  const date = new Date(d);
-  date.setHours(0, 0, 0, 0);
-  const day = date.getDay(); // 0 Sun .. 6 Sat
-  const diff = (day === 0 ? -6 : 1) - day; // shift back to Monday
-  date.setDate(date.getDate() + diff);
-  return date;
-}
-
 // ---------------- Data loading ----------------
 
 async function loadProducts() {
@@ -210,8 +185,7 @@ async function loadProductsAll() {
   categories = await api('/api/categories');
 }
 
-// Only fetched once per session (like workshopMechanicFilterInitialized's
-// guard) - by the time a user opens the sticker print modal from Stockroom,
+// Only fetched once per session - by the time a user opens the sticker print modal from Stockroom,
 // the real saved label size is already in hand rather than the placeholder
 // default above.
 async function loadLabelSettings() {
@@ -253,51 +227,8 @@ async function loadCustomerMessages(customerId) {
   customerMessages = customerId ? await api(`/api/customers/${customerId}/texts`) : [];
 }
 
-async function loadWorkshopJobs(start, end) {
-  workshopJobs = await api(`/api/workshop-jobs?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-}
-
-// What customers are waiting on staff for (piece 12): new online bookings,
-// change requests and unseen cancellations, whichever week they're in.
-async function loadWaitingFeed() {
-  waitingFeed = await api('/api/workshop-waiting');
-  waitingIds = new Set(waitingFeed.items.map((i) => i.jobId));
-}
-
-// The column checks every minute while the Workshop tab shows; it redraws
-// only itself, never the grid. A failed check keeps the last list. Logout
-// and a 401 both leave the hash at #workshop, so the tick also checks that
-// there's still a signed-in user and a workshop feed on screen - otherwise
-// it would keep polling (and, on a 401, wiping the freshly-rendered login
-// screen) after the session that started it has ended.
-function startWaitingTimer() {
-  if (waitingTimer) return;
-  waitingTimer = setInterval(async () => {
-    if (topTab() !== 'workshop' || !currentUser || !document.getElementById('workshop-feed')) {
-      return stopWaitingTimer();
-    }
-    try {
-      await loadWaitingFeed();
-      renderWaitingFeed();
-    } catch (_) { /* keep the last list; try again next minute */ }
-  }, 60_000);
-}
-
-function stopWaitingTimer() {
-  if (waitingTimer) clearInterval(waitingTimer);
-  waitingTimer = null;
-}
-
 async function loadMechanics() {
   mechanics = await api('/api/employees?role=mechanic');
-  // Default to every mechanic shown split side by side (matches the
-  // booking link page's own default) rather than the merged single-column
-  // "All" view - only on first load, so it doesn't override a filter
-  // already chosen this session (including deliberately picking "All" back).
-  if (!workshopMechanicFilterInitialized && mechanics.length) {
-    workshopMechanicFilter = mechanics.map((m) => m.id);
-    workshopMechanicFilterInitialized = true;
-  }
 }
 
 async function loadActiveCashiers() {
@@ -313,7 +244,6 @@ async function loadTeam() {
 
 async function loadWorkshopSettings() {
   workshopSettings = await api('/api/workshop-settings');
-  applyWorkshopHours(workshopSettings.openingTime, workshopSettings.closingTime);
 }
 
 async function loadSaleDocuments(kind) {
@@ -350,7 +280,6 @@ const OFFICE_TABS = [
 
 window.addEventListener('hashchange', () => {
   route = (location.hash || '#till').replace('#', '');
-  if (topTab() !== 'workshop') stopWaitingTimer();
   renderRoute();
 });
 
@@ -359,6 +288,9 @@ function topTab() {
 }
 
 function go(tab) {
+  // The old diary was retired (docs/decisions/2026-10-18-retire-old-diary.md):
+  // Workshop opens the new one.
+  if (tab === 'workshop') return location.assign('/workshop/diary');
   location.hash = tab === 'office' ? 'office/dashboard' : tab;
 }
 
@@ -382,7 +314,6 @@ function renderShell() {
   document.getElementById('logout-btn').addEventListener('click', async () => {
     try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) { /* ignore */ }
     currentUser = null;
-    stopWaitingTimer();
     renderAuthScreen();
   });
 }
@@ -410,7 +341,7 @@ async function renderRoute() {
     const top = topTab();
     if (top === 'till') await renderTill();
     else if (top === 'office') await renderOffice();
-    else if (top === 'workshop') await renderWorkshop();
+    else if (top === 'workshop') location.replace('/workshop/diary');
     else { location.hash = 'till'; }
   } catch (err) {
     main.innerHTML = `<div class="error-banner">Failed to load: ${esc(err.message)}</div>`;
@@ -1496,1068 +1427,6 @@ function renderOfficeSubnav() {
     btn.addEventListener('click', () => {
       const childId = btn.dataset.officeSubnav;
       location.hash = childId ? `office/${btn.dataset.officeNav}/${childId}` : `office/${btn.dataset.officeNav}`;
-    });
-  });
-}
-
-// ================= WORKSHOP =================
-
-async function renderWorkshop() {
-  workshopPlacing = false;
-  await loadWorkshopSettings();
-  await loadActiveCustomers();
-  await loadMechanics();
-  await loadWaitingFeed();
-
-  let navHtml;
-  let hintText;
-  let gridDays;
-  let monthDate;
-
-  if (workshopView === 'month') {
-    if (!workshopMonthStart) workshopMonthStart = toDateStr(startOfMonth(new Date()));
-    monthDate = new Date(workshopMonthStart + 'T00:00:00');
-    gridDays = monthGridDays(monthDate);
-    await loadWorkshopJobs(toDateStr(gridDays[0]), toDateStr(gridDays[gridDays.length - 1]));
-    navHtml = `
-      <button class="btn btn-sm" id="month-prev">‹ Prev</button>
-      <button class="btn btn-sm" id="month-today">This month</button>
-      <button class="btn btn-sm" id="month-next">Next ›</button>
-      <span class="week-label">${esc(fmtMonthLabel(monthDate))}</span>
-    `;
-    hintText = 'Click a day on the calendar to place the new job — or click "Cancel" to stop.';
-  } else {
-    if (!workshopWeekStart) workshopWeekStart = toDateStr(startOfWeek(new Date()));
-    const weekStart = new Date(workshopWeekStart + 'T00:00:00');
-    gridDays = [...Array(7)].map((_, i) => {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-    await loadWorkshopJobs(toDateStr(weekStart), toDateStr(gridDays[6]));
-    navHtml = `
-      <button class="btn btn-sm" id="week-prev">‹ Prev</button>
-      <button class="btn btn-sm" id="week-today">This week</button>
-      <button class="btn btn-sm" id="week-next">Next ›</button>
-      <span class="week-label">${esc(fmtWeekRange(weekStart, gridDays[6]))}</span>
-    `;
-    hintText = 'Click a time on the diary to place the new job — or click "Cancel" to stop.';
-  }
-
-  const main = document.getElementById('main');
-  main.innerHTML = `
-    <div class="workshop-layout">
-      <aside class="workshop-feed" id="workshop-feed"></aside>
-      <div class="workshop-main">
-        <div class="workshop-header">
-          <h1>Workshop</h1>
-          <div class="week-nav">
-            <button class="btn btn-sm ${workshopView === 'week' ? 'btn-primary' : ''}" id="view-week-btn">Week</button>
-            <button class="btn btn-sm ${workshopView === 'month' ? 'btn-primary' : ''}" id="view-month-btn">Month</button>
-            ${navHtml}
-            <button class="btn btn-sm btn-primary" id="create-job-btn">+ Create job</button>
-          </div>
-        </div>
-        <div class="category-pills" id="mechanic-pills"></div>
-        <div class="wk-placing-hint" id="workshop-hint" style="display:none;">${esc(hintText)}</div>
-        <div class="week-diaries" id="week-diaries"></div>
-      </div>
-    </div>
-  `;
-
-  renderWaitingFeed();
-  startWaitingTimer();
-
-  document.getElementById('view-week-btn').addEventListener('click', () => {
-    if (workshopView === 'week') return;
-    workshopView = 'week';
-    renderWorkshop();
-  });
-  document.getElementById('view-month-btn').addEventListener('click', () => {
-    if (workshopView === 'month') return;
-    workshopView = 'month';
-    renderWorkshop();
-  });
-  document.getElementById('create-job-btn').addEventListener('click', () => setWorkshopPlacing(!workshopPlacing));
-
-  if (workshopView === 'month') {
-    document.getElementById('month-prev').addEventListener('click', () => shiftWorkshopMonth(-1));
-    document.getElementById('month-today').addEventListener('click', () => {
-      workshopMonthStart = toDateStr(startOfMonth(new Date()));
-      renderWorkshop();
-    });
-    document.getElementById('month-next').addEventListener('click', () => shiftWorkshopMonth(1));
-    renderMechanicPills();
-    renderMonthGrid(gridDays, monthDate);
-  } else {
-    document.getElementById('week-prev').addEventListener('click', () => shiftWorkshopWeek(-7));
-    document.getElementById('week-today').addEventListener('click', () => {
-      workshopWeekStart = toDateStr(startOfWeek(new Date()));
-      renderWorkshop();
-    });
-    document.getElementById('week-next').addEventListener('click', () => shiftWorkshopWeek(7));
-    renderMechanicPills();
-    renderWeekGrid(gridDays);
-  }
-}
-
-function renderMechanicPills() {
-  const wrap = document.getElementById('mechanic-pills');
-  if (!wrap) return;
-  const selectedIds = Array.isArray(workshopMechanicFilter) ? workshopMechanicFilter : [];
-  const tabs = [
-    { id: 'all', label: 'All', active: workshopMechanicFilter === 'all' },
-    { id: 'unassigned', label: 'Unassigned', active: workshopMechanicFilter === 'unassigned' },
-    ...mechanics.map((m) => ({ id: String(m.id), label: m.name, active: selectedIds.includes(m.id) })),
-  ];
-  wrap.innerHTML = tabs
-    .map((t) => `<button class="pill ${t.active ? 'active' : ''}" data-mech="${esc(t.id)}">${esc(t.label)}</button>`)
-    .join('');
-  wrap.querySelectorAll('button[data-mech]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const val = btn.dataset.mech;
-      if (val === 'all' || val === 'unassigned') {
-        workshopMechanicFilter = val;
-      } else {
-        const id = Number(val);
-        const current = Array.isArray(workshopMechanicFilter) ? [...workshopMechanicFilter] : [];
-        const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-        workshopMechanicFilter = next.length ? next : 'all';
-      }
-      renderMechanicPills();
-      refreshWorkshopGrid();
-    });
-  });
-}
-
-function currentWorkshopDays() {
-  const weekStart = new Date(workshopWeekStart + 'T00:00:00');
-  return [...Array(7)].map((_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-}
-
-// Re-renders just the grid area for whichever view is currently active,
-// without rebuilding the header/nav or re-fetching jobs from the server.
-function refreshWorkshopGrid() {
-  if (workshopView === 'month') {
-    const monthDate = new Date(workshopMonthStart + 'T00:00:00');
-    renderMonthGrid(monthGridDays(monthDate), monthDate);
-  } else {
-    renderWeekGrid(currentWorkshopDays());
-  }
-}
-
-function mechanicShown(mechanicId) {
-  if (workshopMechanicFilter === 'all') return true;
-  if (workshopMechanicFilter === 'unassigned') return !mechanicId;
-  if (Array.isArray(workshopMechanicFilter)) return workshopMechanicFilter.includes(mechanicId);
-  return mechanicId === workshopMechanicFilter;
-}
-
-// Cancelled, declined and expired bookings aren't drawn - except a
-// customer's cancellation nobody has seen yet (staff diary piece).
-function visibleWorkshopJobs() {
-  return workshopJobs.filter((j) => DiaryMarks.markOf(j) !== 'hidden' && mechanicShown(j.mechanicId));
-}
-
-// "Waiting for you": one card per thing a customer is waiting on staff for,
-// oldest first (the server's order). Clicking a card jumps to the job.
-function renderWaitingFeed() {
-  const wrap = document.getElementById('workshop-feed');
-  if (!wrap) return;
-  const now = new Date();
-  const cards = waitingFeed.items.map((item) => {
-    const c = DiaryWaiting.cardFor(item, now);
-    return `
-      <button class="waiting-card tone-${c.tone}" data-job="${item.jobId}">
-        <span class="waiting-tag">${esc(c.label)}</span>
-        <span class="waiting-who">${esc(c.customer)}${c.reference ? ` · ${esc(c.reference)}` : ''}</span>
-        ${c.services ? `<span class="waiting-line">${esc(c.services)}</span>` : ''}
-        <span class="waiting-line muted">${esc(c.when)}</span>
-        <span class="waiting-line muted">${esc(c.arrived)}</span>
-      </button>`;
-  }).join('');
-  wrap.innerHTML = `
-    <h2 class="workshop-feed-title">Waiting for you (${waitingFeed.count})</h2>
-    ${cards || '<div class="empty-state">Nothing waiting</div>'}
-  `;
-  wrap.querySelectorAll('.waiting-card').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const item = waitingFeed.items.find((i) => i.jobId === Number(btn.dataset.job));
-      if (item) jumpToJob({ id: item.jobId, jobDate: item.jobDate });
-    });
-  });
-}
-
-// Navigates the diary to wherever a job lives - switches to week view,
-// jumps to its week, and makes sure every mechanic is visible (in case the
-// current filter would otherwise hide it) - then scrolls to and briefly
-// highlights the actual block so it's obvious which one it is. Serves the
-// "Waiting for you" column.
-async function jumpToJob(job) {
-  workshopView = 'week';
-  workshopWeekStart = toDateStr(startOfWeek(new Date(job.jobDate + 'T00:00:00')));
-  workshopMechanicFilter = mechanics.map((m) => m.id);
-  await renderWorkshop();
-  const target = document.querySelector(`.wk-job-block[data-job="${job.id}"], .job-card[data-job="${job.id}"]`);
-  if (!target) return;
-  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  target.classList.add('flash-highlight');
-  setTimeout(() => target.classList.remove('flash-highlight'), 2000);
-}
-
-// When 2+ mechanics are selected at once, the diary splits each day into a
-// sub-column per mechanic so their schedules show side by side. A single
-// selected mechanic (or 'all'/'unassigned') keeps the normal one-column-per-day view.
-function activeMechanicList() {
-  if (!Array.isArray(workshopMechanicFilter) || workshopMechanicFilter.length < 2) return null;
-  const list = mechanics.filter((m) => workshopMechanicFilter.includes(m.id));
-  // If selected mechanics were since removed, fall back to the normal single
-  // diary rather than rendering zero of them.
-  return list.length >= 2 ? list : null;
-}
-
-function setWorkshopPlacing(on) {
-  workshopPlacing = on;
-  const wrap = document.getElementById('week-diaries');
-  const btn = document.getElementById('create-job-btn');
-  const hint = document.getElementById('workshop-hint');
-  if (wrap) wrap.classList.toggle('placing', on);
-  if (btn) btn.textContent = on ? 'Cancel' : '+ Create job';
-  if (hint) hint.style.display = on ? '' : 'none';
-}
-
-function shiftWorkshopWeek(deltaDays) {
-  const d = new Date(workshopWeekStart + 'T00:00:00');
-  d.setDate(d.getDate() + deltaDays);
-  workshopWeekStart = toDateStr(d);
-  renderWorkshop();
-}
-
-function fmtWeekRange(start, end) {
-  const opts = { day: '2-digit', month: 'short' };
-  const sameYear = start.getFullYear() === end.getFullYear();
-  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}${sameYear ? ', ' + end.getFullYear() : ''}`;
-}
-
-function startOfMonth(d) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
-// Always 6 full weeks (42 days) so the grid's shape never jumps around when
-// navigating between months with different lengths/starting weekdays.
-function monthGridDays(monthDate) {
-  const gridStart = startOfWeek(startOfMonth(monthDate));
-  return [...Array(42)].map((_, i) => {
-    const d = new Date(gridStart);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-}
-
-function fmtMonthLabel(monthDate) {
-  return monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
-
-function shiftWorkshopMonth(deltaMonths) {
-  const d = new Date(workshopMonthStart + 'T00:00:00');
-  d.setMonth(d.getMonth() + deltaMonths);
-  workshopMonthStart = toDateStr(startOfMonth(d));
-  renderWorkshop();
-}
-
-// Workshop diary shows the shop's working hours as a continuous, pixel-positioned
-// grid so timed jobs render as draggable/resizable blocks; jobs without a start
-// time go in a separate "Unscheduled" row above it. The hour range is driven by
-// the workshop's opening/closing time (Office > Edit Workshop), defaulting to
-// 09:00-18:00 until that's loaded.
-let WORKSHOP_HOUR_START = 9;
-let WORKSHOP_HOUR_END = 18;
-const WORKSHOP_ROW_PX = 48;
-const WORKSHOP_SNAP_MIN = 15;
-let WORKSHOP_GRID_HEIGHT = (WORKSHOP_HOUR_END - WORKSHOP_HOUR_START) * WORKSHOP_ROW_PX;
-let WORKSHOP_GRID_MIN = WORKSHOP_HOUR_START * 60;
-let WORKSHOP_GRID_MAX = WORKSHOP_HOUR_END * 60;
-
-function applyWorkshopHours(openingTime, closingTime) {
-  WORKSHOP_HOUR_START = parseInt((openingTime || '09:00').split(':')[0], 10);
-  WORKSHOP_HOUR_END = parseInt((closingTime || '18:00').split(':')[0], 10);
-  WORKSHOP_GRID_HEIGHT = (WORKSHOP_HOUR_END - WORKSHOP_HOUR_START) * WORKSHOP_ROW_PX;
-  WORKSHOP_GRID_MIN = WORKSHOP_HOUR_START * 60;
-  WORKSHOP_GRID_MAX = WORKSHOP_HOUR_END * 60;
-}
-
-function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-function minutesToTime(mins) {
-  const clamped = Math.max(0, Math.min(23 * 60 + 59, Math.round(mins)));
-  return `${String(Math.floor(clamped / 60)).padStart(2, '0')}:${String(clamped % 60).padStart(2, '0')}`;
-}
-function minutesToGridPx(mins) {
-  return ((mins - WORKSHOP_GRID_MIN) / 60) * WORKSHOP_ROW_PX;
-}
-function timeFromGridY(y) {
-  const rawMinutes = WORKSHOP_GRID_MIN + (y / WORKSHOP_ROW_PX) * 60;
-  const snapped = Math.round(rawMinutes / 30) * 30;
-  return minutesToTime(Math.max(WORKSHOP_GRID_MIN, Math.min(WORKSHOP_GRID_MAX, snapped)));
-}
-
-function unscheduledJobsFor(dateStr, mechanicId) {
-  let jobs = visibleWorkshopJobs().filter((j) => j.jobDate === dateStr && !j.startTime);
-  if (mechanicId !== undefined) jobs = jobs.filter((j) => j.mechanicId === mechanicId);
-  return jobs;
-}
-
-// The bike (if the job is linked to one) is the bold headline, with the job
-// title shown beside it as a secondary label; jobs without a bike just show
-// the job title as the headline on its own.
-function jobTitleLineHtml(j) {
-  if (j.bikeLabel) {
-    return `<span class="job-title-line"><span class="job-title">${esc(j.bikeLabel)}</span><span class="job-subtitle">${esc(j.title)}</span></span>`;
-  }
-  return `<span class="job-title-line"><span class="job-title">${esc(j.title)}</span></span>`;
-}
-
-// A job can be 'complete' well before it's actually paid for and picked up
-// (the mechanic finishing the work vs. the customer collecting/paying are
-// separate events) - this extra modifier class lightens complete+paid jobs
-// so a glance at the diary shows "done, still owed" vs. "done and gone".
-// j.orderStatus is the linked order's own status ('open'/'converted'/...),
-// already joined onto the job by the server - 'converted' means it was
-// actually tendered off at the till, not just marked complete.
-function jobPaidClass(j) {
-  return j.status === 'complete' && j.orderStatus === 'converted' ? ' paid' : '';
-}
-
-// A mark from DiaryMarks (move-requested, cancelled-unseen) overrides the
-// job's own status for the grid's colour and label - the customer is
-// waiting on staff, which matters more here than what work state it's in.
-const MARK_LABELS = { 'move-requested': 'Move requested', 'cancelled-unseen': 'Cancelled by customer' };
-function markClass(j) {
-  const mark = DiaryMarks.markOf(j);
-  return mark === 'normal' ? '' : ` mark-${mark}`;
-}
-function statusLabel(j) {
-  return MARK_LABELS[DiaryMarks.markOf(j)] || JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled;
-}
-
-function renderJobCard(j) {
-  const mark = DiaryMarks.markOf(j);
-  const markLabelHtml = MARK_LABELS[mark] ? `<span class="job-mark-label">${esc(MARK_LABELS[mark])}</span>` : '';
-  const statusBadgeHtml = MARK_LABELS[mark] ? '' : `<span class="job-status-badge">${esc(statusLabel(j))}</span>`;
-  return `
-    <button class="job-card status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}">
-      ${markLabelHtml}
-      ${j.startTime ? `<span class="job-time">${esc(j.startTime)}</span>` : ''}
-      ${jobTitleLineHtml(j)}
-      ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
-      ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
-      ${statusBadgeHtml}
-    </button>
-  `;
-}
-
-function renderUnscheduledCell(dateStr, isToday, mechanicId, dayOff) {
-  const jobs = unscheduledJobsFor(dateStr, mechanicId);
-  const mechAttr = mechanicId !== undefined ? ` data-mechanic="${mechanicId}"` : '';
-  return `
-    <div class="wk-cell ${isToday ? 'today' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}"${mechAttr}>
-      ${jobs.map(renderJobCard).join('')}
-    </div>
-  `;
-}
-
-function renderHourLabelsColumn() {
-  let labels = '';
-  for (let h = WORKSHOP_HOUR_START; h < WORKSHOP_HOUR_END; h++) {
-    const top = (h - WORKSHOP_HOUR_START) * WORKSHOP_ROW_PX;
-    labels += `<div class="wk-hour-label" style="top:${top}px;">${String(h).padStart(2, '0')}:00</div>`;
-  }
-  return `<div class="wk-hour-labels" style="height:${WORKSHOP_GRID_HEIGHT}px;">${labels}</div>`;
-}
-
-function renderTimedDayColumn(dateStr, isToday, mechanicId, dayOff) {
-  let jobs = visibleWorkshopJobs().filter((j) => j.jobDate === dateStr && j.startTime);
-  if (mechanicId !== undefined) jobs = jobs.filter((j) => j.mechanicId === mechanicId);
-  const blocksHtml = jobs
-    .map((j) => {
-      const startMin = timeToMinutes(j.startTime);
-      const endMin = timeToMinutes(j.endTime || minutesToTime(startMin + 60));
-      const top = minutesToGridPx(Math.max(startMin, WORKSHOP_GRID_MIN));
-      const bottom = minutesToGridPx(Math.min(endMin, WORKSHOP_GRID_MAX));
-      // Floor raised to guarantee the bike name (the first line in the body,
-      // see below) always has room to render, even for a very short job -
-      // at the old 18px floor it was reliably clipped by the body's own
-      // overflow:hidden before a single line could fit alongside the two
-      // 6px resize handles + body padding.
-      const height = Math.max(34, bottom - top);
-      const cancelledUnseen = DiaryMarks.markOf(j) === 'cancelled-unseen';
-      const resizeHandle = (edge) => (cancelledUnseen ? '' : `<div class="wk-resize-handle" data-edge="${edge}"></div>`);
-      const mark = DiaryMarks.markOf(j);
-      const markLabelHtml = MARK_LABELS[mark] ? `<span class="job-mark-label">${esc(MARK_LABELS[mark])}</span>` : '';
-      const statusBadgeHtml = MARK_LABELS[mark] ? '' : `<span class="job-status-badge">${esc(statusLabel(j))}</span>`;
-      return `
-        <div class="wk-job-block status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
-          ${resizeHandle('top')}
-          <div class="wk-job-block-body">
-            ${markLabelHtml}
-            ${jobTitleLineHtml(j)}
-            <span class="job-time">${esc(j.startTime)}–${esc(j.endTime || minutesToTime(startMin + 60))}</span>
-            ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
-            ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
-            ${statusBadgeHtml}
-          </div>
-          ${resizeHandle('bottom')}
-        </div>
-      `;
-    })
-    .join('');
-  const mechanicOk = (id) => (mechanicId !== undefined ? id === mechanicId : mechanicShown(id));
-  const outlinesHtml = DiaryMarks.outlinesOn(waitingFeed.items, dateStr, mechanicOk).map((item) => {
-    const startMin = timeToMinutes(item.to.startTime);
-    const endMin = timeToMinutes(item.to.endTime || minutesToTime(startMin + 60));
-    const top = minutesToGridPx(Math.max(startMin, WORKSHOP_GRID_MIN));
-    const bottom = minutesToGridPx(Math.min(endMin, WORKSHOP_GRID_MAX));
-    const height = Math.max(34, bottom - top);
-    return `
-      <div class="wk-request-outline" data-job="${item.jobId}" style="top:${top}px; height:${height}px;">
-        <span>Requested</span><span>${esc(item.customerName || 'Customer')}</span>
-      </div>`;
-  }).join('');
-  return `
-    <div class="wk-day-col ${isToday ? 'today' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}"${mechanicId !== undefined ? ` data-mechanic="${mechanicId}"` : ''} style="height:${WORKSHOP_GRID_HEIGHT}px;">
-      ${blocksHtml}${outlinesHtml}
-    </div>
-  `;
-}
-
-const WORKSHOP_DRAG_THRESHOLD_PX = 4;
-
-// Dragging the block body (as opposed to the resize handles) moves the job to
-// a different time and/or day, preserving its duration. A plain click (no
-// movement past the threshold) still opens the edit modal. Click-vs-drag is
-// decided entirely from the mousedown/mouseup pair below, not from the
-// browser's own synthetic "click" event - that event's target can end up
-// resolving to whatever's underneath once the block gets pointer-events:none
-// mid-drag, which was intermittently reopening the edit modal after a drag.
-function wireJobBlockMove(blockEl, job) {
-  const body = blockEl.querySelector('.wk-job-block-body');
-
-  body.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origRect = blockEl.getBoundingClientRect();
-    const offsetX = startX - origRect.left;
-    const offsetY = startY - origRect.top;
-    const origStartMin = timeToMinutes(job.startTime);
-    const origEndMin = timeToMinutes(job.endTime || minutesToTime(origStartMin + 60));
-    const durationMin = origEndMin - origStartMin;
-    const origDate = job.jobDate;
-    const origMechanicId = job.mechanicId ?? null;
-
-    let dragging = false;
-    let pendingDate = origDate;
-    let pendingStartMin = origStartMin;
-    let pendingMechanicId = origMechanicId;
-    let targetCol = null;
-
-    function onMove(ev) {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      if (!dragging) {
-        if (Math.abs(dx) < WORKSHOP_DRAG_THRESHOLD_PX && Math.abs(dy) < WORKSHOP_DRAG_THRESHOLD_PX) return;
-        dragging = true;
-        blockEl.classList.add('dragging');
-        blockEl.style.position = 'fixed';
-        blockEl.style.width = `${origRect.width}px`;
-        blockEl.style.zIndex = '50';
-        blockEl.style.pointerEvents = 'none';
-      }
-      blockEl.style.left = `${ev.clientX - offsetX}px`;
-      blockEl.style.top = `${ev.clientY - offsetY}px`;
-
-      const underEl = document.elementFromPoint(ev.clientX, ev.clientY);
-      let hoveredCol = underEl ? underEl.closest('.wk-day-col') : null;
-      if (hoveredCol && hoveredCol.classList.contains('day-off')) hoveredCol = null;
-      if (targetCol && targetCol !== hoveredCol) targetCol.classList.remove('drop-target');
-      if (hoveredCol) {
-        hoveredCol.classList.add('drop-target');
-        const rect = hoveredCol.getBoundingClientRect();
-        const cardTop = ev.clientY - offsetY;
-        const rawMinutes = WORKSHOP_GRID_MIN + ((cardTop - rect.top) / WORKSHOP_ROW_PX) * 60;
-        const snapped = Math.round(rawMinutes / WORKSHOP_SNAP_MIN) * WORKSHOP_SNAP_MIN;
-        pendingStartMin = Math.max(WORKSHOP_GRID_MIN, Math.min(WORKSHOP_GRID_MAX - durationMin, snapped));
-        pendingDate = hoveredCol.dataset.date;
-        pendingMechanicId = hoveredCol.dataset.mechanic !== undefined ? Number(hoveredCol.dataset.mechanic) : origMechanicId;
-
-        const timeLabel = blockEl.querySelector('.job-time');
-        if (timeLabel) {
-          const newStart = minutesToTime(pendingStartMin);
-          const newEnd = minutesToTime(pendingStartMin + durationMin);
-          const dateChanged = pendingDate !== origDate;
-          timeLabel.textContent = dateChanged
-            ? `${fmtDayShort(pendingDate)} ${newStart}–${newEnd}`
-            : `${newStart}–${newEnd}`;
-        }
-      }
-      targetCol = hoveredCol;
-    }
-
-    async function onUp() {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      if (targetCol) targetCol.classList.remove('drop-target');
-
-      if (!dragging) {
-        openJob(job);
-        return;
-      }
-
-      const changed =
-        targetCol && (pendingDate !== origDate || pendingStartMin !== origStartMin || pendingMechanicId !== origMechanicId);
-      if (changed) {
-        const newStart = minutesToTime(pendingStartMin);
-        const newEnd = minutesToTime(pendingStartMin + durationMin);
-        const body = { jobDate: pendingDate, startTime: newStart, endTime: newEnd, version: job.version };
-        if (pendingMechanicId !== origMechanicId) body.mechanicId = pendingMechanicId;
-        try {
-          await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body });
-        } catch (err) {
-          showToast(saveRefusalText(err));
-        }
-      }
-      await renderWorkshop();
-    }
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
-
-  // The browser still fires its own "click" after mouseup regardless of what
-  // happened above - swallow it so it never bubbles to the day-column's
-  // "add job" handler. Opening the edit modal is handled entirely in onUp.
-  body.addEventListener('click', (e) => e.stopPropagation());
-}
-
-function wireJobBlockResize(blockEl, job) {
-  blockEl.querySelectorAll('.wk-resize-handle').forEach((handle) => {
-    handle.addEventListener('click', (e) => e.stopPropagation());
-    handle.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const edge = handle.dataset.edge;
-      const startY = e.clientY;
-      const origStartMin = timeToMinutes(job.startTime);
-      const origEndMin = timeToMinutes(job.endTime || minutesToTime(origStartMin + 60));
-      let pendingStart = job.startTime;
-      let pendingEnd = job.endTime || minutesToTime(origStartMin + 60);
-      blockEl.classList.add('dragging');
-
-      function onMove(ev) {
-        const deltaPx = ev.clientY - startY;
-        const deltaMin = Math.round(((deltaPx / WORKSHOP_ROW_PX) * 60) / WORKSHOP_SNAP_MIN) * WORKSHOP_SNAP_MIN;
-        let newStartMin = origStartMin;
-        let newEndMin = origEndMin;
-        if (edge === 'top') {
-          newStartMin = Math.max(WORKSHOP_GRID_MIN, Math.min(origEndMin - WORKSHOP_SNAP_MIN, origStartMin + deltaMin));
-        } else {
-          newEndMin = Math.min(WORKSHOP_GRID_MAX, Math.max(origStartMin + WORKSHOP_SNAP_MIN, origEndMin + deltaMin));
-        }
-        pendingStart = minutesToTime(newStartMin);
-        pendingEnd = minutesToTime(newEndMin);
-        const top = minutesToGridPx(newStartMin);
-        const height = Math.max(18, minutesToGridPx(newEndMin) - top);
-        blockEl.style.top = `${top}px`;
-        blockEl.style.height = `${height}px`;
-        const timeLabel = blockEl.querySelector('.job-time');
-        if (timeLabel) timeLabel.textContent = `${pendingStart}–${pendingEnd}`;
-      }
-
-      async function onUp() {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        blockEl.classList.remove('dragging');
-        if (pendingStart === job.startTime && pendingEnd === job.endTime) return;
-        try {
-          await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { startTime: pendingStart, endTime: pendingEnd, version: job.version } });
-        } catch (err) {
-          showToast(saveRefusalText(err));
-        }
-        await renderWorkshop();
-      }
-
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
-  });
-}
-
-// Builds the inner HTML for one complete week grid (day headers, Unscheduled
-// row, hour-labelled timed grid). mechanicId undefined means "whatever the
-// pill filter currently resolves to" (via visibleWorkshopJobs); a specific
-// id isolates that one mechanic's jobs regardless of the pill state, used
-// when rendering a separate diary per selected mechanic.
-function buildWeekGridHtml(days, mechanicId) {
-  const todayStr = toDateStr(new Date());
-  // A diary scoped to one specific mechanic also greys out their own days
-  // off; the combined All/Unassigned view isn't tied to one schedule, but
-  // shop-closed days grey out everywhere regardless of mechanic.
-  const mechanic = mechanicId !== undefined ? mechanics.find((m) => m.id === mechanicId) : null;
-  const isDayOff = (d) => {
-    const dow = d.getDay();
-    if (!workshopSettings.openingDays.includes(dow)) return true;
-    return !!mechanic && !mechanic.workingDays.includes(dow);
-  };
-
-  let html = '<div class="wk-corner"></div>';
-  html += days
-    .map((d) => {
-      const dateStr = toDateStr(d);
-      return `
-      <div class="wk-day-header ${dateStr === todayStr ? 'today' : ''} ${isDayOff(d) ? 'day-off' : ''}">
-        <span class="wd-name">${esc(d.toLocaleDateString(undefined, { weekday: 'short' }))}</span>
-        <span class="wd-date">${esc(d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' }))}</span>
-      </div>
-    `;
-    })
-    .join('');
-
-  html += `<div class="wk-time-label">Unscheduled</div>`;
-  html += days.map((d) => renderUnscheduledCell(toDateStr(d), toDateStr(d) === todayStr, mechanicId, isDayOff(d))).join('');
-
-  html += renderHourLabelsColumn();
-  html += days.map((d) => renderTimedDayColumn(toDateStr(d), toDateStr(d) === todayStr, mechanicId, isDayOff(d))).join('');
-
-  return html;
-}
-
-function renderWeekGrid(days) {
-  const wrap = document.getElementById('week-diaries');
-  if (!wrap) return;
-  const activeMechs = activeMechanicList();
-
-  if (!activeMechs) {
-    wrap.classList.remove('split');
-    const soloMechanicId =
-      Array.isArray(workshopMechanicFilter) && workshopMechanicFilter.length === 1 ? workshopMechanicFilter[0] : undefined;
-    wrap.innerHTML = `
-      <div class="week-diary">
-        <div class="week-grid-scroll"><div class="week-grid">${buildWeekGridHtml(days, soloMechanicId)}</div></div>
-      </div>
-    `;
-  } else {
-    wrap.classList.add('split');
-    wrap.innerHTML = activeMechs
-      .map(
-        (m) => `
-      <div class="week-diary">
-        <div class="week-diary-title">${esc(m.name)}</div>
-        <div class="week-grid-scroll"><div class="week-grid">${buildWeekGridHtml(days, m.id)}</div></div>
-      </div>
-    `
-      )
-      .join('');
-  }
-
-  wireGridInteractions();
-}
-
-// Hover summary - a short delay avoids flashing a tooltip on every card the
-// mouse merely passes over while scanning the diary.
-const JOB_TOOLTIP_DELAY_MS = 200;
-let jobTooltipTimer = null;
-
-const JOB_TOOLTIP_CURSOR_GAP = 14;
-
-// Tracked continuously (not just captured at mouseenter) so the tooltip
-// appears wherever the cursor actually is once the delay elapses, not where
-// it happened to be when the hover started.
-let lastMouseX = 0;
-let lastMouseY = 0;
-document.addEventListener('mousemove', (e) => {
-  lastMouseX = e.clientX;
-  lastMouseY = e.clientY;
-});
-
-function wireJobTooltipOn(container, selector) {
-  container.querySelectorAll(selector).forEach((el) => {
-    el.addEventListener('mouseenter', () => {
-      clearTimeout(jobTooltipTimer);
-      const job = workshopJobs.find((x) => x.id === Number(el.dataset.job));
-      if (!job) return;
-      jobTooltipTimer = setTimeout(() => showJobTooltip(el, job), JOB_TOOLTIP_DELAY_MS);
-    });
-    el.addEventListener('mouseleave', () => {
-      clearTimeout(jobTooltipTimer);
-      hideJobTooltip();
-    });
-  });
-}
-
-function hideJobTooltip() {
-  const el = document.getElementById('job-tooltip');
-  if (el) el.remove();
-}
-
-function showJobTooltip(anchorEl, job) {
-  // A drag can start during the delay window - don't pop a tooltip over a
-  // block the user is actively moving.
-  if (anchorEl.classList.contains('dragging')) return;
-  hideJobTooltip();
-  const statusLabel = esc(JOB_STATUS_LABELS[job.status] || JOB_STATUS_LABELS.scheduled);
-  const statusColor = `var(--status-${job.status || 'scheduled'}-border)`;
-  const tip = document.createElement('div');
-  tip.id = 'job-tooltip';
-  tip.className = 'job-tooltip';
-  tip.innerHTML = `
-    <div class="job-tooltip-bike">${esc(job.bikeLabel || 'No bike on file')}</div>
-    <div class="job-tooltip-row">${esc(job.title)}</div>
-    <div class="job-tooltip-row">${esc(job.customerName || 'No customer')}</div>
-    <div class="job-tooltip-row">Status: <strong style="color:${statusColor};">${statusLabel}</strong></div>
-    <div class="job-tooltip-row">${job.orderId ? `Order total: ${money(job.orderTotal)}` : 'No order linked'}</div>
-  `;
-  document.body.appendChild(tip);
-
-  // Defaults to the cursor's right, flipping to its left only if there's
-  // not enough room - not anchored to the card itself, since a right-side
-  // placement relative to a wide/short card could still overlap it.
-  const tipRect = tip.getBoundingClientRect();
-  let x = lastMouseX + JOB_TOOLTIP_CURSOR_GAP;
-  if (x + tipRect.width > window.innerWidth - 8) {
-    x = lastMouseX - JOB_TOOLTIP_CURSOR_GAP - tipRect.width;
-  }
-  let y = lastMouseY;
-  if (y + tipRect.height > window.innerHeight - 8) y = window.innerHeight - tipRect.height - 8;
-  tip.style.left = Math.max(8, x) + 'px';
-  tip.style.top = Math.max(8, y) + 'px';
-}
-
-// Right-click quick actions on a job card/block/chip/row - wired onto
-// whichever of the four job-card DOM shapes (see JOB_CARD_SELECTOR callers
-// below) is on screen. Reuses loadOrderIntoCart/the receipt modal rather
-// than inventing new job-specific logic, since "the order for this job" is
-// just a normal sale_document (see job.orderId, joined server-side).
-function wireJobContextMenuOn(container, selector) {
-  container.querySelectorAll(selector).forEach((el) => {
-    el.addEventListener('contextmenu', (e) => {
-      const job = workshopJobs.find((x) => x.id === Number(el.dataset.job));
-      if (job) openJobContextMenu(e, job);
-    });
-  });
-}
-
-function closeJobContextMenu() {
-  const el = document.getElementById('job-context-menu');
-  if (el) el.remove();
-  document.removeEventListener('keydown', closeJobContextMenuOnEscape);
-}
-
-function closeJobContextMenuOnEscape(e) {
-  if (e.key === 'Escape') closeJobContextMenu();
-}
-
-function openJobContextMenu(e, job) {
-  e.preventDefault();
-  e.stopPropagation();
-  closeJobContextMenu();
-  clearTimeout(jobTooltipTimer);
-  hideJobTooltip();
-
-  const hasOrder = !!job.orderId;
-  const isPending = job.status === 'pending';
-  const menu = document.createElement('div');
-  menu.id = 'job-context-menu';
-  menu.className = 'context-menu';
-  menu.innerHTML = `
-    ${isPending ? `<button type="button" class="context-menu-item" data-action="approve">Approve</button>` : ''}
-    <button type="button" class="context-menu-item" data-action="receipt" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Print receipt for this job</button>
-    <button type="button" class="context-menu-item" data-action="frontdesk" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Open order in Till</button>
-  `;
-  document.body.appendChild(menu);
-
-  const menuRect = menu.getBoundingClientRect();
-  const x = Math.min(e.clientX, window.innerWidth - menuRect.width - 8);
-  const y = Math.min(e.clientY, window.innerHeight - menuRect.height - 8);
-  menu.style.left = Math.max(8, x) + 'px';
-  menu.style.top = Math.max(8, y) + 'px';
-
-  if (isPending) {
-    menu.querySelector('[data-action="approve"]').addEventListener('click', () => {
-      closeJobContextMenu();
-      if (waitingIds.has(job.id)) openReview(job.id);
-      else approveJob(job);
-    });
-  }
-  if (hasOrder) {
-    menu.querySelector('[data-action="receipt"]').addEventListener('click', () => {
-      closeJobContextMenu();
-      printJobOrderReceipt(job);
-    });
-    menu.querySelector('[data-action="frontdesk"]').addEventListener('click', () => {
-      closeJobContextMenu();
-      openJobOrderInFrontDesk(job);
-    });
-  }
-
-  // Deferred so the contextmenu event that opened this menu doesn't
-  // immediately trigger its own outside-click listener.
-  setTimeout(() => {
-    document.addEventListener('click', closeJobContextMenu, { once: true });
-    document.addEventListener('contextmenu', closeJobContextMenu, { once: true });
-  }, 0);
-  document.addEventListener('keydown', closeJobContextMenuOnEscape);
-}
-
-// A refused diary save says why in plain words (DiaryReview.refusalText).
-// What happens next is up to the caller: the job-form submit and the
-// complete/reopen toggle close the modal and redraw only on a stale save;
-// drag and resize always redraw regardless of the error, since the block
-// was already moved on screen and has to be put back either way.
-//
-// Capacity is the one code where the review pop-up's fixed wording
-// ("The requested time is no longer free.") doesn't fit every caller: drag
-// and resize reuse this same function, and the server's own message for a
-// capacity refusal already reads correctly there, so it wins over the fixed
-// text.
-function saveRefusalText(err) {
-  if (err.code === 'capacity') return err.message;
-  return DiaryReview.refusalText(err);
-}
-
-// A job a customer is waiting on staff for opens the review pop-up; any other
-// job opens the edit form as before (staff diary piece).
-function openJob(job) {
-  if (!job) return;
-  if (waitingIds.has(job.id)) openReview(job.id);
-  else openModal({ type: 'workshop-job-form', job });
-}
-
-function openReview(jobId) {
-  openModal({ type: 'review-job', jobId });
-}
-
-async function approveJob(job) {
-  try {
-    await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: 'scheduled', version: job.version } });
-    showToast('Job approved');
-    if (document.getElementById('week-diaries')) await renderWorkshop();
-  } catch (err) {
-    showToast(saveRefusalText(err));
-    if (err.code === 'stale') await renderWorkshop();
-  }
-}
-
-async function printJobOrderReceipt(job) {
-  try {
-    const doc = await api(`/api/sale-documents/${job.orderId}`);
-    if (!doc.convertedSaleId) {
-      showToast("This order hasn't been checked out yet - nothing to print.");
-      return;
-    }
-    const sale = await api(`/api/sales/${doc.convertedSaleId}`);
-    openModal({ type: 'receipt', sale, title: `Sale #${sale.id}` });
-  } catch (err) {
-    showToast(err.message);
-  }
-}
-
-async function openJobOrderInFrontDesk(job) {
-  try {
-    const doc = await api(`/api/sale-documents/${job.orderId}`);
-    if (doc.status !== 'open') {
-      showToast(`This order is already ${doc.status} - nothing to fulfil.`);
-      return;
-    }
-    loadOrderIntoCart(doc);
-  } catch (err) {
-    showToast(err.message);
-  }
-}
-
-function wireGridInteractions() {
-  const wrap = document.getElementById('week-diaries');
-  if (!wrap) return;
-
-  wrap.querySelectorAll('.wk-cell button[data-job]').forEach((b) => {
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const job = workshopJobs.find((x) => x.id === Number(b.dataset.job));
-      openJob(job);
-    });
-  });
-  wrap.querySelectorAll('.wk-cell').forEach((cellEl) => {
-    cellEl.addEventListener('click', () => {
-      if (!workshopPlacing || cellEl.classList.contains('day-off')) return;
-      setWorkshopPlacing(false);
-      const mech = cellEl.dataset.mechanic;
-      openModal({
-        type: 'workshop-job-form',
-        job: null,
-        defaultDate: cellEl.dataset.date,
-        defaultMechanicId: mech !== undefined ? Number(mech) : undefined,
-      });
-    });
-  });
-
-  wrap.querySelectorAll('.wk-job-block').forEach((blockEl) => {
-    const job = workshopJobs.find((x) => x.id === Number(blockEl.dataset.job));
-    if (!job) return;
-    if (DiaryMarks.markOf(job) === 'cancelled-unseen') {
-      blockEl.addEventListener('click', () => openReview(job.id));
-      return;
-    }
-    wireJobBlockMove(blockEl, job);
-    wireJobBlockResize(blockEl, job);
-  });
-  wrap.querySelectorAll('.wk-request-outline').forEach((el) => el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openReview(Number(el.dataset.job));
-  }));
-  wireJobContextMenuOn(wrap, '.job-card, .wk-job-block');
-  wireJobTooltipOn(wrap, '.job-card, .wk-job-block');
-
-  wrap.querySelectorAll('.wk-day-col').forEach((colEl) => {
-    colEl.addEventListener('click', (e) => {
-      if (!workshopPlacing || colEl.classList.contains('day-off')) return;
-      const rect = colEl.getBoundingClientRect();
-      const time = timeFromGridY(e.clientY - rect.top);
-      setWorkshopPlacing(false);
-      const mech = colEl.dataset.mechanic;
-      openModal({
-        type: 'workshop-job-form',
-        job: null,
-        defaultDate: colEl.dataset.date,
-        defaultTime: time,
-        defaultMechanicId: mech !== undefined ? Number(mech) : undefined,
-      });
-    });
-  });
-}
-
-// ================= WORKSHOP: MONTH VIEW =================
-
-const MONTH_CHIP_LIMIT = 3;
-
-function renderMonthJobChip(j) {
-  const mainText = j.bikeLabel || j.title;
-  return `
-    <button class="month-job-chip status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}">
-      ${j.startTime ? `<span class="mjc-time">${esc(j.startTime)}</span>` : ''}<span class="mjc-title"><span class="mjc-main">${esc(mainText)}</span>${j.bikeLabel ? ` <span class="mjc-sub">${esc(j.title)}</span>` : ''}</span>
-    </button>
-  `;
-}
-
-function buildMonthGridHtml(gridDays, monthDate, mechanicId) {
-  const todayStr = toDateStr(new Date());
-  const mechanic = mechanicId !== undefined ? mechanics.find((m) => m.id === mechanicId) : null;
-  const isDayOff = (d) => {
-    const dow = d.getDay();
-    if (!workshopSettings.openingDays.includes(dow)) return true;
-    return !!mechanic && !mechanic.workingDays.includes(dow);
-  };
-  const monthIndex = monthDate.getMonth();
-
-  let html = WEEKDAY_ORDER.map((wd) => `<div class="month-dow">${esc(WEEKDAY_LABELS[wd])}</div>`).join('');
-
-  html += gridDays
-    .map((d) => {
-      const dateStr = toDateStr(d);
-      const dayOff = isDayOff(d);
-      const otherMonth = d.getMonth() !== monthIndex;
-      let jobs = visibleWorkshopJobs().filter((j) => j.jobDate === dateStr);
-      if (mechanicId !== undefined) jobs = jobs.filter((j) => j.mechanicId === mechanicId);
-      jobs = jobs.slice().sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
-      const shown = jobs.slice(0, MONTH_CHIP_LIMIT);
-      const extra = jobs.length - shown.length;
-      const mechAttr = mechanicId !== undefined ? ` data-mechanic="${mechanicId}"` : '';
-
-      return `
-      <div class="month-cell ${dateStr === todayStr ? 'today' : ''} ${otherMonth ? 'other-month' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}"${mechAttr}>
-        <div class="month-cell-date">${d.getDate()}</div>
-        <div class="month-cell-jobs">
-          ${shown.map(renderMonthJobChip).join('')}
-          ${extra > 0 ? `<button class="month-more-btn" data-date="${dateStr}"${mechAttr}>+${extra} more</button>` : ''}
-        </div>
-      </div>
-    `;
-    })
-    .join('');
-
-  return `<div class="month-grid">${html}</div>`;
-}
-
-function renderMonthGrid(gridDays, monthDate) {
-  const wrap = document.getElementById('week-diaries');
-  if (!wrap) return;
-  const activeMechs = activeMechanicList();
-
-  if (!activeMechs) {
-    wrap.classList.remove('split');
-    const soloMechanicId =
-      Array.isArray(workshopMechanicFilter) && workshopMechanicFilter.length === 1 ? workshopMechanicFilter[0] : undefined;
-    wrap.innerHTML = `<div class="week-diary">${buildMonthGridHtml(gridDays, monthDate, soloMechanicId)}</div>`;
-  } else {
-    wrap.classList.add('split');
-    wrap.innerHTML = activeMechs
-      .map(
-        (m) => `
-      <div class="week-diary">
-        <div class="week-diary-title">${esc(m.name)}</div>
-        ${buildMonthGridHtml(gridDays, monthDate, m.id)}
-      </div>
-    `
-      )
-      .join('');
-  }
-
-  wireMonthInteractions();
-}
-
-function wireMonthInteractions() {
-  const wrap = document.getElementById('week-diaries');
-  if (!wrap) return;
-
-  wrap.querySelectorAll('.month-job-chip').forEach((b) => {
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const job = workshopJobs.find((x) => x.id === Number(b.dataset.job));
-      openJob(job);
-    });
-  });
-  wireJobContextMenuOn(wrap, '.month-job-chip');
-  wireJobTooltipOn(wrap, '.month-job-chip');
-
-  wrap.querySelectorAll('.month-more-btn').forEach((b) => {
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const dateStr = b.dataset.date;
-      const mech = b.dataset.mechanic;
-      let jobs = visibleWorkshopJobs().filter((j) => j.jobDate === dateStr);
-      if (mech !== undefined) jobs = jobs.filter((j) => j.mechanicId === Number(mech));
-      jobs = jobs.slice().sort((a, c) => (a.startTime || '').localeCompare(c.startTime || ''));
-      openModal({ type: 'day-jobs', dateStr, jobs });
-    });
-  });
-
-  wrap.querySelectorAll('.month-cell').forEach((cellEl) => {
-    cellEl.addEventListener('click', () => {
-      if (!workshopPlacing || cellEl.classList.contains('day-off')) return;
-      setWorkshopPlacing(false);
-      const mech = cellEl.dataset.mechanic;
-      openModal({
-        type: 'workshop-job-form',
-        job: null,
-        defaultDate: cellEl.dataset.date,
-        defaultMechanicId: mech !== undefined ? Number(mech) : undefined,
-      });
     });
   });
 }
@@ -4192,7 +3061,6 @@ const JOB_STATUS_OPTIONS = [
   { value: 'on_hold', label: 'On hold' },
   { value: 'complete', label: 'Complete' },
 ];
-const JOB_STATUS_LABELS = Object.fromEntries(JOB_STATUS_OPTIONS.map((s) => [s.value, s.label]));
 const JOB_STATUS_SELECT_OPTIONS = JOB_STATUS_OPTIONS.filter((s) => s.value !== 'complete');
 
 async function renderEditWorkshop() {
@@ -4693,7 +3561,6 @@ function renderModal() {
   if (modal.type === 'receipt') return renderReceiptModal(holder, modal.sale, modal.title);
   if (modal.type === 'customer-form') return renderCustomerFormModal(holder, modal.customer);
   if (modal.type === 'customer-sales') return renderCustomerSalesModal(holder, modal.customer, modal.sales);
-  if (modal.type === 'review-job') return renderReviewJobModal(holder, modal.jobId);
   if (modal.type === 'workshop-job-form') return renderWorkshopJobFormModal(holder, modal.job, modal.defaultDate, modal.prefill, modal.defaultTime, modal.defaultMechanicId, modal.skipAutoOrder);
   if (modal.type === 'document-view') return renderDocumentModal(holder, modal.doc);
   if (modal.type === 'bike-form') return renderBikeFormModal(holder, modal.bike, modal.customerId);
@@ -4703,7 +3570,6 @@ function renderModal() {
   if (modal.type === 'team-attach-login-form') return renderTeamAttachLoginFormModal(holder, modal.member);
   if (modal.type === 'team-attach-roles-form') return renderTeamAttachRolesFormModal(holder, modal.member);
   if (modal.type === 'group-form') return renderGroupFormModal(holder, modal.group);
-  if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
   if (modal.type === 'catalogue-import') return renderCatalogueImportModal(holder, modal.item);
   if (modal.type === 'supplier-form') return renderSupplierFormModal(holder, modal.supplier);
   if (modal.type === 'po-receive') return renderPoReceiveModal(holder, modal.po);
@@ -5827,186 +4693,14 @@ function renderTeamAttachRolesFormModal(holder, member) {
   });
 }
 
-function renderDayJobsModal(holder, dateStr, jobs) {
-  const label = new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-  const rowsHtml = jobs.length
-    ? jobs
-        .map(
-          (j) => `
-      <button class="day-job-row status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}">
-        <span class="djr-time">${j.startTime ? esc(j.startTime) : 'Unscheduled'}</span>
-        <span class="djr-title">${esc(j.title)}</span>
-        <span class="djr-status-badge">${esc(JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled)}</span>
-        ${j.customerName ? `<span class="djr-detail">${esc(j.customerName)}${j.bikeLabel ? ' · ' + esc(j.bikeLabel) : ''}</span>` : ''}
-        ${j.mechanicName ? `<span class="djr-detail">${esc(j.mechanicName)}</span>` : ''}
-      </button>
-    `
-        )
-        .join('')
-    : `<div class="empty-state">No jobs on this day.</div>`;
-
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>${esc(label)}</h2>
-          <button class="modal-close" id="modal-close">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="day-job-list">${rowsHtml}</div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary" id="modal-cancel">Close</button>
-        </div>
-      </div>
-    </div>
-  `;
-  wireModalDismiss();
-
-  holder.querySelectorAll('.day-job-row').forEach((b) => {
-    b.addEventListener('click', () => {
-      const job = workshopJobs.find((x) => x.id === Number(b.dataset.job));
-      closeModal();
-      openJob(job);
-    });
-  });
-  wireJobContextMenuOn(holder, '.day-job-row');
-  wireJobTooltipOn(holder, '.day-job-row');
-}
-
-// ================= WORKSHOP: REVIEW POP-UP =================
-// What a customer sent, and the one answer staff owe them: Accept / Decline
-// for a new booking or a change request, Seen for a cancellation.
-// Spec: docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md
-// The pop-up that is open now is this job's review; anything else (closed,
-// or another screen opened) means a late result must not draw or close.
-function reviewIsOpen(jobId) {
-  return !!modal && modal.type === 'review-job' && modal.jobId === jobId;
-}
-
-async function renderReviewJobModal(holder, jobId, message = '') {
-  if (!reviewIsOpen(jobId)) return;
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop"><div class="modal review-modal">
-      <div class="modal-header"><h2>Job</h2><button class="modal-close" id="modal-close" aria-label="Close">✕</button></div>
-      <div class="empty-state">Loading…</div>
-    </div></div>`;
-  wireModalDismiss();
-  let job;
-  let photos;
-  try {
-    [job, photos] = await Promise.all([
-      api(`/api/workshop-jobs/${jobId}`),
-      api(`/api/workshop-jobs/${jobId}/attachments`),
-      loadWaitingFeed(),
-    ]);
-  } catch (err) {
-    if (!reviewIsOpen(jobId)) return;
-    return renderReviewShell(holder, { heading: 'Job', body: '', actions: '', message: DiaryReview.refusalText(err) });
-  }
-  if (!reviewIsOpen(jobId)) return; // closed while loading
-  renderWaitingFeed();
-  const item = waitingFeed.items.find((i) => i.jobId === jobId);
-  if (!item) {
-    return renderReviewShell(holder, {
-      heading: 'Job', body: '<p>This is no longer waiting for an answer.</p>',
-      actions: '<button class="btn" data-review="open">Open full job</button>', message, job,
-    });
-  }
-  const answers = DiaryReview.groupAnswers(job.questionAnswers, item.services || []).map((g) => `
-    <h3 class="review-service">${esc(g.name)}</h3>
-    ${g.answers.map((a) => `<p class="review-answer"><span class="muted">${esc(a.wording)}</span> ${esc(DiaryReview.answerText(a))}</p>`).join('')}
-  `).join('');
-  const customerPhotos = (photos || []).filter((p) => p.fromCustomer && /^image\//.test(p.contentType));
-  const photosHtml = customerPhotos.length ? `
-    <h3 class="review-service">Photos</h3>
-    <div class="review-photos">${customerPhotos.map((p) => `
-      <img class="review-photo" src="/api/workshop-jobs/${jobId}/attachments/${p.id}" alt="${esc(p.originalName || 'Customer photo')}">`).join('')}
-    </div>` : '';
-  const notes = [job.customerBikeNote, job.customerDescription].filter(Boolean);
-  const notesHtml = notes.length ? `<h3 class="review-service">Customer's notes</h3>${notes.map((n) => `<p>${esc(n)}</p>`).join('')}` : '';
-  const whenHtml = item.kind === 'change_request'
-    ? `<p class="review-change">${esc(DiaryReview.changeLine(item))}</p>`
-    : `<p class="muted">${esc(item.customerName || 'Customer')} · ${esc(DiaryWaiting.slotText(item))}</p>`;
-  const actions = item.kind === 'customer_cancelled'
-    ? '<button class="btn" data-review="open">Open full job</button><button class="btn btn-primary" data-review="seen">Seen</button>'
-    : '<button class="btn" data-review="open">Open full job</button><button class="btn" data-review="decline">Decline</button><button class="btn btn-primary" data-review="accept">Accept</button>';
-  renderReviewShell(holder, {
-    heading: DiaryReview.headingFor(item),
-    body: `${item.kind === 'change_request' ? `<p class="muted">${esc(item.customerName || 'Customer')}</p>` : ''}${whenHtml}${answers}${photosHtml}${notesHtml}`,
-    actions, message, job, item,
-  });
-}
-
-function renderReviewShell(holder, { heading, body, actions, message, job, item }) {
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop">
-      <div class="modal review-modal" role="dialog" aria-label="${esc(heading)}">
-        <div class="modal-header"><h2>${esc(heading)}</h2><button class="modal-close" id="modal-close" aria-label="Close">✕</button></div>
-        <div class="review-body">${body}</div>
-        <p class="review-message" role="status">${esc(message || '')}</p>
-        <div class="review-actions">${actions}</div>
-      </div>
-    </div>`;
-  wireModalDismiss();
-  holder.querySelectorAll('.review-photo').forEach((img) => img.addEventListener('click', () => img.classList.toggle('enlarged')));
-  const on = (name, fn) => { const b = holder.querySelector(`[data-review="${name}"]`); if (b) b.addEventListener('click', fn); };
-  on('open', () => openModal({ type: 'workshop-job-form', job }));
-  on('seen', () => answerReview(holder, job, 'cancellation-seen'));
-  on('accept', () => answerReview(holder, job, item.kind === 'change_request' ? 'accept-change' : 'accept'));
-  on('decline', () => {
-    if (item.kind === 'change_request') return answerReview(holder, job, 'decline-change');
-    holder.querySelector('.review-actions').innerHTML = `
-      <p class="review-confirm">${esc(DiaryReview.declineConfirmText(item))}</p>
-      <button class="btn" data-review="keep">Keep booking</button>
-      <button class="btn btn-danger" data-review="confirm-decline">Decline booking</button>`;
-    on('keep', () => renderReviewJobModal(holder, job.id));
-    on('confirm-decline', () => answerReview(holder, job, 'decline'));
-  });
-}
-
-async function answerReview(holder, job, action) {
-  holder.querySelectorAll('.review-actions button').forEach((b) => { b.disabled = true; });
-  try {
-    await api(`/api/workshop-jobs/${job.id}/${action}`, { method: 'POST', body: { version: job.version } });
-  } catch (err) {
-    // Closed (or replaced) while the answer was on its way: only refresh.
-    if (!reviewIsOpen(job.id)) return refreshDiaryAfterReview();
-    let message = DiaryReview.refusalText(err);
-    // The server checks whether a move is allowed before it checks the version,
-    // so a job someone else already answered comes back 'illegal', not 'stale'.
-    // A changed version means it moved on under us: say so, as for 'stale'.
-    // An unchanged version means the move really isn't allowed: keep the
-    // server's own words. If the re-read fails, keep the first refusal.
-    let stale = err.code === 'stale';
-    if (err.code === 'illegal') {
-      try {
-        const now = await api(`/api/workshop-jobs/${job.id}`);
-        if (now.version !== job.version) {
-          stale = true;
-          message = DiaryReview.refusalText({ code: 'stale' });
-        }
-      } catch (_) { /* keep the original refusal */ }
-      if (!reviewIsOpen(job.id)) return refreshDiaryAfterReview();
-    }
-    if (stale) return renderReviewJobModal(holder, job.id, message);
-    if (err.status === 404) { await loadWaitingFeed().catch(() => {}); renderWaitingFeed(); }
-    const line = holder.querySelector('.review-message');
-    if (line) line.textContent = message;
-    holder.querySelectorAll('.review-actions button').forEach((b) => { b.disabled = false; });
-    return;
-  }
-  if (reviewIsOpen(job.id)) closeModal();
-  await refreshDiaryAfterReview();
-}
-
-async function refreshDiaryAfterReview() {
-  if (document.getElementById('week-diaries')) await renderWorkshop();
+// A refused save from the old job form in plain words: a capacity refusal's
+// own message already reads correctly, so it wins over the fixed text.
+function saveRefusalText(err) {
+  if (err.code === 'capacity') return err.message;
+  if (err.code === 'stale') return 'This job changed while you were looking at it.';
+  if (err.status === 404) return 'This job no longer exists.';
+  if (err.status === undefined && err.name === 'TypeError') return "Couldn't reach the server — try again.";
+  return err.message;
 }
 
 function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTime, prefillMechanicId, skipAutoOrder) {
@@ -6016,7 +4710,7 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
   const defaultMechanicId =
     initial.mechanicId ||
     prefillMechanicId ||
-    (Array.isArray(workshopMechanicFilter) && workshopMechanicFilter.length === 1 ? workshopMechanicFilter[0] : null);
+    null;
   holder.innerHTML = `
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal job-modal">
@@ -6620,12 +5314,10 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
         }
         applyLockState();
         showToast(jobIsComplete ? 'Job marked complete' : 'Job reopened');
-        if (document.getElementById('week-diaries')) await renderWorkshop();
       } catch (err) {
         showToast(saveRefusalText(err));
         if (err.code === 'stale') {
           closeModal();
-          if (document.getElementById('week-diaries')) await renderWorkshop();
         }
       }
     });
@@ -6656,16 +5348,11 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
       showToast(isEdit ? 'Job updated' : 'Job added');
       const afterSave = modal && modal.afterSave;
       closeModal();
-      if (afterSave) {
-        afterSave(saved);
-      } else if (document.getElementById('week-diaries')) {
-        await renderWorkshop();
-      }
+      if (afterSave) afterSave(saved);
     } catch (err) {
       showToast(saveRefusalText(err));
       if (err.code === 'stale') {
         closeModal();
-        if (document.getElementById('week-diaries')) await renderWorkshop();
       }
     }
   });
@@ -6678,7 +5365,7 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
         await api(`/api/workshop-jobs/${job.id}`, { method: 'DELETE' });
         showToast('Job deleted');
         closeModal();
-        await renderWorkshop();
+        await refreshDocListAfterChange('order');
       } catch (err) {
         showToast(err.message);
       }
@@ -6882,6 +5569,13 @@ function renderDocumentModal(holder, doc) {
         const capturedTitle = document.getElementById('doc-title').value.trim() || `Order #${doc.id}`;
         const capturedNotes = document.getElementById('doc-notes').value.trim();
         const capturedCustomerId = docCustomerId;
+        try {
+          await loadMechanics();
+        } catch (err) {
+          showToast(err.message);
+          e.target.checked = false;
+          return;
+        }
         openModal({
           type: 'workshop-job-form',
           job: null,
@@ -6928,6 +5622,7 @@ function renderDocumentModal(holder, doc) {
       viewJobBtn.addEventListener('click', async () => {
         try {
           const job = await api(`/api/workshop-jobs/${doc.workshopJobId}`);
+          await loadMechanics();
           openModal({ type: 'workshop-job-form', job });
         } catch (err) {
           showToast(err.message);

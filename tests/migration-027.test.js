@@ -2,6 +2,7 @@
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -37,9 +38,12 @@ for (const name of ['link_token_hash', 'customer_description']) {
 }
 
 test('two jobs cannot share a link hash', async () => {
+  // Fresh for each run, so another test run sharing this database can't
+  // hold the same hash already.
+  const hash = `same-hash-${randomUUID()}`;
   const insert = () => runWithShop(owner.shop.id, () => prepare(
-    "INSERT INTO workshop_jobs (title, job_date, link_token_hash) VALUES ('x', '2030-01-01', 'same-hash')"
-  ).run());
+    "INSERT INTO workshop_jobs (title, job_date, link_token_hash) VALUES ('x', '2030-01-01', ?)"
+  ).run(hash));
   await insert();
   await assert.rejects(insert(), /unique|duplicate/i);
 });
