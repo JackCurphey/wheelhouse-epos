@@ -1,7 +1,7 @@
 # shop-details Specification
 
 ## Purpose
-TBD - created by archiving change shop-details. Update Purpose after archive.
+The shop's own details (name, address, phone, email, VAT number), kept in Settings › Shop and sites and printed on receipts. For now one set covers the whole business; when shops have sites, the address and phone move onto each site and the VAT number stays with the business.
 
 ## Requirements
 
