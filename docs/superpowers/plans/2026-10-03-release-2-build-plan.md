@@ -917,6 +917,10 @@ later packages.
 
 ### Stage 8 — The move, the switch-over and the trading week
 
+> **Changed 18 Oct 2026** (Jack, `docs/decisions/2026-10-18-build-for-every-shop.md`
+> answer 5): WP-8.1 stays in Release 2, tested on made-up export files;
+> WP-8.2 and WP-8.3 move to the selling stage, after Release 2.
+
 - **WP-8.1 Citrus Lime import, second half** (journey 9, pieces 5–11):
   weekly refresh; the move page; the weekly check; the switch-over
   checklist; switch-over morning; the first week. At switch-over it brings

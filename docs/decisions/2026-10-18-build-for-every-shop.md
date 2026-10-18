@@ -38,7 +38,15 @@ nothing else in them changes until he has.
    there is no other shop lined up. Chosen over a first real shop trading
    on it for a week, and over the first paying shop going live.
 
-What this means for stage 8 (the move, the switch-over and the trading
-week) and the Citrus Lime import, which were built around one shop moving,
-is for Jack to settle next, one at a time. The plans are shared, so Mark is
-told.
+5. **Stage 8: the Citrus Lime move tools stay in Release 2** (Jack: "1").
+   WP-8.1 (the move page, weekly refresh, weekly check, switch-over
+   checklist, switch-over morning, the first week) is still built, tested
+   on made-up files shaped like Citrus Lime's real exports (their columns
+   were read from the real thing, `docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`);
+   a ready-made way off Citrus Lime helps sell to Citrus Lime shops. **WP-8.2
+   (running alongside) and WP-8.3 (switch-over and a trading week) move to
+   the selling stage**, as they need a real shop. Chosen over building only
+   the import and leaving the rest of 8.1 for a real move, and over moving
+   all Citrus Lime importing out of Release 2.
+
+The plans are shared, so Mark is told.
