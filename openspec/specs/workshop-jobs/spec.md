@@ -156,7 +156,7 @@ When a job's work is finished, staff SHALL NOT be able to change its title, date
 - **THEN** it is not refused for being finished
 
 ### Requirement: Staff can delete a job
-Staff SHALL be able to delete a job in any state, without sending a version. Its order SHALL be kept, no longer linked to any job, so nothing already added to it is lost. Its attached files SHALL be removed with it. Deleting a job that does not exist SHALL be refused as not found.
+Staff SHALL be able to delete a job without sending a version, unless money has been paid on its order or the bike is in the shop (Jack, 18 Oct, `docs/decisions/2026-10-18-attachments-and-delete.md`). Then the delete SHALL be refused with the code `settle_first`, saying which of the two applies. Its order SHALL be kept, no longer linked to any job, so nothing already added to it is lost. Its attached files SHALL be removed with it. Deleting a job that does not exist SHALL be refused as not found.
 
 #### Scenario: Deleting a job keeps its order
 - **WHEN** staff delete a job that has an order
@@ -165,6 +165,14 @@ Staff SHALL be able to delete a job in any state, without sending a version. Its
 #### Scenario: Deleting a job that is not there
 - **WHEN** staff delete a job that does not exist
 - **THEN** it is refused as not found
+
+#### Scenario: The bike is in the shop
+- **WHEN** staff delete a job whose bike has been booked in
+- **THEN** it is refused with `settle_first`, the bike in the shop, and the job remains
+
+#### Scenario: The order is paid
+- **WHEN** staff delete a job whose order has been paid
+- **THEN** it is refused with `settle_first` and money paid
 
 ### Requirement: A job records three separate facts: the booking, the bike and the work
 A job SHALL keep three separate facts, each with its own fixed set of values: the booking (pending, scheduled, reschedule requested, declined, expired, cancelled), where the bike is (expected, in the shop, collected) and the work (not started, in progress, waiting for parts, on hold, finished). Moving one SHALL NOT move another. The database SHALL refuse any value not in these sets.
@@ -380,7 +388,7 @@ When jobs are listed, a job whose bike is in the shop, whose work is not finishe
 - **THEN** neither job gains a day
 
 ### Requirement: Staff can attach files to a job
-Staff SHALL be able to attach a file to a job, such as an e-bike's diagnostic report, keeping its name and type. A file SHALL be refused if it is missing, empty or over 15MB. Only the old app offers this; the new staff screens do not yet.
+Staff SHALL be able to attach a file to a job, such as an e-bike's diagnostic report, keeping its name and type. A file SHALL be refused if it is missing, empty or over 15MB.
 
 #### Scenario: Attaching a report
 - **WHEN** staff attach "report.pdf" to a job
@@ -626,3 +634,25 @@ A request for a drop-off day with no time SHALL show no note. On a job over seve
 #### Scenario: Several days
 - **WHEN** a job over two days has a change request waiting
 - **THEN** the note reads "Oliver Chen asked to move this to Wed 7 Oct, 14:00. Answer it from Waiting for you."
+
+### Requirement: The job page shows and adds a job's files and photos
+The job page SHALL show "Files and photos" under Notes: photos as small pictures that open larger, other files by name and size, the customer's booking photos marked "From the customer". "Add file or photo" SHALL upload any file up to 15MB, refusing a larger one before sending, and "Remove" SHALL ask "Remove [file]?" first.
+
+#### Scenario: A photo and a report
+- **WHEN** a job has the customer's photo brake.jpg and a 20 KB report.pdf
+- **THEN** the photo shows as a picture marked "From the customer", and the report as "report.pdf · 20 KB"
+
+#### Scenario: Too large
+- **WHEN** staff choose a file over 15MB
+- **THEN** it says "That file is too large (max 15MB)." and nothing is sent
+
+### Requirement: The job page deletes a job, or says to settle up first
+"Delete job" SHALL sit small at the left of the job page's bottom bar, which SHALL always show. It SHALL ask "Delete [job]?" with "The job, its diary time and its files and photos are removed. This can't be undone.", "Keep the job" and "Delete job". While money has been paid on the order or the bike is in the shop, or the server refuses with `settle_first`, it SHALL instead show "Settle up first" with what is still open.
+
+#### Scenario: Nothing at stake
+- **WHEN** staff press Delete job on an expected booking and confirm
+- **THEN** the job is deleted and its page closes
+
+#### Scenario: Paid and in the shop
+- **WHEN** the job's order is paid and its bike is in the shop
+- **THEN** "Settle up first" lists "Paid on its order" and "Bike in the shop", and nothing is deleted
