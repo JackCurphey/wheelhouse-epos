@@ -65,9 +65,11 @@ function stageActions(j: WorkshopJob): Action[] {
     case 'on_hold': return [{ label: 'Resume', action: 'resume', primary: true }];
     // Unpaid finished work is paid at the till, which records the hand-over
     // (collect and pay decision 3; Jack, 18 Oct); paid work is handed over.
-    case 'complete': return j.orderId && j.orderStatus === 'open'
-      ? [{ label: 'Take payment', action: 'pay', primary: true }]
-      : [{ label: 'Hand over', action: 'collect', primary: true }];
+    // A cancelled order is neither paid nor payable here (fresh review).
+    case 'complete': return j.orderId && j.orderStatus === 'cancelled' ? []
+      : j.orderId && j.orderStatus === 'open'
+        ? [{ label: 'Take payment', action: 'pay', primary: true }]
+        : [{ label: 'Hand over', action: 'collect', primary: true }];
     default: return [];
   }
 }

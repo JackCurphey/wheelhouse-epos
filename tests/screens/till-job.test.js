@@ -42,7 +42,7 @@ function order(over = {}) {
   return { id: 40, kind: 'order', status: 'open', customerId: 5, customerName: 'Maya Patel', subtotal: 83, discount: 0, total: 83, workshopJobId: 1,
     items: [
       { id: 1, productId: null, name: 'Standard service', unitPrice: 65, qty: 1, lineTotal: 65, lineType: 'labour', serviceId: 3, minutes: 60 },
-      { id: 2, productId: 7, name: 'Shimano brake pads', sku: 'B05S-RX', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'part', serviceId: null, minutes: null },
+      { id: 2, productId: 7, name: 'Shimano brake pads', sku: 'B05S-RX', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null },
     ], ...over };
 }
 
@@ -147,6 +147,25 @@ test('a refused payment says why in plain words', async () => {
   convertReply = { status: 409, ok: false, json: async () => ({ error: 'cannot finish a job that is on_hold; from here you can resume', code: 'illegal' }) };
   await t.sale.findByText('Maya Patel · workshop job WH-1042');
   const dlg = await payByCard(t);
-  assert.ok(has(await dlg.findByText(/can’t be paid|cannot finish/)));
+  assert.ok(has(await dlg.findByText('The work isn’t finished, so this job can’t be paid yet. No sale was recorded: if the card machine took the payment, reverse it on the machine.')));
   assert.equal(posts('/api/workshop-jobs/1/collect').length, 0);
+});
+
+// Fresh review, 18 Oct.
+test('if the job didn\'t finish while paying, the bike isn\'t handed over, and Paid says why and waits', async () => {
+  const t = await openJobTill();
+  convertReply = { status: 201, ok: true, json: async () => ({ id: 601, jobWarning: 'The order was paid but the job could not be marked finished: someone changed it.' }) };
+  const dlg = await payByCard(t);
+  assert.ok(has(await dlg.findByText(/could not be marked finished/)));
+  assert.equal(posts('/api/workshop-jobs/1/collect').length, 0);
+  // With a note, Paid waits for No receipt rather than counting down.
+  await new Promise((r) => setTimeout(r, 200));
+  assert.ok(has(dlg.queryByRole('button', { name: 'No receipt' })));
+  assert.equal(has(dlg.queryByRole('timer')), false);
+});
+
+test('a cancelled order is not called paid', async () => {
+  const { sale } = await openJobTill({ jobOver: { orderStatus: 'cancelled' }, orderOver: { status: 'cancelled' } });
+  assert.ok(has(await sale.findByText('This job’s order was cancelled, so there’s nothing to pay here.')));
+  assert.equal(has(sale.queryByText('This job’s order is already paid.')), false);
 });

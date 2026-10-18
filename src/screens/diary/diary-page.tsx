@@ -1371,6 +1371,7 @@ export function DiaryPage() {
             const j = menuFor.job;
             if (j.state === 'pending') return { reason: 'Not booked yet' };
             if (!j.orderId) return { reason: 'No order on this job' };
+            if (j.orderStatus === 'cancelled') return { reason: 'Order cancelled' };
             if (j.orderStatus !== 'open') return { reason: 'Already paid' };
             return { onOpen: () => { setMenuFor(null); navigate(`${ROUTES.till}?job=${j.id}`); } };
           })()}

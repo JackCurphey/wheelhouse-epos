@@ -246,3 +246,16 @@ test('a paid job\'s Open in the till is greyed: Already paid', async () => {
     JOBS[0] = keep;
   }
 });
+
+test('a cancelled order\'s Open in the till is greyed: Order cancelled', async () => {
+  const keep = JOBS[0];
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'cancelled' };
+  try {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.keyDown(block(ui, 'Trek Domane'), { key: 'ContextMenu' });
+    const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
+    assert.ok(has(within(menu.getByRole('menuitem', { name: /^Open in the till/ })).queryByText('Order cancelled')));
+  } finally {
+    JOBS[0] = keep;
+  }
+});

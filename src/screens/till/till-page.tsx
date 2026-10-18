@@ -229,20 +229,29 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
   }));
   const total = saleTotal(lines);
   const inShop = job?.custodyState === 'in_shop';
-  const paid = order ? order.status !== 'open' : false;
+  const paid = order?.status === 'converted';
+  const cancelled = order?.status === 'cancelled';
   const payable = job ? PAYABLE.has(job.workState) : false;
 
   // After paying: the bike goes out with the customer, unless the pill says it stays.
-  async function afterPaid(): Promise<string | null> {
-    await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
-    if (!collect || !inShop) return null;
+  async function afterPaid(reply: { jobWarning?: string }): Promise<string | null> {
+    const refresh = () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workshop-job', jobId] }),
+      queryClient.invalidateQueries({ queryKey: ['sale-document', job?.orderId] }),
+      queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+    ]);
+    // Someone moved or reopened the job while it was being paid: the bike
+    // stays, and Paid says why (fresh review).
+    if (reply.jobWarning) { await refresh(); return `${reply.jobWarning} The bike hasn’t been recorded as collected: check the job.`; }
+    if (!collect || !inShop) { await refresh(); return null; }
     try {
       const fresh = await apiGet<WorkshopJob>(`/api/workshop-jobs/${jobId}`);
       if (fresh.custodyState !== 'in_shop') return null;
       await apiMutate(`/api/workshop-jobs/${jobId}/collect`, { version: fresh.version });
-      await queryClient.invalidateQueries({ queryKey: ['workshop-job', jobId] });
+      await refresh();
       return null;
     } catch (err) {
+      await refresh();
       return `Paid, but the bike couldn’t be recorded as collected${err instanceof ApiError ? `: ${err.message}` : ''}. Hand it over from the job.`;
     }
   }
@@ -274,8 +283,9 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
           </ul>
         ) : null}
         {paid ? <p className="m-0 text-sm font-semibold">This job’s order is already paid.</p> : null}
-        {order && !paid && !payable ? <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">The work isn’t finished, so this job can’t be paid yet.</p> : null}
-        {order && !paid && inShop ? (
+        {cancelled ? <p className="m-0 text-sm font-semibold">This job’s order was cancelled, so there’s nothing to pay here.</p> : null}
+        {order && order.status === 'open' && !payable ? <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-[13px] font-semibold text-[var(--wh-warn-ink)]">The work isn’t finished, so this job can’t be paid yet.</p> : null}
+        {order && order.status === 'open' && inShop ? (
           <button
             type="button"
             aria-pressed={collect}
@@ -289,7 +299,7 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
           <span className="text-base font-bold">Total</span>
           <span className="font-mono text-[26px]">{money(total)}</span>
         </div>
-        {order && !paid ? (
+        {order && order.status === 'open' ? (
           <Button variant="primary" block disabled={!payable || lines.length === 0} onClick={() => setPaying(true)}>{`Take payment · ${money(total)}`}</Button>
         ) : null}
       </section>

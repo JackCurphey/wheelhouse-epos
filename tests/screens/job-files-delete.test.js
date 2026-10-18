@@ -194,3 +194,10 @@ test('finished work already paid still offers Hand over', async () => {
   assert.ok(has(await page.findByRole('button', { name: 'Hand over' })));
   assert.equal(page.queryAllByRole('button', { name: 'Take payment' }).length, 0);
 });
+
+test('finished work with a cancelled order offers neither Hand over nor Take payment', async () => {
+  const { page } = await openJob({ workState: 'complete', custodyState: 'in_shop', orderId: 40, orderStatus: 'cancelled' });
+  await page.findByRole('button', { name: 'Delete job' });
+  assert.equal(page.queryAllByRole('button', { name: 'Hand over' }).length, 0);
+  assert.equal(page.queryAllByRole('button', { name: 'Take payment' }).length, 0);
+});
