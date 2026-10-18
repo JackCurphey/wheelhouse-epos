@@ -76,3 +76,7 @@ fresh review found a mechanic who had signed off couldn't be deleted: "1:
 keep their name. Each sign-off saves the mechanic's name when they sign, so
 deleting them later still works and old jobs still say who signed off").
 Chosen over refusing the delete and over forgetting who.
+
+**Merged with the server change flagged for Mark** (Jack, 18 Oct: "1: merge
+once GitHub's checks pass, and flag the server and database change for Mark
+in the status update"), as #265 and #267 were.
