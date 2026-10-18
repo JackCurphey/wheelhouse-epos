@@ -46,6 +46,8 @@ function serializeWorkshopSettings(row) {
     // INTEGER 0/1 in the column, boolean over the wire - the client renders
     // it directly, same shape serializeWorkshopService uses for `active`.
     showPricesOnline: row.show_prices_online === 1,
+    // "Show who signed off to customers" (mechanic sign-off answer 3; Jack, 18 Oct).
+    showSignOffToCustomers: row.show_sign_off_to_customers === 1,
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -378,6 +380,8 @@ export function register(route) {
 
     const showPricesOnline = body.showPricesOnline === undefined
       ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
+    const showSignOff = body.showSignOffToCustomers === undefined
+      ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
 
     // A shop's own terms, or null to use the standard ones (piece 11). A
     // string is trimmed; null or an empty/blank string reverts to standard;
@@ -401,12 +405,12 @@ export function register(route) {
          dropoff_window_start = ?,
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, time_zone = ?,
-         show_prices_online = ?, booking_terms = ?, updated_at = ? WHERE id = ?`
+         show_prices_online = ?, show_sign_off_to_customers = ?, booking_terms = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, timeZone,
-          showPricesOnline, bookingTerms, nowIso(), existing.id);
+          showPricesOnline, showSignOff, bookingTerms, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });

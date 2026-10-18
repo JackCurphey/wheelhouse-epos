@@ -288,7 +288,7 @@ export async function resolveBookingLink(req, res, code) {
 async function bookingLinkView(jobId, shop) {
   const row = await db.prepare(
     `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.customer_bike_note, w.question_answers,
-            w.booking_state, w.custody_state, w.work_state,
+            w.booking_state, w.custody_state, w.work_state, w.signed_off_name,
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
@@ -299,6 +299,12 @@ async function bookingLinkView(jobId, shop) {
   ).get(jobId);
   const requested = requestedOf(row);
   const today = await currentShopToday();
+  const stage = bookingStage(row);
+  // "Checked by [name]" once the bike is ready, if the shop shows who signed
+  // the job off (mechanic sign-off answer 3; Jack, 18 Oct). Off to start.
+  const shows = await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get();
+  const checkedBy = shows?.show_sign_off_to_customers === 1 && (stage === 'ready_to_collect' || stage === 'collected')
+    ? row.signed_off_name ?? null : null;
   return {
     reference: row.reference,
     shopName: shop.name,
@@ -309,7 +315,8 @@ async function bookingLinkView(jobId, shop) {
     // As asked at booking, from the frozen copy - never the service's current wording.
     answers: (row.question_answers ?? []).map(({ wording, answer, text }) => ({ wording, answer, ...(text ? { text } : {}) })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
-    stage: bookingStage(row),
+    stage,
+    checkedBy,
     photoCount: row.photo_count,
     requested: requested && { jobDate: requested.jobDate, startTime: requested.startTime, mechanicId: requested.mechanicId },
     canChange: customerCanAct(row, today),
