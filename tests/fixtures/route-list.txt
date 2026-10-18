@@ -47,6 +47,7 @@ GET /api/sale-documents/:id
 POST /api/sale-documents
 PUT /api/sale-documents/:id
 PUT /api/sale-documents/:id/items
+GET /api/sale-documents/:id/due
 POST /api/sale-documents/:id/convert
 GET /api/workshop-jobs
 GET /api/workshop-jobs/:id

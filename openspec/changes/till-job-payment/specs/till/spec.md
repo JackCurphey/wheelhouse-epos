@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: The till pays a workshop job's order
-Opened with a job (Jack, 18 Oct, `docs/decisions/2026-10-18-till-job-payment.md`), the till SHALL show the job's order lines locked, each marked "agreed on the job", with the customer and job, and "Bike collected when paid", on by default while the bike is in the shop. Take payment SHALL pay the whole order at the amount due, the order's and the customer's group discounts taken off, selling past zero stock with "Stock says [n] — sold anyway" (answer 3). Then, unless the pill is off, it SHALL record the bike as collected.
+Opened with a job (Jack, 18 Oct, `docs/decisions/2026-10-18-till-job-payment.md`), the till SHALL show the job's order lines locked, each marked "agreed on the job", with the customer and job, and "Bike collected when paid", on by default while the bike is in the shop. Take payment SHALL pay the whole order. Then, unless the pill is off, it SHALL record the bike as collected.
 
 #### Scenario: Paying for a finished job
 - **WHEN** staff open WH-1042 in the till and pay its £83.00 by card
@@ -17,6 +17,9 @@ An order already paid SHALL say "This job’s order is already paid." with nothi
 #### Scenario: Work not started
 - **WHEN** the job's work hasn't started
 - **THEN** the till says "The work isn’t finished, so this job can’t be paid yet." and Take payment can't be pressed
+
+### Requirement: The till pays a job's order at the amount due
+The till SHALL ask the server for the amount due on a job's order, the order's and the customer's group discounts taken off, show both discounts, and take that amount (Jack, 18 Oct, answer 3). Paying SHALL sell past zero stock, the line saying "Stock says [n] — sold anyway".
 
 #### Scenario: A discount
 - **WHEN** Maya Patel is in Blue Light (10%) and her order has £2.00 off
