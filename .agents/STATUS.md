@@ -33,7 +33,14 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #273 too** (Jack chose to merge it and flag it, 18 Oct): your
+**Check #275 too** (Jack, 18 Oct: build piece 3 "flagging Mark's two
+files for him"): migration 041 adds `workshop_settings.show_sign_off_to_customers`
+(off); your `server/routes/workshop-settings.js` sends and saves
+`showSignOffToCustomers`; your `server/routes/portal.js` booking link view
+carries `checkedBy` (the sign-off's name, only with the setting on and the
+bike ready or collected). Also worth a look: `PUT /api/workshop-settings`
+checks no role, so any staff session can change this privacy setting
+(already so for every setting). **Check #273 too** (Jack chose to merge it and flag it, 18 Oct): your
 `server/routes/sales.js` convert takes an optional `signedOffBy` and, when
 paying finishes a job, records the sign-off (`recordSignOff`); it never
 refuses a payment over it, warning instead (an inactive mechanic, a failed
@@ -73,8 +80,10 @@ in their packages. Then the mechanic sign-off's first piece: "Mark ready
 for collection" asks "Who's signing this off?", the job's mechanic picked,
 and the finished job shows "Signed off by [name] · [day], [time]"; each
 sign-off keeps the mechanic's name (#271). Then the till asks too, when a
-payment finishes work still in progress (#273). Showing it to customers is
-a later piece. Then Files and photos on the job page,
+payment finishes work still in progress (#273). Then showing customers who
+signed off: a first Settings page (Workshop › Mechanics) with the switch,
+off, and "Checked by [name]" on the receipt and booking link when it's on
+(#275); turning it on at a real shop waits for the solicitor's check. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
