@@ -719,6 +719,7 @@ export const journeys = [
         sc("till-receipt-print", "Paid: Print or No receipt, for now", "Staff"),
         sc("till-receipt-paper", "The printed receipt", "Staff"),
         sc("till-receipt-paper-checked", "The printed receipt, showing who signed the job off", "Staff"),
+        sc("till-receipt-paper-details", "The printed receipt, with the shop’s address, phone and VAT number", "Staff"),
       ] },
       { label: "Other ways to pay", screens: [
         sc("till-giftcard", "Gift card or store credit", "Staff"),
