@@ -695,6 +695,19 @@ export function withPartArrived(job, fn) {
   if (saved) Object.assign(j, PART_ARRIVED_AT[job]);
   try { return fn(); } finally { PART_ARRIVED = was; if (saved) Object.assign(j, saved); }
 }
+// Automatic confirming (Jack, 19 Oct, docs/decisions/2026-10-19-auto-confirm.md
+// answer 1): a booking confirmed straight away sits in the diary as a normal
+// booking, marked "New, booked online" until someone opens it; nothing to
+// answer. Off everywhere unless a board is drawn inside withNewOnline().
+let NEW_ONLINE = null;
+export function withNewOnline(job, fn) {
+  const was = NEW_ONLINE; NEW_ONLINE = job;
+  try { return fn(); } finally { NEW_ONLINE = was; }
+}
+// The one-line mark a block carries: Part arrived, or New, booked online
+// ("New online" in a narrow week column, where the whole words get cut off).
+const blockMark = (j) => (PART_ARRIVED === j.job ? { text: 'Part arrived', icon: 'check', color: ST.ready[1] }
+  : NEW_ONLINE === j.job ? { text: 'New, booked online', short: 'New online', icon: 'website', color: C.ink } : null);
 // Desktop diary block text (third walk): 12px on a 14px line.
 const D_LINE_H = 14;
 function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null) {
@@ -735,7 +748,8 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // UX walk-through 3 L4: "Part arrived" was 10px, the smallest text on the
   // board; it's now 12px, the size the tablet block uses for its job title,
   // and like the rest of the block it grows with "Larger text".
-  const arrived = PART_ARRIVED === j.job;
+  const mark = blockMark(j);
+  const arrived = Boolean(mark);
   // Audit H1: bike names ("Trek Domane AL 3", "Brompton C Line") were
   // truncating mid-word on their own, even before status text was added to
   // the block. Where a narrow block is tall enough to spare the room (roomy,
@@ -746,7 +760,8 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // bike may wrap onto two there too (it would truncate mid-word otherwise).
   // A lane block (decision 59, `rect` set) never wraps: at 12px it is too
   // narrow to wrap a word cleanly, and hovering widens it.
-  const bikeWrap = narrow && !rect && fitLines >= 3;
+  // A block with a mark keeps the bike to one line, so the mark fits (19 Oct).
+  const bikeWrap = narrow && !rect && fitLines >= 3 && !(mark && fitLines < 4);
   const showSymbol = narrow && SHOW_STATUS_SYMBOLS;
   // Decision 59: a lane block (part of a partial overlap, `rect` set) may be
   // narrow enough to truncate the bike name/job title — acceptable, since
@@ -760,11 +775,11 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   const isSummaryJob = narrow && j.job === 'WH-1042';
   const summaryCls = isSummaryJob ? `wh-hovsum-${size}-${nextSeq(size)}` : '';
   const classAttr = [hoverCls, summaryCls].filter(Boolean).join(' ');
-  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(stageOf(j))}${arrived ? ', part arrived' : ''}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(stageOf(j))} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(stageOf(j))}${mark ? `, ${mark.text.toLowerCase()}` : ''}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(stageOf(j))} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 ${showSymbol ? statusDot(j.key) : ''}
-<span style="font-size: 12px; font-weight: 700; color: ${C.ink}; line-height: ${D_LINE_H}px; flex-shrink: 0; ${strike} ${bikeWrap ? `white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden` : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(fitLines < 2 && arrived ? `${bike} · Part arrived` : bike)}</span>
+<span style="font-size: 12px; font-weight: 700; color: ${C.ink}; line-height: ${D_LINE_H}px; flex-shrink: 0; ${strike} ${bikeWrap ? `white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden` : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(fitLines < 2 && mark ? `${bike} · ${mark.text}` : bike)}</span>
 ${fitLines >= 2 ? `<span style="font-size: 12px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${D_LINE_H}px; flex-shrink: 0">${esc(line2)}</span>` : ''}
-${fitLines < 2 ? '' : arrived ? `<span style="display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: ${ST.ready[1]}; white-space: nowrap; line-height: ${D_LINE_H}px">${icon('check', 12)}Part arrived</span>` : line3 ? `<span style="font-size: 12px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${D_LINE_H}px; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
+${fitLines < 2 ? '' : arrived ? `<span style="display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: ${mark.color}; white-space: nowrap; line-height: ${D_LINE_H}px">${icon(mark.icon, 12)}${narrow && mark.short ? mark.short : mark.text}</span>` : line3 ? `<span style="font-size: 12px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${D_LINE_H}px; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
 </a>${isSummaryJob ? jobHoverSummaryMarkup(j, size, summaryCls, FORCE_HOVER_SUMMARY_JOB === j.job, top) : ''}`;
 }
 // Decision 65: resting on WH-1042's block for ~0.6s shows a small quick-look
@@ -1341,16 +1356,17 @@ function touchJobBlock(j, size, slotH, { highlighted = false, lightMarked = fals
   const one = (t, style) => `<span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${lineH}px; ${style}">${esc(t)}</span>`;
   const bikeStyle = `font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; ${strike}`;
   const titleStyle = `font-size: ${fs.s}px; font-weight: 700; color: ${ink};`;
-  const arrived = PART_ARRIVED === j.job;
-  const arrivedLine = `<span style="display: flex; align-items: center; gap: 3px; white-space: nowrap; line-height: ${lineH}px; font-size: ${fs.x}px; font-weight: 700; color: ${ST.ready[1]}">${icon('check', fs.x)}Part arrived</span>`;
+  const mark = blockMark(j);
+  const arrived = Boolean(mark);
+  const arrivedLine = mark ? `<span style="display: flex; align-items: center; gap: 3px; white-space: nowrap; line-height: ${lineH}px; font-size: ${fs.x}px; font-weight: 700; color: ${mark.color}">${icon(mark.icon, fs.x)}${narrow && size === 'tablet' && mark.short ? mark.short : mark.text}</span>` : '';
   let lines;
-  if (arrived) lines = fitLines <= 1 ? one(`${bike} · Part arrived`, bikeStyle) : fitLines === 2 ? one(bike, bikeStyle) + arrivedLine : one(bike, bikeStyle) + one(jobTitle, titleStyle) + arrivedLine;
+  if (arrived) lines = fitLines <= 1 ? one(`${bike} · ${mark.text}`, bikeStyle) : fitLines === 2 ? one(bike, bikeStyle) + arrivedLine : one(bike, bikeStyle) + one(jobTitle, titleStyle) + arrivedLine;
   else if (fitLines <= 1) lines = one(`${bike} · ${jobTitle}`, bikeStyle);
   else if (fitLines === 2) lines = one(bike, bikeStyle) + one(narrow ? jobTitle : [jobTitle, stageOf(j, true)].join(' · '), titleStyle);
   else lines = one(bike, bikeStyle) + one(jobTitle, titleStyle) + (extra ? one(extra, `font-size: ${fs.x}px; color: ${C.ink}; opacity: 0.8; ${strike}`) : '');
   const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
   const href = `${j.link || 'job-overview'}-${size}.dc.html`;
-  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(statusWord)}${arrived ? ', part arrived' : ''}, ${esc(j.detail)}. Press and hold for more." style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 3px 7px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${touchRing(highlighted, lightMarked)}">${lines}</a>`;
+  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(statusWord)}${mark ? `, ${mark.text.toLowerCase()}` : ''}, ${esc(j.detail)}. Press and hold for more." style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 3px 7px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${touchRing(highlighted, lightMarked)}">${lines}</a>`;
 }
 function touchPendingBlock(size, slotH, highlighted = false) {
   const j = PENDING_DIARY;

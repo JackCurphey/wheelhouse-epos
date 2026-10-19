@@ -24,7 +24,7 @@ import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
 import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, remindBox } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CUSTOMER_NOTE } from './job-page.mjs';
-import { requestDepositBoard } from './diary.mjs';
+import { requestDepositBoard, withNewOnline, buildDiaryDesktopBoard, tabletDiary, phoneDiary } from './diary.mjs';
 import { msgPage, msgListOpen } from './setup.mjs';
 import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs';
 
@@ -197,7 +197,7 @@ const DONE_WHEN = `${DAY_SHORT}, 11:30`;
 // Audit M4: no terms tick box — the sentence by the button is the agreement.
 // Audit M2: the button says what will happen. A shop that confirms
 // automatically shows "Confirm booking" / "Pay £[deposit] and book".
-const detailsBody = ({ deposit = false, signedIn = false, state = '', remind = true } = {}) => {
+const detailsBody = ({ deposit = false, signedIn = false, state = '', remind = true, auto = false } = {}) => {
   const contact = signedIn
     ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">${MAYA.name} · ${mono(MAYA.phone)} · ${MAYA.email} ${link('Change')}</p>`
     : `${bfield('Your name', { value: MAYA.name, auto: 'name' })}${twoCol(bfield('Mobile number', { value: MAYA.phone, type: 'tel', auto: 'tel' }), bfield('Email', { value: MAYA.email, type: 'email', auto: 'email', hint: 'For your receipt, and updates if you choose Email' }))}`;
@@ -211,8 +211,8 @@ const detailsBody = ({ deposit = false, signedIn = false, state = '', remind = t
   // re-paid (audit H3).
   const notSent = state === 'not-sent' ? alert('Not sent yet — check your connection.', 'Everything you’ve typed is still here.')
     : state === 'checking' ? alert('We’re checking whether your payment went through — please don’t pay again.', 'Your connection dropped while sending. Nothing will be taken twice.') : '';
-  const label = state === 'sending' ? 'Sending…' : state === 'checking' ? 'Check again' : state === 'not-sent' || state === 'card-failed' ? 'Try again' : deposit ? 'Pay £[deposit] and send request' : 'Send booking request';
-  const agree = `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">By sending, you agree to North Street Cycles’ <a href="#" style="color: ${C.ink}; font-weight: 600">booking terms</a> and <a href="#" style="color: ${C.ink}; font-weight: 600">privacy notice</a>.</p>`;
+  const label = state === 'sending' ? 'Sending…' : state === 'checking' ? 'Check again' : state === 'not-sent' || state === 'card-failed' ? 'Try again' : deposit ? (auto ? 'Pay £[deposit] and book' : 'Pay £[deposit] and send request') : auto ? 'Confirm booking' : 'Send booking request';
+  const agree = `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">By ${auto ? 'booking' : 'sending'}, you agree to North Street Cycles’ <a href="#" style="color: ${C.ink}; font-weight: 600">booking terms</a> and <a href="#" style="color: ${C.ink}; font-weight: 600">privacy notice</a>.</p>`;
   const send = `<div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap">${state === 'sending' ? `<span role="status" style="font-size: 14px; color: ${C.muted}">Sending your booking — this takes a moment.</span>` : ''}${button(label).replace('style="', state === 'sending' ? 'aria-disabled="true" style="opacity: 0.75; ' : 'style="')}</div>`;
   // Account, history and reminders decision 2: say yes once to service reminders.
   const remindTick = remind ? remindBox() : '';
@@ -346,7 +346,7 @@ const scheduledLine = `<p role="status" style="margin: 0; display: flex; align-i
 // docs/decisions/2026-10-19-confirmation-note.md): each shop writes it,
 // starting with bk-confirmed's drawn second sentence.
 const noteRow = `<div style="display: flex; flex-direction: column; gap: 6px; padding: 6px 0"><label for="confirm-note" style="font-size: 15px; font-weight: 600">Additional note on the confirmation</label><textarea id="confirm-note" aria-describedby="confirm-note-h" rows="2" style="box-sizing: border-box; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; line-height: 1.5; color: ${C.ink}; resize: vertical">Please bring the lock key, and tell us about any accessories.</textarea><span id="confirm-note-h" style="font-size: 13px; color: ${C.muted}">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span></div>`;
-const onlineOpen = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
+const onlineOpen = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false, auto = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
 ${sub('How bikes are booked in')}
 ${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay ? 1 : 0)}
 ${scheduled ? scheduledLine : ''}
@@ -356,7 +356,7 @@ ${noteRow}
 ${noticeRow(noticeDays)}
 ${reserve ? `${numRow('reserve', 'Time kept free each day', 'For the little jobs between bikes', 'hours', '[n]')}${note('Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.')}` : ''}
 ${rowSwitch('Show prices on the booking page', true)}
-${rowSwitch('Confirm bookings automatically', false)}
+${rowSwitch('Confirm bookings automatically', auto)}
 ${note('Off: each booking is a request, purple in the diary until someone accepts it. On: a booking that fits the diary is confirmed straight away. Changing a confirmed booking is always a request.')}
 ${sub('Deposits')}
 ${rowSwitch('Take a deposit when booking', true)}
@@ -369,7 +369,7 @@ ${note('With automatic confirming off, the customer pays before the shop has sai
 ${sub('Terms')}
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Booking terms</span><span style="font-size: 13px; color: ${C.muted}">Wheelhouse’s standard terms · a copy is kept with each booking</span></span>${button('Use your own', { variant: 'default' })}</div>
 <div>${link('See your booking page ↗')}</div>`;
-const settings = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false) => { let page = settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ online: onlineOpen(reserve, wholeDay, noticeDays, scheduled) })); if (wholeDay) page = page.replace('Set times ·', 'Whole day ·'); if (noticeDays) page = page.replace('2 hours’ notice', '1 day’s notice'); return page; };
+const settings = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false, auto = false) => { let page = settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ online: onlineOpen(reserve, wholeDay, noticeDays, scheduled, auto) })); if (auto) page = page.replace('each booking a request', 'confirmed straight away'); if (wholeDay) page = page.replace('Set times ·', 'Whole day ·'); if (noticeDays) page = page.replace('2 hours’ notice', '1 day’s notice'); return page; };
 
 // ---------- The boards ----------
 const S = (o = {}) => summaryBox({ service: 'Standard service', price: '£65.00', ...o });
@@ -387,6 +387,11 @@ def('bk-when', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenAppt()), S({
 def('bk-when-full', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenAppt(null, { hoverFull: true })), S({ bike: BIKE, limit: 'call' })));
 def('bk-when-dropoff', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenDropoff()), S({ bike: BIKE, when: `${DAY_SHORT}, drop off 09:00–10:00`, mechanic: 'Whoever’s free', limit: 'call' })));
 def('bk-details', () => layout(steps(4, DONE3, detailsBody()), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
+// Automatic confirming (Jack, 1 Oct, decision 8; drawn 19 Oct,
+// docs/decisions/2026-10-19-auto-confirm.md): with the shop's switch on, the
+// button says the booking is made, and the diary gets a normal booking marked
+// "New, booked online" until someone opens it (answer 1).
+def('bk-details-auto', () => layout(steps(4, DONE3, detailsBody({ auto: true })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
 def('bk-details-deposit', () => layout(steps(4, DONE3, detailsBody({ deposit: true, signedIn: true })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call', deposit: 'now' }), true));
 def('bk-sending', () => layout(steps(4, DONE3, detailsBody({ state: 'sending' })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
 def('bk-card-failed', () => layout(steps(4, DONE3, detailsBody({ deposit: true, signedIn: true, state: 'card-failed' })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call', deposit: 'now' }), true));
@@ -428,6 +433,8 @@ def('bk-settings-notice-days', () => settings(true, false, true));
 def('bk-settings-mode-change', () => overlay(settings(true), modeDialog()));
 def('bk-settings-mode-scheduled', () => settings(true, false, false, true));
 // The same page scrolled down to Deposits and Terms (the section is long).
+def('bk-settings-auto', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 300, tablet: 300, phone: 560 }[SIZE]}px }</style>${settings(true, false, false, false, true).replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
+def('bk-staff-confirmed', () => withNewOnline('WH-1070', () => (SIZE === 'desktop' ? buildDiaryDesktopBoard() : SIZE === 'tablet' ? tabletDiary() : phoneDiary({ day: 4, mode: 'everyone' }))));
 def('bk-settings-deposits', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 420, tablet: 420, phone: 720 }[SIZE]}px }</style>${settings().replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 
 const SIZES = ['desktop', 'tablet', 'phone']; // decision 13
@@ -475,6 +482,9 @@ export const TITLES = {
   'bk-page-ls': 'A Lightspeed shop: the booking’s page, no deposit',
   'bk-cancel-ls': 'A Lightspeed shop: cancel, nothing to pay or refund',
   'bk-staff-request': 'The diary: a request with a deposit',
+  'bk-staff-confirmed': 'The diary: a booking confirmed straight away, marked New, booked online',
+  'bk-details-auto': 'Step 4 when the shop confirms automatically: Confirm booking',
+  'bk-settings-auto': 'Settings › Workshop › Online booking: Confirm bookings automatically on',
   'bk-staff-decline': 'Declining it refunds the deposit',
   'bk-messages': 'Settings › Front desk › Messages: the booking messages',
   'bk-settings': 'Settings › Workshop › Online booking',
@@ -486,13 +496,13 @@ export const TITLES = {
   'bk-settings-deposits': 'Online booking, scrolled: deposits and terms',
 };
 export const ROWS = [
-  { label: 'Booking', screens: ['bk-service', 'bk-service-chosen', 'bk-service-many', 'bk-bike', 'bk-bike-signed-in', 'bk-not-sure', 'bk-when', 'bk-when-full', 'bk-when-dropoff', 'bk-details', 'bk-details-deposit'] },
+  { label: 'Booking', screens: ['bk-service', 'bk-service-chosen', 'bk-service-many', 'bk-bike', 'bk-bike-signed-in', 'bk-not-sure', 'bk-when', 'bk-when-full', 'bk-when-dropoff', 'bk-details', 'bk-details-auto', 'bk-details-deposit'] },
   { label: 'Sending', screens: ['bk-sending', 'bk-card-failed', 'bk-not-sent', 'bk-checking-payment', 'bk-resume', 'bk-request', 'bk-request-deposit', 'bk-confirmed'] },
   { label: 'Your booking', screens: ['bk-bookings', 'bk-page-request', 'bk-offered', 'bk-page', 'bk-page-dropoff', 'bk-change', 'bk-change-pending', 'bk-change-declined'] },
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
-  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-deposits'] },
+  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-deposits'] },
 ];
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.

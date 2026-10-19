@@ -267,6 +267,7 @@ export const journeys = [
         sd3("bk-when-full", "A full day says why", "Customer"),
         sd3("bk-when-dropoff", "A shop that takes drop-off days: the window and the mechanic", "Customer"),
         sd3("bk-details", "Your details, and how to send updates", "Customer"),
+        sd3("bk-details-auto", "Step 4 when the shop confirms automatically: Confirm booking", "Customer"),
         sd3("bk-details-deposit", "Pay the deposit and send", "Customer"),
       ] },
       { label: "Sending", screens: [
@@ -304,6 +305,7 @@ export const journeys = [
       ] },
       { label: "The shop’s side", screens: [
         sd3("bk-staff-request", "The diary: a request with a deposit", "Staff"),
+        sd3("bk-staff-confirmed", "The diary: a booking confirmed straight away, marked New, booked online", "Staff"),
         sd3("bk-staff-decline", "Declining it refunds the deposit", "Staff"),
         sd3("bk-messages", "Settings › Front desk › Messages: the booking messages", "Manager"),
         sd3("bk-settings", "Settings › Workshop › Online booking", "Manager"),
@@ -312,6 +314,7 @@ export const journeys = [
         sd3("bk-settings-notice-days", "Settings › Workshop › Online booking: notice in days", "Manager"),
         sd3("bk-settings-mode-change", "Settings › Workshop › Online booking: changing to the whole day, from a day you choose", "Manager"),
         sd3("bk-settings-mode-scheduled", "Settings › Workshop › Online booking: a change to the whole day coming up", "Manager"),
+        sd3("bk-settings-auto", "Settings › Workshop › Online booking: Confirm bookings automatically on", "Manager"),
         sd3("bk-settings-deposits", "Online booking, scrolled: deposits and terms", "Manager"),
       ] },
     ],
