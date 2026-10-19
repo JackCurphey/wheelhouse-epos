@@ -108,7 +108,13 @@ today". Then opening hours in Settings › Shop and sites: each day Open or
 Closed, hours on the hour, saved at once; screens only, on the existing
 workshop settings (#281). Then Settings for the Owner only until roles are
 built: anyone else sees "Settings aren't part of your role", and the two
-settings routes refuse them (#283). Then Files and photos on the job page,
+settings routes refuse them (#283). Then the time kept free each day in
+Settings › Workshop › Online booking, worded so lunch (now a diary block)
+isn't counted twice, and the old app's Edit workshop removed (#285). The same
+pull request drew, for later: "Bikes are booked in for: A set time / The
+whole day", set-time customers dropping off before their booking (30
+minutes by default), and notice in hours or days, which needs a server
+change of yours (`docs/decisions/2026-10-19-retire-old-workshop-settings.md`). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
