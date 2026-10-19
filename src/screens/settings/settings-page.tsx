@@ -5,7 +5,8 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button.tsx';
-import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { previewLines } from './booking-preview.ts';
 import { shortDay } from '@/screens/diary/rules.ts';
 
 /**
@@ -558,6 +559,48 @@ function PricesSetting() {
 }
 
 /**
+ * Preview what the customer sees (Jack, 19 Oct, docs/decisions/2026-10-19-booking-preview.md;
+ * drawn as bk-settings-preview): the confirmed page for the drawings' example
+ * booking, with the shop's saved drop-off time, note and prices.
+ */
+function BookingPreview() {
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [open, setOpen] = useState(false);
+  const p = previewLines(settings.data ?? {});
+  const row = (k: string, v: string) => (
+    <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+      <span className="text-[var(--wh-muted)]">{k}</span>{' '}<strong className="text-right">{v}</strong>
+    </p>
+  );
+  return (
+    <div>
+      <Button variant="default" disabled={!settings.data} onClick={() => setOpen(true)}>Preview</Button>
+      <Dialog open={open} onOpenChange={setOpen} aria-labelledby="preview-title" className="md:max-w-[560px]">
+        <DialogHeader>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle id="preview-title">What the customer sees</DialogTitle>
+            <span className="text-[13px] text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
+          </div>
+          <DialogClose onClick={() => setOpen(false)} />
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px]">
+            <span className="self-start rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>
+            <h3 className="m-0 text-xl font-bold">{p.heading}</h3>
+            {p.arrival ? <p className="m-0 text-[15px] leading-normal">{p.arrival}</p> : null}
+            <div>{row('Service', p.service)}{row('Bike', p.bike)}{row('When', p.when)}</div>
+          </div>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">Customers see this once a booking is confirmed. Change a setting and preview again to see the difference.</p>
+        </DialogBody>
+        <DialogFooter className="flex gap-2.5">
+          <Button variant="default" onClick={() => setOpen(false)}>Close</Button>
+        </DialogFooter>
+      </Dialog>
+    </div>
+  );
+}
+
+/**
  * The shop's additional note on the booking confirmation (Jack, 19 Oct,
  * docs/decisions/2026-10-19-confirmation-note.md; drawn in bk-settings): its
  * own words after the drop-off time, saved when the box is left if changed.
@@ -598,6 +641,7 @@ function ConfirmationNoteSetting() {
         className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
       />
       <span id="confirm-note-h" className="text-[13px] text-[var(--wh-muted)]">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span>
+      <BookingPreview />
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
     </div>
   );

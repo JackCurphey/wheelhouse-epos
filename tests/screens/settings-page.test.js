@@ -553,3 +553,27 @@ test('a refused note says why and keeps what was typed', async () => {
   assert.ok(has(await ui.findByText('Only the shop’s owner can change settings')));
   assert.equal(box.value, 'Ring the bell.');
 });
+
+// Preview what the customer sees (Jack, 19 Oct, docs/decisions/2026-10-19-booking-preview.md;
+// drawn as bk-settings-preview): a pop-up of the confirmed page with the shop's saved settings.
+test('Preview opens What the customer sees, with the shop’s saved note and prices, and Close closes it', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  settings = { ...settings, confirmationNote: 'Park round the back and ring the bell.', showPricesOnline: false };
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  fireEvent.click(await ui.findByRole('button', { name: 'Preview' }));
+  const dialog = await ui.findByRole('dialog', { name: 'What the customer sees' });
+  const { within } = await import('@testing-library/react');
+  const box = within(dialog);
+  assert.ok(has(box.queryByText('An example booking, with your settings as they are now')));
+  assert.ok(has(box.queryByText('Booking confirmed')));
+  assert.ok(has(box.queryByText('See you on Thursday 17 September, Maya')));
+  assert.ok(has(box.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. Park round the back and ring the bell.')));
+  assert.ok(has(box.queryByText('Standard service')));
+  assert.ok(box.queryByText(/£65/) === null);
+  assert.ok(has(box.queryByText('Customers see this once a booking is confirmed. Change a setting and preview again to see the difference.')));
+  // The header's ✕ and the footer's Close, as drawn; the footer's is the last.
+  const closes = box.getAllByRole('button', { name: 'Close' });
+  assert.equal(closes.length, 2);
+  fireEvent.click(closes[1]);
+  await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'What the customer sees' }) === null));
+});

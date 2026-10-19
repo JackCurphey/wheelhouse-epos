@@ -534,6 +534,17 @@ silent:
 4. **The box shows in both booking modes, after the drop-off row.**
    *Pattern:* bk-settings, where the drawing puts it.
 
+### 19 Oct 2026: Preview what the customer sees (`docs/decisions/2026-10-19-booking-preview.md`)
+
+1. **For a shop that books bikes in for the whole day, the preview says the
+   drop-off window and its When row shows the day without a time.**
+   *Pattern:* the booking page's own whole-day line (bk-when-dropoff).
+2. **The preview shows saved settings; a note being typed saves as the box
+   is left, which pressing Preview does first.** *Pattern:* "with your
+   settings as they are now" in the drawing; the settings boxes save when left.
+3. **The pop-up has the drawn ✕ and Close, and Escape closes it.**
+   *Pattern:* the mode change pop-up.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

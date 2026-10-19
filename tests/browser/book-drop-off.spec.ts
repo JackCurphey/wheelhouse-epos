@@ -66,3 +66,17 @@ test('the note written in Settings follows the drop-off time on the booking page
   await page.goto(`${server!.baseUrl}${link}`);
   await expect(page.getByText('Drop your Trek Domane AL 3 off by 10:30, half an hour before your booking at 11:00. Park round the back and ring the bell.', { exact: true })).toBeVisible();
 });
+
+// Preview what the customer sees (Jack, 19 Oct, docs/decisions/2026-10-19-booking-preview.md):
+// the shop's saved note shows in the example booking.
+test('Preview in Settings shows the example booking with the shop’s saved note', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  expect((await staff('/api/workshop-settings', { method: 'PUT', body: { confirmationNote: 'Use the side door.', timedLeadMinutes: 30 } })).status).toBe(200);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const dialog = page.getByRole('dialog', { name: 'What the customer sees' });
+  await expect(dialog.getByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. Use the side door.', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close' }).last().click();
+  await expect(dialog).toBeHidden();
+});
