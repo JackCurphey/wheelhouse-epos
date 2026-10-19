@@ -462,6 +462,14 @@ silent:
    End of day's Close the day isn't built. *Pattern:* nothing shown that
    isn't there.
 
+### 19 Oct 2026: Settings for the Owner only (`docs/decisions/2026-10-19-owner-only-settings.md`)
+
+1. **The not-part-of-your-role card for Settings reads "Settings aren't part
+   of your role", "Only the shop's owner can change settings for now. Ask
+   the owner if you need something changed.", and "Go to the till"**, since
+   there are no Managers yet and a non-owner's landing page is the till.
+   *Pattern:* auth-noaccess (Reports), its words fitted.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
