@@ -33,16 +33,16 @@ const as = (who) => (path, options) => staffRequest(server.baseUrl, who.cookie, 
 test('a new shop has its name and no details yet', async () => {
   const res = await as(a)('/api/shop-details');
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.deepEqual(res.body, { name: aName, address: null, phone: null, email: null, vatNumber: null });
+  assert.deepEqual(res.body, { name: aName, address: null, phone: null, email: null, vatNumber: null, receiptFooter: null });
 });
 
 test('details save trimmed, a field left out keeps its value, and blank clears one', async () => {
   const put = (body) => as(a)('/api/shop-details', { method: 'PUT', body });
   const first = await put({ address: '  [Shop address]  ', phone: '[shop phone]', vatNumber: '[VAT number]' });
   assert.equal(first.status, 200, JSON.stringify(first.body));
-  assert.deepEqual(first.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]' });
+  assert.deepEqual(first.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]', receiptFooter: null });
   const second = await put({ email: '[email address]', vatNumber: '   ' });
-  assert.deepEqual(second.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: '[email address]', vatNumber: null });
+  assert.deepEqual(second.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: '[email address]', vatNumber: null, receiptFooter: null });
   assert.deepEqual((await as(a)('/api/shop-details')).body, second.body);
 });
 
@@ -73,4 +73,16 @@ test('one shop never sees or changes another’s details', async () => {
 test('a body that isn’t an object is refused in plain words', async () => {
   const res = await as(a)('/api/shop-details', { method: 'PUT', body: null });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+// Words at the bottom of receipts (Jack, 19 Oct, docs/decisions/2026-10-19-receipt-words.md).
+test('the words at the bottom save with their line breaks, clear when blank, and have a limit', async () => {
+  const put = (body) => as(a)('/api/shop-details', { method: 'PUT', body });
+  const saved = await put({ receiptFooter: '  [Returns policy]\n[Thank-you]  ' });
+  assert.equal(saved.status, 200, JSON.stringify(saved.body));
+  assert.equal(saved.body.receiptFooter, '[Returns policy]\n[Thank-you]');
+  const long = await put({ receiptFooter: 'x'.repeat(501) });
+  assert.equal(long.status, 400);
+  assert.equal(long.body.error, 'Words at the bottom can be up to 500 characters');
+  assert.equal((await put({ receiptFooter: '   ' })).body.receiptFooter, null);
 });

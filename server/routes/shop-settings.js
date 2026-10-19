@@ -65,11 +65,13 @@ const SHOP_DETAIL_FIELDS = [
   ['phone', 'phone', 'Phone', 40],
   ['email', 'email', 'Email', 200],
   ['vatNumber', 'vat_number', 'VAT number', 30],
+  // Words at the bottom of receipts (Jack, 19 Oct); line breaks kept.
+  ['receiptFooter', 'receipt_footer', 'Words at the bottom', 500],
 ];
 function serializeShopDetails(row) {
-  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null };
+  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null, receiptFooter: row.receipt_footer ?? null };
 }
-const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number FROM shops WHERE id = ?';
+const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number, receipt_footer FROM shops WHERE id = ?';
 
 export function register(route) {
   route('GET', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
