@@ -33,7 +33,9 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #277 too** (Jack, 18 Oct, `docs/decisions/2026-10-18-shop-details.md`:
+**Check #279 too** (19 Oct, `docs/decisions/2026-10-19-receipt-words.md`):
+migration 043 adds `shops.receipt_footer`, and your `shop-settings.js`
+sends and saves `receiptFooter` on `/api/shop-details`. **Check #277 too** (Jack, 18 Oct, `docs/decisions/2026-10-18-shop-details.md`:
 build it "flagging Mark's files for him"): migration 042 adds `address`,
 `phone`, `email` and `vat_number` to `shops`, one set for the whole business
 for now; your `server/routes/shop-settings.js` gains `GET`/`PUT
@@ -94,7 +96,10 @@ off, and "Checked by [name]" on the receipt and booking link when it's on
 Shop details on the Settings page (shop name, address, phone, email, VAT
 number), and receipts with the shop's name at the top and the address,
 phone, VAT number and barcode at the bottom, after research on receipt
-layouts (#277). Then Files and photos on the job page,
+layouts (#277). On 19 Oct, the words at the bottom of receipts: Settings ›
+Till › Receipts, printed just above the barcode (#279); the same pull
+request fixed a diary browser test that used 19 Oct as a week "away from
+today". Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
