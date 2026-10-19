@@ -33,7 +33,10 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #283 too** (19 Oct, `docs/decisions/2026-10-19-owner-only-settings.md`):
+**Check #287 too** (19 Oct): your `server/routes/portal.js` booking link view
+gains `dropOff` (the booked time less `timed_lead_minutes`, or the drop-off
+window when the shop books for the whole day that date, via `modeForDate`;
+null until the booking stands). **Check #283 too** (19 Oct, `docs/decisions/2026-10-19-owner-only-settings.md`):
 a new `server/lib/owner-only.js` (`ownerOnly`, reading the session as
 `team.js` does) makes your `PUT /api/workshop-settings` and `PUT
 /api/shop-details` Owner-only until WP-1.1 brings Managers and the "Can
@@ -114,7 +117,10 @@ isn't counted twice, and the old app's Edit workshop removed (#285). The same
 pull request drew, for later: "Bikes are booked in for: A set time / The
 whole day", set-time customers dropping off before their booking (30
 minutes by default), and notice in hours or days, which needs a server
-change of yours (`docs/decisions/2026-10-19-retire-old-workshop-settings.md`). Then Files and photos on the job page,
+change of yours (`docs/decisions/2026-10-19-retire-old-workshop-settings.md`).
+Then the customer's booking page says when to drop the bike off ("Drop your
+Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30."),
+with "Drop off before the booking" in Settings (#287). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
