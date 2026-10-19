@@ -84,11 +84,11 @@ export function ReceiptPaper({ sale, shopName, job, details }: ReceiptProps) {
         {(sale.extraPayments ?? []).map((p, i) => <Row key={i} left={`Paid by ${p.tenderType}`} right={money(p.amount)} />)}
       </div>
       <div className="flex flex-col items-center gap-0.5 border-t border-dashed border-current pt-2.5 text-center">
-        {details?.address ? <span>{details.address}</span> : null}
+        {details?.address ? <span className="break-words">{details.address}</span> : null}
         {details?.phone ? <span>{details.phone}</span> : null}
         {details?.vatNumber ? <span>{`VAT number ${details.vatNumber}`}</span> : null}
         {/* The shop's words at the bottom, just above the barcode (Jack, 19 Oct; set-till-receipts' preview). */}
-        {details?.receiptFooter ? <span className="mt-1.5 whitespace-pre-line">{details.receiptFooter}</span> : null}
+        {details?.receiptFooter ? <span className="mt-1.5 break-words whitespace-pre-line">{details.receiptFooter}</span> : null}
         <span className={details?.address || details?.phone || details?.vatNumber || details?.receiptFooter ? 'mt-2' : ''}><Barcode value={String(sale.id)} /></span>
       </div>
     </article>

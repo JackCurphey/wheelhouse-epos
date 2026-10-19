@@ -16,11 +16,6 @@ const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
   ['name', 'Shop name', 'organization'], ['address', 'Address', 'street-address'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email'], ['vatNumber', 'VAT number', 'off'],
 ];
 
-/**
- * Settings › Shop and sites › Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md;
- * drawn as set-shop-details): one set for the whole business, for now. Each
- * box saves when it's left, if it changed, as the settings pages save as you go.
- */
 // The shop's details, each saved when its box is left if it changed (Shop
 // details and Till › Receipts share them).
 function useShopDetails() {
@@ -52,6 +47,11 @@ function useShopDetails() {
   return { details, valueOf, setTyped, save, note };
 }
 
+/**
+ * Settings › Shop and sites › Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md;
+ * drawn as set-shop-details): one set for the whole business, for now. Each
+ * box saves when it's left, if it changed, as the settings pages save as you go.
+ */
 function ShopDetailsBox() {
   const { details, valueOf, setTyped, save, note } = useShopDetails();
   return (
@@ -117,6 +117,7 @@ function ReceiptsBox() {
         id="receipt-footer"
         rows={3}
         placeholder="e.g. your returns policy, a thank-you"
+        maxLength={500}
         value={valueOf('receiptFooter')}
         disabled={!details.data}
         onChange={(e) => setTyped((t) => ({ ...t, receiptFooter: e.target.value }))}

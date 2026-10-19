@@ -440,9 +440,10 @@ silent:
    number and just above the barcode.** *Pattern:* set-till-receipts'
    preview, words directly above the barcode.
 2. **"Till" on the Settings page shows only Receipts, with only the words**
-   until the Paid box's choices and the other Till sections are built.
-   Saving works as in Shop details. *Pattern:* the drawn page, cut to
-   what's built.
+   until the Paid box's choices and the other Till sections are built,
+   and without the drawn live receipt preview beside it (printing a receipt
+   shows the real thing). Saving works as in Shop details; the box stops at
+   500 characters. *Pattern:* the drawn page, cut to what's built.
 
 ## Decided here, for Jack to overrule
 

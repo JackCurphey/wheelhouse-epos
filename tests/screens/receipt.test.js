@@ -147,3 +147,13 @@ test('the shop’s words print just above the barcode, with their line breaks', 
   const bars = paper.querySelector('svg[aria-label="Barcode for sale 601"]');
   assert.ok(words.compareDocumentPosition(bars) & 4, 'the barcode follows the words');
 });
+
+// Fresh review: a long web address in the words, or a long address, wraps
+// rather than running off the 72 mm paper.
+test('the words and the address wrap long unbroken text', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', details: { address: '[Shop address]', receiptFooter: '[Returns policy link]' } });
+  for (const t of ['[Shop address]', '[Returns policy link]']) {
+    const el = [...paper.querySelectorAll('span')].find((e) => e.textContent === t);
+    assert.ok(el?.className.includes('break-words'), `${t} wraps`);
+  }
+});
