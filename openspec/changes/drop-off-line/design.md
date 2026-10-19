@@ -4,8 +4,8 @@
 
 `GET /api/portal/:shopSlug/booking-links/:code` (and the views cancel, change and withdraw-change return) gain `dropOff`:
 - `null` unless the stage is `confirmed` or `change_requested` (a request not yet accepted, or a bike already in, gets nothing).
-- With a start time: `{ by: "HH:MM", booked: "HH:MM", leadMinutes }`, `by` = start time − `timed_lead_minutes` (not before 00:00).
-- With no start time (a whole-day booking): `{ from, to }`, the shop's `dropoff_window_start`/`end`.
+- With a start time: `{ by: "HH:MM", booked: "HH:MM", leadMinutes }`, `by` = start time − `timed_lead_minutes`, not before 00:00 (`addMinutesToTime`), and `leadMinutes` the real difference.
+- With no start time, when the shop books bikes in for the whole day on that date (`modeForDate`): `{ from, to }`, the shop's `dropoff_window_start`/`end`. A set-time shop's job with no time gets `null` (fresh review).
 
 ## Words (pending-rules.ts)
 

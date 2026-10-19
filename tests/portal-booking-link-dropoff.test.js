@@ -57,17 +57,40 @@ test('a confirmed set-time booking says to drop off by the booked time less the 
   await settings({ timedLeadMinutes: 30 });
 });
 
-test('a whole-day booking says to drop off in the shop’s window', async () => {
-  const { code, id } = await book();
-  await setJob(id, "booking_state = 'scheduled', custody_state = 'expected', work_state = 'not_started', start_time = NULL");
-  await settings({ dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00' });
-  assert.deepEqual((await read(code)).body.dropOff, { from: '09:00', to: '10:00' });
-});
-
 test('a request not yet accepted, or a bike already in, says nothing about dropping off', async () => {
   const { code, id } = await book();
   await setJob(id, "booking_state = 'pending', custody_state = 'expected'");
   assert.equal((await read(code)).body.dropOff, null, 'request waiting');
   await setJob(id, "booking_state = 'scheduled', custody_state = 'in_shop', work_state = 'in_progress'");
   assert.equal((await read(code)).body.dropOff, null, 'bike in');
+});
+
+// Fresh review: the window is for a shop that books in for the whole day; a
+// set-time shop's job with no time gets no line. A change waiting keeps the
+// booked time's line, and the words stay true near midnight.
+test('a set-time shop’s job with no time says nothing about a window', async () => {
+  const { code, id } = await book();
+  await settings({ bookingMode: 'timed' });
+  await setJob(id, "booking_state = 'scheduled', custody_state = 'expected', work_state = 'not_started', start_time = NULL, end_time = NULL");
+  assert.equal((await read(code)).body.dropOff, null);
+});
+
+test('a whole-day shop’s booking says the window', async () => {
+  const { code, id } = await book();
+  await settings({ bookingMode: 'dropoff', dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00' });
+  try {
+    await setJob(id, "booking_state = 'scheduled', custody_state = 'expected', work_state = 'not_started', start_time = NULL, end_time = NULL");
+    assert.deepEqual((await read(code)).body.dropOff, { from: '09:00', to: '10:00' });
+  } finally {
+    await settings({ bookingMode: 'timed' });
+  }
+});
+
+test('a change waiting keeps the booked time’s line; a very early time says the real lead', async () => {
+  const { code, id } = await book();
+  await settings({ bookingMode: 'timed', timedLeadMinutes: 30 });
+  await setJob(id, "booking_state = 'reschedule_requested', custody_state = 'expected', start_time = '11:30', requested_job_date = job_date, requested_start_time = '14:00', requested_end_time = '15:00'");
+  assert.deepEqual((await read(code)).body.dropOff, { by: '11:00', booked: '11:30', leadMinutes: 30 });
+  await setJob(id, "booking_state = 'scheduled', start_time = '00:15', requested_job_date = NULL, requested_start_time = NULL, requested_end_time = NULL");
+  assert.deepEqual((await read(code)).body.dropOff, { by: '00:00', booked: '00:15', leadMinutes: 15 });
 });

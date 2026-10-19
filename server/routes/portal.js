@@ -17,7 +17,7 @@ import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from '../customer-auth.js';
-import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView } from '../capacity.js';
+import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate } from '../capacity.js';
 import { currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import {
@@ -302,21 +302,21 @@ async function bookingLinkView(jobId, shop) {
   const stage = bookingStage(row);
   // "Checked by [name]" once the bike is ready, if the shop shows who signed
   // the job off (mechanic sign-off answer 3; Jack, 18 Oct). Off to start.
-  const shows = await db.prepare('SELECT show_sign_off_to_customers, timed_lead_minutes, dropoff_window_start, dropoff_window_end FROM workshop_settings LIMIT 1').get();
+  const shows = await db.prepare('SELECT show_sign_off_to_customers, timed_lead_minutes, dropoff_window_start, dropoff_window_end, booking_mode, next_booking_mode, next_booking_mode_from FROM workshop_settings LIMIT 1').get();
   const checkedBy = shows?.show_sign_off_to_customers === 1 && (stage === 'ready_to_collect' || stage === 'collected')
     ? row.signed_off_name ?? null : null;
   // When to drop the bike off, once the booking stands (Jack, 19 Oct,
   // docs/decisions/2026-10-19-retire-old-workshop-settings.md answers 3 and 7):
-  // a set time less the shop's lead time, or the whole day's drop-off window.
+  // a set time less the shop's lead time, or the drop-off window when the
+  // shop books bikes in for the whole day that day (a set-time shop's job
+  // with no time gets nothing: the window isn't its rule; fresh review).
   let dropOff = null;
   if (shows && (stage === 'confirmed' || stage === 'change_requested')) {
     if (row.start_time) {
-      const [h, m] = row.start_time.split(':').map(Number);
-      const lead = Number(shows.timed_lead_minutes) || 0;
-      const at = Math.max(0, h * 60 + m - lead);
-      const by = `${String(Math.floor(at / 60)).padStart(2, '0')}:${String(at % 60).padStart(2, '0')}`;
-      dropOff = { by, booked: row.start_time, leadMinutes: lead };
-    } else if (shows.dropoff_window_start && shows.dropoff_window_end) {
+      const by = addMinutesToTime(row.start_time, -(Number(shows.timed_lead_minutes) || 0));
+      dropOff = { by, booked: row.start_time, leadMinutes: timeToMinutes(row.start_time) - timeToMinutes(by) };
+    } else if (modeForDate({ bookingMode: shows.booking_mode, nextBookingMode: shows.next_booking_mode, nextBookingModeFrom: shows.next_booking_mode_from }, row.job_date) === 'dropoff'
+      && shows.dropoff_window_start && shows.dropoff_window_end) {
       dropOff = { from: shows.dropoff_window_start, to: shows.dropoff_window_end };
     }
   }

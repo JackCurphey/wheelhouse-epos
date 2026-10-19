@@ -480,10 +480,16 @@ silent:
    booking time, [time]."; with no bike named, "bike".** *Pattern:*
    bk-confirmed's "half an hour before".
 3. **A whole-day booking's page says "Drop your [bike] off between [from]
-   and [to]."** *Pattern:* bk-when-dropoff's words.
+   and [to]."**, only when the shop books bikes in for the whole day; a
+   set-time shop's job with no time gets no line. *Pattern:*
+   bk-when-dropoff's words.
 4. **"Drop off before the booking" shows only while bikes are booked in for
    a set time**, 0 to 240 whole minutes. *Pattern:* bk-settings-reserve,
    where it shows with A set time.
+5. **bk-confirmed's second sentence ("Please bring the lock key, and tell
+   us about any accessories.") isn't on the booking page yet**, since no
+   shop setting holds it; only the drop-off line is built. *Pattern:*
+   nothing shown that isn't the shop's own.
 
 ## Decided here, for Jack to overrule
 
