@@ -33,7 +33,11 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #295 too** (19 Oct): migration 045 adds
+**New for you** (19 Oct, #297): the server half of confirming online
+bookings automatically, contract in `openspec/changes/auto-confirm/design.md`
+(migration 046, `confirmBookingsAutomatically`, bookings saved `scheduled`
+when on, `newOnline` and `POST /api/workshop-jobs/:id/seen`); Jack's screens
+wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #295 too** (19 Oct): migration 045 adds
 `workshop_settings.confirmation_note` (NOT NULL, default the drawn sentence);
 your `workshop-settings.js` sends and saves `confirmationNote` (trimmed, up to
 300 characters, empty for none); your `portal.js` `bookingLinkView` returns it
@@ -141,7 +145,10 @@ automatically" is its own piece later (mostly Mark's WP-4.2). Then the
 the drop-off time on the confirmed booking page, starting with "Please bring
 the lock key, and tell us about any accessories." (#295,
 `docs/decisions/2026-10-19-confirmation-note.md`). Deposits wait for Mark's
-payment work (Jack, 19 Oct). Then Files and photos on the job page,
+payment work (Jack, 19 Oct). Then confirming online bookings
+automatically drawn and approved (the diary's "New, booked online" mark,
+"Confirm booking", the switch on) and its contract written for Mark (#297);
+the screens follow his server half. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
