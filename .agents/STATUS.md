@@ -152,8 +152,13 @@ the screens follow his server half. Then "Preview" under the
 note: a pop-up of the confirmed page for the drawings' example booking with
 the shop's saved drop-off time, note and prices (#299,
 `docs/decisions/2026-10-19-booking-preview.md`); screens only. The preview
-follows the drawn bk-confirmed, which the customer's booking page doesn't
-fully match yet. Then Files and photos on the job page,
+follows the drawn bk-confirmed. Then the confirmed booking page itself, to
+its drawing (bk-page): "Your repair · WH-1042" over the bike and the work, the
+Booking confirmed badge, the drop-off sentence and note, the Service, Bike,
+When and Your repair rows, the shop's name (#301); screens only. Other stages,
+Change the date and Cancel booking, and rows needing data your server doesn't
+send yet (Extra work, deposit, free to cancel, mechanic, shop address and
+phone) come later. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
