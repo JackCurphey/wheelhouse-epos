@@ -82,6 +82,8 @@ test('a booking returns a booking link, and the link reads the booking back', as
     stage: 'awaiting_confirmation',
     // Who signed it off, only once ready and if the shop shows it (mechanic sign-off, piece 3).
     checkedBy: null,
+    // When to drop the bike off, once the booking stands (Jack, 19 Oct).
+    dropOff: null,
     answers: [],
     photoCount: 0,
     services: [{ name: 'Test service', price: null }],
