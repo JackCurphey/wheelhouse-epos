@@ -67,14 +67,17 @@ test('the note saves trimmed, can be emptied, and keeps its place when not sent'
 });
 
 test('a note over 300 characters, or not text, is refused', async () => {
-  const long = await settings({ confirmationNote: 'x'.repeat(301) });
-  assert.equal(long.status, 400);
-  assert.equal(long.body.error, 'The note can be up to 300 characters');
-  assert.equal((await settings({ confirmationNote: 'x'.repeat(300) })).status, 200);
-  const notText = await settings({ confirmationNote: 42 });
-  assert.equal(notText.status, 400);
-  assert.equal(notText.body.error, 'The note must be text');
-  await settings({ confirmationNote: DRAWN });
+  try {
+    const long = await settings({ confirmationNote: 'x'.repeat(301) });
+    assert.equal(long.status, 400);
+    assert.equal(long.body.error, 'The note can be up to 300 characters');
+    assert.equal((await settings({ confirmationNote: 'x'.repeat(300) })).status, 200);
+    const notText = await settings({ confirmationNote: 42 });
+    assert.equal(notText.status, 400);
+    assert.equal(notText.body.error, 'The note must be text');
+  } finally {
+    await settings({ confirmationNote: DRAWN });
+  }
 });
 
 test('a confirmed booking, or one with a change waiting, carries the note', async () => {

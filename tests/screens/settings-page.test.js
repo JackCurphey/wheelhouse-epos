@@ -531,6 +531,9 @@ test('the note saves when the box is left, only if it changed, and can be emptie
   const box = await ui.findByLabelText('Additional note on the confirmation');
   await waitFor(() => assert.ok(box.value.length > 0));
   fireEvent.blur(box);
+  fireEvent.change(box, { target: { value: '  Please bring the lock key, and tell us about any accessories.  ' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.equal(box.value, 'Please bring the lock key, and tell us about any accessories.'));
   fireEvent.change(box, { target: { value: 'Park round the back and ring the bell.' } });
   fireEvent.blur(box);
   await waitFor(() => assert.deepEqual(notePuts(), [{ confirmationNote: 'Park round the back and ring the bell.' }]));

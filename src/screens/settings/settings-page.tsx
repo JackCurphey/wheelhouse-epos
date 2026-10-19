@@ -558,13 +558,6 @@ function PricesSetting() {
 }
 
 /**
- * Settings › Workshop › Online booking, so far (Jack, 19 Oct,
- * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
- * bk-settings-reserve): how long before a set-time booking bikes come in
- * (answers 3 and 7), shown while bikes are booked in for a set time, and the
- * time kept free each day (answers 1 and 6). The rest of the section comes later.
- */
-/**
  * The shop's additional note on the booking confirmation (Jack, 19 Oct,
  * docs/decisions/2026-10-19-confirmation-note.md; drawn in bk-settings): its
  * own words after the drop-off time, saved when the box is left if changed.
@@ -610,6 +603,13 @@ function ConfirmationNoteSetting() {
   );
 }
 
+/**
+ * Settings › Workshop › Online booking, so far (Jack, 19 Oct,
+ * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
+ * bk-settings-reserve): how long before a set-time booking bikes come in
+ * (answers 3 and 7), shown while bikes are booked in for a set time, and the
+ * time kept free each day (answers 1 and 6). The rest of the section comes later.
+ */
 function OnlineBookingBox() {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   return (
