@@ -342,12 +342,17 @@ ${note(days ? 'Days: a customer can book from that many days on, whatever the ti
 const modeDialog = () => popup('mode-title', 'Book bikes in for the whole day?', 'From a day you choose', `<div style="display: flex; flex-direction: column; gap: 6px"><label for="mode-from" style="font-size: 15px; font-weight: 600">Starting on</label><input id="mode-from" type="date" value="[date]" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; color: ${C.ink}; max-width: 220px"><span style="font-size: 13px; color: ${C.muted}">Tomorrow at the earliest</span></div>
 ${note('Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Change from [date]')}`, 480);
 const scheduledLine = `<p role="status" style="margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.45"><span>Changing to <strong>the whole day</strong> from [date]. Bookings already made keep their set times.</span>${button('Cancel the change', { variant: 'default' })}</p>`;
+// The shop's own note on the confirmation (Jack, 19 Oct,
+// docs/decisions/2026-10-19-confirmation-note.md): each shop writes it,
+// starting with bk-confirmed's drawn second sentence.
+const noteRow = `<div style="display: flex; flex-direction: column; gap: 6px; padding: 6px 0"><label for="confirm-note" style="font-size: 15px; font-weight: 600">Note on the confirmation</label><textarea id="confirm-note" aria-describedby="confirm-note-h" rows="2" style="box-sizing: border-box; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; line-height: 1.5; color: ${C.ink}; resize: vertical">Please bring the lock key, and tell us about any accessories.</textarea><span id="confirm-note-h" style="font-size: 13px; color: ${C.muted}">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span></div>`;
 const onlineOpen = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
 ${sub('How bikes are booked in')}
 ${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay ? 1 : 0)}
 ${scheduled ? scheduledLine : ''}
 ${note('A set time: the customer drops the bike off before the time they booked. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')}
 ${wholeDay ? windowRow : numRow('lead', 'Drop off before the booking', 'How long before their booked time customers bring the bike in', 'minutes', '30')}
+${noteRow}
 ${noticeRow(noticeDays)}
 ${reserve ? `${numRow('reserve', 'Time kept free each day', 'For the little jobs between bikes', 'hours', '[n]')}${note('Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.')}` : ''}
 ${rowSwitch('Show prices on the booking page', true)}
