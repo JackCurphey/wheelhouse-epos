@@ -59,7 +59,7 @@ test('it reads the booking link and shows where the booking is up to as its head
 });
 
 for (const [stage, words] of [
-  ['confirmed', 'Confirmed'],
+  ['confirmed', 'Your bike · Brake service and 1 more'],
   ['in_workshop', 'In the workshop'],
   ['ready_to_collect', 'Ready to collect'],
   ['collected', 'Collected'],
@@ -198,7 +198,7 @@ test('with no one to name, the link names nobody', async () => {
 // Telling the customer when to drop the bike off (Jack, 19 Oct; drawn in bk-confirmed).
 test('a confirmed booking says when to drop the bike off, under the heading', async () => {
   const { ui } = await open({ ...LINK, stage: 'confirmed', bike: { make: 'Trek', model: 'Domane AL 3' }, dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 } });
-  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(await heading(ui, 'Trek Domane AL 3 · Brake service and 1 more'));
   assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30.') !== null);
 });
 
@@ -207,18 +207,62 @@ test('a confirmed booking says when to drop the bike off, under the heading', as
 const NOTE = 'Please bring the lock key, and tell us about any accessories.';
 test('the shop’s note follows when to drop the bike off', async () => {
   const { ui } = await open({ ...LINK, stage: 'confirmed', bike: { make: 'Trek', model: 'Domane AL 3' }, dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 }, confirmationNote: NOTE });
-  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(await heading(ui, /Brake service and 1 more$/));
   assert.ok(ui.queryByText(`Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. ${NOTE}`) !== null);
 });
 
 test('with no drop-off line, the note shows alone', async () => {
   const { ui } = await open({ ...LINK, stage: 'confirmed', dropOff: null, confirmationNote: NOTE });
-  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(await heading(ui, /Brake service and 1 more$/));
   assert.ok(ui.queryByText(NOTE) !== null);
 });
 
 test('with no note, nothing follows the drop-off line', async () => {
   const { ui } = await open({ ...LINK, stage: 'confirmed', bike: { make: 'Trek', model: 'Domane AL 3' }, dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 }, confirmationNote: null });
-  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(await heading(ui, /Brake service and 1 more$/));
   assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30.') !== null);
+});
+
+// The confirmed page, to its drawing (Jack, 19 Oct; drawn as bk-page):
+// "Your repair · [reference]" above a heading naming the bike and the work,
+// then a card with the badge, the drop-off sentence and note, the rows and
+// the shop's name. Other stages are unchanged.
+const MAYA_LINK = {
+  ...LINK, reference: 'WH-1042', stage: 'confirmed', jobDate: '2026-09-17', startTime: '11:30', bikeNote: null, description: null, answers: [],
+  bike: { make: 'Trek', model: 'Domane AL 3' }, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
+  dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 }, confirmationNote: 'Please bring the lock key, and tell us about any accessories.',
+};
+const rowValue = (ui, label) => {
+  const el = ui.queryAllByText(label).find((x) => x.dataset.row === 'label');
+  return el ? el.nextElementSibling?.textContent ?? null : null;
+};
+
+test('a confirmed booking: Your repair above the bike and the work, the badge, the drop-off and note, the rows, the shop', async () => {
+  const { ui } = await open(MAYA_LINK);
+  assert.ok(await heading(ui, 'Trek Domane AL 3 · Standard service'));
+  assert.ok(ui.queryByText('Your repair · WH-1042') !== null);
+  // A plain badge, as drawn: it's there on arrival, so not announced.
+  const badge = ui.getByText('Booking confirmed');
+  assert.ok(badge.closest('[role="status"]') === null);
+  assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. Please bring the lock key, and tell us about any accessories.') !== null);
+  assert.equal(rowValue(ui, 'Service'), 'Standard service · £65');
+  assert.equal(rowValue(ui, 'Bike'), 'Trek Domane AL 3');
+  assert.equal(rowValue(ui, 'When'), 'Thursday 17 September, 11:30');
+  assert.equal(rowValue(ui, 'Your repair'), 'WH-1042');
+  assert.ok(ui.queryByText('North Street Cycles', { selector: '[data-shop-line] *, [data-shop-line]' }) !== null);
+  assert.ok(ui.queryByText('Reference') === null);
+});
+
+test('a confirmed booking with prices hidden, several services and only the customer’s words about the bike', async () => {
+  const { ui } = await open({ ...MAYA_LINK, bike: null, bikeNote: 'Blue Trek road bike', services: [{ name: 'Brake service', price: null }, { name: 'Gear service', price: null }], totalPrice: null });
+  assert.ok(await heading(ui, 'Your bike · Brake service and 1 more'));
+  assert.equal(rowValue(ui, 'Service'), 'Brake serviceGear service');
+  assert.equal(rowValue(ui, 'Bike'), 'Blue Trek road bike');
+});
+
+test('a booking still waiting for the shop keeps its heading and summary', async () => {
+  const { ui } = await open({ ...MAYA_LINK, stage: 'awaiting_confirmation' });
+  assert.ok(await heading(ui, 'Awaiting shop confirmation'));
+  assert.ok(ui.queryByText('Reference') !== null);
+  assert.ok(ui.queryByText('Booking confirmed') === null);
 });

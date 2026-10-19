@@ -23,13 +23,15 @@ import { useServices } from './services-query.ts';
 export type BookFrameProps = {
   step?: 1 | 2 | 3 | 4;
   title: string;
+  /** A small line above the heading, as the booking page's "Your repair · WH-1042" (bk-page). */
+  eyebrow?: string;
   back?: string;
   action?: { label: string; onClick: () => void; disabled?: boolean };
   actionNote?: React.ReactNode;
   children: React.ReactNode;
 };
 
-export function BookFrame({ step, title, back, action, actionNote, children }: BookFrameProps) {
+export function BookFrame({ step, title, eyebrow, back, action, actionNote, children }: BookFrameProps) {
   const { shopSlug = '' } = useParams();
   const services = useServices(shopSlug);
 
@@ -109,6 +111,7 @@ export function BookFrame({ step, title, back, action, actionNote, children }: B
                 </div>
               </div>
             )}
+            {eyebrow && <p className="m-0 mb-1 text-sm text-[var(--wh-muted)]">{eyebrow}</p>}
             <h1 ref={heading} tabIndex={-1} className="m-0 mb-3 text-xl font-semibold focus:outline-none">{title}</h1>
             {children}
           </>

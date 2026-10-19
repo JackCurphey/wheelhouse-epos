@@ -6,7 +6,7 @@ import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
 import { useBookingLink, type BookingLink } from './pending-query.ts';
 import {
-  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, contactLine, dropOffLine, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, contactLine, dropOffLine, pageHeading, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -56,6 +56,68 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   const total = totalLine(link);
   const answers = answerLines(link);
   const arrival = [dropOffLine(link), link.confirmationNote].filter(Boolean).join(' ');
+  const keep = (
+    <>
+      <p className="m-0 mb-2">Keep this link to check your booking</p>
+      <Button className="mb-4" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy link'}</Button>
+      {/* The button's own text already changes for a sighted customer; a screen
+          reader user focused elsewhere needs the change announced. */}
+      <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
+      <p className="m-0">{contactLine(link.shopName)}</p>
+    </>
+  );
+  const answerList = answers.length > 0 && (
+    <dl className="m-0 mt-2">
+      {answers.map((a, i) => (
+        <div key={i} className="mb-1">
+          <dt className="text-xs text-[var(--wh-muted)]">{a.wording}</dt>
+          <dd className="m-0">{a.answer}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+
+  // A confirmed booking, to its drawing (Jack, 19 Oct; drawn as bk-page):
+  // "Your repair · [reference]" over the bike and the work, then a card with
+  // the badge, when to drop off and the note, the rows and the shop's name.
+  // Changing and cancelling online come later, so the link and contact lines stay.
+  if (link.stage === 'confirmed') {
+    const bike = bikeRow(link);
+    const row = (label: string, value: React.ReactNode) => (
+      <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+        <span data-row="label" className="text-[var(--wh-muted)]">{label}</span>{' '}
+        <span className="text-right font-semibold">{value}</span>
+      </div>
+    );
+    return (
+      <BookFrame title={pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
+        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
+        <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+          {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
+          <div>
+            <span className="inline-block rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>
+          </div>
+          {arrival && <p className="m-0 text-[15px] leading-normal">{arrival}</p>}
+          <div>
+            {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
+            {total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
+            {bike && row('Bike', bike)}
+            {row('When', whenLine(link))}
+            {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
+          </div>
+          {(link.description || answerList) && (
+            <div className="text-sm">
+              {link.description && <p className="m-0">{link.description}</p>}
+              {answerList}
+            </div>
+          )}
+          <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
+        </div>
+        {keep}
+      </BookFrame>
+    );
+  }
+
   // An unrecognised stage (statusText returns undefined) must not break the
   // screen: the heading is left empty rather than crashing BookFrame, which
   // requires a string title, and the rest of the summary still renders.
@@ -85,23 +147,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         {link.description && <p className="m-0">{link.description}</p>}
         {/* Who checked it, once ready, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
         {link.checkedBy && <p className="m-0" data-checked-by="true">Checked by <strong>{link.checkedBy}</strong></p>}
-        {answers.length > 0 && (
-          <dl className="m-0 mt-2">
-            {answers.map((a, i) => (
-              <div key={i} className="mb-1">
-                <dt className="text-xs text-[var(--wh-muted)]">{a.wording}</dt>
-                <dd className="m-0">{a.answer}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+        {answerList}
       </div>
-      <p className="m-0 mb-2">Keep this link to check your booking</p>
-      <Button className="mb-4" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy link'}</Button>
-      {/* The button's own text already changes for a sighted customer; a screen
-          reader user focused elsewhere needs the change announced. */}
-      <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
-      <p className="m-0">{contactLine(link.shopName)}</p>
+      {keep}
     </BookFrame>
   );
 }

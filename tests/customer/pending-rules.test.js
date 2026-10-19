@@ -103,3 +103,20 @@ test('the drop-off line: by the lead time before a set time, in the window for t
   assert.equal(r.dropOffLine({ ...LINK, dropOff: null }), null);
   assert.equal(r.dropOffLine(LINK), null);
 });
+
+// The confirmed page's heading and Bike row (Jack, 19 Oct; drawn as bk-page).
+test('pageHeading names the bike and the work', () => {
+  const base = { bike: { make: 'Trek', model: 'Domane AL 3' }, services: [{ name: 'Standard service', price: 65 }] };
+  assert.equal(r.pageHeading(base), 'Trek Domane AL 3 · Standard service');
+  assert.equal(r.pageHeading({ ...base, bike: null }), 'Your bike · Standard service');
+  assert.equal(r.pageHeading({ ...base, bike: { make: null, model: null } }), 'Your bike · Standard service');
+  assert.equal(r.pageHeading({ ...base, services: [{ name: 'A', price: 1 }, { name: 'B', price: 2 }, { name: 'C', price: 3 }] }), 'Trek Domane AL 3 · A and 2 more');
+  assert.equal(r.pageHeading({ ...base, services: [] }), 'Trek Domane AL 3 · Repair');
+});
+
+test('bikeRow: make and model, then the customer’s words; either alone; else none', () => {
+  assert.equal(r.bikeRow({ bike: { make: 'Trek', model: 'Domane AL 3' }, bikeNote: 'green' }), 'Trek Domane AL 3 · green');
+  assert.equal(r.bikeRow({ bike: { make: 'Trek', model: null }, bikeNote: null }), 'Trek');
+  assert.equal(r.bikeRow({ bike: null, bikeNote: 'Blue Trek road bike' }), 'Blue Trek road bike');
+  assert.equal(r.bikeRow({ bike: null, bikeNote: null }), null);
+});

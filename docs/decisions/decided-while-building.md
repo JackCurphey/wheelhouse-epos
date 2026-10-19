@@ -552,6 +552,30 @@ silent:
    approved drawing; the two come together when bk-confirmed is built (fresh
    review).
 
+### 19 Oct 2026: the confirmed booking page, to its drawing (Jack, 19 Oct: "1: the confirmed page's look and rows with the data the server already sends; the rest later")
+
+1. **Only the confirmed stage takes the drawn layout**; waiting, change
+   requested, in the workshop, ready, collected, cancelled, declined and
+   expired keep the first release's page until their own pieces.
+   *Pattern:* Jack's scope.
+2. **The heading names the bike, else "Your bike", and the work: one
+   service's name, "[first] and [n] more", or "Repair".** *Pattern:* bk-page's
+   "Trek Domane AL 3 · Standard service".
+3. **The Bike row is the make and model, then the customer's own words about
+   the bike ("Trek Domane AL 3 · green"); the saved colour, the mechanic, Extra work, Deposit paid, Free to
+   cancel until, the shop's address and phone, and the sign-in line wait for
+   Mark's server to send them.** *Pattern:* nothing shown that isn't sent.
+4. **Prices read "£65", as everywhere else on the booking pages, not the
+   drawing's "£65.00"; the Settings Preview now writes them the same way.**
+   *Pattern:* the booking pages' `formatMoney`.
+5. **"Keep this link", Copy link and "Need to change or cancel? Contact
+   [shop]" stay below the card, and what the customer told the shop stays
+   inside it, until Change the date and Cancel booking are built.**
+   *Pattern:* the first release's page; nothing taken away before its
+   replacement exists.
+6. **The heading keeps the booking pages' own size, not the drawing's
+   larger one.** *Pattern:* every booking step's heading (fresh review).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
