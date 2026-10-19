@@ -183,7 +183,7 @@ ${radios('Days', DAYS.map(cell).join(''), `display: flex; gap: 8px; overflow-x: 
 // straight to the details step — one click.
 const earliest = (chosen, label = `${DAY_SHORT}, [time]`) => `<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: ${chosen ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${chosen ? C.hover : C.panel}"><span style="flex-grow: 1"><span style="display: block; font-size: 13px; color: ${C.muted}">Earliest you can have</span><span style="font-size: 16px; font-weight: 700">${label}</span></span>${chosen ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700">${icon('check', 14)}Chosen</span>` : button('Book this time', { variant: 'default' })}</div>`;
 const time = ([t, taken], chosen) => `<button type="button" role="radio" aria-checked="${t === chosen}"${taken ? ' aria-disabled="true"' : ''} style="min-height: 44px; min-width: 76px; padding: 0 12px; border-radius: 8px; border: ${t === chosen ? `2px solid ${C.ink}` : `1px solid ${taken ? C.border : C.input}`}; background: ${t === chosen ? C.ink : taken ? C.mutedBg : C.panel}; color: ${t === chosen ? '#ffffff' : taken ? C.muted : C.ink}; font-family: ${MONO}; font-size: 15px; ${taken ? 'text-decoration: line-through;' : ''}">${t}${taken ? hidden(' taken') : ''}</button>`;
-const timesFor = (chosen) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">${DAY} — choose a time to arrive</span>${radios(`Times on ${DAY}`, TIMES.map((x) => time(x, chosen)).join(''))}</div>`;
+const timesFor = (chosen) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">${DAY} — choose a time</span>${radios(`Times on ${DAY}`, TIMES.map((x) => time(x, chosen)).join(''))}</div>`;
 // UX walk-through 1 M2: Maya books 11:30, the start of her diary slot (the
 // arrival time is the slot's start, Workshop day 12).
 const whenAppt = (chosen = '11:30', opts = {}) => `${earliest(chosen === '09:30')}${strip(chosen ? 17 : null, opts)}${chosen ? timesFor(chosen) : ''}${chosen ? next('Next: your details') : ''}`;
@@ -191,7 +191,7 @@ const whenAppt = (chosen = '11:30', opts = {}) => `${earliest(chosen === '09:30'
 const whenDropoff = () => `${earliest(true, `${DAY_SHORT}, drop off 09:00–10:00`)}${strip(17)}
 <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">${DAY}</span><p style="margin: 0; font-size: 15px; line-height: 1.5">Drop your bike off between ${mono('09:00')} and ${mono('10:00')}. The mechanic starts on it later that day.</p></div>
 <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Who would you like to work on it?</span>${radios('Mechanic', `${rpill('Whoever’s free', true)}${rpill('Alex Morgan', false)}`)}</div>${next('Next: your details')}`;
-const DONE_WHEN = `${DAY_SHORT}, arrive 11:30`;
+const DONE_WHEN = `${DAY_SHORT}, 11:30`;
 
 // ---------- Step 4: details, and the deposit (decisions 3, 6, 9) ----------
 // Audit M4: no terms tick box — the sentence by the button is the agreement.
@@ -224,7 +224,7 @@ const centred = (inner, w = 640) => site(`<div style="width: 100%; max-width: ${
 const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>[Shop address] · [shop phone]</span></div>`;
 const kv = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><span style="color: ${C.muted}">${k}</span><span style="text-align: right; font-weight: 600">${v}</span></div>`;
 // Audit H1: "Free to cancel until" is the same row on every answer screen.
-const WHEN_APPT = `${DAY}, arrive ${mono('11:30')}`;
+const WHEN_APPT = `${DAY}, ${mono('11:30')}`;
 // UX walk-through 6 H1: a Lightspeed shop takes no deposit (Lightspeed shops
 // decision 9), so its booking leaves the deposit rows out.
 const bookingLines = ({ deposit = !lightspeedShop(), when = WHEN_APPT, mechanic = null } = {}) => `<div>${kv('Service', DONE_SERVICE)}${kv('Bike', `${BIKE} · green`)}${kv('When', when)}${mechanic ? kv('Mechanic', mechanic) : ''}${kv('Extra work', LIMIT)}${deposit ? kv('Deposit paid', mono('£[deposit]')) : ''}${deposit ? kv('Free to cancel until', CUTOFF) : ''}${kv('Your repair', mono('WH-1042'))}</div>`;
@@ -264,18 +264,18 @@ const bookingPage = ({ state = 'confirmed', dialog = '', deposit } = {}) => {
   } else if (state === 'offered') {
     // Audit H2, option 1: an offered time is answered here, in one click.
     heading = 'Your booking request';
-    head = `${badge('The shop has suggested another time', 'purple')}<p style="margin: 0; font-size: 15px; line-height: 1.5">North Street Cycles can’t do ${DAY} at ${mono('11:30')}. They suggest:</p><p style="margin: 0; font-size: 20px; font-weight: 700">Saturday 19 September, arrive [time]</p><blockquote style="margin: 0; padding: 10px 14px; border-left: 3px solid ${C.border}; font-size: 15px; line-height: 1.5">“[The shop’s message]”</blockquote>`;
-    body = `${btnRow(`${button('Accept this time')}${button('Cancel my request', { variant: 'default' })}`)}${bookingLines({ when: `${DAY}, arrive ${mono('11:30')} — not available` })}`;
+    head = `${badge('The shop has suggested another time', 'purple')}<p style="margin: 0; font-size: 15px; line-height: 1.5">North Street Cycles can’t do ${DAY} at ${mono('11:30')}. They suggest:</p><p style="margin: 0; font-size: 20px; font-weight: 700">Saturday 19 September, [time]</p><blockquote style="margin: 0; padding: 10px 14px; border-left: 3px solid ${C.border}; font-size: 15px; line-height: 1.5">“[The shop’s message]”</blockquote>`;
+    body = `${btnRow(`${button('Accept this time')}${button('Cancel my request', { variant: 'default' })}`)}${bookingLines({ when: `${DAY}, ${mono('11:30')} — not available` })}`;
   } else if (state === 'change') {
     head = badge('Booking confirmed', 'green');
-    body = `<div>${kv('Booked now', WHEN_APPT)}${kv('Free to cancel until', CUTOFF)}</div><section aria-labelledby="chg" style="display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><h2 id="chg" style="margin: 0; font-size: 18px; font-weight: 700">Choose a new date</h2>${strip(25, { booked: 17 })}<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Friday 25 September — choose a time to arrive</span>${radios('Times on Friday 25 September', ['[time]', '[time]', '[time]', '[time]'].map((t, i) => `<button type="button" role="radio" aria-checked="${i === 1}" style="min-height: 44px; min-width: 76px; padding: 0 12px; border-radius: 8px; border: ${i === 1 ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${i === 1 ? C.ink : C.panel}; color: ${i === 1 ? '#ffffff' : C.ink}; font-family: ${MONO}; font-size: 15px">${t}</button>`).join(''))}</div>
+    body = `<div>${kv('Booked now', WHEN_APPT)}${kv('Free to cancel until', CUTOFF)}</div><section aria-labelledby="chg" style="display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><h2 id="chg" style="margin: 0; font-size: 18px; font-weight: 700">Choose a new date</h2>${strip(25, { booked: 17 })}<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Friday 25 September — choose a time</span>${radios('Times on Friday 25 September', ['[time]', '[time]', '[time]', '[time]'].map((t, i) => `<button type="button" role="radio" aria-checked="${i === 1}" style="min-height: 44px; min-width: 76px; padding: 0 12px; border-radius: 8px; border: ${i === 1 ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${i === 1 ? C.ink : C.panel}; color: ${i === 1 ? '#ffffff' : C.ink}; font-family: ${MONO}; font-size: 15px">${t}</button>`).join(''))}</div>
 ${note('Your booking stays on Thursday until the shop confirms the new time.')}<div style="display: flex; justify-content: flex-end; gap: 10px">${button('Keep Thursday', { variant: 'ghost' })}${button('Ask for this date')}</div></section>`;
   } else if (state === 'pending-change') {
-    head = `${badge('New date waiting for the shop', 'purple')}<p style="margin: 0; font-size: 15px; line-height: 1.5">You asked to move to <strong>Fri 25 Sep, arrive [time]</strong>. Your booking stays on ${DAY} until the shop confirms the new time — we’ll send you a text.</p>`;
+    head = `${badge('New date waiting for the shop', 'purple')}<p style="margin: 0; font-size: 15px; line-height: 1.5">You asked to move to <strong>Fri 25 Sep, [time]</strong>. Your booking stays on ${DAY} until the shop confirms the new time — we’ll send you a text.</p>`;
     // Audit L4: the button says it withdraws the date change.
     body = `${bookingLines()}${btnRow(`${button('Cancel my date change', { variant: 'default' })}${button('Cancel booking', { variant: 'default' })}`)}`;
   } else if (state === 'change-declined') {
-    head = `${notice('warn', `<strong>The shop couldn’t do Friday 25 September.</strong> Your booking is still ${DAY}, arrive ${mono('11:30')}.`)}${badge('Booking confirmed', 'green')}`;
+    head = `${notice('warn', `<strong>The shop couldn’t do Friday 25 September.</strong> Your booking is still ${DAY}, ${mono('11:30')}.`)}${badge('Booking confirmed', 'green')}`;
     body = `${bookingLines()}${pageButtons()}`;
   } else if (state === 'dropoff') {
     // A drop-off shop, no deposit, the mechanic picked (decision 10).
@@ -291,7 +291,7 @@ ${note('Your booking stays on Thursday until the shop confirms the new time.')}<
 // Decision 4: the cancel question says what happens to the deposit.
 // UX walk-through 6 H1: a Lightspeed shop took no deposit, so there's
 // nothing to pay or refund.
-const cancelDialog = (late = false) => popup('cancel-title', 'Cancel this booking?', `${DAY}, arrive 11:30 · ${BIKE}`, lightspeedShop()
+const cancelDialog = (late = false) => popup('cancel-title', 'Cancel this booking?', `${DAY}, 11:30 · ${BIKE}`, lightspeedShop()
   ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">There’s nothing to pay or refund. We’ll send you a text to confirm it’s cancelled.</p>`
   : late
   ? `<p style="margin: 0; display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span>It’s past ${CUTOFF}, so <strong>your £[deposit] deposit isn’t refundable</strong>. If something’s gone wrong, call the shop on [shop phone] — they can still refund it.</span></p>`
@@ -310,7 +310,7 @@ const unavailable = () => centred(answerCard(`${h1('Online booking is unavailabl
 // placeholder — nothing in the examples says what else Maya has booked.
 const bookingCard = (title, sub, chip, extra = '') => card(`<div style="padding: 16px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap"><span style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${title}</span><span style="font-size: 14px; color: ${C.muted}">${sub}</span>${extra}</span>${chip}${button('Open', { variant: 'default' })}</div>`);
 const yourBookings = () => centred(`<div style="display: flex; flex-direction: column; gap: 4px">${h1('Your bookings', 28)}<p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px">${icon('user', 16)}Signed in as <strong>${MAYA.name}</strong></p></div>
-<section aria-labelledby="up" style="display: flex; flex-direction: column; gap: 10px"><h2 id="up" style="margin: 0; font-size: 18px; font-weight: 700">Coming up</h2>${bookingCard(`${BIKE} · Standard service`, `${DAY}, arrive ${mono('11:30')} · ${mono('WH-1042')}`, badge('Booking confirmed', 'green'), `<span style="font-size: 13px; color: ${C.muted}">Free to cancel until ${CUTOFF}</span>`)}</section>
+<section aria-labelledby="up" style="display: flex; flex-direction: column; gap: 10px"><h2 id="up" style="margin: 0; font-size: 18px; font-weight: 700">Coming up</h2>${bookingCard(`${BIKE} · Standard service`, `${DAY}, ${mono('11:30')} · ${mono('WH-1042')}`, badge('Booking confirmed', 'green'), `<span style="font-size: 13px; color: ${C.muted}">Free to cancel until ${CUTOFF}</span>`)}</section>
 <section aria-labelledby="past" style="display: flex; flex-direction: column; gap: 10px"><h2 id="past" style="margin: 0; font-size: 18px; font-weight: 700">Earlier</h2>${bookingCard('[Bike] · [Service]', '[date] · [job number]', badge('Collected', 'grey'))}</section>
 <div>${button('Book a repair')}</div>`, 760);
 

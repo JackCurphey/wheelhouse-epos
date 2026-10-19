@@ -35,3 +35,9 @@ The threshold has no drawing.
    minutes", the lead time the server already keeps (`timed_lead_minutes`,
    default 30); the customer's confirmation reads "Drop your [bike] off by
    11:00, half an hour before your booking at 11:30."
+   The booking pages' "choose a time to arrive" and "arrive 11:30" become
+   "choose a time" and "11:30" (the booked time), so only the confirmation
+   tells the customer when to drop off. The built booking pages already
+   show the booked time without "arrive"; telling the customer the drop-off
+   time on them is a later piece (it needs the lead time on the booking
+   link, Mark's `portal.js`).
