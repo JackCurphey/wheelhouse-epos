@@ -502,6 +502,20 @@ silent:
    today, in the shop's time zone.** *Pattern:* Jack's 3pm-for-tomorrow
    example.
 
+### 19 Oct 2026: switching between a set time and the whole day (answers 9 and 10)
+
+1. **Changing to a set time reads "Book bikes in for a set time?", "Bookings
+   already made keep their days. From that day, customers book a time and
+   drop their bike off before it."**, and its coming-change line "…keep
+   their days."; only the whole-day direction is drawn. *Pattern:*
+   bk-settings-mode-change, turned round.
+2. **The drop-off window shows while the whole day is today's mode or the
+   coming one**, so a shop can set it before the change starts; times every
+   half hour from 05:00 to 22:00. *Pattern:* bk-settings-whole-day.
+3. **The day is picked with the device's own date picker, tomorrow at the
+   earliest; "Change from [day]" waits until a day is picked.** *Pattern:*
+   bk-settings-mode-change's date box.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

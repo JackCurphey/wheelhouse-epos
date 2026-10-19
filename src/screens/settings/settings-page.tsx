@@ -4,6 +4,9 @@ import { Link } from 'react-router';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ROUTES } from '@/staff/routes.ts';
+import { Button } from '@/components/ui/button.tsx';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { shortDay } from '@/screens/diary/rules.ts';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -13,7 +16,8 @@ import { ROUTES } from '@/staff/routes.ts';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
+  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -404,6 +408,122 @@ function NoticeSetting() {
   );
 }
 
+const HALF_HOURS = Array.from({ length: 35 }, (_, i) => `${String(5 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
+const MODE_WORDS: Record<string, string> = { timed: 'a set time', dropoff: 'the whole day' };
+
+/**
+ * How bikes are booked in (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md
+ * answers 2, 9 and 10; drawn as bk-settings-mode-change, bk-settings-mode-scheduled,
+ * bk-settings-whole-day). A change of mode takes effect from a day the shop
+ * chooses, tomorrow at the earliest, and bookings keep their shape (Jack,
+ * 24 Sep); the drop-off window shows while the whole day is today's or coming.
+ */
+function ModeSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const data = settings.data;
+  const mode = data?.bookingMode;
+  const [asking, setAsking] = useState<string | null>(null);
+  const [from, setFrom] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function put(body: object, after?: () => void) {
+    setBusy(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', body, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+      after?.();
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  const choose = (to: string) => { if (to !== mode) { setAsking(to); setFrom(''); setError(null); } };
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  const showWindow = mode === 'dropoff' || data?.nextBookingMode === 'dropoff';
+  const windowFrom = data?.dropoffWindowStart ?? '09:00';
+  const windowTo = data?.dropoffWindowEnd ?? '10:00';
+  const times = (v: string) => (HALF_HOURS.includes(v) ? HALF_HOURS : [...HALF_HOURS, v].sort());
+  const pill = (to: string, label: string) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={mode === to}
+      disabled={!data}
+      onClick={() => choose(to)}
+      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${mode === to ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+    >
+      {label}
+    </button>
+  );
+  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="m-0 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">How bikes are booked in</h4>
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+        <span id="mode-label" className="text-[15px] font-semibold">Bikes are booked in for</span>
+        <span role="radiogroup" aria-labelledby="mode-label" className="flex flex-wrap gap-2">{pill('timed', 'A set time')}{pill('dropoff', 'The whole day')}</span>
+      </div>
+      {data?.nextBookingMode && data.nextBookingModeFrom ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--wh-surface-muted)] px-3 py-2.5 text-sm">
+          <p role="status" data-mode-change="true" className="m-0">
+            {`Changing to ${MODE_WORDS[data.nextBookingMode]} from ${shortDay(data.nextBookingModeFrom)}. Bookings already made keep their ${data.nextBookingMode === 'dropoff' ? 'set times' : 'days'}.`}
+          </p>
+          <Button disabled={busy} onClick={() => void put({ nextBookingMode: null, nextBookingModeFrom: null })}>Cancel the change</Button>
+        </div>
+      ) : null}
+      <p className="m-0 text-sm text-[var(--wh-muted)]">A set time: the customer drops the bike off before the time they booked. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.</p>
+      {showWindow ? (
+        <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[15px] font-semibold">Drop-off window</span>
+            <span className="text-[13px] text-[var(--wh-muted)]">Whole-day customers drop their bike off between these times</span>
+          </span>
+          <span className="inline-flex items-center gap-2 text-sm">
+            <select aria-label="Drop-off window starts" value={windowFrom} disabled={busy} onChange={(e) => void put({ dropoffWindowStart: e.target.value, dropoffWindowEnd: windowTo })} className={select}>
+              {times(windowFrom).map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            to
+            <select aria-label="Drop-off window ends" value={windowTo} disabled={busy} onChange={(e) => void put({ dropoffWindowStart: windowFrom, dropoffWindowEnd: e.target.value })} className={select}>
+              {times(windowTo).map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </span>
+        </div>
+      ) : null}
+      {error && !asking ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      <Dialog open={asking !== null} onOpenChange={(o) => { if (!o) setAsking(null); }} aria-labelledby="mode-title" className="md:max-w-[480px]">
+        <DialogHeader>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle id="mode-title">{`Book bikes in for ${asking ? MODE_WORDS[asking] : ''}?`}</DialogTitle>
+            <span className="text-[13px] text-[var(--wh-muted)]">From a day you choose</span>
+          </div>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="mode-from" className="text-[15px] font-semibold">Starting on</label>
+            <input id="mode-from" type="date" min={tomorrow} value={from} onChange={(e) => setFrom(e.target.value)} aria-describedby="mode-from-h" className="min-h-11 max-w-[220px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]" />
+            <span id="mode-from-h" className="text-[13px] text-[var(--wh-muted)]">Tomorrow at the earliest</span>
+          </div>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">{asking === 'dropoff'
+            ? 'Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.'
+            : 'Bookings already made keep their days. From that day, customers book a time and drop their bike off before it.'}</p>
+          {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+        </DialogBody>
+        <DialogFooter className="flex justify-between gap-2.5">
+          <Button variant="ghost" onClick={() => setAsking(null)}>Cancel</Button>
+          <Button variant="primary" disabled={!from || busy} onClick={() => void put({ nextBookingMode: asking, nextBookingModeFrom: from }, () => setAsking(null))}>
+            {from ? `Change from ${shortDay(from)}` : 'Change from [day]'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </div>
+  );
+}
+
 /**
  * Settings › Workshop › Online booking, so far (Jack, 19 Oct,
  * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
@@ -416,6 +536,7 @@ function OnlineBookingBox() {
   return (
     <section aria-labelledby="set-online" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
       <h3 id="set-online" className="m-0 text-base font-bold">Online booking</h3>
+      <ModeSetting />
       {settings.data?.bookingMode === 'timed' ? (
         <NumberSetting
           id="lead" label="Drop off before the booking" hint="How long before their booked time customers bring the bike in" unit="minutes"

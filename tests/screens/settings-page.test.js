@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00' };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -52,6 +52,7 @@ async function openSettings({ me = OWNER } = {}) {
       if (putFails) return reply(500, { error: 'Internal error' });
       if (refuseHours && body.openingHours) return reply(400, { error: refuseHours });
       if (refuseHours && body.fullDayThresholdMinutes !== undefined) return reply(400, { error: refuseHours });
+      if (refuseHours && body.nextBookingMode !== undefined) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -59,6 +60,9 @@ async function openSettings({ me = OWNER } = {}) {
     return reply(404, { error: 'Not found' });
   };
   uninstall = installDom('http://localhost/workshop/settings');
+  // jsdom has no <dialog> methods; the mode change pop-up opens in one.
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
@@ -67,6 +71,8 @@ async function openSettings({ me = OWNER } = {}) {
   return { ...rtl, ui };
 }
 const has = (q) => Boolean(q);
+// Change the stub's settings by making a new object: the app's cache holds the
+// one the stub returned, so changing it in place makes setQueryData a no-op.
 
 test('Settings › Workshop › Mechanics has the switch, off, with its note', async () => {
   const { ui } = await openSettings();
@@ -210,7 +216,7 @@ test('a refusal says why, and the week goes back as it was', async () => {
 // Fresh review: a time the old app saved outside 05:00 to 23:00 shows as it is.
 test('an early time saved by the old app shows as it is', async () => {
   const { ui } = await openSettings();
-  settings.openingHours = [{ weekday: 1, open: '04:00', close: '12:00' }];
+  settings = { ...settings, openingHours: [{ weekday: 1, open: '04:00', close: '12:00' }] };
   shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
   await (await import('@testing-library/react')).waitFor(() => assert.equal(ui.getByLabelText('Monday opens').value, '04:00'));
 });
@@ -308,7 +314,7 @@ test('a lead time that isn’t 0 to 240 whole minutes is refused without saving'
 
 test('with bikes booked in for the whole day there’s no Drop off before the booking', async () => {
   const { ui } = await openSettings();
-  settings.bookingMode = 'dropoff';
+  settings = { ...settings, bookingMode: 'dropoff' };
   shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
   await (await import('@testing-library/react')).waitFor(() => assert.ok(ui.queryByLabelText('Drop off before the booking') === null));
   assert.ok(ui.queryByLabelText('Time kept free each day') !== null);
@@ -365,10 +371,81 @@ test('notice out of range is refused in the screen', async () => {
 // Fresh review: a part-hour saved before switches to days rounded up.
 test('a part-hour switches to days rounded up', async () => {
   const { ui, fireEvent, waitFor } = await openSettings();
-  settings.minNoticeMinutes = 90;
+  settings = { ...settings, minNoticeMinutes: 90 };
   shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
   const box = await ui.findByLabelText('Notice');
   await waitFor(() => assert.equal(box.value, '1.5'));
   fireEvent.click(ui.getByRole('radio', { name: 'days' }));
   await waitFor(() => assert.deepEqual(noticePuts().at(-1), { minNoticeDays: 2 }));
+});
+
+// Switching between a set time and the whole day (Jack, 19 Oct, answers 2, 9, 10;
+// drawn as bk-settings-mode-change, bk-settings-mode-scheduled, bk-settings-whole-day).
+const modePuts = () => calls.filter((c) => c.method === 'PUT' && ('nextBookingMode' in c.body || 'dropoffWindowStart' in c.body)).map((c) => c.body);
+
+test('the pills show today’s mode, with the drawn note', async () => {
+  const { ui, waitFor } = await openSettings();
+  const group = await ui.findByRole('radiogroup', { name: 'Bikes are booked in for' });
+  const { within } = await import('@testing-library/react');
+  await waitFor(() => assert.equal(within(group).getByRole('radio', { name: 'A set time' }).getAttribute('aria-checked'), 'true'));
+  assert.equal(within(group).getByRole('radio', { name: 'The whole day' }).getAttribute('aria-checked'), 'false');
+  assert.ok(has(ui.queryByText('A set time: the customer drops the bike off before the time they booked. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')));
+  assert.ok(ui.queryByLabelText('Drop-off window starts') === null, 'no window while set times');
+});
+
+test('choosing the whole day asks from when; the change then shows, with the window', async () => {
+  const { ui, fireEvent, waitFor, within } = await openSettings();
+  fireEvent.click(await ui.findByRole('radio', { name: 'The whole day' }));
+  const dlg = within(await ui.findByRole('dialog', { name: 'Book bikes in for the whole day?' }));
+  assert.ok(has(dlg.queryByText('Tomorrow at the earliest')));
+  assert.ok(has(dlg.queryByText('Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.')));
+  const go = dlg.getByRole('button', { name: /^Change from/ });
+  assert.equal(go.disabled, true);
+  fireEvent.change(dlg.getByLabelText('Starting on'), { target: { value: '2026-11-05' } });
+  assert.equal(dlg.getByRole('button', { name: 'Change from Thu 5 Nov' }).disabled, false);
+  fireEvent.click(dlg.getByRole('button', { name: 'Change from Thu 5 Nov' }));
+  await waitFor(() => assert.deepEqual(modePuts(), [{ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-11-05' }]));
+  assert.ok(has(await ui.findByText((_, el) => el?.getAttribute('data-mode-change') === 'true' && el.textContent === 'Changing to the whole day from Thu 5 Nov. Bookings already made keep their set times.')));
+  assert.ok(ui.queryByRole('dialog') === null);
+  assert.ok(ui.queryByLabelText('Drop-off window starts') !== null, 'the window shows for the coming whole day');
+});
+
+test('the dialog’s Cancel saves nothing', async () => {
+  const { ui, fireEvent, within } = await openSettings();
+  fireEvent.click(await ui.findByRole('radio', { name: 'The whole day' }));
+  const dlg = within(await ui.findByRole('dialog'));
+  fireEvent.click(dlg.getByRole('button', { name: 'Cancel' }));
+  assert.ok(ui.queryByRole('dialog') === null);
+  assert.deepEqual(modePuts(), []);
+});
+
+test('a change coming up shows, and Cancel the change clears it', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  settings = { ...settings, nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-11-05' };
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  fireEvent.click(await ui.findByRole('button', { name: 'Cancel the change' }));
+  await waitFor(() => assert.deepEqual(modePuts(), [{ nextBookingMode: null, nextBookingModeFrom: null }]));
+  await waitFor(() => assert.ok(ui.queryByRole('button', { name: 'Cancel the change' }) === null));
+});
+
+test('a refused change shows its words in the dialog', async () => {
+  const { ui, fireEvent, within } = await openSettings();
+  refuseHours = 'A mode change must start tomorrow or later';
+  fireEvent.click(await ui.findByRole('radio', { name: 'The whole day' }));
+  const dlg = within(await ui.findByRole('dialog'));
+  fireEvent.change(dlg.getByLabelText('Starting on'), { target: { value: '2026-11-05' } });
+  fireEvent.click(dlg.getByRole('button', { name: 'Change from Thu 5 Nov' }));
+  assert.ok(has(await dlg.findByText('A mode change must start tomorrow or later')));
+});
+
+test('a whole-day shop sets its drop-off window', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  settings = { ...settings, bookingMode: 'dropoff' };
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  const from = await ui.findByLabelText('Drop-off window starts');
+  await waitFor(() => assert.equal(from.value, '09:00'));
+  assert.equal(ui.getByLabelText('Drop-off window ends').value, '10:00');
+  assert.ok(has(ui.queryByText('Whole-day customers drop their bike off between these times')));
+  fireEvent.change(from, { target: { value: '08:30' } });
+  await waitFor(() => assert.deepEqual(modePuts(), [{ dropoffWindowStart: '08:30', dropoffWindowEnd: '10:00' }]));
 });
