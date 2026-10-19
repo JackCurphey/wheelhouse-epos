@@ -13,5 +13,9 @@ work; build the second sentence on the booking-confirmed page now").
    the drawn sentence** (Jack, 19 Oct: "1: each shop writes its own, in
    Settings › Online booking, starting with the drawn sentence; draw the
    box for me first."). Chosen over the same fixed sentence for every shop.
-   Drawn as "Note on the confirmation" under the drop-off row of
+   Drawn as "Note on the confirmation" (renamed in answer 2) under the drop-off row of
    `bk-settings`, for Jack's approval before building.
+2. **Named "Additional note on the confirmation"; drawing approved** (Jack,
+   19 Oct: "can we call it 'additional note on the confirmation' so shops
+   understand its for writing notes for dropping off the bike? apart from
+   that it looks good go ahead").
