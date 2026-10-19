@@ -10,9 +10,9 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
  * WP-5.1.
  */
 type WorkshopSettings = { showSignOffToCustomers?: boolean };
-type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null };
+type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
-const DETAIL_ROWS: [DetailKey, string, string][] = [
+const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
   ['name', 'Shop name', 'organization'], ['address', 'Address', 'street-address'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email'], ['vatNumber', 'VAT number', 'off'],
 ];
 
@@ -21,7 +21,9 @@ const DETAIL_ROWS: [DetailKey, string, string][] = [
  * drawn as set-shop-details): one set for the whole business, for now. Each
  * box saves when it's left, if it changed, as the settings pages save as you go.
  */
-function ShopDetailsBox() {
+// The shop's details, each saved when its box is left if it changed (Shop
+// details and Till › Receipts share them).
+function useShopDetails() {
   const queryClient = useQueryClient();
   const details = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails>('/api/shop-details') });
   const [typed, setTyped] = useState<Partial<Record<DetailKey, string>>>({});
@@ -47,6 +49,11 @@ function ShopDetailsBox() {
     }
   }
 
+  return { details, valueOf, setTyped, save, note };
+}
+
+function ShopDetailsBox() {
+  const { details, valueOf, setTyped, save, note } = useShopDetails();
   return (
     <section aria-labelledby="set-shop-details" className="flex flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
       <h3 id="set-shop-details" className="m-0 mb-2 text-base font-bold">Shop details</h3>
@@ -95,6 +102,33 @@ function RowSwitch({ label, on, disabled, onChange }: { label: string; on: boole
   );
 }
 
+/**
+ * Settings › Till › Receipts, first piece (Jack, 19 Oct, docs/decisions/2026-10-19-receipt-words.md;
+ * drawn as set-till-receipts): the words printed at the bottom of every
+ * receipt. The Paid box's Print, Email and Text choices come later.
+ */
+function ReceiptsBox() {
+  const { details, valueOf, setTyped, save, note } = useShopDetails();
+  return (
+    <section aria-labelledby="set-receipts" className="flex flex-col gap-1.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
+      <h3 id="set-receipts" className="m-0 mb-1 text-base font-bold">Receipts</h3>
+      <label htmlFor="receipt-footer" className="text-sm font-semibold">Words at the bottom</label>
+      <textarea
+        id="receipt-footer"
+        rows={3}
+        placeholder="e.g. your returns policy, a thank-you"
+        value={valueOf('receiptFooter')}
+        disabled={!details.data}
+        onChange={(e) => setTyped((t) => ({ ...t, receiptFooter: e.target.value }))}
+        onBlur={() => void save('receiptFooter')}
+        className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm"
+      />
+      <p className="m-0 text-sm text-[var(--wh-muted)]">The shop’s name and address come from Shop and sites. Every receipt carries a barcode so a refund can find the sale.</p>
+      {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
@@ -124,6 +158,13 @@ export function SettingsPage() {
           <p className="m-0 text-sm text-[var(--wh-muted)]">The shop’s details, its sites and their opening hours.</p>
         </div>
         <ShopDetailsBox />
+      </section>
+      <section aria-labelledby="set-till" className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 id="set-till" className="m-0 text-xl font-bold">Till</h2>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">What staff see and use at the till.</p>
+        </div>
+        <ReceiptsBox />
       </section>
       <section aria-labelledby="set-workshop" className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">

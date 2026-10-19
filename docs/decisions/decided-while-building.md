@@ -434,6 +434,16 @@ silent:
    Sites are built (WP-5.1, WP-5.2). *Pattern:* the drawn page, cut to
    what's built, as Workshop on the same page.
 
+### 19 Oct 2026: words at the bottom of receipts (`docs/decisions/2026-10-19-receipt-words.md`)
+
+1. **With the shop's details also at the bottom, the words go after the VAT
+   number and just above the barcode.** *Pattern:* set-till-receipts'
+   preview, words directly above the barcode.
+2. **"Till" on the Settings page shows only Receipts, with only the words**
+   until the Paid box's choices and the other Till sections are built.
+   Saving works as in Shop details. *Pattern:* the drawn page, cut to
+   what's built.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

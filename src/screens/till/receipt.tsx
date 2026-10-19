@@ -30,7 +30,7 @@ export type ReceiptSale = {
 /** checkedBy: who signed the job off, only when the shop shows it (mechanic sign-off piece 3). */
 export type ReceiptJob = { reference: string; bikeLabel: string | null; checkedBy?: string | null };
 /** The shop's details from Settings › Shop details (Jack, 18 Oct); each left out when blank. */
-export type ShopDetails = { address?: string | null; phone?: string | null; vatNumber?: string | null };
+export type ShopDetails = { address?: string | null; phone?: string | null; vatNumber?: string | null; receiptFooter?: string | null };
 export type ReceiptProps = { sale: ReceiptSale; shopName: string; job?: ReceiptJob; details?: ShopDetails };
 
 const when = (iso: string) => {
@@ -87,7 +87,9 @@ export function ReceiptPaper({ sale, shopName, job, details }: ReceiptProps) {
         {details?.address ? <span>{details.address}</span> : null}
         {details?.phone ? <span>{details.phone}</span> : null}
         {details?.vatNumber ? <span>{`VAT number ${details.vatNumber}`}</span> : null}
-        <span className={details?.address || details?.phone || details?.vatNumber ? 'mt-2' : ''}><Barcode value={String(sale.id)} /></span>
+        {/* The shop's words at the bottom, just above the barcode (Jack, 19 Oct; set-till-receipts' preview). */}
+        {details?.receiptFooter ? <span className="mt-1.5 whitespace-pre-line">{details.receiptFooter}</span> : null}
+        <span className={details?.address || details?.phone || details?.vatNumber || details?.receiptFooter ? 'mt-2' : ''}><Barcode value={String(sale.id)} /></span>
       </div>
     </article>
   );

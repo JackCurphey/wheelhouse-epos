@@ -303,7 +303,9 @@ test('on a 360px phone, Today fits in the top row', async ({ browser }) => {
     const [name, value] = owner.cookie.split('=');
     await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
     const page = await ctx.newPage();
-    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}&who=bymech`);
+    // A week that can never be this week, so Today always shows: MON was the
+    // real week on 19 Oct 2026, which hid it (the browser tests run on the real clock).
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=2026-01-05&who=bymech`);
     const today = page.getByRole('button', { name: 'Today' });
     await expect(today).toBeVisible();
     const box = (await today.boundingBox())!;
