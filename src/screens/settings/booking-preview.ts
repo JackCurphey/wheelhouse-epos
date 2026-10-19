@@ -1,5 +1,6 @@
 import type { BookingLink } from '@/screens/book/pending-query.ts';
 import { dropOffLine } from '@/screens/book/pending-rules.ts';
+import { formatMoney } from '@/screens/book/service-selection.ts';
 
 /**
  * Preview what the customer sees (Jack, 19 Oct, docs/decisions/2026-10-19-booking-preview.md;
@@ -32,7 +33,8 @@ export function previewLines(s: PreviewSettings) {
   return {
     heading: `See you on ${DAY}, Maya`,
     arrival: [dropOffLine(link), s.confirmationNote].filter(Boolean).join(' '),
-    service: s.showPricesOnline ? 'Standard service · £65.00' : 'Standard service',
+    // Prices as the booking page writes them ("£65"), so the two match.
+    service: s.showPricesOnline ? `Standard service · ${formatMoney(65)}` : 'Standard service',
     bike: 'Trek Domane AL 3 · green',
     when: wholeDay ? DAY : `${DAY}, ${BOOKED}`,
   };

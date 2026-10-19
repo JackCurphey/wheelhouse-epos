@@ -14,7 +14,7 @@ test('a set time: the drop-off time, then the note, and the booked time', () => 
   const p = previewLines(TIMED);
   assert.equal(p.arrival, `Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. ${NOTE}`);
   assert.equal(p.when, 'Thursday 17 September, 11:30');
-  assert.equal(p.service, 'Standard service · £65.00');
+  assert.equal(p.service, 'Standard service · £65');
   assert.equal(p.heading, 'See you on Thursday 17 September, Maya');
   assert.equal(p.bike, 'Trek Domane AL 3 · green');
 });

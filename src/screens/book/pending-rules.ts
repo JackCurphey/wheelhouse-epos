@@ -89,3 +89,18 @@ export function dropOffLine(link: BookingLink): string | null {
   if (d.leadMinutes <= 0) return `Drop your ${bike} off at your booking time, ${d.booked}.`;
   return `Drop your ${bike} off by ${d.by}, ${leadWords(d.leadMinutes)} before your booking at ${d.booked}.`;
 }
+
+// The confirmed page, to its drawing (Jack, 19 Oct; drawn as bk-page).
+const bikeName = (link: Pick<BookingLink, 'bike'>) => (link.bike ? [link.bike.make, link.bike.model].filter(Boolean).join(' ') : '');
+
+/** "Trek Domane AL 3 · Standard service": the bike, else "Your bike"; the one service, "[first] and [n] more", or "Repair". */
+export function pageHeading(link: Pick<BookingLink, 'bike' | 'services'>): string {
+  const [first, ...rest] = link.services;
+  const work = !first ? 'Repair' : rest.length ? `${first.name} and ${rest.length} more` : first.name;
+  return `${bikeName(link) || 'Your bike'} · ${work}`;
+}
+
+/** The Bike row: make and model, else the customer's own words about the bike, else none. */
+export function bikeRow(link: Pick<BookingLink, 'bike' | 'bikeNote'>): string | null {
+  return bikeName(link) || link.bikeNote || null;
+}
