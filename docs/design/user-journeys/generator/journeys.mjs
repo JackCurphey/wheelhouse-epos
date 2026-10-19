@@ -315,6 +315,7 @@ export const journeys = [
         sd3("bk-settings-mode-change", "Settings › Workshop › Online booking: changing to the whole day, from a day you choose", "Manager"),
         sd3("bk-settings-mode-scheduled", "Settings › Workshop › Online booking: a change to the whole day coming up", "Manager"),
         sd3("bk-settings-auto", "Settings › Workshop › Online booking: Confirm bookings automatically on", "Manager"),
+        sd3("bk-settings-preview", "Settings › Workshop › Online booking: Preview what the customer sees", "Manager"),
         sd3("bk-settings-deposits", "Online booking, scrolled: deposits and terms", "Manager"),
       ] },
     ],
