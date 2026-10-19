@@ -99,7 +99,9 @@ phone, VAT number and barcode at the bottom, after research on receipt
 layouts (#277). On 19 Oct, the words at the bottom of receipts: Settings ›
 Till › Receipts, printed just above the barcode (#279); the same pull
 request fixed a diary browser test that used 19 Oct as a week "away from
-today". Then Files and photos on the job page,
+today". Then opening hours in Settings › Shop and sites: each day Open or
+Closed, hours on the hour, saved at once; screens only, on the existing
+workshop settings (#281). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
