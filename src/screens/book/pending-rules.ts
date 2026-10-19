@@ -66,3 +66,26 @@ export function answerLines(link: BookingLink): { wording: string; answer: strin
 
 /** Until d6 adds changing and cancelling online. */
 export const contactLine = (shopName: string) => `Need to change or cancel? Contact ${shopName}`;
+
+// How long before the booking, as people say it (Jack, 19 Oct: "half an hour before").
+function leadWords(minutes: number): string {
+  if (minutes === 30) return 'half an hour';
+  if (minutes === 60) return 'an hour';
+  if (minutes === 90) return 'an hour and a half';
+  if (minutes % 60 === 0) return `${minutes / 60} hours`;
+  return `${minutes} minutes`;
+}
+
+/**
+ * When to drop the bike off, once the booking stands (Jack, 19 Oct,
+ * docs/decisions/2026-10-19-retire-old-workshop-settings.md answers 3 and 7;
+ * drawn in bk-confirmed and bk-when-dropoff), or null.
+ */
+export function dropOffLine(link: BookingLink): string | null {
+  const d = link.dropOff;
+  if (!d) return null;
+  const bike = link.bike ? [link.bike.make, link.bike.model].filter(Boolean).join(' ') || 'bike' : 'bike';
+  if ('from' in d) return `Drop your ${bike} off between ${d.from} and ${d.to}.`;
+  if (d.leadMinutes <= 0) return `Drop your ${bike} off at your booking time, ${d.booked}.`;
+  return `Drop your ${bike} off by ${d.by}, ${leadWords(d.leadMinutes)} before your booking at ${d.booked}.`;
+}

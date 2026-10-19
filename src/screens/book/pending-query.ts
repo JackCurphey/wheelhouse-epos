@@ -37,6 +37,8 @@ export type BookingLink = {
   photoCount: number;
   /** Who signed the job off, once ready, if the shop shows it (mechanic sign-off piece 3). */
   checkedBy?: string | null;
+  /** When to drop the bike off, once the booking stands (Jack, 19 Oct): a set time's, or the whole day's window. */
+  dropOff?: { by: string; booked: string; leadMinutes: number } | { from: string; to: string } | null;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
 };
