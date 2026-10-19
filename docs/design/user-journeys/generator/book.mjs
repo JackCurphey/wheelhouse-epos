@@ -345,7 +345,14 @@ const scheduledLine = `<p role="status" style="margin: 0; display: flex; align-i
 // The shop's own note on the confirmation (Jack, 19 Oct,
 // docs/decisions/2026-10-19-confirmation-note.md): each shop writes it,
 // starting with bk-confirmed's drawn second sentence.
-const noteRow = `<div style="display: flex; flex-direction: column; gap: 6px; padding: 6px 0"><label for="confirm-note" style="font-size: 15px; font-weight: 600">Additional note on the confirmation</label><textarea id="confirm-note" aria-describedby="confirm-note-h" rows="2" style="box-sizing: border-box; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; line-height: 1.5; color: ${C.ink}; resize: vertical">Please bring the lock key, and tell us about any accessories.</textarea><span id="confirm-note-h" style="font-size: 13px; color: ${C.muted}">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span></div>`;
+const noteRow = `<div style="display: flex; flex-direction: column; gap: 6px; padding: 6px 0"><label for="confirm-note" style="font-size: 15px; font-weight: 600">Additional note on the confirmation</label><textarea id="confirm-note" aria-describedby="confirm-note-h" rows="2" style="box-sizing: border-box; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; line-height: 1.5; color: ${C.ink}; resize: vertical">Please bring the lock key, and tell us about any accessories.</textarea><span id="confirm-note-h" style="font-size: 13px; color: ${C.muted}">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span><div>${button('Preview', { variant: 'default' })}</div></div>`;
+// Preview what the customer sees (Jack, 19 Oct, docs/decisions/2026-10-19-booking-preview.md):
+// the confirmed page in a pop-up, the drawings' example booking with the
+// shop's own drop-off time, note and prices.
+const previewDialog = () => popup('preview-title', 'What the customer sees', 'An example booking, with your settings as they are now', `<div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}"><div>${badge('Booking confirmed', 'green')}</div><h3 style="margin: 0; font-size: 20px; font-weight: 700">See you on ${DAY}, ${MAYA.first}</h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.5">Drop your ${BIKE} off by ${mono('11:00')}, half an hour before your booking at ${mono('11:30')}. Please bring the lock key, and tell us about any accessories.</p>
+<div>${kv('Service', DONE_SERVICE)}${kv('Bike', `${BIKE} · green`)}${kv('When', WHEN_APPT)}</div></div>
+${note('Customers see this once a booking is confirmed. Change a setting and preview again to see the difference.')}`, button('Close', { variant: 'default' }), 560);
 const onlineOpen = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false, auto = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
 ${sub('How bikes are booked in')}
 ${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay ? 1 : 0)}
@@ -435,6 +442,7 @@ def('bk-settings-mode-scheduled', () => settings(true, false, false, true));
 // The same page scrolled down to Deposits and Terms (the section is long).
 def('bk-settings-auto', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 300, tablet: 300, phone: 560 }[SIZE]}px }</style>${settings(true, false, false, false, true).replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 def('bk-staff-confirmed', () => withNewOnline('WH-1070', () => (SIZE === 'desktop' ? buildDiaryDesktopBoard() : SIZE === 'tablet' ? tabletDiary() : phoneDiary({ day: 4, mode: 'everyone' }))));
+def('bk-settings-preview', () => overlay(settings(true), previewDialog()));
 def('bk-settings-deposits', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 420, tablet: 420, phone: 720 }[SIZE]}px }</style>${settings().replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 
 const SIZES = ['desktop', 'tablet', 'phone']; // decision 13
@@ -485,6 +493,7 @@ export const TITLES = {
   'bk-staff-confirmed': 'The diary: a booking confirmed straight away, marked New, booked online',
   'bk-details-auto': 'Step 4 when the shop confirms automatically: Confirm booking',
   'bk-settings-auto': 'Settings › Workshop › Online booking: Confirm bookings automatically on',
+  'bk-settings-preview': 'Settings › Workshop › Online booking: Preview what the customer sees',
   'bk-staff-decline': 'Declining it refunds the deposit',
   'bk-messages': 'Settings › Front desk › Messages: the booking messages',
   'bk-settings': 'Settings › Workshop › Online booking',
@@ -502,7 +511,7 @@ export const ROWS = [
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
-  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-deposits'] },
+  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-preview', 'bk-settings-deposits'] },
 ];
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.

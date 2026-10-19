@@ -54,6 +54,7 @@ export default {
   'bk-settings': keep(1),
   'bk-settings-mode-change': into('bk-settings', 'Book journey 24 Sep (mode change from a chosen date); 19 Oct', "'Book bikes in for the whole day?' pop-up: 'Starting on' [date], 'Tomorrow at the earliest', 'Bookings already made keep their set times…', Cancel and 'Change from [date]'"),
   'bk-settings-auto': into('bk-settings', 'Book 8; 19 Oct', "'Confirm bookings automatically' On; the folded summary reads '… confirmed straight away'"),
+  'bk-settings-preview': into('bk-settings', '19 Oct (Jack: preview)', "'Preview' under the note opens 'What the customer sees': the confirmed page for the drawings' example booking, with the shop's drop-off time, note and prices"),
   'bk-settings-mode-scheduled': into('bk-settings', 'Book journey 24 Sep; 19 Oct', "'Changing to the whole day from [date]. Bookings already made keep their set times.' with 'Cancel the change'"),
   'bk-settings-notice-days': into('bk-settings', '19 Oct (Jack: notice in hours or days)', "'Notice' [1] with 'days' chosen: 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.'"),
   'bk-settings-whole-day': into('bk-settings', 'Booking mode 2026-09-04 §2; 19 Oct (Jack: worded as a set time or the whole day)', "'Bikes are booked in for' 'The whole day', and a 'Drop-off window' row, [09:00] to [10:00]"),
