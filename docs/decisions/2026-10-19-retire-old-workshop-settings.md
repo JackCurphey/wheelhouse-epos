@@ -85,3 +85,8 @@ The threshold has no drawing.
    made keep their set times." with "Cancel the change"
    (`bk-settings-mode-scheduled`). This follows the 24 Sep decision (a
    change of mode from a date the shop chooses; bookings keep their shape).
+10. **Drawings approved; build the switch** (Jack, 19 Oct: "Approve the
+    drawings; build the set time / whole day switch with its start day, the
+    change-coming-up line, and the drop-off window for the whole day"):
+    `bk-settings-mode-change`, `bk-settings-mode-scheduled`,
+    `bk-settings-whole-day`.
