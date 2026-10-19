@@ -81,3 +81,23 @@ test('notice switches to whole days and saves', async ({ page, context }) => {
   expect(puts).toEqual([JSON.stringify({ minNoticeDays: 1 })]);
   await expect(page.getByText('Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.')).toBeVisible();
 });
+
+// Switching between a set time and the whole day (Jack, 19 Oct, answers 9 and 10):
+// from a day the shop chooses, with Cancel the change, against the real server.
+test('a change to the whole day is scheduled and cancelled', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  expect((await staff('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'timed', nextBookingMode: null, nextBookingModeFrom: null } })).status).toBe(200);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.getByRole('radio', { name: 'The whole day' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Book bikes in for the whole day?' });
+  // Two weeks from whenever this runs, never a fixed date (a fixed one goes stale).
+  const day = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+  await dlg.getByLabel('Starting on').fill(day);
+  await dlg.getByRole('button', { name: /^Change from \w{3} \d{1,2} \w{3}$/ }).click();
+  await expect(page.getByText(/^Changing to the whole day from \w{3} \d{1,2} \w{3}\. Bookings already made keep their set times\.$/)).toBeVisible();
+  await expect.poll(async () => { const b = (await staff('/api/workshop-settings')).body; return [b.nextBookingMode, b.nextBookingModeFrom]; }).toEqual(['dropoff', day]);
+  await page.getByRole('button', { name: 'Cancel the change' }).click();
+  await expect.poll(async () => (await staff('/api/workshop-settings')).body.nextBookingMode).toBe(null);
+  await expect(page.getByRole('button', { name: 'Cancel the change' })).toHaveCount(0);
+});

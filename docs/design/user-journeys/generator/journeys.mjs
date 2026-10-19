@@ -310,6 +310,8 @@ export const journeys = [
         sd3("bk-settings-reserve", "Settings › Workshop › Online booking: the time kept free each day", "Manager"),
         sd3("bk-settings-whole-day", "Settings › Workshop › Online booking: bikes booked in for the whole day, with the drop-off window", "Manager"),
         sd3("bk-settings-notice-days", "Settings › Workshop › Online booking: notice in days", "Manager"),
+        sd3("bk-settings-mode-change", "Settings › Workshop › Online booking: changing to the whole day, from a day you choose", "Manager"),
+        sd3("bk-settings-mode-scheduled", "Settings › Workshop › Online booking: a change to the whole day coming up", "Manager"),
         sd3("bk-settings-deposits", "Online booking, scrolled: deposits and terms", "Manager"),
       ] },
     ],
