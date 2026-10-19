@@ -57,6 +57,7 @@ const map = {
   'bk-staff-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('bk-staff-request') },
   // Settings
   // Coverage walk 7 M1: the Services and Mechanics rows open their sections.
+  'bk-settings-notice-days': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings-reserve': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings-deposits': { 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },

@@ -41,3 +41,12 @@ The threshold has no drawing.
    show the booked time without "arrive"; telling the customer the drop-off
    time on them is a later piece (it needs the lead time on the booking
    link, Mark's `portal.js`).
+4. **Notice in hours or in whole days** (Jack, 19 Oct: "can we change the
+   notice section slightly, so that it can be in hours or just how many
+   days out? say for example its 3pm and we want to have a customer be
+   able to book a bike in for the next day, and if we just had the notice
+   to 24 hours this wouldnt be possible"). Notice gets "hours" or "days";
+   days count calendar days, so 1 day lets a customer book any time
+   tomorrow, whatever the time now (`bk-settings-notice-days`). The server
+   keeps notice only in minutes today (`min_notice_minutes`), so days need
+   a server change (Mark's) when it's built.
