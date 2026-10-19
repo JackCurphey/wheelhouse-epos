@@ -201,3 +201,24 @@ test('a confirmed booking says when to drop the bike off, under the heading', as
   assert.ok(await heading(ui, 'Confirmed'));
   assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30.') !== null);
 });
+
+// The shop's additional note follows the drop-off sentence, in the same
+// paragraph, as drawn in bk-confirmed (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
+const NOTE = 'Please bring the lock key, and tell us about any accessories.';
+test('the shop’s note follows when to drop the bike off', async () => {
+  const { ui } = await open({ ...LINK, stage: 'confirmed', bike: { make: 'Trek', model: 'Domane AL 3' }, dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 }, confirmationNote: NOTE });
+  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(ui.queryByText(`Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. ${NOTE}`) !== null);
+});
+
+test('with no drop-off line, the note shows alone', async () => {
+  const { ui } = await open({ ...LINK, stage: 'confirmed', dropOff: null, confirmationNote: NOTE });
+  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(ui.queryByText(NOTE) !== null);
+});
+
+test('with no note, nothing follows the drop-off line', async () => {
+  const { ui } = await open({ ...LINK, stage: 'confirmed', bike: { make: 'Trek', model: 'Domane AL 3' }, dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 }, confirmationNote: null });
+  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30.') !== null);
+});

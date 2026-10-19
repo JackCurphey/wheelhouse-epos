@@ -302,7 +302,7 @@ async function bookingLinkView(jobId, shop) {
   const stage = bookingStage(row);
   // "Checked by [name]" once the bike is ready, if the shop shows who signed
   // the job off (mechanic sign-off answer 3; Jack, 18 Oct). Off to start.
-  const shows = await db.prepare('SELECT show_sign_off_to_customers, timed_lead_minutes, dropoff_window_start, dropoff_window_end, booking_mode, next_booking_mode, next_booking_mode_from FROM workshop_settings LIMIT 1').get();
+  const shows = await db.prepare('SELECT show_sign_off_to_customers, confirmation_note, timed_lead_minutes, dropoff_window_start, dropoff_window_end, booking_mode, next_booking_mode, next_booking_mode_from FROM workshop_settings LIMIT 1').get();
   const checkedBy = shows?.show_sign_off_to_customers === 1 && (stage === 'ready_to_collect' || stage === 'collected')
     ? row.signed_off_name ?? null : null;
   // When to drop the bike off, once the booking stands (Jack, 19 Oct,
@@ -320,6 +320,10 @@ async function bookingLinkView(jobId, shop) {
       dropOff = { from: shows.dropoff_window_start, to: shows.dropoff_window_end };
     }
   }
+  // The shop's additional note, once the booking stands, with or without a
+  // drop-off line (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
+  const confirmationNote = shows?.confirmation_note && (stage === 'confirmed' || stage === 'change_requested')
+    ? shows.confirmation_note : null;
   return {
     reference: row.reference,
     shopName: shop.name,
@@ -333,6 +337,7 @@ async function bookingLinkView(jobId, shop) {
     stage,
     checkedBy,
     dropOff,
+    confirmationNote,
     photoCount: row.photo_count,
     requested: requested && { jobDate: requested.jobDate, startTime: requested.startTime, mechanicId: requested.mechanicId },
     canChange: customerCanAct(row, today),

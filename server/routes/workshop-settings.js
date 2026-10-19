@@ -51,6 +51,8 @@ function serializeWorkshopSettings(row) {
     showPricesOnline: row.show_prices_online === 1,
     // "Show who signed off to customers" (mechanic sign-off answer 3; Jack, 18 Oct).
     showSignOffToCustomers: row.show_sign_off_to_customers === 1,
+    // The shop's additional note on the confirmation, '' for none (Jack, 19 Oct; migration 045).
+    confirmationNote: row.confirmation_note ?? '',
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -395,6 +397,15 @@ export function register(route) {
     const showSignOff = body.showSignOffToCustomers === undefined
       ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
 
+    // The additional note on the confirmation: trimmed, up to 300 characters;
+    // empty shows none (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
+    let confirmationNote = existing.confirmation_note;
+    if (body.confirmationNote !== undefined) {
+      if (typeof body.confirmationNote !== 'string') return badRequest(res, 'The note must be text');
+      confirmationNote = body.confirmationNote.trim();
+      if (confirmationNote.length > 300) return badRequest(res, 'The note can be up to 300 characters');
+    }
+
     // A shop's own terms, or null to use the standard ones (piece 11). A
     // string is trimmed; null or an empty/blank string reverts to standard;
     // omitted keeps whatever is stored.
@@ -417,12 +428,12 @@ export function register(route) {
          dropoff_window_start = ?,
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
-         show_prices_online = ?, show_sign_off_to_customers = ?, booking_terms = ?, updated_at = ? WHERE id = ?`
+         show_prices_online = ?, show_sign_off_to_customers = ?, booking_terms = ?, confirmation_note = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
-          showPricesOnline, showSignOff, bookingTerms, nowIso(), existing.id);
+          showPricesOnline, showSignOff, bookingTerms, confirmationNote, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });

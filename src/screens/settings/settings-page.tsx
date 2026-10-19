@@ -17,7 +17,7 @@ import { shortDay } from '@/screens/diary/rules.ts';
  */
 type DayHours = { weekday: number; open: string; close: string };
 type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
-  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string };
+  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -564,6 +564,52 @@ function PricesSetting() {
  * (answers 3 and 7), shown while bikes are booked in for a set time, and the
  * time kept free each day (answers 1 and 6). The rest of the section comes later.
  */
+/**
+ * The shop's additional note on the booking confirmation (Jack, 19 Oct,
+ * docs/decisions/2026-10-19-confirmation-note.md; drawn in bk-settings): its
+ * own words after the drop-off time, saved when the box is left if changed.
+ */
+function ConfirmationNoteSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [typed, setTyped] = useState<string | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const stored = settings.data?.confirmationNote ?? '';
+
+  async function save() {
+    if (typed === null) return;
+    if (typed.trim() === stored) { setTyped(null); return; }
+    setNote(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { confirmationNote: typed }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+      setTyped((t) => (t === typed ? null : t));
+      setNote({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 py-1.5">
+      <label htmlFor="confirm-note" className="text-[15px] font-semibold">Additional note on the confirmation</label>
+      <textarea
+        id="confirm-note"
+        aria-describedby="confirm-note-h"
+        rows={2}
+        maxLength={300}
+        value={typed ?? stored}
+        disabled={!settings.data}
+        onChange={(e) => setTyped(e.target.value)}
+        onBlur={() => void save()}
+        className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
+      />
+      <span id="confirm-note-h" className="text-[13px] text-[var(--wh-muted)]">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span>
+      {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </div>
+  );
+}
+
 function OnlineBookingBox() {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   return (
@@ -577,6 +623,7 @@ function OnlineBookingBox() {
           fromBox={(n) => (Number.isInteger(n) && n >= 0 && n <= 240 ? n : null)} invalid="Enter 0 to 240 minutes"
         />
       ) : null}
+      <ConfirmationNoteSetting />
       <NoticeSetting />
       <NumberSetting
         id="reserve" label="Time kept free each day" hint="For the little jobs between bikes" unit="hours"

@@ -49,3 +49,20 @@ test('the confirmed booking page says when to drop the bike off', async ({ page 
   await expect(page.getByRole('heading', { level: 1, name: 'Confirmed' })).toBeVisible();
   await expect(page.getByText('Drop your Trek Domane AL 3 off by 10:30, half an hour before your booking at 11:00.')).toBeVisible();
 });
+
+// The shop's additional note (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md):
+// written in Settings, it follows the drop-off sentence on the booking page.
+test('the note written in Settings follows the drop-off time on the booking page', async ({ page, context }) => {
+  await page.goto(`${server!.baseUrl}${link}`);
+  await expect(page.getByText('Drop your Trek Domane AL 3 off by 10:30, half an hour before your booking at 11:00. Please bring the lock key, and tell us about any accessories.', { exact: true })).toBeVisible();
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  const box = page.getByLabel('Additional note on the confirmation');
+  await expect(box).toHaveValue('Please bring the lock key, and tell us about any accessories.');
+  await box.fill('Park round the back and ring the bell.');
+  await box.blur();
+  await expect(page.getByText('Saved.')).toBeVisible();
+  await page.goto(`${server!.baseUrl}${link}`);
+  await expect(page.getByText('Drop your Trek Domane AL 3 off by 10:30, half an hour before your booking at 11:00. Park round the back and ring the bell.', { exact: true })).toBeVisible();
+});

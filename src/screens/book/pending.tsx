@@ -55,6 +55,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
 
   const total = totalLine(link);
   const answers = answerLines(link);
+  const arrival = [dropOffLine(link), link.confirmationNote].filter(Boolean).join(' ');
   // An unrecognised stage (statusText returns undefined) must not break the
   // screen: the heading is left empty rather than crashing BookFrame, which
   // requires a string title, and the rest of the summary still renders.
@@ -62,8 +63,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     <BookFrame title={statusText(link.stage) ?? ''}>
       {/* A quote waiting for the customer's answer comes first (journey 4). */}
       <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
-      {/* When to drop the bike off, once the booking stands (Jack, 19 Oct; drawn in bk-confirmed). */}
-      {dropOffLine(link) && <p className="m-0 mb-3 text-[15px] leading-normal">{dropOffLine(link)}</p>}
+      {/* When to drop the bike off, then the shop's additional note, once the
+          booking stands (Jack, 19 Oct; drawn in bk-confirmed as one paragraph). */}
+      {arrival && <p className="m-0 mb-3 text-[15px] leading-normal">{arrival}</p>}
       <div className="mb-4 rounded-md border border-[var(--wh-border)] p-3 text-sm">
         <p className="m-0 mb-2 flex justify-between gap-3">
           {/* The {' '} spaces keep the words apart for a screen reader, as ChoiceCard does. */}

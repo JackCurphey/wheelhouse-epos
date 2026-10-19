@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.' };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -54,6 +54,7 @@ async function openSettings({ me = OWNER } = {}) {
       if (refuseHours && body.fullDayThresholdMinutes !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.nextBookingMode !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.showPricesOnline !== undefined) return reply(400, { error: refuseHours });
+      if (refuseHours && body.confirmationNote !== undefined) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -510,4 +511,42 @@ test('a refused prices switch says why and stays as it was', async () => {
   fireEvent.click(sw);
   assert.ok(has(await ui.findByText("Only the shop's owner can change settings")));
   assert.equal(sw.getAttribute('aria-checked'), 'true');
+});
+
+// The additional note on the confirmation (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md;
+// drawn in bk-settings): the shop's own words, saved when the box is left.
+const notePuts = () => calls.filter((c) => c.method === 'PUT' && c.body.confirmationNote !== undefined).map((c) => c.body);
+const NOTE_HINT = 'Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.';
+
+test('Additional note on the confirmation shows the shop’s note, with its hint', async () => {
+  const { ui, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Additional note on the confirmation');
+  await waitFor(() => assert.equal(box.value, 'Please bring the lock key, and tell us about any accessories.'));
+  assert.ok(has(ui.queryByText(NOTE_HINT)));
+  assert.equal(box.getAttribute('maxlength'), '300');
+});
+
+test('the note saves when the box is left, only if it changed, and can be emptied', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Additional note on the confirmation');
+  await waitFor(() => assert.ok(box.value.length > 0));
+  fireEvent.blur(box);
+  fireEvent.change(box, { target: { value: 'Park round the back and ring the bell.' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(notePuts(), [{ confirmationNote: 'Park round the back and ring the bell.' }]));
+  assert.ok(has(await ui.findByText('Saved.')));
+  fireEvent.change(box, { target: { value: '' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(notePuts().at(-1), { confirmationNote: '' }));
+});
+
+test('a refused note says why and keeps what was typed', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Additional note on the confirmation');
+  await waitFor(() => assert.ok(box.value.length > 0));
+  refuseHours = 'Only the shop’s owner can change settings';
+  fireEvent.change(box, { target: { value: 'Ring the bell.' } });
+  fireEvent.blur(box);
+  assert.ok(has(await ui.findByText('Only the shop’s owner can change settings')));
+  assert.equal(box.value, 'Ring the bell.');
 });
