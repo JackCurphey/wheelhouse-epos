@@ -8,7 +8,7 @@ brings Managers and the "Can change settings" switch, only the Owner can.
 
 ## What Changes
 
-- **Server:** `PUT /api/workshop-settings` and `PUT /api/shop-details` refuse anyone but the Owner: 403 `{ error: "Only the shop's owner can change settings", code: 'owner_only' }`. Reading them stays open, since the diary, till and booking need them.
+- **Server:** `PUT /api/workshop-settings` and `PUT /api/shop-details` refuse anyone but the Owner: 403 `{ error: "Only the shop's owner can change settings", code: 'owner_only' }`. Reading them stays open, since the diary, till and booking need them. The same workshop route also saves the online booking settings (booking mode, notice, terms, prices), so those are Owner-only too; only the old app's form sends them today, and a refused save there shows the message.
 - **Screen:** `/workshop/settings` shows anyone but the Owner "Settings aren’t part of your role" (drawn as `auth-noaccess`), with no settings on it.
 
 ## Lane, work package, drawings and decisions
