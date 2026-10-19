@@ -66,3 +66,7 @@ The threshold has no drawing.
    free, `server/auth.js`). The hint is "For the little jobs between
    bikes"; the note adds "Lunch and admin go in the diary as blocks, so
    don't count them here." The drawing shows [n], each shop's own value.
+7. **Build the customer's drop-off line next** (Jack, 19 Oct: "lets do 1",
+   offered as: the "Drop your bike off by 11:00, half an hour before your
+   booking" line on the real booking pages, plus the "Drop off before the
+   booking" setting, with one small addition in Mark's booking-link file).
