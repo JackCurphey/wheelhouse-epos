@@ -16,7 +16,7 @@ import { shortDay } from '@/screens/diary/rules.ts';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
+type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
   nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
@@ -529,6 +529,35 @@ function ModeSetting() {
 }
 
 /**
+ * "Show prices on the booking page" (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md
+ * answer 11; drawn in bk-settings): the settings pages' own switch, saved at once.
+ */
+function PricesSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function change(next: boolean) {
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { showPricesOnline: next }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <RowSwitch label="Show prices on the booking page" on={settings.data?.showPricesOnline === true} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
+      {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+    </div>
+  );
+}
+
+/**
  * Settings › Workshop › Online booking, so far (Jack, 19 Oct,
  * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
  * bk-settings-reserve): how long before a set-time booking bikes come in
@@ -555,6 +584,7 @@ function OnlineBookingBox() {
         fromBox={(h) => (h >= 0 && h <= 8 && Number.isInteger(h * 2) ? h * 60 : null)} invalid="Enter 0 to 8 hours, in half hours"
       />
       <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
+      <PricesSetting />
     </section>
   );
 }

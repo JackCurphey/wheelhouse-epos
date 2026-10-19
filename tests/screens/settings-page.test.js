@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00' };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -53,6 +53,7 @@ async function openSettings({ me = OWNER } = {}) {
       if (refuseHours && body.openingHours) return reply(400, { error: refuseHours });
       if (refuseHours && body.fullDayThresholdMinutes !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.nextBookingMode !== undefined) return reply(400, { error: refuseHours });
+      if (refuseHours && body.showPricesOnline !== undefined) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -82,7 +83,7 @@ test('Settings › Workshop › Mechanics has the switch, off, with its note', a
   assert.ok(has(ui.queryByRole('heading', { name: 'Mechanics' })));
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   assert.equal(sw.getAttribute('aria-checked'), 'false');
-  assert.ok(has(ui.queryByText('Off')));
+  assert.ok(sw.textContent.includes('Off'));
   assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.')));
 });
 
@@ -92,7 +93,8 @@ test('switching it on saves at once, and it reads On', async () => {
   fireEvent.click(sw);
   await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ showSignOffToCustomers: true }]));
   await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'true'));
-  assert.ok(has(ui.queryByText('On')));
+  // Its own On, not the prices switch's.
+  assert.ok(sw.textContent.includes('On'));
 });
 
 test('if it can’t be saved, it says so and stays as it was', async () => {
@@ -488,4 +490,24 @@ test('changing the date of a coming change starts from the date already chosen',
   fireEvent.click(ui.getByRole('radio', { name: 'The whole day' }));
   const dlg = within(await ui.findByRole('dialog'));
   assert.equal(dlg.getByLabelText('Starting on').value, '2026-11-05');
+});
+
+// Show prices on the booking page (Jack, 19 Oct, answer 11; drawn in bk-settings).
+test('Show prices on the booking page shows its value and saves a switch at once', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const sw = await ui.findByRole('switch', { name: 'Show prices on the booking page' });
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'true'));
+  fireEvent.click(sw);
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && 'showPricesOnline' in c.body).map((c) => c.body), [{ showPricesOnline: false }]));
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'false'));
+});
+
+test('a refused prices switch says why and stays as it was', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  refuseHours = "Only the shop's owner can change settings";
+  const sw = await ui.findByRole('switch', { name: 'Show prices on the booking page' });
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'true'));
+  fireEvent.click(sw);
+  assert.ok(has(await ui.findByText("Only the shop's owner can change settings")));
+  assert.equal(sw.getAttribute('aria-checked'), 'true');
 });
