@@ -28,7 +28,7 @@ async function openSettings() {
   calls = [];
   settings = { openingHours: [], showSignOffToCustomers: false };
   putFails = false;
-  details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null };
+  details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
   detailsFail = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -140,4 +140,20 @@ test('typing more while a box is saving keeps the new words, and they save too',
   assert.equal(address.value, '12 High St, Leeds');
   fireEvent.blur(address);
   await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ address: '12 High St' }, { address: '12 High St, Leeds' }]));
+});
+
+// Words at the bottom (Jack, 19 Oct; drawn in set-till-receipts).
+test('Till › Receipts has Words at the bottom, which saves when it’s left', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  assert.ok(has(ui.queryByRole('heading', { name: 'Till' })));
+  assert.ok(has(ui.queryByText('What staff see and use at the till.')));
+  assert.ok(has(ui.queryByRole('heading', { name: 'Receipts' })));
+  const words = await ui.findByLabelText('Words at the bottom');
+  assert.equal(words.tagName, 'TEXTAREA');
+  assert.equal(words.getAttribute('placeholder'), 'e.g. your returns policy, a thank-you');
+  assert.ok(has(ui.queryByText('The shop’s name and address come from Shop and sites. Every receipt carries a barcode so a refund can find the sale.')));
+  fireEvent.change(words, { target: { value: '[Returns policy]' } });
+  fireEvent.blur(words);
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && c.url === '/api/shop-details').map((c) => c.body), [{ receiptFooter: '[Returns policy]' }]));
+  assert.ok(has(await ui.findByText('Saved.')));
 });

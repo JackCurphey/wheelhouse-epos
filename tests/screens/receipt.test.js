@@ -135,3 +135,25 @@ test('a detail left blank is left out; with none, the barcode follows Paid by', 
   const paid = [...none.querySelectorAll('span')].find((el) => el.textContent === 'Paid by card');
   assert.ok(paid.compareDocumentPosition(bars) & 4, 'the barcode comes after Paid by');
 });
+
+// Words at the bottom (Jack, 19 Oct, docs/decisions/2026-10-19-receipt-words.md;
+// set-till-receipts' preview): just above the barcode, after the shop's details,
+// keeping their line breaks.
+test('the shop’s words print just above the barcode, with their line breaks', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', details: { ...DETAILS, receiptFooter: '[Returns policy]\n[Thank-you]' } });
+  assert.ok(text(paper).endsWith('VAT number [VAT number][Returns policy]\n[Thank-you]') || text(paper).endsWith('VAT number [VAT number][Returns policy] [Thank-you]'), text(paper));
+  const words = [...paper.querySelectorAll('span')].find((el) => el.textContent.startsWith('[Returns policy]'));
+  assert.ok(words !== undefined && words.className.includes('whitespace-pre-line'), 'line breaks are kept');
+  const bars = paper.querySelector('svg[aria-label="Barcode for sale 601"]');
+  assert.ok(words.compareDocumentPosition(bars) & 4, 'the barcode follows the words');
+});
+
+// Fresh review: a long web address in the words, or a long address, wraps
+// rather than running off the 72 mm paper.
+test('the words and the address wrap long unbroken text', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', details: { address: '[Shop address]', receiptFooter: '[Returns policy link]' } });
+  for (const t of ['[Shop address]', '[Returns policy link]']) {
+    const el = [...paper.querySelectorAll('span')].find((e) => e.textContent === t);
+    assert.ok(el?.className.includes('break-words'), `${t} wraps`);
+  }
+});

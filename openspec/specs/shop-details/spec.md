@@ -15,3 +15,10 @@ Settings › Shop and sites › Shop details SHALL hold the shop's name, address
 #### Scenario: Leaving the VAT number blank
 - **WHEN** a shop that isn't VAT-registered leaves the VAT number empty
 - **THEN** it stays empty and receipts print no VAT number
+
+### Requirement: A shop keeps the words for the bottom of its receipts
+Settings › Till › Receipts SHALL hold "Words at the bottom", such as a returns policy or a thank-you, saved when the box is left (`set-till-receipts`; Jack, 19 Oct). Blank means none.
+
+#### Scenario: A returns policy
+- **WHEN** the owner types the shop's returns policy into Words at the bottom and moves on
+- **THEN** it is saved, and the next receipt prints it

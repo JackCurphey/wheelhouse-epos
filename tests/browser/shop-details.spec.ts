@@ -61,12 +61,16 @@ test('Shop details saves as you go, and the receipt carries them above the barco
     await expect(page.getByText('Saved.')).toBeVisible();
   }
   await expect.poll(async () => (await staff('/api/shop-details')).body.vatNumber).toBe('[VAT number]');
+  // Words at the bottom (Jack, 19 Oct): Till › Receipts, printed just above the barcode.
+  await page.getByLabel('Words at the bottom').fill('[Returns policy]');
+  await page.getByLabel('Words at the bottom').blur();
+  await expect.poll(async () => (await staff('/api/shop-details')).body.receiptFooter).toBe('[Returns policy]');
 
   await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}`);
   await page.getByRole('button', { name: /Standard service/ }).first().click({ button: 'right' });
   await page.getByRole('menu', { name: 'Job actions' }).getByRole('menuitem', { name: 'Print receipt' }).click();
   await expect.poll(async () => (await page.evaluate(() => window.__printed)).length).toBe(1);
   const [printed] = await page.evaluate(() => window.__printed);
-  expect(printed.text).toMatch(/Paid by card\s*£65\.00\s*\[Shop address\]\s*\[shop phone\]\s*VAT number \[VAT number\]\s*$/);
+  expect(printed.text).toMatch(/Paid by card\s*£65\.00\s*\[Shop address\]\s*\[shop phone\]\s*VAT number \[VAT number\]\s*\[Returns policy\]\s*$/);
   expect(printed.barcodeLast).toBe(true);
 });
