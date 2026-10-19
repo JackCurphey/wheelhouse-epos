@@ -13,3 +13,5 @@ should show (no customer texts or emails are sent yet), he answered:
    Trek Domane AL 3, Standard service, Thursday 17 September at 11:30), so
    nothing is invented; the shop's drop-off time, note and prices are its
    own. Drawn as `bk-settings-preview` for Jack's approval before building.
+2. **Drawing approved; build it** (Jack, 19 Oct: "Approve the Preview
+   drawing; build it.").
