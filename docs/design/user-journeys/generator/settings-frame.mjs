@@ -186,7 +186,7 @@ export function overlay(base, d) {
 export const workshopFolds = (open = {}) =>
   fold('Services', 'Full service, Individual service', open.services || '')
   // Book a repair decision 11: every rule for booking online, in one place.
-  + fold('Online booking', lightspeedShop() ? 'Exact times · 2 hours’ notice · no deposit · each booking a request' : 'Exact times · 2 hours’ notice · deposit [n]% · each booking a request', open.online || '')
+  + fold('Online booking', lightspeedShop() ? 'Set times · 2 hours’ notice · no deposit · each booking a request' : 'Set times · 2 hours’ notice · deposit [n]% · each booking a request', open.online || '')
   + fold('Mechanics', 'Alex Morgan, Jo Taylor, Shared queue', open.mechanics || '')
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '')

@@ -325,9 +325,15 @@ const choiceRow = (label, opts, on) => `<div style="display: flex; align-items: 
 // The time kept free each day (Jack, 4 Sep, docs/decisions/2026-09-04-job-type-before-diary.md
 // §2.2: "mechanics' lunches, admin time, and all the little bits"; default 2 hours),
 // moved here from the old app's Edit workshop (Jack, 19 Oct).
-const onlineOpen = (reserve = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
-${sub('How customers book')}
-${choiceRow('Customers choose', ['An exact time to arrive', 'A day to drop off'], 0)}
+// How bikes are booked in (Jack, 19 Oct: worded for a set time or the whole
+// day, the customer told a drop-off time either way; the booking mode of
+// docs/decisions/2026-09-04-booking-mode-and-downtime.md).
+const windowRow = `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Drop-off window</span><span style="font-size: 13px; color: ${C.muted}">Whole-day customers drop their bike off between these times</span></span><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px"><input aria-label="Drop-off window starts" value="[09:00]" style="width: 84px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">to<input aria-label="Drop-off window ends" value="[10:00]" style="width: 84px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></span></div>`;
+const onlineOpen = (reserve = false, wholeDay = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
+${sub('How bikes are booked in')}
+${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay ? 1 : 0)}
+${note('A set time: the customer drops the bike off at the time they booked, for example 13:00 to 14:00. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')}
+${wholeDay ? windowRow : ''}
 ${numRow('notice', 'Notice', 'Customers book at least this far ahead', 'hours ahead', '2')}
 ${reserve ? `${numRow('reserve', 'Time kept free each day', 'For lunches, admin and little jobs between bikes', 'hours', '2')}${note('Online booking treats a day as full once less than this is left.')}` : ''}
 ${rowSwitch('Show prices on the booking page', true)}
@@ -344,7 +350,7 @@ ${note('With automatic confirming off, the customer pays before the shop has sai
 ${sub('Terms')}
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Booking terms</span><span style="font-size: 13px; color: ${C.muted}">Wheelhouse’s standard terms · a copy is kept with each booking</span></span>${button('Use your own', { variant: 'default' })}</div>
 <div>${link('See your booking page ↗')}</div>`;
-const settings = (reserve = false) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ online: onlineOpen(reserve) }));
+const settings = (reserve = false, wholeDay = false) => { const page = settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ online: onlineOpen(reserve, wholeDay) })); return wholeDay ? page.replace('Set times ·', 'Whole day ·') : page; };
 
 // ---------- The boards ----------
 const S = (o = {}) => summaryBox({ service: 'Standard service', price: '£65.00', ...o });
@@ -398,6 +404,7 @@ def('bk-staff-decline', () => requestDepositBoard(SIZE, true));
 def('bk-messages', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 330, tablet: 330, phone: 600 }[SIZE]}px }</style>${msgPage({ list: msgListOpen() }).replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 def('bk-settings', () => settings());
 def('bk-settings-reserve', () => settings(true));
+def('bk-settings-whole-day', () => settings(true, true));
 // The same page scrolled down to Deposits and Terms (the section is long).
 def('bk-settings-deposits', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 420, tablet: 420, phone: 720 }[SIZE]}px }</style>${settings().replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 
@@ -450,6 +457,7 @@ export const TITLES = {
   'bk-messages': 'Settings › Front desk › Messages: the booking messages',
   'bk-settings': 'Settings › Workshop › Online booking',
   'bk-settings-reserve': 'Settings › Workshop › Online booking: the time kept free each day',
+  'bk-settings-whole-day': 'Settings › Workshop › Online booking: bikes booked in for the whole day, with the drop-off window',
   'bk-settings-deposits': 'Online booking, scrolled: deposits and terms',
 };
 export const ROWS = [
@@ -459,7 +467,7 @@ export const ROWS = [
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
-  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-deposits'] },
+  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-deposits'] },
 ];
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.

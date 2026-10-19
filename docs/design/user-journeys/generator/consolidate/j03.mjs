@@ -50,13 +50,14 @@ export default {
   'bk-staff-decline': into('diary', '', "'Decline booking request' pop-up: 'deposit is refunded automatically'"),
   'bk-messages': into('set-msg-list', 'Receiving 7', "scrolled to 'Booking messages': six rows, 'Request received' to 'Booking cancelled'"),
   'bk-settings': keep(1),
+  'bk-settings-whole-day': into('bk-settings', 'Booking mode 2026-09-04 §2; 19 Oct (Jack: worded as a set time or the whole day)', "'Bikes are booked in for' 'The whole day', and a 'Drop-off window' row, [09:00] to [10:00]"),
   'bk-settings-reserve': into('bk-settings', 'Booking mode and downtime 2026-09-04 §2.2; 19 Oct (moved from the old Edit workshop)', "'Time kept free each day' [2] hours under Notice: 'For lunches, admin and little jobs between bikes', and 'Online booking treats a day as full once less than this is left.'"),
   'bk-settings-deposits': into('bk-settings', 'Book 11', "scrolled to 'Deposits' and 'Terms': 'Free to cancel until', 'Use your own'"),
 };
 
 // Situation lines with no old drawing behind them ("Draw the answers" BK3).
 export const lines = [
-  { on: 'bk-settings', text: "'A day to drop off' chosen: a 'Drop-off window' row, [09:00] to [10:00], that every drop-off customer is told", who: 'Manager', decision: 'Booking mode 2026-09-04 §2 item 3; Book a repair, 3 Oct (drop-off window)' },
+  { on: 'bk-settings', text: "'The whole day' chosen: a 'Drop-off window' row, [09:00] to [10:00], that every whole-day customer is told", who: 'Manager', decision: 'Booking mode 2026-09-04 §2 item 3; Book a repair, 3 Oct (drop-off window)' },
   { on: 'bk-page', text: 'Confirmed, after paying a deposit: Deposit paid £[deposit] and Free to cancel until [date and time]', who: 'Customer', decision: 'Book a repair 8; walk-through 1 M3' },
 // The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
   { on: 'bk-settings', text: "No online payments connected yet: 'Take a deposit when booking' is Off and reads 'Connect [payment provider] first · in Settings › Front desk › Online orders'", who: 'Owner', decision: 'Book a repair 3; Website management 8, 12 H5; 4 Oct (coverage walk 7 M2)' },

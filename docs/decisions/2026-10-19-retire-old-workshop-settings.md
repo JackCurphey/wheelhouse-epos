@@ -13,3 +13,16 @@ The threshold has no drawing.
    between bikes", with "Online booking treats a day as full once less than
    this is left." Removing the old screen is allowed once its replacement
    is merged (CLAUDE.md, allowed rule 5).
+2. **The booking mode reworded** (Jack, 19 Oct: "I want the drop-off
+   question to be more suited towards how a bike is booked in for a certain
+   time versus how a bike is booked in for a whole day. Then we can tell the
+   customer to drop it off at a certain time regardless"). In Settings ›
+   Workshop › Online booking, "How customers book / Customers choose: An
+   exact time to arrive / A day to drop off" becomes "How bikes are booked
+   in / Bikes are booked in for: A set time / The whole day", with "A set
+   time: the customer drops the bike off at the time they booked, for
+   example 13:00 to 14:00. The whole day: they drop it off in the drop-off
+   window, for example 09:00 to 10:00." The whole day shows the drop-off
+   window (`bk-settings-whole-day`). The section's summary reads "Set
+   times" or "Whole day". Wording only: the booking mode itself is the
+   4 Sep decision's.

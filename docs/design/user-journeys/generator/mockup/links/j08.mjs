@@ -119,7 +119,7 @@ export default {
   'set-workshop-services': {
     Edit: go('ac-service-edit'),
     // Coverage walk 7 M1: the Online booking row opens its section.
-    'Online booking Exact times · 2 hours’ notice · deposit [n]% · each booking a request': go('bk-settings'),
+    'Online booking Set times · 2 hours’ notice · deposit [n]% · each booking a request': go('bk-settings'),
     '+ Add a service': notDrawn('Adding a workshop service: the service box, empty'),
   },
   'set-workshop-mechanics': { 'Change in Staff and roles': go('set-staff') },
