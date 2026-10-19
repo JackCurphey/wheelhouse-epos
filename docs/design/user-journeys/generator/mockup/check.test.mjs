@@ -171,7 +171,7 @@ const COVERAGE_LINKS = [
   ['on-settings', 'Showing products Set on each category and product', 'on-settings-show'],
   ['on-settings-show', 'Change what your website started with', 'ws-start-products'],
   ['on-orders-arrived', 'Mark ready', 'on-orders-ready', 'Maya'],
-  ['set-workshop-services', 'Online booking Exact times · 2 hours’ notice · deposit [n]% · each booking a request', 'bk-settings'],
+  ['set-workshop-services', 'Online booking Set times · 2 hours’ notice · deposit [n]% · each booking a request', 'bk-settings'],
   ['bk-settings', 'Services Full service, Individual service', 'set-workshop-services'],
   ['bk-settings', 'Mechanics Alex Morgan, Jo Taylor, Shared queue', 'set-workshop-mechanics'],
   ['dq-diary-waiting', 'Trek Domane AL 3, Standard service, Maya Patel, WH-1042, Quoting, 11:30–13:00 · approved £111', 'dq-job-sent'],

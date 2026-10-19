@@ -100,3 +100,19 @@ test('the public website still applies the shop colour scheme', async (t) => {
   await waitFor(() => root.style.getPropertyValue('--accent'), 'the storefront to apply a theme');
   assert.equal(root.style.getPropertyValue('--accent'), PLUM_ACCENT);
 });
+
+// Retiring the old Edit workshop (Jack, 19 Oct,
+// docs/decisions/2026-10-19-retire-old-workshop-settings.md): its opening hours
+// and time kept free each day are in the new Settings, so Edit Shop has no
+// Workshop item and opens on Front desk, as does an old link to the Workshop page.
+for (const hash of ['#office/edit-shop', '#office/edit-shop/workshop']) {
+  test(`${hash} opens Front desk, with no Workshop item or form`, async (t) => {
+    const { dom } = staffApp(hash);
+    t.after(() => dom.window.close());
+    const doc = dom.window.document;
+    await waitFor(() => doc.getElementById('add-group-btn'), 'Front desk to render');
+    assert.ok(doc.getElementById('ws-full-threshold') === null, 'the old Workshop form is still there');
+    const items = [...doc.querySelectorAll('.subnav-dropdown-item')].map((b) => b.textContent.trim());
+    assert.deepEqual(items, ['Front desk', 'Office']);
+  });
+}

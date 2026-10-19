@@ -57,7 +57,6 @@ let activeCashiers = []; // employees with isCashier=true, active only - used by
 let activeCashierId = null;
 let team = []; // merged roster + login list - used by Office > Edit Shop > Office
 let teamShowInactive = false;
-let workshopSettings = { openingTime: '09:00', closingTime: '18:00', openingDays: [0, 1, 2, 3, 4, 5, 6], fullDayThresholdMinutes: 120 };
 
 let docStatusFilter = { quote: '', order: '' }; // '' = all, else 'open' | 'converted' | 'cancelled'
 let docList = { quote: [], order: [] };
@@ -242,10 +241,6 @@ async function loadTeam() {
   team = await api('/api/team');
 }
 
-async function loadWorkshopSettings() {
-  workshopSettings = await api('/api/workshop-settings');
-}
-
 async function loadSaleDocuments(kind) {
   const status = docStatusFilter[kind];
   const qs = status ? `&status=${encodeURIComponent(status)}` : '';
@@ -273,7 +268,8 @@ const OFFICE_TABS = [
     children: () => [
       { id: 'front-desk', label: 'Front desk' },
       { id: 'office', label: 'Office' },
-      { id: 'workshop', label: 'Workshop' },
+      // Workshop's settings are in the new Settings (Jack, 19 Oct,
+      // docs/decisions/2026-10-19-retire-old-workshop-settings.md).
     ],
   },
 ];
@@ -438,7 +434,7 @@ function renderCashierPills() {
   const wrap = document.getElementById('cashier-pills');
   if (!wrap) return;
   if (!activeCashiers.length) {
-    wrap.innerHTML = '<span class="muted" style="font-size:12.5px;">No staff added — set them up under Edit Shop &gt; Workshop.</span>';
+    wrap.innerHTML = '<span class="muted" style="font-size:12.5px;">No staff added — set them up under Edit Shop &gt; Office.</span>';
     return;
   }
   wrap.innerHTML = activeCashiers
@@ -1393,9 +1389,9 @@ async function renderOffice() {
   else if (sub === 'sales') await renderSalesHistory();
   else if (sub === 'customers' && subId) await renderCustomerDetail(Number(subId));
   else if (sub === 'customers') await renderCustomers();
-  else if (sub === 'edit-shop' && subId === 'front-desk') await renderEditFrontDesk();
   else if (sub === 'edit-shop' && subId === 'office') await renderShopOffice();
-  else if (sub === 'edit-shop') await renderEditWorkshop();
+  // Front desk, also for an old link to the retired Workshop page (Jack, 19 Oct).
+  else if (sub === 'edit-shop') await renderEditFrontDesk();
   else await renderDashboard();
 }
 
@@ -1416,7 +1412,7 @@ function renderOfficeSubnav() {
           ${t.children()
             .map(
               (c) =>
-                `<button data-office-nav="${t.id}" data-office-subnav="${c.id}" class="subnav-dropdown-item ${sub === t.id && (subId || 'workshop') === c.id ? 'active' : ''}">${c.label}</button>`
+                `<button data-office-nav="${t.id}" data-office-subnav="${c.id}" class="subnav-dropdown-item ${sub === t.id && (subId === 'office' ? 'office' : 'front-desk') === c.id ? 'active' : ''}">${c.label}</button>`
             )
             .join('')}
         </div>
@@ -3038,21 +3034,13 @@ function renderGroupFormModal(holder, group) {
   });
 }
 
-// ================= EDIT WORKSHOP =================
+// ================= WEEKDAYS AND JOB STATUSES =================
 
-const HOUR_OPTIONS = [...Array(24)].map((_, h) => `${String(h).padStart(2, '0')}:00`);
 // Monday-first order matching how the diary lays out the week; values match
 // JS Date.getDay() (0 = Sunday) so a day column's weekday can be checked directly.
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WEEKDAY_LABELS = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
 
-const FULL_DAY_THRESHOLD_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300, 360, 420, 480];
-function fmtMinutesLabel(m) {
-  if (m === 0) return 'Never (off)';
-  if (m < 60) return `${m} minutes`;
-  const h = m / 60;
-  return `${h} hour${h === 1 ? '' : 's'}`;
-}
 
 const JOB_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending approval' },
@@ -3063,72 +3051,6 @@ const JOB_STATUS_OPTIONS = [
 ];
 const JOB_STATUS_SELECT_OPTIONS = JOB_STATUS_OPTIONS.filter((s) => s.value !== 'complete');
 
-async function renderEditWorkshop() {
-  await loadWorkshopSettings();
-
-  const main = document.getElementById('office-content');
-  main.innerHTML = `
-    <h1>Edit Workshop</h1>
-    <div class="panel" style="margin-top:14px;">
-      <div class="panel-header"><h2>Opening hours &amp; days</h2></div>
-      <div class="panel-body">
-        <div class="field-row" style="align-items:flex-end;">
-          <div class="field">
-            <label for="ws-opening">Opens</label>
-            <select id="ws-opening">
-              ${HOUR_OPTIONS.map((h) => `<option value="${h}" ${workshopSettings.openingTime === h ? 'selected' : ''}>${h}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label for="ws-closing">Closes</label>
-            <select id="ws-closing">
-              ${HOUR_OPTIONS.map((h) => `<option value="${h}" ${workshopSettings.closingTime === h ? 'selected' : ''}>${h}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <p class="muted" style="margin:0 0 12px;">Controls the time range shown on the Workshop diary.</p>
-        <div class="field">
-          <label>Opening days</label>
-          <div class="weekday-picker">
-            ${WEEKDAY_ORDER.map(
-              (d) => `
-              <label class="weekday-check">
-                <input type="checkbox" data-ws-day="${d}" ${workshopSettings.openingDays.includes(d) ? 'checked' : ''} />
-                ${WEEKDAY_LABELS[d]}
-              </label>
-            `
-            ).join('')}
-          </div>
-          <p class="muted" style="margin:6px 0 0;">On unchecked days, every mechanic's diary is greyed out and can't have jobs assigned, regardless of their own working days.</p>
-        </div>
-        <div class="field" style="margin-top:14px;max-width:220px;">
-          <label for="ws-full-threshold">Treat a day as full once less than this much time is left</label>
-          <select id="ws-full-threshold">
-            ${FULL_DAY_THRESHOLD_OPTIONS.map(
-              (m) => `<option value="${m}" ${workshopSettings.fullDayThresholdMinutes === m ? 'selected' : ''}>${fmtMinutesLabel(m)}</option>`
-            ).join('')}
-          </select>
-          <p class="muted" style="margin:6px 0 0;">Once a mechanic's genuinely free time that day (small gaps between jobs merged, not summed twice) drops below this, the online booking portal shows that whole day as full for them - even if a technically-bookable sliver remains.</p>
-        </div>
-        <button class="btn btn-primary" id="ws-save-hours" style="margin-top:14px;">Save</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('ws-save-hours').addEventListener('click', async () => {
-    const openingTime = document.getElementById('ws-opening').value;
-    const closingTime = document.getElementById('ws-closing').value;
-    const openingDays = [...document.querySelectorAll('[data-ws-day]:checked')].map((cb) => Number(cb.dataset.wsDay));
-    const fullDayThresholdMinutes = Number(document.getElementById('ws-full-threshold').value);
-    try {
-      await api('/api/workshop-settings', { method: 'PUT', body: { openingTime, closingTime, openingDays, fullDayThresholdMinutes } });
-      showToast('Opening hours & days updated');
-      await loadWorkshopSettings();
-    } catch (err) {
-      showToast(err.message);
-    }
-  });
-}
 
 // ================= SHOP OFFICE (website, employee logins) =================
 

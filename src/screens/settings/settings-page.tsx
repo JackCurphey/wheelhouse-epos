@@ -13,7 +13,7 @@ import { ROUTES } from '@/staff/routes.ts';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -258,6 +258,69 @@ function NoAccess() {
   );
 }
 
+/**
+ * Settings › Workshop › Online booking, first piece (Jack, 19 Oct,
+ * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
+ * bk-settings-reserve): the time kept free each day for lunches, admin and
+ * the little jobs (Jack, 4 Sep), in hours, saved in minutes when the box is
+ * left. The rest of the drawn section comes later.
+ */
+function OnlineBookingBox() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [typed, setTyped] = useState<string | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const stored = settings.data?.fullDayThresholdMinutes;
+  const shown = typed ?? (stored === undefined ? '' : String(stored / 60));
+
+  async function save() {
+    if (typed === null) return;
+    const hours = Number(typed.trim());
+    if (typed.trim() === '' || !Number.isFinite(hours) || hours < 0 || hours > 8 || !Number.isInteger(hours * 2)) {
+      setNote({ ok: false, text: 'Enter 0 to 8 hours, in half hours' });
+      return;
+    }
+    const minutes = hours * 60;
+    if (minutes === stored) { setTyped(null); setNote(null); return; }
+    setNote(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { fullDayThresholdMinutes: minutes }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+      setTyped((t) => (t === typed ? null : t));
+      setNote({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    }
+  }
+
+  return (
+    <section aria-labelledby="set-online" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
+      <h3 id="set-online" className="m-0 text-base font-bold">Online booking</h3>
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+        <span className="flex flex-col gap-0.5">
+          <label htmlFor="reserve" className="text-[15px] font-semibold">Time kept free each day</label>
+          <span id="reserve-h" className="text-[13px] text-[var(--wh-muted)]">For the little jobs between bikes</span>
+        </span>
+        <span className="inline-flex items-center gap-2 text-sm">
+          <input
+            id="reserve"
+            aria-describedby="reserve-h"
+            inputMode="decimal"
+            value={shown}
+            disabled={!settings.data}
+            onChange={(e) => setTyped(e.target.value)}
+            onBlur={() => void save()}
+            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+          />
+          hours
+        </span>
+      </div>
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
+      {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const session = useSession();
   if (session.status !== 'signed-in') return null;
@@ -308,6 +371,7 @@ function OwnerSettings() {
           <h2 id="set-workshop" className="m-0 text-xl font-bold">Workshop</h2>
           <p className="m-0 text-sm text-[var(--wh-muted)]">Services, who works in the workshop, and how the diary looks.</p>
         </div>
+        <OnlineBookingBox />
         <section aria-labelledby="set-mechanics" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
           <h3 id="set-mechanics" className="m-0 text-base font-bold">Mechanics</h3>
           {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the settings. Try again in a moment.</p> : null}
