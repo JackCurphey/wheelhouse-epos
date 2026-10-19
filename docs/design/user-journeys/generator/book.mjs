@@ -335,9 +335,17 @@ const windowRow = `<div style="display: flex; align-items: center; justify-conte
 // 1 day lets a customer book any time tomorrow, whatever the time now.
 const noticeRow = (days) => `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><label for="notice" style="font-size: 15px; font-weight: 600">Notice</label><span id="notice-h" style="font-size: 13px; color: ${C.muted}">How far ahead customers must book</span></span><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px"><input id="notice" aria-describedby="notice-h" inputmode="numeric" value="${days ? '1' : '2'}" style="width: 72px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">${radios('Notice in', `${rpill('hours', !days)}${rpill('days', days)}`)}</span></div>
 ${note(days ? 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.' : 'Hours: counted from now. Days: counted in whole days, so 1 day lets a customer book any time tomorrow.')}`;
-const onlineOpen = (reserve = false, wholeDay = false, noticeDays = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
+// Changing how bikes are booked in takes effect from a day the shop picks
+// (Jack, 24 Sep, docs/decisions/2026-09-23-book-journey-routing-and-modes.md:
+// bookings already made keep their shape); drawn 19 Oct. Choosing the other
+// pill opens this; once chosen, the section says what's coming, with Cancel.
+const modeDialog = () => popup('mode-title', 'Book bikes in for the whole day?', 'From a day you choose', `<div style="display: flex; flex-direction: column; gap: 6px"><label for="mode-from" style="font-size: 15px; font-weight: 600">Starting on</label><input id="mode-from" type="date" value="[date]" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; color: ${C.ink}; max-width: 220px"><span style="font-size: 13px; color: ${C.muted}">Tomorrow at the earliest</span></div>
+${note('Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Change from [date]')}`, 480);
+const scheduledLine = `<p role="status" style="margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.45"><span>Changing to <strong>the whole day</strong> from [date]. Bookings already made keep their set times.</span>${button('Cancel the change', { variant: 'default' })}</p>`;
+const onlineOpen = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
 ${sub('How bikes are booked in')}
 ${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay ? 1 : 0)}
+${scheduled ? scheduledLine : ''}
 ${note('A set time: the customer drops the bike off before the time they booked. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')}
 ${wholeDay ? windowRow : numRow('lead', 'Drop off before the booking', 'How long before their booked time customers bring the bike in', 'minutes', '30')}
 ${noticeRow(noticeDays)}
@@ -356,7 +364,7 @@ ${note('With automatic confirming off, the customer pays before the shop has sai
 ${sub('Terms')}
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Booking terms</span><span style="font-size: 13px; color: ${C.muted}">Wheelhouse’s standard terms · a copy is kept with each booking</span></span>${button('Use your own', { variant: 'default' })}</div>
 <div>${link('See your booking page ↗')}</div>`;
-const settings = (reserve = false, wholeDay = false, noticeDays = false) => { let page = settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ online: onlineOpen(reserve, wholeDay, noticeDays) })); if (wholeDay) page = page.replace('Set times ·', 'Whole day ·'); if (noticeDays) page = page.replace('2 hours’ notice', '1 day’s notice'); return page; };
+const settings = (reserve = false, wholeDay = false, noticeDays = false, scheduled = false) => { let page = settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ online: onlineOpen(reserve, wholeDay, noticeDays, scheduled) })); if (wholeDay) page = page.replace('Set times ·', 'Whole day ·'); if (noticeDays) page = page.replace('2 hours’ notice', '1 day’s notice'); return page; };
 
 // ---------- The boards ----------
 const S = (o = {}) => summaryBox({ service: 'Standard service', price: '£65.00', ...o });
@@ -412,6 +420,8 @@ def('bk-settings', () => settings());
 def('bk-settings-reserve', () => settings(true));
 def('bk-settings-whole-day', () => settings(true, true));
 def('bk-settings-notice-days', () => settings(true, false, true));
+def('bk-settings-mode-change', () => overlay(settings(true), modeDialog()));
+def('bk-settings-mode-scheduled', () => settings(true, false, false, true));
 // The same page scrolled down to Deposits and Terms (the section is long).
 def('bk-settings-deposits', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 420, tablet: 420, phone: 720 }[SIZE]}px }</style>${settings().replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 
@@ -466,6 +476,8 @@ export const TITLES = {
   'bk-settings-reserve': 'Settings › Workshop › Online booking: the time kept free each day',
   'bk-settings-whole-day': 'Settings › Workshop › Online booking: bikes booked in for the whole day, with the drop-off window',
   'bk-settings-notice-days': 'Settings › Workshop › Online booking: notice in days',
+  'bk-settings-mode-change': 'Settings › Workshop › Online booking: changing to the whole day, from a day you choose',
+  'bk-settings-mode-scheduled': 'Settings › Workshop › Online booking: a change to the whole day coming up',
   'bk-settings-deposits': 'Online booking, scrolled: deposits and terms',
 };
 export const ROWS = [
@@ -475,7 +487,7 @@ export const ROWS = [
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
-  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-deposits'] },
+  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-deposits'] },
 ];
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.

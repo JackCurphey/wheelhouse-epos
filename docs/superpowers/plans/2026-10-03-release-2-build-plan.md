@@ -651,7 +651,7 @@ later packages.
 - **`bk-details`** (block 36, Step-by-step booking, with the day strip and time picker) — 6 situations: `bk-details-deposit`, `bk-sending`, `bk-card-failed`, `bk-not-sent`, `bk-checking-payment`, `bk-resume`.
 - **`bk-change`** (block 37, Customer job page) — 2 situations: `bk-change-pending`, `bk-change-declined`.
 - **`bk-cancel`** (block 8, "Are you sure?" box) — 1 of its 2 situations here: `bk-cancel-late`.
-- **`bk-settings`** (block 1, Settings page) — 5 situations: `bk-settings-reserve`, `bk-settings-whole-day`, `bk-settings-notice-days`, `bk-settings-deposits`, `cp-setting`; plus 2 written lines.
+- **`bk-settings`** (block 1, Settings page) — 7 situations: `bk-settings-reserve`, `bk-settings-whole-day`, `bk-settings-notice-days`, `bk-settings-mode-change`, `bk-settings-mode-scheduled`, `bk-settings-deposits`, `cp-setting`; plus 2 written lines.
 - **`pending`** (block 40, Message or outcome page) — 1 situation: `expired`.
 - Added to the `bk-page` board (built in WP-4.2) — 10 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-expired`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 2 situations: `bk-staff-request`, `bk-staff-decline`.

@@ -73,3 +73,15 @@ The threshold has no drawing.
 8. **Build notice in hours or days next** (Jack, 19 Oct: "1", offered as:
    notice in hours or days, a small server change in Mark's area then the
    Settings row). Drawn in answer 4 (`bk-settings-notice-days`).
+9. **The set time / whole day switch next, drawn first** (Jack, 19 Oct: "1",
+   offered as: draw the "from which day" choice for approval, then build
+   the switch and the drop-off window). Drawn: choosing the other mode opens
+   "Book bikes in for the whole day?" (or "for a set time?"), "From a day
+   you choose", with "Starting on" a date, "Tomorrow at the earliest", and
+   "Bookings already made keep their set times. From that day, customers
+   book a day and drop their bike off in the drop-off window."; Cancel or
+   "Change from [date]" (`bk-settings-mode-change`). Once chosen, the
+   section says "Changing to the whole day from [date]. Bookings already
+   made keep their set times." with "Cancel the change"
+   (`bk-settings-mode-scheduled`). This follows the 24 Sep decision (a
+   change of mode from a date the shop chooses; bookings keep their shape).

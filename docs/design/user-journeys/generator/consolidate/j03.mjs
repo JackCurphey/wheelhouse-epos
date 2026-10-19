@@ -50,6 +50,8 @@ export default {
   'bk-staff-decline': into('diary', '', "'Decline booking request' pop-up: 'deposit is refunded automatically'"),
   'bk-messages': into('set-msg-list', 'Receiving 7', "scrolled to 'Booking messages': six rows, 'Request received' to 'Booking cancelled'"),
   'bk-settings': keep(1),
+  'bk-settings-mode-change': into('bk-settings', 'Book journey 24 Sep (mode change from a chosen date); 19 Oct', "'Book bikes in for the whole day?' pop-up: 'Starting on' [date], 'Tomorrow at the earliest', 'Bookings already made keep their set times…', Cancel and 'Change from [date]'"),
+  'bk-settings-mode-scheduled': into('bk-settings', 'Book journey 24 Sep; 19 Oct', "'Changing to the whole day from [date]. Bookings already made keep their set times.' with 'Cancel the change'"),
   'bk-settings-notice-days': into('bk-settings', '19 Oct (Jack: notice in hours or days)', "'Notice' [1] with 'days' chosen: 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.'"),
   'bk-settings-whole-day': into('bk-settings', 'Booking mode 2026-09-04 §2; 19 Oct (Jack: worded as a set time or the whole day)', "'Bikes are booked in for' 'The whole day', and a 'Drop-off window' row, [09:00] to [10:00]"),
   'bk-settings-reserve': into('bk-settings', 'Job type before diary 2026-09-04 §2.2; booking mode §4.4; 19 Oct (moved from the old Edit workshop; answer 6)', "'A set time' chosen: 'Drop off before the booking' [30] minutes; 'Time kept free each day' [n] hours under Notice: 'For the little jobs between bikes', and 'Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.'"),
