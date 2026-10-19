@@ -25,3 +25,7 @@ and writing down what it needs from Mark's server side).
    online"**, since "New, booked online" is cut off mid-word there; the
    phone, the Day view and what a screen reader says keep the whole words.
    For Jack's approval with the drawings.
+4. **Drawings approved; the contract for Mark's server half is written
+   first, and the screens are built once his half is in** (Jack, 19 Oct:
+   "Approve the drawings; write the contract for Mark's server half and
+   build the screen half once his part is in.").
