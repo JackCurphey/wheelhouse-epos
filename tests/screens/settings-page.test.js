@@ -565,6 +565,7 @@ test('Preview opens What the customer sees, with the shop’s saved note and pri
   const { within } = await import('@testing-library/react');
   const box = within(dialog);
   assert.ok(has(box.queryByText('An example booking, with your settings as they are now')));
+  assert.equal(dialog.getAttribute('aria-describedby'), 'preview-sub');
   assert.ok(has(box.queryByText('Booking confirmed')));
   assert.ok(has(box.queryByText('See you on Thursday 17 September, Maya')));
   assert.ok(has(box.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. Park round the back and ring the bell.')));

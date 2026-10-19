@@ -544,6 +544,13 @@ silent:
    settings as they are now" in the drawing; the settings boxes save when left.
 3. **The pop-up has the drawn ✕ and Close, and Escape closes it.**
    *Pattern:* the mode change pop-up.
+4. **The preview draws the confirmed page as `bk-confirmed` draws it**
+   ("Booking confirmed", "See you on…", Service, Bike, When), which the
+   customer's booking page doesn't fully match yet: today it heads
+   "Confirmed" and lists a reference and the services. The drop-off sentence
+   and the note, what the preview is for, are the same on both. *Pattern:* the
+   approved drawing; the two come together when bk-confirmed is built (fresh
+   review).
 
 ## Decided here, for Jack to overrule
 

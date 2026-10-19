@@ -575,11 +575,11 @@ function BookingPreview() {
   return (
     <div>
       <Button variant="default" disabled={!settings.data} onClick={() => setOpen(true)}>Preview</Button>
-      <Dialog open={open} onOpenChange={setOpen} aria-labelledby="preview-title" className="md:max-w-[560px]">
+      <Dialog open={open} onOpenChange={setOpen} aria-labelledby="preview-title" aria-describedby="preview-sub" className="md:max-w-[560px]">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="preview-title">What the customer sees</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
+            <span id="preview-sub" className="text-[13px] text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
           </div>
           <DialogClose onClick={() => setOpen(false)} />
         </DialogHeader>
@@ -592,7 +592,8 @@ function BookingPreview() {
           </div>
           <p className="m-0 text-sm text-[var(--wh-muted)]">Customers see this once a booking is confirmed. Change a setting and preview again to see the difference.</p>
         </DialogBody>
-        <DialogFooter className="flex gap-2.5">
+        {/* Close on the left, as drawn. */}
+        <DialogFooter className="flex justify-start gap-2.5">
           <Button variant="default" onClick={() => setOpen(false)}>Close</Button>
         </DialogFooter>
       </Dialog>
