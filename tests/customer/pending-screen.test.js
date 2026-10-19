@@ -241,8 +241,9 @@ test('a confirmed booking: Your repair above the bike and the work, the badge, t
   const { ui } = await open(MAYA_LINK);
   assert.ok(await heading(ui, 'Trek Domane AL 3 · Standard service'));
   assert.ok(ui.queryByText('Your repair · WH-1042') !== null);
+  // A plain badge, as drawn: it's there on arrival, so not announced.
   const badge = ui.getByText('Booking confirmed');
-  assert.ok(badge.closest('[role="status"]') !== null);
+  assert.ok(badge.closest('[role="status"]') === null);
   assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. Please bring the lock key, and tell us about any accessories.') !== null);
   assert.equal(rowValue(ui, 'Service'), 'Standard service · £65');
   assert.equal(rowValue(ui, 'Bike'), 'Trek Domane AL 3');

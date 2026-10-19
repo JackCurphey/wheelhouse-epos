@@ -100,7 +100,7 @@ export function pageHeading(link: Pick<BookingLink, 'bike' | 'services'>): strin
   return `${bikeName(link) || 'Your bike'} · ${work}`;
 }
 
-/** The Bike row: make and model, else the customer's own words about the bike, else none. */
+/** The Bike row: make and model, then the customer's own words about it ("Trek Domane AL 3 · green", as drawn); either alone; else none. */
 export function bikeRow(link: Pick<BookingLink, 'bike' | 'bikeNote'>): string | null {
-  return bikeName(link) || link.bikeNote || null;
+  return [bikeName(link), link.bikeNote].filter(Boolean).join(' · ') || null;
 }

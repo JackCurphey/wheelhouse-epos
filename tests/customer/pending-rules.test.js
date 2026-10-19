@@ -114,8 +114,9 @@ test('pageHeading names the bike and the work', () => {
   assert.equal(r.pageHeading({ ...base, services: [] }), 'Trek Domane AL 3 · Repair');
 });
 
-test('bikeRow: make and model, else the customer’s words, else none', () => {
-  assert.equal(r.bikeRow({ bike: { make: 'Trek', model: null }, bikeNote: 'x' }), 'Trek');
+test('bikeRow: make and model, then the customer’s words; either alone; else none', () => {
+  assert.equal(r.bikeRow({ bike: { make: 'Trek', model: 'Domane AL 3' }, bikeNote: 'green' }), 'Trek Domane AL 3 · green');
+  assert.equal(r.bikeRow({ bike: { make: 'Trek', model: null }, bikeNote: null }), 'Trek');
   assert.equal(r.bikeRow({ bike: null, bikeNote: 'Blue Trek road bike' }), 'Blue Trek road bike');
   assert.equal(r.bikeRow({ bike: null, bikeNote: null }), null);
 });

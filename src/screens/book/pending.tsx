@@ -93,7 +93,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       <BookFrame title={pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
         <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
-          <div role="status">
+          {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
+          <div>
             <span className="inline-block rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>
           </div>
           {arrival && <p className="m-0 text-[15px] leading-normal">{arrival}</p>}
@@ -102,7 +103,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             {total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
             {bike && row('Bike', bike)}
             {row('When', whenLine(link))}
-            {row('Your repair', link.reference)}
+            {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
           </div>
           {(link.description || answerList) && (
             <div className="text-sm">

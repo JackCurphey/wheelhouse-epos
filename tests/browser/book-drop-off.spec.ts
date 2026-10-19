@@ -49,7 +49,7 @@ test('the confirmed booking page says when to drop the bike off', async ({ page 
   // The confirmed page, to its drawing (Jack, 19 Oct; bk-page).
   await expect(page.getByRole('heading', { level: 1, name: /^Trek Domane AL 3 · / })).toBeVisible();
   await expect(page.getByText(/^Your repair · WH-/)).toBeVisible();
-  await expect(page.getByRole('status').getByText('Booking confirmed')).toBeVisible();
+  await expect(page.getByText('Booking confirmed', { exact: true })).toBeVisible();
   await expect(page.locator('[data-shop-line]')).toHaveText(/^North Street Cycles/);
   await expect(page.getByText('Drop your Trek Domane AL 3 off by 10:30, half an hour before your booking at 11:00.')).toBeVisible();
 });

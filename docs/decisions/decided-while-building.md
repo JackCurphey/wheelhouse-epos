@@ -561,8 +561,8 @@ silent:
 2. **The heading names the bike, else "Your bike", and the work: one
    service's name, "[first] and [n] more", or "Repair".** *Pattern:* bk-page's
    "Trek Domane AL 3 · Standard service".
-3. **The Bike row is the make and model, else the customer's own words about
-   the bike; the colour, the mechanic, Extra work, Deposit paid, Free to
+3. **The Bike row is the make and model, then the customer's own words about
+   the bike ("Trek Domane AL 3 · green"); the saved colour, the mechanic, Extra work, Deposit paid, Free to
    cancel until, the shop's address and phone, and the sign-in line wait for
    Mark's server to send them.** *Pattern:* nothing shown that isn't sent.
 4. **Prices read "£65", as everywhere else on the booking pages, not the
@@ -573,6 +573,8 @@ silent:
    inside it, until Change the date and Cancel booking are built.**
    *Pattern:* the first release's page; nothing taken away before its
    replacement exists.
+6. **The heading keeps the booking pages' own size, not the drawing's
+   larger one.** *Pattern:* every booking step's heading (fresh review).
 
 ## Decided here, for Jack to overrule
 
