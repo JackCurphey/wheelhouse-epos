@@ -33,7 +33,12 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #279 too** (19 Oct, `docs/decisions/2026-10-19-receipt-words.md`):
+**Check #283 too** (19 Oct, `docs/decisions/2026-10-19-owner-only-settings.md`):
+a new `server/lib/owner-only.js` (`ownerOnly`, reading the session as
+`team.js` does) makes your `PUT /api/workshop-settings` and `PUT
+/api/shop-details` Owner-only until WP-1.1 brings Managers and the "Can
+change settings" switch; swap it for those there. The booking settings on
+the workshop route are Owner-only too. **Check #279 too** (19 Oct, `docs/decisions/2026-10-19-receipt-words.md`):
 migration 043 adds `shops.receipt_footer`, and your `shop-settings.js`
 sends and saves `receiptFooter` on `/api/shop-details`. **Check #277 too** (Jack, 18 Oct, `docs/decisions/2026-10-18-shop-details.md`:
 build it "flagging Mark's files for him"): migration 042 adds `address`,
@@ -101,7 +106,9 @@ Till › Receipts, printed just above the barcode (#279); the same pull
 request fixed a diary browser test that used 19 Oct as a week "away from
 today". Then opening hours in Settings › Shop and sites: each day Open or
 Closed, hours on the hour, saved at once; screens only, on the existing
-workshop settings (#281). Then Files and photos on the job page,
+workshop settings (#281). Then Settings for the Owner only until roles are
+built: anyone else sees "Settings aren't part of your role", and the two
+settings routes refuse them (#283). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
