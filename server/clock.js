@@ -47,8 +47,15 @@ export function shopToday(timeZone, moment = currentMoment()) {
 }
 
 // Now plus the shop's minimum notice, in real time (so notice across a clock
-// change is the true number of hours), then read on the shop's clock.
-export function earliestBookable({ timeZone, minNoticeMinutes }, moment = currentMoment()) {
+// change is the true number of hours), then read on the shop's clock. Notice
+// in whole days (Jack, 19 Oct) is the start of the day that many days after
+// the shop's today, whatever the time now.
+export function earliestBookable({ timeZone, minNoticeMinutes, minNoticeDays = null }, moment = currentMoment()) {
+  if (Number.isInteger(minNoticeDays) && minNoticeDays > 0) {
+    const day = new Date(`${shopToday(timeZone, moment)}T00:00:00Z`);
+    day.setUTCDate(day.getUTCDate() + minNoticeDays);
+    return { date: day.toISOString().slice(0, 10), minutes: 0 };
+  }
   return shopNow(timeZone, new Date(moment.getTime() + minNoticeMinutes * 60_000));
 }
 

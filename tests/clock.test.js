@@ -103,3 +103,20 @@ test('in production the test pin is ignored and the real time is used', () => {
     else process.env.NODE_ENV = env;
   }
 });
+
+// Notice in days (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md
+// answers 4 and 8): from the start of the day that many days ahead, whatever
+// the time now; notice in hours is unchanged.
+test('notice in days starts at the beginning of the day that many days ahead', () => {
+  const shop = { timeZone: 'Europe/London', minNoticeMinutes: 120, minNoticeDays: 1 };
+  // 15:00 BST on 1 September: one day's notice is any time on 2 September.
+  assert.deepEqual(earliestBookable(shop, at('2026-09-01T14:00:00Z')), { date: '2026-09-02', minutes: 0 });
+  // 23:30 BST on 1 September (22:30 UTC): still the shop's 1 September, so 2 September.
+  assert.deepEqual(earliestBookable(shop, at('2026-09-01T22:30:00Z')), { date: '2026-09-02', minutes: 0 });
+  // 00:30 BST on 2 September (23:30 UTC on 1 September): the shop's day is the 2nd, so the 3rd.
+  assert.deepEqual(earliestBookable(shop, at('2026-09-01T23:30:00Z')), { date: '2026-09-03', minutes: 0 });
+  // Three days, across a month end.
+  assert.deepEqual(earliestBookable({ ...shop, minNoticeDays: 3 }, at('2026-09-29T10:00:00Z')), { date: '2026-10-02', minutes: 0 });
+  // No days: hours, from now, as before.
+  assert.deepEqual(earliestBookable({ ...shop, minNoticeDays: null }, at('2026-09-01T14:00:00Z')), { date: '2026-09-01', minutes: 17 * 60 });
+});

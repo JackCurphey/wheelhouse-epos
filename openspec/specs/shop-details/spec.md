@@ -65,3 +65,10 @@ Settings › Workshop › Online booking SHALL hold "Drop off before the booking
 #### Scenario: An hour before
 - **WHEN** the owner sets Drop off before the booking to 60
 - **THEN** a customer booked at 11:30 is told to drop off by 10:30, an hour before
+
+### Requirement: The shop sets its notice in hours or days
+Settings › Workshop › Online booking SHALL hold "Notice" as a number with hours or days (`bk-settings-notice-days`; Jack, 19 Oct), saved when changed.
+
+#### Scenario: Switching to days
+- **WHEN** the owner sets Notice to 1 and chooses days
+- **THEN** it saves one day's notice, and the note says 1 day lets a customer book any time tomorrow

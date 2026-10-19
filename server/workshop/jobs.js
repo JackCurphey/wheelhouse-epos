@@ -182,6 +182,8 @@ export function toCapacitySettings(row) {
     dropoffWindowStart: row.dropoff_window_start,
     dropoffWindowEnd: row.dropoff_window_end,
     minNoticeMinutes: row.min_notice_minutes,
+    // Notice in whole days, or null for hours (Jack, 19 Oct; migration 044).
+    minNoticeDays: row.min_notice_days ?? null,
     timeZone: row.time_zone,
   };
 }
