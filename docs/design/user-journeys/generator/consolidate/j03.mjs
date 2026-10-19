@@ -16,6 +16,7 @@ export default {
   'bk-details': keep(36),
   'bk-details-deposit': into('bk-details', 'Book 2, 9', "signed-in contact line, 'Deposit · £[deposit]' card form, 'Pay £[deposit] and send request'"),
   // Sending: 5 of the 8 are situations of the booking page's last step
+  'bk-details-auto': into('bk-details', '19 Oct (Jack: confirm automatically)', "the shop confirms automatically: 'Confirm booking'; 'By booking, you agree to…'"),
   'bk-sending': into('bk-details', 'Book 2, 9', "button reads 'Sending…'; 'Sending your booking — this takes a moment.'"),
   'bk-card-failed': into('bk-details', 'Book 2, 9', "'The card didn’t go through.' — nothing taken, nothing booked; 'Try again'"),
   'bk-not-sent': into('bk-details', 'Book 2, 9', "'Not sent yet — check your connection.' Everything typed kept; 'Try again'"),
@@ -46,11 +47,13 @@ export default {
   'bk-page-ls': into('bk-page', 'Quote 1', "no Basket in the header"),
   'bk-cancel-ls': into('bk-cancel', 'Book 10', "cancel pop-up says 'There’s nothing to pay or refund.'"),
   // The shop's side
+  'bk-staff-confirmed': into('diary', 'Book 8; 19 Oct (Jack: answer 1)', "a booking confirmed straight away is a normal block, marked 'New, booked online' until someone opens it; nothing to answer"),
   'bk-staff-request': into('diary', '', "request pop-up: 'Deposit paid £[deposit]', 'Customer OK up to £[amount]', updates choice"),
   'bk-staff-decline': into('diary', '', "'Decline booking request' pop-up: 'deposit is refunded automatically'"),
   'bk-messages': into('set-msg-list', 'Receiving 7', "scrolled to 'Booking messages': six rows, 'Request received' to 'Booking cancelled'"),
   'bk-settings': keep(1),
   'bk-settings-mode-change': into('bk-settings', 'Book journey 24 Sep (mode change from a chosen date); 19 Oct', "'Book bikes in for the whole day?' pop-up: 'Starting on' [date], 'Tomorrow at the earliest', 'Bookings already made keep their set times…', Cancel and 'Change from [date]'"),
+  'bk-settings-auto': into('bk-settings', 'Book 8; 19 Oct', "'Confirm bookings automatically' On; the folded summary reads '… confirmed straight away'"),
   'bk-settings-mode-scheduled': into('bk-settings', 'Book journey 24 Sep; 19 Oct', "'Changing to the whole day from [date]. Bookings already made keep their set times.' with 'Cancel the change'"),
   'bk-settings-notice-days': into('bk-settings', '19 Oct (Jack: notice in hours or days)', "'Notice' [1] with 'days' chosen: 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.'"),
   'bk-settings-whole-day': into('bk-settings', 'Booking mode 2026-09-04 §2; 19 Oct (Jack: worded as a set time or the whole day)', "'Bikes are booked in for' 'The whole day', and a 'Drop-off window' row, [09:00] to [10:00]"),

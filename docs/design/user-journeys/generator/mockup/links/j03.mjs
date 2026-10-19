@@ -40,6 +40,7 @@ const map = {
   'bk-resume': { 'Send booking request': go('bk-request'), 'Carry on': go('bk-details'), 'Start again': go('bk-service') },
   'bk-sending': { 'Sending…': go('bk-request') },
   'bk-not-sent': { 'Try again': go('bk-request') },
+  'bk-details-auto': { 'Confirm booking': go('bk-confirmed') },
   'bk-details-deposit': { 'Pay £[deposit] and send request': go('bk-request-deposit') },
   'bk-card-failed': { 'Try again': go('bk-request-deposit') },
   'bk-checking-payment': { 'Check again': go('bk-request-deposit') },
@@ -58,6 +59,7 @@ const map = {
   // Settings
   // Coverage walk 7 M1: the Services and Mechanics rows open their sections.
   'bk-settings-notice-days': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
+  'bk-settings-auto': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings-reserve': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings-mode-scheduled': { 'Cancel the change': go('bk-settings-reserve'), 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings-mode-change': { Cancel: go('bk-settings-reserve'), 'Change from [date]': go('bk-settings-mode-scheduled'), Close: go('bk-settings-reserve') },
