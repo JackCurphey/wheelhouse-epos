@@ -33,7 +33,11 @@ stage). **Check #265:** it changed his server file without his approval,
 merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
 job with money paid on its order or the bike in the shop (409
 `settle_first`), and deletes the job's quotes and print tasks first.
-**Check #289 too** (19 Oct): migration 044 adds
+**Check #295 too** (19 Oct): migration 045 adds
+`workshop_settings.confirmation_note` (NOT NULL, default the drawn sentence);
+your `workshop-settings.js` sends and saves `confirmationNote` (trimmed, up to
+300 characters, empty for none); your `portal.js` `bookingLinkView` returns it
+once the booking is confirmed or a change waits. **Check #289 too** (19 Oct): migration 044 adds
 `workshop_settings.min_notice_days`; your `server/clock.js` `earliestBookable`
 starts days' notice at the start of the day N after the shop's today; your
 `workshop-settings.js` sends and saves `minNoticeDays` (1 to 28, or null for
@@ -132,7 +136,12 @@ on the 24 Sep scheduled mode change (#291). Settings › Workshop › Online
 booking now has everything drawn except deposits and the other rows. Then
 the "Show prices on the booking page" switch in that box; screens only, the
 server already hid prices when it was off (#293). "Confirm bookings
-automatically" is its own piece later (mostly Mark's WP-4.2). Then Files and photos on the job page,
+automatically" is its own piece later (mostly Mark's WP-4.2). Then the
+"Additional note on the confirmation" in that box: each shop's own words after
+the drop-off time on the confirmed booking page, starting with "Please bring
+the lock key, and tell us about any accessories." (#295,
+`docs/decisions/2026-10-19-confirmation-note.md`). Deposits wait for Mark's
+payment work (Jack, 19 Oct). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
