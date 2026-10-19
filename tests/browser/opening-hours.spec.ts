@@ -101,3 +101,16 @@ test('a change to the whole day is scheduled and cancelled', async ({ page, cont
   await expect.poll(async () => (await staff('/api/workshop-settings')).body.nextBookingMode).toBe(null);
   await expect(page.getByRole('button', { name: 'Cancel the change' })).toHaveCount(0);
 });
+
+// Show prices on the booking page (Jack, 19 Oct, answer 11).
+test('switching prices off on the booking page reaches the server', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  expect((await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: true } })).status).toBe(200);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  const sw = page.getByRole('switch', { name: 'Show prices on the booking page' });
+  await expect(sw).toHaveAttribute('aria-checked', 'true');
+  await sw.click();
+  await expect(sw).toHaveAttribute('aria-checked', 'false');
+  await expect.poll(async () => (await staff('/api/workshop-settings')).body.showPricesOnline).toBe(false);
+});
