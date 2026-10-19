@@ -48,3 +48,18 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
+
+// The time kept free each day (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md):
+// set in hours in Settings › Workshop › Online booking, kept in minutes.
+test('the time kept free each day saves in hours', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Start from two hours (a test shop is made with none kept free).
+  expect((await staff('/api/workshop-settings', { method: 'PUT', body: { fullDayThresholdMinutes: 120 } })).status).toBe(200);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  const box = page.getByLabel('Time kept free each day');
+  await expect(box).toHaveValue('2');
+  await box.fill('3');
+  await box.blur();
+  await expect.poll(async () => (await staff('/api/workshop-settings')).body.fullDayThresholdMinutes).toBe(180);
+});

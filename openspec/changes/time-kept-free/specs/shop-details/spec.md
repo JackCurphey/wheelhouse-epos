@@ -8,8 +8,8 @@ Settings › Workshop › Online booking SHALL hold "Time kept free each day" in
 - **THEN** it saves as 180 minutes, and online booking treats a day with less than 3 hours free as full
 
 ### Requirement: The old app's Edit workshop screen is gone
-The old app SHALL NOT have its own Edit shop › Workshop screen; its menu item SHALL open the new Settings.
+The old app SHALL NOT have its own Edit shop › Workshop screen or menu item; Edit shop SHALL open on Front desk.
 
 #### Scenario: The old menu item
-- **WHEN** someone chooses Edit shop › Workshop in the old app
-- **THEN** the new Settings page opens
+- **WHEN** someone opens Edit shop in the old app, or an old link to its Workshop page
+- **THEN** Front desk opens, and there's no Workshop item

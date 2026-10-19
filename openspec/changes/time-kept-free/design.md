@@ -10,4 +10,4 @@ A "Workshop" section already holds Mechanics; it gains an "Online booking" box a
 
 ## The old app
 
-`OFFICE_TABS` › Edit Shop loses its "Workshop" child; `#office/edit-shop/workshop` and `#office/edit-shop` open the new Settings and Front desk respectively; `renderEditWorkshop` and what only it used go.
+`OFFICE_TABS` › Edit Shop loses its "Workshop" child; `#office/edit-shop` and an old `#office/edit-shop/workshop` open Front desk; `renderEditWorkshop` and what only it used go.

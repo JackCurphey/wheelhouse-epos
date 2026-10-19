@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120 };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -51,6 +51,7 @@ async function openSettings({ me = OWNER } = {}) {
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') {
       if (putFails) return reply(500, { error: 'Internal error' });
       if (refuseHours && body.openingHours) return reply(400, { error: refuseHours });
+      if (refuseHours && body.fullDayThresholdMinutes !== undefined) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -235,4 +236,47 @@ test('someone who isn’t the Owner sees Settings aren’t part of your role, an
   assert.ok(ui.queryByRole('switch') === null);
   assert.ok(ui.queryByLabelText('Shop name') === null);
   assert.ok(ui.queryByRole('heading', { name: 'Opening hours' }) === null);
+});
+
+// The time kept free each day (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md;
+// drawn as bk-settings-reserve): in hours, saved in minutes when the box is left.
+const reservePuts = () => calls.filter((c) => c.method === 'PUT' && c.body.fullDayThresholdMinutes !== undefined).map((c) => c.body);
+
+test('Online booking shows the time kept free each day in hours, with its hint and note', async () => {
+  const { ui } = await openSettings();
+  assert.ok(has(await ui.findByRole('heading', { name: 'Online booking' })));
+  const box = await ui.findByLabelText('Time kept free each day');
+  await (await import('@testing-library/react')).waitFor(() => assert.equal(box.value, '2'));
+  assert.ok(has(ui.queryByText('For lunches, admin and little jobs between bikes')));
+  assert.ok(has(ui.queryByText('Online booking treats a day as full once less than this is left.')));
+});
+
+test('leaving the box saves the hours as minutes, only if they changed', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Time kept free each day');
+  await waitFor(() => assert.equal(box.value, '2'));
+  fireEvent.blur(box);
+  fireEvent.change(box, { target: { value: '2.5' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(reservePuts(), [{ fullDayThresholdMinutes: 150 }]));
+});
+
+test('hours that aren’t a half hour from 0 to 8 are refused without saving', async () => {
+  const { ui, fireEvent } = await openSettings();
+  const box = await ui.findByLabelText('Time kept free each day');
+  for (const bad of ['9', '1.2', '-1', 'two']) {
+    fireEvent.change(box, { target: { value: bad } });
+    fireEvent.blur(box);
+    assert.ok(has(await ui.findByText('Enter 0 to 8 hours, in half hours')), bad);
+  }
+  assert.deepEqual(reservePuts(), []);
+});
+
+test('a server refusal of the time kept free shows its words', async () => {
+  const { ui, fireEvent } = await openSettings();
+  refuseHours = 'Only the shop\'s owner can change settings';
+  const box = await ui.findByLabelText('Time kept free each day');
+  fireEvent.change(box, { target: { value: '3' } });
+  fireEvent.blur(box);
+  assert.ok(has(await ui.findByText('Only the shop\'s owner can change settings')));
 });
