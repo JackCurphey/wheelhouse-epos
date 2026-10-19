@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings() {
   calls = [];
-  settings = { openingHours: WEEK, showSignOffToCustomers: false };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -170,20 +170,22 @@ const hoursPuts = () => calls.filter((c) => c.method === 'PUT' && c.url === '/ap
 test('Opening hours shows Monday to Sunday, each with its hours or Closed', async () => {
   const { ui } = await openSettings();
   assert.ok(has(await ui.findByRole('heading', { name: 'Opening hours' })));
-  const days = ui.getAllByRole('button', { name: /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (open|closed)$/ }).map((b) => b.getAttribute('aria-label'));
-  assert.deepEqual(days, ['Monday open', 'Tuesday open', 'Wednesday open', 'Thursday open', 'Friday open', 'Saturday open', 'Sunday closed']);
+  // A fixed name per day; whether it's open is its pressed state (fresh review).
+  const days = ui.getAllByRole('button', { name: /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) open$/ }).map((b) => [b.getAttribute('aria-label'), b.getAttribute('aria-pressed'), b.textContent]);
+  assert.deepEqual(days, [['Monday open', 'true', 'Open'], ['Tuesday open', 'true', 'Open'], ['Wednesday open', 'true', 'Open'], ['Thursday open', 'true', 'Open'], ['Friday open', 'true', 'Open'], ['Saturday open', 'true', 'Open'], ['Sunday open', 'false', 'Closed']]);
   assert.equal(ui.getByLabelText('Monday opens').value, '09:00');
   assert.equal(ui.getByLabelText('Saturday closes').value, '17:00');
   assert.ok(ui.queryByLabelText('Sunday opens') === null);
   assert.ok(has(ui.queryByText('Online booking only offers mechanics on the days they’re in, set on each person.')));
 });
 
-test('switching Sunday open saves the whole week, Sunday at the usual hours', async () => {
+test('switching Sunday open saves the whole week, Sunday at the shop’s usual hours', async () => {
   const { ui, fireEvent, waitFor } = await openSettings();
-  fireEvent.click(await ui.findByRole('button', { name: 'Sunday closed' }));
+  fireEvent.click(await ui.findByRole('button', { name: 'Sunday open' }));
   await waitFor(() => assert.equal(hoursPuts().length, 1));
-  assert.deepEqual(hoursPuts()[0], [{ weekday: 0, open: '09:00', close: '17:00' }, ...WEEK]);
-  assert.ok(has(await ui.findByRole('button', { name: 'Sunday open' })));
+  // The usual hours are the shop's own (openingTime and closingTime), not the first open day's.
+  assert.deepEqual(hoursPuts()[0], [{ weekday: 0, open: '08:00', close: '18:00' }, ...WEEK]);
+  await waitFor(() => assert.equal(ui.getByRole('button', { name: 'Sunday open' }).getAttribute('aria-pressed'), 'true'));
 });
 
 test('a shorter Saturday saves, and closing Monday drops it', async () => {
@@ -202,4 +204,24 @@ test('a refusal says why, and the week goes back as it was', async () => {
   fireEvent.change(await ui.findByLabelText('Friday closes'), { target: { value: '08:00' } });
   assert.ok(has(await ui.findByText('Closing time must be after opening time')));
   assert.equal(ui.getByLabelText('Friday closes').value, '17:00');
+});
+
+// Fresh review: a time the old app saved outside 05:00 to 23:00 shows as it is.
+test('an early time saved by the old app shows as it is', async () => {
+  const { ui } = await openSettings();
+  settings.openingHours = [{ weekday: 1, open: '04:00', close: '12:00' }];
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  await (await import('@testing-library/react')).waitFor(() => assert.equal(ui.getByLabelText('Monday opens').value, '04:00'));
+});
+
+// Fresh review: the time pickers stay usable while a save is on its way, and
+// the latest choice is the one that's saved.
+test('changing a time twice quickly saves the latest, and the picker stays usable', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const closes = await ui.findByLabelText('Saturday closes');
+  fireEvent.change(closes, { target: { value: '16:00' } });
+  assert.equal(closes.disabled, false);
+  fireEvent.change(closes, { target: { value: '14:00' } });
+  await waitFor(() => assert.equal(hoursPuts().at(-1)?.find((d) => d.weekday === 6)?.close, '14:00'));
+  await waitFor(() => assert.equal(closes.value, '14:00'));
 });

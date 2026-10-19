@@ -8,4 +8,4 @@
 
 ## 2. Checks
 
-- [ ] 2.1 A fresh review; `npm test` and `npm run test:browser` pass
+- [x] 2.1 A fresh review; `npm test` and `npm run test:browser` pass

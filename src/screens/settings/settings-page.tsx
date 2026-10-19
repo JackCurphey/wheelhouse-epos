@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 
@@ -10,7 +10,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[] };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -145,20 +145,37 @@ function HoursBox() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const [draft, setDraft] = useState<DayHours[] | null>(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // While one save is on its way, the latest choice waits and goes next, so
+  // the pickers stay usable from the keyboard (fresh review).
+  const busy = useRef(false);
+  const pending = useRef<DayHours[] | null>(null);
   const week = draft ?? settings.data?.openingHours ?? [];
-  const usual = week[0] ? { open: week[0].open, close: week[0].close } : { open: '09:00', close: '17:00' };
+  // A day turned Open starts at the shop's usual hours.
+  const usual = { open: settings.data?.openingTime ?? '09:00', close: settings.data?.closingTime ?? '17:00' };
 
   async function saveWeek(next: DayHours[]) {
     const sorted = [...next].sort((a, b) => a.weekday - b.weekday);
     setDraft(sorted);
     setError(null);
+    if (busy.current) { pending.current = sorted; return; }
+    busy.current = true;
+    setSaving(true);
+    let sending: DayHours[] | null = sorted;
     try {
-      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { openingHours: sorted }, { method: 'PUT' });
-      queryClient.setQueryData(['workshop-settings'], saved);
+      while (sending) {
+        const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { openingHours: sending }, { method: 'PUT' });
+        queryClient.setQueryData(['workshop-settings'], saved);
+        sending = pending.current;
+        pending.current = null;
+      }
     } catch (err) {
+      pending.current = null;
       setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
     } finally {
+      busy.current = false;
+      setSaving(false);
       setDraft(null);
     }
   }
@@ -169,6 +186,8 @@ function HoursBox() {
   const setTime = (weekday: number, which: 'open' | 'close', value: string) =>
     void saveWeek(week.map((d) => (d.weekday === weekday ? { ...d, [which]: value } : d)));
   const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+  // A time saved elsewhere outside the list still shows as it is (fresh review).
+  const options = (value: string) => (HOURS.includes(value) ? HOURS : [value, ...HOURS].sort());
 
   return (
     <section aria-labelledby="set-hours" className="flex flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
@@ -176,31 +195,36 @@ function HoursBox() {
       {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the opening hours. Try again in a moment.</p> : null}
       {WEEKDAYS.map(([weekday, name]) => {
         const day = week.find((d) => d.weekday === weekday);
+        // As drawn: on a phone the day and Open/Closed share a line, the times
+        // under them; wider, one line with Open/Closed at the end.
         return (
-          <div key={weekday} className="flex min-h-[50px] flex-wrap items-center gap-3 border-t border-[var(--wh-border)] py-1.5">
-            <span className="w-24 text-[15px] font-semibold">{name}</span>
+          <div key={weekday} className="flex flex-col gap-2 border-t border-[var(--wh-border)] py-2 md:min-h-[50px] md:flex-row md:items-center md:gap-3 md:py-1">
+            <div className="flex items-center justify-between gap-3 md:contents">
+              <span className="text-[15px] font-semibold md:order-1 md:w-24">{name}</span>
+              <button
+                type="button"
+                aria-pressed={Boolean(day)}
+                aria-label={`${name} open`}
+                disabled={!settings.data || saving}
+                onClick={() => toggle(weekday)}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold md:order-4 ${day ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] text-[var(--wh-muted)]'}`}
+              >
+                {day ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg> : null}
+                {day ? 'Open' : 'Closed'}
+              </button>
+            </div>
             {day ? (
-              <span className="flex items-center gap-2">
-                <select aria-label={`${name} opens`} value={day.open} disabled={draft !== null} onChange={(e) => setTime(weekday, 'open', e.target.value)} className={select}>
-                  {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              <span className="flex items-center gap-2 md:order-2">
+                <select aria-label={`${name} opens`} value={day.open} disabled={!settings.data} onChange={(e) => setTime(weekday, 'open', e.target.value)} className={select}>
+                  {options(day.open).map((h) => <option key={h} value={h}>{h}</option>)}
                 </select>
                 <span className="text-[var(--wh-muted)]">to</span>
-                <select aria-label={`${name} closes`} value={day.close} disabled={draft !== null} onChange={(e) => setTime(weekday, 'close', e.target.value)} className={select}>
-                  {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                <select aria-label={`${name} closes`} value={day.close} disabled={!settings.data} onChange={(e) => setTime(weekday, 'close', e.target.value)} className={select}>
+                  {options(day.close).map((h) => <option key={h} value={h}>{h}</option>)}
                 </select>
               </span>
             ) : null}
-            <span className="grow" />
-            <button
-              type="button"
-              aria-pressed={Boolean(day)}
-              aria-label={`${name} ${day ? 'open' : 'closed'}`}
-              disabled={!settings.data || draft !== null}
-              onClick={() => toggle(weekday)}
-              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${day ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-[var(--wh-border)] text-[var(--wh-muted)]'}`}
-            >
-              {day ? 'Open' : 'Closed'}
-            </button>
+            <span className="hidden grow md:order-3 md:block" />
           </div>
         );
       })}

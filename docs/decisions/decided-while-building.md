@@ -452,9 +452,11 @@ silent:
 2. **The times are picked from whole hours (05:00 to 23:00)**, as the server
    and the diary need, where the drawing shows boxes. *Pattern:* the
    server's "Opening hours must be on the hour".
-3. **A day turned Open starts at the first open day's hours**, else 09:00 to
-   17:00. Each change saves at once; a refusal shows its words and the week
-   goes back. *Pattern:* the server keeps a reopened day at the usual hours.
+3. **A day turned Open starts at the shop's usual hours** (the opening and
+   closing times the old app set). Each change saves at once; a time chosen
+   while a save is on its way goes next, so the pickers stay usable; a
+   refusal shows its words and the week goes back. *Pattern:* the server
+   keeps a reopened day at the usual hours.
 4. **Only the drawn note's second sentence shows** ("Online booking only
    offers mechanics on the days they're in, set on each person."), since
    End of day's Close the day isn't built. *Pattern:* nothing shown that

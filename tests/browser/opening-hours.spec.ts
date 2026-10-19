@@ -36,8 +36,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.goto(`${server!.baseUrl}/workshop/settings`);
     await page.getByLabel('Saturday closes').selectOption('16:00');
     await expect.poll(async () => (await staff('/api/workshop-settings')).body.openingHours.find((d: { weekday: number }) => d.weekday === 6)?.close).toBe('16:00');
+    // As drawn on a phone and wider: Open/Closed sits on the day's line, at the end.
+    const day = (await page.getByText('Friday', { exact: true }).boundingBox())!;
+    const toggle = (await page.getByRole('button', { name: 'Friday open' }).boundingBox())!;
+    expect(Math.abs(toggle.y + toggle.height / 2 - (day.y + day.height / 2))).toBeLessThan(12);
+    expect(toggle.x).toBeGreaterThan(day.x + day.width);
     await page.getByRole('button', { name: 'Friday open' }).click();
-    await expect(page.getByRole('button', { name: 'Friday closed' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Friday open' })).toHaveAttribute('aria-pressed', 'false');
     await expect.poll(async () => (await staff('/api/workshop-settings')).body.openingHours.map((d: { weekday: number }) => d.weekday)).toEqual([1, 2, 3, 4, 6]);
     // Nothing runs off the side of the page.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
