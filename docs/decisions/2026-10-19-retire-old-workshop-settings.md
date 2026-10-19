@@ -70,3 +70,6 @@ The threshold has no drawing.
    offered as: the "Drop your bike off by 11:00, half an hour before your
    booking" line on the real booking pages, plus the "Drop off before the
    booking" setting, with one small addition in Mark's booking-link file).
+8. **Build notice in hours or days next** (Jack, 19 Oct: "1", offered as:
+   notice in hours or days, a small server change in Mark's area then the
+   Settings row). Drawn in answer 4 (`bk-settings-notice-days`).
