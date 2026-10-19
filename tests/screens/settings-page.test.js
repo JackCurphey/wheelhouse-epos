@@ -26,7 +26,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function openSettings() {
+async function openSettings({ me = OWNER } = {}) {
   calls = [];
   settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false };
   refuseHours = null;
@@ -39,7 +39,7 @@ async function openSettings() {
     calls.push({ url, method, body });
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
-    if (u.pathname === '/api/auth/me') return reply(200, OWNER);
+    if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/shop-details' && method === 'PUT') {
       if (detailsFail) return reply(500, { error: 'Internal error' });
       details = { ...details, ...body };
@@ -62,7 +62,7 @@ async function openSettings() {
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  await ui.findByRole('heading', { name: 'Workshop' });
+  await ui.findByRole('heading', { name: me.isOwner ? 'Workshop' : 'Settings aren’t part of your role' });
   return { ...rtl, ui };
 }
 const has = (q) => Boolean(q);
@@ -224,4 +224,15 @@ test('changing a time twice quickly saves the latest, and the picker stays usabl
   fireEvent.change(closes, { target: { value: '14:00' } });
   await waitFor(() => assert.equal(hoursPuts().at(-1)?.find((d) => d.weekday === 6)?.close, '14:00'));
   await waitFor(() => assert.equal(closes.value, '14:00'));
+});
+
+// Settings for the Owner only, until roles are built (Jack, 19 Oct,
+// docs/decisions/2026-10-19-owner-only-settings.md; drawn as auth-noaccess).
+test('someone who isn’t the Owner sees Settings aren’t part of your role, and no settings', async () => {
+  const { ui } = await openSettings({ me: { ...OWNER, name: 'Jo Taylor', isOwner: false, employee: { id: 21, name: 'Jo Taylor', isCashier: true } } });
+  assert.ok(has(ui.queryByText('Only the shop’s owner can change settings for now. Ask the owner if you need something changed.')));
+  assert.ok(has(ui.queryByRole('link', { name: 'Go to the till' })));
+  assert.ok(ui.queryByRole('switch') === null);
+  assert.ok(ui.queryByLabelText('Shop name') === null);
+  assert.ok(ui.queryByRole('heading', { name: 'Opening hours' }) === null);
 });

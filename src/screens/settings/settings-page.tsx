@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { useSession } from '@/lib/auth/use-session.ts';
+import { ROUTES } from '@/staff/routes.ts';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -234,7 +237,35 @@ function HoursBox() {
   );
 }
 
+/**
+ * Settings for the Owner only, until roles are built (Jack, 19 Oct,
+ * docs/decisions/2026-10-19-owner-only-settings.md): anyone else sees the
+ * drawn auth-noaccess card, its words fitted to Settings and to there being
+ * no Managers yet. The server refuses their changes too.
+ */
+function NoAccess() {
+  return (
+    <div className="mx-auto w-full max-w-[520px] p-5">
+      <div className="flex flex-col gap-3.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-7">
+        <span aria-hidden="true" className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+        </span>
+        <h2 className="m-0 text-[22px] font-bold">Settings aren’t part of your role</h2>
+        <p className="m-0 text-[15px]">Only the shop’s owner can change settings for now. Ask the owner if you need something changed.</p>
+        <div><Link to={ROUTES.till} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-input-border)] px-4 font-semibold">Go to the till</Link></div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPage() {
+  const session = useSession();
+  if (session.status !== 'signed-in') return null;
+  if (!session.user.isOwner) return <NoAccess />;
+  return <OwnerSettings />;
+}
+
+function OwnerSettings() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const [saving, setSaving] = useState(false);

@@ -3,6 +3,7 @@
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
+import { ownerOnly } from '../lib/owner-only.js';
 import { dbExec, prepare } from '../db.js';
 import { badRequest, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 
@@ -79,6 +80,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
     if (body === null || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the shop’s details');
     const sets = [];

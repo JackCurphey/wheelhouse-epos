@@ -8,6 +8,7 @@
 // security already bound, and needs a staff session. Mark's file; a change to
 // what the diary or New job receives needs Jack's approval (#180, 15 Oct).
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
+import { ownerOnly } from '../lib/owner-only.js';
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
@@ -280,6 +281,7 @@ export function register(route) {
 
   // screens: booking-settings, hours
   route('PUT', '/api/workshop-settings', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
     const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     const body = await readJsonBody(req);
     const openingTime = body.openingTime !== undefined ? String(body.openingTime).trim() : existing.opening_time;
