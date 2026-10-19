@@ -450,3 +450,15 @@ test('a drop-off today is refused once now plus the notice reaches the window\'s
   const inTime = await shopWith({ bookingMode: 'dropoff', minNoticeMinutes: 120 }, 'Eve'); // earliest 09:00
   assert.equal((await inTime({})).status, 201);
 });
+
+// Notice in days (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md
+// answers 4 and 8; fresh review): the booking check follows it too - nothing
+// today, tomorrow from opening, with the hours set far longer.
+test('with one day\'s notice a booking today is refused and tomorrow at opening books', async () => {
+  const bookHere = await shopWith({ minNoticeMinutes: 2880, minNoticeDays: 1 }, 'Fay');
+  const today = await bookHere({ jobDate: PINNED_TODAY, startTime: '15:00' });
+  assert.equal(today.status, 400, JSON.stringify(today.body));
+  assert.deepEqual(today.body, { error: TOO_SOON });
+  const tomorrow = await bookHere({ jobDate: '2026-09-02', startTime: '09:00' });
+  assert.equal(tomorrow.status, 201, JSON.stringify(tomorrow.body));
+});

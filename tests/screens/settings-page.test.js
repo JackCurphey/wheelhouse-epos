@@ -358,6 +358,17 @@ test('notice out of range is refused in the screen', async () => {
   assert.ok(has(await ui.findByText('Enter 0 to 168 hours')));
   fireEvent.change(box, { target: { value: '0' } });
   fireEvent.click(ui.getByRole('radio', { name: 'days' }));
-  assert.ok(has(await ui.findByText('Enter 1 to 60 days')));
+  assert.ok(has(await ui.findByText('Enter 1 to 28 days')));
   assert.deepEqual(noticePuts(), []);
+});
+
+// Fresh review: a part-hour saved before switches to days rounded up.
+test('a part-hour switches to days rounded up', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  settings.minNoticeMinutes = 90;
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  const box = await ui.findByLabelText('Notice');
+  await waitFor(() => assert.equal(box.value, '1.5'));
+  fireEvent.click(ui.getByRole('radio', { name: 'days' }));
+  await waitFor(() => assert.deepEqual(noticePuts().at(-1), { minNoticeDays: 2 }));
 });

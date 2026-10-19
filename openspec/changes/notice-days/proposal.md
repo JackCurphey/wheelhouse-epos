@@ -9,7 +9,7 @@ customer book any time tomorrow, whatever the time now.
 
 ## What Changes
 
-- **Server:** `workshop_settings.min_notice_days` (migration 044, empty = notice in hours). When set, the earliest bookable moment is the start of the day that many days from the shop's today; otherwise it stays now plus `min_notice_minutes`. `GET`/`PUT /api/workshop-settings` carry `minNoticeDays` (1 to 60, or null for hours).
+- **Server:** `workshop_settings.min_notice_days` (migration 044, empty = notice in hours). When set, the earliest bookable moment is the start of the day that many days from the shop's today; otherwise it stays now plus `min_notice_minutes`. `GET`/`PUT /api/workshop-settings` carry `minNoticeDays` (1 to 28, or null for hours: the booking page shows dates to the end of next month).
 - **Settings › Workshop › Online booking:** "Notice", "How far ahead customers must book", a number with hours or days (drawn as `bk-settings-notice-days`), saved when changed, Owner only, with the drawn note.
 
 ## Lane, work package, drawings and decisions

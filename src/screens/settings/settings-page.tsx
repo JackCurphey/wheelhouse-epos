@@ -341,10 +341,11 @@ function NoticeSetting() {
     if (to === 'hours') {
       return text.trim() !== '' && Number.isInteger(n) && n >= 0 && n <= 168 ? { body: { minNoticeMinutes: n * 60, minNoticeDays: null } } : { error: 'Enter 0 to 168 hours' };
     }
-    return text.trim() !== '' && Number.isInteger(n) && n >= 1 && n <= 60 ? { body: { minNoticeDays: n } } : { error: 'Enter 1 to 60 days' };
+    return text.trim() !== '' && Number.isInteger(n) && n >= 1 && n <= 28 ? { body: { minNoticeDays: n } } : { error: 'Enter 1 to 28 days' };
   }
   async function save(to: 'hours' | 'days') {
-    const text = typed ?? stored;
+    // A part-hour saved before (say 1.5) switches to days rounded up (fresh review).
+    const text = typed ?? (to === 'days' && unit === 'hours' ? String(Math.max(1, Math.ceil(Number(stored)))) : stored);
     if (to === unit && (typed === null || text === stored)) { setTyped(null); return; }
     const next = bodyFor(text, to);
     if ('error' in next) { setNote({ ok: false, text: next.error }); return; }
@@ -364,6 +365,9 @@ function NoticeSetting() {
       role="radio"
       aria-checked={unit === to}
       disabled={!data}
+      // Keeps the cursor in the box, so picking a unit right after typing
+      // sends one save, not one from leaving the box as well (fresh review).
+      onMouseDown={(e) => e.preventDefault()}
       onClick={() => void save(to)}
       className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${unit === to ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
     >

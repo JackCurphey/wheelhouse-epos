@@ -375,8 +375,9 @@ export function register(route) {
     let minNoticeDays = existing.min_notice_days ?? null;
     if (body.minNoticeDays !== undefined) {
       minNoticeDays = body.minNoticeDays;
-      if (minNoticeDays !== null && !(Number.isInteger(minNoticeDays) && minNoticeDays >= 1 && minNoticeDays <= 60)) {
-        return badRequest(res, 'Notice in days must be a whole number from 1 to 60');
+      // Up to 28: the booking page shows dates to the end of next month (fresh review).
+      if (minNoticeDays !== null && !(Number.isInteger(minNoticeDays) && minNoticeDays >= 1 && minNoticeDays <= 28)) {
+        return badRequest(res, 'Notice in days must be a whole number from 1 to 28');
       }
     }
     let minNoticeMinutes = existing.min_notice_minutes;

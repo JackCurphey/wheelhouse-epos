@@ -73,7 +73,11 @@ test('notice switches to whole days and saves', async ({ page, context }) => {
   const box = page.getByLabel('Notice', { exact: true });
   await expect(box).toHaveValue('2');
   await box.fill('1');
+  // Fresh review: typing then picking days sends one save, not one from the box as well.
+  const puts: string[] = [];
+  page.on('request', (r) => { if (r.method() === 'PUT' && r.url().endsWith('/api/workshop-settings')) puts.push(r.postData() ?? ''); });
   await page.getByRole('radio', { name: 'days' }).click();
   await expect.poll(async () => (await staff('/api/workshop-settings')).body.minNoticeDays).toBe(1);
+  expect(puts).toEqual([JSON.stringify({ minNoticeDays: 1 })]);
   await expect(page.getByText('Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.')).toBeVisible();
 });

@@ -493,7 +493,8 @@ silent:
 
 ### 19 Oct 2026: notice in hours or days (answers 4 and 8)
 
-1. **Hours are whole hours from 0 to 168, days whole days from 1 to 60;
+1. **Hours are whole hours from 0 to 168, days whole days from 1 to 28
+   (the booking page shows dates only to the end of next month);
    choosing the other unit saves the box's number in that unit**, and the
    note follows the unit chosen. *Pattern:* bk-settings-notice-days, and
    the server's existing notice limit of a week.
