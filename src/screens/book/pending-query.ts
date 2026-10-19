@@ -39,6 +39,8 @@ export type BookingLink = {
   checkedBy?: string | null;
   /** When to drop the bike off, once the booking stands (Jack, 19 Oct): a set time's, or the whole day's window. */
   dropOff?: { by: string; booked: string; leadMinutes: number } | { from: string; to: string } | null;
+  // The shop's additional note, once the booking stands (Jack, 19 Oct).
+  confirmationNote?: string | null;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
 };

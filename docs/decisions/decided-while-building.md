@@ -520,6 +520,20 @@ silent:
    already chosen.** *Pattern:*
    bk-settings-mode-change's date box.
 
+### 19 Oct 2026: the additional note on the confirmation (`docs/decisions/2026-10-19-confirmation-note.md`)
+
+1. **Every shop, new or already set up, starts with the drawn sentence**;
+   emptying the box shows no note. *Pattern:* Jack's "starting with the
+   drawn sentence"; the receipt words box, where empty prints nothing.
+2. **Up to 300 characters, trimmed.** *Pattern:* the receipt words box's
+   limit (500), shorter since it sits in a sentence on a phone.
+3. **The note shows once the booking stands (confirmed, or a change to it
+   waiting), also when there's no drop-off line**, not while a request waits
+   or once the bike is in. *Pattern:* the drop-off line's own rule
+   (19 Oct item 1 above).
+4. **The box shows in both booking modes, after the drop-off row.**
+   *Pattern:* bk-settings, where the drawing puts it.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
