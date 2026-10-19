@@ -509,11 +509,15 @@ silent:
    drop their bike off before it."**, and its coming-change line "…keep
    their days."; only the whole-day direction is drawn. *Pattern:*
    bk-settings-mode-change, turned round.
-2. **The drop-off window shows while the whole day is today's mode or the
-   coming one**, so a shop can set it before the change starts; times every
-   half hour from 05:00 to 22:00. *Pattern:* bk-settings-whole-day.
+2. **The drop-off window shows once the whole day is the shop's mode**, as
+   bk-settings-mode-scheduled draws it (not while the change is only
+   coming; until then the shop's window, 09:00 to 10:00 to start, applies);
+   times every half hour from 05:00 to 22:00. *Pattern:*
+   bk-settings-whole-day and bk-settings-mode-scheduled.
 3. **The day is picked with the device's own date picker, tomorrow at the
-   earliest; "Change from [day]" waits until a day is picked.** *Pattern:*
+   earliest; the button reads "Change from…" and waits until a day is
+   picked; changing the date of a coming change starts from the date
+   already chosen.** *Pattern:*
    bk-settings-mode-change's date box.
 
 ## Decided here, for Jack to overrule

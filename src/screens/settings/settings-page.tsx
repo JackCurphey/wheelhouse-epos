@@ -416,7 +416,7 @@ const MODE_WORDS: Record<string, string> = { timed: 'a set time', dropoff: 'the 
  * answers 2, 9 and 10; drawn as bk-settings-mode-change, bk-settings-mode-scheduled,
  * bk-settings-whole-day). A change of mode takes effect from a day the shop
  * chooses, tomorrow at the earliest, and bookings keep their shape (Jack,
- * 24 Sep); the drop-off window shows while the whole day is today's or coming.
+ * 24 Sep); the drop-off window shows while the whole day is the shop's mode.
  */
 function ModeSetting() {
   const queryClient = useQueryClient();
@@ -441,9 +441,13 @@ function ModeSetting() {
       setBusy(false);
     }
   }
-  const choose = (to: string) => { if (to !== mode) { setAsking(to); setFrom(''); setError(null); } };
+  // Changing the date of a coming change starts from the date already chosen (fresh review).
+  const choose = (to: string) => { if (to !== mode) { setAsking(to); setFrom(data?.nextBookingMode === to ? data.nextBookingModeFrom ?? '' : ''); setError(null); } };
+  // A refusal belongs to the pop-up: closing it clears it (fresh review).
+  const close = () => { setAsking(null); setError(null); };
   const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
-  const showWindow = mode === 'dropoff' || data?.nextBookingMode === 'dropoff';
+  // As drawn (bk-settings-mode-scheduled): the window shows once the whole day is the shop's mode.
+  const showWindow = mode === 'dropoff';
   const windowFrom = data?.dropoffWindowStart ?? '09:00';
   const windowTo = data?.dropoffWindowEnd ?? '10:00';
   const times = (v: string) => (HALF_HOURS.includes(v) ? HALF_HOURS : [...HALF_HOURS, v].sort());
@@ -495,7 +499,7 @@ function ModeSetting() {
         </div>
       ) : null}
       {error && !asking ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
-      <Dialog open={asking !== null} onOpenChange={(o) => { if (!o) setAsking(null); }} aria-labelledby="mode-title" className="md:max-w-[480px]">
+      <Dialog open={asking !== null} onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="mode-title" className="md:max-w-[480px]">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="mode-title">{`Book bikes in for ${asking ? MODE_WORDS[asking] : ''}?`}</DialogTitle>
@@ -514,9 +518,9 @@ function ModeSetting() {
           {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
         </DialogBody>
         <DialogFooter className="flex justify-between gap-2.5">
-          <Button variant="ghost" onClick={() => setAsking(null)}>Cancel</Button>
-          <Button variant="primary" disabled={!from || busy} onClick={() => void put({ nextBookingMode: asking, nextBookingModeFrom: from }, () => setAsking(null))}>
-            {from ? `Change from ${shortDay(from)}` : 'Change from [day]'}
+          <Button variant="ghost" onClick={close}>Cancel</Button>
+          <Button variant="primary" disabled={!from || busy} onClick={() => void put({ nextBookingMode: asking, nextBookingModeFrom: from }, close)}>
+            {from ? `Change from ${shortDay(from)}` : 'Change from…'}
           </Button>
         </DialogFooter>
       </Dialog>

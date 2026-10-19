@@ -12,7 +12,7 @@ Settings › Workshop › Online booking SHALL show whether bikes are booked in 
 - **THEN** the coming change is removed and bikes stay booked in for a set time
 
 ### Requirement: The shop sets its drop-off window
-While bikes are, or will be, booked in for the whole day, Settings SHALL show the "Drop-off window", from and to, saved when changed (`bk-settings-whole-day`).
+While bikes are booked in for the whole day, Settings SHALL show the "Drop-off window", from and to, saved when changed (`bk-settings-whole-day`).
 
 #### Scenario: An earlier window
 - **WHEN** the owner sets the window to 08:30 to 10:00

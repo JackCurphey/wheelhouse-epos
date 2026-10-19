@@ -13,7 +13,7 @@ screen for it.
 - **Settings › Workshop › Online booking:** "How bikes are booked in", "Bikes are booked in for: A set time / The whole day", with the drawn note.
   - Choosing the other one opens "Book bikes in for the whole day?" (or "…for a set time?"), "From a day you choose": "Starting on" a date, "Tomorrow at the earliest", the drawn note, Cancel or "Change from [day]" (`bk-settings-mode-change`).
   - Once chosen, the section says "Changing to the whole day from [day]. Bookings already made keep their set times." with "Cancel the change" (`bk-settings-mode-scheduled`).
-  - "Drop-off window", from and to, while bikes are (or will be) booked in for the whole day (`bk-settings-whole-day`).
+  - "Drop-off window", from and to, while bikes are booked in for the whole day (`bk-settings-whole-day`).
 - **No server change:** `PUT /api/workshop-settings` already takes `nextBookingMode` + `nextBookingModeFrom` (tomorrow or later; both null cancels) and `dropoffWindowStart`/`End`.
 
 ## Lane, work package, drawings and decisions

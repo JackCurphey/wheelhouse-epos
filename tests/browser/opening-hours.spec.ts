@@ -97,7 +97,7 @@ test('a change to the whole day is scheduled and cancelled', async ({ page, cont
   await dlg.getByRole('button', { name: /^Change from \w{3} \d{1,2} \w{3}$/ }).click();
   await expect(page.getByText(/^Changing to the whole day from \w{3} \d{1,2} \w{3}\. Bookings already made keep their set times\.$/)).toBeVisible();
   await expect.poll(async () => { const b = (await staff('/api/workshop-settings')).body; return [b.nextBookingMode, b.nextBookingModeFrom]; }).toEqual(['dropoff', day]);
-  await expect(page.getByLabel('Drop-off window starts')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel the change' }).click();
   await expect.poll(async () => (await staff('/api/workshop-settings')).body.nextBookingMode).toBe(null);
+  await expect(page.getByRole('button', { name: 'Cancel the change' })).toHaveCount(0);
 });

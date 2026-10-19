@@ -399,7 +399,7 @@ test('choosing the whole day asks from when; the change then shows, with the win
   const dlg = within(await ui.findByRole('dialog', { name: 'Book bikes in for the whole day?' }));
   assert.ok(has(dlg.queryByText('Tomorrow at the earliest')));
   assert.ok(has(dlg.queryByText('Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.')));
-  const go = dlg.getByRole('button', { name: /^Change from/ });
+  const go = dlg.getByRole('button', { name: 'Change from…' });
   assert.equal(go.disabled, true);
   fireEvent.change(dlg.getByLabelText('Starting on'), { target: { value: '2026-11-05' } });
   assert.equal(dlg.getByRole('button', { name: 'Change from Thu 5 Nov' }).disabled, false);
@@ -407,7 +407,8 @@ test('choosing the whole day asks from when; the change then shows, with the win
   await waitFor(() => assert.deepEqual(modePuts(), [{ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-11-05' }]));
   assert.ok(has(await ui.findByText((_, el) => el?.getAttribute('data-mode-change') === 'true' && el.textContent === 'Changing to the whole day from Thu 5 Nov. Bookings already made keep their set times.')));
   assert.ok(ui.queryByRole('dialog') === null);
-  assert.ok(ui.queryByLabelText('Drop-off window starts') !== null, 'the window shows for the coming whole day');
+  // As drawn (bk-settings-mode-scheduled): the window shows once the whole day is the shop's mode.
+  assert.ok(ui.queryByLabelText('Drop-off window starts') === null, 'no window until the whole day starts');
 });
 
 test('the dialog’s Cancel saves nothing', async () => {
@@ -448,4 +449,43 @@ test('a whole-day shop sets its drop-off window', async () => {
   assert.ok(has(ui.queryByText('Whole-day customers drop their bike off between these times')));
   fireEvent.change(from, { target: { value: '08:30' } });
   await waitFor(() => assert.deepEqual(modePuts(), [{ dropoffWindowStart: '08:30', dropoffWindowEnd: '10:00' }]));
+});
+
+// Fresh review: a refusal doesn't stay on the page once the pop-up closes; the
+// change back to a set time has its own words; changing the date of a coming
+// change starts from the date already chosen.
+test('a refusal clears when the pop-up is cancelled', async () => {
+  const { ui, fireEvent, within } = await openSettings();
+  refuseHours = 'A mode change must start tomorrow or later';
+  fireEvent.click(await ui.findByRole('radio', { name: 'The whole day' }));
+  const dlg = within(await ui.findByRole('dialog'));
+  fireEvent.change(dlg.getByLabelText('Starting on'), { target: { value: '2026-11-05' } });
+  fireEvent.click(dlg.getByRole('button', { name: 'Change from Thu 5 Nov' }));
+  await dlg.findByText('A mode change must start tomorrow or later');
+  fireEvent.click(dlg.getByRole('button', { name: 'Cancel' }));
+  assert.ok(ui.queryByText('A mode change must start tomorrow or later') === null);
+});
+
+test('a whole-day shop changing to a set time sees its own words', async () => {
+  const { ui, fireEvent, within, waitFor } = await openSettings();
+  settings = { ...settings, bookingMode: 'dropoff' };
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  const pill = await ui.findByRole('radio', { name: 'A set time' });
+  await waitFor(() => assert.equal(pill.getAttribute('aria-checked'), 'false'));
+  fireEvent.click(pill);
+  const dlg = within(await ui.findByRole('dialog', { name: 'Book bikes in for a set time?' }));
+  assert.ok(has(dlg.queryByText('Bookings already made keep their days. From that day, customers book a time and drop their bike off before it.')));
+  fireEvent.change(dlg.getByLabelText('Starting on'), { target: { value: '2026-11-05' } });
+  fireEvent.click(dlg.getByRole('button', { name: 'Change from Thu 5 Nov' }));
+  assert.ok(has(await ui.findByText('Changing to a set time from Thu 5 Nov. Bookings already made keep their days.')));
+});
+
+test('changing the date of a coming change starts from the date already chosen', async () => {
+  const { ui, fireEvent, within } = await openSettings();
+  settings = { ...settings, nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-11-05' };
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  await ui.findByRole('button', { name: 'Cancel the change' });
+  fireEvent.click(ui.getByRole('radio', { name: 'The whole day' }));
+  const dlg = within(await ui.findByRole('dialog'));
+  assert.equal(dlg.getByLabelText('Starting on').value, '2026-11-05');
 });
