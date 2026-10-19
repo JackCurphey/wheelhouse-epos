@@ -248,3 +248,24 @@ test('booking terms that are not text or null are refused', async () => {
     await deleteTestShop(shop.id);
   }
 });
+
+// Notice in days (Jack, 19 Oct).
+test('notice in days starts empty, saves 1 to 60, refuses others, and null goes back to hours', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  const put = (body) => staffRequest(server.baseUrl, cookie, '/api/workshop-settings', { method: 'PUT', body });
+  try {
+    assert.equal((await staffRequest(server.baseUrl, cookie, '/api/workshop-settings')).body.minNoticeDays, null);
+    const one = await put({ minNoticeDays: 1 });
+    assert.equal(one.status, 200, JSON.stringify(one.body));
+    assert.equal(one.body.minNoticeDays, 1);
+    for (const bad of [0, 61, 1.5, 'two']) {
+      const res = await put({ minNoticeDays: bad });
+      assert.equal(res.status, 400, `${bad}: ${JSON.stringify(res.body)}`);
+      assert.equal(res.body.error, 'Notice in days must be a whole number from 1 to 60');
+    }
+    assert.equal((await put({ unspecifiedJobMinutes: 60 })).body.minNoticeDays, 1, 'a PUT without it keeps it');
+    assert.equal((await put({ minNoticeDays: null })).body.minNoticeDays, null);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});

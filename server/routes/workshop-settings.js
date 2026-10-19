@@ -43,6 +43,8 @@ function serializeWorkshopSettings(row) {
     timedLeadMinutes: row.timed_lead_minutes,
     unspecifiedJobMinutes: row.unspecified_job_minutes,
     minNoticeMinutes: row.min_notice_minutes,
+    // Notice in whole days, or null for hours (Jack, 19 Oct; migration 044).
+    minNoticeDays: row.min_notice_days ?? null,
     timeZone: row.time_zone,
     // INTEGER 0/1 in the column, boolean over the wire - the client renders
     // it directly, same shape serializeWorkshopService uses for `active`.
@@ -370,6 +372,13 @@ export function register(route) {
       }
     }
 
+    let minNoticeDays = existing.min_notice_days ?? null;
+    if (body.minNoticeDays !== undefined) {
+      minNoticeDays = body.minNoticeDays;
+      if (minNoticeDays !== null && !(Number.isInteger(minNoticeDays) && minNoticeDays >= 1 && minNoticeDays <= 60)) {
+        return badRequest(res, 'Notice in days must be a whole number from 1 to 60');
+      }
+    }
     let minNoticeMinutes = existing.min_notice_minutes;
     if (body.minNoticeMinutes !== undefined) {
       // A number sent as text is accepted, as the fields above; null is refused
@@ -406,12 +415,12 @@ export function register(route) {
          full_day_threshold_minutes = ?, booking_mode = ?, next_booking_mode = ?, next_booking_mode_from = ?,
          dropoff_window_start = ?,
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
-         min_notice_minutes = ?, time_zone = ?,
+         min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
          show_prices_online = ?, show_sign_off_to_customers = ?, booking_terms = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
-          minNoticeMinutes, timeZone,
+          minNoticeMinutes, minNoticeDays, timeZone,
           showPricesOnline, showSignOff, bookingTerms, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));

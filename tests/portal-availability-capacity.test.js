@@ -196,3 +196,16 @@ test('drop-off today is offered until now plus the notice reaches the window\'s 
   assert.equal(mechOn(closed.body, PINNED_TODAY, sam).bookable, false);
   assert.equal(mechOn(closed.body, '2026-09-02', sam).bookable, true);
 });
+
+// Notice in days (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md
+// answers 4 and 8): one day's notice offers nothing today and all of tomorrow
+// from opening, whatever the time now (pinned at 07:00).
+test('one day\'s notice offers nothing today and all of tomorrow from opening', async () => {
+  await freshShop();
+  // The hours box says 48: days must win, or tomorrow would offer nothing.
+  await as('/api/workshop-settings', { method: 'PUT', body: { minNoticeMinutes: 2880, minNoticeDays: 1 } });
+  const { body } = await availability({ start: PINNED_TODAY, end: '2026-09-02', minutes: '60' });
+  assert.deepEqual(mechOn(body, PINNED_TODAY, sam).startTimes, []);
+  assert.equal(mechOn(body, '2026-09-02', sam).startTimes[0], '09:00');
+  await as('/api/workshop-settings', { method: 'PUT', body: { minNoticeDays: null } });
+});
