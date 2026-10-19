@@ -22,7 +22,8 @@ The threshold has no drawing.
    in / Bikes are booked in for: A set time / The whole day", with "A set
    time: the customer drops the bike off at the time they booked, for
    example 13:00 to 14:00. The whole day: they drop it off in the drop-off
-   window, for example 09:00 to 10:00." The whole day shows the drop-off
+   window, for example 09:00 to 10:00." (Answer 3 changed the set time's
+   half to "before the time they booked".) The whole day shows the drop-off
    window (`bk-settings-whole-day`). The section's summary reads "Set
    times" or "Whole day". Wording only: the booking mode itself is the
    4 Sep decision's.
@@ -56,3 +57,12 @@ The threshold has no drawing.
    drop-off-before, notice in days and the customer's drop-off line come
    later"): `bk-settings-reserve`, `bk-settings-whole-day`,
    `bk-settings-notice-days`, and the booking pages' wording.
+6. **The time kept free reworded so lunch isn't counted twice** (Jack, 19 Oct:
+   "1: reword it to 'For the little jobs between bikes. Lunch and admin go
+   in the diary as blocks, so don't count them here.' and show the shop's
+   own value"), after the fresh review found the approved hint told shops
+   to count lunch, which since 24 Sep is a diary block
+   (`2026-09-04-booking-mode-and-downtime.md` §4.4; new shops keep none
+   free, `server/auth.js`). The hint is "For the little jobs between
+   bikes"; the note adds "Lunch and admin go in the diary as blocks, so
+   don't count them here." The drawing shows [n], each shop's own value.

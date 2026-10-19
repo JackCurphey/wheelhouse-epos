@@ -247,8 +247,8 @@ test('Online booking shows the time kept free each day in hours, with its hint a
   assert.ok(has(await ui.findByRole('heading', { name: 'Online booking' })));
   const box = await ui.findByLabelText('Time kept free each day');
   await (await import('@testing-library/react')).waitFor(() => assert.equal(box.value, '2'));
-  assert.ok(has(ui.queryByText('For lunches, admin and little jobs between bikes')));
-  assert.ok(has(ui.queryByText('Online booking treats a day as full once less than this is left.')));
+  assert.ok(has(ui.queryByText('For the little jobs between bikes')));
+  assert.ok(has(ui.queryByText('Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.')));
 });
 
 test('leaving the box saves the hours as minutes, only if they changed', async () => {

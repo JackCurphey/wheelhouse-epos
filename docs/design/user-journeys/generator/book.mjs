@@ -323,8 +323,9 @@ const sub = (t) => `<h4 style="margin: 8px 0 0; padding-top: 12px; border-top: 1
 const numRow = (id, label, hint, unit, value = '[n]', before = '') => `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><label for="${id}" style="font-size: 15px; font-weight: 600">${label}</label>${hint ? `<span id="${id}-h" style="font-size: 13px; color: ${C.muted}">${hint}</span>` : ''}</span><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px">${before}<input id="${id}"${hint ? ` aria-describedby="${id}-h"` : ''} inputmode="numeric" value="${value}" style="width: 72px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">${unit}</span></div>`;
 const choiceRow = (label, opts, on) => `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 52px"><span style="font-size: 15px; font-weight: 600">${label}</span>${radios(label, opts.map((o, i) => rpill(o, i === on)).join(''))}</div>`;
 // The time kept free each day (Jack, 4 Sep, docs/decisions/2026-09-04-job-type-before-diary.md
-// §2.2: "mechanics' lunches, admin time, and all the little bits"; default 2 hours),
-// moved here from the old app's Edit workshop (Jack, 19 Oct).
+// §2.2), moved here from the old app's Edit workshop (Jack, 19 Oct). Lunch and
+// admin are diary blocks since 24 Sep (booking-mode decision §4.4), so the hint
+// says not to count them (Jack, 19 Oct, answer 6); each shop's own value shows.
 // How bikes are booked in (Jack, 19 Oct: worded for a set time or the whole
 // day, the customer told a drop-off time either way; the booking mode of
 // docs/decisions/2026-09-04-booking-mode-and-downtime.md).
@@ -340,7 +341,7 @@ ${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay
 ${note('A set time: the customer drops the bike off before the time they booked. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')}
 ${wholeDay ? windowRow : numRow('lead', 'Drop off before the booking', 'How long before their booked time customers bring the bike in', 'minutes', '30')}
 ${noticeRow(noticeDays)}
-${reserve ? `${numRow('reserve', 'Time kept free each day', 'For lunches, admin and little jobs between bikes', 'hours', '2')}${note('Online booking treats a day as full once less than this is left.')}` : ''}
+${reserve ? `${numRow('reserve', 'Time kept free each day', 'For the little jobs between bikes', 'hours', '[n]')}${note('Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.')}` : ''}
 ${rowSwitch('Show prices on the booking page', true)}
 ${rowSwitch('Confirm bookings automatically', false)}
 ${note('Off: each booking is a request, purple in the diary until someone accepts it. On: a booking that fits the diary is confirmed straight away. Changing a confirmed booking is always a request.')}

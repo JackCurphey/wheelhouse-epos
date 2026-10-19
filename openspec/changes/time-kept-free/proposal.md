@@ -9,7 +9,7 @@ drawn home, then remove the old screen.
 
 ## What Changes
 
-- **Settings › Workshop › Online booking:** "Time kept free each day", in hours (drawn as `bk-settings-reserve`), "For lunches, admin and little jobs between bikes", with "Online booking treats a day as full once less than this is left." Saved when the box is left (`PUT /api/workshop-settings` `fullDayThresholdMinutes`), Owner only (#283).
+- **Settings › Workshop › Online booking:** "Time kept free each day", in hours (drawn as `bk-settings-reserve`), "For the little jobs between bikes", with "Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left." (answer 6) Saved when the box is left (`PUT /api/workshop-settings` `fullDayThresholdMinutes`), Owner only (#283).
 - **The old app:** Office › Edit shop › Workshop is removed, with its menu item; Edit shop opens on Front desk, as does an old link to the Workshop page. The new Settings is in the new app's sidebar.
 
 ## Lane, work package, drawings and decisions

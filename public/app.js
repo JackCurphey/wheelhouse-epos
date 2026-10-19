@@ -57,7 +57,6 @@ let activeCashiers = []; // employees with isCashier=true, active only - used by
 let activeCashierId = null;
 let team = []; // merged roster + login list - used by Office > Edit Shop > Office
 let teamShowInactive = false;
-let workshopSettings = { openingTime: '09:00', closingTime: '18:00', openingDays: [0, 1, 2, 3, 4, 5, 6], fullDayThresholdMinutes: 120 };
 
 let docStatusFilter = { quote: '', order: '' }; // '' = all, else 'open' | 'converted' | 'cancelled'
 let docList = { quote: [], order: [] };
@@ -240,10 +239,6 @@ async function loadActiveCashiers() {
 
 async function loadTeam() {
   team = await api('/api/team');
-}
-
-async function loadWorkshopSettings() {
-  workshopSettings = await api('/api/workshop-settings');
 }
 
 async function loadSaleDocuments(kind) {
@@ -439,7 +434,7 @@ function renderCashierPills() {
   const wrap = document.getElementById('cashier-pills');
   if (!wrap) return;
   if (!activeCashiers.length) {
-    wrap.innerHTML = '<span class="muted" style="font-size:12.5px;">No staff added — set them up under Edit Shop &gt; Workshop.</span>';
+    wrap.innerHTML = '<span class="muted" style="font-size:12.5px;">No staff added — set them up under Edit Shop &gt; Office.</span>';
     return;
   }
   wrap.innerHTML = activeCashiers

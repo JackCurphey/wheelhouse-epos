@@ -299,7 +299,7 @@ function OnlineBookingBox() {
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
           <label htmlFor="reserve" className="text-[15px] font-semibold">Time kept free each day</label>
-          <span id="reserve-h" className="text-[13px] text-[var(--wh-muted)]">For lunches, admin and little jobs between bikes</span>
+          <span id="reserve-h" className="text-[13px] text-[var(--wh-muted)]">For the little jobs between bikes</span>
         </span>
         <span className="inline-flex items-center gap-2 text-sm">
           <input
@@ -315,7 +315,7 @@ function OnlineBookingBox() {
           hours
         </span>
       </div>
-      <p className="m-0 text-sm text-[var(--wh-muted)]">Online booking treats a day as full once less than this is left.</p>
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
     </section>
   );
