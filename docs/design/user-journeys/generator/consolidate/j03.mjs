@@ -51,7 +51,7 @@ export default {
   'bk-messages': into('set-msg-list', 'Receiving 7', "scrolled to 'Booking messages': six rows, 'Request received' to 'Booking cancelled'"),
   'bk-settings': keep(1),
   'bk-settings-whole-day': into('bk-settings', 'Booking mode 2026-09-04 §2; 19 Oct (Jack: worded as a set time or the whole day)', "'Bikes are booked in for' 'The whole day', and a 'Drop-off window' row, [09:00] to [10:00]"),
-  'bk-settings-reserve': into('bk-settings', 'Booking mode and downtime 2026-09-04 §2.2; 19 Oct (moved from the old Edit workshop)', "'Time kept free each day' [2] hours under Notice: 'For lunches, admin and little jobs between bikes', and 'Online booking treats a day as full once less than this is left.'"),
+  'bk-settings-reserve': into('bk-settings', 'Booking mode and downtime 2026-09-04 §2.2; 19 Oct (moved from the old Edit workshop)', "'A set time' chosen: 'Drop off before the booking' [30] minutes; 'Time kept free each day' [2] hours under Notice: 'For lunches, admin and little jobs between bikes', and 'Online booking treats a day as full once less than this is left.'"),
   'bk-settings-deposits': into('bk-settings', 'Book 11', "scrolled to 'Deposits' and 'Terms': 'Free to cancel until', 'Use your own'"),
 };
 

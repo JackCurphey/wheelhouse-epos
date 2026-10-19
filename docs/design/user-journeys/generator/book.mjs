@@ -247,7 +247,7 @@ const requestReceived = (deposit = false, { thirdWalk = false } = {}) => centred
 <p style="margin: 0; font-size: 15px; line-height: 1.5">We’ll check the workshop diary and send you a text to confirm. Please wait for that before bringing your bike in.${deposit ? ' If we can’t fit you in, your deposit comes back in full.' : ''}</p>${bookingLines({ deposit })}
 <p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">We’ve sent you a link to this page by text, so you can check it, change the date or cancel.</p>${signInLine}${pageButtons(true)}${thirdWalk ? shopLinesTel : shopLines}`));
 const confirmedNow = () => centred(answerCard(`${bigIcon('ok', 'check')}${announce(badge('Booking confirmed', 'green'))}${h1(`See you on ${DAY}, ${MAYA.first}`)}
-<p style="margin: 0; font-size: 15px; line-height: 1.5">Arrive at ${mono('11:30')} with your ${BIKE}. Please bring the lock key, and tell us about any accessories.</p>${bookingLines()}
+<p style="margin: 0; font-size: 15px; line-height: 1.5">Drop your ${BIKE} off by ${mono('11:00')}, half an hour before your booking at ${mono('11:30')}. Please bring the lock key, and tell us about any accessories.</p>${bookingLines()}
 <p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">We’ve sent you a link to this page by text.</p>${signInLine}${pageButtons()}${shopLines}`));
 // Decision 9: coming back to an unfinished booking.
 const resume = () => layout(`<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 10px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px"><span style="flex-grow: 1"><strong>You didn’t finish booking.</strong> Carry on where you left off — everything you typed is still here.</span>${button('Carry on')}${link('Start again', `color: ${C.warnInk}`)}</div>
@@ -332,8 +332,8 @@ const windowRow = `<div style="display: flex; align-items: center; justify-conte
 const onlineOpen = (reserve = false, wholeDay = false) => `${note('Which services can be booked online is set on each service, in Services; who can be booked is set on each person, in Mechanics.')}
 ${sub('How bikes are booked in')}
 ${choiceRow('Bikes are booked in for', ['A set time', 'The whole day'], wholeDay ? 1 : 0)}
-${note('A set time: the customer drops the bike off at the time they booked, for example 13:00 to 14:00. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')}
-${wholeDay ? windowRow : ''}
+${note('A set time: the customer drops the bike off before the time they booked. The whole day: they drop it off in the drop-off window, for example 09:00 to 10:00.')}
+${wholeDay ? windowRow : numRow('lead', 'Drop off before the booking', 'How long before their booked time customers bring the bike in', 'minutes', '30')}
 ${numRow('notice', 'Notice', 'Customers book at least this far ahead', 'hours ahead', '2')}
 ${reserve ? `${numRow('reserve', 'Time kept free each day', 'For lunches, admin and little jobs between bikes', 'hours', '2')}${note('Online booking treats a day as full once less than this is left.')}` : ''}
 ${rowSwitch('Show prices on the booking page', true)}

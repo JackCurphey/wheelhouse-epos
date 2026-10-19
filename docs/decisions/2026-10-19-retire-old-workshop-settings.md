@@ -26,3 +26,12 @@ The threshold has no drawing.
    window (`bk-settings-whole-day`). The section's summary reads "Set
    times" or "Whole day". Wording only: the booking mode itself is the
    4 Sep decision's.
+3. **With a set time, the customer drops the bike off before the booking**
+   (Jack, 19 Oct: "we should prompt customer to drop their bike off before
+   the booking time, if its in the 'set time' mode, rather than having the
+   customer drop the bike off during that window"), as his 4 Sep example
+   had it ("Please bring the bike in 30 minutes before your scheduled
+   job"). The set-time choice shows "Drop off before the booking [30]
+   minutes", the lead time the server already keeps (`timed_lead_minutes`,
+   default 30); the customer's confirmation reads "Drop your [bike] off by
+   11:00, half an hour before your booking at 11:30."
