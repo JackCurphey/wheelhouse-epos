@@ -90,3 +90,9 @@ The threshold has no drawing.
     change-coming-up line, and the drop-off window for the whole day"):
     `bk-settings-mode-change`, `bk-settings-mode-scheduled`,
     `bk-settings-whole-day`.
+11. **"Show prices on the booking page" now; confirming automatically later**
+    (Jack, 19 Oct: "1: build the Show prices switch now; automatic confirming
+    is its own piece later"). The prices switch is stored already
+    (`show_prices_online`); confirming automatically (`2026-10-01-book-a-repair-review.md`
+    decision 8) isn't built anywhere and is mostly Mark's booking code
+    (WP-4.2).
