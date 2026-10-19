@@ -50,3 +50,9 @@ The threshold has no drawing.
    tomorrow, whatever the time now (`bk-settings-notice-days`). The server
    keeps notice only in minutes today (`min_notice_minutes`), so days need
    a server change (Mark's) when it's built.
+5. **Drawings approved; build the time kept free and remove the old screen**
+   (Jack, 19 Oct: "Approve the drawings; build the time kept free each day
+   and remove the old Edit workshop screen. The mode switch,
+   drop-off-before, notice in days and the customer's drop-off line come
+   later"): `bk-settings-reserve`, `bk-settings-whole-day`,
+   `bk-settings-notice-days`, and the booking pages' wording.
