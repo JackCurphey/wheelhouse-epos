@@ -16,6 +16,8 @@ let putFails;
 let details;
 let detailsFail;
 let holdDetails = null;
+let refuseHours = null;
+const WEEK = [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '17:00' }));
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -26,7 +28,8 @@ afterEach(async () => {
 
 async function openSettings() {
   calls = [];
-  settings = { openingHours: [], showSignOffToCustomers: false };
+  settings = { openingHours: WEEK, showSignOffToCustomers: false };
+  refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
   detailsFail = false;
@@ -47,6 +50,7 @@ async function openSettings() {
     if (u.pathname === '/api/shop-details') return reply(200, details);
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') {
       if (putFails) return reply(500, { error: 'Internal error' });
+      if (refuseHours && body.openingHours) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -156,4 +160,46 @@ test('Till › Receipts has Words at the bottom, which saves when it’s left', 
   fireEvent.blur(words);
   await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && c.url === '/api/shop-details').map((c) => c.body), [{ receiptFooter: '[Returns policy]' }]));
   assert.ok(has(await ui.findByText('Saved.')));
+});
+
+// Opening hours (Jack, 19 Oct, docs/decisions/2026-10-19-opening-hours.md;
+// drawn as set-shop-hours): Monday to Sunday, Open or Closed, hours on the
+// hour; each change saves the whole week at once.
+const hoursPuts = () => calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings' && c.body.openingHours).map((c) => c.body.openingHours);
+
+test('Opening hours shows Monday to Sunday, each with its hours or Closed', async () => {
+  const { ui } = await openSettings();
+  assert.ok(has(await ui.findByRole('heading', { name: 'Opening hours' })));
+  const days = ui.getAllByRole('button', { name: /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (open|closed)$/ }).map((b) => b.getAttribute('aria-label'));
+  assert.deepEqual(days, ['Monday open', 'Tuesday open', 'Wednesday open', 'Thursday open', 'Friday open', 'Saturday open', 'Sunday closed']);
+  assert.equal(ui.getByLabelText('Monday opens').value, '09:00');
+  assert.equal(ui.getByLabelText('Saturday closes').value, '17:00');
+  assert.ok(ui.queryByLabelText('Sunday opens') === null);
+  assert.ok(has(ui.queryByText('Online booking only offers mechanics on the days they’re in, set on each person.')));
+});
+
+test('switching Sunday open saves the whole week, Sunday at the usual hours', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  fireEvent.click(await ui.findByRole('button', { name: 'Sunday closed' }));
+  await waitFor(() => assert.equal(hoursPuts().length, 1));
+  assert.deepEqual(hoursPuts()[0], [{ weekday: 0, open: '09:00', close: '17:00' }, ...WEEK]);
+  assert.ok(has(await ui.findByRole('button', { name: 'Sunday open' })));
+});
+
+test('a shorter Saturday saves, and closing Monday drops it', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  fireEvent.change(await ui.findByLabelText('Saturday closes'), { target: { value: '16:00' } });
+  await waitFor(() => assert.equal(hoursPuts().length, 1));
+  assert.deepEqual(hoursPuts()[0].find((d) => d.weekday === 6), { weekday: 6, open: '09:00', close: '16:00' });
+  fireEvent.click(ui.getByRole('button', { name: 'Monday open' }));
+  await waitFor(() => assert.equal(hoursPuts().length, 2));
+  assert.equal(hoursPuts()[1].some((d) => d.weekday === 1), false);
+});
+
+test('a refusal says why, and the week goes back as it was', async () => {
+  const { ui, fireEvent } = await openSettings();
+  refuseHours = 'Closing time must be after opening time';
+  fireEvent.change(await ui.findByLabelText('Friday closes'), { target: { value: '08:00' } });
+  assert.ok(has(await ui.findByText('Closing time must be after opening time')));
+  assert.equal(ui.getByLabelText('Friday closes').value, '17:00');
 });

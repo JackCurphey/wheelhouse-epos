@@ -9,7 +9,8 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
  * start, saved as soon as it's switched. The rest of Settings comes with
  * WP-5.1.
  */
-type WorkshopSettings = { showSignOffToCustomers?: boolean };
+type DayHours = { weekday: number; open: string; close: string };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[] };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -130,6 +131,85 @@ function ReceiptsBox() {
   );
 }
 
+// Monday first, as the drawing; 0 is Sunday on the server.
+const WEEKDAYS: [number, string][] = [[1, 'Monday'], [2, 'Tuesday'], [3, 'Wednesday'], [4, 'Thursday'], [5, 'Friday'], [6, 'Saturday'], [0, 'Sunday']];
+// Whole hours only, as the server and the diary need.
+const HOURS = Array.from({ length: 19 }, (_, i) => `${String(i + 5).padStart(2, '0')}:00`);
+
+/**
+ * Settings › Shop and sites › Opening hours (Jack, 19 Oct, docs/decisions/2026-10-19-opening-hours.md;
+ * drawn as set-shop-hours): each day Open or Closed, an open day's hours on
+ * the hour. Each change saves the whole week at once; a refusal puts it back.
+ */
+function HoursBox() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [draft, setDraft] = useState<DayHours[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const week = draft ?? settings.data?.openingHours ?? [];
+  const usual = week[0] ? { open: week[0].open, close: week[0].close } : { open: '09:00', close: '17:00' };
+
+  async function saveWeek(next: DayHours[]) {
+    const sorted = [...next].sort((a, b) => a.weekday - b.weekday);
+    setDraft(sorted);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { openingHours: sorted }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setDraft(null);
+    }
+  }
+  const toggle = (weekday: number) => {
+    const open = week.some((d) => d.weekday === weekday);
+    void saveWeek(open ? week.filter((d) => d.weekday !== weekday) : [...week, { weekday, ...usual }]);
+  };
+  const setTime = (weekday: number, which: 'open' | 'close', value: string) =>
+    void saveWeek(week.map((d) => (d.weekday === weekday ? { ...d, [which]: value } : d)));
+  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+
+  return (
+    <section aria-labelledby="set-hours" className="flex flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
+      <h3 id="set-hours" className="m-0 mb-2 text-base font-bold">Opening hours</h3>
+      {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the opening hours. Try again in a moment.</p> : null}
+      {WEEKDAYS.map(([weekday, name]) => {
+        const day = week.find((d) => d.weekday === weekday);
+        return (
+          <div key={weekday} className="flex min-h-[50px] flex-wrap items-center gap-3 border-t border-[var(--wh-border)] py-1.5">
+            <span className="w-24 text-[15px] font-semibold">{name}</span>
+            {day ? (
+              <span className="flex items-center gap-2">
+                <select aria-label={`${name} opens`} value={day.open} disabled={draft !== null} onChange={(e) => setTime(weekday, 'open', e.target.value)} className={select}>
+                  {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <span className="text-[var(--wh-muted)]">to</span>
+                <select aria-label={`${name} closes`} value={day.close} disabled={draft !== null} onChange={(e) => setTime(weekday, 'close', e.target.value)} className={select}>
+                  {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </span>
+            ) : null}
+            <span className="grow" />
+            <button
+              type="button"
+              aria-pressed={Boolean(day)}
+              aria-label={`${name} ${day ? 'open' : 'closed'}`}
+              disabled={!settings.data || draft !== null}
+              onClick={() => toggle(weekday)}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${day ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-[var(--wh-border)] text-[var(--wh-muted)]'}`}
+            >
+              {day ? 'Open' : 'Closed'}
+            </button>
+          </div>
+        );
+      })}
+      <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">Online booking only offers mechanics on the days they’re in, set on each person.</p>
+      {error ? <p role="alert" className="m-0 mt-1 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
@@ -159,6 +239,7 @@ export function SettingsPage() {
           <p className="m-0 text-sm text-[var(--wh-muted)]">The shop’s details, its sites and their opening hours.</p>
         </div>
         <ShopDetailsBox />
+        <HoursBox />
       </section>
       <section aria-labelledby="set-till" className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
