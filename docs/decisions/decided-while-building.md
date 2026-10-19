@@ -491,6 +491,16 @@ silent:
    shop setting holds it; only the drop-off line is built. *Pattern:*
    nothing shown that isn't the shop's own.
 
+### 19 Oct 2026: notice in hours or days (answers 4 and 8)
+
+1. **Hours are whole hours from 0 to 168, days whole days from 1 to 60;
+   choosing the other unit saves the box's number in that unit**, and the
+   note follows the unit chosen. *Pattern:* bk-settings-notice-days, and
+   the server's existing notice limit of a week.
+2. **Days count from the start of the day that many days after the shop's
+   today, in the shop's time zone.** *Pattern:* Jack's 3pm-for-tomorrow
+   example.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

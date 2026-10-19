@@ -63,3 +63,17 @@ test('the time kept free each day saves in hours', async ({ page, context }) => 
   await box.blur();
   await expect.poll(async () => (await staff('/api/workshop-settings')).body.fullDayThresholdMinutes).toBe(180);
 });
+
+// Notice in hours or days (Jack, 19 Oct, answers 4 and 8).
+test('notice switches to whole days and saves', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  expect((await staff('/api/workshop-settings', { method: 'PUT', body: { minNoticeMinutes: 120, minNoticeDays: null } })).status).toBe(200);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  const box = page.getByLabel('Notice', { exact: true });
+  await expect(box).toHaveValue('2');
+  await box.fill('1');
+  await page.getByRole('radio', { name: 'days' }).click();
+  await expect.poll(async () => (await staff('/api/workshop-settings')).body.minNoticeDays).toBe(1);
+  await expect(page.getByText('Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.')).toBeVisible();
+});

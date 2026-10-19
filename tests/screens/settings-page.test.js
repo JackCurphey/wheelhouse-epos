@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30 };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -312,4 +312,52 @@ test('with bikes booked in for the whole day there’s no Drop off before the bo
   shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
   await (await import('@testing-library/react')).waitFor(() => assert.ok(ui.queryByLabelText('Drop off before the booking') === null));
   assert.ok(ui.queryByLabelText('Time kept free each day') !== null);
+});
+
+// Notice in hours or days (Jack, 19 Oct, answers 4 and 8; drawn as bk-settings-notice-days).
+const noticePuts = () => calls.filter((c) => c.method === 'PUT' && (c.body.minNoticeMinutes !== undefined || c.body.minNoticeDays !== undefined)).map((c) => c.body);
+const HOURS_NOTE = 'Hours: counted from now. Days: counted in whole days, so 1 day lets a customer book any time tomorrow.';
+const DAYS_NOTE = 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.';
+
+test('Notice shows the hours, with hours chosen and its note', async () => {
+  const { ui, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Notice');
+  await waitFor(() => assert.equal(box.value, '2'));
+  assert.ok(has(ui.queryByText('How far ahead customers must book')));
+  const unit = ui.getByRole('radiogroup', { name: 'Notice in' });
+  assert.equal((await import('@testing-library/react')).within(unit).getByRole('radio', { name: 'hours' }).getAttribute('aria-checked'), 'true');
+  assert.ok(has(ui.queryByText(HOURS_NOTE)));
+});
+
+test('a new number of hours saves as minutes, in hours', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Notice');
+  await waitFor(() => assert.equal(box.value, '2'));
+  fireEvent.change(box, { target: { value: '3' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(noticePuts(), [{ minNoticeMinutes: 180, minNoticeDays: null }]));
+});
+
+test('choosing days saves the number as days, and the note changes', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Notice');
+  await waitFor(() => assert.equal(box.value, '2'));
+  fireEvent.change(box, { target: { value: '1' } });
+  fireEvent.click(ui.getByRole('radio', { name: 'days' }));
+  await waitFor(() => assert.deepEqual(noticePuts().at(-1), { minNoticeDays: 1 }));
+  assert.ok(has(await ui.findByText(DAYS_NOTE)));
+  await waitFor(() => assert.equal(ui.getByRole('radio', { name: 'days' }).getAttribute('aria-checked'), 'true'));
+});
+
+test('notice out of range is refused in the screen', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Notice');
+  await waitFor(() => assert.equal(box.value, '2'));
+  fireEvent.change(box, { target: { value: '200' } });
+  fireEvent.blur(box);
+  assert.ok(has(await ui.findByText('Enter 0 to 168 hours')));
+  fireEvent.change(box, { target: { value: '0' } });
+  fireEvent.click(ui.getByRole('radio', { name: 'days' }));
+  assert.ok(has(await ui.findByText('Enter 1 to 60 days')));
+  assert.deepEqual(noticePuts(), []);
 });

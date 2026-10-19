@@ -13,7 +13,7 @@ import { ROUTES } from '@/staff/routes.ts';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -320,6 +320,87 @@ function NumberSetting({ id, label, hint, unit, field, toBox, fromBox, invalid }
 }
 
 /**
+ * Notice in hours or whole days (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md
+ * answers 4 and 8; drawn as bk-settings-notice-days): days count from the
+ * start of the day, so 1 day lets a customer book any time tomorrow. The box
+ * saves when left; choosing the other unit saves the box's number in it.
+ */
+function NoticeSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [typed, setTyped] = useState<string | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const data = settings.data;
+  const unit: 'hours' | 'days' = data?.minNoticeDays ? 'days' : 'hours';
+  const stored = !data ? '' : unit === 'days' ? String(data.minNoticeDays) : String((data.minNoticeMinutes ?? 0) / 60);
+  const shown = typed ?? stored;
+
+  // The body to save, or the words for why not.
+  function bodyFor(text: string, to: 'hours' | 'days'): { body: object } | { error: string } {
+    const n = Number(text.trim());
+    if (to === 'hours') {
+      return text.trim() !== '' && Number.isInteger(n) && n >= 0 && n <= 168 ? { body: { minNoticeMinutes: n * 60, minNoticeDays: null } } : { error: 'Enter 0 to 168 hours' };
+    }
+    return text.trim() !== '' && Number.isInteger(n) && n >= 1 && n <= 60 ? { body: { minNoticeDays: n } } : { error: 'Enter 1 to 60 days' };
+  }
+  async function save(to: 'hours' | 'days') {
+    const text = typed ?? stored;
+    if (to === unit && (typed === null || text === stored)) { setTyped(null); return; }
+    const next = bodyFor(text, to);
+    if ('error' in next) { setNote({ ok: false, text: next.error }); return; }
+    setNote(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', next.body, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+      setTyped((t) => (t === typed ? null : t));
+      setNote({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    }
+  }
+  const pill = (to: 'hours' | 'days') => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={unit === to}
+      disabled={!data}
+      onClick={() => void save(to)}
+      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${unit === to ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+    >
+      {to}
+    </button>
+  );
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+        <span className="flex flex-col gap-0.5">
+          <label htmlFor="notice" className="text-[15px] font-semibold">Notice</label>
+          <span id="notice-h" className="text-[13px] text-[var(--wh-muted)]">How far ahead customers must book</span>
+        </span>
+        <span className="inline-flex items-center gap-2 text-sm">
+          <input
+            id="notice"
+            aria-describedby="notice-h"
+            inputMode="numeric"
+            value={shown}
+            disabled={!data}
+            onChange={(e) => setTyped(e.target.value)}
+            onBlur={() => void save(unit)}
+            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+          />
+          <span role="radiogroup" aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</span>
+        </span>
+      </div>
+      <p className="m-0 text-sm text-[var(--wh-muted)]">{unit === 'days'
+        ? 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.'
+        : 'Hours: counted from now. Days: counted in whole days, so 1 day lets a customer book any time tomorrow.'}</p>
+      {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </div>
+  );
+}
+
+/**
  * Settings › Workshop › Online booking, so far (Jack, 19 Oct,
  * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
  * bk-settings-reserve): how long before a set-time booking bikes come in
@@ -338,6 +419,7 @@ function OnlineBookingBox() {
           fromBox={(n) => (Number.isInteger(n) && n >= 0 && n <= 240 ? n : null)} invalid="Enter 0 to 240 minutes"
         />
       ) : null}
+      <NoticeSetting />
       <NumberSetting
         id="reserve" label="Time kept free each day" hint="For the little jobs between bikes" unit="hours"
         field="fullDayThresholdMinutes" toBox={(m) => String(m / 60)}
