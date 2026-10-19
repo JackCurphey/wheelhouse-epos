@@ -129,7 +129,10 @@ days: "1 day" lets a customer book any time tomorrow, whatever the time now
 (#289). Then switching between a set time and the whole day, from a day the
 shop chooses, with "Cancel the change" and the drop-off window; screens only,
 on the 24 Sep scheduled mode change (#291). Settings › Workshop › Online
-booking now has everything drawn except deposits and the other rows. Then Files and photos on the job page,
+booking now has everything drawn except deposits and the other rows. Then
+the "Show prices on the booking page" switch in that box; screens only, the
+server already hid prices when it was off (#293). "Confirm bookings
+automatically" is its own piece later (mostly Mark's WP-4.2). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
