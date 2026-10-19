@@ -28,7 +28,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120 };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30 };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -279,4 +279,37 @@ test('a server refusal of the time kept free shows its words', async () => {
   fireEvent.change(box, { target: { value: '3' } });
   fireEvent.blur(box);
   assert.ok(has(await ui.findByText('Only the shop\'s owner can change settings')));
+});
+
+// Drop off before the booking (Jack, 19 Oct, answers 3 and 7; drawn in bk-settings-reserve):
+// minutes, shown while bikes are booked in for a set time, saved when left.
+const leadPuts = () => calls.filter((c) => c.method === 'PUT' && c.body.timedLeadMinutes !== undefined).map((c) => c.body);
+
+test('Drop off before the booking shows the lead time and saves a change', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByLabelText('Drop off before the booking');
+  await waitFor(() => assert.equal(box.value, '30'));
+  assert.ok(has(ui.queryByText('How long before their booked time customers bring the bike in')));
+  fireEvent.change(box, { target: { value: '60' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(leadPuts(), [{ timedLeadMinutes: 60 }]));
+});
+
+test('a lead time that isn’t 0 to 240 whole minutes is refused without saving', async () => {
+  const { ui, fireEvent } = await openSettings();
+  const box = await ui.findByLabelText('Drop off before the booking');
+  for (const bad of ['300', '12.5', '-5', 'half']) {
+    fireEvent.change(box, { target: { value: bad } });
+    fireEvent.blur(box);
+    assert.ok(has(await ui.findByText('Enter 0 to 240 minutes')), bad);
+  }
+  assert.deepEqual(leadPuts(), []);
+});
+
+test('with bikes booked in for the whole day there’s no Drop off before the booking', async () => {
+  const { ui } = await openSettings();
+  settings.bookingMode = 'dropoff';
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  await (await import('@testing-library/react')).waitFor(() => assert.ok(ui.queryByLabelText('Drop off before the booking') === null));
+  assert.ok(ui.queryByLabelText('Time kept free each day') !== null);
 });

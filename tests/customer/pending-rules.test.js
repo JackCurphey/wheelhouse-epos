@@ -85,3 +85,21 @@ test('the contact line names the shop', () => {
 test('the address carries the shop and the code', () => {
   assert.equal(q.bookingLinkPath('north shop', 'ab12'), '/api/portal/north%20shop/booking-links/ab12');
 });
+
+// Telling the customer when to drop the bike off (Jack, 19 Oct,
+// docs/decisions/2026-10-19-retire-old-workshop-settings.md answers 3 and 7;
+// drawn in bk-confirmed and bk-when-dropoff).
+test('the drop-off line: by the lead time before a set time, in the window for the whole day', () => {
+  const trek = { ...LINK, bike: { make: 'Trek', model: 'Domane AL 3' } };
+  const set = (leadMinutes, by) => ({ ...trek, dropOff: { by, booked: '11:30', leadMinutes } });
+  assert.equal(r.dropOffLine(set(30, '11:00')), 'Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30.');
+  assert.equal(r.dropOffLine(set(60, '10:30')), 'Drop your Trek Domane AL 3 off by 10:30, an hour before your booking at 11:30.');
+  assert.equal(r.dropOffLine(set(90, '10:00')), 'Drop your Trek Domane AL 3 off by 10:00, an hour and a half before your booking at 11:30.');
+  assert.equal(r.dropOffLine(set(15, '11:15')), 'Drop your Trek Domane AL 3 off by 11:15, 15 minutes before your booking at 11:30.');
+  assert.equal(r.dropOffLine(set(120, '09:30')), 'Drop your Trek Domane AL 3 off by 09:30, 2 hours before your booking at 11:30.');
+  assert.equal(r.dropOffLine(set(0, '11:30')), 'Drop your Trek Domane AL 3 off at your booking time, 11:30.');
+  assert.equal(r.dropOffLine({ ...LINK, dropOff: { by: '09:00', booked: '09:30', leadMinutes: 30 } }), 'Drop your bike off by 09:00, half an hour before your booking at 09:30.');
+  assert.equal(r.dropOffLine({ ...LINK, dropOff: { from: '09:00', to: '10:00' } }), 'Drop your bike off between 09:00 and 10:00.');
+  assert.equal(r.dropOffLine({ ...LINK, dropOff: null }), null);
+  assert.equal(r.dropOffLine(LINK), null);
+});

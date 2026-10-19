@@ -17,7 +17,7 @@ import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from '../customer-auth.js';
-import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView } from '../capacity.js';
+import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate } from '../capacity.js';
 import { currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import {
@@ -302,9 +302,24 @@ async function bookingLinkView(jobId, shop) {
   const stage = bookingStage(row);
   // "Checked by [name]" once the bike is ready, if the shop shows who signed
   // the job off (mechanic sign-off answer 3; Jack, 18 Oct). Off to start.
-  const shows = await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get();
+  const shows = await db.prepare('SELECT show_sign_off_to_customers, timed_lead_minutes, dropoff_window_start, dropoff_window_end, booking_mode, next_booking_mode, next_booking_mode_from FROM workshop_settings LIMIT 1').get();
   const checkedBy = shows?.show_sign_off_to_customers === 1 && (stage === 'ready_to_collect' || stage === 'collected')
     ? row.signed_off_name ?? null : null;
+  // When to drop the bike off, once the booking stands (Jack, 19 Oct,
+  // docs/decisions/2026-10-19-retire-old-workshop-settings.md answers 3 and 7):
+  // a set time less the shop's lead time, or the drop-off window when the
+  // shop books bikes in for the whole day that day (a set-time shop's job
+  // with no time gets nothing: the window isn't its rule; fresh review).
+  let dropOff = null;
+  if (shows && (stage === 'confirmed' || stage === 'change_requested')) {
+    if (row.start_time) {
+      const by = addMinutesToTime(row.start_time, -(Number(shows.timed_lead_minutes) || 0));
+      dropOff = { by, booked: row.start_time, leadMinutes: timeToMinutes(row.start_time) - timeToMinutes(by) };
+    } else if (modeForDate({ bookingMode: shows.booking_mode, nextBookingMode: shows.next_booking_mode, nextBookingModeFrom: shows.next_booking_mode_from }, row.job_date) === 'dropoff'
+      && shows.dropoff_window_start && shows.dropoff_window_end) {
+      dropOff = { from: shows.dropoff_window_start, to: shows.dropoff_window_end };
+    }
+  }
   return {
     reference: row.reference,
     shopName: shop.name,
@@ -317,6 +332,7 @@ async function bookingLinkView(jobId, shop) {
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage,
     checkedBy,
+    dropOff,
     photoCount: row.photo_count,
     requested: requested && { jobDate: requested.jobDate, startTime: requested.startTime, mechanicId: requested.mechanicId },
     canChange: customerCanAct(row, today),

@@ -194,3 +194,10 @@ test('with no one to name, the link names nobody', async () => {
   assert.ok(await heading(ui, 'Ready to collect'));
   assert.ok(ui.queryByText(/Checked by/) === null);
 });
+
+// Telling the customer when to drop the bike off (Jack, 19 Oct; drawn in bk-confirmed).
+test('a confirmed booking says when to drop the bike off, under the heading', async () => {
+  const { ui } = await open({ ...LINK, stage: 'confirmed', bike: { make: 'Trek', model: 'Domane AL 3' }, dropOff: { by: '11:00', booked: '11:30', leadMinutes: 30 } });
+  assert.ok(await heading(ui, 'Confirmed'));
+  assert.ok(ui.queryByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30.') !== null);
+});

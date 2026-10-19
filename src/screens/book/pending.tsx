@@ -6,7 +6,7 @@ import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
 import { useBookingLink, type BookingLink } from './pending-query.ts';
 import {
-  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, contactLine, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, contactLine, dropOffLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -62,6 +62,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     <BookFrame title={statusText(link.stage) ?? ''}>
       {/* A quote waiting for the customer's answer comes first (journey 4). */}
       <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
+      {/* When to drop the bike off, once the booking stands (Jack, 19 Oct; drawn in bk-confirmed). */}
+      {dropOffLine(link) && <p className="m-0 mb-3 text-[15px] leading-normal">{dropOffLine(link)}</p>}
       <div className="mb-4 rounded-md border border-[var(--wh-border)] p-3 text-sm">
         <p className="m-0 mb-2 flex justify-between gap-3">
           {/* The {' '} spaces keep the words apart for a screen reader, as ChoiceCard does. */}

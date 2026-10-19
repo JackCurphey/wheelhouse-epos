@@ -13,7 +13,7 @@ import { ROUTES } from '@/staff/routes.ts';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -258,33 +258,33 @@ function NoAccess() {
   );
 }
 
+type NumberField = 'fullDayThresholdMinutes' | 'timedLeadMinutes';
+
 /**
- * Settings › Workshop › Online booking, first piece (Jack, 19 Oct,
- * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
- * bk-settings-reserve): the time kept free each day for lunches, admin and
- * the little jobs (Jack, 4 Sep), in hours, saved in minutes when the box is
- * left. The rest of the drawn section comes later.
+ * One number setting saved to the workshop settings when its box is left, if
+ * it changed: shown in the box's own unit, refused in the screen when it
+ * isn't allowed, a server refusal shown in its words.
  */
-function OnlineBookingBox() {
+function NumberSetting({ id, label, hint, unit, field, toBox, fromBox, invalid }: {
+  id: string; label: string; hint: string; unit: string; field: NumberField;
+  toBox: (stored: number) => string; fromBox: (typed: number) => number | null; invalid: string;
+}) {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const [typed, setTyped] = useState<string | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
-  const stored = settings.data?.fullDayThresholdMinutes;
-  const shown = typed ?? (stored === undefined ? '' : String(stored / 60));
+  const stored = settings.data?.[field];
+  const shown = typed ?? (stored === undefined ? '' : toBox(stored));
 
   async function save() {
     if (typed === null) return;
-    const hours = Number(typed.trim());
-    if (typed.trim() === '' || !Number.isFinite(hours) || hours < 0 || hours > 8 || !Number.isInteger(hours * 2)) {
-      setNote({ ok: false, text: 'Enter 0 to 8 hours, in half hours' });
-      return;
-    }
-    const minutes = hours * 60;
-    if (minutes === stored) { setTyped(null); setNote(null); return; }
+    const number = Number(typed.trim());
+    const value = typed.trim() === '' || !Number.isFinite(number) ? null : fromBox(number);
+    if (value === null) { setNote({ ok: false, text: invalid }); return; }
+    if (value === stored) { setTyped(null); setNote(null); return; }
     setNote(null);
     try {
-      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { fullDayThresholdMinutes: minutes }, { method: 'PUT' });
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { [field]: value }, { method: 'PUT' });
       queryClient.setQueryData(['workshop-settings'], saved);
       setTyped((t) => (t === typed ? null : t));
       setNote({ ok: true, text: 'Saved.' });
@@ -294,17 +294,16 @@ function OnlineBookingBox() {
   }
 
   return (
-    <section aria-labelledby="set-online" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-      <h3 id="set-online" className="m-0 text-base font-bold">Online booking</h3>
+    <div className="flex flex-col gap-1">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <label htmlFor="reserve" className="text-[15px] font-semibold">Time kept free each day</label>
-          <span id="reserve-h" className="text-[13px] text-[var(--wh-muted)]">For the little jobs between bikes</span>
+          <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
+          <span id={`${id}-h`} className="text-[13px] text-[var(--wh-muted)]">{hint}</span>
         </span>
         <span className="inline-flex items-center gap-2 text-sm">
           <input
-            id="reserve"
-            aria-describedby="reserve-h"
+            id={id}
+            aria-describedby={`${id}-h`}
             inputMode="decimal"
             value={shown}
             disabled={!settings.data}
@@ -312,11 +311,39 @@ function OnlineBookingBox() {
             onBlur={() => void save()}
             className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
           />
-          hours
+          {unit}
         </span>
       </div>
-      <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Settings › Workshop › Online booking, so far (Jack, 19 Oct,
+ * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
+ * bk-settings-reserve): how long before a set-time booking bikes come in
+ * (answers 3 and 7), shown while bikes are booked in for a set time, and the
+ * time kept free each day (answers 1 and 6). The rest of the section comes later.
+ */
+function OnlineBookingBox() {
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  return (
+    <section aria-labelledby="set-online" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
+      <h3 id="set-online" className="m-0 text-base font-bold">Online booking</h3>
+      {settings.data?.bookingMode === 'timed' ? (
+        <NumberSetting
+          id="lead" label="Drop off before the booking" hint="How long before their booked time customers bring the bike in" unit="minutes"
+          field="timedLeadMinutes" toBox={(m) => String(m)}
+          fromBox={(n) => (Number.isInteger(n) && n >= 0 && n <= 240 ? n : null)} invalid="Enter 0 to 240 minutes"
+        />
+      ) : null}
+      <NumberSetting
+        id="reserve" label="Time kept free each day" hint="For the little jobs between bikes" unit="hours"
+        field="fullDayThresholdMinutes" toBox={(m) => String(m / 60)}
+        fromBox={(h) => (h >= 0 && h <= 8 && Number.isInteger(h * 2) ? h * 60 : null)} invalid="Enter 0 to 8 hours, in half hours"
+      />
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
     </section>
   );
 }

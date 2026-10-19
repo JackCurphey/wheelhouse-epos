@@ -1,0 +1,17 @@
+# book Specification
+
+## Purpose
+The customer's side of booking a repair online: the booking page their private link opens, and what it tells them about their booking.
+
+## Requirements
+
+### Requirement: The booking page says when to drop the bike off
+Once a booking is confirmed, the customer's booking page SHALL say when to drop the bike off (Jack, 19 Oct): with a set time, before the booking by the shop's lead time ("Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30."); for the whole day, in the shop's drop-off window ("Drop your bike off between 09:00 and 10:00.").
+
+#### Scenario: A set time
+- **WHEN** Maya's confirmed booking is at 11:30 and the shop's lead time is 30 minutes
+- **THEN** her booking page says "Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30."
+
+#### Scenario: Not confirmed yet
+- **WHEN** the booking is still waiting for the shop to accept it
+- **THEN** the page doesn't tell her when to drop off
