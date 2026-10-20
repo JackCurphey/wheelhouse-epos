@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FocusEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
@@ -582,6 +582,13 @@ function TermsSetting() {
     enabled: editing && own === null && slug !== '',
   });
   const current = own ?? (standard.data?.standard ? standard.data.text : '');
+  // Once the box opens from "Use your own" and has its words, the cursor goes
+  // into it, as the button it replaced has gone (fresh review).
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+  const ready = !!settings.data && (own !== null || !!standard.data);
+  useEffect(() => {
+    if (editing && ready) boxRef.current?.focus();
+  }, [editing, ready]);
   const shown = typed ?? current;
 
   async function put(value: string | null) {
@@ -597,7 +604,9 @@ function TermsSetting() {
     }
   }
 
-  function leave() {
+  function leave(e: FocusEvent<HTMLTextAreaElement>) {
+    // Going straight to "Go back" mustn't save the words first (fresh review).
+    if ((e.relatedTarget as HTMLElement | null)?.id === 'terms-go-back') return;
     if (typed === null || typed.trim() === current.trim()) return;
     void put(typed);
   }
@@ -616,20 +625,24 @@ function TermsSetting() {
           <label htmlFor="booking-terms" className="text-[15px] font-semibold">Your booking terms</label>
           <textarea
             id="booking-terms"
+            ref={boxRef}
             aria-describedby="booking-terms-h"
             rows={8}
             maxLength={20000}
             value={shown}
-            disabled={!settings.data || (own === null && !standard.data)}
+            disabled={!ready}
             onChange={(e) => setTyped(e.target.value)}
-            onBlur={leave}
+            onBlur={(e) => leave(e)}
             className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal"
           />
           <span id="booking-terms-h" className="text-[13px] text-[var(--wh-muted)]">Customers agree to these when they book. A copy is kept with each booking.</span>
           {own !== null && (
-            <div><Button variant="ghost" onClick={() => void put(null)}>Go back to Wheelhouse’s standard terms</Button></div>
+            <div><Button id="terms-go-back" variant="ghost" onClick={() => { setTyped(null); void put(null); }}>Go back to Wheelhouse’s standard terms</Button></div>
           )}
         </>
+      )}
+      {editing && own === null && standard.isError && (
+        <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load the standard terms to start from. Try again in a moment.</p>
       )}
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
     </div>

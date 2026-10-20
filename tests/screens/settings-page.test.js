@@ -17,6 +17,7 @@ let details;
 let detailsFail;
 let holdDetails = null;
 let refuseHours = null;
+let termsFail = false;
 const STANDARD_TERMS = '1. Your booking is a request.\n2. Payment is due when you collect your bike.';
 const WEEK = [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '17:00' }));
 afterEach(async () => {
@@ -31,6 +32,7 @@ async function openSettings({ me = OWNER } = {}) {
   calls = [];
   settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
   refuseHours = null;
+  termsFail = false;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
   detailsFail = false;
@@ -60,6 +62,7 @@ async function openSettings({ me = OWNER } = {}) {
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
+    if (u.pathname === '/api/portal/north-street/terms' && termsFail) return reply(500, { error: 'Internal error' });
     if (u.pathname === '/api/portal/north-street/terms') return reply(200, { title: 'Booking terms', text: STANDARD_TERMS, standard: true });
     if (u.pathname === '/api/workshop-settings') return reply(200, settings);
     return reply(404, { error: 'Not found' });
@@ -638,4 +641,19 @@ test('a refused save shows its words and keeps what was typed', async () => {
   fireEvent.blur(box);
   assert.ok(await ui.findByText('Booking terms can be up to 20,000 characters'));
   assert.equal(box.value, 'Too long, say.');
+});
+
+test('Use your own puts the cursor in the box once it has the words', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
+  const box = await ui.findByLabelText('Your booking terms');
+  await waitFor(() => assert.ok(document.activeElement === box));
+});
+
+test('if the standard terms can’t be loaded, it says so', async () => {
+  const { ui, fireEvent } = await openSettings();
+  termsFail = true;
+  shell.queryClient.setDefaultOptions({ queries: { retry: false } });
+  fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
+  assert.ok(await ui.findByText('Wheelhouse couldn’t load the standard terms to start from. Try again in a moment.'));
 });
