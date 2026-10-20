@@ -62,6 +62,19 @@ test('the booking’s mechanic and length, and its own slot offered again', asyn
   assert.ok(d.startTimes.includes('10:00'), JSON.stringify(d.startTimes));
 });
 
+// So the offer and the change route can't drift apart (fresh review).
+test('a time it offers is one the change route takes', async () => {
+  const day = nextDay();
+  const booked = await book(day, '10:00');
+  const { mechanicId, days: [d] } = (await days(booked.code, day)).body;
+  const other = d.startTimes.find((t) => t !== '10:00');
+  const res = await jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${booked.code}/change`, {
+    method: 'POST', body: { jobDate: day, mechanicId, startTime: other },
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.startTime, other);
+});
+
 test('another booking’s time isn’t offered', async () => {
   const day = nextDay();
   const mine = await book(day, '10:00');

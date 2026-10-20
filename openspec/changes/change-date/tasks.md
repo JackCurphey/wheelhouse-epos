@@ -4,7 +4,7 @@
 
 - [x] 1.1 Tests first, watched failing: the booking's mechanic and minutes; its own slot offered again; notice respected; a closed day; a drop-off day; refusals (in shop, cancelled, no mechanic, bad dates, 404/410)
 - [x] 1.2 The route
-- [ ] 1.3 A fresh review; `npm test` passes; merged
+- [x] 1.3 A fresh review; `npm test` passes; merged
 
 ## 2. Screens — Jack, once 1.3 is merged
 

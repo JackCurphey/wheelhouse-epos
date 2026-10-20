@@ -157,6 +157,7 @@ POST /api/portal/:shopSlug/bikes
 GET /api/portal/:shopSlug/bookings
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/booking-links/:code
+GET /api/portal/:shopSlug/booking-links/:code/availability
 GET /api/portal/:shopSlug/booking-links/:code/quote
 POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 POST /api/portal/:shopSlug/booking-links/:code/cancel
