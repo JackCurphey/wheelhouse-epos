@@ -5,7 +5,7 @@
 - [x] 1.2 The guard
 
 ## 2. Wording and filling in
-- [ ] 2.1 Tests first: Wheelhouse's wording; tap-ins filled, missing ones left out; a shop's own wording; switched off
+- [ ] 2.1 Tests first: Wheelhouse's wording; tap-ins filled, missing ones left out; a shop's own wording; switched off; rows already there settled, not resent; the undone state
 - [ ] 2.2 Migration 048; templates.js; render
 
 ## 3. Senders, engine and outbox
@@ -17,8 +17,8 @@
 - [ ] 4.2 The routes
 
 ## 5. First triggers
-- [ ] 5.1 Tests first: quote send queues Quote to approve with Undo on the server; finish queues Bike ready
-- [ ] 5.2 The triggers; the quote panel's Undo
+- [ ] 5.1 Tests first: quote send queues Quote to approve; finish queues Bike ready with Undo; the old app's one-off text is pretend
+- [ ] 5.2 The triggers; Bike ready's Undo bar
 
 ## 6. Screens
 - [ ] 6.1 Draw the outbox, for Jack's approval

@@ -12,7 +12,7 @@ Every message the drawings promise — Request received, Booking confirmed, Quot
 - **A safety guard:** the hosted test copy refuses to start with any real sending key (add-hosted-copy tasks 2.1–2.2).
 - **The outbox, in the app**: what was sent (pretend), to whom, how and when — drawn first, for Jack's approval.
 - **Settings › Messages** (`set-msg-list`, `set-msg-edit`): the shop's messages, each with On/Off and Edit (wording, tap-ins, text and email preview).
-- **First triggers:** Quote to approve (moved off the hard-coded text; Undo on the server) and Bike ready (when a job is finished). The six approved booking messages follow as their own piece.
+- **First triggers:** Quote to approve (moved off the hard-coded text, keeping the quote's own minute's Undo for now) and Bike ready (when a job is marked ready, with a minute's Undo on the server). The old app's one-off text goes through the engine too, so nothing sends for real. The six approved booking messages follow as their own piece.
 
 ## Lane, work package, drawings and decisions
 
@@ -21,6 +21,9 @@ Every message the drawings promise — Request received, Booking confirmed, Quot
 - **Decisions:** `2026-10-20-messages-engine.md` answer 1; owner setup 14 and 23; account and reminders 3 and 6; stage 1 drawing gaps 7, 17, 24; build-plan questions Q9, Q10; drop-off and quote 5; UX walk-through H2; `2026-10-20-booking-messages.md`.
 
 ## Out of scope (later pieces)
+
+WP-1.8 stays open when this change is archived: its scheduler and `set-msg-new` (build plan :321-336) and the messages WP-4.1 waits on (split plan :567-569) come later.
+
 
 - Real sending (each channel only with Jack's yes); the six booking messages' triggers; scheduled messages (reminders, Bike still waiting, review requests) and the shop's own messages (`set-msg-new`); "Stop these" and consent per kind; the reply line (the booking page has nowhere to reply yet); the staff inbox; running alongside Citrus Lime ("Not sent — practice").
 

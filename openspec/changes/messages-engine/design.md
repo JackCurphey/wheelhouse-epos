@@ -4,8 +4,10 @@ Pretend for now (`docs/decisions/2026-10-20-messages-engine.md`). Built in piece
 
 ## Storage (migration 048)
 
-- `message_templates`: `shop_id`, `key` (e.g. `quote_to_approve`, `bike_ready`, `booking_confirmed`), `enabled` (default true), `wording` (null = Wheelhouse's), `subject` (null = Wheelhouse's); unique (shop, key); row-level security per shop. A row exists only once a shop changes something.
-- `customer_messages` (migration 008) gains: `job_id` (nullable), `channel` (`sms` | `whatsapp` | `email`), `template_key`, `subject`, `to_address`, `send_after` (when it may go), `sent_at`, `pretend` (boolean). Its `intent_state` (020) is used as the `messageIntent` machine says: `intended` (queued, waiting for `send_after`) → `sending` → `delivered` | `failed`; Undo is `cancel` (`intended` → `failed`, error "Undone").
+- `message_templates`: `shop_id`, `key` (e.g. `quote_to_approve`, `bike_ready`), `enabled` (default true), `wording` (null = Wheelhouse's), `subject` (null = Wheelhouse's); unique (shop, key); row-level security per shop. A row exists only once a shop changes something.
+- `customer_messages` (migration 008) gains: `job_id` (nullable), `channel` (`sms` | `whatsapp` | `email`), `template_key`, `subject`, `to_address`, `send_after` (when it may go; null for every row written before this change), `sent_at`, `pretend` (boolean, default false). Staff-triggered rows fill `sent_by_login_id`. The old `status` text column is kept in step for the old app's list: `queued` while waiting, then `sent`, `failed` or `undone`.
+- **Rows already there are settled, not resent** (fresh review): every existing row reads `intent_state = 'intended'` by 020's default, so 048 sets them to `delivered` where `status = 'sent'`, else `failed`; and the sender only ever claims rows whose `send_after` is set.
+- **Undone is its own state** (fresh review): `messageIntent` gains `undone`, reached by `undo` from `intended`, final (no `retry`); 048 re-makes 020's `intent_state` CHECK from the machine (`render-constraints.mjs` then points at 048).
 
 ## Wheelhouse's wording (server/messaging/templates.js)
 
@@ -21,9 +23,10 @@ One interface, `send({ channel, to, subject, body }) → { ok, providerId?, erro
 
 ## Engine (server/messaging/engine.js)
 
-- `queueMessage({ customerId, jobId, key, vars, delayMs })`: skips a switched-off message (returns `{ skipped: 'off' }`); picks the channel and address; renders; inserts `intended` with `send_after = now + delayMs` (60 s for staff-triggered messages, the drawn minute; 0 for others); returns the row.
-- `undoMessage(id)`: `intended` → `failed` ("Undone"), only before `send_after`; otherwise 409.
-- The sender's timer (in `server.js`, started with the server, stopped on shutdown; every 5 s, configurable for tests): for each shop, claims due `intended` rows (`FOR UPDATE SKIP LOCKED`), moves them to `sending`, calls the sender outside the shop's database session, then `delivered` (with `sent_at`) or `failed`.
+- **One clock:** `send_after` is set, and compared, with `server/clock.js` (`currentMoment()`, pinned in tests), passed into SQL as a parameter, never Postgres `now()`.
+- `queueMessage({ customerId, jobId, key, vars, delayMs, loginId })`: skips a switched-off message (returns `{ skipped: 'off' }`); picks the channel and address (none: `{ skipped: 'no_contact' }`); renders; inserts `intended` with `send_after = now + delayMs` (60 s for staff-triggered messages, the drawn minute; 0 for others); returns the row.
+- `undoMessage(id)`: `intended` → `undone`, only before `send_after`; otherwise 409.
+- **The sender's timer** (in `server.js`, started with the server, stopped on shutdown; every 5 s, its interval set by `WH_MESSAGES_TICK_MS` for tests): it lists the shops, then for each one, in its own `runWithShop`, claims due rows with a single `UPDATE customer_messages SET intent_state = 'sending' … WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= $now RETURNING …` (one statement, so two timers can't claim the same row). It calls the sender **outside** any shop scope, then records `delivered` (with `sent_at`) or `failed` in a second scope. A row left in `sending` for more than five minutes (a crash mid-send) is moved to `unknown` by `timeout`, and never resent automatically.
 
 ## Routes
 
@@ -35,8 +38,9 @@ One interface, `send({ channel, to, subject, body }) → { ok, providerId?, erro
 
 ## Triggers in this change
 
-- Quote to approve: `POST /api/quotes/:id/send` queues it (60 s Undo) instead of sending the hard-coded text; the quote panel's Undo calls `POST /api/messages/:id/undo` instead of holding the send in the browser.
-- Bike ready: the job's `finish` queues it (60 s Undo).
+- **Quote to approve:** the quote panel keeps its own minute's Undo (`quote-panel.tsx`), because `POST /api/quotes/:id/send` also moves the quote to sent and makes the customer's new link, which an undone text would leave behind (fresh review). When that minute passes and the panel sends, the route queues Quote to approve through the engine with no further delay, instead of its hard-coded text. Moving the quote's Undo to the server (so a closed tab still sends) is a later piece.
+- **Bike ready:** the job's `finish` — "Mark ready for collection" in the drawings (UX walk-through H2) — queues it, with the 60 s Undo; the job page shows the drawn bar "“Bike ready” goes to [first name] by [text] in 1 minute" with Undo.
+- **The old app's one-off text** (`POST /api/customers/:id/texts`) goes through the engine and the pretend sender too, at once, so nothing sends for real anywhere (Jack: "every message goes to an outbox").
 
 ## Safety guard
 
@@ -44,5 +48,5 @@ With `WHEELHOUSE_HOSTED_COPY=1`, the server refuses to start if any `TWILIO_*`, 
 
 ## Screens
 
-- Settings › Messages: the rows that exist (Quote to approve, Bike ready, the six booking messages), each with "Customer's choice", On/Off and Edit; Edit opens the wording box with tap-ins, the text preview and the email preview, Go back to Wheelhouse's wording, Done.
+- Settings › Messages shows only messages that can be sent (stage 1 drawing gaps 7): Quote to approve and Bike ready now, each with "Customer's choice", On/Off and Edit; Edit opens the wording box with tap-ins, the text preview and the email preview, Go back to Wheelhouse's wording, Done. Other rows arrive with their pieces; "Your own messages" and "+ Add your own message" with `set-msg-new`. The shop choosing text or email per message (owner setup 14) waits too: every message goes the customer's way for now.
 - The outbox: drawn first for Jack's approval.
