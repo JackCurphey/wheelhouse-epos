@@ -3679,6 +3679,22 @@ ${dialogBody(`<p style="margin: 0; font-size: 14px; color: ${C.muted}">Pretend f
 <ol aria-label="Messages with Maya Patel" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px">${JOB_THREAD.map(bubble).join('')}</ol>`, 20, 14)}`;
 }
 
+// A booking message that couldn't go (Jack, 20 Oct: "telling staff when a
+// booking message didn't go"): after an answer whose message has no way to
+// reach the customer, the diary's floating message (the built one a refused
+// move uses, #239) says so, plainly rather than in red; Close puts it away.
+// Switched off in Settings says nothing, as Bike ready (decided while
+// building, messages engine 9).
+const NO_MESSAGE_NOTE = '“Booking confirmed” didn’t go: Sam Reed has no phone number or email on file.';
+function noMessageNote(size) {
+  const phone = size === 'phone';
+  return `<div role="status" style="position: absolute; ${phone ? 'left: 12px; right: 12px; bottom: 12px' : 'left: 50%; bottom: 24px; transform: translateX(-50%); width: 560px'}; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 14px; border-radius: 8px; background: ${C.panel}; border: 1px solid ${C.border}; box-shadow: 0 8px 24px rgba(0,0,0,0.18); font-size: 14px; color: ${C.ink}">
+<span style="flex-grow: 1; padding: 6px 0; line-height: 1.4">${esc(NO_MESSAGE_NOTE)}</span>
+<button type="button" aria-label="Close the message" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: ${C.ink}">${icon('close', 18)}</button>
+</div>`;
+}
+const withNote = (base, w, h, size) => `<div style="position: relative; width: ${w}px; height: ${h}px; overflow: hidden">${base}${noMessageNote(size)}</div>`;
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
@@ -3699,6 +3715,8 @@ export function oldDiaryFeatureDrawings() {
     'diary-menu-pending-phone': menuPendingPhoneBoard(),
     'job-files': jobPageWithFiles('desktop'),
     'job-files-phone': jobPageWithFiles('phone'),
+    'diary-no-message': withNote(screens['diary'].desktop, DW, DH, 'desktop'),
+    'diary-no-message-phone': withNote(screens['diary'].phone, PW, PH, 'phone'),
     'job-messages': dialogOverlay(screens['job-finished'].desktop, DW, DH, messagesDialog('desktop'), { maxWidth: 600, labelledby: 'job-msgs-title' }),
     'job-messages-phone': dialogOverlay(screens['job-finished'].phone, PW, PH, messagesDialog('phone'), { full: true, pad: 0, labelledby: 'job-msgs-title' }),
     'job-delete-confirm': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteConfirm('desktop'), { maxWidth: 520, labelledby: 'del-job-title' }),
