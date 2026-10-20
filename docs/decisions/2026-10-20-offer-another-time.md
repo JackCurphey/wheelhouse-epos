@@ -30,3 +30,6 @@ time picker first ("1").
      they asked for is let go.", and Offer this time / Keep request.
    The mockup's "Offer another time" on the booking request boards, which
    went to the customer's change request by mistake, now goes here.
+3. **Drawings approved; build the whole flow** (Jack, 20 Oct: "yeah looks
+   good, go ahead"): the server part (Mark's files flagged for him), the
+   staff's pick and pop-up, then the customer's page.

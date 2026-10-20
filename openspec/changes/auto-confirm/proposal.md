@@ -34,6 +34,6 @@ approved; this contract first, Mark's server half, then Jack's screens.
 
 ## Impact
 
-- Server: a new migration (046); `workshop-settings.js`, `portal.js`, `workshop.js`
+- Server: a new migration (the next free number); `workshop-settings.js`, `portal.js`, `workshop.js`
 - Screens: `settings-page.tsx`; the step 4 details screen; the diary's job block
 - Tests for each
