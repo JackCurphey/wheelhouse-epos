@@ -37,7 +37,15 @@ job with money paid on its order or the bike in the shop (409
 bookings automatically, contract in `openspec/changes/auto-confirm/design.md`
 (migration 046, `confirmBookingsAutomatically`, bookings saved `scheduled`
 when on, `newOnline` and `POST /api/workshop-jobs/:id/seen`); Jack's screens
-wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
+wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #315 too** (20 Oct, on Jack's word): a new booking state
+`offered` (migration 046: the CHECK and the derived `status` re-made,
+`offered_from_date`/`offered_from_time`/`offer_message`/`offer_accepted_at`);
+`offered` is in `LIVE_BOOKING_STATES`; `POST /api/workshop-jobs/:id/offer`
+in workshop.js (your approval for the workshop server); your
+`booking-link.js` has stage `time_offered`; your `portal.js` has the link's
+`offer`/`canAccept`, `customerCanChange` (false for an offer), cancel on an
+offer, and `POST …/booking-links/:code/accept-offer`. The auto-confirm
+contract now takes the next free migration number. **Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
 answer 2): replying to a text as a shop setting, a shop's own number whose
 replies land in its inbox (a monthly cost, and receiving texts to build), or
 the cheaper shared number with replies on the booking page, as now. Not to
@@ -179,7 +187,11 @@ drawn and approved (#310, `docs/decisions/2026-10-20-booking-messages.md`):
 the booking-confirmed text puts in the shop's note; sending waits for the
 messages engine (WP-1.8). Then a shop's own booking terms in Settings › Online booking:
 Use your own, from the standard terms, and Go back to Wheelhouse's (#312);
-screens only. Online booking now has everything drawn except deposits. Then Files and photos on the job page,
+screens only. Online booking now has everything drawn except deposits. Then
+Offer another time, whole: staff pick a time in the diary itself and add a
+message (drawings #314, redrawn at Jack's request); the suggested time is held
+and the first let go; the customer accepts or cancels on their booking page
+(#315 server, #316 staff, #317 customer). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
