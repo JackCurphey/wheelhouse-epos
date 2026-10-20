@@ -182,6 +182,27 @@ test('the mechanic pills are one Tab stop, and the arrow keys move and pick, wra
   assert.ok(document.activeElement === queue);
 });
 
+// Telling staff when a booking message didn't go (booking messages answer 5;
+// drawn as diary-no-message): the diary's floating note, with Close.
+test('an accept whose message couldn’t reach the customer says so in the diary, until closed', async () => {
+  const r = await openDiary();
+  const dlg = await openCard(r, 'Sam Reed');
+  answer = { status: 200, body: { ...REQUEST, bookingState: 'scheduled', bookingMessage: { skipped: 'no_contact', name: 'Booking confirmed' } } };
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Accept' }));
+  const note = await r.ui.findByText('“Booking confirmed” didn’t go: Sam Reed has no phone number or email on file.');
+  assert.equal(note.closest('[role]').getAttribute('role'), 'status');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Close the message' }));
+  await r.waitFor(() => assert.ok(r.ui.queryByText(/didn’t go/) === null));
+});
+
+test('an accept whose message went says nothing more', async () => {
+  const r = await openDiary();
+  const dlg = await openCard(r, 'Sam Reed');
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Accept' }));
+  await r.waitFor(() => assert.ok(r.ui.queryByRole('dialog') === null));
+  assert.ok(r.ui.queryByText(/didn’t go/) === null);
+});
+
 // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as request-decline).
 const DECLINE_WORDS = 'Sorry, we can’t fit this service in on Friday. Please try another day, or call us and we’ll help find one.';
 test('Decline opens the message to the customer, started for them; Keep request changes nothing', async () => {

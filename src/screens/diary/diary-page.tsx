@@ -963,6 +963,8 @@ export function DiaryPage() {
   previewRef.current = preview;
   const [moveNote, setMoveNote] = useState('');
   const [moveError, setMoveError] = useState<string | null>(null);
+  // A booking message that couldn't go (booking messages answer 5, diary-no-message).
+  const [notice, setNotice] = useState<string | null>(null);
   const session = useSession();
   // "Print receipt" (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
   // the paid order names its sale; that sale is the receipt.
@@ -1547,7 +1549,7 @@ export function DiaryPage() {
       people={people}
       onChooseAgain={() => { setOfferAt(null); setPicking(true); }}
       onKeep={backToRequest}
-      onOffered={() => { setOffering(null); setOfferAt(null); setChosen(null); }}
+      onOffered={(note) => { setOffering(null); setOfferAt(null); setChosen(null); if (note) setNotice(note); }}
     />
   ) : null;
   const moveErrorBox = moveError ? (
@@ -1558,7 +1560,16 @@ export function DiaryPage() {
       </button>
     </div>
   ) : null;
-  const floating = pickBar || moveErrorBox ? <Floating>{pickBar}{moveErrorBox}</Floating> : null;
+  // Drawn as diary-no-message: the floating message, in the panel's colours.
+  const noticeBox = notice ? (
+    <div role="status" className="pointer-events-auto flex items-center gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-1 pr-1 pl-3.5 text-sm shadow-[0_8px_24px_var(--wh-backdrop)]">
+      <span className="grow py-1.5 leading-snug">{notice}</span>
+      <button type="button" aria-label="Close the message" onClick={() => setNotice(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--wh-hover)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
+  ) : null;
+  const floating = pickBar || moveErrorBox || noticeBox ? <Floating>{pickBar}{moveErrorBox}{noticeBox}</Floating> : null;
   // Room at the foot of the page, so the floating bar can't hide the last
   // hour of the diary: scrolling to the bottom brings it above the bar.
   const floatingSpacer = floating ? <div data-floating-spacer aria-hidden="true" className="h-28" /> : null;
@@ -1819,14 +1830,14 @@ export function DiaryPage() {
             card's bar, at the end of the page, so nothing above moves and
             neither covers the other (Jack, 16 Oct). */}
         <div data-phone-foot className="sticky bottom-0 z-30 flex flex-col">
-        {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
+        {pickBar || moveErrorBox || noticeBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}{noticeBox}</div> : null}
         {chosenBar}
         </div>
 
         {waitingSheet}
         <ChooseDaySheet key={chooseOpen ? `open-${date}` : 'closed'} open={chooseOpen} date={date} who={(j) => (shared ? j.mechanicId === null : whoId === null || j.mechanicId === whoId)} whose={shared ? 'Shared queue' : whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'everyone' : 'everyone'} onClose={() => setChooseOpen(false)} onPick={(d) => { setChooseOpen(false); set({ date: d }); }} />
 
-        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} onOffer={startOffer} /> : null}
+        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onNotice={setNotice} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} onOffer={startOffer} /> : null}
         {newJobDialog}
         {offerDialog}
         {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
@@ -1981,12 +1992,12 @@ export function DiaryPage() {
       {isNarrow ? (
         // An upright tablet: the foot of the page, as on a phone.
         <div data-tablet-foot className="sticky bottom-0 z-30 -mx-3.5 flex flex-col md:-mx-[22px]">
-          {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
+          {pickBar || moveErrorBox || noticeBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}{noticeBox}</div> : null}
           {chosenBar}
         </div>
       ) : floatingSpacer}
       {waitingSheet}
-      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} onOffer={startOffer} /> : null}
+      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onNotice={setNotice} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} onOffer={startOffer} /> : null}
       {newJobDialog}
       {offerDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}

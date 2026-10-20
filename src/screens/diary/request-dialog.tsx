@@ -7,6 +7,7 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDesc
 import { STATE_LABEL, dayLabel, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
 import { requestMinutes } from './offer-dialog.tsx';
 import { Pill } from './change-details-dialog.tsx';
+import { noMessageNote, type BookingMessageReply } from './no-message.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
@@ -64,7 +65,7 @@ const TITLE: Record<WaitingItem['kind'], string> = {
   offered: '',
 };
 
-export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }: { item: WaitingItem; onClose: () => void; onAnswered?: () => void; onOpenJob?: (jobId: number) => void; onOffer?: (job: WorkshopJob) => void }) {
+export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, onNotice }: { item: WaitingItem; onClose: () => void; onNotice?: (text: string) => void; onAnswered?: () => void; onOpenJob?: (jobId: number) => void; onOffer?: (job: WorkshopJob) => void }) {
   const queryClient = useQueryClient();
   const id = item.jobId as number;
   const jobQuery = useQuery({ queryKey: ['workshop-job', id], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${id}`) });
@@ -99,11 +100,13 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
     setSending(true);
     setMessage(null);
     try {
-      await jobAction(id, action, job.version, body);
+      const done = await jobAction<{ bookingMessage?: BookingMessageReply }>(id, action, job.version, body);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
       ]);
+      const note = noMessageNote(done?.bookingMessage, item.customerName || job?.customerName);
+      if (note) onNotice?.(note);
       onAnswered?.();
       onClose();
     } catch (err) {

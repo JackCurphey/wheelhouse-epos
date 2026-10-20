@@ -41,6 +41,7 @@ const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
 let calls;
+let postReply = null; // what the next answer gets back
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -55,6 +56,7 @@ function stubServer() {
     calls.push({ url, method: init.method ?? 'GET' });
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
+    if ((init?.method ?? 'GET') === 'POST' && postReply) return reply(200, postReply);
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
@@ -221,3 +223,23 @@ test('on a phone, Today shows away from today and takes you back', async () => {
   await waitFor(() => assert.ok(ui.queryByRole('button', { name: 'Today' }) === null, 'gone once today is on screen'));
   assert.equal(new URL(window.location.href).searchParams.get('date'), null, 'the diary is on today');
 });
+
+// Telling staff when a booking message didn't go (drawn as
+// diary-no-message-phone): the note shows at the phone diary's foot too.
+test('on a phone, an accept whose message couldn’t reach the customer says so at the foot', async () => {
+  const { ui, fireEvent, within, waitFor } = await openPhone();
+  postReply = { ...JOBS.find((j) => j.id === 7), bookingState: 'scheduled', bookingMessage: { skipped: 'no_contact', name: 'Booking confirmed' } };
+  try {
+    fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
+    fireEvent.click(within(await ui.findByRole('dialog', { name: 'Waiting for you (1)' })).getByRole('button', { name: /Sam Reed/ }));
+    const bar = within(await ui.findByRole('status', { name: 'Chosen from Waiting for you' }));
+    fireEvent.click(bar.getByRole('button', { name: "Open Sam Reed's request" }));
+    const accept = await ui.findByRole('button', { name: 'Accept' });
+    await waitFor(() => assert.equal(accept.disabled, false));
+    fireEvent.click(accept);
+    assert.ok(await ui.findByText('“Booking confirmed” didn’t go: Sam Reed has no phone number or email on file.'));
+  } finally {
+    postReply = null;
+  }
+});
+

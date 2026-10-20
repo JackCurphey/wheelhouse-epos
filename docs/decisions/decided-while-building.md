@@ -834,6 +834,16 @@ silent:
    *Pattern:* Change details' pills. (Arrow keys and one Tab stop per group:
    built 20 Oct, pill-keys.)
 
+### 20 Oct 2026: telling staff a booking message didn't go (diary-no-message)
+
+1. **The note stays until Close, and a second replaces the first**; it shows
+   at the foot on a phone and an upright tablet too. *Pattern:* the diary's
+   floating message for a refused move.
+2. **Its Close is named "Close the message", as the refused move's is**: with
+   both showing, the two buttons share a name. *Pattern:* the drawing's own
+   label. A screen reader may not read the note out as it appears (it arrives
+   already filled); a standing status area would fix both if wanted.
+
 ### 20 Oct 2026: the Settings frame (WP-1.3, first part)
 
 1. **On a computer Settings opens on Front desk**, the first room drawn;

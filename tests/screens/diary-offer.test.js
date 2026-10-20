@@ -273,3 +273,16 @@ test('declining with no message sends none', async () => {
   r.fireEvent.click(decline.getByRole('button', { name: 'Decline & notify customer' }));
   await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/5/decline {"message":"","version":2}']));
 });
+
+test('an offer whose message couldn’t reach the customer says so in the diary', async () => {
+  const r = await openDiary();
+  const dlg = await openRequest(r);
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Offer another time' }));
+  await r.ui.findByText(BAR);
+  r.fireEvent.click(r.ui.getByRole('group', { name: 'Tuesday 6 October' }), { clientY: 58 });
+  const offer = r.within(await r.ui.findByRole('dialog', { name: 'Offer another time' }));
+  answer = { status: 200, body: { ...REQUEST, bookingState: 'offered', bookingMessage: { skipped: 'no_contact', name: 'New time offered' } } };
+  r.fireEvent.click(offer.getByRole('button', { name: 'Offer this time' }));
+  assert.ok(await r.ui.findByText('“New time offered” didn’t go: Sam Reed has no phone number or email on file.'));
+});
+

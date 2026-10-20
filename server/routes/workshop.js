@@ -16,6 +16,7 @@ import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
@@ -251,8 +252,8 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
     out = requestedGone;
   }
   if (out?.gone) return notFound(res, 'Job not found');
-  if (answer === 'accept' && out.status === 200) await sendBookingMessage(req, id, shopId, 'date_change_answered');
-  sendJson(res, out.status, out.body);
+  const bookingMessage = answer === 'accept' && out.status === 200 ? await sendBookingMessage(req, id, shopId, 'date_change_answered') : undefined;
+  sendJson(res, out.status, bookingMessage ? { ...out.body, bookingMessage } : out.body);
 }
 
 // One item of "Waiting for you" (decision log D12).
@@ -313,10 +314,14 @@ async function queueBikeReady(req, jobId, shopId) {
 // docs/decisions/2026-10-20-booking-messages.md answer 4), at once, the
 // customer's way. A message that can't be queued is logged: the answer it
 // follows has already been made and stands.
+// Returns { skipped: 'no_contact', name } when the customer can't be reached,
+// for staff to be told (booking messages answer 5); otherwise nothing.
 async function sendBookingMessage(req, jobId, shopId, key) {
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
-    if (await whyNotQueued(key, customerId)) return;
+    const why = await whyNotQueued(key, customerId);
+    if (why === 'no_contact') return { skipped: 'no_contact', name: TEMPLATES[key].name };
+    if (why) return undefined;
     const link = await messageLink(() => issueJobLink(req, jobId, shopId));
     const { vars } = await bookingMessageVars(jobId, shopId, link, key);
     const ctx = await currentSession(req);
@@ -324,6 +329,7 @@ async function sendBookingMessage(req, jobId, shopId, key) {
   } catch (err) {
     console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
+  return undefined;
 }
 
 // Why a job's message didn't go, for the person who pressed the button.
@@ -867,8 +873,9 @@ export function register(route) {
       if (machine === bookingRequest && event === 'decline') {
         await db.prepare('UPDATE workshop_jobs SET decline_message = ? WHERE id = ?').run(declineMessage || null, id);
       }
-      if (event === 'accept' && answering === 'pending') await sendBookingMessage(req, id, shopId, 'booking_confirmed');
-      if (event === 'decline' && (answering === 'pending' || answering === 'offered')) await sendBookingMessage(req, id, shopId, 'request_declined');
+      let bookingMessage;
+      if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
+      if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');
       // A staff cancellation never shows in "Waiting for you" (piece 12), and
       // the link no longer speaks of a declined change.
       if (machine === bookingRequest && event === 'cancel') {
@@ -884,7 +891,7 @@ export function register(route) {
       // and otherwise keeps (or realigns) the one hold a live job holds.
       await syncJobHold(id);
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-      sendJson(res, 200, readyMessage ? { ...serializeWorkshopJob(row), readyMessage } : serializeWorkshopJob(row));
+      sendJson(res, 200, { ...serializeWorkshopJob(row), ...(readyMessage ? { readyMessage } : {}), ...(bookingMessage ? { bookingMessage } : {}) });
     });
   }
 
@@ -959,8 +966,8 @@ export function register(route) {
       out = taken;
     }
     if (out?.gone) return notFound(res, 'Job not found');
-    if (out.status === 200) await sendBookingMessage(req, Number(params.id), shopId, 'time_offered');
-    sendJson(res, out.status, out.body);
+    const bookingMessage = out.status === 200 ? await sendBookingMessage(req, Number(params.id), shopId, 'time_offered') : undefined;
+    sendJson(res, out.status, bookingMessage ? { ...out.body, bookingMessage } : out.body);
   });
 
   // screens: change-pending, diary

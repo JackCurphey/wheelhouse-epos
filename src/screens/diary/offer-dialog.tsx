@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { dayLabel, hhmm } from './rules.ts';
+import { noMessageNote, type BookingMessageReply } from './no-message.ts';
 
 /**
  * Offer another time (Jack, 20 Oct, docs/decisions/2026-10-20-offer-another-time.md;
@@ -39,7 +40,7 @@ function refusal(err: unknown): string {
 
 export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered }: {
   job: WorkshopJob; at: OfferAt; people: { id: number; name: string }[];
-  onChooseAgain: () => void; onKeep: () => void; onOffered: () => void;
+  onChooseAgain: () => void; onKeep: () => void; onOffered: (note?: string) => void;
 }) {
   const queryClient = useQueryClient();
   const customer = job.customerName || 'Customer';
@@ -55,13 +56,13 @@ export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered 
     setSending(true);
     setError(null);
     try {
-      await jobAction(job.id, 'offer', job.version, { jobDate: at.date, startTime: time, mechanicId: at.mechanicId, message });
+      const done = await jobAction<{ bookingMessage?: BookingMessageReply }>(job.id, 'offer', job.version, { jobDate: at.date, startTime: time, mechanicId: at.mechanicId, message });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
       ]);
-      onOffered();
+      onOffered(noMessageNote(done?.bookingMessage, job.customerName) ?? undefined);
     } catch (err) {
       setError(refusal(err));
     } finally {
