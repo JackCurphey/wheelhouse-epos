@@ -17,3 +17,18 @@ test('the build board’s script runs and every section has content', () => {
     assert.ok(doc.getElementById(id).children.length > 0, `#${id} has nothing in it`);
   }
 });
+
+// How far through the current stage (Jack, 20 Oct): worked out from the
+// stage's own steps in the BOARD block (split plan §9), never typed in.
+test('the board shows how far through the current stage, from its steps', () => {
+  const win = new JSDOM(html, { runScripts: 'dangerously' }).window;
+  const doc = win.document;
+  const steps = [...doc.querySelectorAll('#ov-stage-steps li')];
+  assert.ok(steps.length > 0, 'the stage lists its steps');
+  const done = steps.filter((li) => li.dataset.done === 'true').length;
+  const bar = doc.querySelector('[role="progressbar"]');
+  assert.ok(bar !== null, 'a progress bar');
+  const pct = Math.round((done / steps.length) * 100);
+  assert.equal(bar.getAttribute('aria-valuenow'), String(pct));
+  assert.match(doc.getElementById('ov-stage-sum').textContent, new RegExp(`${done} of ${steps.length} steps done · ${pct}%`));
+});
