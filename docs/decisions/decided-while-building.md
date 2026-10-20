@@ -599,6 +599,34 @@ silent:
    shop did. *Pattern:* bk-cancelled; the words are true either way (fresh
    review).
 
+### 20 Oct 2026: Change the date on the booking page (Jack, 20 Oct: "1: build the server additions for Change the date yourself, merge once checks pass, and flag them for Mark.")
+
+1. **"Choose a new date" opens under the card, in place of the buttons**,
+   rather than inside the card in place of its rows. *Pattern:* bk-change's
+   section, kept apart from the booking as it stands.
+2. **The strip shows ten days from today; "Later weeks ›" moves it on a week,
+   and "‹ Earlier weeks" back once moved on; the days come once, today to
+   61 days on.** *Pattern:* bk-change's strip and "Later weeks"; the
+   booking's own day range (fresh review: one request, not one per week).
+3. **A drop-off day with room reads "Free", and says "Drop off between
+   [start] and [end]" once chosen.** *Pattern:* bk-when-dropoff's window.
+4. **Ask for this date stays off until a free day (and, on a timed day, a
+   time) is chosen, and while it's the booking's own day and time.**
+   *Pattern:* the booking flow's pinned button, off until a choice is made.
+5. **A change waiting keeps the drop-off line and the note, and its buttons
+   are Cancel my date change and Cancel booking; "— we'll send you a text"
+   is left out** (no texts yet). *Pattern:* bk-change-pending; the drop-off
+   line's own rule (19 Oct item 1 above).
+6. **A declined change reads "The shop couldn't do the new date you asked
+   for. Your booking is still [day, time]."**: the declined date isn't kept,
+   so it isn't named. *Pattern:* bk-change-declined's notice.
+7. **Once the page offers both Change the date and Cancel booking, the
+   "Contact [shop]" line goes.** *Pattern:* the line was there only until
+   these were built.
+8. **The strip starts on the booking's own day if the device's clock is
+   ahead of it.** *Pattern:* the server offers nothing before its own
+   earliest moment, so starting earlier only shows days it marks full.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

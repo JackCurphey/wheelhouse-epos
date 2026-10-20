@@ -8,9 +8,9 @@
 
 ## 2. Screens — Jack, once 1.3 is merged
 
-- [ ] 2.1 Tests first, watched failing: Change the date shows with canChange; the strip's days and words; choosing a day shows its times; Ask for this date posts and the page shows the waiting state; Keep closes; a refusal shows; Cancel my date change; the declined notice
-- [ ] 2.2 change-date.tsx and the page's states
-- [ ] 2.3 Browser: a customer asks for a new date against the real server, and takes it back
+- [x] 2.1 Tests first, watched failing: Change the date shows with canChange; the strip's days and words; choosing a day shows its times; Ask for this date posts and the page shows the waiting state; Keep closes; a refusal shows; Cancel my date change; the declined notice
+- [x] 2.2 change-date.tsx and the page's states
+- [x] 2.3 Browser: a customer asks for a new date against the real server, and takes it back
 
 ## 3. Checks
 

@@ -6,9 +6,10 @@ import { ApiError, apiMutate } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
+import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink } from './pending-query.ts';
 import {
-  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, dropOffLine, pageHeading, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -38,6 +39,8 @@ export function PendingScreen() {
 
 function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: string; code: string }) {
   const [copied, setCopied] = React.useState(false);
+  // Change the date's strip, open in place of the buttons (drawn as bk-change).
+  const [changing, setChanging] = React.useState(false);
   // "Copied" for a moment, then back. The state is set in the timer's
   // callback, not in the effect itself.
   React.useEffect(() => {
@@ -58,6 +61,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   const total = totalLine(link);
   const answers = answerLines(link);
   const arrival = [dropOffLine(link), link.confirmationNote].filter(Boolean).join(' ');
+  const standing = link.stage === 'confirmed' || link.stage === 'change_requested';
   const keep = (
     <>
       <p className="m-0 mb-2">Keep this link to check your booking</p>
@@ -65,7 +69,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       {/* The button's own text already changes for a sighted customer; a screen
           reader user focused elsewhere needs the change announced. */}
       <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
-      <p className="m-0">{link.stage === 'confirmed' && link.canCancel ? changeLine(link.shopName) : contactLine(link.shopName)}</p>
+      {/* Once the page offers both, no contact line; with Cancel only, it's about the date. */}
+      {!(standing && link.canChange) && <p className="m-0">{standing && link.canCancel ? changeLine(link.shopName) : contactLine(link.shopName)}</p>}
     </>
   );
   const answerList = answers.length > 0 && (
@@ -99,7 +104,10 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
   }
 
-  if (link.stage === 'confirmed') {
+  // A confirmed booking, or one with a change waiting (bk-change-pending), on
+  // the drawn page; a change the shop declined says so at the top (bk-change-declined).
+  if (standing) {
+    const waiting = link.stage === 'change_requested';
     const bike = bikeRow(link);
     const row = (label: string, value: React.ReactNode) => (
       <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
@@ -111,10 +119,16 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       <BookFrame title={pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
         <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+          {!waiting && link.changeDeclined && (
+            <p role="status" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]">{declinedLine(link)}</p>
+          )}
           {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
           <div>
-            <span className="inline-block rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>
+            {waiting
+              ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">New date waiting for the shop</span>
+              : <span className="inline-block rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>}
           </div>
+          {waiting && requestedLine(link) && <p className="m-0 text-[15px] leading-normal">{requestedLine(link)}</p>}
           {arrival && <p className="m-0 text-[15px] leading-normal">{arrival}</p>}
           <div>
             {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
@@ -131,7 +145,13 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           )}
           <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
         </div>
-        {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} />}
+        {changing ? <ChangeDate link={link} shopSlug={shopSlug} code={code} onClose={() => setChanging(false)} /> : (
+          <div className="mb-4 flex flex-wrap gap-2.5">
+            {waiting && <WithdrawChange shopSlug={shopSlug} code={code} />}
+            {!waiting && link.canChange && <Button onClick={() => setChanging(true)}>Change the date</Button>}
+            {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} />}
+          </div>
+        )}
         {keep}
       </BookFrame>
     );
@@ -203,7 +223,7 @@ function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: 
   }
 
   return (
-    <div className="mb-4">
+    <>
       <Button onClick={() => { setError(null); setOpen(true); }}>Cancel booking</Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="cancel-title" aria-describedby="cancel-sub">
         <DialogHeader>
@@ -222,6 +242,32 @@ function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: 
           <Button variant="danger" disabled={busy} onClick={() => void cancel()}>Cancel booking</Button>
         </DialogFooter>
       </Dialog>
-    </div>
+    </>
+  );
+}
+
+/** Cancel my date change (bk-change-pending): the booking goes back to its own date. */
+function WithdrawChange({ shopSlug, code }: { shopSlug: string; code: string }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  async function withdraw() {
+    setBusy(true);
+    setError(null);
+    try {
+      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/withdraw-change`, {}, { method: 'POST' });
+      queryClient.setQueryData(['portal', shopSlug, 'booking-link', code], reply);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
+      if (err instanceof ApiError && err.status === 409) void queryClient.invalidateQueries({ queryKey: ['portal', shopSlug, 'booking-link', code] });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Button disabled={busy} onClick={() => void withdraw()}>Cancel my date change</Button>
+      {error && <p role="alert" className="m-0 basis-full text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
+    </>
   );
 }
