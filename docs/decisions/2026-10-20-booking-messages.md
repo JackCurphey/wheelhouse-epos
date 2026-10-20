@@ -41,3 +41,12 @@ and their edit box for my approval; sending waits for the messages engine.").
    boxes."). They are built with the messages engine (WP-1.8) and the booking
    messages' triggers (WP-4.4); until then nothing is sent, and the booking
    pages don't promise a text.
+5. **Telling staff when a booking message didn't go** (Jack, 20 Oct: "yeah
+   lets go through those", taking up the logged gap). **Drawn, 20 Oct, for
+   Jack's approval:** `diary-no-message`, `diary-no-message-phone`
+   (`diary.mjs`): after an answer (accept, offer, decline, a date change)
+   whose message has no way to reach the customer, the diary's floating
+   message says "“Booking confirmed” didn’t go: Sam Reed has no phone number
+   or email on file.", in the panel's colours rather than a refusal's red,
+   with Close. A message switched off in Settings says nothing, as Bike ready.
+   **Approved, 20 Oct** (Jack: "Approve the didn't-go note drawing; build it.").
