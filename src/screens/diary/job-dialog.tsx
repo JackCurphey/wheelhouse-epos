@@ -387,7 +387,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                       {job.customerDescription ? (
                         <div className="flex flex-col gap-1 border-b border-[var(--wh-border)] pb-2">
                           <span className="text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">From the customer</span>
-                          <span>{job.customerDescription}</span>
+                          <span className="whitespace-pre-line">{job.customerDescription}</span>
                         </div>
                       ) : null}
                       {/* Finished work is frozen until it is reopened, so its notes are read-only (Jack, 15 Oct). */}

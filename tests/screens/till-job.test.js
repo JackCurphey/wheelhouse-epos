@@ -363,3 +363,14 @@ test('the till’s receipt carries the shop’s details at the bottom', async ()
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
   assert.ok(printed?.endsWith('Paid by card£83.00[Shop address][shop phone]VAT number [VAT number]'), String(printed));
 });
+
+// What the customer told us prints under the job (Jack, 20 Oct,
+// docs/decisions/2026-10-20-new-job-customer-note.md).
+test('a job’s receipt from the till prints what the customer told us', async () => {
+  const t = await openJobTill({ jobOver: { customerDescription: 'Rear brake squeals and feels weak.' } });
+  let printed = null;
+  window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+  const dlg = await payByCard(t);
+  t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
+  assert.ok(printed?.includes('WH-1042 · Trek Domane AL 3From the customer: Rear brake squeals and feels weak.'), String(printed));
+});

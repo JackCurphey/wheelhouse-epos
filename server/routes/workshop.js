@@ -393,6 +393,14 @@ export function register(route) {
     const jobDate = (body.jobDate || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
     const notes = (body.notes || '').trim();
+    // What the customer told us about the problem, the job's "From the
+    // customer" (Jack, 20 Oct, docs/decisions/2026-10-20-new-job-customer-note.md);
+    // blank is none.
+    if (body.customerDescription !== undefined && body.customerDescription !== null && typeof body.customerDescription !== 'string') {
+      return badRequest(res, 'What the customer told us must be text');
+    }
+    const customerDescription = typeof body.customerDescription === 'string' ? body.customerDescription.trim() : '';
+    if (customerDescription.length > 2000) return badRequest(res, 'What the customer told us can be up to 2,000 characters');
 
     const times = resolveJobTimes((body.startTime || '').trim(), (body.endTime || '').trim());
     if (times.error) return badRequest(res, times.error);
@@ -443,6 +451,7 @@ export function register(route) {
           workState: created.work,
           custodyState: created.custody ?? 'expected',
           notes,
+          customerDescription: customerDescription || null,
           skipAutoOrder: !!body.skipAutoOrder,
           plannedMinutes: planned.value,
         });

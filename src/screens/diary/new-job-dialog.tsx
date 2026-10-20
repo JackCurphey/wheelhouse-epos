@@ -24,8 +24,11 @@ import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
  * inline fields, Make, Model, Colour and Serial number, with Cancel and Add
  * bike, which saves the bike to the customer and chooses it.
  *
- * Not here yet, because the server has nowhere to keep them: storage hooks,
- * and separate customer and staff notes.
+ * "Note for the customer" is what the customer told us about the problem,
+ * kept as the job's "From the customer" and printed on their receipt; staff
+ * notes keep their own box (Jack, 20 Oct).
+ *
+ * Not here yet: storage hooks, and who wrote each staff note and when.
  */
 
 type Person = { id: number; name: string };
@@ -129,6 +132,9 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   const [service, setService] = useState<Service | null>(null);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  // What the customer told us about the problem: the job's "From the customer",
+  // printed on their receipt (Jack, 20 Oct, docs/decisions/2026-10-20-new-job-customer-note.md).
+  const [customerWords, setCustomerWords] = useState('');
   const [mech, setMech] = useState<number | null>(mechanicId);
   // Picked by hand, the mechanic stays when the date changes; otherwise it is
   // chosen again for the new day (decision 18).
@@ -302,6 +308,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
       mechanicId: mech,
       status,
       notes: notes.trim(),
+      customerDescription: customerWords.trim(),
     };
     if (service) body.plannedMinutes = service.minutes;
     try {
@@ -419,8 +426,14 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               <span id="nj-title-hint" className="text-xs text-[var(--wh-muted)]">Filled in from the work chosen. Shown on the diary block.</span>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="nj-notes" className={LABEL}>Notes</label>
-              <textarea id="nj-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} py-2`} />
+              <label htmlFor="nj-customer-words" className={LABEL}>Note for the customer</label>
+              <textarea id="nj-customer-words" rows={2} maxLength={2000} aria-describedby="nj-customer-words-h" value={customerWords} onChange={(e) => setCustomerWords(e.target.value)} className={`${INPUT} py-2`} />
+              <span id="nj-customer-words-h" className="text-xs text-[var(--wh-muted)]">Printed on their receipt.</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="nj-notes" className={LABEL}>Staff notes</label>
+              <textarea id="nj-notes" rows={2} aria-describedby="nj-notes-h" value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} py-2`} />
+              <span id="nj-notes-h" className="text-xs text-[var(--wh-muted)]">Internal only — not shown to the customer.</span>
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-2.5">

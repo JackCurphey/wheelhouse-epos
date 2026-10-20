@@ -272,7 +272,7 @@ test('a cancelled order\'s Open in the till is greyed: Order cancelled', async (
 // greyed "Not paid yet" until then, as drawn (diary-menu-job).
 test('a paid job\'s Print receipt prints its sale\'s receipt, with the job and bike', async () => {
   const keep = JOBS[0];
-  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted' };
+  JOBS[0] = { ...keep, orderId: 40, orderStatus: 'converted', customerDescription: 'Brakes squeal.' };
   let printed = null;
   try {
     const { ui, fireEvent, within, waitFor } = await openDiary();
@@ -281,7 +281,7 @@ test('a paid job\'s Print receipt prints its sale\'s receipt, with the job and b
     const menu = within(await ui.findByRole('menu', { name: 'Job actions' }));
     fireEvent.click(menu.getByRole('menuitem', { name: 'Print receipt' }));
     await waitFor(() => assert.ok(printed !== null, 'nothing was printed'));
-    for (const want of ['North Street Cycles', 'Sale 601', 'WH-1001 · Trek Domane', 'Brake service£65.00', 'Total£65.00', 'Paid by card£65.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
+    for (const want of ['North Street Cycles', 'Sale 601', 'WH-1001 · Trek Domane', 'From the customer: Brakes squeal.', 'Brake service£65.00', 'Total£65.00', 'Paid by card£65.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
     assert.equal(has(ui.queryByRole('menu', { name: 'Job actions' })), false);
   } finally {
     JOBS[0] = keep;
