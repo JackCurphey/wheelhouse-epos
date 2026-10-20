@@ -723,6 +723,11 @@ silent:
    it isn't in Waiting for you, and its pop-up has no answers. The server
    allows it. For a later piece. *Pattern:* nothing drawn for it (fresh
    review).
+6. **`request-offered`: no "Time offered today at [time]" line**: nothing
+   records when an offer was made, so the line waits for that. The offered
+   block is a button that opens its pop-up but can't be dragged; the
+   decline's message box starts empty, as drawn. *Pattern:* only what has a
+   source is shown; a request's own pop-up (fresh review: request-offered).
 
 ### 20 Oct 2026: the messages engine (`docs/decisions/2026-10-20-messages-engine.md`)
 

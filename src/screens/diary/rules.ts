@@ -192,7 +192,8 @@ export function layoutLanes(items: { id: number; start: number; end: number }[])
 
 type Slot = { jobDate?: string | null; startTime?: string | null; endTime?: string | null };
 export type WaitingItem = Slot & {
-  kind: 'new_booking' | 'change_request' | 'customer_cancelled';
+  /** offered: a time the shop offered, opened from its block (not in Waiting for you). */
+  kind: 'new_booking' | 'change_request' | 'customer_cancelled' | 'offered';
   jobId?: number;
   reference?: string;
   customerName?: string | null;
@@ -206,6 +207,8 @@ const KIND: Record<WaitingItem['kind'], { tone: DiaryState; label: string }> = {
   new_booking: { tone: 'pending', label: 'New booking request' },
   change_request: { tone: 'hold', label: 'Change request' },
   customer_cancelled: { tone: 'cancelled', label: 'Cancelled by customer' },
+  // Never in Waiting for you; opened from its block (Jack, 20 Oct).
+  offered: { tone: 'offered', label: 'Time offered' },
 };
 
 function when(s: Slot): string {

@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { STATE_LABEL, dayLabel, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
+import { requestMinutes } from './offer-dialog.tsx';
 
 /**
  * Answering what's waiting (journey 12 decisions 15 and 19): the request
@@ -58,6 +59,7 @@ const TITLE: Record<WaitingItem['kind'], string> = {
   new_booking: '',
   change_request: 'Change request',
   customer_cancelled: 'Cancelled booking',
+  offered: '',
 };
 
 export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }: { item: WaitingItem; onClose: () => void; onAnswered?: () => void; onOpenJob?: (jobId: number) => void; onOffer?: (job: WorkshopJob) => void }) {
@@ -72,15 +74,16 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
   const customer = item.customerName || job?.customerName || 'Customer';
   const bike = job?.bikeLabel || 'Bike';
   // The decline step has its own title, as drawn (request-decline).
-  const declining = item.kind === 'new_booking' && confirmDecline;
-  const title = declining ? 'Decline booking request' : TITLE[item.kind] || `${customer} · ${bike}`;
-  const sub = declining ? `${customer} · ${bike}` : item.kind === 'new_booking' ? 'Pending request' : `${customer} · ${bike}`;
+  const declining = (item.kind === 'new_booking' || item.kind === 'offered') && confirmDecline;
+  const title = declining ? (item.kind === 'offered' ? 'Decline request' : 'Decline booking request') : TITLE[item.kind] || `${customer} · ${bike}`;
+  const sub = declining ? `${customer} · ${bike}` : item.kind === 'new_booking' ? 'Pending request' : item.kind === 'offered' ? 'Time offered' : `${customer} · ${bike}`;
 
   // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as
   // request-decline): started for staff from the day asked for; the shop
   // suggests another day itself.
   const weekday = item.jobDate ? dayLabel(item.jobDate).split(' ')[0] : 'that day';
-  const [declineWords, setDeclineWords] = useState(`Sorry, we can’t fit this service in on ${weekday}. Please try another day, or call us and we’ll help find one.`);
+  // An offered time's decline starts empty: the drawing leaves it to staff (request-offered-decline).
+  const [declineWords, setDeclineWords] = useState(item.kind === 'offered' ? '' : `Sorry, we can’t fit this service in on ${weekday}. Please try another day, or call us and we’ll help find one.`);
 
   async function answer(action: string, body: object = {}) {
     if (!job) return;
@@ -160,6 +163,55 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
           {onOffer && <Button disabled={sending || !job} onClick={() => { if (job) { onOffer(job); onClose(); } }}>Offer another time</Button>}
           <Button variant="ghost" disabled={sending || !job} onClick={() => setConfirmDecline(true)}>Decline</Button>
         </div>
+      </div>
+    );
+  } else if (item.kind === 'offered') {
+    // A time the shop offered, waiting for the customer (Jack, 20 Oct; drawn as
+    // request-offered): offer a different one or decline; the customer accepts.
+    const first = customer.split(' ')[0];
+    const offeredAt = job ? `${dayLabel(job.jobDate)}${job.startTime ? `, ${job.startTime}` : ''}` : '';
+    body = confirmDecline ? (
+      <>
+        <strong className="text-sm">Explain what the customer can do next</strong>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="decline-msg" className="text-sm font-semibold">{`Message to ${first}`}</label>
+          <textarea id="decline-msg" rows={4} maxLength={1000} value={declineWords} onChange={(e) => setDeclineWords(e.target.value)}
+            className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
+        </div>
+        <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request. ${job ? `${dayLabel(job.jobDate)}${job.startTime ? ` at ${job.startTime}` : ''}` : 'The offered time'} is no longer kept for ${first}.`}</p>
+      </>
+    ) : (
+      <>
+        <div className="flex items-center justify-between gap-2.5">
+          <span className="text-base font-bold">{customer}</span>
+          <Badge state="offered" />
+        </div>
+        <span className="text-sm text-[var(--wh-muted)]">{bike}</span>
+        <div className="flex flex-col gap-1.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3">
+          <span className="text-sm"><strong>{offeredAt}</strong>{` · ${job?.mechanicName ?? 'Shared queue'}`}</span>
+          <span className="text-[13px] text-[var(--wh-muted)]">{`Waiting for ${first} to accept it or cancel. It’s kept free for them.`}</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <h3 className="m-0 text-sm font-bold">{`Your message to ${first}`}</h3>
+          <blockquote className="m-0 rounded-md border border-[var(--wh-border)] px-3 py-2 text-sm leading-normal whitespace-pre-wrap">
+            {job?.offer?.message || 'No message.'}
+          </blockquote>
+        </div>
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm">{(item.serviceNames ?? []).join(', ') || job?.title}</strong>
+          {job ? <span className="text-[13px] text-[var(--wh-muted)]">{`${requestMinutes(job)} minutes planned. Asked for ${dayLabel(job.offer?.fromDate ?? job.jobDate)}.`}</span> : null}
+        </div>
+      </>
+    );
+    footer = confirmDecline ? (
+      <div className="flex w-full flex-col gap-2">
+        <Button variant="danger" block disabled={sending} onClick={() => answer('decline', { message: declineWords })}>Decline &amp; notify customer</Button>
+        <Button block disabled={sending} onClick={() => setConfirmDecline(false)}>Keep request</Button>
+      </div>
+    ) : (
+      <div className="flex w-full gap-2.5">
+        {onOffer && <Button disabled={sending || !job} onClick={() => { if (job) { onOffer(job); onClose(); } }}>Offer a different time</Button>}
+        <Button variant="ghost" disabled={sending || !job} onClick={() => setConfirmDecline(true)}>Decline</Button>
       </div>
     );
   } else if (item.kind === 'change_request') {

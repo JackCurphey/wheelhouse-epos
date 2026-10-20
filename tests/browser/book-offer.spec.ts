@@ -55,3 +55,34 @@ test('staff offer another time and the customer accepts it on their booking page
   expect(after.bookingState).toBe('scheduled');
   expect(after.startTime).toBe('14:00');
 });
+
+// Declining a time already offered (Jack, 20 Oct, offered-decline-reoffer;
+// drawn as request-offered and request-offered-decline): from its block in
+// the diary, with a message the customer sees on their page.
+test('staff open an offered booking from the diary and decline it with a message', async ({ page, context }) => {
+  const customer = await portalSignup(server!.baseUrl, owner.shop.slug, {});
+  const types = await seedJobTypes(owner.shop.id);
+  const alex = (await staff('/api/workshop-jobs')).body[0].mechanicId;
+  const booked = await portalRequest(server!.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
+    method: 'POST',
+    body: { mechanicId: alex, jobDate: futureDate(4), startTime: '11:00', description: 'Gears slip', newBike: { make: 'Giant', model: 'Escape 2' }, serviceIds: [types.service], ...BOOKING_CONTACT },
+  });
+  expect(booked.status, JSON.stringify(booked.body)).toBe(201);
+  const job = (await staff(`/api/workshop-jobs/${booked.body.id}`)).body;
+  const offered = await staff(`/api/workshop-jobs/${job.id}/offer`, { method: 'POST', body: { version: job.version, jobDate: futureDate(5), startTime: '14:00', mechanicId: alex, message: 'Would Friday suit?' } });
+  expect(offered.status, JSON.stringify(offered.body)).toBe(200);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${futureDate(5)}`);
+  await page.getByRole('button', { name: /Giant Escape 2.*Time offered/ }).first().click();
+  const pop = page.getByRole('dialog', { name: /· Giant Escape 2$/ });
+  await expect(pop.getByText('“Would Friday suit?”').or(pop.getByText('Would Friday suit?'))).toBeVisible();
+  await pop.getByRole('button', { name: 'Decline' }).click();
+  const decline = page.getByRole('dialog', { name: 'Decline request' });
+  await decline.getByRole('textbox').fill('Sorry, we’re full that week.');
+  await decline.getByRole('button', { name: 'Decline & notify customer' }).click();
+  await expect(decline).toBeHidden();
+  expect((await staff(`/api/workshop-jobs/${job.id}`)).body.bookingState).toBe('declined');
+  await page.goto(`${server!.baseUrl}${booked.body.privateLink}`);
+  await expect(page.getByText(/Sorry, we’re full that week\./)).toBeVisible();
+});
