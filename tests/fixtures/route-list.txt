@@ -41,6 +41,9 @@ GET /api/customers/:id/texts
 POST /api/customers/:id/texts
 GET /api/messages
 POST /api/messages/:id/undo
+GET /api/message-templates
+PUT /api/message-templates/:key
+POST /api/message-templates/:key/preview
 GET /api/sales
 GET /api/sales/:id
 POST /api/sales
