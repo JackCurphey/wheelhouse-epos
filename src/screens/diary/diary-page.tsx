@@ -1515,32 +1515,54 @@ export function DiaryPage() {
     setPicking(false);
   };
   // From the old app's order screen (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md):
-  // ?job= opens that job's page; ?order= opens New job, as "Enter a time
-  // instead" does, filled in from the order. Each is read once, then dropped
-  // from the address so going back or reloading doesn't open it again.
+  // ?job= opens that job as a click on its block does; ?order= opens New job,
+  // as "Enter a time instead" does, filled in from the order. Each is read
+  // once, then dropped from the address so going back or reloading doesn't
+  // open it again.
   const fromAddress = useRef(false);
+  // The order read, until the mechanics, opening hours and jobs are in, so
+  // New job chooses the mechanic and the first hour as it would from the diary.
+  const [orderFor, setOrderFor] = useState<ForOrder | null>(null);
   useEffect(() => {
     if (fromAddress.current) return;
     fromAddress.current = true;
-    const job = Number(params.get('job'));
-    const order = Number(params.get('order'));
     if (!params.has('job') && !params.has('order')) return;
+    const jobId = Number(params.get('job'));
+    const orderId = Number(params.get('order'));
     const kept = new URLSearchParams(params);
     kept.delete('job');
     kept.delete('order');
     setParams(kept, { replace: true });
-    if (Number.isInteger(job) && job > 0) setOpenJobId(job);
-    if (Number.isInteger(order) && order > 0) {
+    const words = (err: unknown) => (err instanceof ApiError ? err.message : 'the server couldn’t be reached');
+    const openById = async (id: number) => {
+      const job = await apiGet<WorkshopJob>(`/api/workshop-jobs/${id}`);
+      const state = diaryState(job);
+      if (state === 'hidden') setOpenJobId(job.id);
+      else openShown({ ...job, state });
+    };
+    if (Number.isInteger(jobId) && jobId > 0) {
+      openById(jobId).catch((err) => setNotice(`Couldn’t open that job: ${words(err)}`));
+    }
+    if (Number.isInteger(orderId) && orderId > 0) {
       (async () => {
         try {
-          const doc = await apiGet<{ id: number; title: string; customerId: number | null; note: string | null }>(`/api/sale-documents/${order}`);
+          const doc = await apiGet<{ id: number; status: string; title: string; customerId: number | null; note: string | null; workshopJobId: number | null }>(`/api/sale-documents/${orderId}`);
+          // Checked before a job is made, as the order refuses the link after.
+          if (doc.status !== 'open') { setNotice(`That order is already ${doc.status}, so it can’t go in the diary.`); return; }
+          if (doc.workshopJobId) { await openById(doc.workshopJobId); return; }
           const customer = doc.customerId ? await apiGet<{ id: number; name: string; email: string | null; phone: string | null }>(`/api/customers/${doc.customerId}`) : null;
-          setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: { id: doc.id, title: doc.title || `Order #${doc.id}`, customer, notes: doc.note ?? '' } });
+          setOrderFor({ id: doc.id, title: doc.title || `Order #${doc.id}`, customer, notes: doc.note ?? '' });
         } catch (err) {
-          setNotice(`Couldn’t open that order: ${err instanceof ApiError ? err.message : 'the server couldn’t be reached'}`);
+          setNotice(`Couldn’t open that order: ${words(err)}`);
         }
       })();
     }
+  });
+  const readyForOrder = Boolean(orderFor && mechanics.data && settings.data && jobs.data);
+  useEffect(() => {
+    if (!readyForOrder || !orderFor) return;
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
+    setOrderFor(null);
   });
   const newJobDialog = newJob ? (
     <NewJobDialog
@@ -1553,7 +1575,7 @@ export function DiaryPage() {
       chooseMechanic={freest}
       people={people}
       order={newJob.order}
-      onLinkRefused={setNotice}
+      onSavedWithProblem={setNotice}
       onClose={() => setNewJob(null)}
     />
   ) : null;

@@ -89,15 +89,18 @@ test('ticking Show in workshop diary opens New job filled in from the order, and
   expect(order.status, JSON.stringify(order.body)).toBe(201);
   await signIn(context);
   await openOrder(page, title);
+  // Typed on the order but not saved: kept, as leaving the page would lose it.
+  const typed = `${title}, front and rear`;
+  await page.locator('#doc-title').fill(typed);
   await page.locator('#doc-workshop-toggle').check();
   await expect(page).toHaveURL(/\/workshop\/diary$/);
   const form = page.getByRole('dialog', { name: 'New job' });
-  await expect(form.getByLabel('Job title')).toHaveValue(title);
+  await expect(form.getByLabel('Job title')).toHaveValue(typed);
   await expect(form.getByText('Maya Patel')).toBeVisible();
   await expect(form.getByLabel('Staff notes')).toHaveValue('Rims ordered');
   await form.getByRole('button', { name: 'Save job' }).click();
   await expect(form).toBeHidden();
   const linked = (await staff(`/api/sale-documents/${order.body.id}`)).body;
   expect(linked.workshopJobId).toBeTruthy();
-  expect((await staff(`/api/workshop-jobs/${linked.workshopJobId}`)).body.title).toBe(title);
+  expect((await staff(`/api/workshop-jobs/${linked.workshopJobId}`)).body.title).toBe(typed);
 });

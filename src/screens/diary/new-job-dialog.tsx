@@ -93,10 +93,10 @@ const INPUT = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)]
 /** The order New job was opened for, from the old app's "Show in workshop diary". */
 export type ForOrder = { id: number; title: string; customer: Customer | null; notes: string };
 
-export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, onLinkRefused, onClose }: {
+export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, onSavedWithProblem, onClose }: {
   date: string; startMin: number; mechanicId: number | null; autoChosen: boolean; entered?: boolean;
   chooseMechanic?: (day: string) => number | null; people: Person[];
-  order?: ForOrder; onLinkRefused?: (words: string) => void; onClose: () => void;
+  order?: ForOrder; onSavedWithProblem?: (words: string) => void; onClose: () => void;
 }) {
   // Opened by "Enter a time instead" (Jack, 15 Oct, issue 192; drawn as
   // new-job-entered), the form has Date and Start time boxes, filled with the
@@ -316,27 +316,36 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
       customerDescription: customerWords.trim(),
     };
     if (service) body.plannedMinutes = service.minutes;
+    let job: WorkshopJob;
     try {
-      const job = await apiMutate<WorkshopJob>('/api/workshop-jobs', body);
-      // A waiting-for-parts job is created with the bike already in, so
-      // booking it in again would be refused (Jack, 8 Oct).
-      if (bikeHere && job.custodyState !== 'in_shop') await jobAction(job.id, 'book-in', job.version);
-      await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
-      // Opened for an order, the job is linked to it, as the old form did
-      // (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md). The job
-      // is saved either way, so a refused link closes the form and says so.
-      if (order) {
-        try {
-          await apiMutate(`/api/sale-documents/${order.id}`, { workshopJobId: job.id }, { method: 'PUT' });
-        } catch (err) {
-          onLinkRefused?.(`The job is saved, but couldn’t be linked to the order: ${err instanceof ApiError ? err.message : 'the server couldn’t be reached'}`);
-        }
-      }
-      onClose();
+      job = await apiMutate<WorkshopJob>('/api/workshop-jobs', body);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
       setSaving(false);
+      return;
     }
+    // The job is saved from here on, so the form closes whatever follows
+    // (saving again would make a second job) and the diary says what didn't
+    // happen (fresh review, 20 Oct).
+    const words = (err: unknown) => (err instanceof ApiError ? err.message : 'the server couldn’t be reached');
+    const problems: string[] = [];
+    // A waiting-for-parts job is created with the bike already in, so
+    // booking it in again would be refused (Jack, 8 Oct).
+    if (bikeHere && job.custodyState !== 'in_shop') {
+      try { await jobAction(job.id, 'book-in', job.version); } catch (err) { problems.push(`The job is saved, but couldn’t be booked in: ${words(err)}`); }
+    }
+    // Opened for an order, the job is linked to it, as the old form did
+    // (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md).
+    if (order) {
+      try {
+        await apiMutate(`/api/sale-documents/${order.id}`, { workshopJobId: job.id }, { method: 'PUT' });
+      } catch (err) {
+        problems.push(`The job is saved, but couldn’t be linked to the order: ${words(err)}`);
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
+    if (problems.length) onSavedWithProblem?.(problems.join(' '));
+    onClose();
   }
 
   return (

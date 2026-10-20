@@ -44,15 +44,22 @@ afterEach(async () => {
   shell?.queryClient.clear();
   uninstall?.();
   globalThis.fetch = realFetch;
+  // What a test set before opening the diary.
+  orderPut = null;
+  settings = { openingHours: [] };
+  bookIn = null;
+  order = null;
 });
 
 let addedBikes = [];
 let orderPut = null;
+let settings = { openingHours: [] };
+let bookIn = null;
+let order = null;
 function stubServer() {
   calls = [];
   addedBikes = [];
   answer = null;
-  orderPut = null;
   freeOn = () => [{ start: '09:00', end: '18:00' }];
   capacityDown = false;
   globalThis.fetch = async (url, init = {}) => {
@@ -60,6 +67,7 @@ function stubServer() {
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
+    if (method === 'POST' && u.pathname === '/api/workshop-jobs/50/book-in' && bookIn) return bookIn;
     if (method === 'POST' && u.pathname === '/api/workshop-jobs') return answer ?? reply(201, { ...JOBS[0], id: 50, version: 1 });
     if (method === 'POST' && u.pathname === '/api/customers/5/bikes') {
       const body = JSON.parse(init.body);
@@ -70,11 +78,12 @@ function stubServer() {
     if (method === 'POST') return reply(200, { ...JOBS[0], id: 50, version: 2 });
     if (method === 'PUT' && u.pathname === '/api/sale-documents/9') return orderPut ?? reply(200, { ...ORDER, workshopJobId: 50 });
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOBS[0]);
-    if (u.pathname === '/api/sale-documents/9') return reply(200, ORDER);
+    if (u.pathname === '/api/sale-documents/9') return reply(200, order ?? ORDER);
+    if (u.pathname === '/api/workshop-jobs/5') return reply(200, { ...JOBS[0], id: 5, title: 'Gear service', bookingState: 'offered', offer: { fromDate: '2026-10-06', fromTime: '10:00', message: null } });
     if (u.pathname === '/api/customers/5') return reply(200, CUSTOMERS[0]);
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
-    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
+    if (u.pathname === '/api/workshop-settings') return reply(200, settings);
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
@@ -152,4 +161,50 @@ test('an order that can’t be read opens nothing and says so', async () => {
   const r = await openDiary('?date=2026-10-05&order=404');
   assert.ok(has(await r.ui.findByText('Couldn’t open that order: Not found')));
   assert.equal(has(r.ui.queryByRole('dialog', { name: 'New job' })), false);
+});
+
+// Fresh review, 20 Oct: the form waited for nothing, so it opened before the
+// mechanics and opening hours had loaded.
+test('the order’s New job chooses the freest mechanic and the shop’s first hour, as Enter a time instead does', async () => {
+  settings = { openingHours: [{ weekday: 2, open: '10:00', close: '17:00' }] };
+  const r = await openDiary('?date=2026-10-06&order=9');
+  const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));
+  await form.findByText('Maya Patel');
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.ok(calls.some((c) => c.method === 'POST' && c.url === '/api/workshop-jobs')));
+  const body = calls.find((c) => c.method === 'POST' && c.url === '/api/workshop-jobs').body;
+  assert.equal(body.mechanicId, 12, 'Jo has the most free time on Tuesday');
+  assert.equal(body.startTime, '10:00');
+});
+
+test('a book-in refused after the job is saved still links it, closes the form and says so', async () => {
+  const r = await openDiary('?date=2026-10-05&order=9');
+  const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));
+  await form.findByText('Maya Patel');
+  r.fireEvent.click(form.getByRole('switch', { name: /The bike is here now/ }));
+  bookIn = { status: 409, ok: false, json: async () => ({ error: 'This job changed while you were looking at it.', code: 'stale' }) };
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.equal(has(r.ui.queryByRole('dialog', { name: 'New job' })), false));
+  assert.deepEqual(puts(), ['/api/sale-documents/9 {"workshopJobId":50}']);
+  assert.ok(has(r.ui.getByText(/^The job is saved, but couldn’t be booked in: This job changed while you were looking at it\.$/)));
+});
+
+test('an order no longer open isn’t put in the diary, and says why', async () => {
+  order = { ...ORDER, status: 'completed' };
+  const r = await openDiary('?date=2026-10-05&order=9');
+  assert.ok(has(await r.ui.findByText('That order is already completed, so it can’t go in the diary.')));
+  assert.equal(has(r.ui.queryByRole('dialog', { name: 'New job' })), false);
+});
+
+test('an order that already has a job opens that job instead', async () => {
+  order = { ...ORDER, workshopJobId: 1 };
+  const r = await openDiary('?date=2026-10-05&order=9');
+  assert.ok(has(await r.ui.findByRole('dialog', { name: /Full service/ })));
+  assert.equal(has(r.ui.queryByRole('dialog', { name: 'New job' })), false);
+  assert.equal(calls.filter((c) => c.method !== 'GET' && c.method !== undefined).length, 0);
+});
+
+test('?job= for an offered time opens its request pop-up, as its block does', async () => {
+  const r = await openDiary('?date=2026-10-05&job=5');
+  assert.ok(has(await r.ui.findByRole('dialog', { description: 'Time offered' })));
 });

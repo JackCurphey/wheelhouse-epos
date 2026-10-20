@@ -928,3 +928,19 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    "Menu"; the close button stays an ✕ named "Close menu" for screen readers.
    *Pattern:* answer 1 asks for "Menu" beside the three lines; the staff app's
    phone menu has no word on either button.
+
+### 20 Oct 2026: an order's workshop job in the new diary (order-job-link)
+
+1. **No drawing for ticking "Show in workshop diary" on an order that
+   already has a job, or is no longer open.** *Decided:* an order that
+   already has a job opens that job's page; one completed or cancelled says
+   "That order is already [status], so it can't go in the diary." and opens
+   nothing. *Pattern:* the order refuses a link once it isn't open, and a
+   job made first would be left over with no way to delete it yet.
+2. **No drawing for a New job saved but then not booked in or not linked.**
+   *Decided:* the form closes and the diary's notice says "The job is saved,
+   but couldn't be booked in / linked to the order: [reason]". *Pattern:* the
+   diary's notice for a booking message that didn't go; keeping the form open
+   would let a second Save make a second job (Jack, 8 Oct).
+3. **The old job form is no longer opened from anywhere.** *Decided:* its
+   code is removed in its own pull request (rule 5), to keep this one small.
