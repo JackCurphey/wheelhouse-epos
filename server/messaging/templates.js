@@ -20,7 +20,7 @@ export const TEMPLATES = {
   bike_ready: {
     name: 'Bike ready',
     when: 'When a job is marked ready',
-    wording: 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
+    wording: 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
     subject: 'Your bike is ready — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Job number', 'Amount to pay', 'Link to the job', 'Shop name', 'Opening hours'],
   },
@@ -73,15 +73,25 @@ export const LIVE_KEYS = ['quote_to_approve', 'bike_ready'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
- * the spacing tidied, so a customer never sees brackets.
+ * the spacing around it tidied, so a customer never sees brackets. Only the
+ * gap a left-out tap-in leaves is tidied: the shop's own words and the values
+ * filled in (a "Wait...", a link) are never changed (fresh review).
  */
+const GAP = '\u0000';
 export function render(wording, vars) {
   return wording
-    .replace(/\[([^\]]+)\]/g, (_, name) => (vars[name] ?? '').toString())
-    .replace(/“\s*”/g, '')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/ +([.,!?:;])/g, '$1')
-    .replace(/([.,!?:;])(?=\1)/g, '')
+    .replace(/\[([^\]]+)\]/g, (_, name) => {
+      const value = vars[name];
+      return value === undefined || value === null || value === '' ? GAP : String(value).replaceAll(GAP, '');
+    })
+    .replace(new RegExp(`“${GAP}”`, 'g'), GAP)
+    .replace(new RegExp(`[ \\t]*${GAP}[ \\t]*`, 'g'), GAP)
+    // A gap between two marks keeps the second ("See:" + gap + "." → "See.").
+    .replace(new RegExp(`[.,!?:;]${GAP}+(?=[.,!?:;])`, 'g'), '')
+    // A gap before a mark goes ("Hi" + gap + "," → "Hi,").
+    .replace(new RegExp(`${GAP}+(?=[.,!?:;])`, 'g'), '')
+    .replace(new RegExp(`^${GAP}+|${GAP}+$`, 'g'), '')
+    .replace(new RegExp(`${GAP}+`, 'g'), ' ')
     .trim();
 }
 

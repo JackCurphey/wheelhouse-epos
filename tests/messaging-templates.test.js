@@ -29,3 +29,17 @@ test('render fills tap-ins, and leaves out any with nothing to fill, tidily', ()
     'Booked. See: https://x/y.');
   assert.equal(render('Hi [Customer’s first name], hello.', {}), 'Hi, hello.');
 });
+
+// Fresh review: tidying touches only where a tap-in was left out, never what
+// the shop or a value wrote.
+test('render leaves the shop’s own punctuation and links alone', () => {
+  assert.equal(render('Wait... [Customer’s first name]!!', { 'Customer’s first name': 'Maya' }), 'Wait... Maya!!');
+  assert.equal(render('See: [Link to the job].', { 'Link to the job': 'https://x.co/a..b?q=1,,2' }), 'See: https://x.co/a..b?q=1,,2.');
+  assert.equal(render('Note: “[The shop’s message]” Thanks.', { 'The shop’s message': 'Wait...' }), 'Note: “Wait...” Thanks.');
+  assert.equal(render('Note: “[The shop’s message]” Thanks.', {}), 'Note: Thanks.');
+});
+
+test('Bike ready keeps the decided wording: the amount, then “to pay on collection”', () => {
+  assert.equal(TEMPLATES.bike_ready.wording,
+    'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].');
+});

@@ -25,7 +25,8 @@ CREATE POLICY message_templates_shop_isolation ON message_templates
 
 -- What each message needs for the engine and the outbox.
 ALTER TABLE customer_messages
-  ADD COLUMN job_id INTEGER REFERENCES workshop_jobs(id),
+  -- A deleted job keeps its message history, unlinked (fresh review).
+  ADD COLUMN job_id INTEGER REFERENCES workshop_jobs(id) ON DELETE SET NULL,
   ADD COLUMN channel TEXT CHECK (channel IN ('sms', 'whatsapp', 'email')),
   ADD COLUMN template_key TEXT,
   ADD COLUMN subject TEXT,

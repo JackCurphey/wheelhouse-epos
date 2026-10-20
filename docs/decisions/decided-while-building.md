@@ -724,6 +724,24 @@ silent:
    allows it. For a later piece. *Pattern:* nothing drawn for it (fresh
    review).
 
+### 20 Oct 2026: the messages engine (`docs/decisions/2026-10-20-messages-engine.md`)
+
+1. **Settings › Messages lists only what sends today (Quote to approve, Bike
+   ready); each other message's row comes with its trigger.** *Pattern:*
+   stage 1 drawing gaps decision 7.
+2. **A tap-in with nothing to fill is left out, with the gap tidied; the
+   shop's own words and the values filled in are never changed.** *Pattern:*
+   a customer never sees brackets (Q9).
+3. **Date change answered's second wording ("If the shop can't …") comes with
+   that message's trigger**: only the "accepts" wording is stored for now.
+   *Pattern:* bk-msg-change, built when it's sent.
+4. **Every message goes the customer's chosen way for now; the shop choosing
+   text or email per message (owner setup 14) comes later.** *Pattern:* the
+   booking messages' "Customer's choice".
+5. **The reply line ("Replies to this number aren't read — reply on your
+   page") waits for a page to reply on.** *Pattern:* nothing said that isn't
+   true.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
