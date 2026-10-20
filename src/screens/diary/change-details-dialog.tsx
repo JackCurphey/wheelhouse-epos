@@ -31,7 +31,7 @@ const bikeName = (b: Bike) => [b.make, b.model].filter(Boolean).join(' ') + (b.c
 const LABEL = 'text-sm font-semibold';
 const INPUT = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
 
-function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+export function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"

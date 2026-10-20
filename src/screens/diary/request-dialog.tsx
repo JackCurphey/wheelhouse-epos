@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { STATE_LABEL, dayLabel, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
 import { requestMinutes } from './offer-dialog.tsx';
+import { Pill } from './change-details-dialog.tsx';
 
 /**
  * Answering what's waiting (journey 12 decisions 15 and 19): the request
@@ -16,7 +17,7 @@ import { requestMinutes } from './offer-dialog.tsx';
  *
  * "Offer another time" (Jack, 20 Oct) hands the request to the diary's pick
  * mode (onOffer); Decline asks for a message to the customer (Jack, 20 Oct).
- * Not here yet: choosing the mechanic as you accept (decision 62). A change request's "Open full job" opens the job page (layout review 238, item 8).
+ * Accept takes the mechanic picked in the request's pills (decision 62). A change request's "Open full job" opens the job page (layout review 238, item 8).
  */
 
 const CHIP: Record<DiaryState, string> = {
@@ -68,6 +69,13 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
   const jobQuery = useQuery({ queryKey: ['workshop-job', id], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${id}`) });
   const job = jobQuery.data;
   const [confirmDecline, setConfirmDecline] = useState(false);
+  // Choosing the mechanic as the request is accepted (Workshop day decision 62;
+  // drawn on request-new): the shop's mechanics and the shared queue, the
+  // request's own picked until another is chosen.
+  const mechanics = useQuery({ queryKey: ['mechanics'], queryFn: () => apiGet<{ id: number; name: string; active?: boolean }[]>('/api/employees?role=mechanic'), enabled: item.kind === 'new_booking' });
+  const people = (mechanics.data ?? []).filter((m) => m.active !== false);
+  const [chosenMech, setChosenMech] = useState<number | null | undefined>(undefined);
+  const mech = chosenMech === undefined ? job?.mechanicId ?? null : chosenMech;
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -134,6 +142,15 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
           <strong className="text-sm">{(item.serviceNames ?? []).join(', ') || job?.title}</strong>
           <span className="text-[13px] text-[var(--wh-muted)]">{`Requested ${when(item)}`}</span>
         </div>
+        {mechanics.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the mechanics. Accept keeps the request’s own.</p> : null}
+        {/* Shown once the job and the mechanics are in, so nothing looks picked that isn't. */}
+        {job && mechanics.isSuccess ? <div className="flex flex-col gap-1.5">
+          <span id="req-mech" className="text-sm font-semibold">Mechanic</span>
+          <div role="radiogroup" aria-labelledby="req-mech" className="flex flex-wrap gap-1.5">
+            {people.map((p) => <Pill key={p.id} on={mech === p.id} onClick={() => setChosenMech(p.id)}>{p.name}</Pill>)}
+            <Pill on={mech === null} onClick={() => setChosenMech(null)}>Shared queue</Pill>
+          </div>
+        </div> : null}
       </>
     );
     if (confirmDecline) {
@@ -157,7 +174,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
       </div>
     ) : (
       <div className="flex w-full flex-col gap-2">
-        <Button variant="accent" block disabled={sending || !job} onClick={() => answer('accept')}>Accept</Button>
+        <Button variant="accent" block disabled={sending || !job} onClick={() => answer('accept', job && mech !== (job.mechanicId ?? null) ? { mechanicId: mech } : {})}>Accept</Button>
         <div className="flex gap-2.5">
           {/* Offer another time (Jack, 20 Oct): the diary goes into pick mode for this request. */}
           {onOffer && <Button disabled={sending || !job} onClick={() => { if (job) { onOffer(job); onClose(); } }}>Offer another time</Button>}
