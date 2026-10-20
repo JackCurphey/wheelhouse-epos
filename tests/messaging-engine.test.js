@@ -142,6 +142,7 @@ test('the outbox lists a customer’s messages, newest first, with how and when'
   assert.equal(m.to, '07700 900142');
   assert.equal(m.state, 'delivered');
   assert.equal(m.pretend, true);
+  assert.equal(m.direction, 'outbound');
   assert.ok(m.sentAt);
   assert.match(m.body, /^Hi Maya/);
 });

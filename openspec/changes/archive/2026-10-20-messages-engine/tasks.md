@@ -21,9 +21,9 @@
 - [x] 5.2 The triggers; Bike ready's Undo bar
 
 ## 6. Screens
-- [ ] 6.1 Draw the outbox, for Jack's approval
+- [x] 6.1 Draw the outbox, for Jack's approval
 - [x] 6.2 Tests first, then Settings › Messages (list, edit)
-- [ ] 6.3 The outbox screen
+- [x] 6.3 The outbox screen
 
 ## 7. Checks
-- [ ] 7.1 A fresh review per piece; `npm test` and `npm run test:browser` pass; archived with the last
+- [x] 7.1 A fresh review per piece; `npm test` and `npm run test:browser` pass; archived with the last
