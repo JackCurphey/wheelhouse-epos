@@ -77,4 +77,12 @@ const map = {
 // Every "Edit the wording of …" row in Messages opens the same editor.
 for (const k of ['Bike ready', 'Bike still waiting', 'Booking cancelled', 'Booking confirmed', 'Certificate received', 'Date change answered', 'Item we couldn’t supply', 'New ready date', 'New time offered', 'Order cancelled', 'Order confirmation', 'Order not ready after all', 'Order ready to collect', 'Order still waiting', 'Quote reminder', 'Quote to approve', 'Ready to collect', 'Request declined', 'Request received', 'Review request', 'Service reminder', 'Work added within your limit', 'Your answers', 'Your bike is no longer put aside', 'Your bike is put aside', 'Your hold ends on [date]', 'Your order is cancelled']) map['bk-messages'][`Edit the wording of ${k}`] = go('set-msg-edit');
 
+// The booking messages each open their own wording (20 Oct).
+for (const [name, id] of [['Request received', 'bk-msg-request'], ['Booking confirmed', 'bk-msg-confirmed'], ['New time offered', 'bk-msg-offered'], ['Request declined', 'bk-msg-declined'], ['Date change answered', 'bk-msg-change'], ['Booking cancelled', 'bk-msg-cancelled']]) {
+  map['bk-messages'][`Edit the wording of ${name}`] = go(id);
+  map[id] = { ...map['bk-messages'], Done: go('bk-messages'), 'Go back to Wheelhouse’s wording': STAY, Close: go('bk-messages') };
+  // Each tap-in puts its field into the wording, on the same board.
+  for (const t of ['Customer’s first name', 'Bike', 'Service', 'Booked day and time', 'Shop name', 'Link to the booking', 'Job number', 'When to drop off', 'Your note on the confirmation', 'Suggested day and time', 'The shop’s message', 'New day and time']) map[id][`+ ${t}`] = STAY;
+}
+
 export default map;
