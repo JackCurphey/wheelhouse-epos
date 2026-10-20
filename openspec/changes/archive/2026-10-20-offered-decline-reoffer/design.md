@@ -1,0 +1,7 @@
+# Design
+
+- **Server:** `serializeWorkshopJob` adds `offer: { fromDate, fromTime, message } | null`, non-null only while `booking_state = 'offered'`, from the columns migration 046 added (`offered_from_date`, `offered_from_time`, `offer_message`). No route changes: `POST /api/workshop-jobs/:id/offer` and `/decline` already accept an offered booking.
+- **Opening it:** the diary's block click opens `RequestDialog` with a new item kind, `offered`, for a job whose state is offered; every other block still opens the job page.
+- **The pop-up** (`request-offered`): title "[customer] · [bike]", sub "Time offered"; the badge "Time offered"; the offered day and time (the job's own, `dayLabel` + start) and mechanic; the waiting note; the message (or "No message."); the services and "[n] minutes planned. Asked for [first day]". "Time offered today at [time]" is drawn but no column records when an offer was made, so it is left out (logged).
+- **Offer a different time** calls `onOffer(job)`, the same pick as Offer another time; Cancel in the pick comes back to this pop-up. The offer pop-up's "Asked for" reads `job.offer.fromDate` when there is one.
+- **Decline** (`request-offered-decline`): title "Decline request"; the message box starts empty (the drawing leaves it to staff); the note adds "[day] at [time] is no longer kept for [first name]."; sends `decline` with the message, as a pending request's decline does.

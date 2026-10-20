@@ -67,6 +67,11 @@ export function serializeWorkshopJob(row) {
     // Piece 12: the customer's change request while it waits, and who
     // cancelled (a customer's shows in "Waiting for you" until seen).
     requested: requestedOf(row),
+    // A time the shop offered, while it waits for the customer (Jack, 20 Oct,
+    // offered-decline-reoffer): the day and time first asked for, and the
+    // message sent with the offer.
+    offer: row.booking_state === 'offered'
+      ? { fromDate: row.offered_from_date ?? null, fromTime: row.offered_from_time || null, message: row.offer_message ?? null } : null,
     cancelledBy: row.cancelled_by ?? null,
     cancelledAt: row.cancelled_at ?? null,
     cancellationSeenAt: row.cancellation_seen_at ?? null,

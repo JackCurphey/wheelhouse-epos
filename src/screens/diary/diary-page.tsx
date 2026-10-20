@@ -210,6 +210,14 @@ function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
       ) : null}
     </>
   );
+  // An offered time opens its pop-up, but isn't dragged (Jack, 20 Oct, request-offered).
+  if (move && job.state === 'offered' && !picking) {
+    return (
+      <button type="button" title={describe(job, false)} className={className} style={style} {...hover} onPointerDown={onPress} onKeyDown={(e) => { onMenuKey?.(e); }} onClick={() => move.onOpen(job)}>
+        {inner}
+      </button>
+    );
+  }
   if (!move || !movable(job) || picking) {
     return (
       <div title={describe(job, false)} className={className} style={style} {...hover} onPointerDown={onPress}>
@@ -1083,6 +1091,12 @@ export function DiaryPage() {
   const openJob = (job: Shown) => {
     if (justDragged.current) { justDragged.current = false; return; }
     if (preview) return;
+    openShown(job);
+  };
+  // An offered time opens its request pop-up (Jack, 20 Oct, request-offered),
+  // however it's opened: its block, a stack's chooser, the menu or the overview.
+  const openShown = (job: WorkshopJob & { state: DiaryState }) => {
+    if (job.state === 'offered') { setOpenItem(requestItem(job, 'offered')); return; }
     setOpenJobId(job.id);
   };
   /** M: pick a job up to move with the arrow keys (from its block, or its stack's chooser). */
@@ -1390,7 +1404,7 @@ export function DiaryPage() {
           job={menuFor.job}
           at={menuFor.at}
           onClose={(back) => { const el = menuFor.opener; setMenuFor(null); if (back) el?.focus(); }}
-          onOpenJob={() => { setMenuFor(null); setOpenJobId(menuFor.job.id); }}
+          onOpenJob={() => { setMenuFor(null); openShown(menuFor.job); }}
           onOverview={() => showOverview(menuFor.job)}
           onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
           till={(() => {
@@ -1418,7 +1432,7 @@ export function DiaryPage() {
         />
       ) : null}
       {overview ? (
-        <OverviewDialog job={overview} onClose={() => setOverview(null)} onOpenJob={() => { setOverview(null); setOpenJobId(overview.id); }} />
+        <OverviewDialog job={overview} onClose={() => setOverview(null)} onOpenJob={() => { setOverview(null); openShown(overview); }} />
       ) : null}
       {stackJobs ? (
         <StackChooser
@@ -1426,7 +1440,7 @@ export function DiaryPage() {
           time={stackJobs[0].startTime ?? ''}
           at={stackAt}
           onClose={(back) => { setStackJobs(null); if (back) stackFrom.current?.opener.focus(); }}
-          onPick={(j) => { setStackJobs(null); setOpenJobId(j.id); }}
+          onPick={(j) => { setStackJobs(null); openShown(j); }}
           onMove={(picked) => {
             const from = stackFrom.current;
             const j = stackJobs.find((x) => x.partId === picked.partId);
@@ -1484,11 +1498,11 @@ export function DiaryPage() {
   const pickCancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (picking) (offering ? pickCancelRef : enterInsteadRef).current?.focus(); }, [picking, offering]);
   // The request's card again, from Waiting for you or made from the job, to go back to it.
-  const requestItem = (j: { id: number; reference?: string | null; customerName?: string | null; mechanicId?: number | null; jobDate: string; startTime?: string | null; endTime?: string | null }): WaitingItem =>
-    (waiting.data?.items ?? []).find((i) => i.jobId === j.id && i.kind === 'new_booking')
-    ?? { kind: 'new_booking', jobId: j.id, reference: j.reference ?? undefined, customerName: j.customerName ?? null, serviceNames: [], mechanicId: j.mechanicId ?? null, jobDate: j.jobDate, startTime: j.startTime ?? null, endTime: j.endTime ?? null };
+  const requestItem = (j: { id: number; reference?: string | null; customerName?: string | null; mechanicId?: number | null; jobDate: string; startTime?: string | null; endTime?: string | null }, kind: 'new_booking' | 'offered' = 'new_booking'): WaitingItem =>
+    (kind === 'new_booking' ? (waiting.data?.items ?? []).find((i) => i.jobId === j.id && i.kind === 'new_booking') : undefined)
+    ?? { kind, jobId: j.id, reference: j.reference ?? undefined, customerName: j.customerName ?? null, serviceNames: [], mechanicId: j.mechanicId ?? null, jobDate: j.jobDate, startTime: j.startTime ?? null, endTime: j.endTime ?? null };
   const backToRequest = () => {
-    if (offering) setOpenItem(requestItem(offering));
+    if (offering) setOpenItem(requestItem(offering, offering.bookingState === 'offered' ? 'offered' : 'new_booking'));
     setOffering(null);
     setOfferAt(null);
     setPicking(false);

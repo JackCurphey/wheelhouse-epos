@@ -78,7 +78,7 @@ export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered 
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
-        <p className="m-0 text-xs font-bold tracking-wide text-[var(--wh-muted)] uppercase">{`Asked for ${dayLabel(job.jobDate)} · ${requestMinutes(job)} minutes`}</p>
+        <p className="m-0 text-xs font-bold tracking-wide text-[var(--wh-muted)] uppercase">{`Asked for ${dayLabel(job.offer?.fromDate ?? job.jobDate)} · ${requestMinutes(job)} minutes`}</p>
         <div className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-2">
           <span className="grow text-sm"><strong>{`${day}, ${time}`}</strong>{mechanic ? ` · ${mechanic}` : ''}</span>
           <button type="button" onClick={onChooseAgain} className="min-h-11 text-sm font-semibold underline">Choose another time</button>

@@ -185,3 +185,13 @@ test('staff can decline an offer, and its time goes', async () => {
   assert.equal(res.body.bookingState, 'declined');
   assert.deepEqual(await liveHolds(shopId(), booked.id), []);
 });
+
+test('staff see the offer while it waits: the day first asked for and the message, and none once answered', async () => {
+  const booked = await book();
+  assert.equal((await staff(`/api/workshop-jobs/${booked.id}`)).body.offer, null);
+  await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex, message: 'Would 14:00 work?' });
+  const seen = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
+  assert.deepEqual(seen.offer, { fromDate: booked.jobDate, fromTime: booked.startTime, message: 'Would 14:00 work?' });
+  await staff(`/api/workshop-jobs/${booked.id}/decline`, { method: 'POST', body: { version: await version(booked.id) } });
+  assert.equal((await staff(`/api/workshop-jobs/${booked.id}`)).body.offer, null);
+});
