@@ -10,7 +10,7 @@ import { printReceipt, type ReceiptSale, type ShopDetails } from '@/screens/till
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
-import { NewJobDialog } from './new-job-dialog.tsx';
+import { NewJobDialog, type ForOrder } from './new-job-dialog.tsx';
 import { OfferDialog, requestMinutes, type OfferAt } from './offer-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { jobRefusalText } from './refusal-words.ts';
@@ -1304,7 +1304,7 @@ export function DiaryPage() {
 
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
-  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean } | null>(null);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder } | null>(null);
   // ---- Offer another time (Jack, 20 Oct): the same pick mode, for a request ----
   const [offering, setOffering] = useState<WorkshopJob | null>(null);
   const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
@@ -1514,6 +1514,61 @@ export function DiaryPage() {
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true });
     setPicking(false);
   };
+  // From the old app's order screen (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md):
+  // ?job= opens that job as a click on its block does; ?order= opens New job,
+  // as "Enter a time instead" does, filled in from the order. Each is read
+  // once, then dropped from the address so going back or reloading doesn't
+  // open it again.
+  const fromAddress = useRef(false);
+  // The order read, until the mechanics, opening hours and jobs are in, so
+  // New job chooses the mechanic and the first hour as it would from the diary.
+  const [orderFor, setOrderFor] = useState<ForOrder | null>(null);
+  useEffect(() => {
+    if (fromAddress.current) return;
+    fromAddress.current = true;
+    if (!params.has('job') && !params.has('order')) return;
+    const jobId = Number(params.get('job'));
+    const orderId = Number(params.get('order'));
+    const kept = new URLSearchParams(params);
+    kept.delete('job');
+    kept.delete('order');
+    setParams(kept, { replace: true });
+    const words = (err: unknown) => (err instanceof ApiError ? err.message : 'the server couldn’t be reached');
+    const openById = async (id: number) => {
+      const job = await apiGet<WorkshopJob>(`/api/workshop-jobs/${id}`);
+      const state = diaryState(job);
+      if (state === 'hidden') setOpenJobId(job.id);
+      else openShown({ ...job, state });
+    };
+    if (Number.isInteger(jobId) && jobId > 0) {
+      openById(jobId).catch((err) => setNotice(`Couldn’t open that job: ${words(err)}`));
+    }
+    if (Number.isInteger(orderId) && orderId > 0) {
+      (async () => {
+        try {
+          const doc = await apiGet<{ id: number; status: string; title: string; customerId: number | null; note: string | null; workshopJobId: number | null }>(`/api/sale-documents/${orderId}`);
+          // Checked before a job is made, as the order refuses the link after.
+          if (doc.status !== 'open') { setNotice(`That order is already ${doc.status}, so it can’t go in the diary.`); return; }
+          if (doc.workshopJobId) { await openById(doc.workshopJobId); return; }
+          const customer = doc.customerId ? await apiGet<{ id: number; name: string; email: string | null; phone: string | null }>(`/api/customers/${doc.customerId}`) : null;
+          setOrderFor({ id: doc.id, title: doc.title || `Order #${doc.id}`, customer, notes: doc.note ?? '' });
+        } catch (err) {
+          setNotice(`Couldn’t open that order: ${words(err)}`);
+        }
+      })();
+    }
+  });
+  // Handed to New job once the mechanics, opening hours and jobs are in, during
+  // render as the state it follows from changes; one of them failing would
+  // otherwise leave the order waiting with nothing said.
+  const notLoaded = [mechanics, settings, jobs].find((q) => q.isError)?.error;
+  if (orderFor && notLoaded) {
+    setOrderFor(null);
+    setNotice(`Couldn’t open that order: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
+  } else if (orderFor && mechanics.data && settings.data && jobs.data) {
+    setOrderFor(null);
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
+  }
   const newJobDialog = newJob ? (
     <NewJobDialog
       key={`${newJob.date}-${newJob.startMin}`}
@@ -1524,6 +1579,8 @@ export function DiaryPage() {
       entered={newJob.entered}
       chooseMechanic={freest}
       people={people}
+      order={newJob.order}
+      onSavedWithProblem={setNotice}
       onClose={() => setNewJob(null)}
     />
   ) : null;

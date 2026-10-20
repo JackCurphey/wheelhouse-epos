@@ -39,3 +39,12 @@ already have their new versions (`src/screens/diary/`).
 **Drawn, 18 Oct:** Jack approved the drawings of the month view, stretching,
 changing a job's details, the menu's three actions and the Shared queue
 button: `2026-10-18-old-diary-features.md`.
+
+**Changed, 20 Oct** (Jack: "1: yes — an order's 'Show in workshop diary' and
+'View / edit workshop job' open the new diary and job page now, before the
+order screen is rebuilt."): item 3's old job form as opened from an order is
+replaced. "View / edit workshop job" opens the job's page in the new diary;
+ticking "Show in workshop diary" opens New job in the new diary for that
+order, its title and customer filled in, and the saved job is linked to the
+order. Unticking it (removing the job) stays in the old app until the order
+screen is rebuilt.
