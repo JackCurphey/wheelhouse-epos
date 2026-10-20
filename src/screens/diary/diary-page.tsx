@@ -1558,19 +1558,17 @@ export function DiaryPage() {
       })();
     }
   });
-  const readyForOrder = Boolean(orderFor && mechanics.data && settings.data && jobs.data);
-  // One of them failing would leave the order waiting with nothing said.
+  // Handed to New job once the mechanics, opening hours and jobs are in, during
+  // render as the state it follows from changes; one of them failing would
+  // otherwise leave the order waiting with nothing said.
   const notLoaded = [mechanics, settings, jobs].find((q) => q.isError)?.error;
-  useEffect(() => {
-    if (orderFor && notLoaded) {
-      setNotice(`Couldn’t open that order: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
-      setOrderFor(null);
-      return;
-    }
-    if (!readyForOrder || !orderFor) return;
-    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
+  if (orderFor && notLoaded) {
     setOrderFor(null);
-  });
+    setNotice(`Couldn’t open that order: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
+  } else if (orderFor && mechanics.data && settings.data && jobs.data) {
+    setOrderFor(null);
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
+  }
   const newJobDialog = newJob ? (
     <NewJobDialog
       key={`${newJob.date}-${newJob.startMin}`}
