@@ -24,3 +24,9 @@ Twilio is real in Jack's set-up; email and WhatsApp have no account yet
    first, each with its name, Waiting or Pretend, how and when ("By text to
    07700 900 142 · goes at 15:31"), and the words the customer gets.
    **Approved, 20 Oct** (Jack: "Approve the job page's Messages drawing; build it.").
+   **Moved into a pop-up, 20 Oct** (Jack: "actually instead can we have it so
+   that the messages are in a pop up button instead of on the main job
+   page"): the job page's drawn "Message Maya Patel" button (the inbox icon,
+   `job-page.mjs`) opens "Messages", headed "Maya Patel · Standard service ·
+   WH-1042", with the same list; nothing is added under Notes. Redrawn as
+   `job-messages` and `job-messages-phone`, for Jack's approval.
