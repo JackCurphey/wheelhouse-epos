@@ -29,4 +29,13 @@ Twilio is real in Jack's set-up; email and WhatsApp have no account yet
    page"): the job page's drawn "Message Maya Patel" button (the inbox icon,
    `job-page.mjs`) opens "Messages", headed "Maya Patel · Standard service ·
    WH-1042", with the same list; nothing is added under Notes. Redrawn as
-   `job-messages` and `job-messages-phone`, for Jack's approval.
+   `job-messages` and `job-messages-phone`.
+   **As a conversation, 20 Oct** (Jack: "can we have it so that it mimics
+   messaging apps where it has sent messages on the right and received
+   messages on the left in speech bubbles?"): the shop's messages in dark
+   bubbles on the right, each with its name and Waiting or Pretend above and
+   how and when below; the customer's on the left in light bubbles with her
+   name and when; oldest at the top. Customers can't message the shop in
+   Wheelhouse yet, so the drawn one is the staff inbox's placeholder
+   "[Maya’s note to the shop]"; until replies are built only the shop's
+   messages show. For Jack's approval.

@@ -3611,15 +3611,28 @@ const JOB_MESSAGES = [
 // Jack, 20 Oct (changing where): "instead can we have it so that the messages
 // are in a pop up button instead of on the main job page". The job page's
 // drawn "Message Maya Patel" button (job-page.mjs, the inbox icon) opens it.
+// Jack, 20 Oct: "mimics messaging apps where it has sent messages on the right
+// and received messages on the left in speech bubbles": oldest at the top.
+// Replies from the customer aren't built yet, so hers is a placeholder (the
+// staff inbox's own, account.mjs).
+const JOB_THREAD = [
+  { from: 'shop', ...JOB_MESSAGES[1] },
+  { from: 'customer', who: 'Maya', when: '[day, time]', words: '[Maya’s note to the shop]' },
+  { from: 'shop', ...JOB_MESSAGES[0] },
+];
 function messagesDialog(size) {
-  const row = (m) => `<li style="display: flex; flex-direction: column; gap: 3px; padding: 10px 0; border-top: 1px solid ${C.border}">
-<span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 700">${esc(m.name)}</span>${badge(m.state[0], m.state[1])}</span>
-<span style="font-size: 13px; color: ${C.muted}">${esc(m.how)}</span>
-<span style="font-size: 14px; line-height: 1.45">${esc(m.words)}</span>
-</li>`;
+  const bubble = (m) => {
+    const mine = m.from === 'shop';
+    const top = mine
+      ? `<span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 13px; font-weight: 700">${esc(m.name)}</span>${badge(m.state[0], m.state[1])}</span>`
+      : `<span style="font-size: 13px; font-weight: 700">${esc(m.who)}</span>`;
+    const body = `<div style="max-width: ${size === 'phone' ? 85 : 78}%; box-sizing: border-box; padding: 10px 14px; border-radius: ${mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px'}; background: ${mine ? C.ink : C.mutedBg}; color: ${mine ? C.panel : C.ink}; font-size: 14px; line-height: 1.45; text-align: left">${esc(m.words)}</div>`;
+    const foot = `<span style="font-size: 12px; color: ${C.muted}">${esc(mine ? m.how : m.when)}</span>`;
+    return `<li style="display: flex; flex-direction: column; align-items: ${mine ? 'flex-end' : 'flex-start'}; gap: 4px; text-align: ${mine ? 'right' : 'left'}">${top}${body}${foot}</li>`;
+  };
   return `${dialogHeader('Messages', `job-finished-${size}.dc.html`, 'Maya Patel · Standard service · WH-1042', 'job-msgs-title', size)}
 ${dialogBody(`<p style="margin: 0; font-size: 14px; color: ${C.muted}">Pretend for now: each shows what Maya would get. Nothing is really sent.</p>
-<ul style="list-style: none; margin: 0; padding: 0">${JOB_MESSAGES.map(row).join('')}</ul>`, 20, 8)}`;
+<ol aria-label="Messages with Maya Patel" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px">${JOB_THREAD.map(bubble).join('')}</ol>`, 20, 14)}`;
 }
 
 export function oldDiaryFeatureDrawings() {
