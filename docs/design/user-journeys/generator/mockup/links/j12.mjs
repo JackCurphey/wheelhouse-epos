@@ -44,6 +44,8 @@ export default {
     'Another time': go('request-offer-pick'),
   },
   'request-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('request-new') },
+  'request-offered': { 'Offer a different time': go('request-offer-pick'), 'Another time': go('request-offer-pick'), 'Decline': go('request-offered-decline') },
+  'request-offered-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('request-offered') },
   'request-offer': { 'Offer this time': go('diary'), 'Keep request': go('request-new'), 'Choose another time': go('request-offer-pick') },
   'request-change': { 'Accept': go('diary'), 'Decline': go('diary') },
   'request-cancel': { 'Seen': go('diary') },

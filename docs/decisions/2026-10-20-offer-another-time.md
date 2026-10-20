@@ -33,3 +33,20 @@ time picker first ("1").
 3. **Drawings approved; build the whole flow** (Jack, 20 Oct: "yeah looks
    good, go ahead"): the server part (Mark's files flagged for him), the
    staff's pick and pop-up, then the customer's page.
+4. **Declining or re-offering a time already offered** (Jack, 20 Oct: "Yes:
+   draw staff declining or re-offering an offered booking time for my
+   approval."), until now logged as not possible (`decided-while-building.md`).
+   **Drawn, 20 Oct, for Jack's approval**, following the request pop-up:
+   - `request-offered`: clicking the purple "Time offered" block opens the
+     request pop-up for it, "Sam Reed · Specialized Sirrus", "Time offered":
+     the offered time ("Friday 18 September, 12:00 · Alex Morgan", "Waiting
+     for Sam to accept it or cancel. It’s kept free for them."), "Your message
+     to Sam", and the request; no Accept, since Sam answers. "Offer a
+     different time" ("Another time" on a phone) goes back into the diary
+     pick (`request-offer-pick`), and Offer this time replaces the first
+     offer; "Decline" opens the next.
+   - `request-offered-decline`: "Decline request", a message to Sam (staff's
+     own; bracketed in the drawing), "… Friday 18 September at 12:00 is no
+     longer kept for Sam.", Decline & notify customer or Keep request.
+   **Approved, 20 Oct** (Jack: "Approve the offered-time drawings (offer a
+   different time, decline); build it.").
