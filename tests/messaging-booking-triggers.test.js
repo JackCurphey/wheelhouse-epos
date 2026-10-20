@@ -127,3 +127,21 @@ test('a staff-made reschedule answered sends no booking message', async () => {
   assert.deepEqual((await messagesFor(booked.id)).map((m) => m.template_key), ['booking_confirmed']);
 });
 
+
+// Telling staff when a booking message didn't go (Jack, 20 Oct, booking
+// messages answer 5; drawn as diary-no-message): the answer's reply says so,
+// with the message's name; switched off says nothing.
+test('an answer whose message has no way to reach the customer says so, by name', async () => {
+  const quiet = await portalSignup(server.baseUrl, owner.shop.slug, {});
+  const booked = await bookOnline(server.baseUrl, quiet.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds: [types.service] });
+  await runWithShop(owner.shop.id, async () => {
+    const { customer_id: id } = await prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(booked.id);
+    await prepare('UPDATE customers SET phone = NULL, email = NULL WHERE id = ?').run(id);
+  });
+  const res = await act(booked.id, 'accept');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.bookingMessage, { skipped: 'no_contact', name: 'Booking confirmed' });
+  const sent = await book('11:00');
+  const ok = await act(sent.id, 'accept');
+  assert.equal(ok.body.bookingMessage, undefined, 'nothing to say when it went');
+});
