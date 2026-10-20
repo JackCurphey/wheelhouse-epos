@@ -34,6 +34,11 @@ const EXAMPLE = {
   'The shop’s message': '[The shop’s message]',
   'New day and time': 'Fri 25 Sep, [time]',
 };
+// Where a message's drawing fills a tap-in differently (bk-msg-change: the
+// new day's drop-off time is open).
+const EXAMPLE_FOR = {
+  date_change_answered: { 'When to drop off': 'Drop your Trek Domane AL 3 off by [time], half an hour before your booking.' },
+};
 
 const asSetting = (t) => ({
   key: t.key, name: t.name, when: t.when, enabled: t.enabled, wording: t.wording, subject: t.subject,
@@ -41,13 +46,16 @@ const asSetting = (t) => ({
 });
 
 // A shop's own text, or null for Wheelhouse's: blank goes back to Wheelhouse's.
-function ownText(value, max, name) {
+function ownText(value, max, name, { oneLine = false } = {}) {
   if (value === null) return null;
   if (typeof value !== 'string') throw new Error(`${name} must be text`);
   const text = value.trim();
   if (text.length > max) throw new Error(`${name} can be at most ${max} characters`);
+  // An email subject is one line: a line break could add headers.
+  if (oneLine && /[\r\n]/.test(text)) throw new Error(`${name} must be one line`);
   return text || null;
 }
+const isObject = (body) => body !== null && typeof body === 'object' && !Array.isArray(body);
 
 export function register(route) {
   // screens: customer, diary
@@ -98,24 +106,25 @@ export function register(route) {
     if (await ownerOnly(req, res)) return;
     if (!Object.hasOwn(TEMPLATES, params.key)) return notFound(res, 'No such message');
     const body = await readJsonBody(req);
-    const current = await prepare('SELECT enabled, wording, subject FROM message_templates WHERE key = ?').get(params.key);
-    let enabled = current ? current.enabled : true;
-    let wording = current?.wording ?? null;
-    let subject = current?.subject ?? null;
+    if (!isObject(body)) return badRequest(res, 'Send the changes as an object');
+    // Only what was sent changes, in one statement, so two changes at once
+    // can't undo each other.
+    const sent = {};
     try {
       if (body.enabled !== undefined) {
         if (typeof body.enabled !== 'boolean') throw new Error('enabled must be true or false');
-        enabled = body.enabled;
+        sent.enabled = body.enabled;
       }
-      if (body.wording !== undefined) wording = ownText(body.wording, MAX_WORDING, 'wording');
-      if (body.subject !== undefined) subject = ownText(body.subject, MAX_SUBJECT, 'subject');
+      if (body.wording !== undefined) sent.wording = ownText(body.wording, MAX_WORDING, 'wording');
+      if (body.subject !== undefined) sent.subject = ownText(body.subject, MAX_SUBJECT, 'subject', { oneLine: true });
     } catch (err) {
       return badRequest(res, err.message);
     }
+    const set = [...Object.keys(sent).map((c) => `${c} = EXCLUDED.${c}`), 'updated_at = EXCLUDED.updated_at'];
     await prepare(
       `INSERT INTO message_templates (key, enabled, wording, subject, updated_at) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT (shop_id, key) DO UPDATE SET enabled = EXCLUDED.enabled, wording = EXCLUDED.wording, subject = EXCLUDED.subject, updated_at = EXCLUDED.updated_at`
-    ).run(params.key, enabled, wording, subject, nowIso());
+       ON CONFLICT (shop_id, key) DO UPDATE SET ${set.join(', ')}`
+    ).run(params.key, sent.enabled ?? true, sent.wording ?? null, sent.subject ?? null, nowIso());
     sendJson(res, 200, asSetting(await templateFor(params.key)));
   });
 
@@ -127,16 +136,17 @@ export function register(route) {
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     if (!Object.hasOwn(TEMPLATES, params.key)) return notFound(res, 'No such message');
     const body = await readJsonBody(req);
+    if (!isObject(body)) return badRequest(res, 'Send the wording as an object');
     const saved = await templateFor(params.key);
     let wording;
     let subject;
     try {
       wording = body.wording === undefined ? saved.wording : ownText(body.wording, MAX_WORDING, 'wording') ?? TEMPLATES[params.key].wording;
-      subject = body.subject === undefined ? saved.subject : ownText(body.subject, MAX_SUBJECT, 'subject') ?? TEMPLATES[params.key].subject;
+      subject = body.subject === undefined ? saved.subject : ownText(body.subject, MAX_SUBJECT, 'subject', { oneLine: true }) ?? TEMPLATES[params.key].subject;
     } catch (err) {
       return badRequest(res, err.message);
     }
-    const vars = { ...EXAMPLE, 'Shop name': ctx.shop.name };
+    const vars = { ...EXAMPLE, ...EXAMPLE_FOR[params.key], 'Shop name': ctx.shop.name };
     const text = render(wording, vars);
     sendJson(res, 200, { text, email: { subject: render(subject, vars), body: text } });
   });

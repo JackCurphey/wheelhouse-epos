@@ -84,3 +84,52 @@ test('the preview fills the drawing’s example, as a text and as an email', asy
   assert.equal(typed.body.email.subject, `${shop} says hi`);
   assert.equal((await as(jo)('/api/message-templates/nope/preview', { method: 'POST', body: {} })).status, 404);
 });
+
+test('a key that only exists on every object is no message', async () => {
+  assert.equal((await as(owner)('/api/message-templates/constructor', { method: 'PUT', body: { enabled: false } })).status, 404);
+  assert.equal((await as(jo)('/api/message-templates/toString/preview', { method: 'POST', body: {} })).status, 404);
+});
+
+test('a body that isn’t an object, a long or two-line subject, and wording that isn’t text are refused', async () => {
+  const put = (body) => as(owner)('/api/message-templates/quote_to_approve', { method: 'PUT', body });
+  for (const body of [null, [], 'x']) assert.equal((await put(body)).status, 400, JSON.stringify(body));
+  assert.equal((await put({ subject: 'x'.repeat(201) })).status, 400);
+  assert.equal((await put({ subject: 'Hello\r\nBcc: someone@example.test' })).status, 400);
+  const preview = (body) => as(jo)('/api/message-templates/quote_to_approve/preview', { method: 'POST', body });
+  assert.equal((await preview(null)).status, 400);
+  assert.equal((await preview({ wording: 42 })).status, 400);
+  assert.equal((await preview({ subject: 'a\nb' })).status, 400);
+});
+
+test('one shop’s wording is never another shop’s', async () => {
+  const other = await staffSignup(server.baseUrl, { shopName: 'South Road Bikes' });
+  try {
+    assert.equal((await as(owner)('/api/message-templates/quote_to_approve', { method: 'PUT', body: { wording: 'Ours only [Job number]' } })).status, 200);
+    const theirs = (await as(other)('/api/message-templates')).body.find((m) => m.key === 'quote_to_approve');
+    assert.equal(theirs.wording, TEMPLATES.quote_to_approve.wording);
+    assert.equal(theirs.changed, false);
+    // Their own change is a row of their own, not a clash with ours.
+    assert.equal((await as(other)('/api/message-templates/quote_to_approve', { method: 'PUT', body: { enabled: false } })).status, 200);
+    assert.equal((await as(owner)('/api/message-templates')).body.find((m) => m.key === 'quote_to_approve').enabled, true);
+  } finally {
+    await deleteTestShop(other.shop.id);
+    await as(owner)('/api/message-templates/quote_to_approve', { method: 'PUT', body: { wording: null } });
+  }
+});
+
+test('changing one thing leaves what it didn’t send alone', async () => {
+  const put = (body) => as(owner)('/api/message-templates/booking_cancelled', { method: 'PUT', body });
+  await put({ wording: 'Cancelled [Job number]' });
+  const res = await put({ subject: 'Cancelled' });
+  assert.equal(res.body.wording, 'Cancelled [Job number]');
+  assert.equal(res.body.subject, 'Cancelled');
+  assert.equal(res.body.enabled, true);
+});
+
+test('the booking messages preview as drawn', async () => {
+  const shop = (await as(owner)('/api/shop-details')).body.name;
+  const confirmed = await as(jo)('/api/message-templates/booking_confirmed/preview', { method: 'POST', body: {} });
+  assert.equal(confirmed.body.text, `Hi Maya, your Standard service at ${shop} is booked for Thu 17 Sep, 11:30. Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking. Please bring the lock key, and tell us about any accessories. See or change your booking: [link] — no app or sign-in needed. Your repair · WH-1042.`);
+  const moved = await as(jo)('/api/message-templates/date_change_answered/preview', { method: 'POST', body: {} });
+  assert.match(moved.body.text, /Fri 25 Sep, \[time\]\. Drop your Trek Domane AL 3 off by \[time\], half an hour before your booking\./);
+});
