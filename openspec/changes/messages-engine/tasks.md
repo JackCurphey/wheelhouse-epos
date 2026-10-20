@@ -1,8 +1,8 @@
 # Tasks: the messages engine
 
 ## 1. Safety guard
-- [ ] 1.1 Tests first: the hosted copy refuses real sending keys
-- [ ] 1.2 The guard
+- [x] 1.1 Tests first: the hosted copy refuses real sending keys
+- [x] 1.2 The guard
 
 ## 2. Wording and filling in
 - [ ] 2.1 Tests first: Wheelhouse's wording; tap-ins filled, missing ones left out; a shop's own wording; switched off

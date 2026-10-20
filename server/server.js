@@ -1,5 +1,6 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
+import { hostedCopyRefusal } from './hosted-copy-guard.js';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -915,6 +916,13 @@ if (isMainModule) {
   // real rolling deploy rather than Node's raw default (immediate exit).
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   console.log(SIGNALS_READY);
+
+  // The hosted test copy refuses anything unsafe before any migration runs.
+  const hostedRefusal = hostedCopyRefusal(process.env);
+  if (hostedRefusal) {
+    console.error(hostedRefusal);
+    process.exit(1);
+  }
 
   runMigrations()
     // Session-scoped tenancy (the DB_TENANT_SCOPE default) is only safe on a
