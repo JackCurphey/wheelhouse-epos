@@ -13,6 +13,7 @@ import { apiGet } from '@/lib/api/client.ts';
  */
 export type BookingStage =
   | 'awaiting_confirmation'
+  | 'time_offered'
   | 'confirmed'
   | 'in_workshop'
   | 'ready_to_collect'
@@ -45,6 +46,9 @@ export type BookingLink = {
   canCancel?: boolean;
   /** Whether the customer can still change the date online, the change they asked for, and whether the shop declined the last one (piece 12; Jack, 20 Oct). */
   canChange?: boolean;
+  /** A time the shop offered, and where the customer first asked (Jack, 20 Oct, offer another time). */
+  offer?: { fromDate: string; fromTime: string; message: string | null } | null;
+  canAccept?: boolean;
   requested?: { jobDate: string; startTime: string; mechanicId: number } | null;
   changeDeclined?: boolean;
   services: { name: string; price: number | null }[];

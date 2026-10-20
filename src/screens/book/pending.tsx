@@ -9,8 +9,9 @@ import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
 import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink } from './pending-query.ts';
+import { dayLabel } from './date-rules.ts';
 import {
-  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -63,7 +64,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   const answers = answerLines(link);
   const arrival = [dropOffLine(link), link.confirmationNote].filter(Boolean).join(' ');
   // A booking still waiting for the shop opens as a request (bk-page-request).
-  const request = link.stage === 'awaiting_confirmation';
+  // A time the shop suggested is still a request, answered here (bk-offered).
+  const offered = link.stage === 'time_offered';
+  const request = link.stage === 'awaiting_confirmation' || offered;
   const standing = link.stage === 'confirmed' || link.stage === 'change_requested' || request;
   const keep = (
     <>
@@ -128,7 +131,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           )}
           {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
           <div>
-            {request
+            {offered
+              ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">The shop has suggested another time</span>
+              : request
               ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">Waiting for the shop to confirm</span>
               : waiting
               ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">New date waiting for the shop</span>
@@ -136,13 +141,21 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           </div>
           {waiting && requestedLine(link) && <p className="m-0 text-[15px] leading-normal">{requestedLine(link)}</p>}
           {/* No texts are sent yet, so the drawing's "We'll send you a text" becomes this page. */}
-          {request && <p className="m-0 text-[15px] leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.</p>}
+          {request && !offered && <p className="m-0 text-[15px] leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.</p>}
+          {offered && (
+            <>
+              <p className="m-0 text-[15px] leading-normal">{offerLine(link)}</p>
+              <p className="m-0 text-xl font-bold">{whenLine(link)}</p>
+              {link.offer?.message && <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-[15px] leading-normal">{`“${link.offer.message}”`}</blockquote>}
+            </>
+          )}
           {arrival && <p className="m-0 text-[15px] leading-normal">{arrival}</p>}
           <div>
             {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
             {total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
             {bike && row('Bike', bike)}
-            {row('When', whenLine(link))}
+            {/* An offer's When is the time first asked for, as drawn (bk-offered). */}
+            {row('When', offered && link.offer ? `${dayLabel(link.offer.fromDate)}${link.offer.fromTime ? `, ${link.offer.fromTime}` : ''} — not available` : whenLine(link))}
             {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
           </div>
           {(link.description || answerList) && (
@@ -156,8 +169,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         {changing ? <ChangeDate link={link} shopSlug={shopSlug} code={code} request={request} onClose={() => setChanging(false)} /> : (
           <div className="mb-4 flex flex-wrap gap-2.5">
             {waiting && <WithdrawChange shopSlug={shopSlug} code={code} />}
+            {offered && link.canAccept && <AcceptOffer shopSlug={shopSlug} code={code} />}
             {!waiting && link.canChange && <Button onClick={() => setChanging(true)}>Change the date</Button>}
-            {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} request={request} />}
+            {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} request={request} label={offered ? 'Cancel my request' : undefined} />}
           </div>
         )}
         {keep}
@@ -206,7 +220,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
  * bk-cancel-ls's words since no shop takes deposits yet): asked once; the
  * reply replaces the cached link, so the page becomes the cancelled page.
  */
-function CancelBooking({ link, shopSlug, code, request = false }: { link: BookingLink; shopSlug: string; code: string; request?: boolean }) {
+function CancelBooking({ link, shopSlug, code, request = false, label }: { link: BookingLink; shopSlug: string; code: string; request?: boolean; label?: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -232,7 +246,7 @@ function CancelBooking({ link, shopSlug, code, request = false }: { link: Bookin
 
   return (
     <>
-      <Button onClick={() => { setError(null); setOpen(true); }}>{request ? 'Cancel request' : 'Cancel booking'}</Button>
+      <Button onClick={() => { setError(null); setOpen(true); }}>{label ?? (request ? 'Cancel request' : 'Cancel booking')}</Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="cancel-title" aria-describedby="cancel-sub">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -275,6 +289,32 @@ function WithdrawChange({ shopSlug, code }: { shopSlug: string; code: string }) 
   return (
     <>
       <Button disabled={busy} onClick={() => void withdraw()}>Cancel my date change</Button>
+      {error && <p role="alert" className="m-0 basis-full text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
+    </>
+  );
+}
+
+/** Accept this time (bk-offered): the booking is confirmed at the time the shop suggested. */
+function AcceptOffer({ shopSlug, code }: { shopSlug: string; code: string }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  async function accept() {
+    setBusy(true);
+    setError(null);
+    try {
+      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/accept-offer`, {}, { method: 'POST' });
+      queryClient.setQueryData(['portal', shopSlug, 'booking-link', code], reply);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
+      if (err instanceof ApiError && err.status === 409) void queryClient.invalidateQueries({ queryKey: ['portal', shopSlug, 'booking-link', code] });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Button variant="primary" disabled={busy} onClick={() => void accept()}>Accept this time</Button>
       {error && <p role="alert" className="m-0 basis-full text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
     </>
   );
