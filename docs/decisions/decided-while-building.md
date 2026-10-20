@@ -793,6 +793,14 @@ silent:
    customer; Email and Notes, drawn beside it, come later.** *Pattern:* the
    drawing's header buttons, built one at a time as each has something to do.
 
+### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
+
+1. **`new-job`: "+ Add a bike" opens Make, Model, Colour and Serial number
+   under the Bike list, with Cancel and Add bike, which saves the bike to the
+   customer and chooses it; it waits for a customer.** *Pattern:* the old job
+   form's new-bike fields (`public/app.js`), as the old diary's features were
+   brought across (`2026-10-18-old-diary-features.md`); answer C.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
