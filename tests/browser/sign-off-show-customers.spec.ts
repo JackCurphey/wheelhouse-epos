@@ -51,7 +51,8 @@ test('switching the setting on puts Checked by on the receipt', async ({ page, c
     window.__printed = [];
     window.print = () => { window.__printed.push(document.getElementById('wh-print')?.innerText ?? ''); };
   });
-  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  await page.getByRole('button', { name: /^Mechanics/ }).click();
   const sw = page.getByRole('switch', { name: 'Show who signed off to customers' });
   await expect(sw).toHaveAttribute('aria-checked', 'false');
   await sw.click();

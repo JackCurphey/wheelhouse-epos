@@ -21,7 +21,15 @@ type Preview = { text: string; email: { subject: string; body: string } };
 const KEY = ['message-templates'];
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 
-export function MessagesSettings() {
+/** The Automatic messages fold's summary: how many of the messages that send are on ("2 on"). */
+export function useMessagesSummary(): string {
+  const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
+  if (!templates.data) return '';
+  return `${templates.data.filter((t) => t.live && t.enabled).length} on`;
+}
+
+/** Front desk › Messages › Automatic messages, inside its fold. */
+export function AutomaticMessages() {
   const queryClient = useQueryClient();
   const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
   // Each message's own save in flight, so two quick switches don't share one.
@@ -67,25 +75,20 @@ export function MessagesSettings() {
     </div>
   );
   return (
-    <section aria-labelledby="set-messages" className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <h2 id="set-messages" className="m-0 text-xl font-bold">Messages</h2>
-        <p className="m-0 text-sm text-[var(--wh-muted)]">The texts and emails customers get from the shop.</p>
-      </div>
-      <section aria-labelledby="set-msg-list" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-        <h3 id="set-msg-list" className="m-0 text-base font-bold">Automatic messages</h3>
+    <div className="flex flex-col gap-2">
+      <div data-msg-list="true" className="flex flex-col gap-2">
         {templates.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
         {jobMessages.map(row)}
         {/* The booking messages under their own heading, as drawn (msgListOpen). */}
         {bookingMessages.length ? (
           <>
-            <h4 className="m-0 mt-2 text-sm font-bold">Booking messages</h4>
+            <h5 className="m-0 mt-2 text-sm font-bold">Booking messages</h5>
             <p className="m-0 text-[13px] text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
           </>
         ) : null}
         {bookingMessages.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
-      </section>
+      </div>
       {editing ? (
         <EditMessage
           template={templates.data?.find((t) => t.key === editing.key) ?? editing}
@@ -94,7 +97,7 @@ export function MessagesSettings() {
           onClose={closeEdit}
         />
       ) : null}
-    </section>
+    </div>
   );
 }
 

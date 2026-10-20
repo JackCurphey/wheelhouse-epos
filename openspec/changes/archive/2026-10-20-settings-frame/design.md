@@ -1,0 +1,5 @@
+# Design
+- `SettingsFrame({ rooms })`: rooms are `{ key, name, intro, areas: [{ key, title, intro, folds: [{ key, title, summary, body }] }] }`, built by the page from what exists. `?room=` picks the room; none: a computer shows the first room, a phone the list of rooms (CSS breakpoint).
+- Room page: h2 name; the room's intro when it has more than one area, else that area's; Jump to (links to `#set-<area>`) and area h3s only for more than one area; folds are h4 under an area, h3 otherwise.
+- Fold: the heading wraps a button (`aria-expanded`, `aria-controls`) with the title, the summary (beside it, under it on a phone) and a chevron; the panel shows the body when open. A room opens with its first fold open; each fold opens and closes on its own.
+- Summaries: Receipts "Words at the bottom" / "Nothing at the bottom yet"; Automatic messages "[n] on"; Online booking "Set times" or "The whole day" · the notice; Mechanics "Who signed off: staff only" / "shown to customers"; Shop details the shop's name; Opening hours the closed days ("Closed Sundays", "Open every day").

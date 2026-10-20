@@ -35,7 +35,7 @@ test('a staff login sees Settings aren’t part of your role; the Owner sees Set
       const [name, value] = cookie.split('=');
       await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
       const page = await ctx.newPage();
-      await page.goto(`${server!.baseUrl}/workshop/settings`);
+      await page.goto(`${server!.baseUrl}/workshop/settings?room=office`);
       if (who === 'staff') {
         await expect(page.getByRole('heading', { name: 'Settings aren’t part of your role' })).toBeVisible();
         await expect(page.getByLabel('Shop name')).toHaveCount(0);

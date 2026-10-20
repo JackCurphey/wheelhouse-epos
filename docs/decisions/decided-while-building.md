@@ -834,6 +834,29 @@ silent:
    *Pattern:* Change details' pills. (Arrow keys and one Tab stop per group:
    built 20 Oct, pill-keys.)
 
+### 20 Oct 2026: the Settings frame (WP-1.3, first part)
+
+1. **On a computer Settings opens on Front desk**, the first room drawn;
+   a phone opens on the list of rooms. *Pattern:* the drawn room order.
+2. **A room opens with its first fold open, and each fold then opens and
+   closes on its own.** *Pattern:* "one section open" (Owner setup decision
+   17) read as how a room starts.
+3. **Fold summaries say only what's set up**: Receipts "Words at the bottom"
+   or "Nothing at the bottom yet"; Online booking "Set times · 2 hours’
+   notice"; Mechanics "Who signed off: staff only"; Opening hours "Closed
+   Sundays". *Pattern:* setup audit H3 and M2; the drawn summaries' style.
+4. **Rooms are addressed `?room=front-desk|workshop|office`.** *Pattern:* the
+   till's `?job=`.
+5. **No "Saved · Undo" yet**: the boxes keep their own "Saved." until Mark's
+   change record is in (WP-1.2).
+6. **The phone's room lines and the Messages summary come from what's built**
+   ("Till, messages"; "[n] on" counting the messages that send and are on),
+   not the drawn full lines. *Pattern:* decision 6, show only what works.
+7. **Jump to's pills don't yet mark where the page is** (`aria-current`),
+   and a fold stays in place once opened, hidden while closed, so nothing
+   typed is lost. *Pattern:* the drawing's Jump to; the boxes' own "keeps
+   what was typed".
+
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 
 1. **`new-job`: "+ Add a bike" opens Make, Model, Colour and Serial number

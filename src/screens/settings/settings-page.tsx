@@ -7,7 +7,8 @@ import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { previewLines } from './booking-preview.ts';
-import { MessagesSettings } from './messages-settings.tsx';
+import { AutomaticMessages, useMessagesSummary } from './messages-settings.tsx';
+import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
@@ -66,8 +67,7 @@ function useShopDetails() {
 function ShopDetailsBox() {
   const { details, valueOf, setTyped, save, note } = useShopDetails();
   return (
-    <section aria-labelledby="set-shop-details" className="flex flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-      <h3 id="set-shop-details" className="m-0 mb-2 text-base font-bold">Shop details</h3>
+    <div className="flex flex-col">
       {details.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the shop’s details. Try again in a moment.</p> : null}
       {DETAIL_ROWS.map(([key, label, autoComplete]) => (
         <div key={key} className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3 md:py-0">
@@ -85,7 +85,7 @@ function ShopDetailsBox() {
       ))}
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">These show on receipts, emails and the website.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 mt-1 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
-    </section>
+    </div>
   );
 }
 
@@ -121,8 +121,7 @@ function RowSwitch({ label, on, disabled, onChange }: { label: string; on: boole
 function ReceiptsBox() {
   const { details, valueOf, setTyped, save, note } = useShopDetails();
   return (
-    <section aria-labelledby="set-receipts" className="flex flex-col gap-1.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-      <h3 id="set-receipts" className="m-0 mb-1 text-base font-bold">Receipts</h3>
+    <div className="flex flex-col gap-1.5">
       <label htmlFor="receipt-footer" className="text-sm font-semibold">Words at the bottom</label>
       <textarea
         id="receipt-footer"
@@ -137,7 +136,7 @@ function ReceiptsBox() {
       />
       <p className="m-0 text-sm text-[var(--wh-muted)]">The shop’s name and address come from Shop and sites. Every receipt carries a barcode so a refund can find the sale.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
-    </section>
+    </div>
   );
 }
 
@@ -200,8 +199,7 @@ function HoursBox() {
   const options = (value: string) => (HOURS.includes(value) ? HOURS : [value, ...HOURS].sort());
 
   return (
-    <section aria-labelledby="set-hours" className="flex flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-      <h3 id="set-hours" className="m-0 mb-2 text-base font-bold">Opening hours</h3>
+    <div className="flex flex-col">
       {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the opening hours. Try again in a moment.</p> : null}
       {WEEKDAYS.map(([weekday, name]) => {
         const day = week.find((d) => d.weekday === weekday);
@@ -240,7 +238,7 @@ function HoursBox() {
       })}
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">Online booking only offers mechanics on the days they’re in, set on each person.</p>
       {error ? <p role="alert" className="m-0 mt-1 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
-    </section>
+    </div>
   );
 }
 
@@ -751,8 +749,7 @@ function ConfirmationNoteSetting() {
 function OnlineBookingBox() {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   return (
-    <section aria-labelledby="set-online" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-      <h3 id="set-online" className="m-0 text-base font-bold">Online booking</h3>
+    <div className="flex flex-col gap-2">
       <ModeSetting />
       {settings.data?.bookingMode === 'timed' ? (
         <NumberSetting
@@ -772,7 +769,7 @@ function OnlineBookingBox() {
       <PricesSetting />
       <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Terms</h4>
       <TermsSetting />
-    </section>
+    </div>
   );
 }
 
@@ -783,7 +780,9 @@ export function SettingsPage() {
   return <OwnerSettings />;
 }
 
-function OwnerSettings() {
+// Workshop › Mechanics, so far: who signed off, shown to customers or not
+// (mechanic sign-off piece 3; drawn as set-workshop-sign-off).
+function MechanicsBody() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const [saving, setSaving] = useState(false);
@@ -804,38 +803,69 @@ function OwnerSettings() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 p-5">
-      {/* The staff frame's header already says "Settings". */}
-      <section aria-labelledby="set-shop" className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 id="set-shop" className="m-0 text-xl font-bold">Shop and sites</h2>
-          <p className="m-0 text-sm text-[var(--wh-muted)]">The shop’s details, its sites and their opening hours.</p>
-        </div>
-        <ShopDetailsBox />
-        <HoursBox />
-      </section>
-      <section aria-labelledby="set-till" className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 id="set-till" className="m-0 text-xl font-bold">Till</h2>
-          <p className="m-0 text-sm text-[var(--wh-muted)]">What staff see and use at the till.</p>
-        </div>
-        <ReceiptsBox />
-      </section>
-      <section aria-labelledby="set-workshop" className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 id="set-workshop" className="m-0 text-xl font-bold">Workshop</h2>
-          <p className="m-0 text-sm text-[var(--wh-muted)]">Services, who works in the workshop, and how the diary looks.</p>
-        </div>
-        <OnlineBookingBox />
-        <section aria-labelledby="set-mechanics" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
-          <h3 id="set-mechanics" className="m-0 text-base font-bold">Mechanics</h3>
-          {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the settings. Try again in a moment.</p> : null}
-          <RowSwitch label="Show who signed off to customers" on={on} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
-          <p className="m-0 text-sm text-[var(--wh-muted)]">Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.</p>
-          {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
-        </section>
-      </section>
-      <MessagesSettings />
+    <div className="flex flex-col gap-2">
+      {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the settings. Try again in a moment.</p> : null}
+      <RowSwitch label="Show who signed off to customers" on={on} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.</p>
+      {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
     </div>
   );
+}
+
+// The folds' one-line summaries describe only what's set up (setup audit H3, M2).
+const DAY_NAMES: Record<number, string> = { 0: 'Sundays', 1: 'Mondays', 2: 'Tuesdays', 3: 'Wednesdays', 4: 'Thursdays', 5: 'Fridays', 6: 'Saturdays' };
+function closedDays(hours: DayHours[] | undefined): string {
+  if (!hours) return '';
+  const closed = [1, 2, 3, 4, 5, 6, 0].filter((d) => !hours.some((h) => h.weekday === d)).map((d) => DAY_NAMES[d]);
+  if (!closed.length) return 'Open every day';
+  if (closed.length === 7) return 'Closed every day';
+  return `Closed ${closed.length === 1 ? closed[0] : `${closed.slice(0, -1).join(', ')} and ${closed[closed.length - 1]}`}`;
+}
+function noticeWords(s: WorkshopSettings): string {
+  if (s.minNoticeDays) return s.minNoticeDays === 1 ? '1 day’s notice' : `${s.minNoticeDays} days’ notice`;
+  const minutes = s.minNoticeMinutes ?? 0;
+  if (!minutes) return 'No notice';
+  if (minutes % 60) return `${minutes} minutes’ notice`;
+  return minutes === 60 ? '1 hour’s notice' : `${minutes / 60} hours’ notice`;
+}
+
+function OwnerSettings() {
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const details = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails>('/api/shop-details') });
+  const messages = useMessagesSummary();
+  const s = settings.data;
+  // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
+  // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
+  const rooms: SettingsRoom[] = [
+    {
+      key: 'front-desk', name: 'Front desk', intro: 'The till, payments, messages to customers and closing the day.',
+      areas: [
+        { key: 'till', title: 'Till', intro: 'What staff see and use at the till.', folds: [
+          { key: 'receipts', title: 'Receipts', summary: details.data ? (details.data.receiptFooter ? 'Words at the bottom' : 'Nothing at the bottom yet') : '', body: <ReceiptsBox /> },
+        ] },
+        { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
+          { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
+        ] },
+      ],
+    },
+    {
+      key: 'workshop', name: 'Workshop', intro: '',
+      areas: [
+        { key: 'workshop', title: 'Workshop', intro: 'Services, who works in the workshop, and how the diary looks.', folds: [
+          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)}` : '', body: <OnlineBookingBox /> },
+          { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
+        ] },
+      ],
+    },
+    {
+      key: 'office', name: 'Office', intro: 'The shop and its sites, the people who work here, and your data.',
+      areas: [
+        { key: 'shop', title: 'Shop and sites', intro: 'The shop’s details, its sites and their opening hours.', folds: [
+          { key: 'shop-details', title: 'Shop details', summary: details.data?.name ?? '', body: <ShopDetailsBox /> },
+          { key: 'opening-hours', title: 'Opening hours', summary: closedDays(s?.openingHours), body: <HoursBox /> },
+        ] },
+      ],
+    },
+  ];
+  return <SettingsFrame rooms={rooms} />;
 }
