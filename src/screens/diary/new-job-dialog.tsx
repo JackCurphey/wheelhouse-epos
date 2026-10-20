@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * New job (journey 12; drawn as new-job and new-job-day in
@@ -407,17 +408,17 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
             </div>
             <div className="flex flex-col gap-1.5">
               <span id="nj-work" className={LABEL}>Work</span>
-              <div role="radiogroup" aria-labelledby="nj-work" className="flex flex-wrap gap-1.5">
+              <RadioPillGroup aria-labelledby="nj-work" className="flex flex-wrap gap-1.5">
                 {KINDS.map((k) => (
                   <Pill key={k.kind} on={kind === k.kind} onClick={() => setKind(k.kind)}>{k.label}</Pill>
                 ))}
-              </div>
+              </RadioPillGroup>
               {kind ? (
-                <div role="radiogroup" aria-label={KINDS.find((k) => k.kind === kind)?.label} className="flex flex-wrap gap-1.5">
+                <RadioPillGroup aria-label={KINDS.find((k) => k.kind === kind)?.label} className="flex flex-wrap gap-1.5">
                   {(services.data ?? []).filter((s) => s.active && s.kind === kind).map((s) => (
                     <Pill key={s.id} on={service?.id === s.id} onClick={() => chooseService(s)}>{`${s.name} · ${s.minutes} min`}</Pill>
                   ))}
-                </div>
+                </RadioPillGroup>
               ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
@@ -464,19 +465,19 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
             ) : null}
             <div className="flex flex-col gap-1.5">
               <span id="nj-mech" className={LABEL}>Mechanic</span>
-              <div role="radiogroup" aria-labelledby="nj-mech" className="flex flex-wrap gap-1.5">
+              <RadioPillGroup aria-labelledby="nj-mech" className="flex flex-wrap gap-1.5">
                 {people.map((p) => (
                   <Pill key={p.id} on={mech === p.id} onClick={() => { setMech(p.id); setMechByHand(true); }}>{p.name}</Pill>
                 ))}
                 <Pill on={mech === null} onClick={() => { setMech(null); setMechByHand(true); }}>Shared queue</Pill>
-              </div>
+              </RadioPillGroup>
             </div>
             <div className="flex flex-col gap-1.5">
               <span id="nj-status" className={LABEL}>Starting status</span>
-              <div role="radiogroup" aria-labelledby="nj-status" className="flex flex-wrap gap-1.5">
+              <RadioPillGroup aria-labelledby="nj-status" className="flex flex-wrap gap-1.5">
                 <Pill on={status === 'scheduled'} onClick={() => setStatus('scheduled')}>Booked</Pill>
                 <Pill on={status === 'waiting_parts'} onClick={() => setStatus('waiting_parts')}>Waiting for parts</Pill>
-              </div>
+              </RadioPillGroup>
             </div>
             <Toggle on={bikeHere} onChange={setBikeHere} label="The bike is here now" hint="Books it in straight away." />
           </div>

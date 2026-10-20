@@ -624,3 +624,17 @@ test('New job keeps what the customer told us apart from staff notes, and saves 
   assert.equal(body.notes, 'Collect after work.');
 });
 
+test('New job’s pills are one Tab stop per group and move with the arrow keys', async () => {
+  const r = await openDiary();
+  const form = await pickTuesdayTen(r);
+  const work = form.getByRole('radiogroup', { name: 'Work' });
+  const full = r.within(work).getByRole('radio', { name: 'Full service' });
+  const individual = r.within(work).getByRole('radio', { name: 'Individual service' });
+  await r.waitFor(() => assert.equal(full.tabIndex, 0), 'nothing picked: the first');
+  assert.equal(individual.tabIndex, -1);
+  full.focus();
+  r.fireEvent.keyDown(full, { key: 'ArrowRight' });
+  await r.waitFor(() => assert.equal(individual.getAttribute('aria-checked'), 'true'));
+  assert.ok(document.activeElement === individual);
+});
+

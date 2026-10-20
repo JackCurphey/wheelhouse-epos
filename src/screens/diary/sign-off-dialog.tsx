@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { shortDay } from './rules.ts';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * "Who’s signing this off?" (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md;
@@ -44,9 +45,9 @@ export function SignOffDialog({ job, busy, onSign, onClose }: { job: WorkshopJob
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
         <p className="m-0 text-[13px] text-[var(--wh-muted)]">Signing off says the work is done and the bike is fine to go out. If it comes back, the job shows who passed it.</p>
-        <div role="radiogroup" aria-label="Signed off by" className="flex flex-wrap gap-2">
+        <RadioPillGroup aria-label="Signed off by" className="flex flex-wrap gap-2">
           {people.map((p) => <Pill key={p.id} on={chosen === p.id} onClick={() => setPicked(p.id)}>{p.name}</Pill>)}
-        </div>
+        </RadioPillGroup>
         {mechanics.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the mechanics. Try again in a moment.</p> : null}
       </DialogBody>
       <DialogFooter className="flex justify-between gap-2.5">

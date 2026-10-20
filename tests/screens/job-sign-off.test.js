@@ -129,6 +129,18 @@ test('Mark ready asks who is signing it off, with the job’s mechanic picked, a
   assert.deepEqual(posts(), []);
 });
 
+test('the sign-off pills are one Tab stop and move with the arrow keys', async () => {
+  const { pop, fireEvent, waitFor } = await askSignOff();
+  const alex = pop.getByRole('radio', { name: 'Alex Morgan' });
+  const jo = pop.getByRole('radio', { name: 'Jo Taylor' });
+  await waitFor(() => assert.equal(alex.tabIndex, 0));
+  assert.equal(jo.tabIndex, -1);
+  alex.focus();
+  fireEvent.keyDown(alex, { key: 'ArrowDown' });
+  await waitFor(() => assert.equal(jo.getAttribute('aria-checked'), 'true'));
+  assert.ok(document.activeElement === jo);
+});
+
 test('Sign off and mark ready finishes the work with who signed it off', async () => {
   const { pop, fireEvent, waitFor, ui } = await askSignOff();
   fireEvent.click(pop.getByRole('radio', { name: 'Jo Taylor' }));

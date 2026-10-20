@@ -831,9 +831,8 @@ silent:
    words**, and the request stays waiting. *Pattern:* the job's save.
 3. **Every active mechanic has a pill, including one not working that day**;
    accepting for them is refused with the save's "does not work that day".
-   *Pattern:* Change details' pills. Moving between pills with the arrow keys
-   (one Tab stop for the group, as the drawing's pills have) is a follow-up
-   for the shared pill.
+   *Pattern:* Change details' pills. (Arrow keys and one Tab stop per group:
+   built 20 Oct, pill-keys.)
 
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 
