@@ -49,6 +49,8 @@ export type BookingLink = {
   /** A time the shop offered, and where the customer first asked (Jack, 20 Oct, offer another time). */
   offer?: { fromDate: string; fromTime: string; message: string | null } | null;
   canAccept?: boolean;
+  /** What the shop told the customer when it declined (Jack, 20 Oct). */
+  declineMessage?: string | null;
   requested?: { jobDate: string; startTime: string; mechanicId: number } | null;
   changeDeclined?: boolean;
   services: { name: string; price: number | null }[];

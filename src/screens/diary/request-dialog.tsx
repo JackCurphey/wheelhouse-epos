@@ -4,7 +4,7 @@ import { apiGet, ApiError, jobAction } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
-import { STATE_LABEL, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
+import { STATE_LABEL, dayLabel, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
 
 /**
  * Answering what's waiting (journey 12 decisions 15 and 19): the request
@@ -14,8 +14,8 @@ import { STATE_LABEL, shortDay, todayIso, type DiaryState, type WaitingItem } fr
  * saw, so an answer to a job someone else has just changed is refused.
  *
  * "Offer another time" (Jack, 20 Oct) hands the request to the diary's pick
- * mode (onOffer). Not here yet: choosing the mechanic as you accept
- * (decision 62), and a message with a decline. A change request's "Open full job" opens the job page (layout review 238, item 8).
+ * mode (onOffer); Decline asks for a message to the customer (Jack, 20 Oct).
+ * Not here yet: choosing the mechanic as you accept (decision 62). A change request's "Open full job" opens the job page (layout review 238, item 8).
  */
 
 const CHIP: Record<DiaryState, string> = {
@@ -71,15 +71,23 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
 
   const customer = item.customerName || job?.customerName || 'Customer';
   const bike = job?.bikeLabel || 'Bike';
-  const title = TITLE[item.kind] || `${customer} · ${bike}`;
-  const sub = item.kind === 'new_booking' ? 'Pending request' : `${customer} · ${bike}`;
+  // The decline step has its own title, as drawn (request-decline).
+  const declining = item.kind === 'new_booking' && confirmDecline;
+  const title = declining ? 'Decline booking request' : TITLE[item.kind] || `${customer} · ${bike}`;
+  const sub = declining ? `${customer} · ${bike}` : item.kind === 'new_booking' ? 'Pending request' : `${customer} · ${bike}`;
 
-  async function answer(action: string) {
+  // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as
+  // request-decline): started for staff from the day asked for; the shop
+  // suggests another day itself.
+  const weekday = item.jobDate ? dayLabel(item.jobDate).split(' ')[0] : 'that day';
+  const [declineWords, setDeclineWords] = useState(`Sorry, we can’t fit this service in on ${weekday}. Please try another day, or call us and we’ll help find one.`);
+
+  async function answer(action: string, body: object = {}) {
     if (!job) return;
     setSending(true);
     setMessage(null);
     try {
-      await jobAction(id, action, job.version);
+      await jobAction(id, action, job.version, body);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
@@ -125,11 +133,24 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
         </div>
       </>
     );
+    if (confirmDecline) {
+      const first = customer.split(' ')[0];
+      body = (
+        <>
+          <strong className="text-sm">Explain what the customer can do next</strong>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="decline-msg" className="text-sm font-semibold">{`Message to ${first}`}</label>
+            <textarea id="decline-msg" rows={4} maxLength={1000} value={declineWords} onChange={(e) => setDeclineWords(e.target.value)}
+              className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
+          </div>
+          <p className="m-0 text-[13px] text-[var(--wh-muted)]">Declining releases the request’s reservation. The customer is told not to travel for this request.</p>
+        </>
+      );
+    }
     footer = confirmDecline ? (
       <div className="flex w-full flex-col gap-2">
-        <p className="m-0 text-sm">{`Decline ${customer}'s booking for ${item.jobDate ? shortDay(item.jobDate) : 'this day'}? This can't be undone.`}</p>
-        <Button variant="danger" block disabled={sending} onClick={() => answer('decline')}>Decline booking</Button>
-        <Button block disabled={sending} onClick={() => setConfirmDecline(false)}>Keep booking</Button>
+        <Button variant="danger" block disabled={sending} onClick={() => answer('decline', { message: declineWords })}>Decline &amp; notify customer</Button>
+        <Button block disabled={sending} onClick={() => setConfirmDecline(false)}>Keep request</Button>
       </div>
     ) : (
       <div className="flex w-full flex-col gap-2">

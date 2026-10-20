@@ -96,6 +96,29 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   // Changing and cancelling online come later, so the link and contact lines stay.
   // A cancelled booking (drawn as bk-cancelled). No texts are sent yet, so
   // the drawing's "We've sent you a text to confirm." is left out.
+  // A declined booking (drawn as bk-declined), with the shop's message. No
+  // deposits yet, and the booking flow doesn't keep the details, so the
+  // drawing's deposit line and "— we've kept your details" are left off.
+  if (link.stage === 'declined') {
+    return (
+      <BookFrame title="Sorry, we can’t fit this booking in" eyebrow="Not booked">
+        <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+          {link.declineMessage && (
+            <>
+              <p className="m-0 text-[15px] leading-normal">{`A message from ${link.shopName}:`}</p>
+              <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-[15px] leading-normal">{`“${link.declineMessage}”`}</blockquote>
+            </>
+          )}
+          <p className="m-0 text-[15px] leading-normal">Nothing is booked.</p>
+          <div>
+            <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Choose another date</Link>
+          </div>
+          <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
+        </div>
+      </BookFrame>
+    );
+  }
+
   if (link.stage === 'cancelled') {
     return (
       <BookFrame title="Your booking is cancelled" eyebrow="Cancelled">

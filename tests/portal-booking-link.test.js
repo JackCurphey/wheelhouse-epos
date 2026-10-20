@@ -87,6 +87,7 @@ test('a booking returns a booking link, and the link reads the booking back', as
     confirmationNote: null,
     offer: null,
     canAccept: false,
+    declineMessage: null,
     answers: [],
     photoCount: 0,
     services: [{ name: 'Test service', price: null }],

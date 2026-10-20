@@ -295,7 +295,7 @@ async function bookingLinkView(jobId, shop) {
     `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.customer_bike_note, w.question_answers,
             w.booking_state, w.custody_state, w.work_state, w.signed_off_name,
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
-            w.offered_from_date, w.offered_from_time, w.offer_message,
+            w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
              WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
@@ -350,6 +350,8 @@ async function bookingLinkView(jobId, shop) {
     offer: row.booking_state === 'offered'
       ? { fromDate: row.offered_from_date, fromTime: row.offered_from_time || '', message: row.offer_message ?? null } : null,
     canAccept: row.booking_state === 'offered' && !customerTooLate(row, today),
+    // What the shop told the customer when it declined (Jack, 20 Oct).
+    declineMessage: stage === 'declined' ? row.decline_message ?? null : null,
     canChange: customerCanChange(row, today),
     canCancel: customerCanAct(row, today),
     changeDeclined: row.change_declined_at !== null,
