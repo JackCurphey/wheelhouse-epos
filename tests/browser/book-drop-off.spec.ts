@@ -84,3 +84,21 @@ test('Preview in Settings shows the example booking with the shop’s saved note
   await dialog.getByRole('button', { name: 'Close' }).last().click();
   await expect(dialog).toBeHidden();
 });
+
+// A shop's own booking terms (Jack, 8 Oct, not-drawn pages row 95; 20 Oct):
+// written in Settings, they're what customers agree to.
+test('own booking terms saved in Settings are the terms customers get', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.getByRole('button', { name: 'Use your own' }).click();
+  const box = page.getByLabel('Your booking terms');
+  await expect(box).toHaveValue(/^1\. Your booking is a request/);
+  await box.fill('Our own terms: bring the lock key.');
+  await box.blur();
+  await expect(page.getByText('Your own terms · a copy is kept with each booking')).toBeVisible();
+  const terms = await (await fetch(`${server!.baseUrl}/api/portal/${owner.shop.slug}/terms`)).json();
+  expect(terms).toEqual({ title: 'Booking terms', text: 'Our own terms: bring the lock key.', standard: false });
+  await page.getByRole('button', { name: 'Go back to Wheelhouse’s standard terms' }).click();
+  await expect(page.getByRole('button', { name: 'Use your own' })).toBeVisible();
+});

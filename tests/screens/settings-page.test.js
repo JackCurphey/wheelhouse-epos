@@ -17,6 +17,7 @@ let details;
 let detailsFail;
 let holdDetails = null;
 let refuseHours = null;
+const STANDARD_TERMS = '1. Your booking is a request.\n2. Payment is due when you collect your bike.';
 const WEEK = [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '17:00' }));
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
@@ -28,7 +29,7 @@ afterEach(async () => {
 
 async function openSettings({ me = OWNER } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.' };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
   refuseHours = null;
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
@@ -55,9 +56,11 @@ async function openSettings({ me = OWNER } = {}) {
       if (refuseHours && body.nextBookingMode !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.showPricesOnline !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.confirmationNote !== undefined) return reply(400, { error: refuseHours });
+      if (refuseHours && body.bookingTerms !== undefined) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
+    if (u.pathname === '/api/portal/north-street/terms') return reply(200, { title: 'Booking terms', text: STANDARD_TERMS, standard: true });
     if (u.pathname === '/api/workshop-settings') return reply(200, settings);
     return reply(404, { error: 'Not found' });
   };
@@ -577,4 +580,62 @@ test('Preview opens What the customer sees, with the shop’s saved note and pri
   assert.equal(closes.length, 2);
   fireEvent.click(closes[1]);
   await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'What the customer sees' }) === null));
+});
+
+// A shop's own booking terms (Jack, 8 Oct, not-drawn pages row 95; 20 Oct;
+// drawn as bk-settings' Terms row): Use your own starts from the standard terms.
+const termsPuts = () => calls.filter((c) => c.method === 'PUT' && c.body.bookingTerms !== undefined).map((c) => c.body);
+
+test('the standard terms: the row says so, with Use your own', async () => {
+  const { ui } = await openSettings();
+  assert.ok(await ui.findByText('Wheelhouse’s standard terms · a copy is kept with each booking'));
+  assert.ok(ui.getByRole('button', { name: 'Use your own' }));
+  assert.ok(ui.queryByLabelText('Your booking terms') === null);
+});
+
+test('Use your own opens the box with the standard terms; leaving it unchanged saves nothing', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
+  const box = await ui.findByLabelText('Your booking terms');
+  await waitFor(() => assert.equal(box.value, STANDARD_TERMS));
+  assert.ok(ui.queryByText('Customers agree to these when they book. A copy is kept with each booking.') !== null);
+  fireEvent.blur(box);
+  // Typed back to the same words (spaces aside) is unchanged too.
+  fireEvent.change(box, { target: { value: `${STANDARD_TERMS}  ` } });
+  fireEvent.blur(box);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.deepEqual(termsPuts(), []);
+});
+
+test('changed words save when the box is left, and the row then says they’re the shop’s own', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
+  const box = await ui.findByLabelText('Your booking terms');
+  await waitFor(() => assert.equal(box.value, STANDARD_TERMS));
+  fireEvent.change(box, { target: { value: 'Our own terms.' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(termsPuts(), [{ bookingTerms: 'Our own terms.' }]));
+  assert.ok(await ui.findByText('Your own terms · a copy is kept with each booking'));
+});
+
+test('own terms show in the box; Go back to Wheelhouse’s standard terms saves null', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  settings = { ...settings, bookingTerms: 'Our own terms.' };
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  const box = await ui.findByLabelText('Your booking terms');
+  assert.equal(box.value, 'Our own terms.');
+  fireEvent.click(ui.getByRole('button', { name: 'Go back to Wheelhouse’s standard terms' }));
+  await waitFor(() => assert.deepEqual(termsPuts(), [{ bookingTerms: null }]));
+  assert.ok(await ui.findByRole('button', { name: 'Use your own' }));
+});
+
+test('a refused save shows its words and keeps what was typed', async () => {
+  const { ui, fireEvent } = await openSettings();
+  fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
+  const box = await ui.findByLabelText('Your booking terms');
+  refuseHours = 'Booking terms can be up to 20,000 characters';
+  fireEvent.change(box, { target: { value: 'Too long, say.' } });
+  fireEvent.blur(box);
+  assert.ok(await ui.findByText('Booking terms can be up to 20,000 characters'));
+  assert.equal(box.value, 'Too long, say.');
 });
