@@ -11,8 +11,8 @@ import { sendTextNow } from '../messaging/engine.js';
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 
-// One-off texts sent to a customer via Twilio (see sms.js). A failed send
-// still gets a history row (status: 'failed') rather than being dropped, so
+// One-off texts sent to a customer, through the messages engine's sender
+// (pretend for now: Jack, 20 Oct). A failed send still gets a history row (status: 'failed') rather than being dropped, so
 // staff can see what was actually attempted.
 
 function serializeCustomerMessage(row) {
@@ -56,7 +56,7 @@ export function register(route) {
     const row = await db.prepare(MESSAGE_SELECT + ' WHERE m.id = ?').get(id);
     // Always 201: the request itself succeeded (an attempt was made and
     // recorded) even when the send didn't - the frontend reads row.status to
-    // show the outcome, rather than this route throwing on a Twilio failure.
+    // show the outcome, rather than this route throwing on a failed send.
     sendJson(res, 201, serializeCustomerMessage(row));
   });
 }

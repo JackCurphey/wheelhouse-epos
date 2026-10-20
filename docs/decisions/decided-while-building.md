@@ -742,10 +742,12 @@ silent:
    page") waits for a page to reply on.** *Pattern:* nothing said that isn't
    true.
 6. **Bike ready's "[Link to the job]" is the job's booking link, issued
-   afresh when it's queued.** *Pattern:* sending a quote (journey 4 decision 5:
-   only the newest link works). An undone Bike ready leaves the older link
-   stopped too; before real sending is switched on, links should be issued
-   when the message actually goes.
+   afresh when it's queued, and only when it will go** (switched off, or no
+   phone or email, keeps the customer's link). *Pattern:* sending a quote
+   (journey 4 decision 5: only the newest link works). An undone Bike ready
+   leaves the older link stopped too; before real sending is switched on,
+   links should be issued when the message actually goes. Reopening the work
+   stops a Bike ready still waiting its minute.
 7. **"[Opening hours]" reads "Mon to Fri 9:00 to 18:00, Sat 9:00 to 16:00"**:
    Monday first, days in a row with the same hours run together, two days as
    "Tue and Wed". *Pattern:* the booking messages' times ("Thu 17 Sep, 11:30").

@@ -45,6 +45,13 @@ async function mayasJob({ phone = '07700 900142', email = null } = {}) {
   return { customer, job };
 }
 const finish = (job) => staff(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: alex } });
+// Whether a booking link still opens, through the customer's own API (the
+// page itself answers 200 for any code).
+const linkWorks = async (link) => {
+  const [, slug, code] = new URL(link, server.baseUrl).pathname.match(/^\/book\/([^/]+)\/booking\/([0-9a-f]+)$/);
+  return (await fetch(`${server.baseUrl}/api/portal/${slug}/booking-links/${code}`)).status === 200;
+};
+const giveLink = async (job) => (await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} })).body.privateLink;
 
 test('opening hours read as days and times, like days of the week run together', () => {
   const day = (weekday, open = '09:00', close = '18:00') => ({ weekday, open, close });
@@ -56,6 +63,8 @@ test('opening hours read as days and times, like days of the week run together',
 
 test('marking a job ready queues Bike ready to go in a minute, with a link, and Undo stops it', async () => {
   const { job } = await mayasJob();
+  const old = await giveLink(job);
+  assert.equal(await linkWorks(old), true);
   const before = Date.now();
   const res = await finish(job);
   assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -74,7 +83,8 @@ test('marking a job ready queues Bike ready to go in a minute, with a link, and 
   assert.match(row.body, expected);
   // The link in the message opens the job's booking page.
   const link = row.body.match(/See what we did: (\S+)\. Job/)[1];
-  assert.equal((await fetch(link)).status, 200);
+  assert.equal(await linkWorks(link), true);
+  assert.equal(await linkWorks(old), false, 'only the newest link works');
   const undone = await staff(`/api/messages/${ready.id}/undo`, { method: 'POST', body: {} });
   assert.equal(undone.status, 200, JSON.stringify(undone.body));
   assert.equal((await messagesFor(job.id))[0].intent_state, 'undone');
@@ -82,18 +92,39 @@ test('marking a job ready queues Bike ready to go in a minute, with a link, and 
 
 test('Bike ready switched off, or no way to reach the customer, sends nothing and says why', async () => {
   const off = await mayasJob();
+  const offLink = await giveLink(off.job);
   assert.equal((await staff('/api/message-templates/bike_ready', { method: 'PUT', body: { enabled: false } })).status, 200);
   try {
     const res = await finish(off.job);
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.deepEqual(res.body.readyMessage, { skipped: 'off' });
     assert.equal((await messagesFor(off.job.id)).length, 0);
+    assert.equal(await linkWorks(offLink), true, 'no message, so the customer keeps their link');
   } finally {
     await staff('/api/message-templates/bike_ready', { method: 'PUT', body: { enabled: true } });
   }
   const none = await mayasJob({ phone: null });
+  const noneLink = await giveLink(none.job);
   const res = await finish(none.job);
   assert.deepEqual(res.body.readyMessage, { skipped: 'no_contact' });
+  assert.equal(await linkWorks(noneLink), true);
+});
+
+test('reopening the work stops a Bike ready still waiting its minute', async () => {
+  const { job } = await mayasJob();
+  const done = (await finish(job)).body;
+  const reopened = await staff(`/api/workshop-jobs/${job.id}/reopen-work`, { method: 'POST', body: { version: done.version } });
+  assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
+  const [row] = await messagesFor(job.id);
+  assert.equal(row.intent_state, 'undone');
+});
+
+test('Amount to pay leaves out a cancelled order', async () => {
+  const { job } = await mayasJob();
+  await inShop(() => prepare("INSERT INTO sale_documents (kind, status, subtotal, discount, total, workshop_job_id, title) VALUES ('order', 'cancelled', 999, 0, 999, ?, 'Old')").run(job.id));
+  const res = await finish(job);
+  const [row] = await messagesFor(job.id);
+  assert.match(row.body, /£111\.00 to pay on collection/, res.body.readyMessage && row.body);
 });
 
 test('sending a quote queues Quote to approve through the engine, pretend, at once', async () => {

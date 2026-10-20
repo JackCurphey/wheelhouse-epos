@@ -15,7 +15,7 @@ export async function jobMessageVars(jobId, shopId, link) {
             d.total AS order_total, d.status AS order_status
        FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
-       LEFT JOIN sale_documents d ON d.workshop_job_id = w.id AND d.kind = 'order'
+       LEFT JOIN sale_documents d ON d.workshop_job_id = w.id AND d.kind = 'order' AND d.status <> 'cancelled'
       WHERE w.id = ? ORDER BY d.id DESC LIMIT 1`
   ).get(jobId);
   const { rows: [shop] } = await pool.query('SELECT name FROM shops WHERE id = $1', [shopId]);

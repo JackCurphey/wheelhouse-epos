@@ -15,7 +15,7 @@ import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/htt
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-import { queueMessage, UNDO_MS } from '../messaging/engine.js';
+import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
 import { jobMessageVars } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
@@ -293,6 +293,19 @@ async function issueJobLink(req, jobId, shopId) {
   await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(code), nowIso(), jobId);
   const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
   return `${publicBase(req)}${linkPath(shop.slug, code)}`;
+}
+
+// Bike ready for a job just marked ready. The job's link is issued afresh
+// only for a message that will go, so a customer who gets nothing keeps the
+// link they have (fresh review).
+async function queueBikeReady(req, jobId, shopId) {
+  const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
+  const skipped = await whyNotQueued('bike_ready', customerId);
+  if (skipped) return { skipped };
+  const link = await issueJobLink(req, jobId, shopId);
+  const { vars } = await jobMessageVars(jobId, shopId, link);
+  const ctx = await currentSession(req);
+  return queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId: ctx?.login?.id ?? null });
 }
 
 // Why a job's message didn't go, for the person who pressed the button.
@@ -746,12 +759,22 @@ export function register(route) {
         if (signer === null) return sendJson(res, 400, SIGN_OFF_REQUIRED);
       }
       let result;
+      let readyMessage;
       if (signing || unsigning) {
         await db.exec('BEGIN');
         try {
           result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
-          if (result.ok && signing) await recordSignOff(id, signer);
-          if (result.ok && unsigning) await clearSignOff(id);
+          if (result.ok && signing) {
+            await recordSignOff(id, signer);
+            // Marking it ready sends "Bike ready", with a minute to Undo (UX
+            // walk-through 1 H2; the messages engine, pretend for now), in the
+            // same transaction: if it can't be queued, nothing is finished.
+            readyMessage = await queueBikeReady(req, id, shopId);
+          }
+          if (result.ok && unsigning) {
+            await clearSignOff(id);
+            await undoWaiting(id, 'bike_ready');
+          }
           await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
         } catch (err) {
           await db.exec('ROLLBACK');
@@ -792,17 +815,6 @@ export function register(route) {
       // which event fired, so it releases only when the job is no longer live
       // and otherwise keeps (or realigns) the one hold a live job holds.
       await syncJobHold(id);
-      // Marking it ready sends "Bike ready", with a minute to Undo (UX
-      // walk-through 1 H2; the messages engine, pretend for now).
-      let readyMessage;
-      if (signing) {
-        const link = await issueJobLink(req, id, shopId);
-        const { customerId, vars } = await jobMessageVars(id, shopId, link);
-        const ctx = await currentSession(req);
-        readyMessage = customerId
-          ? await queueMessage({ customerId, jobId: id, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId: ctx?.login?.id ?? null })
-          : { skipped: 'no_contact' };
-      }
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
       sendJson(res, 200, readyMessage ? { ...serializeWorkshopJob(row), readyMessage } : serializeWorkshopJob(row));
     });

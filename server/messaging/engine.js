@@ -27,6 +27,25 @@ export function channelFor(c) {
 }
 
 /**
+ * Why a message wouldn't be queued for this customer ('off' or 'no_contact'),
+ * or null when it would: checked first by a trigger that must do something
+ * only for a message that goes (a new link). Inside runWithShop.
+ */
+export async function whyNotQueued(key, customerId) {
+  if (!(await templateFor(key)).enabled) return 'off';
+  const c = customerId ? await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId) : null;
+  return c && channelFor(c) ? null : 'no_contact';
+}
+
+/** Stops a job's message still waiting its minute (reopening the work stops its Bike ready). */
+export async function undoWaiting(jobId, key) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE job_id = ? AND template_key = ? AND intent_state = 'intended'`
+  ).run(jobId, key);
+}
+
+/**
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
