@@ -49,3 +49,4 @@ and their edit box for my approval; sending waits for the messages engine.").
    message says "“Booking confirmed” didn’t go: Sam Reed has no phone number
    or email on file.", in the panel's colours rather than a refusal's red,
    with Close. A message switched off in Settings says nothing, as Bike ready.
+   **Approved, 20 Oct** (Jack: "Approve the didn't-go note drawing; build it.").
