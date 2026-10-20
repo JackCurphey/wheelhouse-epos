@@ -9,4 +9,4 @@
 - [x] 2.2 The offered pop-up and its decline; the block click; the offer pop-up's "Asked for"
 
 ## 3. Checks
-- [ ] 3.1 Fresh review; `npm test` and `npm run test:browser` pass; archived
+- [x] 3.1 Fresh review; `npm test` and `npm run test:browser` pass; archived
