@@ -94,6 +94,14 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
 .next ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .next li span { display: block; font-size: 13px; color: var(--muted); }
 .more { margin: 0; font-size: 14px; color: var(--muted); }
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.stage .sum { margin: 0; font-size: 16px; font-weight: 600; }
+.stage .bar { height: 10px; border-radius: 999px; background: var(--next-bg); overflow: hidden; }
+.stage .bar span { display: block; height: 100%; background: var(--done-ink); border-radius: 999px; }
+.stage ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.stage li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; font-size: 14px; }
+.stage li span.d { grid-column: 2; font-size: 13px; color: var(--muted); }
+.stage .how { margin: 0; font-size: 13px; color: var(--muted); }
 .more button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
 @media (max-width: 560px) {
   ol.pieces li { grid-template-columns: minmax(0, 1fr) auto; }
@@ -119,6 +127,13 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
       <h2 id="ov-now-h">Where we're at</h2>
       <p class="lead" id="ov-now"></p>
       <div class="tally" id="ov-tally"></div>
+    </section>
+    <section class="stage" aria-labelledby="ov-stage-h">
+      <h2 id="ov-stage-h">How far through the stage</h2>
+      <p class="sum" id="ov-stage-sum"></p>
+      <div class="bar" id="ov-stage-bar" role="progressbar" aria-labelledby="ov-stage-sum" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+      <ol id="ov-stage-steps"></ol>
+      <p class="how" id="ov-stage-how"></p>
     </section>
     <section aria-labelledby="ov-wait-h">
       <h2 id="ov-wait-h">Needs you</h2>
@@ -183,6 +198,21 @@ const BOARD = {
   // Jack (from Mark, or a decision), with a link where there is one, and the
   // next few pieces for each person. Keep it short; the rest is on Detail.
   overview: {
+    // The current stage's steps, as the split plan's §9 lists them; the
+    // percentage on the board is worked out from these, never typed in.
+    stage: {
+      name: 'Stage 0',
+      how: 'Counted from the stage\'s seven steps in the split plan (§9). Pieces built ahead of the plan on your word, like the booking page and the messages engine, belong to later stages and aren\'t counted here.',
+      steps: [
+        { done: true, what: 'Merge the till and diary work (WP-0.1)', detail: 'You, #110, #111 and #112' },
+        { done: true, what: 'Booking bugs, server half (WP-0.2)', detail: 'Mark, #148' },
+        { done: true, what: 'Trim STATUS to 8 KB (WP-0.3)', detail: 'Mark, #149' },
+        { done: false, what: 'Split the server into files (WP-0.4)', detail: 'Mark. Nearly there: one booking route and the screens\' shared definitions are left' },
+        { done: true, what: 'Booking bugs, screens half (WP-0.2)', detail: 'You, #164' },
+        { done: false, what: 'The online test copy (WP-0.5)', detail: 'Mark. Live since 16 Oct; its safety checks and automatic updates are left' },
+        { done: false, what: 'Stage check: walk booking, the till and the diary in the real app', detail: 'You, once the two above are in' },
+      ],
+    },
     now: 'Stage 0. On 19 and 20 Oct online booking grew up: Show prices, a note on the confirmation, Preview, the customer\'s own booking page (confirmed, waiting, cancel, change the date), a shop\'s own booking terms, Offer another time and declining with a message (#293 to #319). Now the messages engine: pretend for now, so every message lands in an outbox in the app and nothing is really sent until you say yes (#321 to #323).',
     next: {
       Mark: [
@@ -431,6 +461,25 @@ for (const s of ['done', 'review', 'build', 'next']) {
 }
 
 const ov = BOARD.overview;
+// How far through the stage: done steps out of all of them.
+{
+  const { name, steps, how } = ov.stage;
+  const done = steps.filter((s) => s.done).length;
+  const pct = Math.round((done / steps.length) * 100);
+  document.getElementById('ov-stage-sum').textContent = `${name}: ${done} of ${steps.length} steps done · ${pct}%`;
+  const bar = document.getElementById('ov-stage-bar');
+  bar.setAttribute('aria-valuenow', String(pct));
+  bar.firstElementChild.style.width = `${pct}%`;
+  const ol = document.getElementById('ov-stage-steps');
+  for (const s of steps) {
+    const li = el('li');
+    li.dataset.done = String(s.done);
+    li.append(el('span', `pill ${s.done ? 's-done' : 's-next'}`, s.done ? 'Done' : 'To do'), el('strong', null, s.what));
+    if (s.detail) li.append(el('span', 'd', s.detail));
+    ol.append(li);
+  }
+  document.getElementById('ov-stage-how').textContent = how;
+}
 document.getElementById('ov-now').textContent = ov.now;
 const ovTally = document.getElementById('ov-tally');
 for (const n of tally.children) ovTally.append(n.cloneNode(true));
