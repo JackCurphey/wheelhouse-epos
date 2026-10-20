@@ -3597,6 +3597,44 @@ ${dialogBody(`${note('Deleting it now would lose what’s still open:', 14)}<div
 <div style="display: flex; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('OK', { variant: 'default', href: `job-files-${size}.dc.html` })}</div>`;
 }
 
+// The job's messages (Jack, 20 Oct, docs/decisions/2026-10-20-messages-engine.md
+// answer 2: "on each job's page — a Messages list showing what that job has
+// sent (pretend for now)"), newest first, each with what it is, how and when it goes, and the words the
+// customer gets. The words are the approved wordings filled with the drawn
+// example; unknown times stay bracketed.
+const JOB_MESSAGES = [
+  { name: 'Bike ready', state: ['Waiting', 'amber'], how: 'By text to 07700 900 142 · goes at 15:31',
+    words: 'Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].' },
+  { name: 'Quote to approve', state: ['Pretend', 'grey'], how: 'By text to 07700 900 142 · [day, time]',
+    words: 'Hi Maya, North Street Cycles has a quote for more work on your Trek Domane AL 3. See it and say yes or no to each part: [link] — no app or sign-in needed. Your repair · WH-1042.' },
+];
+// Jack, 20 Oct (changing where): "instead can we have it so that the messages
+// are in a pop up button instead of on the main job page". The job page's
+// drawn "Message Maya Patel" button (job-page.mjs, the inbox icon) opens it.
+// Jack, 20 Oct: "mimics messaging apps where it has sent messages on the right
+// and received messages on the left in speech bubbles": oldest at the top.
+// Replies from the customer aren't built yet, so hers is a placeholder (the
+// staff inbox's own, account.mjs).
+const JOB_THREAD = [
+  { from: 'shop', ...JOB_MESSAGES[1] },
+  { from: 'customer', who: 'Maya', when: '[day, time]', words: '[Maya’s note to the shop]' },
+  { from: 'shop', ...JOB_MESSAGES[0] },
+];
+function messagesDialog(size) {
+  const bubble = (m) => {
+    const mine = m.from === 'shop';
+    const top = mine
+      ? `<span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 13px; font-weight: 700">${esc(m.name)}</span>${badge(m.state[0], m.state[1])}</span>`
+      : `<span style="font-size: 13px; font-weight: 700">${esc(m.who)}</span>`;
+    const body = `<div style="max-width: ${size === 'phone' ? 85 : 78}%; box-sizing: border-box; padding: 10px 14px; border-radius: ${mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px'}; background: ${mine ? C.ink : C.mutedBg}; color: ${mine ? C.panel : C.ink}; font-size: 14px; line-height: 1.45; text-align: left">${esc(m.words)}</div>`;
+    const foot = `<span style="font-size: 12px; color: ${C.muted}">${esc(mine ? m.how : m.when)}</span>`;
+    return `<li style="display: flex; flex-direction: column; align-items: ${mine ? 'flex-end' : 'flex-start'}; gap: 4px; text-align: ${mine ? 'right' : 'left'}">${top}${body}${foot}</li>`;
+  };
+  return `${dialogHeader('Messages', `job-finished-${size}.dc.html`, 'Maya Patel · Standard service · WH-1042', 'job-msgs-title', size)}
+${dialogBody(`<p style="margin: 0; font-size: 14px; color: ${C.muted}">Pretend for now: each shows what Maya would get. Nothing is really sent.</p>
+<ol aria-label="Messages with Maya Patel" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px">${JOB_THREAD.map(bubble).join('')}</ol>`, 20, 14)}`;
+}
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
@@ -3617,6 +3655,8 @@ export function oldDiaryFeatureDrawings() {
     'diary-menu-pending-phone': menuPendingPhoneBoard(),
     'job-files': jobPageWithFiles('desktop'),
     'job-files-phone': jobPageWithFiles('phone'),
+    'job-messages': dialogOverlay(screens['job-finished'].desktop, DW, DH, messagesDialog('desktop'), { maxWidth: 600, labelledby: 'job-msgs-title' }),
+    'job-messages-phone': dialogOverlay(screens['job-finished'].phone, PW, PH, messagesDialog('phone'), { full: true, pad: 0, labelledby: 'job-msgs-title' }),
     'job-delete-confirm': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteConfirm('desktop'), { maxWidth: 520, labelledby: 'del-job-title' }),
     'job-delete-blocked': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteBlocked('desktop'), { maxWidth: 560, labelledby: 'del-job-blocked-title' }),
     'job-delete-confirm-phone': dialogOverlay(jobPageWithFiles('phone'), PW, PH, deleteConfirm('phone'), { pad: 16, maxWidth: 360, labelledby: 'del-job-title' }),
