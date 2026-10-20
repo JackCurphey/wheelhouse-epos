@@ -39,6 +39,8 @@ DELETE /api/bikes/:id
 GET /api/bikes/:id/jobs
 GET /api/customers/:id/texts
 POST /api/customers/:id/texts
+GET /api/messages
+POST /api/messages/:id/undo
 GET /api/sales
 GET /api/sales/:id
 POST /api/sales

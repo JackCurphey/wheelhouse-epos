@@ -9,8 +9,8 @@
 - [x] 2.2 Migration 048; templates.js; render
 
 ## 3. Senders, engine and outbox
-- [ ] 3.1 Tests first: the channel; queue, Undo, the timer sends with the pretend sender; the outbox route
-- [ ] 3.2 The pretend sender; engine.js; the timer; outbox and undo routes
+- [x] 3.1 Tests first: the channel; queue, Undo, the timer sends with the pretend sender; the outbox route
+- [x] 3.2 The pretend sender; engine.js; the timer; outbox and undo routes
 
 ## 4. Settings › Messages routes
 - [ ] 4.1 Tests first: list, change, go back, Owner only, preview
