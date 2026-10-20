@@ -40,10 +40,11 @@ export default {
   // Requests, as a pop-up
   'request-new': {
     'Accept': go('diary'),
-    'Offer another time': notDrawn('Offer another time: choosing the time to suggest to the customer'),
-    'Another time': notDrawn('Offer another time: choosing the time to suggest to the customer'),
+    'Offer another time': go('request-offer'),
+    'Another time': go('request-offer'),
   },
   'request-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('request-new') },
+  'request-offer': { 'Offer this time': go('diary'), 'Keep request': go('request-new') },
   'request-change': { 'Accept': go('diary'), 'Decline': go('diary') },
   'request-cancel': { 'Seen': go('diary') },
   // New job

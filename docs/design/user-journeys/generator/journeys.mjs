@@ -806,6 +806,7 @@ export const journeys = [
       { label: 'Requests, as a pop-up', screens: [
         sd('request-new', 'Booking request', 'Staff'),
         sd('request-decline', 'Decline a booking request', 'Staff'),
+        sd('request-offer', 'Offer another time for a booking request', 'Staff'),
         sd('request-change', 'Change request', 'Staff'),
         sd('request-cancel', 'Cancelled booking', 'Staff'),
       ] },

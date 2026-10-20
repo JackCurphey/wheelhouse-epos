@@ -627,7 +627,7 @@ let devSeq = 0;
 const nextSeq = (size) => (size === 'desktop' ? hoverSeq++ : devSeq++);
 const LEGACY_TABLET_SEQ = {
   diary: 7, 'diary-mechanic': 1, 'waiting-open': 7, 'change-selected': 7,
-  'request-new': 7, 'request-decline': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
+  'request-new': 7, 'request-decline': 7, 'request-offer': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
   'job-overview': 7, 'job-book-in': 7, 'job-quote': 7, 'job-mechanic': 1, 'job-waiting-parts': 7, 'job-finished': 7, 'job-collection': 7,
 };
 const LEGACY_TABLET_CONNECTOR_SEQ = { 'change-selected': 1 };
@@ -1949,6 +1949,40 @@ screens['request-decline'] = {
 };
 keepDesktopSeq('request-decline');
 
+// Offer another time (Jack, 20 Oct, docs/decisions/2026-10-20-offer-another-time.md;
+// not-drawn pages row 48, answer C: the bk-when day strip). Staff pick a day
+// and time the chosen mechanic is free for the request's length, and a message;
+// the suggested time is kept free for the customer and the first one let go
+// (answer 1). The customer answers on their booking page (bk-offered).
+const OFFER_DAYS = [['Fri', 18, 'Asked for'], ['Sat', 19, '[n] times'], ['Sun', 20, 'Closed'], ['Mon', 21, '[n] times'], ['Tue', 22, 'Full'], ['Wed', 23, '[n] times'], ['Thu', 24, '[n] times']];
+const offerDay = ([d, n, sub], chosen) => {
+  const off = sub === 'Closed' || sub === 'Full' || sub === 'Asked for';
+  const on = n === chosen;
+  const label = { 'Asked for': 'asked for', Closed: 'closed', Full: 'full' }[sub] ?? `${sub} free`;
+  return `<button type="button" role="radio" aria-checked="${on}"${off ? ' aria-disabled="true"' : ''} aria-label="${d} ${n} September, ${label}" style="flex-shrink: 0; min-width: 58px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 8px; border: ${sub === 'Asked for' ? `2px dashed ${C.ink}` : `1px solid ${on ? C.ink : C.input}`}; background: ${on ? C.ink : C.panel}; color: ${on ? '#ffffff' : C.ink}; font-family: inherit; ${off && sub !== 'Asked for' ? 'opacity: 0.5;' : ''}"><span style="font-size: 12px">${d}</span><span style="font-size: 17px; font-weight: 700">${n}</span><span style="font-size: 11px">${sub}</span></button>`;
+};
+const offerTime = (t, on) => `<button type="button" role="radio" aria-checked="${on}" style="min-height: 44px; min-width: 72px; padding: 0 10px; border-radius: 8px; border: ${on ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${on ? C.ink : C.panel}; color: ${on ? '#ffffff' : C.ink}; font-family: ${MONO}; font-size: 14px">${t}</button>`;
+const OFFER_MSG = 'Sorry, we can’t fit this service in on Friday. Would Saturday at [time] work instead?';
+function requestOfferBody(size) {
+  return `${eyebrow(`Asked for Friday 18 September · 45 minutes`)}
+${mechanicPillGroup(size, 'Shared queue')}
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Suggest a day</span><div role="radiogroup" aria-label="Days" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px">${OFFER_DAYS.map((x) => offerDay(x, 19)).join('')}</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Saturday 19 September — choose a time</span><div role="radiogroup" aria-label="Saturday 19 September — choose a time" style="display: flex; flex-wrap: wrap; gap: 6px">${['[time]', '[time]', '[time]', '[time]'].map((t, i) => offerTime(t, i === 1)).join('')}</div></div>
+${area('Message to Sam', OFFER_MSG, 'offer-msg-' + size, 3)}
+${note('Sam sees the time and your message on their booking page, and accepts it or cancels. Saturday at [time] is kept free for them; Friday is let go.')}`;
+}
+const reqOfferOpts = {
+  id: 'req-offer-title', title: 'Offer another time', sub: 'Sam Reed · Specialized Sirrus', body: requestOfferBody,
+  footer: () => `${button('Offer this time', { block: true })}${button('Keep request', { variant: 'default', block: true })}`,
+  highlightJob: { type: 'pending' },
+};
+screens['request-offer'] = {
+  desktop: requestDialog('desktop', DW, DH, reqOfferOpts),
+  tablet: requestDialog('tablet', TW, TH, reqOfferOpts),
+  phone: dialogPhone('Offer another time', reqCloseHref('phone'), stack(requestOfferBody('phone'), 12), `${button('Offer this time', { block: true })}${button('Keep request', { variant: 'default', block: true })}`, 'Sam Reed · Specialized Sirrus', { scroll: true }),
+};
+keepDesktopSeq('request-offer');
+
 // Book a repair decision 12 (audit M1): the same two pop-ups for a request
 // that came with a deposit. Drawn on journey 3's canvas.
 export function requestDepositBoard(size, decline = false) {
@@ -2942,7 +2976,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -2959,7 +2993,7 @@ export const ROWS = [
   // 3, task item 3) is appended after diary-stack-open for the same reason
   // again — x 14960, y 263, no existing board moves.
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
-  { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
+  { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
   { label: 'Customer account', screens: ['customer'] },
