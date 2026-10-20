@@ -37,7 +37,12 @@ job with money paid on its order or the bike in the shop (409
 bookings automatically, contract in `openspec/changes/auto-confirm/design.md`
 (migration 046, `confirmBookingsAutomatically`, bookings saved `scheduled`
 when on, `newOnline` and `POST /api/workshop-jobs/:id/seen`); Jack's screens
-wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #295 too** (19 Oct): migration 045 adds
+wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #305 too** (20 Oct, on Jack's word): your `portal.js` gains
+`GET /api/portal/:slug/booking-links/:code/availability?start&end`, the days
+and times a booking could move to for its own mechanic and length, with the
+booking left out of capacity (`loadCapacity(..., { ignoreJobId })`); refused
+as `POST …/change` refuses; `bookedMinutes(job)` pulled out of
+`changeBookingTime` unchanged; the route snapshot is 165. **Check #295 too** (19 Oct): migration 045 adds
 `workshop_settings.confirmation_note` (NOT NULL, default the drawn sentence);
 your `workshop-settings.js` sends and saves `confirmationNote` (trimmed, up to
 300 characters, empty for none); your `portal.js` `bookingLinkView` returns it
@@ -160,9 +165,9 @@ Change the date and Cancel booking, and rows needing data your server doesn't
 send yet (Extra work, deposit, free to cancel, mechanic, shop address and
 phone) come later. On 20 Oct, Cancel booking on the confirmed page: asked once
 ("There's nothing to pay or refund."), then "Your booking is cancelled" with
-Book another time (#303); screens only, on the existing cancel route. Change
-the date needs your server to send the booking's mechanic and minutes, and an
-availability check that leaves the booking's own slot out. Then Files and photos on the job page,
+Book another time (#303); screens only, on the existing cancel route. Then
+Change the date: the day strip in place, a change waiting with Cancel my date
+change, and a declined change's notice (#306), on a new server route (#305). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
