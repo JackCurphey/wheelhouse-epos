@@ -1468,8 +1468,10 @@ export function DiaryPage() {
       const startMin = dropStart(y, range, 30, slotPx);
       const fixed = view === 'day' && !c.all;
       if (offering) {
-        // The request's own mechanic if it has one, else the column's, else the freest (decision 18).
-        setOfferAt({ date: c.date, startMin: dropStart(y, range, requestMinutes(offering), slotPx), mechanicId: fixed ? c.mechanicId : (offering.mechanicId ?? freest(c.date)) });
+        // A mechanic's own column gives that mechanic; else the request's, else
+        // the freest that day (decision 18). Shared queue has none (fresh review).
+        const columnMechanic = fixed ? c.mechanicId : null;
+        setOfferAt({ date: c.date, startMin: dropStart(y, range, requestMinutes(offering), slotPx), mechanicId: columnMechanic ?? offering.mechanicId ?? freest(c.date) });
         setPicking(false);
         return;
       }

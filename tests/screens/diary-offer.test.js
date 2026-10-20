@@ -41,12 +41,14 @@ let uninstall;
 let shell;
 let calls;
 let answer; // what the next POST gets back: { status, body }
+let people = MECHANICS;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
   shell?.queryClient.clear();
   uninstall?.();
   globalThis.fetch = realFetch;
+  people = MECHANICS;
 });
 
 function stubServer() {
@@ -59,7 +61,7 @@ function stubServer() {
     const u = new URL(url, 'http://localhost');
     if (method === 'POST') return answer ? reply(answer.status, answer.body) : reply(200, JOBS.find((j) => u.pathname.includes(`/${j.id}/`)));
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
-    if (u.pathname === '/api/employees') return reply(200, MECHANICS);
+    if (u.pathname === '/api/employees') return reply(200, people);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname === '/api/workshop-waiting') return reply(200, WAITING);
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
@@ -168,4 +170,18 @@ test('an offered booking can’t be dragged to another time, like a request', as
   assert.ok(label.closest('button') === null);
   assert.ok(request.closest('button') === null);
   assert.ok(r.ui.getByText(/Oliver Chen, WH-1002/).closest('button') !== null, 'a confirmed booking is a button');
+});
+
+// Fresh review: with no mechanic to give it (no one working, and none on the
+// request), the pop-up says so and offers nothing the server would refuse.
+test('with no mechanic for the time, the offer says to choose a mechanic’s time and can’t be sent', async () => {
+  people = [];
+  const r = await openDiary();
+  const dlg = await openRequest(r);
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Offer another time' }));
+  await r.ui.findByText(BAR);
+  r.fireEvent.click(r.ui.getByRole('group', { name: 'Tuesday 6 October' }), { clientY: 58 });
+  const offer = r.within(await r.ui.findByRole('dialog', { name: 'Offer another time' }));
+  assert.ok(offer.queryByText('No mechanic is free to take this time. Choose another time, in a mechanic’s column.') !== null);
+  assert.equal(offer.getByRole('button', { name: 'Offer this time' }).disabled, true);
 });

@@ -28,7 +28,7 @@ export function requestMinutes(job: Pick<WorkshopJob, 'plannedMinutes' | 'startT
 
 function refusal(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === 'stale') return 'This request changed while you were looking at it.';
+    if (err.code === 'stale') return 'This request changed while you were looking at it. Press Keep request to see it as it is now.';
     if (err.code === 'capacity') return 'That time is no longer free. Choose another time.';
     if (err.status === 404) return 'This request no longer exists.';
     return err.message;
@@ -46,7 +46,7 @@ export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered 
   const first = customer.split(' ')[0];
   const day = dayLabel(at.date);
   const time = hhmm(at.startMin);
-  const mechanic = people.find((p) => p.id === at.mechanicId)?.name ?? 'Shared queue';
+  const mechanic = people.find((p) => p.id === at.mechanicId)?.name ?? null;
   const [message, setMessage] = useState(`Sorry, we can’t fit this service in when you asked. Would ${day} at ${time} work instead?`);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered 
       <DialogBody className="flex flex-col gap-3.5">
         <p className="m-0 text-xs font-bold tracking-wide text-[var(--wh-muted)] uppercase">{`Asked for ${dayLabel(job.jobDate)} · ${requestMinutes(job)} minutes`}</p>
         <div className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-2">
-          <span className="grow text-sm"><strong>{`${day}, ${time}`}</strong>{` · ${mechanic}`}</span>
+          <span className="grow text-sm"><strong>{`${day}, ${time}`}</strong>{mechanic ? ` · ${mechanic}` : ''}</span>
           <button type="button" onClick={onChooseAgain} className="min-h-11 text-sm font-semibold underline">Choose another time</button>
         </div>
         <div className="flex flex-col gap-1.5">
@@ -89,10 +89,12 @@ export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered 
             className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
         </div>
         <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`${first} sees the time and your message on their booking page, and accepts it or cancels. ${day} at ${time} is kept free for them; the time they asked for is let go.`}</p>
+        {/* The server needs a mechanic for the time (fresh review). */}
+        {mechanic === null && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">No mechanic is free to take this time. Choose another time, in a mechanic’s column.</p>}
         {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
       </DialogBody>
       <DialogFooter className="flex w-full flex-col gap-2">
-        <Button variant="accent" block disabled={sending} onClick={() => void offer()}>Offer this time</Button>
+        <Button variant="accent" block disabled={sending || mechanic === null} onClick={() => void offer()}>Offer this time</Button>
         <Button block disabled={sending} onClick={onKeep}>Keep request</Button>
       </DialogFooter>
     </Dialog>

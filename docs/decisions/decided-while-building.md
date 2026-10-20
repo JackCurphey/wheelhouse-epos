@@ -670,9 +670,13 @@ silent:
    [n] minutes." ("Tap a free time…" on a phone) with Cancel back to the
    request; New job isn't shown as pressed while offering.** *Pattern:*
    request-offer-pick; New job's pick bar.
-3. **The offered time keeps the request's mechanic if it has one; otherwise
-   the day column's mechanic, or the freest that day.** *Pattern:* New job's
-   pick (decision 18).
+3. **Picked in a mechanic's own column, the offer goes to that mechanic;
+   otherwise to the request's mechanic, or the freest that day. With nobody
+   to take it, the pop-up says so and can't be sent.** *Pattern:* New job's
+   pick (decision 18); the server needs a mechanic (fresh review).
+5. **The pick bar says "Tap" only on a phone, and doesn't say "Esc to
+   cancel."**: New job's pick bar doesn't either. *Pattern:* the built pick
+   bar.
 4. **The offer pop-up's footer is Offer this time and Keep request, stacked,
    as drawn; Keep request goes back to the request.** *Pattern:*
    request-offer.
