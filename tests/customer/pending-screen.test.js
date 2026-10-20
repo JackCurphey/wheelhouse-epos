@@ -23,7 +23,9 @@ const LINK = {
     { wording: "What's wrong with the brakes?", answer: 'Squeaking', text: 'Front only' },
     { wording: 'Tubeless?', answer: null },
   ],
-  bike: null, stage: 'awaiting_confirmation', photoCount: 1,
+  // A bike in the workshop: the first release's page, which waiting, confirmed
+  // and cancelled bookings no longer use (19 and 20 Oct).
+  bike: null, stage: 'in_workshop', photoCount: 1,
   services: [{ name: 'Brake service', price: 20 }, { name: 'Gear service', price: 25 }], totalPrice: 45,
 };
 
@@ -51,7 +53,7 @@ const heading = (ui, name) => ui.findByRole('heading', { level: 1, name });
 
 test('it reads the booking link and shows where the booking is up to as its heading; no step, back link or action', async () => {
   const { ui, requests } = await open();
-  assert.ok(await heading(ui, 'Awaiting shop confirmation'));
+  assert.ok(await heading(ui, 'In the workshop'));
   assert.ok(requests.some((r) => r.url === `/api/portal/north/booking-links/${CODE}`), JSON.stringify(requests));
   assert.ok(ui.queryByText(/^Step /) === null);
   assert.ok(ui.queryByRole('link', { name: /Back/ }) === null);
@@ -84,7 +86,7 @@ test('an unknown stage leaves the heading empty but still renders the summary', 
 
 test('the summary: reference, services with prices, the total, day and time, bike note, description and answers', async () => {
   const { ui } = await open();
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   for (const text of [
     'Reference', 'WH-1042', 'Brake service', '£20', 'Gear service', '£25', 'From £45', 'Monday 5 October, 09:30',
     'Blue Trek road bike', 'Squeals when braking', "What's wrong with the brakes?", 'Squeaking - Front only',
@@ -94,7 +96,7 @@ test('the summary: reference, services with prices, the total, day and time, bik
 
 test('with prices hidden only the names show; a drop-off booking shows the day alone', async () => {
   const { ui } = await open({ ...LINK, startTime: '', services: [{ name: 'Brake service', price: null }], totalPrice: null });
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   assert.ok(ui.getByText('Brake service'));
   assert.ok(ui.queryByText(/£/) === null);
   assert.ok(ui.getByText('Monday 5 October'));
@@ -102,7 +104,7 @@ test('with prices hidden only the names show; a drop-off booking shows the day a
 
 test('with a single service there is no "From £" total line, only the service\'s own price', async () => {
   const { ui } = await open({ ...LINK, services: [{ name: 'Brake service', price: 20 }], totalPrice: 20 });
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   assert.ok(ui.getByText('Brake service'));
   assert.ok(ui.getByText('£20'));
   assert.ok(ui.queryByText(/^From £/) === null);
@@ -110,7 +112,7 @@ test('with a single service there is no "From £" total line, only the service\'
 
 test('Copy link copies this page\'s address and says "Copied" briefly', async () => {
   const { ui } = await open();
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   const copied = [];
   Object.defineProperty(window.navigator, 'clipboard', {
     value: { writeText: async (text) => { copied.push(text); } }, configurable: true,
@@ -125,7 +127,7 @@ test('Copy link copies this page\'s address and says "Copied" briefly', async ()
 
 test('Copy link also announces "Copied" to a screen reader, via a live region, not only the button text', async () => {
   const { ui } = await open();
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   Object.defineProperty(window.navigator, 'clipboard', {
     value: { writeText: async () => {} }, configurable: true,
   });
@@ -138,7 +140,7 @@ test('Copy link also announces "Copied" to a screen reader, via a live region, n
 
 test('Copy link with no clipboard does not throw, and the button stays "Copy link"', async () => {
   const { ui } = await open();
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   Object.defineProperty(window.navigator, 'clipboard', { value: undefined, configurable: true });
   await click(ui.getByRole('button', { name: 'Copy link' }));
   assert.ok(ui.getByRole('button', { name: 'Copy link' }));
@@ -146,7 +148,7 @@ test('Copy link with no clipboard does not throw, and the button stays "Copy lin
 
 test('it says to contact the shop to change or cancel', async () => {
   const { ui } = await open();
-  await heading(ui, 'Awaiting shop confirmation');
+  await heading(ui, 'In the workshop');
   assert.ok(ui.getByText('Need to change or cancel? Contact North Street Cycles'));
 });
 
@@ -173,7 +175,7 @@ test('any other failure offers Try again, which asks again', async () => {
   });
   assert.ok(await heading(ui, "We couldn't load this booking"));
   await click(ui.getByRole('button', { name: 'Try again' }));
-  assert.ok(await heading(ui, 'Awaiting shop confirmation'));
+  assert.ok(await heading(ui, 'In the workshop'));
   assert.equal(calls, 2);
   const { waitFor } = await rtl();
   await waitFor(() => assert.ok(quoteAsked));
@@ -260,9 +262,15 @@ test('a confirmed booking with prices hidden, several services and only the cust
   assert.equal(rowValue(ui, 'Bike'), 'Blue Trek road bike');
 });
 
-test('a booking still waiting for the shop keeps its heading and summary', async () => {
+test('a booking waiting for the shop opens as a request', async () => {
   const { ui } = await open({ ...MAYA_LINK, stage: 'awaiting_confirmation' });
-  assert.ok(await heading(ui, 'Awaiting shop confirmation'));
+  assert.ok(await heading(ui, 'Your booking request'));
+  assert.ok(ui.queryByText('Reference') === null);
+});
+
+test('a bike in the workshop keeps the first release’s page', async () => {
+  const { ui } = await open({ ...MAYA_LINK, stage: 'in_workshop' });
+  assert.ok(await heading(ui, 'In the workshop'));
   assert.ok(ui.queryByText('Reference') !== null);
   assert.ok(ui.queryByText('Booking confirmed') === null);
 });

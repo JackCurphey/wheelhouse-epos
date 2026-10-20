@@ -104,7 +104,7 @@ test('a customer books from the first screen to pending, the booking link reopen
   await page.getByRole('button', { name: 'Request booking' }).click();
 
   // pending
-  await expect(page.getByRole('heading', { level: 1, name: 'Awaiting shop confirmation' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Your booking request' })).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveURL(new RegExp(`/book/${slug}/booking/[0-9a-f]{64}$`));
   const privateLink = page.url();
   expect(await page.evaluate((key) => window.sessionStorage.getItem(key), `wh-book-draft:${slug}`), 'the draft is cleared').toBeNull();
@@ -113,7 +113,7 @@ test('a customer books from the first screen to pending, the booking link reopen
   const cold = await browser.newContext({ timezoneId: 'Europe/London', viewport: PHONE });
   const coldPage = await cold.newPage();
   await coldPage.goto(privateLink);
-  await expect(coldPage.getByRole('heading', { level: 1, name: 'Awaiting shop confirmation' })).toBeVisible();
+  await expect(coldPage.getByRole('heading', { level: 1, name: 'Your booking request' })).toBeVisible();
   await expect(coldPage.getByText('Blue Trek road bike')).toBeVisible();
   await cold.close();
 

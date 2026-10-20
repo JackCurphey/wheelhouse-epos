@@ -627,6 +627,23 @@ silent:
    ahead of it.** *Pattern:* the server offers nothing before its own
    earliest moment, so starting earlier only shows days it marks full.
 
+### 20 Oct 2026: the waiting-for-the-shop page, to its drawing (Jack, 20 Oct: "1")
+
+1. **"We'll send you a text when the shop confirms." reads "Please wait for
+   the shop to confirm before bringing your bike in. Check this page to see
+   when it does."**: no texts are sent yet. *Pattern:* nothing said that
+   isn't true.
+2. **Changing a request's date says "Your request moves to the new date
+   straight away; the shop still needs to confirm it." and the button reads
+   "Move my request"**, since the server moves a request at once (piece 12).
+   *Pattern:* bk-change, worded for what happens to a request.
+3. **Cancel request asks "Cancel this request?" with Keep my request / Cancel
+   request**, and then shows the cancelled page. *Pattern:* bk-cancel-ls,
+   worded for a request; bk-page-request's "Cancel request".
+4. **bk-request, the thank-you card straight after sending ("Thanks, Maya —
+   your request is with us"), waits**: the page isn't sent the customer's
+   name. *Pattern:* nothing shown that isn't sent.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
