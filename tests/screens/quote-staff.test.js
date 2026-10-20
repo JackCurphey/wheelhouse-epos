@@ -126,6 +126,13 @@ test('when the minute is up the quote is sent, and staff are told it went', asyn
   assert.ok(has(await dlg.findByText('Quote sent to Maya Patel by text.')));
 });
 
+test('the quote goes the customer’s way, and staff are told which', async () => {
+  const { dlg, fireEvent } = await openJob({ q: quote('draft', [line({})]) });
+  sendAnswer = { quote: { ...QUOTE, state: 'sent' }, message: { status: 'sent', channel: 'email', to: 'maya@example.test', pretend: true }, link: 'http://localhost/book/north-street/booking/abc' };
+  fireEvent.click(await dlg.findByRole('button', { name: 'Send quote' }));
+  assert.ok(has(await dlg.findByText('Quote sent to Maya Patel by email.')));
+});
+
 test('if the text could not go, staff are told why and can copy the link', async () => {
   const { dlg, fireEvent } = await openJob({ q: quote('draft', [line({})]) });
   sendAnswer = { quote: { ...QUOTE, state: 'sent' }, message: { status: 'not_sent', reason: 'Maya Patel has no phone number on file.' }, link: 'http://localhost/book/north-street/booking/abc' };

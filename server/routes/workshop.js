@@ -15,7 +15,8 @@ import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/htt
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-import { sendSms } from '../sms.js';
+import { queueMessage, UNDO_MS } from '../messaging/engine.js';
+import { jobMessageVars } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
   serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
@@ -283,6 +284,21 @@ function waitingItem(row) {
 // the member of staff is using.
 function publicBase(req) {
   return process.env.APP_PUBLIC_URL || `${isHttpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
+}
+
+// A job's booking link, issued afresh for a message that carries it (journey
+// 4 decision 5: only a hash is kept, so the old link stops working).
+async function issueJobLink(req, jobId, shopId) {
+  const code = newLinkCode();
+  await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(code), nowIso(), jobId);
+  const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+  return `${publicBase(req)}${linkPath(shop.slug, code)}`;
+}
+
+// Why a job's message didn't go, for the person who pressed the button.
+function notSent(skipped, name, customerName) {
+  if (skipped === 'off') return `${name} is switched off in Settings › Messages.`;
+  return `${customerName} has no phone number or email on file.`;
 }
 
 // ---------- Workshop job attachments ----------
@@ -691,7 +707,7 @@ export function register(route) {
   // the design's "an endpoint no screen consumes is not built" rule, made into a
   // check that runs rather than a promise in a document.
   function jobActionRoute(action, machine, event) {
-    route('POST', `/api/workshop-jobs/:id/${action}`, async (req, res, params) => {
+    route('POST', `/api/workshop-jobs/:id/${action}`, async (req, res, params, query, afterRelease, shopId) => {
       const id = Number(params.id);
       const body = await readJsonBody(req);
       // The caller must say which version it saw. Defaulting it would turn every
@@ -776,8 +792,19 @@ export function register(route) {
       // which event fired, so it releases only when the job is no longer live
       // and otherwise keeps (or realigns) the one hold a live job holds.
       await syncJobHold(id);
+      // Marking it ready sends "Bike ready", with a minute to Undo (UX
+      // walk-through 1 H2; the messages engine, pretend for now).
+      let readyMessage;
+      if (signing) {
+        const link = await issueJobLink(req, id, shopId);
+        const { customerId, vars } = await jobMessageVars(id, shopId, link);
+        const ctx = await currentSession(req);
+        readyMessage = customerId
+          ? await queueMessage({ customerId, jobId: id, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId: ctx?.login?.id ?? null })
+          : { skipped: 'no_contact' };
+      }
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-      sendJson(res, 200, serializeWorkshopJob(row));
+      sendJson(res, 200, readyMessage ? { ...serializeWorkshopJob(row), readyMessage } : serializeWorkshopJob(row));
     });
   }
 
@@ -976,26 +1003,18 @@ export function register(route) {
     const ctx = await currentSession(req);
     const result = await sendQuoteForApproval({ quoteId: Number(params.id) });
     if (!result.ok) return sendQuoteResult(res, result);
-    const job = await db.prepare(
-      `SELECT w.id, w.customer_id, c.name AS customer_name, c.phone, trim(b.make || ' ' || b.model) AS bike_label
-         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id LEFT JOIN customer_bikes b ON b.id = w.bike_id
-        WHERE w.id = ?`
-    ).get(result.quote.workshop_job_id);
-    const code = newLinkCode();
-    await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(code), nowIso(), job.id);
-    const { rows: [shop] } = await pool.query('SELECT slug, name FROM shops WHERE id = $1', [shopId]);
-    const link = `${publicBase(req)}${linkPath(shop.slug, code)}`;
+    const jobId = result.quote.workshop_job_id;
+    const link = await issueJobLink(req, jobId, shopId);
+    // Through the messages engine, with no further wait: the panel had its
+    // minute's Undo before calling this (pretend for now; Jack, 20 Oct).
+    const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, link);
     let message;
-    if (!job.customer_id) message = { status: 'not_sent', reason: 'This job has no customer.' };
-    else if (!job.phone) message = { status: 'not_sent', reason: `${job.customer_name} has no phone number on file.` };
-    else if (!process.env.TWILIO_ACCOUNT_SID) message = { status: 'not_sent', reason: "Texts aren't set up on this Wheelhouse yet." };
+    if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
     else {
-      const text = `${shop.name}: your quote for ${job.bike_label || 'your bike'} is ready. See it and choose what to go ahead with: ${link}`;
-      const sent = await sendSms(job.phone, text);
-      await db.prepare(
-        `INSERT INTO customer_messages (customer_id, body, status, error, provider_sid, sent_by_login_id) VALUES (?, ?, ?, ?, ?, ?)`
-      ).run(job.customer_id, text, sent.ok ? 'sent' : 'failed', sent.ok ? null : sent.error, sent.ok ? sent.sid : null, ctx?.login?.id ?? null);
-      message = sent.ok ? { status: 'sent' } : { status: 'failed', reason: sent.error };
+      const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+      message = queued.skipped
+        ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
+        : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
     }
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
   });
