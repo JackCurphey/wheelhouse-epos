@@ -54,7 +54,7 @@ test('Shop details saves as you go, and the receipt carries them above the barco
       window.__printed.push({ text: (paper as HTMLElement | null)?.innerText ?? '', barcodeLast: Boolean(paper?.lastElementChild?.lastElementChild?.querySelector('svg rect')) });
     };
   });
-  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=office`);
   for (const [label, text] of [['Address', '[Shop address]'], ['Phone', '[shop phone]'], ['VAT number', '[VAT number]']]) {
     await page.getByLabel(label, { exact: true }).fill(text);
     await page.getByLabel(label, { exact: true }).blur();
@@ -62,6 +62,7 @@ test('Shop details saves as you go, and the receipt carries them above the barco
   }
   await expect.poll(async () => (await staff('/api/shop-details')).body.vatNumber).toBe('[VAT number]');
   // Words at the bottom (Jack, 19 Oct): Till › Receipts, printed just above the barcode.
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=front-desk`);
   await page.getByLabel('Words at the bottom').fill('[Returns policy]');
   await page.getByLabel('Words at the bottom').blur();
   await expect.poll(async () => (await staff('/api/shop-details')).body.receiptFooter).toBe('[Returns policy]');

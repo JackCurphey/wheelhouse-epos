@@ -28,7 +28,10 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function openSettings({ me = OWNER } = {}) {
+// Settings' rooms (WP-1.3): each test opens the room its setting is in, and
+// the fold if it isn't the room's first.
+const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'Office' };
+async function openSettings({ me = OWNER, room = 'workshop', open = null } = {}) {
   calls = [];
   settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
   refuseHours = null;
@@ -67,7 +70,7 @@ async function openSettings({ me = OWNER } = {}) {
     if (u.pathname === '/api/workshop-settings') return reply(200, settings);
     return reply(404, { error: 'Not found' });
   };
-  uninstall = installDom('http://localhost/workshop/settings');
+  uninstall = installDom(`http://localhost/workshop/settings?room=${room}`);
   // jsdom has no <dialog> methods; the mode change pop-up opens in one.
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
@@ -75,7 +78,11 @@ async function openSettings({ me = OWNER } = {}) {
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  await ui.findByRole('heading', { name: me.isOwner ? 'Workshop' : 'Settings aren’t part of your role' });
+  await ui.findByRole('heading', me.isOwner ? { level: 2, name: ROOM_NAME[room] } : { name: 'Settings aren’t part of your role' });
+  if (open) {
+    const button = ui.getByRole('button', { name: new RegExp(`^${open}`) });
+    if (button.getAttribute('aria-expanded') !== 'true') rtl.fireEvent.click(button);
+  }
   return { ...rtl, ui };
 }
 const has = (q) => Boolean(q);
@@ -83,11 +90,11 @@ const has = (q) => Boolean(q);
 // one the stub returned, so changing it in place makes setQueryData a no-op.
 
 test('Settings › Workshop › Mechanics has the switch, off, with its note', async () => {
-  const { ui } = await openSettings();
+  const { ui } = await openSettings({ open: 'Mechanics' });
   // The staff frame's header names the page, once.
   assert.equal(ui.getAllByRole('heading', { level: 1, name: 'Settings' }).length, 1);
   assert.ok(has(ui.queryByText('Services, who works in the workshop, and how the diary looks.')));
-  assert.ok(has(ui.queryByRole('heading', { name: 'Mechanics' })));
+  assert.ok(has(ui.queryByRole('heading', { name: /^Mechanics/ })));
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   assert.equal(sw.getAttribute('aria-checked'), 'false');
   assert.ok(sw.textContent.includes('Off'));
@@ -95,7 +102,7 @@ test('Settings › Workshop › Mechanics has the switch, off, with its note', a
 });
 
 test('switching it on saves at once, and it reads On', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ open: 'Mechanics' });
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   fireEvent.click(sw);
   await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ showSignOffToCustomers: true }]));
@@ -105,7 +112,7 @@ test('switching it on saves at once, and it reads On', async () => {
 });
 
 test('if it can’t be saved, it says so and stays as it was', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ open: 'Mechanics' });
   putFails = true;
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   fireEvent.click(sw);
@@ -116,16 +123,16 @@ test('if it can’t be saved, it says so and stays as it was', async () => {
 // Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md; drawn
 // as set-shop-details): five boxes, each saved when it's left if it changed.
 test('Shop and sites › Shop details shows the five boxes and the note', async () => {
-  const { ui } = await openSettings();
-  assert.ok(has(ui.queryByRole('heading', { name: 'Shop and sites' })));
-  assert.ok(has(ui.queryByRole('heading', { name: 'Shop details' })));
+  const { ui } = await openSettings({ room: 'office' });
+  assert.ok(has(ui.queryByText('The shop’s details, its sites and their opening hours.')));
+  assert.ok(has(ui.queryByRole('heading', { name: /^Shop details/ })));
   assert.equal((await ui.findByLabelText('Shop name')).value, 'North Street Cycles');
   for (const label of ['Address', 'Phone', 'Email', 'VAT number']) assert.equal(ui.getByLabelText(label).value, '', label);
   assert.ok(has(ui.queryByText('These show on receipts, emails and the website.')));
 });
 
 test('a box saves when it’s left, only if it changed, and says Saved', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office' });
   const address = await ui.findByLabelText('Address');
   fireEvent.blur(ui.getByLabelText('Phone'));
   fireEvent.change(address, { target: { value: '[Shop address]' } });
@@ -135,7 +142,7 @@ test('a box saves when it’s left, only if it changed, and says Saved', async (
 });
 
 test('if a box can’t be saved, it says so and keeps what was typed', async () => {
-  const { ui, fireEvent } = await openSettings();
+  const { ui, fireEvent } = await openSettings({ room: 'office' });
   detailsFail = true;
   const vat = await ui.findByLabelText('VAT number');
   fireEvent.change(vat, { target: { value: '[VAT number]' } });
@@ -147,7 +154,7 @@ test('if a box can’t be saved, it says so and keeps what was typed', async () 
 // Fresh review: what's typed while a save is on its way isn't lost, and a
 // reply only updates the box it saved.
 test('typing more while a box is saving keeps the new words, and they save too', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office' });
   let release;
   holdDetails = new Promise((r) => { release = r; });
   const address = await ui.findByLabelText('Address');
@@ -164,10 +171,10 @@ test('typing more while a box is saving keeps the new words, and they save too',
 
 // Words at the bottom (Jack, 19 Oct; drawn in set-till-receipts).
 test('Till › Receipts has Words at the bottom, which saves when it’s left', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'front-desk' });
   assert.ok(has(ui.queryByRole('heading', { name: 'Till' })));
   assert.ok(has(ui.queryByText('What staff see and use at the till.')));
-  assert.ok(has(ui.queryByRole('heading', { name: 'Receipts' })));
+  assert.ok(has(ui.queryByRole('heading', { name: /^Receipts/ })));
   const words = await ui.findByLabelText('Words at the bottom');
   assert.equal(words.tagName, 'TEXTAREA');
   assert.equal(words.getAttribute('placeholder'), 'e.g. your returns policy, a thank-you');
@@ -184,8 +191,8 @@ test('Till › Receipts has Words at the bottom, which saves when it’s left', 
 const hoursPuts = () => calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings' && c.body.openingHours).map((c) => c.body.openingHours);
 
 test('Opening hours shows Monday to Sunday, each with its hours or Closed', async () => {
-  const { ui } = await openSettings();
-  assert.ok(has(await ui.findByRole('heading', { name: 'Opening hours' })));
+  const { ui } = await openSettings({ room: 'office', open: 'Opening hours' });
+  assert.ok(has(await ui.findByRole('heading', { name: /^Opening hours/ })));
   // A fixed name per day; whether it's open is its pressed state (fresh review).
   const days = ui.getAllByRole('button', { name: /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) open$/ }).map((b) => [b.getAttribute('aria-label'), b.getAttribute('aria-pressed'), b.textContent]);
   assert.deepEqual(days, [['Monday open', 'true', 'Open'], ['Tuesday open', 'true', 'Open'], ['Wednesday open', 'true', 'Open'], ['Thursday open', 'true', 'Open'], ['Friday open', 'true', 'Open'], ['Saturday open', 'true', 'Open'], ['Sunday open', 'false', 'Closed']]);
@@ -196,7 +203,7 @@ test('Opening hours shows Monday to Sunday, each with its hours or Closed', asyn
 });
 
 test('switching Sunday open saves the whole week, Sunday at the shop’s usual hours', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office', open: 'Opening hours' });
   fireEvent.click(await ui.findByRole('button', { name: 'Sunday open' }));
   await waitFor(() => assert.equal(hoursPuts().length, 1));
   // The usual hours are the shop's own (openingTime and closingTime), not the first open day's.
@@ -205,7 +212,7 @@ test('switching Sunday open saves the whole week, Sunday at the shop’s usual h
 });
 
 test('a shorter Saturday saves, and closing Monday drops it', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office', open: 'Opening hours' });
   fireEvent.change(await ui.findByLabelText('Saturday closes'), { target: { value: '16:00' } });
   await waitFor(() => assert.equal(hoursPuts().length, 1));
   assert.deepEqual(hoursPuts()[0].find((d) => d.weekday === 6), { weekday: 6, open: '09:00', close: '16:00' });
@@ -215,7 +222,7 @@ test('a shorter Saturday saves, and closing Monday drops it', async () => {
 });
 
 test('a refusal says why, and the week goes back as it was', async () => {
-  const { ui, fireEvent } = await openSettings();
+  const { ui, fireEvent } = await openSettings({ room: 'office', open: 'Opening hours' });
   refuseHours = 'Closing time must be after opening time';
   fireEvent.change(await ui.findByLabelText('Friday closes'), { target: { value: '08:00' } });
   assert.ok(has(await ui.findByText('Closing time must be after opening time')));
@@ -224,7 +231,9 @@ test('a refusal says why, and the week goes back as it was', async () => {
 
 // Fresh review: a time the old app saved outside 05:00 to 23:00 shows as it is.
 test('an early time saved by the old app shows as it is', async () => {
-  const { ui } = await openSettings();
+  const { ui, waitFor } = await openSettings({ room: 'office', open: 'Opening hours' });
+  // Opening the fold fetches the settings again: let that land first.
+  await waitFor(() => assert.equal(shell.queryClient.isFetching(), 0));
   settings = { ...settings, openingHours: [{ weekday: 1, open: '04:00', close: '12:00' }] };
   shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
   await (await import('@testing-library/react')).waitFor(() => assert.equal(ui.getByLabelText('Monday opens').value, '04:00'));
@@ -233,7 +242,7 @@ test('an early time saved by the old app shows as it is', async () => {
 // Fresh review: the time pickers stay usable while a save is on its way, and
 // the latest choice is the one that's saved.
 test('changing a time twice quickly saves the latest, and the picker stays usable', async () => {
-  const { ui, fireEvent, waitFor } = await openSettings();
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office', open: 'Opening hours' });
   const closes = await ui.findByLabelText('Saturday closes');
   fireEvent.change(closes, { target: { value: '16:00' } });
   assert.equal(closes.disabled, false);
@@ -250,7 +259,7 @@ test('someone who isn’t the Owner sees Settings aren’t part of your role, an
   assert.ok(has(ui.queryByRole('link', { name: 'Go to the till' })));
   assert.ok(ui.queryByRole('switch') === null);
   assert.ok(ui.queryByLabelText('Shop name') === null);
-  assert.ok(ui.queryByRole('heading', { name: 'Opening hours' }) === null);
+  assert.ok(ui.queryByRole('heading', { name: /^Opening hours/ }) === null);
 });
 
 // The time kept free each day (Jack, 19 Oct, docs/decisions/2026-10-19-retire-old-workshop-settings.md;
@@ -259,7 +268,7 @@ const reservePuts = () => calls.filter((c) => c.method === 'PUT' && c.body.fullD
 
 test('Online booking shows the time kept free each day in hours, with its hint and note', async () => {
   const { ui } = await openSettings();
-  assert.ok(has(await ui.findByRole('heading', { name: 'Online booking' })));
+  assert.ok(has(await ui.findByRole('heading', { name: /^Online booking/ })));
   const box = await ui.findByLabelText('Time kept free each day');
   await (await import('@testing-library/react')).waitFor(() => assert.equal(box.value, '2'));
   assert.ok(has(ui.queryByText('For the little jobs between bikes')));

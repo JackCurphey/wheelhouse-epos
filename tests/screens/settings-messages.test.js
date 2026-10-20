@@ -68,14 +68,16 @@ async function openSettings() {
     }
     return reply(404, { error: 'Not found' });
   };
-  uninstall = installDom('http://localhost/workshop/settings');
+  uninstall = installDom('http://localhost/workshop/settings?room=front-desk');
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
+  // Front desk › Messages › Automatic messages, a fold (Settings frame, WP-1.3).
   await ui.findByRole('heading', { name: 'Messages' });
+  rtl.fireEvent.click(ui.getByRole('button', { name: /^Automatic messages/ }));
   return { ...rtl, ui };
 }
 const has = (q) => Boolean(q);
@@ -84,7 +86,7 @@ const puts = () => calls.filter((c) => c.method === 'PUT').map((c) => `${c.url} 
 test('Messages lists the messages that send today, each with when, the customer’s choice, On and Edit', async () => {
   const { ui } = await openSettings();
   assert.ok(has(ui.queryByText('The texts and emails customers get from the shop.')));
-  const list = ui.getByRole('heading', { name: 'Automatic messages' }).closest('section');
+  const list = await ui.findByText((_, el) => el?.getAttribute('data-msg-list') === 'true');
   assert.ok(list !== null);
   await ui.findByText('Bike ready');
   assert.ok(list.textContent.includes('Bike ready'));
@@ -92,7 +94,7 @@ test('Messages lists the messages that send today, each with when, the customer�
   assert.ok(has(ui.queryByText('Quote to approve')));
   assert.equal(list.textContent.includes('Booking cancelled'), false, 'not sent yet, so not listed');
   // The booking messages under their own heading, as drawn (msgListOpen).
-  const heading = list.querySelector('h4');
+  const heading = list.querySelector('h5');
   assert.ok(heading !== null && heading.textContent === 'Booking messages');
   assert.ok(list.textContent.includes('Sent the way each customer chose when booking: text, WhatsApp or email.'));
   const inList = (t) => [...list.querySelectorAll('span')].find((el) => el.textContent === t);

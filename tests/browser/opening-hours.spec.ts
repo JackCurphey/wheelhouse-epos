@@ -33,7 +33,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     // Start each run from Monday to Saturday, 09:00 to 17:00.
     const reset = await staff('/api/workshop-settings', { method: 'PUT', body: { openingHours: [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '17:00' })) } });
     expect(reset.status, JSON.stringify(reset.body)).toBe(200);
-    await page.goto(`${server!.baseUrl}/workshop/settings`);
+    await page.goto(`${server!.baseUrl}/workshop/settings?room=office`);
+    await page.getByRole('button', { name: /^Opening hours/ }).click();
     await page.getByLabel('Saturday closes').selectOption('16:00');
     await expect.poll(async () => (await staff('/api/workshop-settings')).body.openingHours.find((d: { weekday: number }) => d.weekday === 6)?.close).toBe('16:00');
     // As drawn on a phone and wider: Open/Closed sits on the day's line, at the end.
@@ -56,7 +57,7 @@ test('the time kept free each day saves in hours', async ({ page, context }) => 
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   // Start from two hours (a test shop is made with none kept free).
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { fullDayThresholdMinutes: 120 } })).status).toBe(200);
-  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
   const box = page.getByLabel('Time kept free each day');
   await expect(box).toHaveValue('2');
   await box.fill('3');
@@ -69,7 +70,7 @@ test('notice switches to whole days and saves', async ({ page, context }) => {
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { minNoticeMinutes: 120, minNoticeDays: null } })).status).toBe(200);
-  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
   const box = page.getByLabel('Notice', { exact: true });
   await expect(box).toHaveValue('2');
   await box.fill('1');
@@ -88,7 +89,7 @@ test('a change to the whole day is scheduled and cancelled', async ({ page, cont
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'timed', nextBookingMode: null, nextBookingModeFrom: null } })).status).toBe(200);
-  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
   await page.getByRole('radio', { name: 'The whole day' }).click();
   const dlg = page.getByRole('dialog', { name: 'Book bikes in for the whole day?' });
   // Two weeks from whenever this runs, never a fixed date (a fixed one goes stale).
@@ -107,7 +108,7 @@ test('switching prices off on the booking page reaches the server', async ({ pag
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: true } })).status).toBe(200);
-  await page.goto(`${server!.baseUrl}/workshop/settings`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
   const sw = page.getByRole('switch', { name: 'Show prices on the booking page' });
   await expect(sw).toHaveAttribute('aria-checked', 'true');
   await sw.click();
