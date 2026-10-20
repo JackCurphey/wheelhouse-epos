@@ -63,7 +63,7 @@ for (const [stage, words] of [
   ['in_workshop', 'In the workshop'],
   ['ready_to_collect', 'Ready to collect'],
   ['collected', 'Collected'],
-  ['change_requested', 'Change requested'],
+  ['change_requested', 'Your bike · Brake service and 1 more'],
   ['declined', 'Declined'],
   ['cancelled', 'Your booking is cancelled'],
   ['request_expired', 'Request expired'],

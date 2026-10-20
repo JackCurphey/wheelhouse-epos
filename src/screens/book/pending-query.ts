@@ -43,6 +43,10 @@ export type BookingLink = {
   confirmationNote?: string | null;
   /** Whether the customer can still cancel online (piece 12; Jack, 19 Oct: Cancel booking). */
   canCancel?: boolean;
+  /** Whether the customer can still change the date online, the change they asked for, and whether the shop declined the last one (piece 12; Jack, 20 Oct). */
+  canChange?: boolean;
+  requested?: { jobDate: string; startTime: string; mechanicId: number } | null;
+  changeDeclined?: boolean;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
 };

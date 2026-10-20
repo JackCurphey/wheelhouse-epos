@@ -120,3 +120,27 @@ export function cancelledLine(link: BookingLink): string {
   const work = names.length === 0 ? 'your repair' : names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   return `${dayLabel(link.jobDate)}, ${work} for your ${bikeName(link) || 'bike'}. There’s nothing to pay or refund.`;
 }
+
+// Change the date (Jack, 1 Oct, decision 10; 20 Oct; drawn as bk-change, bk-change-pending, bk-change-declined).
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const LONG_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const utc = (date: string) => new Date(`${date}T00:00:00Z`);
+
+/** "Fri 25 Sep" (no "Sept"). */
+export const shortDay = (date: string) => { const d = utc(date); return `${SHORT_DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${SHORT_MONTHS[d.getUTCMonth()]}`; };
+/** "Thursday". */
+export const weekdayName = (date: string) => LONG_DAYS[utc(date).getUTCDay()];
+/** "September 2026", over the strip. */
+export const monthLabel = (date: string) => { const d = utc(date); return `${LONG_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+
+/** "You asked to move to Fri 25 Sep, 14:00. Your booking stays on Thursday 17 September until the shop confirms the new time." */
+export function requestedLine(link: BookingLink): string | null {
+  const r = link.requested;
+  if (!r) return null;
+  return `You asked to move to ${shortDay(r.jobDate)}${r.startTime ? `, ${r.startTime}` : ''}. Your booking stays on ${dayLabel(link.jobDate)} until the shop confirms the new time.`;
+}
+
+/** The declined change isn't kept, so it isn't named. */
+export const declinedLine = (link: BookingLink) => `The shop couldn’t do the new date you asked for. Your booking is still ${whenLine(link)}.`;
