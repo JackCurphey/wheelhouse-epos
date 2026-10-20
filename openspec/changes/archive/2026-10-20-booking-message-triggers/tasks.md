@@ -3,4 +3,4 @@
 - [x] 1.2 The hooks, the tap-ins and the pretend link rule (Bike ready too)
 - [x] 2.1 Tests first: the four listed, under Booking messages
 - [x] 2.2 Templates' group, LIVE_KEYS, the heading
-- [ ] 3.1 Fresh review; `npm test` and `npm run test:browser` pass; archived
+- [x] 3.1 Fresh review; `npm test` and `npm run test:browser` pass; archived
