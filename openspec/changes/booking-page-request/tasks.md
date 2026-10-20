@@ -2,9 +2,9 @@
 
 ## 1. Screens
 
-- [ ] 1.1 Tests first, watched failing: the heading, eyebrow, badge, words and rows; Change the date with the request's note and Move my request, then the new date shown; Cancel request's pop-up words and the cancelled page; buttons follow canChange/canCancel
-- [ ] 1.2 The shell for a request; the request words in ChangeDate and CancelBooking
-- [ ] 1.3 Browser: a customer moves a request to another time and cancels it, against the real server
+- [x] 1.1 Tests first, watched failing: the heading, eyebrow, badge, words and rows; Change the date with the request's note and Move my request, then the new date shown; Cancel request's pop-up words and the cancelled page; buttons follow canChange/canCancel
+- [x] 1.2 The shell for a request; the request words in ChangeDate and CancelBooking
+- [x] 1.3 Browser: a customer moves a request to another time and cancels it, against the real server
 
 ## 2. Checks
 

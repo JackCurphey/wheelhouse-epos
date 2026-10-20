@@ -62,7 +62,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   const total = totalLine(link);
   const answers = answerLines(link);
   const arrival = [dropOffLine(link), link.confirmationNote].filter(Boolean).join(' ');
-  const standing = link.stage === 'confirmed' || link.stage === 'change_requested';
+  // A booking still waiting for the shop opens as a request (bk-page-request).
+  const request = link.stage === 'awaiting_confirmation';
+  const standing = link.stage === 'confirmed' || link.stage === 'change_requested' || request;
   const keep = (
     <>
       <p className="m-0 mb-2">Keep this link to check your booking</p>
@@ -117,19 +119,23 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       </div>
     );
     return (
-      <BookFrame title={pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
+      <BookFrame title={request ? 'Your booking request' : pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
         <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
-          {!waiting && link.changeDeclined && (
+          {link.stage === 'confirmed' && link.changeDeclined && (
             <p role="status" className="m-0 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>{declinedLine(link)}</span></p>
           )}
           {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
           <div>
-            {waiting
+            {request
+              ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">Waiting for the shop to confirm</span>
+              : waiting
               ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">New date waiting for the shop</span>
               : <span className="inline-block rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>}
           </div>
           {waiting && requestedLine(link) && <p className="m-0 text-[15px] leading-normal">{requestedLine(link)}</p>}
+          {/* No texts are sent yet, so the drawing's "We'll send you a text" becomes this page. */}
+          {request && <p className="m-0 text-[15px] leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.</p>}
           {arrival && <p className="m-0 text-[15px] leading-normal">{arrival}</p>}
           <div>
             {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
@@ -146,11 +152,11 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           )}
           <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
         </div>
-        {changing ? <ChangeDate link={link} shopSlug={shopSlug} code={code} onClose={() => setChanging(false)} /> : (
+        {changing ? <ChangeDate link={link} shopSlug={shopSlug} code={code} request={request} onClose={() => setChanging(false)} /> : (
           <div className="mb-4 flex flex-wrap gap-2.5">
             {waiting && <WithdrawChange shopSlug={shopSlug} code={code} />}
             {!waiting && link.canChange && <Button onClick={() => setChanging(true)}>Change the date</Button>}
-            {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} />}
+            {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} request={request} />}
           </div>
         )}
         {keep}
@@ -199,7 +205,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
  * bk-cancel-ls's words since no shop takes deposits yet): asked once; the
  * reply replaces the cached link, so the page becomes the cancelled page.
  */
-function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: string; code: string }) {
+function CancelBooking({ link, shopSlug, code, request = false }: { link: BookingLink; shopSlug: string; code: string; request?: boolean }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -225,11 +231,11 @@ function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: 
 
   return (
     <>
-      <Button onClick={() => { setError(null); setOpen(true); }}>Cancel booking</Button>
+      <Button onClick={() => { setError(null); setOpen(true); }}>{request ? 'Cancel request' : 'Cancel booking'}</Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="cancel-title" aria-describedby="cancel-sub">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <DialogTitle id="cancel-title">Cancel this booking?</DialogTitle>
+            <DialogTitle id="cancel-title">{request ? 'Cancel this request?' : 'Cancel this booking?'}</DialogTitle>
             <span id="cancel-sub" className="text-[13px] text-[var(--wh-muted)]">{cancelSubline(link)}</span>
           </div>
           <DialogClose onClick={close} />
@@ -239,8 +245,8 @@ function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: 
           {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
         </DialogBody>
         <DialogFooter className="flex justify-between gap-2.5">
-          <Button variant="ghost" onClick={close}>Keep my booking</Button>
-          <Button variant="danger" disabled={busy} onClick={() => void cancel()}>Cancel booking</Button>
+          <Button variant="ghost" onClick={close}>{request ? 'Keep my request' : 'Keep my booking'}</Button>
+          <Button variant="danger" disabled={busy} onClick={() => void cancel()}>{request ? 'Cancel request' : 'Cancel booking'}</Button>
         </DialogFooter>
       </Dialog>
     </>

@@ -30,7 +30,7 @@ function dayWords(d: ChangeDay, booked: string): { sub: string; label: string } 
   return { sub, label };
 }
 
-export function ChangeDate({ link, shopSlug, code, onClose }: { link: BookingLink; shopSlug: string; code: string; onClose: () => void }) {
+export function ChangeDate({ link, shopSlug, code, request = false, onClose }: { link: BookingLink; shopSlug: string; code: string; request?: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   // From today, or from the booking's own day if the device's clock is ahead of
   // the shop's (the booking's day is never before the shop's today when it can
@@ -126,11 +126,12 @@ export function ChangeDate({ link, shopSlug, code, onClose }: { link: BookingLin
       {chosen && chosen.mode === 'dropoff' && chosen.dropoffWindow && (
         <p className="m-0 text-[15px]">{`Drop off between ${chosen.dropoffWindow.start} and ${chosen.dropoffWindow.end}`}</p>
       )}
-      <p className="m-0 text-sm text-[var(--wh-muted)]">{`Your booking stays on ${weekday} until the shop confirms the new time.`}</p>
+      {/* A request moves at once, still waiting for the shop (piece 12); a confirmed booking waits. */}
+      <p className="m-0 text-sm text-[var(--wh-muted)]">{request ? 'Your request moves to the new date straight away; the shop still needs to confirm it.' : `Your booking stays on ${weekday} until the shop confirms the new time.`}</p>
       {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
       <div className="flex justify-end gap-2.5">
         <Button variant="ghost" onClick={onClose}>{`Keep ${weekday}`}</Button>
-        <Button variant="primary" disabled={!ready || busy} onClick={() => void ask()}>Ask for this date</Button>
+        <Button variant="primary" disabled={!ready || busy} onClick={() => void ask()}>{request ? 'Move my request' : 'Ask for this date'}</Button>
       </div>
     </section>
   );
