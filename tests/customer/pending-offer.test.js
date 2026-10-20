@@ -84,3 +84,9 @@ test('with no message, no quote; too late to accept, no Accept', async () => {
   assert.ok(ui.queryByText(/“/) === null);
   assert.ok(ui.queryByRole('button', { name: 'Accept this time' }) === null);
 });
+
+test('a drop-off day’s offer names the day alone', async () => {
+  const { ui } = await open({ ...MAYA, startTime: '', offer: { fromDate: '2026-09-17', fromTime: '', message: null } });
+  assert.ok(await ui.findByText('North Street Cycles can’t do Thursday 17 September. They suggest:'));
+  assert.ok(ui.queryByText('Thursday 17 September — not available') !== null);
+});

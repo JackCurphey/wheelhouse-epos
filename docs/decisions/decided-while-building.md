@@ -695,6 +695,12 @@ silent:
 4. **"Need to change the date? Contact [shop]" stays under an offer**: the
    date can't be changed online while a time is offered. *Pattern:* the
    contact line where the page can't do it.
+5. **Accept this time and Cancel my request sit under the card**, not inside
+   it above the rows as drawn. *Pattern:* the request and confirmed pages'
+   buttons, under the card (fresh review).
+6. **Cancelling an offer shows the cancelled page for the suggested time**
+   ("[suggested day], [service] for your [bike]"), the booking the customer
+   was answering. *Pattern:* bk-cancelled (fresh review).
 
 ## Decided here, for Jack to overrule
 
