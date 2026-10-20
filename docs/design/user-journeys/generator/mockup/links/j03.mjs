@@ -54,7 +54,7 @@ const map = {
   'bk-cancel-late': { 'Cancel booking': STAY, 'Cancel and lose the deposit': go('bk-cancelled-late') },
   'bk-cancel-ls': { 'Cancel booking': go('bk-cancelled'), 'Keep my booking': go('bk-page-ls') },
   // Staff side: the request in the diary (Workshop day 7, 12, 15)
-  'bk-staff-request': { Accept: go('diary'), 'Offer another time': go('request-change'), 'Another time': go('request-change') },
+  'bk-staff-request': { Accept: go('diary'), 'Offer another time': go('request-offer-pick'), 'Another time': go('request-offer-pick') },
   'bk-staff-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('bk-staff-request') },
   // Settings
   // Coverage walk 7 M1: the Services and Mechanics rows open their sections.

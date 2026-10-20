@@ -627,7 +627,7 @@ let devSeq = 0;
 const nextSeq = (size) => (size === 'desktop' ? hoverSeq++ : devSeq++);
 const LEGACY_TABLET_SEQ = {
   diary: 7, 'diary-mechanic': 1, 'waiting-open': 7, 'change-selected': 7,
-  'request-new': 7, 'request-decline': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
+  'request-new': 7, 'request-decline': 7, 'request-offer-pick': 7, 'request-offer': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
   'job-overview': 7, 'job-book-in': 7, 'job-quote': 7, 'job-mechanic': 1, 'job-waiting-parts': 7, 'job-finished': 7, 'job-collection': 7,
 };
 const LEGACY_TABLET_CONNECTOR_SEQ = { 'change-selected': 1 };
@@ -665,6 +665,18 @@ function laneHoverCSS(cls) {
 // Journey 13 audit H1: when a part a job was waiting for is booked in, the
 // job's diary block and its Overview row say "Part arrived" until the work
 // carries on. Off everywhere unless a board is drawn inside withPartArrived().
+// Offer another time picks in the same diary (Jack, 20 Oct: "show the diary
+// in one way or another so shops can have context of what is in for the
+// days"); its bar says what the time is for, and Cancel goes back to the request.
+let PICK_OFFER = false;
+function withPickOffer(fn) { const was = PICK_OFFER; PICK_OFFER = true; try { return fn(); } finally { PICK_OFFER = was; } }
+function offerPickBar(size) {
+  const touch = size !== 'desktop';
+  return `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: ${touch ? '1px 1px 1px 14px' : '7px 14px'}; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: ${touch ? 14 : 13}px; font-weight: 600; color: ${C.accentDark}">
+<span>${touch ? 'Tap' : 'Click'} a free time ${size === 'phone' ? '' : 'in the diary '}to offer Sam Reed · 45 minutes.${touch ? '' : ' Esc to cancel.'}</span>
+<a href="request-new-${size}.dc.html" style="margin-left: auto; display: inline-flex; align-items: center; justify-content: center; min-height: ${touch ? 44 : 32}px; padding: 0 ${touch ? 14 : 12}px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: ${touch ? 14 : 13}px; font-weight: 600; text-decoration: none; flex-shrink: 0">Cancel</a>
+</div>`;
+}
 let PART_ARRIVED = null;
 // UX walk-through 3 M5: the "part arrived" boards draw the job where the job
 // page has it — WH-1042 is Waiting for parts, moved to Sat 19 Sep 16:00–17:30
@@ -1530,7 +1542,7 @@ function tabletStackPopover() {
 const T_WAIT_W = 184;
 function tabletDiaryContent({ mechFilter = 'Everyone', activeView = 'Week', selectedIdx = -1, hint = false, highlightJob = null, pickMode = false, selectSlot = null, forceExpandStack = null, overlayFor = null, newJob = 'new-job-pick-tablet.dc.html', mechanic = false, legend = true } = {}) {
   const size = 'tablet';
-  const toolbar = mechanic ? mechToolbar(true, size, { newJob }) : diaryToolbar(mechFilter, size, { activeView, newJob: pickMode ? 'active' : newJob });
+  const toolbar = mechanic ? mechToolbar(true, size, { newJob }) : diaryToolbar(mechFilter, size, { activeView, newJob: pickMode && !PICK_OFFER ? 'active' : newJob });
   const grid = activeView === 'Day'
     ? dayMechGrid({ dayIdx: TODAY, size, slotH: 30, highlightJob })
     : weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size, slotH: 30, mechFilter: mechanic ? 'Alex' : mechFilter, highlightJob, pickMode, selectSlot, forceExpandStack, overlayFor });
@@ -1650,7 +1662,7 @@ ${mode === 'byMech' ? '' : NO_TIME_ROW('phone')}
 }
 export const phoneDiary = (opts = {}, shellOpts = {}) => shellPhone('Diary', phoneDiaryContent(opts), {
   active: 'diary', pad: 0,
-  actions: `${opts.mode === 'mechanic' ? '' : phoneWaitingButton()}${phoneNewJobAction(opts.mode === 'mechanic' ? 'new-job-phone.dc.html' : opts.mode === 'byMech' ? 'new-job-day-phone.dc.html' : 'new-job-pick-phone.dc.html', !!opts.pickMode)}`,
+  actions: `${opts.mode === 'mechanic' ? '' : phoneWaitingButton()}${phoneNewJobAction(opts.mode === 'mechanic' ? 'new-job-phone.dc.html' : opts.mode === 'byMech' ? 'new-job-day-phone.dc.html' : 'new-job-pick-phone.dc.html', !!opts.pickMode && !PICK_OFFER)}`,
   ...shellOpts,
 });
 // The selected-card bar pinned under a phone diary (decisions 14/19): the
@@ -1948,6 +1960,36 @@ screens['request-decline'] = {
   phone: dialogPhone('Decline request', reqCloseHref('phone'), stack(requestDeclineBody('phone'), 12), `${button('Decline & notify customer', { variant: 'danger', block: true })}${button('Keep request', { variant: 'default', block: true })}`, 'Sam Reed · Specialized Sirrus'),
 };
 keepDesktopSeq('request-decline');
+
+// Offer another time (Jack, 20 Oct, docs/decisions/2026-10-20-offer-another-time.md;
+// not-drawn pages row 48, answer C: the day diary). Staff pick a free time in
+// the diary (request-offer-pick), then confirm it with a message;
+// the suggested time is kept free for the customer and the first one let go
+// (answer 1). The customer answers on their booking page (bk-offered).
+const OFFER_MSG = 'Sorry, we can’t fit this service in when you asked. Would Friday 18 September at 12:00 work instead?';
+function requestOfferBody(size) {
+  return `${eyebrow('Asked for Friday 18 September · 45 minutes')}
+${panel(`${row(`${txt('<strong>Friday 18 September, 12:00</strong> · Alex Morgan')}<a href="request-offer-pick-${size}.dc.html" style="margin-left: auto; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Choose another time</a>`, 10, 'flex-wrap: wrap')}`, '', 14, 8)}
+${area('Message to Sam', OFFER_MSG, 'offer-msg-' + size, 3)}
+${note('Sam sees the time and your message on their booking page, and accepts it or cancels. Friday at 12:00 is kept free for them; the time they asked for is let go.')}`;
+}
+const reqOfferOpts = {
+  id: 'req-offer-title', title: 'Offer another time', sub: 'Sam Reed · Specialized Sirrus', body: requestOfferBody,
+  footer: () => `${button('Offer this time', { block: true })}${button('Keep request', { variant: 'default', block: true })}`,
+  highlightJob: { type: 'pending' },
+};
+screens['request-offer'] = {
+  desktop: requestDialog('desktop', DW, DH, reqOfferOpts),
+  tablet: requestDialog('tablet', TW, TH, reqOfferOpts),
+  phone: dialogPhone('Offer another time', reqCloseHref('phone'), stack(requestOfferBody('phone'), 12), `${button('Offer this time', { block: true })}${button('Keep request', { variant: 'default', block: true })}`, 'Sam Reed · Specialized Sirrus', { scroll: true }),
+};
+keepDesktopSeq('request-offer');
+// Choosing the time in the diary itself, as New job's pick does (new-job-pick).
+screens['request-offer-pick'] = withPickOffer(() => ({
+  desktop: shellDesktop('diary', 'Workshop diary', diaryPickContent('desktop')),
+  tablet: shellTablet('diary', 'Workshop diary', diaryPickContent('tablet')),
+  phone: phoneDiary({ day: HINT_SLOT.day, pickMode: true, selectSlot: HINT_SLOT }),
+}));
 
 // Book a repair decision 12 (audit M1): the same two pop-ups for a request
 // that came with a deposit. Drawn on journey 3's canvas.
@@ -2288,6 +2330,7 @@ screens['new-job-day'] = {
 // new-job-desktop. Tablet and phone (decision 68) draw the same step: "Tap a
 // free time", with a Cancel button in place of Esc.
 function pickInstructionBar(size) {
+  if (PICK_OFFER) return offerPickBar(size);
   if (size !== 'desktop') return `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 1px 1px 1px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 14px; font-weight: 600; color: ${C.accentDark}">
 <span>Tap a free time ${size === 'phone' ? '' : 'in the diary '}for the new job.</span>
 <a href="new-job-entered-${size}.dc.html" style="margin-left: auto; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Enter a time instead</a>
@@ -2307,7 +2350,7 @@ function diaryPickContent(size) {
   if (size !== 'desktop') return tabletDiaryContent({ pickMode: true, selectSlot: HINT_SLOT });
   const days = size === 'desktop' ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
   const slotH = size === 'desktop' ? 29 : 30;
-  return stack(`${diaryToolbar('Everyone', size, { newJob: 'active' })}
+  return stack(`${diaryToolbar('Everyone', size, { newJob: PICK_OFFER ? null : 'active' })}
 ${pickInstructionBar(size)}
 ${row(`${waitingColumn(size, -1)}${weekGrid({ days, size, slotH, mechFilter: 'Everyone', pickMode: true, selectSlot: HINT_SLOT })}`, 16, 'align-items: flex-start')}`, 8);
 }
@@ -2942,7 +2985,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -2959,7 +3002,7 @@ export const ROWS = [
   // 3, task item 3) is appended after diary-stack-open for the same reason
   // again — x 14960, y 263, no existing board moves.
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
-  { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
+  { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
   { label: 'Customer account', screens: ['customer'] },

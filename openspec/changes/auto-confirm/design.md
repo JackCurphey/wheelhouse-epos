@@ -3,7 +3,7 @@
 The contract is written first; Mark's server half merges before Jack's
 screens start (split plan §4.3, §4.4).
 
-## Storage (migration 046, additive)
+## Storage (the next free migration number, additive)
 
 - `workshop_settings.confirm_bookings_automatically INTEGER NOT NULL DEFAULT 0` — off for every shop to start (decision 8).
 - `workshop_jobs.online_unseen INTEGER NOT NULL DEFAULT 0` — 1 only on an online booking confirmed straight away, until staff open it.
