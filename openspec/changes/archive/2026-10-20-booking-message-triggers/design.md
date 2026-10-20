@@ -1,0 +1,6 @@
+# Design
+- `sendBookingMessage(req, jobId, shopId, key)` in `workshop.js`: `whyNotQueued` first (off, or no way to reach them: nothing), then the link (`messageLink`), the tap-ins (`bookingMessageVars`) and `queueMessage` with no delay. A message that can't be queued is logged; the answer it follows stands.
+- Hooks: the booking-request `accept` and `decline` actions; `POST …/offer` on success; `answerChangeRequest` on an accepted change. A declined change sends nothing yet: Date change answered's "can't" wording is not stored (`decided-while-building.md`, messages engine item 3).
+- `bookingMessageVars` (`server/workshop/job-messages.js`): the job's services (else its title); `dayAndTime`; the drop-off sentence as `bk-msg-confirmed` words it, from the booking page's rule (`portal.js`'s link view, kept as a copy here so Mark's file is untouched); `confirmation_note`; for New time offered, the time first asked for as [Booked day and time] and the job's time as [Suggested day and time], with the offer's message; for Request declined, the decline message.
+- `messageLink(issue)`: `isPretend()` → "[link]"; otherwise `issue()`.
+- Templates: the six booking ones get `group: 'booking'`; `LIVE_KEYS` adds the four; the settings route returns `group`; Settings › Messages shows job messages, then "Booking messages".

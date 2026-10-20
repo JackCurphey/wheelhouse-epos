@@ -18,7 +18,8 @@ const template = (over) => ({
 const TEMPLATES = () => [
   template({ key: 'quote_to_approve', name: 'Quote to approve', when: 'When a job needs the customer’s OK', wording: 'Hi [Customer’s first name], a quote. [Link to the quote]', tapIns: ['Customer’s first name', 'Link to the quote'] }),
   template({}),
-  template({ key: 'booking_confirmed', name: 'Booking confirmed', when: 'When a booking is accepted, or confirmed straight away', live: false }),
+  template({ key: 'booking_confirmed', name: 'Booking confirmed', when: 'When a booking is accepted, or confirmed straight away', group: 'booking' }),
+  template({ key: 'booking_cancelled', name: 'Booking cancelled', when: 'When a booking is cancelled', group: 'booking', live: false }),
 ];
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -89,8 +90,15 @@ test('Messages lists the messages that send today, each with when, the customer�
   assert.ok(list.textContent.includes('Bike ready'));
   assert.ok(has(ui.queryByText('When a job is marked ready')));
   assert.ok(has(ui.queryByText('Quote to approve')));
-  assert.equal(list.textContent.includes('Booking confirmed'), false, 'not sent yet, so not listed');
-  assert.equal(ui.getAllByText('Customer’s choice').length, 2);
+  assert.equal(list.textContent.includes('Booking cancelled'), false, 'not sent yet, so not listed');
+  // The booking messages under their own heading, as drawn (msgListOpen).
+  const heading = list.querySelector('h4');
+  assert.ok(heading !== null && heading.textContent === 'Booking messages');
+  assert.ok(list.textContent.includes('Sent the way each customer chose when booking: text, WhatsApp or email.'));
+  const inList = (t) => [...list.querySelectorAll('span')].find((el) => el.textContent === t);
+  assert.ok(heading.compareDocumentPosition(inList('Booking confirmed')) & 4, 'Booking confirmed under it');
+  assert.ok(inList('Bike ready').compareDocumentPosition(heading) & 4, 'job messages first');
+  assert.equal(ui.getAllByText('Customer’s choice').length, 3);
   assert.ok(has(ui.queryByRole('button', { name: 'Bike ready: On' })));
   assert.ok(has(ui.queryByRole('button', { name: 'Edit the wording of Bike ready' })));
 });

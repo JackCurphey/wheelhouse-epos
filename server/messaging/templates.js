@@ -25,6 +25,7 @@ export const TEMPLATES = {
     tapIns: ['Customer’s first name', 'Bike', 'Job number', 'Amount to pay', 'Link to the job', 'Shop name', 'Opening hours'],
   },
   request_received: {
+    group: 'booking',
     name: 'Request received',
     when: 'When a booking request is sent',
     wording: 'Hi [Customer’s first name], [Shop name] has your request for a [Service] on your [Bike], [Booked day and time]. We’ll let you know when it’s confirmed. See your booking: [Link to the booking] — no app or sign-in needed. Your repair · [Job number].',
@@ -32,6 +33,7 @@ export const TEMPLATES = {
     tapIns: BOOKING,
   },
   booking_confirmed: {
+    group: 'booking',
     name: 'Booking confirmed',
     when: 'When a booking is accepted, or confirmed straight away',
     wording: 'Hi [Customer’s first name], your [Service] at [Shop name] is booked for [Booked day and time]. [When to drop off] [Your note on the confirmation] See or change your booking: [Link to the booking] — no app or sign-in needed. Your repair · [Job number].',
@@ -39,6 +41,7 @@ export const TEMPLATES = {
     tapIns: [...BOOKING, 'When to drop off', 'Your note on the confirmation'],
   },
   time_offered: {
+    group: 'booking',
     name: 'New time offered',
     when: 'When the shop suggests another time',
     wording: 'Hi [Customer’s first name], [Shop name] can’t do [Booked day and time] and suggests [Suggested day and time] instead. “[The shop’s message]” Accept it or cancel your request: [Link to the booking]. Your repair · [Job number].',
@@ -46,6 +49,7 @@ export const TEMPLATES = {
     tapIns: [...BOOKING, 'Suggested day and time', 'The shop’s message'],
   },
   request_declined: {
+    group: 'booking',
     name: 'Request declined',
     when: 'When the shop can’t fit a booking in',
     wording: 'Hi [Customer’s first name], sorry — [Shop name] can’t fit in your [Service] on [Booked day and time]. “[The shop’s message]” Choose another date: [Link to the booking]. Your repair · [Job number].',
@@ -53,6 +57,7 @@ export const TEMPLATES = {
     tapIns: [...BOOKING, 'The shop’s message'],
   },
   date_change_answered: {
+    group: 'booking',
     name: 'Date change answered',
     when: 'When the shop accepts or declines a new date',
     wording: 'Hi [Customer’s first name], [Shop name] has moved your [Service] to [New day and time]. [When to drop off] See your booking: [Link to the booking]. Your repair · [Job number].',
@@ -60,6 +65,7 @@ export const TEMPLATES = {
     tapIns: [...BOOKING, 'New day and time', 'When to drop off'],
   },
   booking_cancelled: {
+    group: 'booking',
     name: 'Booking cancelled',
     when: 'When a booking is cancelled',
     wording: 'Hi [Customer’s first name], your [Service] at [Shop name] on [Booked day and time] is cancelled. There’s nothing to pay or refund. Book another time: [Link to the booking]. Your repair · [Job number].',
@@ -69,7 +75,9 @@ export const TEMPLATES = {
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
-export const LIVE_KEYS = ['quote_to_approve', 'bike_ready'];
+// The booking messages staff answers send (Jack, 20 Oct); Request received and
+// Booking cancelled come with the customer's side (Mark's booking server).
+export const LIVE_KEYS = ['quote_to_approve', 'bike_ready', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

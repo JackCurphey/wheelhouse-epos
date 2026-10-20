@@ -16,7 +16,7 @@ import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
-import { jobMessageVars } from '../workshop/job-messages.js';
+import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
   serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
@@ -201,7 +201,7 @@ const lastPartOf = (id) => db.prepare('SELECT * FROM workshop_job_parts WHERE wo
 
 // Staff answer a customer's change request (piece 12). Under the booking lock
 // for both days; the version is the one staff last read.
-async function answerChangeRequest(req, res, id, answer) {
+async function answerChangeRequest(req, res, id, answer, shopId) {
   const body = await readJsonBody(req);
   if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
   const requestedGone = { status: 409, body: { error: 'The requested time is no longer free', code: 'capacity' } };
@@ -251,6 +251,7 @@ async function answerChangeRequest(req, res, id, answer) {
     out = requestedGone;
   }
   if (out?.gone) return notFound(res, 'Job not found');
+  if (answer === 'accept' && out.status === 200) await sendBookingMessage(req, id, shopId, 'date_change_answered');
   sendJson(res, out.status, out.body);
 }
 
@@ -302,10 +303,27 @@ async function queueBikeReady(req, jobId, shopId) {
   const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
   const skipped = await whyNotQueued('bike_ready', customerId);
   if (skipped) return { skipped };
-  const link = await issueJobLink(req, jobId, shopId);
+  const link = await messageLink(() => issueJobLink(req, jobId, shopId));
   const { vars } = await jobMessageVars(jobId, shopId, link);
   const ctx = await currentSession(req);
   return queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId: ctx?.login?.id ?? null });
+}
+
+// A booking message for a staff answer (Jack, 20 Oct,
+// docs/decisions/2026-10-20-booking-messages.md answer 4), at once, the
+// customer's way. A message that can't be queued is logged: the answer it
+// follows has already been made and stands.
+async function sendBookingMessage(req, jobId, shopId, key) {
+  try {
+    const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
+    if (await whyNotQueued(key, customerId)) return;
+    const link = await messageLink(() => issueJobLink(req, jobId, shopId));
+    const { vars } = await bookingMessageVars(jobId, shopId, link, key);
+    const ctx = await currentSession(req);
+    await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+  } catch (err) {
+    console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
+  }
 }
 
 // Why a job's message didn't go, for the person who pressed the button.
@@ -767,6 +785,10 @@ export function register(route) {
         signer = await signOffMechanic(body.signedOffBy);
         if (signer === null) return sendJson(res, 400, SIGN_OFF_REQUIRED);
       }
+      // A booking message answers a customer's request or an offered time,
+      // not a reschedule staff asked for themselves (fresh review).
+      const answering = machine === bookingRequest && (event === 'accept' || event === 'decline')
+        ? (await db.prepare('SELECT booking_state FROM workshop_jobs WHERE id = ?').get(id))?.booking_state : null;
       let result;
       let readyMessage;
       if (signing || unsigning) {
@@ -810,6 +832,8 @@ export function register(route) {
       if (machine === bookingRequest && event === 'decline') {
         await db.prepare('UPDATE workshop_jobs SET decline_message = ? WHERE id = ?').run(declineMessage || null, id);
       }
+      if (event === 'accept' && answering === 'pending') await sendBookingMessage(req, id, shopId, 'booking_confirmed');
+      if (event === 'decline' && (answering === 'pending' || answering === 'offered')) await sendBookingMessage(req, id, shopId, 'request_declined');
       // A staff cancellation never shows in "Waiting for you" (piece 12), and
       // the link no longer speaks of a declined change.
       if (machine === bookingRequest && event === 'cancel') {
@@ -852,7 +876,7 @@ export function register(route) {
   // itself left out; under the booking lock for both days.
   // Drawn as request-offer-pick and request-offer.
   // screens: requests, diary
-  route('POST', '/api/workshop-jobs/:id/offer', async (req, res, params) => {
+  route('POST', '/api/workshop-jobs/:id/offer', async (req, res, params, query, afterRelease, shopId) => {
     const id = Number(params.id);
     const body = await readJsonBody(req);
     if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
@@ -900,12 +924,13 @@ export function register(route) {
       out = taken;
     }
     if (out?.gone) return notFound(res, 'Job not found');
+    if (out.status === 200) await sendBookingMessage(req, Number(params.id), shopId, 'time_offered');
     sendJson(res, out.status, out.body);
   });
 
   // screens: change-pending, diary
-  route('POST', '/api/workshop-jobs/:id/accept-change', async (req, res, params) =>
-    answerChangeRequest(req, res, Number(params.id), 'accept'));
+  route('POST', '/api/workshop-jobs/:id/accept-change', async (req, res, params, query, afterRelease, shopId) =>
+    answerChangeRequest(req, res, Number(params.id), 'accept', shopId));
 
   // screens: change-pending, diary
   route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>

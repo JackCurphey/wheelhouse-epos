@@ -13,6 +13,8 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
 type Template = {
   key: string; name: string; when: string; enabled: boolean; wording: string; subject: string;
   changed: boolean; tapIns: string[]; live: boolean;
+  /** 'booking' for the booking messages, listed under their own heading. */
+  group?: string | null;
 };
 type Preview = { text: string; email: { subject: string; body: string } };
 
@@ -51,6 +53,19 @@ export function MessagesSettings() {
   }
 
   const live = templates.data?.filter((t) => t.live) ?? [];
+  const jobMessages = live.filter((t) => t.group !== 'booking');
+  const bookingMessages = live.filter((t) => t.group === 'booking');
+  const row = (t: Template) => (
+    <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
+      <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
+        <span className="text-[15px] font-bold">{t.name}</span>
+        <span className="text-[13px] text-[var(--wh-muted)]">{t.when}</span>
+      </span>
+      <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
+      <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
+      <OnOff name={t.name} on={t.enabled} disabled={busy.has(t.key)} onChange={(on) => void change(t.key, { enabled: on })} />
+    </div>
+  );
   return (
     <section aria-labelledby="set-messages" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -60,17 +75,15 @@ export function MessagesSettings() {
       <section aria-labelledby="set-msg-list" className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
         <h3 id="set-msg-list" className="m-0 text-base font-bold">Automatic messages</h3>
         {templates.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
-        {live.map((t) => (
-          <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
-            <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
-              <span className="text-[15px] font-bold">{t.name}</span>
-              <span className="text-[13px] text-[var(--wh-muted)]">{t.when}</span>
-            </span>
-            <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
-            <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
-            <OnOff name={t.name} on={t.enabled} disabled={busy.has(t.key)} onChange={(on) => void change(t.key, { enabled: on })} />
-          </div>
-        ))}
+        {jobMessages.map(row)}
+        {/* The booking messages under their own heading, as drawn (msgListOpen). */}
+        {bookingMessages.length ? (
+          <>
+            <h4 className="m-0 mt-2 text-sm font-bold">Booking messages</h4>
+            <p className="m-0 text-[13px] text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
+          </>
+        ) : null}
+        {bookingMessages.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </section>
       {editing ? (

@@ -61,7 +61,7 @@ test('opening hours read as days and times, like days of the week run together',
   assert.equal(formatOpeningHours([]), '');
 });
 
-test('marking a job ready queues Bike ready to go in a minute, with a link, and Undo stops it', async () => {
+test('marking a job ready queues Bike ready to go in a minute, the customer’s link left working, and Undo stops it', async () => {
   const { job } = await mayasJob();
   const old = await giveLink(job);
   assert.equal(await linkWorks(old), true);
@@ -79,12 +79,12 @@ test('marking a job ready queues Bike ready to go in a minute, with a link, and 
   assert.equal(row.intent_state, 'intended');
   const reference = (await staff(`/api/workshop-jobs/${job.id}`)).body.reference;
   assert.match(reference, /^WH-\d+$/);
-  const expected = new RegExp(`^Hi Maya, your Trek Domane AL 3 is ready to collect from ${shopName}\\. £111\\.00 to pay on collection\\. See what we did: https?://\\S+/\\S+\\. Job ${reference}\\. We’re open .+\\.$`);
+  const expected = new RegExp(`^Hi Maya, your Trek Domane AL 3 is ready to collect from ${shopName}\\. £111\\.00 to pay on collection\\. See what we did: \\[link\\]\\. Job ${reference}\\. We’re open .+\\.$`);
   assert.match(row.body, expected);
   // The link in the message opens the job's booking page.
-  const link = row.body.match(/See what we did: (\S+)\. Job/)[1];
-  assert.equal(await linkWorks(link), true);
-  assert.equal(await linkWorks(old), false, 'only the newest link works');
+  // Pretend: no new link is issued, so the customer's own keeps working
+  // (fresh review: a new link nobody receives only stops theirs).
+  assert.equal(await linkWorks(old), true);
   const undone = await staff(`/api/messages/${ready.id}/undo`, { method: 'POST', body: {} });
   assert.equal(undone.status, 200, JSON.stringify(undone.body));
   assert.equal((await messagesFor(job.id))[0].intent_state, 'undone');

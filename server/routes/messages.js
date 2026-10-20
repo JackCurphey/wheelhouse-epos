@@ -42,7 +42,7 @@ const EXAMPLE_FOR = {
 
 const asSetting = (t) => ({
   key: t.key, name: t.name, when: t.when, enabled: t.enabled, wording: t.wording, subject: t.subject,
-  changed: t.changed, tapIns: t.tapIns, live: LIVE_KEYS.includes(t.key),
+  changed: t.changed, tapIns: t.tapIns, live: LIVE_KEYS.includes(t.key), group: t.group ?? null,
 });
 
 // A shop's own text, or null for Wheelhouse's: blank goes back to Wheelhouse's.
