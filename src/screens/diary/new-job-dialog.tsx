@@ -90,9 +90,13 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 const LABEL = 'text-sm font-semibold';
 const INPUT = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
 
-export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, onClose }: {
+/** The order New job was opened for, from the old app's "Show in workshop diary". */
+export type ForOrder = { id: number; title: string; customer: Customer | null; notes: string };
+
+export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, onLinkRefused, onClose }: {
   date: string; startMin: number; mechanicId: number | null; autoChosen: boolean; entered?: boolean;
-  chooseMechanic?: (day: string) => number | null; people: Person[]; onClose: () => void;
+  chooseMechanic?: (day: string) => number | null; people: Person[];
+  order?: ForOrder; onLinkRefused?: (words: string) => void; onClose: () => void;
 }) {
   // Opened by "Enter a time instead" (Jack, 15 Oct, issue 192; drawn as
   // new-job-entered), the form has Date and Start time boxes, filled with the
@@ -109,7 +113,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   // The matches drop down over the form, so New job keeps one size while
   // staff type (Jack, 16 Oct).
   const [listOpen, setListOpen] = useState(false);
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(order?.customer ?? null);
   const [bikeId, setBikeId] = useState<number | null>(null);
   // "+ Add a bike": the fields while open, and why it couldn't be added.
   const [newBike, setNewBike] = useState<{ make: string; model: string; colour: string; serialNumber: string } | null>(null);
@@ -131,8 +135,8 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   }, [bikeFieldsOpen]);
   const [kind, setKind] = useState<string | null>(null);
   const [service, setService] = useState<Service | null>(null);
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
+  const [title, setTitle] = useState(order?.title ?? '');
+  const [notes, setNotes] = useState(order?.notes ?? '');
   // What the customer told us about the problem: the job's "From the customer",
   // printed on their receipt (Jack, 20 Oct, docs/decisions/2026-10-20-new-job-customer-note.md).
   const [customerWords, setCustomerWords] = useState('');
@@ -318,6 +322,16 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
       // booking it in again would be refused (Jack, 8 Oct).
       if (bikeHere && job.custodyState !== 'in_shop') await jobAction(job.id, 'book-in', job.version);
       await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
+      // Opened for an order, the job is linked to it, as the old form did
+      // (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md). The job
+      // is saved either way, so a refused link closes the form and says so.
+      if (order) {
+        try {
+          await apiMutate(`/api/sale-documents/${order.id}`, { workshopJobId: job.id }, { method: 'PUT' });
+        } catch (err) {
+          onLinkRefused?.(`The job is saved, but couldn’t be linked to the order: ${err instanceof ApiError ? err.message : 'the server couldn’t be reached'}`);
+        }
+      }
       onClose();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");

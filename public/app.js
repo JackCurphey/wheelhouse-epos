@@ -5488,39 +5488,24 @@ function renderDocumentModal(holder, doc) {
     const workshopToggle = document.getElementById('doc-workshop-toggle');
     workshopToggle.addEventListener('change', async (e) => {
       if (e.target.checked) {
-        const capturedTitle = document.getElementById('doc-title').value.trim() || `Order #${doc.id}`;
-        const capturedNotes = document.getElementById('doc-notes').value.trim();
-        const capturedCustomerId = docCustomerId;
+        // New job in the new diary, filled in from the order, which links the
+        // saved job to it (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md).
+        // What's typed on the order is saved first, as leaving the page loses it.
         try {
-          await loadMechanics();
+          await api(`/api/sale-documents/${doc.id}`, {
+            method: 'PUT',
+            body: {
+              title: document.getElementById('doc-title').value.trim() || `Order #${doc.id}`,
+              customerId: docCustomerId,
+              note: document.getElementById('doc-notes').value.trim(),
+            },
+          });
         } catch (err) {
           showToast(err.message);
           e.target.checked = false;
           return;
         }
-        openModal({
-          type: 'workshop-job-form',
-          job: null,
-          defaultDate: toDateStr(new Date()),
-          prefill: {
-            title: capturedTitle,
-            customerId: capturedCustomerId,
-            notes: capturedNotes,
-          },
-          skipAutoOrder: true,
-          afterSave: async (savedJob) => {
-            try {
-              await api(`/api/sale-documents/${doc.id}`, {
-                method: 'PUT',
-                body: { workshopJobId: savedJob.id, title: capturedTitle, customerId: capturedCustomerId, note: capturedNotes },
-              });
-              showToast('Order linked to workshop job');
-            } catch (err) {
-              showToast(err.message);
-            }
-            await refreshDocListAfterChange(doc.kind);
-          },
-        });
+        location.assign(`/workshop/diary?order=${doc.id}`);
       } else {
         if (!confirm('Remove this order from the workshop diary? The linked workshop job will be deleted.')) {
           e.target.checked = true;
@@ -5543,9 +5528,9 @@ function renderDocumentModal(holder, doc) {
     if (viewJobBtn) {
       viewJobBtn.addEventListener('click', async () => {
         try {
+          // The job's page in the new diary, on its day (Jack, 20 Oct).
           const job = await api(`/api/workshop-jobs/${doc.workshopJobId}`);
-          await loadMechanics();
-          openModal({ type: 'workshop-job-form', job });
+          location.assign(`/workshop/diary?date=${job.jobDate}&job=${job.id}`);
         } catch (err) {
           showToast(err.message);
         }

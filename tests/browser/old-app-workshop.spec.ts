@@ -9,12 +9,12 @@ import { futureDate } from '../helpers/workshopFixtures.js';
 
 // The old app (public/app.js) after its workshop diary was retired
 // (docs/decisions/2026-10-18-retire-old-diary.md): its Workshop tab opens the
-// new diary, and the old job form, still opened from an order, lists the
-// shop's mechanics without the old diary having loaded them first.
+// new diary, and so does an order's workshop job (changed 20 Oct): "View /
+// edit workshop job" opens the job's page there, and ticking "Show in
+// workshop diary" opens New job filled in from the order, linked once saved.
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
 let jobTitle: string;
-let jobId: number;
 
 test.describe.configure({ timeout: 60_000 });
 test.use({ timezoneId: 'Europe/London', viewport: { width: 1400, height: 900 } });
@@ -29,7 +29,6 @@ test.beforeAll(async () => {
     body: { title: jobTitle, jobDate: futureDate(2, new Date(TEST_CLOCK_PIN)), startTime: '10:00', endTime: '11:00', mechanicId: sam },
   });
   expect(made.status, JSON.stringify(made.body)).toBe(201);
-  jobId = made.body.id;
 });
 
 test.afterAll(async () => {
@@ -64,46 +63,41 @@ test("the old app's Workshop tab opens the new diary", async ({ page, context })
   await expect(page).toHaveURL(/\/workshop\/diary$/);
 });
 
-test("an order's workshop job opens the old form with the shop's mechanics", async ({ page, context }) => {
-  await signIn(context);
+async function openOrder(page: import('@playwright/test').Page, title: string) {
   await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
   await page.goto(`${server!.baseUrl}/#till`);
   await page.locator('#view-orders-btn').click();
-  const row = page.locator('#order-table-body tr', { hasText: jobTitle });
-  await row.locator('button[data-open]').click();
-  await page.locator('#doc-view-job-btn').click();
-  await expect(page.locator('#workshop-job-form')).toBeVisible();
-  await expect(page.locator('#wj-mechanic option', { hasText: 'Sam' })).toHaveCount(1);
-});
-
-async function openOrdersJob(page: import('@playwright/test').Page) {
-  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
-  await page.goto(`${server!.baseUrl}/#till`);
-  await page.locator('#view-orders-btn').click();
-  await page.locator('#order-table-body tr', { hasText: jobTitle }).locator('button[data-open]').click();
-  await page.locator('#doc-view-job-btn').click();
-  await expect(page.locator('#workshop-job-form')).toBeVisible();
+  await page.locator('#order-table-body tr', { hasText: title }).locator('button[data-open]').click();
 }
 
-// Moved here from the retired old-diary tests: the form now opens only from
-// an order.
-test('marking complete a job changed elsewhere is refused and the form closes', async ({ page, context }) => {
+test("an order's View / edit workshop job opens the job's page in the new diary", async ({ page, context }) => {
   await signIn(context);
-  await openOrdersJob(page);
-  // Someone else saves the job after the form opened.
-  const changed = await staff(`/api/workshop-jobs/${jobId}`, { method: 'PUT', body: { notes: 'Changed elsewhere' } });
-  expect(changed.status, JSON.stringify(changed.body)).toBe(200);
-  await page.locator('#wj-complete-toggle').click();
-  await expect(page.locator('#toast')).toContainText('This job changed while you were looking at it.');
-  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+  await openOrder(page, jobTitle);
+  await page.locator('#doc-view-job-btn').click();
+  await expect(page).toHaveURL(/\/workshop\/diary\?date=\d{4}-\d{2}-\d{2}$/);
+  await expect(page.getByRole('dialog', { name: new RegExp(jobTitle) })).toBeVisible();
 });
 
-test('saving a job changed elsewhere is refused in plain words and the form closes', async ({ page, context }) => {
+test('ticking Show in workshop diary opens New job filled in from the order, and saving links it', async ({ page, context }) => {
+  const customer = await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: 'maya@example.test' } });
+  expect(customer.status, JSON.stringify(customer.body)).toBe(201);
+  const title = `Wheel build ${owner.shop.id}`;
+  const order = await staff('/api/sale-documents', {
+    method: 'POST',
+    body: { kind: 'order', title, customerId: customer.body.id, note: 'Rims ordered', items: [{ lineType: 'labour', name: 'Wheel build', unitPrice: 40, qty: 1, minutes: 60 }] },
+  });
+  expect(order.status, JSON.stringify(order.body)).toBe(201);
   await signIn(context);
-  await openOrdersJob(page);
-  const changed = await staff(`/api/workshop-jobs/${jobId}`, { method: 'PUT', body: { notes: 'Changed again' } });
-  expect(changed.status, JSON.stringify(changed.body)).toBe(200);
-  await page.locator('#workshop-job-form button[type="submit"]').click();
-  await expect(page.locator('#toast')).toContainText('This job changed while you were looking at it.');
-  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+  await openOrder(page, title);
+  await page.locator('#doc-workshop-toggle').check();
+  await expect(page).toHaveURL(/\/workshop\/diary$/);
+  const form = page.getByRole('dialog', { name: 'New job' });
+  await expect(form.getByLabel('Job title')).toHaveValue(title);
+  await expect(form.getByText('Maya Patel')).toBeVisible();
+  await expect(form.getByLabel('Staff notes')).toHaveValue('Rims ordered');
+  await form.getByRole('button', { name: 'Save job' }).click();
+  await expect(form).toBeHidden();
+  const linked = (await staff(`/api/sale-documents/${order.body.id}`)).body;
+  expect(linked.workshopJobId).toBeTruthy();
+  expect((await staff(`/api/workshop-jobs/${linked.workshopJobId}`)).body.title).toBe(title);
 });

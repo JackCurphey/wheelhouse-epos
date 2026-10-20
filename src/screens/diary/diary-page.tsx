@@ -10,7 +10,7 @@ import { printReceipt, type ReceiptSale, type ShopDetails } from '@/screens/till
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
-import { NewJobDialog } from './new-job-dialog.tsx';
+import { NewJobDialog, type ForOrder } from './new-job-dialog.tsx';
 import { OfferDialog, requestMinutes, type OfferAt } from './offer-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { jobRefusalText } from './refusal-words.ts';
@@ -1304,7 +1304,7 @@ export function DiaryPage() {
 
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
-  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean } | null>(null);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder } | null>(null);
   // ---- Offer another time (Jack, 20 Oct): the same pick mode, for a request ----
   const [offering, setOffering] = useState<WorkshopJob | null>(null);
   const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
@@ -1514,6 +1514,34 @@ export function DiaryPage() {
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true });
     setPicking(false);
   };
+  // From the old app's order screen (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md):
+  // ?job= opens that job's page; ?order= opens New job, as "Enter a time
+  // instead" does, filled in from the order. Each is read once, then dropped
+  // from the address so going back or reloading doesn't open it again.
+  const fromAddress = useRef(false);
+  useEffect(() => {
+    if (fromAddress.current) return;
+    fromAddress.current = true;
+    const job = Number(params.get('job'));
+    const order = Number(params.get('order'));
+    if (!params.has('job') && !params.has('order')) return;
+    const kept = new URLSearchParams(params);
+    kept.delete('job');
+    kept.delete('order');
+    setParams(kept, { replace: true });
+    if (Number.isInteger(job) && job > 0) setOpenJobId(job);
+    if (Number.isInteger(order) && order > 0) {
+      (async () => {
+        try {
+          const doc = await apiGet<{ id: number; title: string; customerId: number | null; note: string | null }>(`/api/sale-documents/${order}`);
+          const customer = doc.customerId ? await apiGet<{ id: number; name: string; email: string | null; phone: string | null }>(`/api/customers/${doc.customerId}`) : null;
+          setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: { id: doc.id, title: doc.title || `Order #${doc.id}`, customer, notes: doc.note ?? '' } });
+        } catch (err) {
+          setNotice(`Couldn’t open that order: ${err instanceof ApiError ? err.message : 'the server couldn’t be reached'}`);
+        }
+      })();
+    }
+  });
   const newJobDialog = newJob ? (
     <NewJobDialog
       key={`${newJob.date}-${newJob.startMin}`}
@@ -1524,6 +1552,8 @@ export function DiaryPage() {
       entered={newJob.entered}
       chooseMechanic={freest}
       people={people}
+      order={newJob.order}
+      onLinkRefused={setNotice}
       onClose={() => setNewJob(null)}
     />
   ) : null;
