@@ -13,8 +13,8 @@
 - [x] 3.2 The pretend sender; engine.js; the timer; outbox and undo routes
 
 ## 4. Settings › Messages routes
-- [ ] 4.1 Tests first: list, change, go back, Owner only, preview
-- [ ] 4.2 The routes
+- [x] 4.1 Tests first: list, change, go back, Owner only, preview
+- [x] 4.2 The routes
 
 ## 5. First triggers
 - [ ] 5.1 Tests first: quote send queues Quote to approve; finish queues Bike ready with Undo; the old app's one-off text is pretend
