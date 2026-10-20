@@ -14,4 +14,4 @@
 
 ## 3. Checks
 
-- [ ] 3.1 A fresh review; `npm test` and `npm run test:browser` pass; archived with the screens
+- [x] 3.1 A fresh review; `npm test` and `npm run test:browser` pass; archived with the screens
