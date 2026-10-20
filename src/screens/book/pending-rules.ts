@@ -104,3 +104,19 @@ export function pageHeading(link: Pick<BookingLink, 'bike' | 'services'>): strin
 export function bikeRow(link: Pick<BookingLink, 'bike' | 'bikeNote'>): string | null {
   return [bikeName(link), link.bikeNote].filter(Boolean).join(' · ') || null;
 }
+
+// Cancel booking (Jack, 1 Oct, decision 10; 19 Oct; drawn as bk-cancel and bk-cancelled).
+/** Until Change the date is built, the contact line for a booking that can be cancelled here. */
+export const changeLine = (shopName: string) => `Need to change the date? Contact ${shopName}`;
+
+/** "Thursday 17 September, 11:30 · Trek Domane AL 3": the pop-up's line; a whole-day booking has no time. */
+export function cancelSubline(link: BookingLink): string {
+  return `${whenLine(link)} · ${bikeName(link) || 'your bike'}`;
+}
+
+/** "Thursday 17 September, Standard service for your Trek Domane AL 3. There’s nothing to pay or refund." */
+export function cancelledLine(link: BookingLink): string {
+  const names = link.services.map((sv) => sv.name);
+  const work = names.length === 0 ? 'your repair' : names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return `${dayLabel(link.jobDate)}, ${work} for your ${bikeName(link) || 'bike'}. There’s nothing to pay or refund.`;
+}

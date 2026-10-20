@@ -576,6 +576,29 @@ silent:
 6. **The heading keeps the booking pages' own size, not the drawing's
    larger one.** *Pattern:* every booking step's heading (fresh review).
 
+### 20 Oct 2026: Cancel booking on the booking page (Jack, 19 Oct: Change the date and Cancel booking next)
+
+1. **The pop-up says "There's nothing to pay or refund."**, since no shop
+   takes deposits yet; the deposit wording comes with deposits. *Pattern:*
+   bk-cancel-ls, the drawn pop-up for a booking with no deposit.
+2. **"We've sent you a text to confirm." is left off the pop-up and the
+   cancelled page**: no texts are sent yet. *Pattern:* nothing said that
+   isn't true.
+3. **Cancel booking shows under the card, only while the booking can still
+   be cancelled online; Change the date and Add a note for the shop come
+   later, and the contact line reads "Need to change the date? Contact
+   [shop]" meanwhile.** *Pattern:* bk-page's button row, built a button at a
+   time.
+4. **Cancel request on a request's page waits for that page's own piece.**
+   *Pattern:* the confirmed page first (19 Oct).
+5. **A refusal (the bike already with the shop, or the booking no longer
+   cancellable) shows the server's words in the pop-up.** *Pattern:* the
+   settings pop-ups' refusals.
+6. **Every cancelled booking shows "Your booking is cancelled", whoever
+   cancelled it**: the booking link doesn't say whether the customer or the
+   shop did. *Pattern:* bk-cancelled; the words are true either way (fresh
+   review).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

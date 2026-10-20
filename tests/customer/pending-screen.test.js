@@ -65,7 +65,7 @@ for (const [stage, words] of [
   ['collected', 'Collected'],
   ['change_requested', 'Change requested'],
   ['declined', 'Declined'],
-  ['cancelled', 'Cancelled'],
+  ['cancelled', 'Your booking is cancelled'],
   ['request_expired', 'Request expired'],
 ]) {
   test(`stage ${stage} reads "${words}"`, async () => {
