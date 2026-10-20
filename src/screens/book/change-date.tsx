@@ -55,7 +55,8 @@ export function ChangeDate({ link, shopSlug, code, onClose }: { link: BookingLin
   const shown = days.slice(from, from + STRIP);
   const chosen = days.find((d) => d.date === day);
   const sameAsBooked = chosen?.date === link.jobDate && (chosen.mode === 'dropoff' || time === link.startTime);
-  const ready = !!chosen && free(chosen) && (chosen.mode === 'dropoff' || !!time) && !sameAsBooked;
+  // A time must still be on the day's list: the days are read again after a refusal (fresh review).
+  const ready = !!chosen && free(chosen) && (chosen.mode === 'dropoff' || (!!time && (chosen.startTimes ?? []).includes(time))) && !sameAsBooked;
 
   async function ask() {
     if (!chosen || !availability.data) return;
@@ -111,7 +112,7 @@ export function ChangeDate({ link, shopSlug, code, onClose }: { link: BookingLin
       {chosen && chosen.mode === 'timed' && free(chosen) && (
         <div className="flex flex-col gap-2">
           <span id="chg-times" className="text-[15px] font-bold">{`${dayLabel(chosen.date)} — choose a time`}</span>
-          <div role="radiogroup" aria-label={`${dayLabel(chosen.date)} — choose a time`} className="flex flex-wrap gap-2">
+          <div role="radiogroup" aria-labelledby="chg-times" className="flex flex-wrap gap-2">
             {(chosen.startTimes ?? []).map((t) => (
               <label key={t} className={cn('inline-flex min-h-11 min-w-[76px] cursor-pointer items-center justify-center rounded-lg border px-3 font-[family-name:var(--wh-font-mono)] text-[15px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--accent)]',
                 time === t ? 'border-2 border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)]')}>

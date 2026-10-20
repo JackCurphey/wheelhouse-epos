@@ -155,3 +155,13 @@ test('a change the shop declined says so at the top', async () => {
   const { ui } = await open({ ...MAYA, changeDeclined: true });
   assert.ok(await ui.findByText(`The shop couldn’t do the new date you asked for. Your booking is still ${long(BOOKED)}, 11:30.`));
 });
+
+test('Ask for this date stays off for the booking’s own day and time', async () => {
+  const { ui } = await open();
+  await click(await ui.findByRole('button', { name: 'Change the date' }));
+  await click(await ui.findByRole('radio', { name: `${long(BOOKED)}, your booking` }));
+  await click(ui.getByRole('radio', { name: '11:30' }));
+  assert.equal(ui.getByRole('button', { name: 'Ask for this date' }).disabled, true);
+  await click(ui.getByRole('radio', { name: '09:00' }));
+  assert.equal(ui.getByRole('button', { name: 'Ask for this date' }).disabled, false);
+});

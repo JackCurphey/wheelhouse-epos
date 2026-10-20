@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Link, useParams } from 'react-router';
+import { TriangleAlert } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ApiError, apiMutate } from '@/lib/api/client.ts';
@@ -120,7 +121,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {!waiting && link.changeDeclined && (
-            <p role="status" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]">{declinedLine(link)}</p>
+            <p role="status" className="m-0 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>{declinedLine(link)}</span></p>
           )}
           {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
           <div>
