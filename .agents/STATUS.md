@@ -48,7 +48,16 @@ in workshop.js (your approval for the workshop server); your
 `booking-link.js` has stage `time_offered`; your `portal.js` has the link's
 `offer`/`canAccept`, `customerCanChange` (false for an offer), cancel on an
 offer, and `POST …/booking-links/:code/accept-offer`. The auto-confirm
-contract now takes the next free migration number. **Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
+contract now takes the next free migration number. **Check the messages engine too** (20 Oct, on Jack's word; Jack: pretend for
+now, `docs/decisions/2026-10-20-messages-engine.md`): #321 adds
+`server/hosted-copy-guard.js`, called in `server.js` before migrations (your
+`add-hosted-copy` tasks 2.1–2.2: the hosted copy refuses `TWILIO_*`,
+`EMAIL_*`, `WHATSAPP_*` keys); #322 migration 048 (`message_templates`, the
+outbox's columns on `customer_messages`, old rows settled, `undone`);
+#323 (in review) `server/messaging/engine.js`, the pretend sender, the timer
+started in `server.js` and waited for on shutdown, migration 049
+(`claimed_at`), `GET /api/messages` and `POST /api/messages/:id/undo`.
+**Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
 answer 2): replying to a text as a shop setting, a shop's own number whose
 replies land in its inbox (a monthly cost, and receiving texts to build), or
 the cheaper shared number with replies on the booking page, as now. Not to
