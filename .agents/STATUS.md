@@ -37,7 +37,11 @@ job with money paid on its order or the bike in the shop (409
 bookings automatically, contract in `openspec/changes/auto-confirm/design.md`
 (migration 046, `confirmBookingsAutomatically`, bookings saved `scheduled`
 when on, `newOnline` and `POST /api/workshop-jobs/:id/seen`); Jack's screens
-wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #305 too** (20 Oct, on Jack's word): your `portal.js` gains
+wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
+answer 2): replying to a text as a shop setting, a shop's own number whose
+replies land in its inbox (a monthly cost, and receiving texts to build), or
+the cheaper shared number with replies on the booking page, as now. Not to
+build yet. **Check #305 too** (20 Oct, on Jack's word): your `portal.js` gains
 `GET /api/portal/:slug/booking-links/:code/availability?start&end`, the days
 and times a booking could move to for its own mechanic and length, with the
 booking left out of capacity (`loadCapacity(..., { ignoreJobId })`); refused
@@ -170,7 +174,10 @@ Change the date: the day strip in place, a change waiting with Cancel my date
 change, and a declined change's notice (#306), on a new server route (#305). Then
 the waiting-for-the-shop page to its drawing: "Your booking request", the
 purple badge, Change the date (a request moves at once) and Cancel request
-(#308); screens only. Then Files and photos on the job page,
+(#308); screens only. Then the six booking messages' wording and edit boxes,
+drawn and approved (#310, `docs/decisions/2026-10-20-booking-messages.md`):
+the booking-confirmed text puts in the shop's note; sending waits for the
+messages engine (WP-1.8). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
