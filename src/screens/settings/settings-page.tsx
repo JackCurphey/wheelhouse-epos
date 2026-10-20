@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FocusEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
@@ -18,7 +18,7 @@ import { shortDay } from '@/screens/diary/rules.ts';
  */
 type DayHours = { weekday: number; open: string; close: string };
 type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
-  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string };
+  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -559,6 +559,97 @@ function PricesSetting() {
 }
 
 /**
+ * A shop's own booking terms (Jack, 8 Oct, docs/decisions/2026-10-08-not-drawn-pages.md
+ * row 95: a form box on bk-settings; 20 Oct). "Use your own" starts from
+ * Wheelhouse's standard terms; the box saves when left, if the words differ
+ * from what customers get now; "Go back to Wheelhouse's standard terms"
+ * saves null. The server keeps a copy with each booking (piece 11).
+ */
+function TermsSetting() {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const slug = session.status === 'signed-in' ? session.shop.slug : '';
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [editing, setEditing] = useState(false);
+  const [typed, setTyped] = useState<string | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const own = settings.data?.bookingTerms ?? null;
+  const open = own !== null || editing;
+  // The standard words, to start from (the customers' own terms address).
+  const standard = useQuery({
+    queryKey: ['portal', slug, 'terms'],
+    queryFn: () => apiGet<{ text: string; standard: boolean }>(`/api/portal/${encodeURIComponent(slug)}/terms`),
+    enabled: editing && own === null && slug !== '',
+  });
+  const current = own ?? (standard.data?.standard ? standard.data.text : '');
+  // Once the box opens from "Use your own" and has its words, the cursor goes
+  // into it, as the button it replaced has gone (fresh review).
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+  const ready = !!settings.data && (own !== null || !!standard.data);
+  useEffect(() => {
+    if (editing && ready) boxRef.current?.focus();
+  }, [editing, ready]);
+  const shown = typed ?? current;
+
+  async function put(value: string | null) {
+    setNote(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { bookingTerms: value }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+      setTyped((t) => (value === null || t === value ? null : t));
+      if (value === null) setEditing(false);
+      setNote({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    }
+  }
+
+  function leave(e: FocusEvent<HTMLTextAreaElement>) {
+    // Going straight to "Go back" mustn't save the words first (fresh review).
+    if ((e.relatedTarget as HTMLElement | null)?.id === 'terms-go-back') return;
+    if (typed === null || typed.trim() === current.trim()) return;
+    void put(typed);
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+        <span className="flex flex-col gap-0.5">
+          <span className="text-[15px] font-semibold">Booking terms</span>
+          <span className="text-[13px] text-[var(--wh-muted)]">{own !== null ? 'Your own terms · a copy is kept with each booking' : 'Wheelhouse’s standard terms · a copy is kept with each booking'}</span>
+        </span>
+        {!open && <Button disabled={!settings.data} onClick={() => { setNote(null); setEditing(true); }}>Use your own</Button>}
+      </div>
+      {open && (
+        <>
+          <label htmlFor="booking-terms" className="text-[15px] font-semibold">Your booking terms</label>
+          <textarea
+            id="booking-terms"
+            ref={boxRef}
+            aria-describedby="booking-terms-h"
+            rows={8}
+            maxLength={20000}
+            value={shown}
+            disabled={!ready}
+            onChange={(e) => setTyped(e.target.value)}
+            onBlur={(e) => leave(e)}
+            className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal"
+          />
+          <span id="booking-terms-h" className="text-[13px] text-[var(--wh-muted)]">Customers agree to these when they book. A copy is kept with each booking.</span>
+          {own !== null && (
+            <div><Button id="terms-go-back" variant="ghost" onClick={() => { setTyped(null); void put(null); }}>Go back to Wheelhouse’s standard terms</Button></div>
+          )}
+        </>
+      )}
+      {editing && own === null && standard.isError && (
+        <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load the standard terms to start from. Try again in a moment.</p>
+      )}
+      {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+    </div>
+  );
+}
+
+/**
  * Preview what the customer sees (Jack, 19 Oct, docs/decisions/2026-10-19-booking-preview.md;
  * drawn as bk-settings-preview): the confirmed page for the drawings' example
  * booking, with the shop's saved drop-off time, note and prices.
@@ -677,6 +768,8 @@ function OnlineBookingBox() {
       />
       <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
       <PricesSetting />
+      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Terms</h4>
+      <TermsSetting />
     </section>
   );
 }

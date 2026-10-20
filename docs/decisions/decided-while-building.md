@@ -644,6 +644,22 @@ silent:
    your request is with us"), waits**: the page isn't sent the customer's
    name. *Pattern:* nothing shown that isn't sent.
 
+### 20 Oct 2026: a shop's own booking terms (`docs/decisions/2026-10-08-not-drawn-pages.md` row 95, answer C)
+
+1. **"Use your own" opens a box under the row, filled with Wheelhouse's
+   standard terms to edit from, labelled "Your booking terms", with "Customers
+   agree to these when they book. A copy is kept with each booking."**
+   *Pattern:* the Additional note on the confirmation's box.
+2. **It saves when left, only if the words differ from what customers get
+   now; leaving the standard words untouched saves nothing.** *Pattern:* the
+   settings boxes, saved when left if changed.
+3. **With own terms, the row reads "Your own terms · a copy is kept with each
+   booking" and offers "Go back to Wheelhouse's standard terms".** *Pattern:*
+   Messages' "Go back to Wheelhouse's wording".
+4. **The Terms row sits at the end of Online booking, after Show prices**:
+   deposits, which the drawing puts between them, aren't built. *Pattern:*
+   bk-settings' order.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
