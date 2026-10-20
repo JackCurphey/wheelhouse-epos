@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/staff/routes.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
+import { channelWord } from './channel-word.ts';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -156,13 +157,36 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
 
   // "Mark ready for collection" asks who is signing it off first (Jack, 16 Oct).
   const [signing, setSigning] = useState(false);
+  // "Bike ready" waits a minute with Undo after marking it ready (UX
+  // walk-through 1 H2; the messages engine). The strip goes when the minute does.
+  const [ready, setReady] = useState<ReadyStrip | null>(null);
+  useEffect(() => {
+    if (!ready || !('id' in ready)) return undefined;
+    const t = setTimeout(() => setReady(null), Math.max(0, Date.parse(ready.sendAfter) - Date.now()));
+    return () => clearTimeout(t);
+  }, [ready]);
+  async function undoReady() {
+    if (!ready || !('id' in ready)) return;
+    setSending(true);
+    setMessage(null);
+    try {
+      await apiMutate(`/api/messages/${ready.id}/undo`, {});
+      setReady(null);
+    } catch (err) {
+      setReady(null);
+      setMessage(refusalText(err));
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function run(action: string, extra: object = {}) {
     if (!job) return;
     setSending(true);
     setMessage(null);
     try {
-      await jobAction(job.id, action, job.version, extra);
+      const done = await jobAction<WorkshopJob & { readyMessage?: ReadyMessage }>(job.id, action, job.version, extra);
+      if (action === 'finish' && done?.readyMessage) setReady(readyStrip(done, done.readyMessage));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
@@ -297,6 +321,15 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
                 <span data-sign-off="true">Signed off by <strong>{job.signedOffByName}</strong>{` · ${signedOffWhen(job.signedOffAt)}`}</span>
               </p>
+            ) : null}
+            {ready && 'id' in ready ? (
+              <div role="status" className="flex shrink-0 flex-wrap items-center gap-3 bg-[var(--wh-ink)] px-5 py-2 text-sm text-[var(--wh-bg)]">
+                <span className="grow">{ready.text}</span>
+                <button type="button" disabled={sending} onClick={() => void undoReady()} className="min-h-11 rounded-md px-3 font-semibold underline">Undo</button>
+              </div>
+            ) : null}
+            {ready && 'reason' in ready ? (
+              <p role="status" className="m-0 shrink-0 border-b border-[var(--wh-border)] px-5 py-2 text-sm">{ready.reason}</p>
             ) : null}
             <div className="min-h-0 grow overflow-y-auto px-5 py-4">
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
@@ -440,4 +473,19 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
       </Dialog>
     </Dialog>
   );
+}
+
+type ReadyMessage = { id: number; channel: string; to: string; sendAfter: string } | { skipped: 'off' | 'no_contact' };
+type ReadyStrip = { id: number; sendAfter: string; text: string } | { reason: string };
+
+// What the strip says after marking it ready: the drawn line, or why Bike
+// ready didn't go (no phone or email; switched off says nothing).
+function readyStrip(job: WorkshopJob, m: ReadyMessage): ReadyStrip | null {
+  if ('skipped' in m) {
+    return m.skipped === 'no_contact' ? { reason: `“Bike ready” didn’t go: ${job.customerName ?? 'The customer'} has no phone number or email on file.` } : null;
+  }
+  const first = (job.customerName ?? '').trim().split(/\s+/)[0] || 'the customer';
+  const at = job.signedOffAt ? signedOffWhen(job.signedOffAt).split(', ').at(-1) : null;
+  const who = job.signedOffByName && at ? `${job.signedOffByName} marked it ready at ${at}. ` : '';
+  return { id: m.id, sendAfter: m.sendAfter, text: `${who}“Bike ready” goes to ${first} by ${channelWord(m.channel)} in 1 minute.` };
 }

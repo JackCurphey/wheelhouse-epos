@@ -6,13 +6,13 @@
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
-import { sendSms } from '../sms.js';
+import { sendTextNow } from '../messaging/engine.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 
-// One-off texts sent to a customer via Twilio (see sms.js). A failed send
-// still gets a history row (status: 'failed') rather than being dropped, so
+// One-off texts sent to a customer, through the messages engine's sender
+// (pretend for now: Jack, 20 Oct). A failed send still gets a history row (status: 'failed') rather than being dropped, so
 // staff can see what was actually attempted.
 
 function serializeCustomerMessage(row) {
@@ -51,17 +51,12 @@ export function register(route) {
     if (!text) return badRequest(res, 'Message text is required');
     if (text.length > 1600) return badRequest(res, 'Message is too long');
 
-    const result = await sendSms(customer.phone, text);
-    const info = await db
-      .prepare(
-        `INSERT INTO customer_messages (customer_id, body, status, error, provider_sid, sent_by_login_id)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(customerId, text, result.ok ? 'sent' : 'failed', result.ok ? null : result.error, result.ok ? result.sid : null, ctx.login.id);
-    const row = await db.prepare(MESSAGE_SELECT + ' WHERE m.id = ?').get(info.lastInsertRowid);
+    // Through the messages engine's sender: pretend for now (Jack, 20 Oct).
+    const id = await sendTextNow({ customerId, to: customer.phone, body: text, loginId: ctx.login.id });
+    const row = await db.prepare(MESSAGE_SELECT + ' WHERE m.id = ?').get(id);
     // Always 201: the request itself succeeded (an attempt was made and
     // recorded) even when the send didn't - the frontend reads row.status to
-    // show the outcome, rather than this route throwing on a Twilio failure.
+    // show the outcome, rather than this route throwing on a failed send.
     sendJson(res, 201, serializeCustomerMessage(row));
   });
 }

@@ -27,6 +27,25 @@ export function channelFor(c) {
 }
 
 /**
+ * Why a message wouldn't be queued for this customer ('off' or 'no_contact'),
+ * or null when it would: checked first by a trigger that must do something
+ * only for a message that goes (a new link). Inside runWithShop.
+ */
+export async function whyNotQueued(key, customerId) {
+  if (!(await templateFor(key)).enabled) return 'off';
+  const c = customerId ? await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId) : null;
+  return c && channelFor(c) ? null : 'no_contact';
+}
+
+/** Stops a job's message still waiting its minute (reopening the work stops its Bike ready). */
+export async function undoWaiting(jobId, key) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE job_id = ? AND template_key = ? AND intent_state = 'intended'`
+  ).run(jobId, key);
+}
+
+/**
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
@@ -44,6 +63,27 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
      VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?) RETURNING id`
   ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId);
   return { id: row.id, channel: how.channel, to: how.to, sendAfter };
+}
+
+/**
+ * Sends a one-off text now (the old app's customer texts), through the
+ * channel's sender — pretend for now — and records it like any other.
+ * Inside the shop's runWithShop. Returns the message's id.
+ */
+export async function sendTextNow({ customerId, to, body, loginId = null }) {
+  const now = new Date().toISOString();
+  const { id } = await prepare(
+    `INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address, send_after, claimed_at, sent_by_login_id)
+     VALUES (?, ?, 'queued', 'sending', 'sms', ?, ?, ?, ?) RETURNING id`
+  ).get(customerId, body, to, now, now, loginId);
+  let result;
+  try {
+    result = await senderFor('sms').send({ channel: 'sms', to, subject: null, body });
+  } catch (err) {
+    result = { ok: false, error: err.message };
+  }
+  await recordResult(id, result);
+  return id;
 }
 
 /** Undo: only while it's still waiting. Returns true, or false when it's already gone. */
@@ -103,11 +143,16 @@ async function sendOne(shopId, m) {
   } catch (err) {
     result = { ok: false, error: err.message };
   }
-  await runWithShop(shopId, () => prepare(
+  await runWithShop(shopId, () => recordResult(m.id, result));
+}
+
+// What the sender said, on a message it was claimed for. Inside runWithShop.
+function recordResult(id, result) {
+  return prepare(
     `UPDATE customer_messages SET intent_state = ?, status = ?, sent_at = ?, provider_sid = ?, pretend = ?, error = ?
      WHERE id = ? AND intent_state = 'sending'`
   ).run(result.ok ? 'delivered' : 'failed', result.ok ? 'sent' : 'failed', result.ok ? new Date().toISOString() : null,
-    result.providerId ?? null, Boolean(result.pretend), result.ok ? null : result.error ?? 'Not sent', m.id));
+    result.providerId ?? null, Boolean(result.pretend), result.ok ? null : result.error ?? 'Not sent', id);
 }
 
 /**

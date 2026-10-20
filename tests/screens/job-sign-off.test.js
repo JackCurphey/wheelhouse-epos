@@ -165,3 +165,58 @@ test('work not signed off (finished before the sign-off, or paid at the till) sh
   const { dlg } = await openJob({ custodyState: 'in_shop', workState: 'complete', signedOffBy: null, signedOffByName: null, signedOffAt: null });
   assert.equal(has(dlg.queryByText(/Signed off by/)), false);
 });
+
+// Bike ready (UX walk-through 1 H2; the messages engine, Jack 20 Oct): marking
+// it ready queues "Bike ready" with a minute to Undo, drawn as the strip
+// "Alex marked it ready at 15:30. “Bike ready” goes to Maya by text in 1 minute."
+const FINISHED = { custodyState: 'in_shop', workState: 'complete', signedOffBy: 12, signedOffByName: 'Jo Taylor', signedOffAt: '2026-09-17T14:30:00.000Z' };
+const inAMinute = () => new Date(Date.now() + 60_000).toISOString();
+
+async function markReady(readyMessage) {
+  const t = await askSignOff();
+  answer = { status: 200, ok: true, json: async () => ({ ...JOB, ...FINISHED, version: 4, readyMessage }) };
+  t.fireEvent.click(t.pop.getByRole('radio', { name: 'Jo Taylor' }));
+  t.fireEvent.click(t.pop.getByRole('button', { name: 'Sign off and mark ready' }));
+  return t;
+}
+
+test('marking it ready says Bike ready goes in a minute, the customer’s way, with Undo', async () => {
+  const { dlg } = await markReady({ id: 55, channel: 'sms', to: '07700 900142', sendAfter: inAMinute() });
+  assert.ok(has(await dlg.findByText('Jo Taylor marked it ready at 15:30. “Bike ready” goes to Maya by text in 1 minute.')));
+  assert.ok(has(dlg.queryByRole('button', { name: 'Undo' })));
+});
+
+test('by email or WhatsApp when that’s the customer’s way', async () => {
+  const { dlg } = await markReady({ id: 55, channel: 'whatsapp', to: '07700 900142', sendAfter: inAMinute() });
+  assert.ok(has(await dlg.findByText('Jo Taylor marked it ready at 15:30. “Bike ready” goes to Maya by WhatsApp in 1 minute.')));
+});
+
+test('Undo stops Bike ready, and the strip goes', async () => {
+  const { dlg, fireEvent, waitFor } = await markReady({ id: 55, channel: 'email', to: 'maya@example.test', sendAfter: inAMinute() });
+  await dlg.findByText(/“Bike ready” goes to Maya by email in 1 minute\./);
+  answer = { status: 200, ok: true, json: async () => ({ id: 55, state: 'undone' }) };
+  fireEvent.click(dlg.getByRole('button', { name: 'Undo' }));
+  await waitFor(() => assert.equal(posts().at(-1), '/api/messages/55/undo {}'));
+  await waitFor(() => assert.equal(has(dlg.queryByText(/“Bike ready” goes to/)), false));
+});
+
+test('too late to Undo: says it’s already gone', async () => {
+  const { dlg, fireEvent } = await markReady({ id: 55, channel: 'sms', to: '07700 900142', sendAfter: inAMinute() });
+  await dlg.findByText(/“Bike ready” goes to Maya/);
+  answer = { status: 409, ok: false, json: async () => ({ error: 'It’s already gone', code: 'illegal' }) };
+  fireEvent.click(dlg.getByRole('button', { name: 'Undo' }));
+  assert.ok(has(await dlg.findByText('It’s already gone')));
+});
+
+test('a customer with no phone or email: says Bike ready didn’t go, and why', async () => {
+  const { dlg } = await markReady({ skipped: 'no_contact' });
+  assert.ok(has(await dlg.findByText('“Bike ready” didn’t go: Maya Patel has no phone number or email on file.')));
+  assert.equal(has(dlg.queryByRole('button', { name: 'Undo' })), false);
+});
+
+test('Bike ready switched off in Settings: nothing is said', async () => {
+  const { dlg, waitFor } = await markReady({ skipped: 'off' });
+  await waitFor(() => assert.ok(posts().length === 1));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(has(dlg.queryByText(/Bike ready/)), false);
+});

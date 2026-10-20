@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { ItemSearch, type Picked } from './item-search.tsx';
 import { refusalText } from './refusal-words.ts';
+import { channelWord } from './channel-word.ts';
 
 /**
  * The quote, in the job's work and parts (journey 4; quoteJobBoards in
@@ -22,7 +23,7 @@ type QuoteLine = {
   decidedVia: string | null; decidedAt: string | null; decidedByName: string | null; addedToOrderAt: string | null;
 };
 type Quote = { id: number; revision: number; state: string; lines: QuoteLine[]; totals: { all: number; approved: number; pending: number; declined: number } };
-type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string }; link: string };
+type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
 const ANSWERED = new Set(['approved', 'partly_approved', 'declined']);
@@ -216,7 +217,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
       {sent ? (
         sent.message.status === 'sent' ? (
-          <p role="status" className="m-0 text-sm">{`Quote sent to ${customer} by text.`}</p>
+          <p role="status" className="m-0 text-sm">{`Quote sent to ${customer} by ${channelWord(sent.message.channel)}.`}</p>
         ) : (
           <div role="status" className="flex flex-col gap-1.5 rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 py-2 text-sm">
             <span>{`The quote is ready for ${customer}, but no text went: ${sent.message.reason ?? ''}`}</span>
