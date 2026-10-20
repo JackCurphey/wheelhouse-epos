@@ -2,9 +2,9 @@
 
 ## 1. Server — the workshop server (Jack's, Mark approves) and the booking server (Mark's), on Jack's word; flagged for Mark
 
-- [ ] 1.1 Tests first, watched failing: the state's transitions; the migration from empty; offer (moves the job and its hold, keeps where it was asked, refusals); the link's stage, offer and flags; accept-offer; cancel an offer; change refused; Waiting for you leaves it out; the legacy PUT leaves it
-- [ ] 1.2 Migration 046, the machine and generated docs, the offer route, the link view, accept-offer, guards; route snapshot
-- [ ] 1.3 A fresh review; `npm test` passes; merged
+- [x] 1.1 Tests first, watched failing: the state's transitions; the migration from empty; offer (moves the job and its hold, keeps where it was asked, refusals); the link's stage, offer and flags; accept-offer; cancel an offer; change refused; Waiting for you leaves it out; the legacy PUT leaves it
+- [x] 1.2 Migration 046, the machine and generated docs, the offer route, the link view, accept-offer, guards; route snapshot
+- [x] 1.3 A fresh review; `npm test` passes; merged
 
 ## 2. Staff screens — Jack
 

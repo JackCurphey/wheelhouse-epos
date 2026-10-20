@@ -71,6 +71,7 @@ POST /api/workshop-jobs/:id/decline
 POST /api/workshop-jobs/:id/request-reschedule
 POST /api/workshop-jobs/:id/cancel
 POST /api/workshop-jobs/:id/expire
+POST /api/workshop-jobs/:id/offer
 POST /api/workshop-jobs/:id/accept-change
 POST /api/workshop-jobs/:id/decline-change
 POST /api/workshop-jobs/:id/cancellation-seen
@@ -161,5 +162,6 @@ GET /api/portal/:shopSlug/booking-links/:code/availability
 GET /api/portal/:shopSlug/booking-links/:code/quote
 POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 POST /api/portal/:shopSlug/booking-links/:code/cancel
+POST /api/portal/:shopSlug/booking-links/:code/accept-offer
 POST /api/portal/:shopSlug/booking-links/:code/change
 POST /api/portal/:shopSlug/booking-links/:code/withdraw-change

@@ -12,7 +12,7 @@ export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 export const HOUR_RE = /^([01]\d|2[0-3]):00$/;
 export const SLOT_STEP_MINUTES = 30;
 export const MAX_RANGE_DAYS = 62;
-export const LIVE_BOOKING_STATES = ['pending', 'scheduled', 'reschedule_requested'];
+export const LIVE_BOOKING_STATES = ['pending', 'offered', 'scheduled', 'reschedule_requested'];
 const DAY_MINUTES = 24 * 60;
 const DAY_MS = 24 * 60 * 60 * 1000;
 

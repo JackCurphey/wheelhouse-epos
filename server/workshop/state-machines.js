@@ -76,11 +76,15 @@ export const custody = defineMachine({
 export const bookingRequest = defineMachine({
   name: 'bookingRequest',
   initial: 'pending',
-  states: ['pending', 'scheduled', 'reschedule_requested', 'declined', 'expired', 'cancelled'],
+  states: ['pending', 'offered', 'scheduled', 'reschedule_requested', 'declined', 'expired', 'cancelled'],
   transitions: {
     // change_time: an unconfirmed booking moves at once and stays unconfirmed
     // (piece 12, decision 4); a request replaced by another stays a request.
-    pending: { accept: 'scheduled', decline: 'declined', expire: 'expired', cancel: 'cancelled', change_time: 'pending' },
+    // offer: the shop moves the request to a time it suggests (Jack, 20 Oct,
+    // docs/decisions/2026-10-20-offer-another-time.md); the customer accepts
+    // it (accept_offer) or cancels; staff can offer again, decline, or let it expire.
+    pending: { accept: 'scheduled', decline: 'declined', expire: 'expired', cancel: 'cancelled', change_time: 'pending', offer: 'offered' },
+    offered: { offer: 'offered', accept_offer: 'scheduled', cancel: 'cancelled', decline: 'declined', expire: 'expired' },
     // A reschedule keeps the original allocation until the shop answers, so a
     // refused move leaves the customer with the booking they already had.
     scheduled: { request_reschedule: 'reschedule_requested', cancel: 'cancelled' },

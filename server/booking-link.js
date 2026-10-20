@@ -30,6 +30,8 @@ export function isLinkExpired(jobDate, today) {
 
 const BOOKING_STAGES = {
   pending: 'awaiting_confirmation',
+  // The shop suggested another time (Jack, 20 Oct, offer another time).
+  offered: 'time_offered',
   reschedule_requested: 'change_requested',
   declined: 'declined',
   expired: 'request_expired',

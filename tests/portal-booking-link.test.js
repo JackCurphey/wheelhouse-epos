@@ -85,6 +85,8 @@ test('a booking returns a booking link, and the link reads the booking back', as
     // When to drop the bike off, once the booking stands (Jack, 19 Oct).
     dropOff: null,
     confirmationNote: null,
+    offer: null,
+    canAccept: false,
     answers: [],
     photoCount: 0,
     services: [{ name: 'Test service', price: null }],
