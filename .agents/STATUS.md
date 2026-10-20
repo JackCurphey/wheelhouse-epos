@@ -158,7 +158,11 @@ Booking confirmed badge, the drop-off sentence and note, the Service, Bike,
 When and Your repair rows, the shop's name (#301); screens only. Other stages,
 Change the date and Cancel booking, and rows needing data your server doesn't
 send yet (Extra work, deposit, free to cancel, mechanic, shop address and
-phone) come later. Then Files and photos on the job page,
+phone) come later. On 20 Oct, Cancel booking on the confirmed page: asked once
+("There's nothing to pay or refund."), then "Your booking is cancelled" with
+Book another time (#303); screens only, on the existing cancel route. Change
+the date needs your server to send the booking's mechanic and minutes, and an
+availability check that leaves the booking's own slot out. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
