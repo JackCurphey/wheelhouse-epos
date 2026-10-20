@@ -25,7 +25,7 @@ import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, ov
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CUSTOMER_NOTE } from './job-page.mjs';
 import { requestDepositBoard, withNewOnline, buildDiaryDesktopBoard, tabletDiary, phoneDiary } from './diary.mjs';
-import { msgPage, msgListOpen } from './setup.mjs';
+import { msgPage, msgListOpen, wordingBox, bubble } from './setup.mjs';
 import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs';
 
 export const screens = {};
@@ -432,6 +432,52 @@ def('bk-cancel-ls', () => withLightspeedShop(() => bookingPage({ dialog: cancelD
 def('bk-staff-request', () => requestDepositBoard(SIZE));
 def('bk-staff-decline', () => requestDepositBoard(SIZE, true));
 // Scrolled down to the booking messages, below the shop's other messages.
+// The six booking messages' wording, for Jack's approval (Jack, 20 Oct:
+// "1: draw the six booking messages' wording and their edit box for my
+// approval; sending waits for the messages engine"). Each opens from its row
+// in Messages, as Bike ready's does (set-msg-edit), with what it can put in,
+// a text preview and an email preview (stage 1 drawing gaps, decision 24).
+// The example is the drawings' own: Maya Patel's Trek Domane AL 3, a Standard
+// service on Thu 17 Sep at 11:30, WH-1042, North Street Cycles, Bolton.
+const BK_CHIPS = ['Customer’s first name', 'Bike', 'Service', 'Booked day and time', 'Shop name', 'Link to the booking', 'Job number'];
+const emailPreview = (subject, body) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">PREVIEW · EMAIL TO MAYA PATEL</span><div style="box-sizing: border-box; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5"><span style="font-weight: 700">${subject}</span><span>${body}</span></div></div>`;
+const replyNote = note('Every text ends “Replies to this number aren’t read — reply on your page: [link]”, so replies reach the shop.');
+const bkMsg = (title, when, words, example, subject, { extra = [], second = null } = {}) => popup('bkmsg-title', title, when, `
+<p style="margin: 0; font-size: 15px">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
+${second ? `<h3 style="margin: 0; font-size: 15px; font-weight: 700">${second.first}</h3>` : ''}
+${wordingBox('bkmsg-words', words, 4, [...BK_CHIPS, ...extra])}
+${second ? `<h3 style="margin: 0; font-size: 15px; font-weight: 700">${second.label}</h3>${wordingBox('bkmsg-words-2', second.words, 4, [...BK_CHIPS, ...extra])}` : ''}
+${replyNote}
+${bubble(example)}
+${emailPreview(subject, example)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 640);
+const BK_MESSAGES = {
+  'bk-msg-request': () => bkMsg('Request received', 'When a booking request is sent',
+    'Hi [Customer’s first name], [Shop name] has your request for a [Service] on your [Bike], [Booked day and time]. We’ll let you know when it’s confirmed. See your booking: [Link to the booking] — no app or sign-in needed. Your repair · [Job number].',
+    'Hi Maya, North Street Cycles, Bolton has your request for a Standard service on your Trek Domane AL 3, Thu 17 Sep, 11:30. We’ll let you know when it’s confirmed. See your booking: [link] — no app or sign-in needed. Your repair · WH-1042.',
+    'Your booking request — North Street Cycles, Bolton'),
+  'bk-msg-confirmed': () => bkMsg('Booking confirmed', 'When a booking is accepted, or confirmed straight away',
+    'Hi [Customer’s first name], your [Service] at [Shop name] is booked for [Booked day and time]. [When to drop off] [Your note on the confirmation] See or change your booking: [Link to the booking] — no app or sign-in needed. Your repair · [Job number].',
+    'Hi Maya, your Standard service at North Street Cycles, Bolton is booked for Thu 17 Sep, 11:30. Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking. Please bring the lock key, and tell us about any accessories. See or change your booking: [link] — no app or sign-in needed. Your repair · WH-1042.',
+    'Booking confirmed — North Street Cycles, Bolton', { extra: ['When to drop off', 'Your note on the confirmation'] }),
+  'bk-msg-offered': () => bkMsg('New time offered', 'When the shop suggests another time',
+    'Hi [Customer’s first name], [Shop name] can’t do [Booked day and time] and suggests [Suggested day and time] instead. “[The shop’s message]” Accept it or cancel your request: [Link to the booking]. Your repair · [Job number].',
+    'Hi Maya, North Street Cycles, Bolton can’t do Thu 17 Sep, 11:30 and suggests Sat 19 Sep, [time] instead. “[The shop’s message]” Accept it or cancel your request: [link]. Your repair · WH-1042.',
+    'Another time for your booking — North Street Cycles, Bolton', { extra: ['Suggested day and time', 'The shop’s message'] }),
+  'bk-msg-declined': () => bkMsg('Request declined', 'When the shop can’t fit a booking in',
+    'Hi [Customer’s first name], sorry — [Shop name] can’t fit in your [Service] on [Booked day and time]. “[The shop’s message]” Choose another date: [Link to the booking]. Your repair · [Job number].',
+    'Hi Maya, sorry — North Street Cycles, Bolton can’t fit in your Standard service on Thu 17 Sep, 11:30. “[The shop’s message]” Choose another date: [link]. Your repair · WH-1042.',
+    'About your booking request — North Street Cycles, Bolton', { extra: ['The shop’s message'] }),
+  'bk-msg-change': () => bkMsg('Date change answered', 'When the shop accepts or declines a new date',
+    'Hi [Customer’s first name], [Shop name] has moved your [Service] to [New day and time]. [When to drop off] See your booking: [Link to the booking]. Your repair · [Job number].',
+    'Hi Maya, North Street Cycles, Bolton has moved your Standard service to Fri 25 Sep, [time]. Drop your Trek Domane AL 3 off by [time], half an hour before your booking. See your booking: [link]. Your repair · WH-1042.',
+    'Your new date — North Street Cycles, Bolton',
+    { extra: ['New day and time', 'When to drop off'], second: { first: 'If the shop accepts', label: 'If the shop can’t', words: 'Hi [Customer’s first name], [Shop name] can’t do [New day and time], so your booking stays on [Booked day and time]. See your booking: [Link to the booking]. Your repair · [Job number].' } }),
+  'bk-msg-cancelled': () => bkMsg('Booking cancelled', 'When a booking is cancelled',
+    'Hi [Customer’s first name], your [Service] at [Shop name] on [Booked day and time] is cancelled. There’s nothing to pay or refund. Book another time: [Link to the booking]. Your repair · [Job number].',
+    'Hi Maya, your Standard service at North Street Cycles, Bolton on Thu 17 Sep, 11:30 is cancelled. There’s nothing to pay or refund. Book another time: [link]. Your repair · WH-1042.',
+    'Booking cancelled — North Street Cycles, Bolton'),
+};
+for (const [id, dialog] of Object.entries(BK_MESSAGES)) def(id, () => overlay(msgPage({ list: msgListOpen() }), dialog()));
 def('bk-messages', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 330, tablet: 330, phone: 600 }[SIZE]}px }</style>${msgPage({ list: msgListOpen() }).replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 def('bk-settings', () => settings());
 def('bk-settings-reserve', () => settings(true));
@@ -496,6 +542,12 @@ export const TITLES = {
   'bk-settings-preview': 'Settings › Workshop › Online booking: Preview what the customer sees',
   'bk-staff-decline': 'Declining it refunds the deposit',
   'bk-messages': 'Settings › Front desk › Messages: the booking messages',
+  'bk-msg-request': 'Messages: Request received, its wording',
+  'bk-msg-confirmed': 'Messages: Booking confirmed, its wording',
+  'bk-msg-offered': 'Messages: New time offered, its wording',
+  'bk-msg-declined': 'Messages: Request declined, its wording',
+  'bk-msg-change': 'Messages: Date change answered, its two wordings',
+  'bk-msg-cancelled': 'Messages: Booking cancelled, its wording',
   'bk-settings': 'Settings › Workshop › Online booking',
   'bk-settings-reserve': 'Settings › Workshop › Online booking: the time kept free each day',
   'bk-settings-whole-day': 'Settings › Workshop › Online booking: bikes booked in for the whole day, with the drop-off window',
@@ -511,7 +563,7 @@ export const ROWS = [
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
-  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-preview', 'bk-settings-deposits'] },
+  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-msg-request', 'bk-msg-confirmed', 'bk-msg-offered', 'bk-msg-declined', 'bk-msg-change', 'bk-msg-cancelled', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-preview', 'bk-settings-deposits'] },
 ];
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.
