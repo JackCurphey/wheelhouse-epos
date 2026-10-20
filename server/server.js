@@ -1,6 +1,7 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
 import { hostedCopyRefusal } from './hosted-copy-guard.js';
+import { startSender } from './messaging/engine.js';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -788,6 +789,9 @@ async function waitForPendingShopifyPushes(pendingPushes) {
 // Exported so tests can drive it directly against a fake server/pool without
 // spawning a real process for every assertion; production only ever calls it
 // through the SIGTERM/SIGINT listeners below.
+// The messages engine's timer, stopped first on shutdown.
+let stopMessageSender = null;
+
 export function gracefulShutdown(signal, {
   httpServer = server,
   dbPool = pool,
@@ -803,6 +807,7 @@ export function gracefulShutdown(signal, {
 } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
+  stopMessageSender?.();
 
   // A signal landing before server.listen()'s callback has fired means
   // there is no HTTP server to close and no pool activity belonging to
@@ -935,6 +940,8 @@ if (isMainModule) {
     .then(() => {
       server.listen(PORT, () => {
         serverListening = true;
+        // The messages engine's timer (pretend senders for now).
+        stopMessageSender = startSender();
         console.log(`\n  Wheelhouse running at http://localhost:${PORT}\n`);
       });
     })
