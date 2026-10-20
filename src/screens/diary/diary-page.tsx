@@ -1559,7 +1559,14 @@ export function DiaryPage() {
     }
   });
   const readyForOrder = Boolean(orderFor && mechanics.data && settings.data && jobs.data);
+  // One of them failing would leave the order waiting with nothing said.
+  const notLoaded = [mechanics, settings, jobs].find((q) => q.isError)?.error;
   useEffect(() => {
+    if (orderFor && notLoaded) {
+      setNotice(`Couldn’t open that order: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
+      setOrderFor(null);
+      return;
+    }
     if (!readyForOrder || !orderFor) return;
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
     setOrderFor(null);

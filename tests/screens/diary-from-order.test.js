@@ -83,7 +83,7 @@ function stubServer() {
     if (u.pathname === '/api/customers/5') return reply(200, CUSTOMERS[0]);
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
-    if (u.pathname === '/api/workshop-settings') return reply(200, settings);
+    if (u.pathname === '/api/workshop-settings') return settings ? reply(200, settings) : reply(404, { error: 'Not found' });
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
@@ -207,4 +207,11 @@ test('an order that already has a job opens that job instead', async () => {
 test('?job= for an offered time opens its request pop-up, as its block does', async () => {
   const r = await openDiary('?date=2026-10-05&job=5');
   assert.ok(has(await r.ui.findByRole('dialog', { description: 'Time offered' })));
+});
+
+test('if the diary’s own data can’t load, the order says so instead of waiting for ever', async () => {
+  settings = null;
+  const r = await openDiary('?date=2026-10-05&order=9');
+  assert.ok(has(await r.ui.findByText(/^Couldn’t open that order: /)));
+  assert.equal(has(r.ui.queryByRole('dialog', { name: 'New job' })), false);
 });

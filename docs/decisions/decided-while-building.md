@@ -937,7 +937,7 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    "That order is already [status], so it can't go in the diary." and opens
    nothing. *Pattern:* the order refuses a link once it isn't open, and a
    job made first would be left over with no way to delete it yet.
-2. **No drawing for a New job saved but then not booked in or not linked.**
+2. **No drawing for any New job (an order's or not) saved but then not booked in or not linked.**
    *Decided:* the form closes and the diary's notice says "The job is saved,
    but couldn't be booked in / linked to the order: [reason]". *Pattern:* the
    diary's notice for a booking message that didn't go; keeping the form open
