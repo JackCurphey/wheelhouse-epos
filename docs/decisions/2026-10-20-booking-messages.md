@@ -30,3 +30,9 @@ and their edit box for my approval; sending waits for the messages engine.").
    number, and receiving texts to build), or keep the cheaper shared number
    with replies on the booking page. Not built; flagged for Mark in the
    status file.
+3. **The note on the confirmation stays the one place to write it, and the
+   booking-confirmed text puts it in automatically** (Jack, 20 Oct: "1: keep
+   both, linked: the note box stays the one place to write it, and the text
+   includes it automatically."), through the "Your note on the confirmation"
+   tap-in, as drawn in `bk-msg-confirmed`. Chosen over the note on the page
+   only, and dropping the note box.
