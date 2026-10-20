@@ -1,12 +1,14 @@
 import * as React from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { ApiError } from '@/lib/api/client.ts';
+import { ApiError, apiMutate } from '@/lib/api/client.ts';
+import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
-import { useBookingLink, type BookingLink } from './pending-query.ts';
+import { bookingLinkPath, useBookingLink, type BookingLink } from './pending-query.ts';
 import {
-  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, contactLine, dropOffLine, pageHeading, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, dropOffLine, pageHeading, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -63,7 +65,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       {/* The button's own text already changes for a sighted customer; a screen
           reader user focused elsewhere needs the change announced. */}
       <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
-      <p className="m-0">{contactLine(link.shopName)}</p>
+      <p className="m-0">{link.stage === 'confirmed' && link.canCancel ? changeLine(link.shopName) : contactLine(link.shopName)}</p>
     </>
   );
   const answerList = answers.length > 0 && (
@@ -81,6 +83,22 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   // "Your repair · [reference]" over the bike and the work, then a card with
   // the badge, when to drop off and the note, the rows and the shop's name.
   // Changing and cancelling online come later, so the link and contact lines stay.
+  // A cancelled booking (drawn as bk-cancelled). No texts are sent yet, so
+  // the drawing's "We've sent you a text to confirm." is left out.
+  if (link.stage === 'cancelled') {
+    return (
+      <BookFrame title="Your booking is cancelled" eyebrow="Cancelled">
+        <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+          <p className="m-0 text-[15px] leading-normal">{cancelledLine(link)}</p>
+          <div>
+            <Link to={`/book/${shopSlug}`} className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] px-4 text-sm font-semibold">Book another time</Link>
+          </div>
+          <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
+        </div>
+      </BookFrame>
+    );
+  }
+
   if (link.stage === 'confirmed') {
     const bike = bikeRow(link);
     const row = (label: string, value: React.ReactNode) => (
@@ -113,6 +131,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           )}
           <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
         </div>
+        {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} />}
         {keep}
       </BookFrame>
     );
@@ -151,5 +170,55 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       </div>
       {keep}
     </BookFrame>
+  );
+}
+
+/**
+ * Cancel booking (Jack, 1 Oct, decision 10; 19 Oct; drawn as bk-cancel, with
+ * bk-cancel-ls's words since no shop takes deposits yet): asked once; the
+ * reply replaces the cached link, so the page becomes the cancelled page.
+ */
+function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: string; code: string }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const close = () => { setOpen(false); setError(null); };
+
+  async function cancel() {
+    setBusy(true);
+    setError(null);
+    try {
+      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/cancel`, {}, { method: 'POST' });
+      queryClient.setQueryData(['portal', shopSlug, 'booking-link', code], reply);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t cancel that. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-4">
+      <Button onClick={() => setOpen(true)}>Cancel booking</Button>
+      <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="cancel-title" aria-describedby="cancel-sub">
+        <DialogHeader>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle id="cancel-title">Cancel this booking?</DialogTitle>
+            <span id="cancel-sub" className="text-[13px] text-[var(--wh-muted)]">{cancelSubline(link)}</span>
+          </div>
+          <DialogClose onClick={close} />
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-3">
+          <p className="m-0 text-[15px] leading-normal">There’s nothing to pay or refund.</p>
+          {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
+        </DialogBody>
+        <DialogFooter className="flex justify-between gap-2.5">
+          <Button variant="ghost" onClick={close}>Keep my booking</Button>
+          <Button variant="danger" disabled={busy} onClick={() => void cancel()}>Cancel booking</Button>
+        </DialogFooter>
+      </Dialog>
+    </div>
   );
 }

@@ -41,6 +41,8 @@ export type BookingLink = {
   dropOff?: { by: string; booked: string; leadMinutes: number } | { from: string; to: string } | null;
   // The shop's additional note, once the booking stands (Jack, 19 Oct).
   confirmationNote?: string | null;
+  /** Whether the customer can still cancel online (piece 12; Jack, 19 Oct: Cancel booking). */
+  canCancel?: boolean;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
 };
