@@ -177,7 +177,9 @@ purple badge, Change the date (a request moves at once) and Cancel request
 (#308); screens only. Then the six booking messages' wording and edit boxes,
 drawn and approved (#310, `docs/decisions/2026-10-20-booking-messages.md`):
 the booking-confirmed text puts in the shop's note; sending waits for the
-messages engine (WP-1.8). Then Files and photos on the job page,
+messages engine (WP-1.8). Then a shop's own booking terms in Settings › Online booking:
+Use your own, from the standard terms, and Go back to Wheelhouse's (#312);
+screens only. Online booking now has everything drawn except deposits. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
