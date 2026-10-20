@@ -214,3 +214,19 @@ test('deleting a job that does not exist is a 404, not a crash', async () => {
     await deleteTestShop(shop.id);
   }
 });
+
+// New job's "Note for the customer" (Jack, 20 Oct,
+// docs/decisions/2026-10-20-new-job-customer-note.md): what the customer tells
+// us about the problem, kept as the job's "From the customer".
+test('New job keeps what the customer told us as the job’s From the customer; blank is none; too long is refused', async () => {
+  const { cookie, mechanicId } = await newShop();
+  const made = await createJob(cookie, mechanicId, { customerDescription: '  Rear brake squeals and feels weak.  ' });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  assert.equal(made.body.customerDescription, 'Rear brake squeals and feels weak.');
+  const blank = await createJob(cookie, mechanicId, { customerDescription: '   ', startTime: '13:00', endTime: '14:00' });
+  assert.equal(blank.body.customerDescription, null);
+  const long = await createJob(cookie, mechanicId, { customerDescription: 'x'.repeat(2001), startTime: '15:00', endTime: '16:00' });
+  assert.equal(long.status, 400);
+  const wrong = await createJob(cookie, mechanicId, { customerDescription: 42, startTime: '16:00', endTime: '17:00' });
+  assert.equal(wrong.status, 400);
+});

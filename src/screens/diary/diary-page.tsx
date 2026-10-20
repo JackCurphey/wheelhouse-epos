@@ -966,7 +966,7 @@ export function DiaryPage() {
   const session = useSession();
   // "Print receipt" (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md):
   // the paid order names its sale; that sale is the receipt.
-  async function printJobReceipt(j: { orderId: number | null; reference: string; bikeLabel?: string | null; signedOffByName?: string | null }) {
+  async function printJobReceipt(j: { orderId: number | null; reference: string; bikeLabel?: string | null; signedOffByName?: string | null; customerDescription?: string | null }) {
     setMoveError(null);
     try {
       const order = await apiGet<{ convertedSaleId: number | null }>(`/api/sale-documents/${j.orderId}`);
@@ -974,7 +974,7 @@ export function DiaryPage() {
       const sale = await apiGet<ReceiptSale>(`/api/sales/${order.convertedSaleId}`);
       // The shop's address, phone and VAT number (Shop details, 18 Oct).
       const details = await queryClient.fetchQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails & { name: string }>('/api/shop-details') }).catch(() => undefined);
-      printReceipt({ details, sale, shopName: details?.name ?? (session.status === 'signed-in' ? session.shop.name : ''), job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null, checkedBy: settings.data?.showSignOffToCustomers ? j.signedOffByName ?? null : null } });
+      printReceipt({ details, sale, shopName: details?.name ?? (session.status === 'signed-in' ? session.shop.name : ''), job: { reference: j.reference, bikeLabel: j.bikeLabel ?? null, customerWords: j.customerDescription ?? null, checkedBy: settings.data?.showSignOffToCustomers ? j.signedOffByName ?? null : null } });
     } catch {
       setMoveError('Wheelhouse couldn’t get this job’s receipt to print. Try again in a moment.');
     }

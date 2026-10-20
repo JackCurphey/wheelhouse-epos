@@ -149,7 +149,7 @@ test('a customer is found by name and their bike chosen; saving creates the job'
   r.fireEvent.click(form.getByRole('radio', { name: 'Standard service · 90 min' }));
   r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
   await r.waitFor(() => assert.equal(has(r.ui.queryByRole('dialog')), false));
-  assert.deepEqual(posts(), ['/api/workshop-jobs {"title":"Standard service","jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30","customerId":5,"bikeId":7,"mechanicId":12,"status":"scheduled","notes":"","plannedMinutes":90}']);
+  assert.deepEqual(posts(), ['/api/workshop-jobs {"title":"Standard service","jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30","customerId":5,"bikeId":7,"mechanicId":12,"status":"scheduled","notes":"","customerDescription":"","plannedMinutes":90}']);
 });
 
 test('"The bike is here now" books it in straight after saving', async () => {
@@ -601,3 +601,23 @@ test('focus goes to Make when the fields open, back to + Add a bike on Cancel, a
   r.fireEvent.click(form.getByRole('button', { name: 'Add bike' }));
   await r.waitFor(() => assert.ok(document.activeElement === form.getByLabelText('Bike')));
 });
+
+// "Note for the customer" (Jack, 20 Oct, docs/decisions/2026-10-20-new-job-customer-note.md):
+// what the customer tells us about the problem, printed on their receipt;
+// staff notes keep their own box, "Staff notes", as drawn.
+test('New job keeps what the customer told us apart from staff notes, and saves it', async () => {
+  const r = await openDiary();
+  const form = await withMaya(r);
+  assert.ok(has(form.queryByText('Printed on their receipt.')));
+  assert.ok(has(form.queryByLabelText('Staff notes')));
+  r.fireEvent.click(await form.findByRole('radio', { name: 'Full service' }));
+  r.fireEvent.click(form.getByRole('radio', { name: 'Standard service · 90 min' }));
+  r.fireEvent.change(form.getByLabelText('Note for the customer'), { target: { value: 'Rear brake squeals and feels weak.' } });
+  r.fireEvent.change(form.getByLabelText('Staff notes'), { target: { value: 'Collect after work.' } });
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.equal(posts().length, 1));
+  const body = calls.find((c) => c.method === 'POST').body;
+  assert.equal(body.customerDescription, 'Rear brake squeals and feels weak.');
+  assert.equal(body.notes, 'Collect after work.');
+});
+

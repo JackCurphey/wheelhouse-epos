@@ -57,6 +57,22 @@ test('a job\'s receipt: the shop, the sale, the job and bike, the lines, the tot
   assert.ok(bars.querySelectorAll('rect').length > 10);
 });
 
+// What the customer told us, under the job (Jack, 20 Oct,
+// docs/decisions/2026-10-20-new-job-customer-note.md: "printed on their receipt").
+test('a job\'s receipt prints what the customer told us under the job', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', job: { reference: 'WH-1042', bikeLabel: 'Trek Domane AL 3', customerWords: 'Rear brake squeals and feels weak.' } });
+  const t = text(paper);
+  const job = t.indexOf('WH-1042 · Trek Domane AL 3');
+  const words = t.indexOf('From the customer: Rear brake squeals and feels weak.');
+  assert.ok(job >= 0 && words > job, `under the job in: ${t}`);
+  assert.ok(words < t.indexOf('Standard service'), 'before the lines');
+});
+
+test('with nothing from the customer, no line', async () => {
+  const paper = await render({ sale: JOB_SALE, shopName: 'North Street Cycles', job: { reference: 'WH-1042', bikeLabel: 'Trek Domane AL 3', customerWords: null } });
+  assert.equal(/From the customer/.test(text(paper)), false);
+});
+
 test('a till sale: quantities, the discount, and cash and card each with its amount', async () => {
   const paper = await render({ sale: { ...TILL_SALE, groupDiscountAmount: 0 }, shopName: 'North Street Cycles' });
   const t = text(paper);

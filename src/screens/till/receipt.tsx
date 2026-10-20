@@ -27,8 +27,12 @@ export type ReceiptSale = {
   /** Tenders the shop added (the old app's extra payments), each by its own name. */
   extraPayments?: { tenderType: string; amount: number }[];
 };
-/** checkedBy: who signed the job off, only when the shop shows it (mechanic sign-off piece 3). */
-export type ReceiptJob = { reference: string; bikeLabel: string | null; checkedBy?: string | null };
+/**
+ * checkedBy: who signed the job off, only when the shop shows it (mechanic sign-off piece 3).
+ * customerWords: what the customer told us about the problem (Jack, 20 Oct,
+ * docs/decisions/2026-10-20-new-job-customer-note.md: "printed on their receipt").
+ */
+export type ReceiptJob = { reference: string; bikeLabel: string | null; checkedBy?: string | null; customerWords?: string | null };
 /** The shop's details from Settings › Shop details (Jack, 18 Oct); each left out when blank. */
 export type ShopDetails = { address?: string | null; phone?: string | null; vatNumber?: string | null; receiptFooter?: string | null };
 export type ReceiptProps = { sale: ReceiptSale; shopName: string; job?: ReceiptJob; details?: ShopDetails };
@@ -70,6 +74,7 @@ export function ReceiptPaper({ sale, shopName, job, details }: ReceiptProps) {
       </div>
       <div className="flex flex-col gap-1 border-t border-dashed border-current pt-2">
         {job ? <span className="font-bold">{job.bikeLabel ? `${job.reference} · ${job.bikeLabel}` : job.reference}</span> : null}
+        {job?.customerWords ? <span className="whitespace-pre-wrap">{`From the customer: ${job.customerWords}`}</span> : null}
         {job?.checkedBy ? <span>{`Checked by ${job.checkedBy}`}</span> : null}
         {sale.items.map((it) => (
           <Row key={it.id} left={it.qty > 1 ? `${it.name} ${it.qty} × ${money(it.unitPrice)}` : it.name} right={money(it.lineTotal)} />
