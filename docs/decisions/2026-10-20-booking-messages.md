@@ -36,3 +36,8 @@ and their edit box for my approval; sending waits for the messages engine.").
    includes it automatically."), through the "Your note on the confirmation"
    tap-in, as drawn in `bk-msg-confirmed`. Chosen over the note on the page
    only, and dropping the note box.
+4. **The six booking messages' wording and their edit boxes are approved**
+   (Jack, 20 Oct: "Approve the six booking messages' wording and their edit
+   boxes."). They are built with the messages engine (WP-1.8) and the booking
+   messages' triggers (WP-4.4); until then nothing is sent, and the booking
+   pages don't promise a text.
