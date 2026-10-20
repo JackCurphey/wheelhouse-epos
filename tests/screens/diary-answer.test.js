@@ -173,6 +173,10 @@ test('the mechanic pills are one Tab stop, and the arrow keys move and pick, wra
   assert.ok(document.activeElement === alex, 'wraps to the first');
   assert.equal(alex.tabIndex, 0);
   assert.equal(queue.tabIndex, -1);
+  // A browser shortcut (Alt+arrow) is left alone.
+  r.fireEvent.keyDown(alex, { key: 'ArrowLeft', altKey: true });
+  assert.ok(document.activeElement === alex);
+  assert.equal(alex.getAttribute('aria-checked'), 'true');
   r.fireEvent.keyDown(alex, { key: 'End' });
   await r.waitFor(() => assert.equal(queue.getAttribute('aria-checked'), 'true'));
   assert.ok(document.activeElement === queue);

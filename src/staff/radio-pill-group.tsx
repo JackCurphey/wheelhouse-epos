@@ -8,7 +8,8 @@ import * as React from 'react';
  * pills do (diary.mjs mechanicPill's roving tabindex). By default the pill
  * moved to is also picked, as a radio is; `pickOnMove={false}` only moves, for
  * a group whose choice opens a question (Space or Enter then picks, as for any
- * button). Disabled pills are skipped.
+ * button) — and for one whose choice is saved at once. Disabled pills are
+ * skipped, and an arrow with Alt, Ctrl or Cmd is left to the browser.
  */
 export type RadioPillGroupProps = React.ComponentProps<'div'> & { pickOnMove?: boolean };
 
@@ -33,7 +34,8 @@ export function RadioPillGroup({ pickOnMove = true, onKeyDown, children, ...prop
 
   function move(e: React.KeyboardEvent<HTMLDivElement>) {
     onKeyDown?.(e);
-    if (e.defaultPrevented) return;
+    // Alt, Ctrl or Cmd with an arrow is the browser's or the system's, not ours.
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     const radios = radiosIn(ref.current);
     const at = radios.indexOf(document.activeElement as HTMLElement);
     if (at < 0) return;

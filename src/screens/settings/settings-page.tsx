@@ -389,7 +389,7 @@ function NoticeSetting() {
           <label htmlFor="notice" className="text-[15px] font-semibold">Notice</label>
           <span id="notice-h" className="text-[13px] text-[var(--wh-muted)]">How far ahead customers must book</span>
         </span>
-        <span className="inline-flex items-center gap-2 text-sm">
+        <div className="inline-flex items-center gap-2 text-sm">
           <input
             id="notice"
             aria-describedby="notice-h"
@@ -400,8 +400,8 @@ function NoticeSetting() {
             onBlur={() => void save(unit)}
             className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
           />
-          <RadioPillGroup aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</RadioPillGroup>
-        </span>
+          <RadioPillGroup pickOnMove={false} aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</RadioPillGroup>
+        </div>
       </div>
       <p className="m-0 text-sm text-[var(--wh-muted)]">{unit === 'days'
         ? 'Days: a customer can book from that many days on, whatever the time now. 1 day lets them book any time tomorrow.'

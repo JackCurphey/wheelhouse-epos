@@ -414,6 +414,18 @@ test('the booking mode pills move with the arrow keys without choosing', async (
   assert.ok(ui.queryByRole('dialog', { name: 'Book bikes in for the whole day?' }) === null, 'moving opens nothing');
 });
 
+test('the Notice pills move with the arrow keys without saving', async () => {
+  const { ui, fireEvent } = await openSettings();
+  const group = await ui.findByRole('radiogroup', { name: 'Notice in' });
+  const radios = [...group.querySelectorAll('[role="radio"]')];
+  const on = radios.find((r) => r.getAttribute('aria-checked') === 'true');
+  on.focus();
+  const before = calls.filter((c) => c.method === 'PUT').length;
+  fireEvent.keyDown(on, { key: 'ArrowRight' });
+  assert.ok(document.activeElement !== on, 'focus moved');
+  assert.equal(calls.filter((c) => c.method === 'PUT').length, before, 'nothing saved');
+});
+
 test('choosing the whole day asks from when; the change then shows, with the window', async () => {
   const { ui, fireEvent, waitFor, within } = await openSettings();
   fireEvent.click(await ui.findByRole('radio', { name: 'The whole day' }));
