@@ -702,6 +702,21 @@ silent:
    ("[suggested day], [service] for your [bike]"), the booking the customer
    was answering. *Pattern:* bk-cancelled (fresh review).
 
+### 20 Oct 2026: declining with a message (Workshop day 15; Jack, 20 Oct: "2")
+
+1. **The message starts "Sorry, we can't fit this service in on [the weekday
+   asked for]. Please try another day, or call us and we'll help find one."**
+   The drawing's example suggested a particular day; the shop now types that
+   itself. *Pattern:* request-decline's message, without a day the shop
+   hasn't chosen.
+2. **"Decline & notify customer" keeps the drawn name**: the customer sees the
+   message on their booking page now, and by text once the messages engine
+   is built. *Pattern:* request-decline.
+3. **The declined page leaves off the deposit line and "— we've kept your
+   details"** (no deposits yet; the booking flow doesn't keep the details);
+   with no message, there's no quote. *Pattern:* bk-declined, saying nothing
+   that isn't true.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

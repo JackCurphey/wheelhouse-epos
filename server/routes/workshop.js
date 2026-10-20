@@ -700,6 +700,14 @@ export function register(route) {
       if (!Number.isInteger(body.version)) {
         return badRequest(res, VERSION_REQUIRED);
       }
+      // A decline may carry a message for the customer (Workshop day 15; Jack,
+      // 20 Oct), checked before anything moves.
+      let declineMessage = null;
+      if (machine === bookingRequest && event === 'decline' && body.message !== undefined && body.message !== null) {
+        if (typeof body.message !== 'string') return badRequest(res, 'The message must be text');
+        declineMessage = body.message.trim();
+        if (declineMessage.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
+      }
       // A customer's change request is answered with accept-change or
       // decline-change (piece 12): plain accept/decline would return the job to
       // scheduled without moving it or telling the customer.
@@ -750,6 +758,9 @@ export function register(route) {
         // (piece 12). Only if nothing has written the job since this event: a
         // customer's request made after it is theirs to keep.
         await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST} WHERE id = ? AND version = ?`).run(id, result.job.version);
+      }
+      if (machine === bookingRequest && event === 'decline') {
+        await db.prepare('UPDATE workshop_jobs SET decline_message = ? WHERE id = ?').run(declineMessage || null, id);
       }
       // A staff cancellation never shows in "Waiting for you" (piece 12), and
       // the link no longer speaks of a declined change.

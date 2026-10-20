@@ -66,7 +66,7 @@ for (const [stage, words] of [
   ['ready_to_collect', 'Ready to collect'],
   ['collected', 'Collected'],
   ['change_requested', 'Your bike · Brake service and 1 more'],
-  ['declined', 'Declined'],
+  ['declined', 'Sorry, we can’t fit this booking in'],
   ['cancelled', 'Your booking is cancelled'],
   ['request_expired', 'Request expired'],
 ]) {

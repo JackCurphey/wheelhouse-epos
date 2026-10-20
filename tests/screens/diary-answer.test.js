@@ -125,22 +125,30 @@ test('Accept accepts the booking with the version seen, closes the pop-up and re
   await r.waitFor(() => assert.ok(calls.filter((c) => c.url === '/api/workshop-waiting').length > before));
 });
 
-test('Decline asks first; Keep booking changes nothing', async () => {
+// Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as request-decline).
+const DECLINE_WORDS = 'Sorry, we can’t fit this service in on Friday. Please try another day, or call us and we’ll help find one.';
+test('Decline opens the message to the customer, started for them; Keep request changes nothing', async () => {
   const r = await openDiary();
   const dlg = await openCard(r, 'Sam Reed');
   r.fireEvent.click(dlg.getByRole('button', { name: 'Decline' }));
-  assert.ok(has(dlg.queryByText("Decline Sam Reed's booking for Fri 9 Oct? This can't be undone.")));
-  r.fireEvent.click(dlg.getByRole('button', { name: 'Keep booking' }));
+  assert.ok(has(dlg.queryByText('Explain what the customer can do next')));
+  assert.equal(dlg.getByLabelText('Message to Sam').value, DECLINE_WORDS);
+  assert.ok(has(dlg.queryByText('Declining releases the request’s reservation. The customer is told not to travel for this request.')));
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Keep request' }));
   assert.ok(has(dlg.queryByRole('button', { name: 'Accept' })));
   assert.deepEqual(posted(), []);
 });
 
-test('confirming Decline declines the booking', async () => {
+test('Decline & notify customer declines the booking with the message', async () => {
   const r = await openDiary();
   const dlg = await openCard(r, 'Sam Reed');
   r.fireEvent.click(dlg.getByRole('button', { name: 'Decline' }));
-  r.fireEvent.click(dlg.getByRole('button', { name: 'Decline booking' }));
-  await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/3/decline {"version":4}']));
+  r.fireEvent.change(dlg.getByLabelText('Message to Sam'), { target: { value: 'Fully booked that week, sorry.' } });
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Decline & notify customer' }));
+  await r.waitFor(() => assert.equal(posted().length, 1));
+  const post = calls.find((c) => c.method === 'POST');
+  assert.equal(new URL(post.url, 'http://localhost').pathname, '/api/workshop-jobs/3/decline');
+  assert.deepEqual(post.body, { message: 'Fully booked that week, sorry.', version: 4 });
 });
 
 test('a change request shows where from and to, and Accept moves it', async () => {
