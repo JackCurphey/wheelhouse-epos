@@ -8,8 +8,8 @@
 
 ## 2. Staff screens — Jack
 
-- [ ] 2.1 Tests first, watched failing: Offer another time opens pick mode; Cancel returns; a free time opens the offer pop-up; Offer this time posts; the diary draws Time offered without Accept/Decline
-- [ ] 2.2 The request pop-up's button, pick mode, the offer pop-up, the offered diary state
+- [x] 2.1 Tests first, watched failing: Offer another time opens pick mode; Cancel returns; a free time opens the offer pop-up; Offer this time posts; the diary draws Time offered without Accept/Decline
+- [x] 2.2 The request pop-up's button, pick mode, the offer pop-up, the offered diary state
 - [ ] 2.3 A fresh review; tests pass; merged
 
 ## 3. Customer page — Jack

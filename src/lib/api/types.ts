@@ -33,6 +33,8 @@ export type WorkshopJob = {
   status: string;
   reference: string;
   bookingState: string;
+  /** The job's planned length in minutes (an online booking's services' total). */
+  plannedMinutes?: number | null;
   custodyState: string;
   workState: string;
   /** Echoed on every action; see jobAction in client.ts. */
