@@ -133,3 +133,32 @@ test('the job page itself shows no messages', async () => {
   await dlg.findByRole('button', { name: 'Message Maya Patel' });
   assert.equal(has(dlg.queryByText(READY)), false);
 });
+
+test('every other state has its words: Sending, Sent, Not sure it went, and going now once its time has passed', async () => {
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const { pop } = await openMessages([
+    msg({ id: 9, state: 'unknown', sentAt: null, pretend: false }),
+    msg({ id: 8, state: 'delivered', pretend: false }),
+    msg({ id: 7, state: 'sending', sentAt: null, pretend: false }),
+    msg({ id: 6, state: 'intended', sendAfter: past, sentAt: null, pretend: false }),
+  ]);
+  const words = (await items(pop)).map((li) => li.textContent);
+  assert.match(words[0], /^Bike readyWaiting.*· going now$/);
+  assert.match(words[1], /^Bike readySending.*· going now$/);
+  assert.match(words[2], /^Bike readySent.*· Thu 17 Sep, 15:31$/);
+  assert.match(words[3], /^Bike readyNot sure it went/);
+});
+
+test('closing Messages puts focus back on the Message button', async () => {
+  const { ui, pop, fireEvent, waitFor } = await openMessages([msg({})]);
+  fireEvent.click(pop.getByRole('button', { name: 'Close' }));
+  await waitFor(() => assert.equal(has(ui.queryByRole('dialog', { name: 'Messages' })), false));
+  await waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Message Maya Patel'));
+});
+
+test('with no messages there is no empty list, and the button asks for up to 200', async () => {
+  const { pop } = await openMessages([]);
+  await pop.findByText('No messages yet.');
+  assert.equal(has(pop.queryByRole('list', { name: 'Messages with Maya Patel' })), false);
+  assert.ok(calls.some((c) => c.url.includes('/api/messages?jobId=1&limit=200')));
+});

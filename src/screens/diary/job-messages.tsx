@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
@@ -35,21 +35,29 @@ const clock = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Eur
 // The state's word and colour, and what follows "By text to …".
 function describe(m: JobMessage): { word: string; tone: keyof typeof TONE; when: string } {
   switch (m.state) {
-    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.sendAfter ? `goes at ${clock(m.sendAfter)}` : 'waiting' };
+    // Past its time and not yet claimed by the sender's next round.
+    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? `goes at ${clock(m.sendAfter)}` : 'going now' };
     case 'sending': return { word: 'Sending', tone: 'amber', when: 'going now' };
     case 'delivered': return { word: m.pretend ? 'Pretend' : 'Sent', tone: m.pretend ? 'grey' : 'green', when: signedOffWhen(m.sentAt ?? m.createdAt) };
     case 'undone': return { word: 'Undone', tone: 'grey', when: 'stopped with Undo' };
     case 'failed': return { word: 'Not sent', tone: 'red', when: m.error ?? 'it couldn’t go' };
+    case 'unknown':
     default: return { word: 'Not sure it went', tone: 'red', when: 'the server stopped while sending it' };
   }
 }
 
 export function JobMessagesButton({ jobId, customerName, title, reference }: { jobId: number; customerName: string; title: string; reference: string | null }) {
   const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  // Back to the button when Messages closes, however it closes.
+  function close() {
+    setOpen(false);
+    setTimeout(() => button.current?.focus(), 0);
+  }
   return (
     <>
       <button
-        type="button" aria-label={`Message ${customerName}`} onClick={() => setOpen(true)}
+        ref={button} type="button" aria-label={`Message ${customerName}`} title={`Message ${customerName}`} onClick={() => setOpen(true)}
         className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] hover:bg-[var(--wh-hover)]"
       >
         {/* The drawing's inbox icon (job-page.mjs). */}
@@ -58,7 +66,7 @@ export function JobMessagesButton({ jobId, customerName, title, reference }: { j
           <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
         </svg>
       </button>
-      {open ? <MessagesDialog jobId={jobId} customerName={customerName} title={title} reference={reference} onClose={() => setOpen(false)} /> : null}
+      {open ? <MessagesDialog jobId={jobId} customerName={customerName} title={title} reference={reference} onClose={close} /> : null}
     </>
   );
 }
@@ -66,7 +74,7 @@ export function JobMessagesButton({ jobId, customerName, title, reference }: { j
 function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jobId: number; customerName: string; title: string; reference: string | null; onClose: () => void }) {
   const messages = useQuery({
     queryKey: jobMessagesKey(jobId),
-    queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}`),
+    queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
     // While one waits its minute, look again so it shows when it's gone.
     refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'intended' || m.state === 'sending') ? 5000 : false),
   });
@@ -74,7 +82,9 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
   // The server lists newest first; a conversation reads oldest first.
   const thread = [...(messages.data ?? [])].reverse();
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="job-msgs-title" className="md:max-w-[600px]">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="job-msgs-title"
+      // Full screen on a phone, as drawn (job-messages-phone).
+      className="md:max-w-[600px] max-md:open:flex max-md:h-full max-md:max-h-none max-md:max-w-none max-md:flex-col max-md:rounded-none">
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="job-msgs-title">Messages</DialogTitle>
@@ -84,11 +94,11 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </DialogHeader>
-      <DialogBody className="flex flex-col gap-3.5">
+      <DialogBody className="flex flex-col gap-3.5 max-md:min-h-0 max-md:grow max-md:overflow-y-auto">
         <p className="m-0 text-sm text-[var(--wh-muted)]">{`Pretend for now: each shows what ${first} would get. Nothing is really sent.`}</p>
         {messages.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
         {messages.data && !thread.length ? <p className="m-0 text-sm">No messages yet.</p> : null}
-        <ol aria-label={`Messages with ${customerName}`} className="m-0 flex list-none flex-col gap-3.5 p-0">
+        {thread.length ? <ol aria-label={`Messages with ${customerName}`} className="m-0 flex list-none flex-col gap-3.5 p-0">
           {thread.map((m) => (m.direction === 'inbound' ? (
             <li key={m.id} data-from="customer" className="flex flex-col items-start gap-1">
               <span className="text-[13px] font-bold">{first}</span>
@@ -98,7 +108,7 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
           ) : (
             <ShopMessage key={m.id} m={m} />
           )))}
-        </ol>
+        </ol> : null}
       </DialogBody>
     </Dialog>
   );
