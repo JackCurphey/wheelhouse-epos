@@ -24,13 +24,13 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
 ## 2. The hosted-copy guard, Shopify switched off, and the commit in the health check (Mark; after WP-0.4)
 
-- [ ] 2.1 Write tests first for the `WHEELHOUSE_HOSTED_COPY=1` start-up guard, and watch each fail because the guard doesn't exist yet:
+- [x] 2.1 Write tests first for the `WHEELHOUSE_HOSTED_COPY=1` start-up guard, and watch each fail because the guard doesn't exist yet:
   - it refuses with any `TWILIO_*` setting;
   - it refuses without `NODE_ENV=production`;
   - it refuses with `DB_TENANT_SCOPE=transaction`;
   - each refusal comes before any migration runs and names the setting;
   - it starts with none of these.
-- [ ] 2.2 Add the guard before `runMigrations()` in the start-up order, with the known real-key list starting at Twilio. Verify the 2.1 tests pass
+- [x] 2.2 Add the guard before `runMigrations()` in the start-up order, with the known real-key list starting at Twilio. Verify the 2.1 tests pass
 - [ ] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off
 - [ ] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
 - [ ] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail
