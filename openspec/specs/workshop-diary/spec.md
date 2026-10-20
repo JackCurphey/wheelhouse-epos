@@ -984,3 +984,10 @@ The request pop-up SHALL offer "Offer another time", which puts the diary in pic
 #### Scenario: Picking a time
 - **WHEN** Jo presses Offer another time on Sam's request and clicks Friday at 12:00 in Alex's column
 - **THEN** the offer pop-up shows "Friday 18 September, 12:00 · Alex Morgan" with Message to Sam
+
+### Requirement: Staff decline a request with a message
+Declining a booking request SHALL ask staff to explain what the customer can do next, in a message started for them, and send it with the decline (Workshop day 15; Jack, 20 Oct).
+
+#### Scenario: Declining Sam's request
+- **WHEN** Jo presses Decline on Sam's request, edits the message and presses Decline & notify customer
+- **THEN** the request is declined and the message kept for Sam
