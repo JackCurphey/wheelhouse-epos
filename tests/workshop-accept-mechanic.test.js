@@ -81,3 +81,21 @@ test('an unknown mechanic is refused', async () => {
   assert.equal(res.status, 400);
   assert.equal((await read(booked.id)).bookingState, 'pending');
 });
+
+test('an out-of-date accept is told the job changed, before any mechanic check', async () => {
+  const day = nextDay();
+  const busy = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Already booked', jobDate: day, startTime: '15:00', endTime: '16:00', mechanicId: alex } });
+  assert.equal(busy.status, 201, JSON.stringify(busy.body));
+  const booked = await book(day, '15:00');
+  const seen = (await read(booked.id)).version;
+  const res = await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version: seen - 1, mechanicId: alex } });
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'stale');
+});
+
+test('the accept answers with the job as it now is', async () => {
+  const booked = await book(nextDay(), '16:00');
+  const res = await accept(booked.id, { mechanicId: alex });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.version, (await read(booked.id)).version);
+});

@@ -829,6 +829,11 @@ silent:
    built (#261).
 2. **A mechanic busy at the booked time is refused with the job save's own
    words**, and the request stays waiting. *Pattern:* the job's save.
+3. **Every active mechanic has a pill, including one not working that day**;
+   accepting for them is refused with the save's "does not work that day".
+   *Pattern:* Change details' pills. Moving between pills with the arrow keys
+   (one Tab stop for the group, as the drawing's pills have) is a follow-up
+   for the shared pill.
 
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 

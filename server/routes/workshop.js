@@ -821,13 +821,12 @@ export function register(route) {
           throw err;
         }
       } else if (acceptMechanic !== undefined) {
-        // Under the day's lock: the mechanic must be free at the booked time,
-        // then the accept, then the move, together (as the job's save does).
-        const day = await db.prepare('SELECT job_date FROM workshop_jobs WHERE id = ?').get(id);
-        if (!day) return notFound(res, 'Job not found');
+        // Under the job's day lock (re-read if it moves meanwhile): the version
+        // first, then the mechanic free at the booked time, then the accept,
+        // the move and its held time, together (as the job's save does).
         try {
-          result = await withBookingLock([day.job_date], async () => {
-            const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
+          result = await withJobBookingLock(id, [], async (current) => {
+            if (current.version !== body.version) return { refused: staleRefusal };
             const moving = current.mechanic_id !== acceptMechanic;
             if (moving) {
               const slotError = await checkJobSlot({
@@ -836,15 +835,16 @@ export function register(route) {
               if (slotError) return { refused: refusal(slotError.error) };
             }
             const accepted = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
-            if (accepted.ok && moving) {
-              await db.prepare('UPDATE workshop_jobs SET mechanic_id = ?, version = version + 1, updated_at = now() WHERE id = ?').run(acceptMechanic, id);
-            }
-            return accepted;
+            if (!accepted.ok || !moving) return accepted;
+            await db.prepare('UPDATE workshop_jobs SET mechanic_id = ?, version = version + 1, updated_at = now() WHERE id = ?').run(acceptMechanic, id);
+            await syncJobHold(id);
+            return { ...accepted, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
           });
         } catch (err) {
           if (err.code !== '23505') throw err;
           result = { refused: capacityRefusal(SLOT_GONE) };
         }
+        if (result.gone) return notFound(res, 'Job not found');
         if (result.refused) return sendJson(res, result.refused.status, result.refused.body);
       } else {
         result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });

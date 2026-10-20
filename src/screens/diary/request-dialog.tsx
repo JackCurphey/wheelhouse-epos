@@ -142,13 +142,15 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
           <strong className="text-sm">{(item.serviceNames ?? []).join(', ') || job?.title}</strong>
           <span className="text-[13px] text-[var(--wh-muted)]">{`Requested ${when(item)}`}</span>
         </div>
-        <div className="flex flex-col gap-1.5">
+        {mechanics.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the mechanics. Accept keeps the request’s own.</p> : null}
+        {/* Shown once the job and the mechanics are in, so nothing looks picked that isn't. */}
+        {job && mechanics.isSuccess ? <div className="flex flex-col gap-1.5">
           <span id="req-mech" className="text-sm font-semibold">Mechanic</span>
           <div role="radiogroup" aria-labelledby="req-mech" className="flex flex-wrap gap-1.5">
             {people.map((p) => <Pill key={p.id} on={mech === p.id} onClick={() => setChosenMech(p.id)}>{p.name}</Pill>)}
             <Pill on={mech === null} onClick={() => setChosenMech(null)}>Shared queue</Pill>
           </div>
-        </div>
+        </div> : null}
       </>
     );
     if (confirmDecline) {

@@ -141,6 +141,22 @@ test('the request shows the mechanic pills with its own picked; choosing one sen
   await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/3/accept {"mechanicId":11,"version":4}']));
 });
 
+test('a request with its mechanic already set has that pill picked; keeping it sends no change', async () => {
+  const keep = JOBS.find((j) => j.id === 3);
+  const i = JOBS.indexOf(keep);
+  JOBS[i] = { ...keep, mechanicId: 11, mechanicName: 'Alex Morgan' };
+  try {
+    const r = await openDiary();
+    const dlg = await openCard(r, 'Sam Reed');
+    const group = await dlg.findByRole('radiogroup', { name: 'Mechanic' });
+    await r.waitFor(() => assert.equal(r.within(group).getByRole('radio', { name: 'Alex Morgan' }).getAttribute('aria-checked'), 'true'));
+    r.fireEvent.click(dlg.getByRole('button', { name: 'Accept' }));
+    await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/3/accept {"version":4}']));
+  } finally {
+    JOBS[i] = keep;
+  }
+});
+
 // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as request-decline).
 const DECLINE_WORDS = 'Sorry, we can’t fit this service in on Friday. Please try another day, or call us and we’ll help find one.';
 test('Decline opens the message to the customer, started for them; Keep request changes nothing', async () => {
