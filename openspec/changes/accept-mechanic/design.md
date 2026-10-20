@@ -1,0 +1,3 @@
+# Design
+- `POST /api/workshop-jobs/:id/accept` takes an optional `mechanicId` (a mechanic's id, or null for the shared queue). Absent: as before. Unknown or inactive: 400. Otherwise, under `withBookingLock([the job's day])`: read the job, `checkJobSlot` for that mechanic at its time (ignoring itself), `applyEvent` accept, then `mechanic_id` set; `syncJobHold` follows as for every action. A clash returns the save's refusal (400, "That mechanic is already booked …").
+- The pop-up loads `/api/employees?role=mechanic` (as Change details does) and uses Change details' `Pill`; Accept sends `mechanicId` only when the pick differs from the request's.

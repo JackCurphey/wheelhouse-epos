@@ -125,6 +125,22 @@ test('Accept accepts the booking with the version seen, closes the pop-up and re
   await r.waitFor(() => assert.ok(calls.filter((c) => c.url === '/api/workshop-waiting').length > before));
 });
 
+// Choosing the mechanic as you accept (Workshop day decision 62; drawn on
+// request-new): pills for the shop's mechanics and the shared queue, the
+// request's own picked.
+test('the request shows the mechanic pills with its own picked; choosing one sends it with Accept', async () => {
+  const r = await openDiary();
+  const dlg = await openCard(r, 'Sam Reed');
+  const group = await dlg.findByRole('radiogroup', { name: 'Mechanic' });
+  const pills = r.within(group).getAllByRole('radio');
+  assert.deepEqual(pills.map((p) => p.textContent), ['Alex Morgan', 'Shared queue']);
+  assert.equal(r.within(group).getByRole('radio', { name: 'Shared queue' }).getAttribute('aria-checked'), 'true');
+  r.fireEvent.click(r.within(group).getByRole('radio', { name: 'Alex Morgan' }));
+  assert.equal(r.within(group).getByRole('radio', { name: 'Alex Morgan' }).getAttribute('aria-checked'), 'true');
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Accept' }));
+  await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/3/accept {"mechanicId":11,"version":4}']));
+});
+
 // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as request-decline).
 const DECLINE_WORDS = 'Sorry, we can’t fit this service in on Friday. Please try another day, or call us and we’ll help find one.';
 test('Decline opens the message to the customer, started for them; Keep request changes nothing', async () => {

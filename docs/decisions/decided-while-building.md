@@ -822,6 +822,14 @@ silent:
    database runs one transaction per request (`DB_TENANT_SCOPE=transaction`).
    Neither can happen while pretend.
 
+### 20 Oct 2026: choosing the mechanic as a request is accepted (Workshop day decision 62)
+
+1. **`request-new`'s pills show each mechanic's full name, without the drawn
+   initial badges.** *Pattern:* Change details' mechanic pills, already
+   built (#261).
+2. **A mechanic busy at the booked time is refused with the job save's own
+   words**, and the request stays waiting. *Pattern:* the job's save.
+
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 
 1. **`new-job`: "+ Add a bike" opens Make, Model, Colour and Serial number

@@ -785,6 +785,15 @@ export function register(route) {
         signer = await signOffMechanic(body.signedOffBy);
         if (signer === null) return sendJson(res, 400, SIGN_OFF_REQUIRED);
       }
+      // Choosing the mechanic as the request is accepted (Workshop day decision
+      // 62; drawn on request-new): absent keeps the one it has; null is the
+      // shared queue.
+      let acceptMechanic;
+      if (machine === bookingRequest && event === 'accept' && body.mechanicId !== undefined) {
+        const chosen = await resolveJobMechanicId(body.mechanicId, null);
+        if (!chosen.ok) return badRequest(res, 'Mechanic not found or inactive');
+        acceptMechanic = chosen.mechanicId;
+      }
       // A booking message answers a customer's request or an offered time,
       // not a reschedule staff asked for themselves (fresh review).
       const answering = machine === bookingRequest && (event === 'accept' || event === 'decline')
@@ -811,6 +820,32 @@ export function register(route) {
           await db.exec('ROLLBACK');
           throw err;
         }
+      } else if (acceptMechanic !== undefined) {
+        // Under the day's lock: the mechanic must be free at the booked time,
+        // then the accept, then the move, together (as the job's save does).
+        const day = await db.prepare('SELECT job_date FROM workshop_jobs WHERE id = ?').get(id);
+        if (!day) return notFound(res, 'Job not found');
+        try {
+          result = await withBookingLock([day.job_date], async () => {
+            const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
+            const moving = current.mechanic_id !== acceptMechanic;
+            if (moving) {
+              const slotError = await checkJobSlot({
+                jobDate: current.job_date, startTime: current.start_time, endTime: current.end_time, mechanicId: acceptMechanic, ignoreJobId: id,
+              });
+              if (slotError) return { refused: refusal(slotError.error) };
+            }
+            const accepted = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+            if (accepted.ok && moving) {
+              await db.prepare('UPDATE workshop_jobs SET mechanic_id = ?, version = version + 1, updated_at = now() WHERE id = ?').run(acceptMechanic, id);
+            }
+            return accepted;
+          });
+        } catch (err) {
+          if (err.code !== '23505') throw err;
+          result = { refused: capacityRefusal(SLOT_GONE) };
+        }
+        if (result.refused) return sendJson(res, result.refused.status, result.refused.body);
       } else {
         result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
       }
