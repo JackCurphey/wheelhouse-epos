@@ -627,7 +627,7 @@ let devSeq = 0;
 const nextSeq = (size) => (size === 'desktop' ? hoverSeq++ : devSeq++);
 const LEGACY_TABLET_SEQ = {
   diary: 7, 'diary-mechanic': 1, 'waiting-open': 7, 'change-selected': 7,
-  'request-new': 7, 'request-decline': 7, 'request-offer-pick': 7, 'request-offer': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
+  'request-new': 7, 'request-decline': 7, 'request-offer-pick': 7, 'request-offer': 7, 'request-offered': 7, 'request-offered-decline': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
   'job-overview': 7, 'job-book-in': 7, 'job-quote': 7, 'job-mechanic': 1, 'job-waiting-parts': 7, 'job-finished': 7, 'job-collection': 7,
 };
 const LEGACY_TABLET_CONNECTOR_SEQ = { 'change-selected': 1 };
@@ -1991,6 +1991,50 @@ screens['request-offer-pick'] = withPickOffer(() => ({
   phone: phoneDiary({ day: HINT_SLOT.day, pickMode: true, selectSlot: HINT_SLOT }),
 }));
 
+// An offered time, waiting for the customer (Jack, 20 Oct: "draw staff
+// declining or re-offering an offered booking time"): clicking its purple
+// "Time offered" block opens the request pop-up for it. No Accept (the
+// customer answers); "Offer a different time" goes back into the diary pick
+// (request-offer-pick), where Offer this time replaces the first offer; Decline
+// opens the decline pop-up, and the offered time is let go.
+function requestOfferedBody(size) {
+  return `${eyebrow('Time offered today at [time]')}
+${row(`${h2('Sam Reed', 18)}${statusBadge('pending', 'Time offered')}`, 10, 'justify-content: space-between')}
+${txt('Specialized Sirrus · grey', 14, `color: ${C.muted}`)}
+${panel(`${txt('<strong>Friday 18 September, 12:00</strong> · Alex Morgan')}${note('Waiting for Sam to accept it or cancel. It’s kept free for them.')}`, '', 14, 6)}
+<div style="display: flex; flex-direction: column; gap: 6px">${h2('Your message to Sam', 14)}${quote(OFFER_MSG)}</div>
+<div style="display: flex; flex-direction: column; gap: 4px">${txt('<strong>Brake service · Price to be confirmed</strong>')}${note('45 minutes planned. Asked for Friday 18 September.')}</div>`;
+}
+const reqOfferedOpts = {
+  id: 'req-offered-title', title: 'Sam Reed · Specialized Sirrus', sub: 'Time offered', body: requestOfferedBody,
+  footer: (size) => btnRow(`${button('Offer a different time', { variant: 'default', href: `request-offer-pick-${size}.dc.html` })}${button('Decline', { variant: 'ghost', href: `request-offered-decline-${size}.dc.html` })}`),
+  highlightJob: { type: 'pending' },
+};
+screens['request-offered'] = {
+  desktop: requestDialog('desktop', DW, DH, reqOfferedOpts),
+  tablet: requestDialog('tablet', TW, TH, reqOfferedOpts),
+  phone: dialogPhone('Sam Reed · Specialized Sirrus', reqCloseHref('phone'), stack(requestOfferedBody('phone'), 12),
+    grid('1fr 1fr', `${button('Another time', { variant: 'default', block: true, href: 'request-offer-pick-phone.dc.html' })}${button('Decline', { variant: 'ghost', block: true, href: 'request-offered-decline-phone.dc.html' })}`, 8), 'Time offered', { scroll: true }),
+};
+keepDesktopSeq('request-offered');
+// Declining an offered time: the request's decline pop-up, saying the
+// offered time is let go too.
+// The message is staff's own; no example is drawn for this case.
+const requestOfferedDeclineBody = (size) => `${txt('<strong>Explain what the customer can do next</strong>')}
+${area('Message to Sam', '[What Sam can do next]', 'offered-decline-msg-' + size, 4)}
+${note('Declining releases the request’s reservation. The customer is told not to travel for this request. Friday 18 September at 12:00 is no longer kept for Sam.')}`;
+const reqOfferedDeclineOpts = {
+  id: 'req-offered-decline-title', title: 'Decline request', sub: 'Sam Reed · Specialized Sirrus', body: requestOfferedDeclineBody,
+  footer: (size) => `${button('Decline & notify customer', { variant: 'danger', block: true })}${button('Keep request', { variant: 'default', block: true, href: `request-offered-${size}.dc.html` })}`,
+  highlightJob: { type: 'pending' },
+};
+screens['request-offered-decline'] = {
+  desktop: requestDialog('desktop', DW, DH, reqOfferedDeclineOpts),
+  tablet: requestDialog('tablet', TW, TH, reqOfferedDeclineOpts),
+  phone: dialogPhone('Decline request', reqCloseHref('phone'), stack(requestOfferedDeclineBody('phone'), 12), `${button('Decline & notify customer', { variant: 'danger', block: true })}${button('Keep request', { variant: 'default', block: true, href: 'request-offered-phone.dc.html' })}`, 'Sam Reed · Specialized Sirrus', { scroll: true }),
+};
+keepDesktopSeq('request-offered-decline');
+
 // Book a repair decision 12 (audit M1): the same two pop-ups for a request
 // that came with a deposit. Drawn on journey 3's canvas.
 export function requestDepositBoard(size, decline = false) {
@@ -2985,7 +3029,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -3002,7 +3046,7 @@ export const ROWS = [
   // 3, task item 3) is appended after diary-stack-open for the same reason
   // again — x 14960, y 263, no existing board moves.
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
-  { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-change', 'request-cancel'] },
+  { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
   { label: 'Customer account', screens: ['customer'] },
