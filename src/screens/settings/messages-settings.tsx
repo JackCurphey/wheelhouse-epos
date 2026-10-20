@@ -22,12 +22,13 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 export function MessagesSettings() {
   const queryClient = useQueryClient();
   const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
-  const [busy, setBusy] = useState<string | null>(null);
+  // Each message's own save in flight, so two quick switches don't share one.
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Template | null>(null);
 
   async function change(key: string, body: object) {
-    setBusy(key);
+    setBusy((b) => new Set(b).add(key));
     setError(null);
     try {
       const saved = await apiMutate<Template>(`/api/message-templates/${key}`, body, { method: 'PUT' });
@@ -37,8 +38,16 @@ export function MessagesSettings() {
       setError(SAVE_FAILED);
       return null;
     } finally {
-      setBusy(null);
+      setBusy((b) => { const next = new Set(b); next.delete(key); return next; });
     }
+  }
+
+  // Back to the row's Edit when the box closes, for keyboard users.
+  function closeEdit() {
+    const name = editing?.name;
+    setEditing(null);
+    setError(null);
+    setTimeout(() => document.querySelector<HTMLButtonElement>(`[aria-label="Edit the wording of ${name}"]`)?.focus(), 0);
   }
 
   const live = templates.data?.filter((t) => t.live) ?? [];
@@ -59,16 +68,17 @@ export function MessagesSettings() {
             </span>
             <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
             <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
-            <OnOff name={t.name} on={t.enabled} disabled={busy === t.key} onChange={(on) => void change(t.key, { enabled: on })} />
+            <OnOff name={t.name} on={t.enabled} disabled={busy.has(t.key)} onChange={(on) => void change(t.key, { enabled: on })} />
           </div>
         ))}
-        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+        {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </section>
       {editing ? (
         <EditMessage
           template={templates.data?.find((t) => t.key === editing.key) ?? editing}
+          error={error}
           onSave={(body) => change(editing.key, body)}
-          onClose={() => setEditing(null)}
+          onClose={closeEdit}
         />
       ) : null}
     </section>
@@ -92,9 +102,10 @@ function OnOff({ name, on, disabled, onChange }: { name: string; on: boolean; di
   );
 }
 
-function EditMessage({ template, onSave, onClose }: { template: Template; onSave: (body: object) => Promise<Template | null>; onClose: () => void }) {
+function EditMessage({ template, error, onSave, onClose }: { template: Template; error: string | null; onSave: (body: object) => Promise<Template | null>; onClose: () => void }) {
   const [words, setWords] = useState(template.wording);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
 
@@ -104,8 +115,8 @@ function EditMessage({ template, onSave, onClose }: { template: Template; onSave
     let current = true;
     const t = setTimeout(() => {
       apiMutate<Preview>(`/api/message-templates/${template.key}/preview`, { wording: words })
-        .then((p) => { if (current) setPreview(p); })
-        .catch(() => undefined);
+        .then((p) => { if (current) { setPreview(p); setPreviewFailed(false); } })
+        .catch(() => { if (current) setPreviewFailed(true); });
     }, 200);
     return () => { current = false; clearTimeout(t); };
   }, [template.key, words]);
@@ -140,7 +151,7 @@ function EditMessage({ template, onSave, onClose }: { template: Template; onSave
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="msg-title">{template.name}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{template.when}</span>
+          <span className="text-[13px] text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
@@ -148,7 +159,7 @@ function EditMessage({ template, onSave, onClose }: { template: Template; onSave
         <div className="flex flex-col gap-2">
           <label htmlFor="msg-words" className="text-[15px] font-semibold">Wording</label>
           <textarea
-            id="msg-words" ref={box} rows={4} value={words} onChange={(e) => setWords(e.target.value)}
+            id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)}
             className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
           />
           <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
@@ -156,18 +167,22 @@ function EditMessage({ template, onSave, onClose }: { template: Template; onSave
               <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[13px] font-semibold">{`+ ${name}`}</button>
             ))}
           </div>
+          {/* UX walk-through 7 M6, drawn under the wording (set-msg-edit). */}
+          <p className="m-0 text-sm text-[var(--wh-muted)]">With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.</p>
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
-          <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal">{preview?.text ?? ''}</div>
+          {previewFailed ? <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t show the preview. Try again in a moment.</p> : null}
+          <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview?.text ?? ''}</div>
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-bold text-[var(--wh-muted)]">PREVIEW · EMAIL TO MAYA PATEL</span>
           <div className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3 text-sm leading-normal">
             <span className="font-bold">{preview?.email.subject ?? ''}</span>
-            <span>{preview?.email.body ?? ''}</span>
+            <span className="whitespace-pre-wrap">{preview?.email.body ?? ''}</span>
           </div>
         </div>
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </DialogBody>
       <DialogFooter className="flex justify-between gap-2.5">
         <Button variant="ghost" disabled={busy} onClick={() => void goBack()}>Go back to Wheelhouse’s wording</Button>

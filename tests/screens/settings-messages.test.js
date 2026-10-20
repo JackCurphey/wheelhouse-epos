@@ -119,7 +119,7 @@ async function openEdit() {
 
 test('Edit shows the wording, what it can put in, and the text and email previews', async () => {
   const { dlg } = await openEdit();
-  assert.ok(has(dlg.queryByText('When a job is marked ready')));
+  assert.ok(has(dlg.queryByText('Sent when a job is marked ready')));
   assert.ok(has(dlg.queryByText('Sent the way each customer chose: text, WhatsApp or email.')));
   assert.equal(dlg.getByLabelText('Wording').value, READY_WORDS);
   const putIn = dlg.getByRole('group', { name: 'Put in' });
@@ -159,4 +159,27 @@ test('Done with nothing changed saves nothing', async () => {
   fireEvent.click(dlg.getByRole('button', { name: 'Done' }));
   await waitFor(() => assert.equal(has(ui.queryByRole('dialog', { name: 'Bike ready' })), false));
   assert.deepEqual(puts(), []);
+});
+
+test('a save that fails inside the edit box says so there, and the box stays open', async () => {
+  const { ui, dlg, fireEvent } = await openEdit();
+  failPut = true;
+  fireEvent.change(dlg.getByLabelText('Wording'), { target: { value: 'Ready: [Bike]' } });
+  fireEvent.click(dlg.getByRole('button', { name: 'Done' }));
+  assert.ok(has(await dlg.findByText('Wheelhouse couldn’t save that. Try again in a moment.')));
+  assert.ok(has(ui.queryByRole('dialog', { name: 'Bike ready' })));
+});
+
+test('after Done, focus goes back to the row’s Edit', async () => {
+  const { ui, dlg, fireEvent, waitFor } = await openEdit();
+  fireEvent.click(dlg.getByRole('button', { name: 'Done' }));
+  await waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Edit the wording of Bike ready'));
+  assert.equal(has(ui.queryByRole('dialog', { name: 'Bike ready' })), false);
+});
+
+test('the edit box says how [Shop name] fills in, as drawn, and keeps the wording to 2,000 characters', async () => {
+  const { dlg } = await openEdit();
+  assert.ok(has(dlg.queryByText('Sent when a job is marked ready')));
+  assert.ok(has(dlg.queryByText('With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.')));
+  assert.equal(dlg.getByLabelText('Wording').getAttribute('maxlength'), '2000');
 });

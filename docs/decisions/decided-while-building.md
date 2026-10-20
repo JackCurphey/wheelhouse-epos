@@ -741,6 +741,20 @@ silent:
 5. **The reply line ("Replies to this number aren't read — reply on your
    page") waits for a page to reply on.** *Pattern:* nothing said that isn't
    true.
+12. **`set-msg-list` is a "Messages" section of the one Settings page, with
+   no folds: no "[n] on" summary, and no "How messages are sent" fold until
+   real sending has a sender name and address.** *Pattern:* every Settings
+   section built so far is a heading and boxes, not folds.
+13. **`set-msg-edit` adds the email preview under the text bubble.**
+   *Pattern:* the booking messages' editor (`book.mjs` bkMsg; stage 1 drawing
+   gaps decision 24: a text preview and an email preview).
+14. **The hovered row's Edit reads "Edit", not "Edit wording".** *Pattern:*
+   every row can be edited and is named "Edit the wording of [message]" for
+   screen readers (Drop off audit L5); the hover word comes with hover
+   states elsewhere.
+15. **A preview that can't load says "Wheelhouse couldn’t show the preview.
+   Try again in a moment."; a failed save says so inside the edit box.**
+   *Pattern:* the Settings page's "Wheelhouse couldn’t save that" lines.
 
 ## Decided here, for Jack to overrule
 
