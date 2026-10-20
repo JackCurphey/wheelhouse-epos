@@ -777,6 +777,14 @@ silent:
 15. **A preview that can't load says "Wheelhouse couldn’t show the preview.
    Try again in a moment."; a failed save says so inside the edit box.**
    *Pattern:* the Settings page's "Wheelhouse couldn’t save that" lines.
+16. **`job-messages`: states the drawing doesn't show.** "Sent" (green) once
+   real sending is on; "Sending" ("going now"); "Undone" ("stopped with
+   Undo"); "Not sent" with the reason; "Not sure it went" ("the server
+   stopped while sending it"); and "No messages yet." for a job with none.
+   *Pattern:* the drawn Waiting and Pretend badges, and the engine's states.
+17. **`job-messages`: the Message button shows only for a job with a
+   customer; Email and Notes, drawn beside it, come later.** *Pattern:* the
+   drawing's header buttons, built one at a time as each has something to do.
 
 ## Decided here, for Jack to overrule
 

@@ -11,7 +11,7 @@ import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
-import { JobMessages, jobMessagesKey } from './job-messages.tsx';
+import { JobMessagesButton, jobMessagesKey } from './job-messages.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 import { channelWord } from './channel-word.ts';
 
@@ -310,6 +310,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <strong>{job.customerName ?? 'No customer'}</strong>
                 {customer.data?.phone ? <span>{customer.data.phone}</span> : null}
                 {customer.data?.email ? <span>{customer.data.email}</span> : null}
+                {/* The drawn "Message [customer]" button opens the job's messages (Jack, 20 Oct). */}
+                {job.customerId ? <span className="ml-auto"><JobMessagesButton jobId={job.id} customerName={job.customerName ?? 'the customer'} title={job.title} reference={job.reference ?? null} /></span> : null}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 {job.bikeLabel ? <span>{job.bikeLabel}</span> : null}
@@ -409,7 +411,6 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                     )}
                   </section>
                   <JobFiles jobId={job.id} />
-                  <JobMessages jobId={job.id} firstName={(job.customerName ?? '').trim().split(/\s+/)[0] || 'the customer'} />
                 </div>
                 <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>

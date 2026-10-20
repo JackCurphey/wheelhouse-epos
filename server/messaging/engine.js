@@ -181,6 +181,8 @@ export function serializeMessage(row) {
     id: row.id,
     customerId: row.customer_id,
     jobId: row.job_id ?? null,
+    // The shop's (outbound) or the customer's (inbound), for the conversation.
+    direction: row.direction ?? 'outbound',
     key: row.template_key ?? null,
     name: TEMPLATES[row.template_key]?.name ?? 'Message',
     channel: row.channel ?? 'sms',

@@ -32,3 +32,14 @@ A message staff trigger SHALL wait a minute before it goes, and Undo in that min
 #### Scenario: Undo
 - **WHEN** staff send a quote and press Undo within the minute
 - **THEN** Quote to approve isn't sent
+
+### Requirement: Staff see a job's messages as a conversation
+The job page's "Message [customer]" button SHALL open "Messages": the job's messages oldest first, the shop's on the right with each message's name, state, how and when, the customer's on the left, and a line saying messages are pretend (Jack, 20 Oct, `docs/decisions/2026-10-20-messages-engine.md` answer 2; drawn as job-messages).
+
+#### Scenario: Bike ready waiting
+- **WHEN** staff mark a job ready and open its Messages
+- **THEN** Bike ready shows on the right as Waiting, by the customer's way, with the time it goes and the words the customer gets
+
+#### Scenario: No messages
+- **WHEN** a job has sent nothing
+- **THEN** Messages says "No messages yet."
