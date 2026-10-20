@@ -5,7 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { shortDay } from './rules.ts';
-import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * "Who’s signing this off?" (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md;

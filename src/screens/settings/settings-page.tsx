@@ -9,7 +9,7 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitl
 import { previewLines } from './booking-preview.ts';
 import { MessagesSettings } from './messages-settings.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
-import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md

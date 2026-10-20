@@ -5,7 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
-import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * New job (journey 12; drawn as new-job and new-job-day in

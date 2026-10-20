@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { jobRefusalText } from './refusal-words.ts';
 import { shortDay } from './rules.ts';
-import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * "Change details" on the job page (Jack, 18 Oct,

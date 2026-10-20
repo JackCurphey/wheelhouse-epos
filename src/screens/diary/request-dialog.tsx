@@ -7,7 +7,7 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDesc
 import { STATE_LABEL, dayLabel, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
 import { requestMinutes } from './offer-dialog.tsx';
 import { Pill } from './change-details-dialog.tsx';
-import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
+import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
 /**
  * Answering what's waiting (journey 12 decisions 15 and 19): the request
