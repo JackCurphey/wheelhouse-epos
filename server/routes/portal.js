@@ -355,6 +355,14 @@ async function bookingLinkView(jobId, shop) {
 // - reschedule_requested: the new request replaces the stored one.
 // A confirmed booking asking for the time it already has makes no request,
 // and withdraws any it had (decision log D5).
+// How long the booking takes. Every online booking stores its services'
+// total as planned_minutes; a staff job with a link falls back to its times,
+// then to the not-sure hour.
+function bookedMinutes(job) {
+  return job.planned_minutes
+    || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
+}
+
 async function changeBookingTime(job, { jobDate, mechanicId, startTime }) {
   const refused = customerActionRefusal(job, 'change', await currentShopToday());
   if (refused) return refused;
@@ -364,10 +372,7 @@ async function changeBookingTime(job, { jobDate, mechanicId, startTime }) {
     if (job.booking_state === 'reschedule_requested') await withdrawRequest(job);
     return undefined;
   }
-  // Every online booking stores its services' total as planned_minutes; a
-  // staff job with a link falls back to its times, then to the not-sure hour.
-  const minutes = job.planned_minutes
-    || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
+  const minutes = bookedMinutes(job);
   const checked = await checkCustomerTime({ jobDate, mechanicId, startTime, minutes, ignoreJobId: job.id });
   if (checked.refusal) return checked.refusal;
   const { times } = checked;
@@ -962,6 +967,50 @@ export function register(route) {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
     sendJson(res, 200, await bookingLinkView(found.id, shop));
+  });
+
+  // The days and times this booking could move to (Jack, 20 Oct: Change the
+  // date; openspec/changes/change-date): for its own mechanic and length, with
+  // the booking and any change it asked for left out of capacity, so its own
+  // slot can be chosen again. Refused as the change route refuses, and for a
+  // booking with no mechanic (the change route needs one).
+  // screens: bk-change
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/availability', async (req, res, params, query) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const start = query.get('start');
+    const end = query.get('end');
+    if (!isRealDate(start || '') || !isRealDate(end || '')) {
+      return badRequest(res, 'Valid start and end dates are required');
+    }
+    if (end < start) return badRequest(res, 'The end date must be on or after the start date');
+    if (dayCount(start, end) > MAX_RANGE_DAYS) {
+      return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
+    }
+    const job = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(found.id);
+    const refused = customerActionRefusal(job, 'change', await currentShopToday());
+    if (refused) return sendJson(res, refused.status, refused.body);
+    if (job.mechanic_id === null) {
+      return sendJson(res, 409, { error: CUSTOMER_REFUSALS.change.other, code: 'illegal' });
+    }
+    const minutes = bookedMinutes(job);
+    const { settings, days } = await loadCapacity(start, end, { ignoreJobId: job.id });
+    const earliest = earliestBookable(settings);
+    sendJson(res, 200, {
+      mechanicId: job.mechanic_id,
+      minutes,
+      days: days.map((day) => {
+        const m = day.mechanics.find((x) => x.mechanicId === job.mechanic_id);
+        const closed = !m || !m.working;
+        return day.mode === 'timed'
+          ? { date: day.date, mode: day.mode, closed, startTimes: closed ? [] : startTimesFor(m, minutes).filter((t) => startIsInTime(earliest, day.date, t)) }
+          : {
+            date: day.date, mode: day.mode, closed,
+            bookable: !closed && fitsDropoff(m, minutes) && dropoffIsInTime(earliest, day.date, settings.dropoffWindowEnd),
+            dropoffWindow: { start: settings.dropoffWindowStart, end: settings.dropoffWindowEnd },
+          };
+      }),
+    });
   });
 
   // The customer's quote on their booking link (journey 4): the job's current
