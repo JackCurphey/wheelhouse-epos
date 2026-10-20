@@ -15,4 +15,4 @@ Once staff offer a booking request another time, the booking shows as "Time offe
 ## Impact
 - `server/workshop/jobs.js` (`serializeWorkshopJob`; workshop server, flagged for Mark).
 - `src/screens/diary/request-dialog.tsx`, `diary-page.tsx`, `offer-dialog.tsx`, `rules.ts`.
-- Tests: `tests/workshop-offer.test.js`, `tests/screens/request-offered.test.js`.
+- Tests: `tests/workshop-offer.test.js`, `tests/screens/diary-offer.test.js`, `tests/browser/book-offer.spec.ts`.

@@ -255,3 +255,21 @@ test('Decline asks for a message, says the offered time is let go, and sends it;
   await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/5/decline {"message":"Sorry, we’re full that week.","version":2}']));
 });
 
+
+test('Open job from an offered booking’s menu opens its pop-up too, so the keyboard can reach it', async () => {
+  const r = await openDiary();
+  const block = (await r.ui.findByText(/Jamie Brooks, WH-1005, Time offered/)).closest('button');
+  r.fireEvent.contextMenu(block, { clientX: 200, clientY: 200 });
+  r.fireEvent.click(r.within(r.ui.getByRole('menu')).getByRole('menuitem', { name: 'Open job' }));
+  const dlg = r.within(await r.ui.findByRole('dialog', { name: 'Jamie Brooks · Giant Escape 2' }));
+  assert.ok(dlg.queryByRole('button', { name: 'Offer a different time' }) !== null);
+});
+
+test('declining with no message sends none', async () => {
+  const r = await openDiary();
+  const dlg = await openOffered(r);
+  r.fireEvent.click(dlg.getByRole('button', { name: 'Decline' }));
+  const decline = r.within(await r.ui.findByRole('dialog', { name: 'Decline request' }));
+  r.fireEvent.click(decline.getByRole('button', { name: 'Decline & notify customer' }));
+  await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/5/decline {"message":"","version":2}']));
+});

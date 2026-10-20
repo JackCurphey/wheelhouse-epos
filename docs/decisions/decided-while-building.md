@@ -719,15 +719,17 @@ silent:
 4. **The declined page has no grey warning icon above "Not booked"**: the
    booking pages draw none of their big icons yet. *Pattern:* the cancelled
    page (fresh review).
-5. **Staff can't yet decline a booking that's waiting on an offered time**:
-   it isn't in Waiting for you, and its pop-up has no answers. The server
-   allows it. For a later piece. *Pattern:* nothing drawn for it (fresh
-   review).
+5. ~~**Staff can't yet decline a booking that's waiting on an offered
+   time**~~: built 20 Oct (offered-decline-reoffer; item 6 below). It still
+   isn't in Waiting for you; its block opens it.
 6. **`request-offered`: no "Time offered today at [time]" line**: nothing
    records when an offer was made, so the line waits for that. The offered
    block is a button that opens its pop-up but can't be dragged; the
-   decline's message box starts empty, as drawn. *Pattern:* only what has a
-   source is shown; a request's own pop-up (fresh review: request-offered).
+   decline's message box starts empty, as drawn. On a phone the button
+   reads "Offer a different time", not the drawn "Another time", as the
+   pending request's already does. Opened from a stack, the menu's Open job or
+   the overview, it opens the same pop-up. *Pattern:* only what has a source
+   is shown; a request's own pop-up (fresh review: request-offered).
 
 ### 20 Oct 2026: the messages engine (`docs/decisions/2026-10-20-messages-engine.md`)
 

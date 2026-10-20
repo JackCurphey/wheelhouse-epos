@@ -1091,7 +1091,11 @@ export function DiaryPage() {
   const openJob = (job: Shown) => {
     if (justDragged.current) { justDragged.current = false; return; }
     if (preview) return;
-    // An offered time opens its request pop-up (Jack, 20 Oct, request-offered).
+    openShown(job);
+  };
+  // An offered time opens its request pop-up (Jack, 20 Oct, request-offered),
+  // however it's opened: its block, a stack's chooser, the menu or the overview.
+  const openShown = (job: WorkshopJob & { state: DiaryState }) => {
     if (job.state === 'offered') { setOpenItem(requestItem(job, 'offered')); return; }
     setOpenJobId(job.id);
   };
@@ -1400,7 +1404,7 @@ export function DiaryPage() {
           job={menuFor.job}
           at={menuFor.at}
           onClose={(back) => { const el = menuFor.opener; setMenuFor(null); if (back) el?.focus(); }}
-          onOpenJob={() => { setMenuFor(null); setOpenJobId(menuFor.job.id); }}
+          onOpenJob={() => { setMenuFor(null); openShown(menuFor.job); }}
           onOverview={() => showOverview(menuFor.job)}
           onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
           till={(() => {
@@ -1428,7 +1432,7 @@ export function DiaryPage() {
         />
       ) : null}
       {overview ? (
-        <OverviewDialog job={overview} onClose={() => setOverview(null)} onOpenJob={() => { setOverview(null); setOpenJobId(overview.id); }} />
+        <OverviewDialog job={overview} onClose={() => setOverview(null)} onOpenJob={() => { setOverview(null); openShown(overview); }} />
       ) : null}
       {stackJobs ? (
         <StackChooser
@@ -1436,7 +1440,7 @@ export function DiaryPage() {
           time={stackJobs[0].startTime ?? ''}
           at={stackAt}
           onClose={(back) => { setStackJobs(null); if (back) stackFrom.current?.opener.focus(); }}
-          onPick={(j) => { setStackJobs(null); setOpenJobId(j.id); }}
+          onPick={(j) => { setStackJobs(null); openShown(j); }}
           onMove={(picked) => {
             const from = stackFrom.current;
             const j = stackJobs.find((x) => x.partId === picked.partId);
