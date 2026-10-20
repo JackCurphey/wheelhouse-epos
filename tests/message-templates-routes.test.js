@@ -41,7 +41,9 @@ test('every message, with Wheelhouse’s wording and which can be sent today', a
   assert.equal(ready.wording, TEMPLATES.bike_ready.wording);
   assert.equal(ready.subject, TEMPLATES.bike_ready.subject);
   assert.deepEqual(ready.tapIns, TEMPLATES.bike_ready.tapIns);
-  assert.equal(res.body.find((m) => m.key === 'booking_confirmed').live, false);
+  assert.equal(res.body.find((m) => m.key === 'booking_confirmed').live, true);
+  assert.equal(res.body.find((m) => m.key === 'booking_confirmed').group, 'booking');
+  assert.equal(res.body.find((m) => m.key === 'booking_cancelled').live, false);
 });
 
 test('the Owner rewords a message, switches it off, then goes back to Wheelhouse’s wording', async () => {

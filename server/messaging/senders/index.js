@@ -6,3 +6,8 @@ import * as pretend from './pretend.js';
 export function senderFor(/* channel */) {
   return pretend;
 }
+
+/** Whether a channel's messages are pretend (every channel, for now). */
+export function isPretend(/* channel */) {
+  return true;
+}

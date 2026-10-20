@@ -748,7 +748,10 @@ silent:
 5. **The reply line ("Replies to this number aren't read — reply on your
    page") waits for a page to reply on.** *Pattern:* nothing said that isn't
    true.
-6. **Bike ready's "[Link to the job]" is the job's booking link, issued
+6. **(Changed 20 Oct, booking-message-triggers: while sending is pretend no
+   link is issued and the message shows "[link]", so the customer's own link
+   keeps working; the rest of this entry applies once real sending is on.)**
+   **Bike ready's "[Link to the job]" is the job's booking link, issued
    afresh when it's queued, and only when it will go** (switched off, or no
    phone or email, keeps the customer's link). *Pattern:* sending a quote
    (journey 4 decision 5: only the newest link works). An undone Bike ready
@@ -792,6 +795,21 @@ silent:
 17. **`job-messages`: the Message button shows only for a job with a
    customer; Email and Notes, drawn beside it, come later.** *Pattern:* the
    drawing's header buttons, built one at a time as each has something to do.
+
+### 20 Oct 2026: the booking messages staff answers send (booking-message-triggers)
+
+1. **They go at once, with no Undo.** *Pattern:* the quote's message, which
+   the answer itself already confirms; no Undo is drawn for these answers.
+2. **A declined date change sends nothing yet**: its wording isn't stored
+   (messages engine item 3). Request received and Booking cancelled wait for
+   the customer's side, in Mark's booking server.
+3. **[Service] is the job's services, else its title; [Booked day and time]
+   reads "Thu 17 Sep, 11:30"; the drop-off sentence follows the booking
+   page's rule in `bk-msg-confirmed`'s words.** *Pattern:* the approved
+   wordings' examples.
+4. **A message that can't be queued is logged, and the answer stands.**
+   *Pattern:* nothing the customer is sent is worth refusing a staff answer
+   for.
 
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 
