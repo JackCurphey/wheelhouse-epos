@@ -46,12 +46,14 @@ test('a customer moves a request straight away, then cancels it', async ({ page 
   await expect(page.getByRole('heading', { level: 1, name: 'Your booking request' })).toBeVisible();
   await expect(page.getByText('Waiting for the shop to confirm', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Change the date' }).click();
-  await page.getByRole('radiogroup', { name: 'Days' }).getByRole('radio', { name: / times? free$/ }).first().check({ force: true });
+  const dayRadio = page.getByRole('radiogroup', { name: 'Days' }).getByRole('radio', { name: / times? free$/ }).first();
+  const day = (await dayRadio.getAttribute('aria-label'))!.split(',')[0];
+  await dayRadio.check({ force: true });
   const times = page.getByRole('radiogroup', { name: /choose a time$/ });
   const pick = await times.getByRole('radio').first().getAttribute('aria-label');
   await times.getByRole('radio', { name: pick!, exact: true }).check({ force: true });
   await page.getByRole('button', { name: 'Move my request' }).click();
-  await expect(page.getByText(new RegExp(`, ${pick}$`))).toBeVisible();
+  await expect(page.getByText(`${day}, ${pick}`, { exact: true })).toBeVisible();
   await expect(page.getByText('Waiting for the shop to confirm', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel request' }).click();
   await page.getByRole('dialog', { name: 'Cancel this request?' }).getByRole('button', { name: 'Cancel request' }).click();

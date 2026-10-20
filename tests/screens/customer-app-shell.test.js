@@ -56,7 +56,7 @@ test('a booking link opened cold reaches the pending screen', async () => {
     return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   const screen = await renderAt(`/book/demo/booking/${'a'.repeat(64)}`);
-  assert.ok(await screen.findByRole('heading', { level: 1, name: 'Awaiting shop confirmation' }));
+  assert.ok(await screen.findByRole('heading', { level: 1, name: 'Your booking request' }));
   screen.unmount();
 });
 

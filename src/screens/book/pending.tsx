@@ -107,8 +107,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
   }
 
-  // A confirmed booking, or one with a change waiting (bk-change-pending), on
-  // the drawn page; a change the shop declined says so at the top (bk-change-declined).
+  // A confirmed booking, one with a change waiting (bk-change-pending), or one
+  // still waiting for the shop (bk-page-request), on the drawn page; a change
+  // the shop declined says so at the top (bk-change-declined).
   if (standing) {
     const waiting = link.stage === 'change_requested';
     const bike = bikeRow(link);

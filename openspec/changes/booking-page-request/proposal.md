@@ -23,4 +23,4 @@ For a booking waiting for the shop (`awaiting_confirmation`):
 
 ## Impact
 
-- `src/screens/book/pending.tsx`, `change-date.tsx`, `pending-rules.ts`; tests
+- `src/screens/book/pending.tsx`, `change-date.tsx`; tests
