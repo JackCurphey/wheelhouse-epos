@@ -21,7 +21,10 @@ test('old sent messages become delivered, old failed ones failed; queued ones wi
     const add = (status, extra = '') => prepare(`INSERT INTO customer_messages (customer_id, body, status, intent_state${extra ? ', send_after' : ''}) VALUES (?, 'Hi', ?, 'intended'${extra ? ', now()' : ''}) RETURNING id`).get(c.id, status);
     return { sent: (await add('sent')).id, failed: (await add('failed')).id, queued: (await add('queued', 'x')).id };
   });
-  await pool.query(BACKFILL);
+  // Only this test's shop: other test files' messages run at the same time.
+  const ownShop = BACKFILL.replace('SELECT id FROM shops', `SELECT id FROM shops WHERE id = ${Number(shop.id)}`);
+  assert.notEqual(ownShop, BACKFILL);
+  await pool.query(ownShop);
   const state = (id) => runWithShop(shop.id, () => prepare('SELECT intent_state FROM customer_messages WHERE id = ?').get(id)).then((r) => r.intent_state);
   assert.equal(await state(ids.sent), 'delivered');
   assert.equal(await state(ids.failed), 'failed');

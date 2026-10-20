@@ -10,6 +10,7 @@ import * as sitesTills from './sites-tills.js';
 import * as team from './team.js';
 import * as printAgents from './print-agents.js';
 import * as customerMessages from './customer-messages.js';
+import * as messages from './messages.js';
 import * as auth from './auth.js';
 import * as products from './products.js';
 import * as workshop from './workshop.js';
@@ -19,4 +20,4 @@ import * as customers from './customers.js';
 import * as salesRoutes from './sales.js';
 import * as dashboard from './dashboard.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard];
