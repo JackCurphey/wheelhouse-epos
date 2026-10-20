@@ -807,8 +807,14 @@ silent:
    and bike.** *Pattern:* the job page's "From the customer"; the receipt
    drawing has no such line, and "Checked by" sits there too.
 2. **New job's "Notes" box is labelled "Staff notes", as drawn; it stays one
-   box, without who wrote each note and when, until WP-1.7.** *Pattern:*
-   `staffNotesBlock` in the drawing.
+   box, without who wrote each note and when, until WP-1.7; it stays under
+   Note for the customer rather than at the foot of the right column.**
+   *Pattern:* `staffNotesBlock` in the drawing, with its hint "Internal only —
+   not shown to the customer."
+3. **What the customer told us can't be changed after the job is saved**, as
+   with online bookings already. *Pattern:* the job page shows it read-only.
+4. **Online bookings' messages print on their receipts too**, being the same
+   thing. *Pattern:* the decision's answer 1.
 
 ## Decided here, for Jack to overrule
 

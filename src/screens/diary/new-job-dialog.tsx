@@ -432,7 +432,8 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="nj-notes" className={LABEL}>Staff notes</label>
-              <textarea id="nj-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} py-2`} />
+              <textarea id="nj-notes" rows={2} aria-describedby="nj-notes-h" value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} py-2`} />
+              <span id="nj-notes-h" className="text-xs text-[var(--wh-muted)]">Internal only — not shown to the customer.</span>
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-2.5">

@@ -227,6 +227,8 @@ test('New job keeps what the customer told us as the job’s From the customer; 
   assert.equal(blank.body.customerDescription, null);
   const long = await createJob(cookie, mechanicId, { customerDescription: 'x'.repeat(2001), startTime: '15:00', endTime: '16:00' });
   assert.equal(long.status, 400);
+  assert.equal(long.body.error, 'What the customer told us can be up to 2,000 characters');
   const wrong = await createJob(cookie, mechanicId, { customerDescription: 42, startTime: '16:00', endTime: '17:00' });
   assert.equal(wrong.status, 400);
+  assert.equal(wrong.body.error, 'What the customer told us must be text');
 });

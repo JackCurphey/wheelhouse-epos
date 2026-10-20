@@ -610,6 +610,9 @@ test('New job keeps what the customer told us apart from staff notes, and saves 
   const form = await withMaya(r);
   assert.ok(has(form.queryByText('Printed on their receipt.')));
   assert.ok(has(form.queryByLabelText('Staff notes')));
+  assert.equal(form.getByLabelText('Note for the customer').getAttribute('aria-describedby'), 'nj-customer-words-h');
+  assert.equal(form.getByLabelText('Staff notes').getAttribute('aria-describedby'), 'nj-notes-h');
+  assert.ok(has(form.queryByText('Internal only — not shown to the customer.')));
   r.fireEvent.click(await form.findByRole('radio', { name: 'Full service' }));
   r.fireEvent.click(form.getByRole('radio', { name: 'Standard service · 90 min' }));
   r.fireEvent.change(form.getByLabelText('Note for the customer'), { target: { value: 'Rear brake squeals and feels weak.' } });
