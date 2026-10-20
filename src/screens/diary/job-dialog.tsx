@@ -11,6 +11,7 @@ import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
+import { JobMessages, jobMessagesKey } from './job-messages.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 import { channelWord } from './channel-word.ts';
 
@@ -172,6 +173,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     try {
       await apiMutate(`/api/messages/${ready.id}/undo`, {});
       setReady(null);
+      void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job?.id ?? 0) });
     } catch (err) {
       setReady(null);
       setMessage(refusalText(err));
@@ -187,6 +189,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     try {
       const done = await jobAction<WorkshopJob & { readyMessage?: ReadyMessage }>(job.id, action, job.version, extra);
       if (action === 'finish' && done?.readyMessage) setReady(readyStrip(done, done.readyMessage));
+      // Finishing, or reopening, changes what the job's Messages list holds.
+      if (action === 'finish' || action === 'reopen-work') void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job.id) });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
@@ -405,6 +409,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                     )}
                   </section>
                   <JobFiles jobId={job.id} />
+                  <JobMessages jobId={job.id} firstName={(job.customerName ?? '').trim().split(/\s+/)[0] || 'the customer'} />
                 </div>
                 <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>
