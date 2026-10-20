@@ -21,6 +21,8 @@ export default {
   'request-new': keep(9),
   'request-offer-pick': into('diary', '20 Oct (Jack: offer another time, in the diary)', "the diary in pick mode: 'Click a free time in the diary to offer Sam Reed · 45 minutes', Cancel back to the request"),
   'request-offer': into('request-new', '20 Oct (Jack: offer another time)', "'Offer another time': the picked time with 'Choose another time', 'Message to Sam'; the suggested time kept free, the first let go; 'Offer this time' or 'Keep request'"),
+  'request-offered': into('request-new', '20 Oct (Jack: decline or re-offer an offered time)', "an offered time waiting for the customer: the time and 'Waiting for Sam to accept it or cancel', 'Your message to Sam'; 'Offer a different time' or 'Decline', no Accept"),
+  'request-offered-decline': into('request-new', '20 Oct (Jack: decline or re-offer an offered time)', "'Decline request' for an offered time: the message to Sam, 'Friday 18 September at 12:00 is no longer kept for Sam'; 'Decline & notify customer' or 'Keep request'"),
   'request-decline': into('request-new', 'Workshop day 15', "'Decline booking request': message to Sam; 'Decline & notify customer' or 'Keep request'"),
   'request-change': into('request-new', 'Workshop day 15', "Oliver Chen: 'Mon 14 Sep · 10:00' → '14:00'; 'Accept', 'Decline', 'Open full job'"),
   'request-cancel': into('request-new', 'Workshop day 15', "Aisha Khan's 'Cancelled booking': nothing to decide, one button 'Seen'"),

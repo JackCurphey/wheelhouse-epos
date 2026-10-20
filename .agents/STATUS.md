@@ -54,9 +54,18 @@ now, `docs/decisions/2026-10-20-messages-engine.md`): #321 adds
 `add-hosted-copy` tasks 2.1–2.2: the hosted copy refuses `TWILIO_*`,
 `EMAIL_*`, `WHATSAPP_*` keys); #322 migration 048 (`message_templates`, the
 outbox's columns on `customer_messages`, old rows settled, `undone`);
-#323 (in review) `server/messaging/engine.js`, the pretend sender, the timer
+#323 `server/messaging/engine.js`, the pretend sender, the timer
 started in `server.js` and waited for on shutdown, migration 049
-(`claimed_at`), `GET /api/messages` and `POST /api/messages/:id/undo`.
+(`claimed_at`), `GET /api/messages` and `POST /api/messages/:id/undo`;
+#325 `GET/PUT /api/message-templates[/:key]` (Owner only to change) and
+`POST …/:key/preview`; #326 in your workshop server and
+`customer-messages.js`: the quote send queues Quote to approve through the
+engine instead of Twilio, finishing queues Bike ready (in the finish's
+transaction, a new link only when it will go, reopening stops it), and the
+old app's one-off text goes through the pretend sender; #330 adds
+`direction` to the outbox's messages. `server/sms.js` is now unused by the
+app (kept for real sending). The change is archived:
+`openspec/specs/messages/spec.md`.
 **Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
 answer 2): replying to a text as a shop setting, a shop's own number whose
 replies land in its inbox (a monthly cost, and receiving texts to build), or
@@ -118,7 +127,11 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 18 Oct merged: the old app's workshop diary is retired
+**Jack is on:** 20 Oct: the messages engine is built, pretend for now
+(#321–#330, `docs/decisions/2026-10-20-messages-engine.md`): Settings ›
+Messages, Quote to approve and Bike ready with its minute's Undo, and each
+job's Messages as a conversation from the job page's Message button. The
+board shows how far through stage 0 we are (#328). 18 Oct merged: the old app's workshop diary is retired
 and its Workshop tab opens the new diary (#252,
 `docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
 (#253, #254, #258, #260; `docs/decisions/2026-10-18-old-diary-features.md`)

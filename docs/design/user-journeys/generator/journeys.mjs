@@ -808,6 +808,8 @@ export const journeys = [
         sd('request-decline', 'Decline a booking request', 'Staff'),
         sd('request-offer-pick', 'Offer another time: pick a free time in the diary', 'Staff'),
         sd('request-offer', 'Offer another time for a booking request', 'Staff'),
+        sd('request-offered', 'A time offered, waiting for the customer: offer a different one or decline', 'Staff'),
+        sd('request-offered-decline', 'Decline a booking whose offered time is waiting', 'Staff'),
         sd('request-change', 'Change request', 'Staff'),
         sd('request-cancel', 'Cancelled booking', 'Staff'),
       ] },
