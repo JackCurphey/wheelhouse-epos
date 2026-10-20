@@ -145,3 +145,21 @@ test('an answer whose message has no way to reach the customer says so, by name'
   const ok = await act(sent.id, 'accept');
   assert.equal(ok.body.bookingMessage, undefined, 'nothing to say when it went');
 });
+
+test('declining or offering for a customer with no way to reach them says so too, by name', async () => {
+  const quiet = await portalSignup(server.baseUrl, owner.shop.slug, {});
+  const unreachable = async (startTime) => {
+    const booked = await bookOnline(server.baseUrl, quiet.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime, serviceIds: [types.service] });
+    await runWithShop(owner.shop.id, async () => {
+      const { customer_id: id } = await prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(booked.id);
+      await prepare('UPDATE customers SET phone = NULL, email = NULL WHERE id = ?').run(id);
+    });
+    return booked;
+  };
+  const declined = await unreachable('12:00');
+  assert.deepEqual((await act(declined.id, 'decline')).body.bookingMessage, { skipped: 'no_contact', name: 'Request declined' });
+  const offered = await unreachable('13:00');
+  const res = await act(offered.id, 'offer', { jobDate: nextDay(), startTime: '15:00', mechanicId: sam });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.bookingMessage, { skipped: 'no_contact', name: 'New time offered' });
+});

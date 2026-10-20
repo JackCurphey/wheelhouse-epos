@@ -1830,7 +1830,7 @@ export function DiaryPage() {
             card's bar, at the end of the page, so nothing above moves and
             neither covers the other (Jack, 16 Oct). */}
         <div data-phone-foot className="sticky bottom-0 z-30 flex flex-col">
-        {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
+        {pickBar || moveErrorBox || noticeBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}{noticeBox}</div> : null}
         {chosenBar}
         </div>
 
@@ -1992,7 +1992,7 @@ export function DiaryPage() {
       {isNarrow ? (
         // An upright tablet: the foot of the page, as on a phone.
         <div data-tablet-foot className="sticky bottom-0 z-30 -mx-3.5 flex flex-col md:-mx-[22px]">
-          {pickBar || moveErrorBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}</div> : null}
+          {pickBar || moveErrorBox || noticeBox ? <div className="flex flex-col gap-2 px-3.5 pb-2">{pickBar}{moveErrorBox}{noticeBox}</div> : null}
           {chosenBar}
         </div>
       ) : floatingSpacer}

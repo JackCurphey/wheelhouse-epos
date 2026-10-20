@@ -105,7 +105,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
         queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
       ]);
-      const note = noMessageNote(done?.bookingMessage, customer);
+      const note = noMessageNote(done?.bookingMessage, item.customerName || job?.customerName);
       if (note) onNotice?.(note);
       onAnswered?.();
       onClose();
