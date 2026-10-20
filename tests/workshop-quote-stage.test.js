@@ -106,7 +106,9 @@ test("every read of a job carries its current quote's state", async () => {
   assert.equal(list.find((j) => j.id === job.id).quote.state, 'draft');
 });
 
-test('Send texts the customer a fresh booking link; the old link stops working', async () => {
+// Messages are pretend for now (Jack, 20 Oct, docs/decisions/2026-10-20-messages-engine.md):
+// the quote's message goes to the outbox, and nothing reaches the text provider.
+test('Send gives the customer a fresh booking link in a pretend message; the old link stops working', async () => {
   const { job, quote } = await jobWithQuote();
   const old = await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} });
   const oldCode = codeFrom(old.body.privateLink);
@@ -117,21 +119,21 @@ test('Send texts the customer a fresh booking link; the old link stops working',
   assert.ok(sent.body.quote.sentAt);
   assert.equal(sent.body.message.status, 'sent');
   assert.match(sent.body.link, new RegExp(`^${server.baseUrl}/book/${owner.shop.slug}/booking/[0-9a-f]{64}$`));
-  assert.equal(texts.length, before + 1);
-  assert.equal(texts.at(-1).To, '+447700900142');
-  assert.ok(texts.at(-1).Body.includes(sent.body.link), texts.at(-1).Body);
+  assert.equal(sent.body.message.pretend, true);
+  assert.equal(sent.body.message.to, '07700 900142');
+  assert.equal(texts.length, before, 'nothing really sent');
   const history = (await staff(`/api/customers/${maya.id}/texts`)).body;
   assert.ok(history.some((m) => m.body.includes(sent.body.link)));
   assert.equal((await portal(`/booking-links/${oldCode}`)).status, 404);
   assert.equal((await portal(`/booking-links/${codeFrom(sent.body.link)}`)).status, 200);
 });
 
-test('a customer with no phone number is not texted, but the quote is sent and the link given', async () => {
+test('a customer with no phone number or email gets no message, but the quote is sent and the link given', async () => {
   const { quote } = await jobWithQuote(noPhone, null);
   const before = texts.length;
   const sent = await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} });
   assert.equal(sent.status, 200, JSON.stringify(sent.body));
-  assert.deepEqual(sent.body.message, { status: 'not_sent', reason: 'Sam Reed has no phone number on file.' });
+  assert.deepEqual(sent.body.message, { status: 'not_sent', reason: 'Sam Reed has no phone number or email on file.' });
   assert.equal(sent.body.quote.state, 'sent');
   assert.match(sent.body.link, /\/booking\//);
   assert.equal(texts.length, before);

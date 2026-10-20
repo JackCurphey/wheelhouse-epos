@@ -109,3 +109,27 @@ export async function templateFor(key) {
     changed: Boolean(row && (!row.enabled || row.wording !== null || row.subject !== null)),
   };
 }
+
+const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const time = (hhmm) => hhmm.replace(/^0(\d)/, '$1');
+/**
+ * The [Opening hours] tap-in: Monday first, days in a row with the same hours
+ * run together ("Mon to Fri 9:00 to 18:00, Sat 9:00 to 16:00"). Takes
+ * openingHoursFor's list of { weekday, open, close }.
+ */
+export function formatOpeningHours(days) {
+  const sorted = [...days].sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7));
+  const runs = [];
+  for (const d of sorted) {
+    const last = runs.at(-1);
+    const prev = last?.days.at(-1);
+    if (last && last.open === d.open && last.close === d.close && (prev.weekday + 1) % 7 === d.weekday && d.weekday !== 1) last.days.push(d);
+    else runs.push({ open: d.open, close: d.close, days: [d] });
+  }
+  return runs.map(({ open, close, days: run }) => {
+    const first = DAY[run[0].weekday];
+    const last = DAY[run.at(-1).weekday];
+    const names = run.length === 1 ? first : run.length === 2 ? `${first} and ${last}` : `${first} to ${last}`;
+    return `${names} ${time(open)} to ${time(close)}`;
+  }).join(', ');
+}

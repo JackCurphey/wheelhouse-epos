@@ -1,7 +1,7 @@
 // The quote stage in the React staff app (journey 4), against the real server:
 // add to the quote, send it, record the customer's answer taken by phone, and
-// the approved part joins the job's work and parts. Texts aren't set up in
-// this run, so the app says no text went and offers the link.
+// the approved part joins the job's work and parts. Messages are pretend
+// (Jack, 20 Oct): the quote goes to the outbox, and the app says it was sent.
 // Spec: docs/superpowers/specs/2026-10-03-quote-stage-design.md
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
@@ -51,7 +51,8 @@ test('staff quote, send and record a phone answer; the approved part joins the j
   await job.getByRole('button', { name: /Brake pads \(pair\)/ }).click();
   await expect(job.getByText('Awaiting approval')).toBeVisible();
   await job.getByRole('button', { name: 'Send quote' }).click();
-  await expect(job.getByText(/but no text went: Texts aren't set up/)).toBeVisible();
+  // Through the messages engine, pretend for now (Jack, 20 Oct).
+  await expect(job.getByText('Quote sent to Maya Patel by text.')).toBeVisible();
   await expect(job.getByText('Quoting')).toBeVisible();
   await job.getByRole('button', { name: 'Record their answer' }).click();
   const rec = page.getByRole('dialog', { name: "Record Maya Patel's answer" });

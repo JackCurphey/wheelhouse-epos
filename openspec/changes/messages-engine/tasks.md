@@ -17,8 +17,8 @@
 - [x] 4.2 The routes
 
 ## 5. First triggers
-- [ ] 5.1 Tests first: quote send queues Quote to approve; finish queues Bike ready with Undo; the old app's one-off text is pretend
-- [ ] 5.2 The triggers; Bike ready's Undo bar
+- [x] 5.1 Tests first: quote send queues Quote to approve; finish queues Bike ready with Undo; the old app's one-off text is pretend
+- [x] 5.2 The triggers; Bike ready's Undo bar
 
 ## 6. Screens
 - [ ] 6.1 Draw the outbox, for Jack's approval

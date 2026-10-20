@@ -741,6 +741,28 @@ silent:
 5. **The reply line ("Replies to this number aren't read — reply on your
    page") waits for a page to reply on.** *Pattern:* nothing said that isn't
    true.
+6. **Bike ready's "[Link to the job]" is the job's booking link, issued
+   afresh when it's queued, and only when it will go** (switched off, or no
+   phone or email, keeps the customer's link). *Pattern:* sending a quote
+   (journey 4 decision 5: only the newest link works). An undone Bike ready
+   leaves the older link stopped too; before real sending is switched on,
+   links should be issued when the message actually goes. Reopening the work
+   stops a Bike ready still waiting its minute.
+7. **"[Opening hours]" reads "Mon to Fri 9:00 to 18:00, Sat 9:00 to 16:00"**:
+   Monday first, days in a row with the same hours run together, two days as
+   "Tue and Wed". *Pattern:* the booking messages' times ("Thu 17 Sep, 11:30").
+8. **"[Amount to pay]" is "Nothing" when the order is paid or empty**, so Bike
+   ready reads "Nothing to pay on collection." *Pattern:* the reminder's paid
+   version, "Paid — nothing more to pay" (`collect.mjs`).
+9. **`job-finished`: a customer with no phone or email gets the line "“Bike
+   ready” didn’t go: [name] has no phone number or email on file."; switched
+   off in Settings says nothing.** *Pattern:* the quote panel's "no text
+   went" line. Undo after the minute shows "It’s already gone".
+10. **The quote panel says how it went: "Quote sent to Maya Patel by email."**
+   *Pattern:* the drawn "by [text]" in the Bike ready strip.
+11. **The old app's one-off text shows as "sent", though it's pretend**: the
+   old Customers page is being replaced, and the outbox will show it as
+   pretend. *Pattern:* every message goes to the outbox (Jack, 20 Oct).
 12. **`set-msg-list` is a "Messages" section of the one Settings page, with
    no folds: no "[n] on" summary, and no "How messages are sent" fold until
    real sending has a sender name and address.** *Pattern:* every Settings
