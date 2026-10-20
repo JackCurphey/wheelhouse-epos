@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { jobRefusalText } from './refusal-words.ts';
 import { shortDay } from './rules.ts';
+import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
 
 /**
  * "Change details" on the job page (Jack, 18 Oct,
@@ -222,10 +223,10 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
           )}
           <div className="flex flex-col gap-1.5">
             <span id="cd-mech" className={LABEL}>{manyDays ? 'Mechanic, day 1' : 'Mechanic'}</span>
-            <div role="radiogroup" aria-labelledby="cd-mech" className="flex flex-wrap gap-1.5">
+            <RadioPillGroup aria-labelledby="cd-mech" className="flex flex-wrap gap-1.5">
               {people.map((p) => <Pill key={p.id} on={mech === p.id} onClick={() => setMech(p.id)}>{p.name}</Pill>)}
               <Pill on={mech === null} onClick={() => setMech(null)}>Shared queue</Pill>
-            </div>
+            </RadioPillGroup>
           </div>
         </div>
         {error ? <p role="alert" className="m-0 text-sm text-[var(--wh-danger)] md:col-span-2">{error}</p> : null}

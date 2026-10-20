@@ -7,6 +7,7 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDesc
 import { STATE_LABEL, dayLabel, shortDay, todayIso, type DiaryState, type WaitingItem } from './rules.ts';
 import { requestMinutes } from './offer-dialog.tsx';
 import { Pill } from './change-details-dialog.tsx';
+import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
 
 /**
  * Answering what's waiting (journey 12 decisions 15 and 19): the request
@@ -146,10 +147,10 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
         {/* Shown once the job and the mechanics are in, so nothing looks picked that isn't. */}
         {job && mechanics.isSuccess ? <div className="flex flex-col gap-1.5">
           <span id="req-mech" className="text-sm font-semibold">Mechanic</span>
-          <div role="radiogroup" aria-labelledby="req-mech" className="flex flex-wrap gap-1.5">
+          <RadioPillGroup aria-labelledby="req-mech" className="flex flex-wrap gap-1.5">
             {people.map((p) => <Pill key={p.id} on={mech === p.id} onClick={() => setChosenMech(p.id)}>{p.name}</Pill>)}
             <Pill on={mech === null} onClick={() => setChosenMech(null)}>Shared queue</Pill>
-          </div>
+          </RadioPillGroup>
         </div> : null}
       </>
     );

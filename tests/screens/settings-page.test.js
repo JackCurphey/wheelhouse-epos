@@ -402,6 +402,18 @@ test('the pills show today’s mode, with the drawn note', async () => {
   assert.ok(ui.queryByLabelText('Drop-off window starts') === null, 'no window while set times');
 });
 
+test('the booking mode pills move with the arrow keys without choosing', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const set = await ui.findByRole('radio', { name: 'A set time' });
+  const whole = ui.getByRole('radio', { name: 'The whole day' });
+  await waitFor(() => assert.equal(set.tabIndex, 0));
+  assert.equal(whole.tabIndex, -1);
+  set.focus();
+  fireEvent.keyDown(set, { key: 'ArrowRight' });
+  assert.ok(document.activeElement === whole);
+  assert.ok(ui.queryByRole('dialog', { name: 'Book bikes in for the whole day?' }) === null, 'moving opens nothing');
+});
+
 test('choosing the whole day asks from when; the change then shows, with the window', async () => {
   const { ui, fireEvent, waitFor, within } = await openSettings();
   fireEvent.click(await ui.findByRole('radio', { name: 'The whole day' }));

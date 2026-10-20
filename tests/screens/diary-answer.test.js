@@ -157,6 +157,27 @@ test('a request with its mechanic already set has that pill picked; keeping it s
   }
 });
 
+// Pills move with the arrow keys, one Tab stop per group (drawn: mechanicPill's
+// roving tabindex): only the picked pill is in the Tab order.
+test('the mechanic pills are one Tab stop, and the arrow keys move and pick, wrapping', async () => {
+  const r = await openDiary();
+  const dlg = await openCard(r, 'Sam Reed');
+  const group = await dlg.findByRole('radiogroup', { name: 'Mechanic' });
+  const alex = r.within(group).getByRole('radio', { name: 'Alex Morgan' });
+  const queue = r.within(group).getByRole('radio', { name: 'Shared queue' });
+  await r.waitFor(() => assert.equal(queue.tabIndex, 0));
+  assert.equal(alex.tabIndex, -1);
+  queue.focus();
+  r.fireEvent.keyDown(queue, { key: 'ArrowRight' });
+  await r.waitFor(() => assert.equal(alex.getAttribute('aria-checked'), 'true'));
+  assert.ok(document.activeElement === alex, 'wraps to the first');
+  assert.equal(alex.tabIndex, 0);
+  assert.equal(queue.tabIndex, -1);
+  r.fireEvent.keyDown(alex, { key: 'End' });
+  await r.waitFor(() => assert.equal(queue.getAttribute('aria-checked'), 'true'));
+  assert.ok(document.activeElement === queue);
+});
+
 // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as request-decline).
 const DECLINE_WORDS = 'Sorry, we can’t fit this service in on Friday. Please try another day, or call us and we’ll help find one.';
 test('Decline opens the message to the customer, started for them; Keep request changes nothing', async () => {

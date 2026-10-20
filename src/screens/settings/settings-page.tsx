@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitl
 import { previewLines } from './booking-preview.ts';
 import { MessagesSettings } from './messages-settings.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
+import { RadioPillGroup } from '@/components/ui/radio-pill-group.tsx';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -399,7 +400,7 @@ function NoticeSetting() {
             onBlur={() => void save(unit)}
             className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
           />
-          <span role="radiogroup" aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</span>
+          <RadioPillGroup aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</RadioPillGroup>
         </span>
       </div>
       <p className="m-0 text-sm text-[var(--wh-muted)]">{unit === 'days'
@@ -472,7 +473,7 @@ function ModeSetting() {
       <h4 className="m-0 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">How bikes are booked in</h4>
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span id="mode-label" className="text-[15px] font-semibold">Bikes are booked in for</span>
-        <span role="radiogroup" aria-labelledby="mode-label" className="flex flex-wrap gap-2">{pill('timed', 'A set time')}{pill('dropoff', 'The whole day')}</span>
+        <RadioPillGroup pickOnMove={false} aria-labelledby="mode-label" className="flex flex-wrap gap-2">{pill('timed', 'A set time')}{pill('dropoff', 'The whole day')}</RadioPillGroup>
       </div>
       {data?.nextBookingMode && data.nextBookingModeFrom ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--wh-surface-muted)] px-3 py-2.5 text-sm">
