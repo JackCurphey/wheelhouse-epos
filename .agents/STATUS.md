@@ -167,7 +167,10 @@ phone) come later. On 20 Oct, Cancel booking on the confirmed page: asked once
 ("There's nothing to pay or refund."), then "Your booking is cancelled" with
 Book another time (#303); screens only, on the existing cancel route. Then
 Change the date: the day strip in place, a change waiting with Cancel my date
-change, and a declined change's notice (#306), on a new server route (#305). Then Files and photos on the job page,
+change, and a declined change's notice (#306), on a new server route (#305). Then
+the waiting-for-the-shop page to its drawing: "Your booking request", the
+purple badge, Change the date (a request moves at once) and Cancel request
+(#308); screens only. Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
