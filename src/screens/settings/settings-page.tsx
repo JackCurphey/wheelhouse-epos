@@ -7,6 +7,7 @@ import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { previewLines } from './booking-preview.ts';
+import { MessagesSettings } from './messages-settings.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 
 /**
@@ -833,6 +834,7 @@ function OwnerSettings() {
           {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
         </section>
       </section>
+      <MessagesSettings />
     </div>
   );
 }

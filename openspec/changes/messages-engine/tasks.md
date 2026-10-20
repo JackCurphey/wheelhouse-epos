@@ -22,7 +22,7 @@
 
 ## 6. Screens
 - [ ] 6.1 Draw the outbox, for Jack's approval
-- [ ] 6.2 Tests first, then Settings › Messages (list, edit)
+- [x] 6.2 Tests first, then Settings › Messages (list, edit)
 - [ ] 6.3 The outbox screen
 
 ## 7. Checks
