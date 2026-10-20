@@ -660,6 +660,27 @@ silent:
    deposits, which the drawing puts between them, aren't built. *Pattern:*
    bk-settings' order.
 
+### 20 Oct 2026: Offer another time, the staff side (`docs/decisions/2026-10-20-offer-another-time.md`)
+
+1. **An offered booking is drawn in a request's purple, labelled "Time
+   offered"; it isn't in Waiting for you, has no Accept or Decline, can't be
+   dragged, and its till entry says "Not booked yet".** *Pattern:* a booking
+   request's block, since the customer hasn't said yes yet.
+2. **The pick bar reads "Click a free time in the diary to offer [customer] ·
+   [n] minutes." ("Tap a free time…" on a phone) with Cancel back to the
+   request; New job isn't shown as pressed while offering.** *Pattern:*
+   request-offer-pick; New job's pick bar.
+3. **Picked in a mechanic's own column, the offer goes to that mechanic;
+   otherwise to the request's mechanic, or the freest that day. With nobody
+   to take it, the pop-up says so and can't be sent.** *Pattern:* New job's
+   pick (decision 18); the server needs a mechanic (fresh review).
+5. **The pick bar says "Tap" only on a phone, and doesn't say "Esc to
+   cancel."**: New job's pick bar doesn't either. *Pattern:* the built pick
+   bar.
+4. **The offer pop-up's footer is Offer this time and Keep request, stacked,
+   as drawn; Keep request goes back to the request.** *Pattern:*
+   request-offer.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

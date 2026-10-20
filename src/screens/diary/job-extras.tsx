@@ -226,7 +226,7 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, on
         // menu holds only menu items, so this is the menu's description.
         <span id="job-menu-head" aria-hidden="true" className="flex flex-col gap-0.5 px-4 pt-3.5 pb-2">
           {/* A booking request has no job yet to number: "[job] · booking request", as drawn (Jack, 18 Oct). */}
-          <span className="text-base font-bold">{job.bookingState === 'pending' ? `${job.title} · booking request` : headOf(job)}</span>
+          <span className="text-base font-bold">{job.bookingState === 'pending' ? `${job.title} · booking request` : job.bookingState === 'offered' ? `${job.title} · time offered` : headOf(job)}</span>
           <span className="text-sm text-[var(--wh-muted)]">{whoOf(job)}</span>
         </span>
       ) : null}
@@ -264,6 +264,7 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, on
 const TILE: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] border-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] border-[var(--wh-state-pending-ink)]',
+  offered: 'bg-[var(--wh-state-pending-bg)] border-[var(--wh-state-pending-ink)]',
   answer: 'bg-[var(--wh-state-answer-bg)] border-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] border-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] border-[var(--wh-state-waiting-ink)]',
@@ -296,7 +297,7 @@ export function StackChooser({ jobs, time, at, onClose, onPick, onMove, onMenu }
     </>
   );
   const tiles = jobs.map((j) => {
-    const canMove = j.state !== 'pending' && j.state !== 'cancelled';
+    const canMove = j.state !== 'pending' && j.state !== 'offered' && j.state !== 'cancelled';
     return (
       <button
         key={j.partId}

@@ -11,6 +11,7 @@ import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
 import { NewJobDialog } from './new-job-dialog.tsx';
+import { OfferDialog, requestMinutes, type OfferAt } from './offer-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { jobRefusalText } from './refusal-words.ts';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
@@ -43,6 +44,7 @@ const SlotContext = createContext(SLOT_H);
 const BLOCK: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] border-[var(--wh-state-scheduled-ink)] text-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] border-[var(--wh-state-pending-ink)] text-[var(--wh-state-pending-ink)]',
+  offered: 'bg-[var(--wh-state-pending-bg)] border-[var(--wh-state-pending-ink)] text-[var(--wh-state-pending-ink)]',
   answer: 'bg-[var(--wh-state-answer-bg)] border-[var(--wh-state-answer-ink)] text-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] border-[var(--wh-state-hold-ink)] text-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] border-[var(--wh-state-waiting-ink)] text-[var(--wh-state-waiting-ink)]',
@@ -52,6 +54,7 @@ const BLOCK: Record<DiaryState, string> = {
 const CHIP: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
+  offered: 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
   answer: 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
@@ -157,7 +160,8 @@ function useExtrasHandlers(job: Shown) {
 }
 
 /** A booking request is answered before it is moved; a cancellation isn't moved at all. */
-const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j.state !== 'cancelled';
+// An offer is changed by offering again, not dragged (Jack, 20 Oct).
+const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j.state !== 'offered' && j.state !== 'cancelled';
 
 function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
   job: Shown; range: { start: number }; wide: boolean; chosen: boolean; light?: boolean; lane?: { lane: number; total: number }; colIndex: number;
@@ -1285,6 +1289,10 @@ export function DiaryPage() {
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
   const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean } | null>(null);
+  // ---- Offer another time (Jack, 20 Oct): the same pick mode, for a request ----
+  const [offering, setOffering] = useState<WorkshopJob | null>(null);
+  const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
+  const newJobPicking = picking && !offering;
 
   // ---- The extras (piece 5b) ----
   const [hovered, setHovered] = useState<{ job: Shown; rect: DOMRect } | null>(null);
@@ -1296,7 +1304,7 @@ export function DiaryPage() {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const touchPress = useRef(false);
-  const busy = Boolean(preview || picking || menuFor || overview || stackJobs || openJobId !== null || newJob);
+  const busy = Boolean(preview || picking || menuFor || overview || stackJobs || openJobId !== null || newJob || offerAt);
   const stopHover = () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = null;
@@ -1387,7 +1395,7 @@ export function DiaryPage() {
           onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
           till={(() => {
             const j = menuFor.job;
-            if (j.state === 'pending') return { reason: 'Not booked yet' };
+            if (j.state === 'pending' || j.state === 'offered') return { reason: 'Not booked yet' };
             if (!j.orderId) return { reason: 'No order on this job' };
             if (j.orderStatus === 'cancelled') return { reason: 'Order cancelled' };
             if (j.orderStatus !== 'open') return { reason: 'Already paid' };
@@ -1459,13 +1467,33 @@ export function DiaryPage() {
       const c = columns[colIndex];
       const startMin = dropStart(y, range, 30, slotPx);
       const fixed = view === 'day' && !c.all;
+      if (offering) {
+        // A mechanic's own column gives that mechanic; else the request's, else
+        // the freest that day (decision 18). Shared queue has none (fresh review).
+        const columnMechanic = fixed ? c.mechanicId : null;
+        setOfferAt({ date: c.date, startMin: dropStart(y, range, requestMinutes(offering), slotPx), mechanicId: columnMechanic ?? offering.mechanicId ?? freest(c.date) });
+        setPicking(false);
+        return;
+      }
       setNewJob({ date: c.date, startMin, mechanicId: fixed ? c.mechanicId : freest(c.date), auto: !fixed });
       setPicking(false);
     },
   } : null;
   // Keyboard users land on the bar's first button (it is at the end of the page).
   const enterInsteadRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (picking) enterInsteadRef.current?.focus(); }, [picking]);
+  const pickCancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (picking) (offering ? pickCancelRef : enterInsteadRef).current?.focus(); }, [picking, offering]);
+  // The request's card again, from Waiting for you or made from the job, to go back to it.
+  const requestItem = (j: { id: number; reference?: string | null; customerName?: string | null; mechanicId?: number | null; jobDate: string; startTime?: string | null; endTime?: string | null }): WaitingItem =>
+    (waiting.data?.items ?? []).find((i) => i.jobId === j.id && i.kind === 'new_booking')
+    ?? { kind: 'new_booking', jobId: j.id, reference: j.reference ?? undefined, customerName: j.customerName ?? null, serviceNames: [], mechanicId: j.mechanicId ?? null, jobDate: j.jobDate, startTime: j.startTime ?? null, endTime: j.endTime ?? null };
+  const backToRequest = () => {
+    if (offering) setOpenItem(requestItem(offering));
+    setOffering(null);
+    setOfferAt(null);
+    setPicking(false);
+  };
+  const startOffer = (j: WorkshopJob) => { setOffering(j); setOfferAt(null); setMoveError(null); if (view === 'month') set({ view: null }); setPicking(true); };
   const enterInstead = () => {
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true });
     setPicking(false);
@@ -1485,10 +1513,28 @@ export function DiaryPage() {
   ) : null;
   const pickBar = picking ? (
     <div role="status" className="pointer-events-auto flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)] shadow-[0_8px_24px_var(--wh-backdrop)]">
-      <span className="grow font-semibold">Choose a time for the new job.</span>
-      <button ref={enterInsteadRef} type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
-      <button type="button" onClick={() => setPicking(false)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
+      {offering ? (
+        // Drawn as request-offer-pick; Cancel goes back to the request.
+        <span className="grow font-semibold">{`${isPhone ? 'Tap a free time' : 'Click a free time in the diary'} to offer ${offering.customerName || 'the customer'} · ${requestMinutes(offering)} minutes.`}</span>
+      ) : (
+        <>
+          <span className="grow font-semibold">Choose a time for the new job.</span>
+          <button ref={enterInsteadRef} type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
+        </>
+      )}
+      <button ref={pickCancelRef} type="button" onClick={() => (offering ? backToRequest() : setPicking(false))} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
     </div>
+  ) : null;
+  const offerDialog = offering && offerAt ? (
+    <OfferDialog
+      key={`${offerAt.date}-${offerAt.startMin}-${offerAt.mechanicId}`}
+      job={offering}
+      at={offerAt}
+      people={people}
+      onChooseAgain={() => { setOfferAt(null); setPicking(true); }}
+      onKeep={backToRequest}
+      onOffered={() => { setOffering(null); setOfferAt(null); setChosen(null); }}
+    />
   ) : null;
   const moveErrorBox = moveError ? (
     <div role="alert" className="pointer-events-auto flex items-center gap-2 rounded-md bg-[var(--wh-danger-bg)] py-1 pr-1 pl-3 text-sm text-[var(--wh-danger-hover)] shadow-[0_8px_24px_var(--wh-backdrop)]">
@@ -1615,10 +1661,10 @@ export function DiaryPage() {
         {headerSlot ? createPortal(
           <button
             type="button"
-            aria-label={picking ? 'Choose a time' : 'New job'}
-            aria-pressed={picking}
-            onClick={() => { setPicking((v) => !v); setMoveError(null); }}
-            className={`inline-flex size-11 items-center justify-center rounded-[10px] text-[22px] ${picking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
+            aria-label={newJobPicking ? 'Choose a time' : 'New job'}
+            aria-pressed={newJobPicking}
+            onClick={() => { setPicking((v) => (offering ? true : !v)); setOffering(null); setOfferAt(null); setMoveError(null); }}
+            className={`inline-flex size-11 items-center justify-center rounded-[10px] text-[22px] ${newJobPicking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
           >
             <span aria-hidden="true">+</span>
           </button>,
@@ -1766,8 +1812,9 @@ export function DiaryPage() {
         {waitingSheet}
         <ChooseDaySheet key={chooseOpen ? `open-${date}` : 'closed'} open={chooseOpen} date={date} who={(j) => (shared ? j.mechanicId === null : whoId === null || j.mechanicId === whoId)} whose={shared ? 'Shared queue' : whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'everyone' : 'everyone'} onClose={() => setChooseOpen(false)} onPick={(d) => { setChooseOpen(false); set({ date: d }); }} />
 
-        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
+        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} onOffer={startOffer} /> : null}
         {newJobDialog}
+        {offerDialog}
         {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
         {extrasUi}
       </div>
@@ -1787,7 +1834,7 @@ export function DiaryPage() {
               type="button"
               role="tab"
               aria-selected={view === v}
-              onClick={() => { if (v === 'month') setPicking(false); set({ view: v === 'week' ? null : v }); }}
+              onClick={() => { if (v === 'month') { setPicking(false); setOffering(null); } set({ view: v === 'week' ? null : v }); }}
               className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-[13px] font-semibold pointer-coarse:min-h-11 ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
             >
               {v === 'week' ? 'Week' : v === 'day' ? 'Day' : 'Month'}
@@ -1827,12 +1874,12 @@ export function DiaryPage() {
           <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-[13px] font-bold">{waiting.data?.count ?? items.length}</span>
         </button>
         <div className="hidden w-5 shrink-0 lg:block xl:w-2" />
-        {picking ? (
+        {newJobPicking ? (
           <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
             Choose a time
           </button>
         ) : (
-          <button type="button" onClick={() => { if (view === 'month') set({ view: null }); setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
+          <button type="button" onClick={() => { if (view === 'month') set({ view: null }); setOffering(null); setOfferAt(null); setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
             <span aria-hidden="true">+</span>
             New job
           </button>
@@ -1925,8 +1972,9 @@ export function DiaryPage() {
         </div>
       ) : floatingSpacer}
       {waitingSheet}
-      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} /> : null}
+      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} onOpenJob={(id) => { setOpenItem(null); setOpenJobId(id); }} onOffer={startOffer} /> : null}
       {newJobDialog}
+      {offerDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
       {extrasUi}
     </div>

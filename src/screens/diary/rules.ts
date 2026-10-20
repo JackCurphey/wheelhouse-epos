@@ -5,12 +5,14 @@
  */
 
 /** The diary's colours (ST in docs/design/user-journeys/generator/diary.mjs). */
-export type DiaryState = 'pending' | 'scheduled' | 'answer' | 'waiting' | 'hold' | 'ready' | 'cancelled';
+export type DiaryState = 'pending' | 'offered' | 'scheduled' | 'answer' | 'waiting' | 'hold' | 'ready' | 'cancelled';
 
 // The job page's stage words, everywhere (3 Oct answer 11, walk-through 9 M4).
 export const STATE_LABEL: Record<DiaryState, string> = {
   scheduled: 'Expected',
   pending: 'Pending',
+  // A time the shop offered, waiting for the customer (Jack, 20 Oct): a request's colours.
+  offered: 'Time offered',
   answer: 'Quoting',
   hold: 'Change requested',
   waiting: 'Waiting for parts',
@@ -43,6 +45,7 @@ export function diaryState(job: JobStates): DiaryState | 'hidden' {
   if (b === 'cancelled') return job.cancelledBy === 'customer' && !job.cancellationSeenAt ? 'cancelled' : 'hidden';
   if (b === 'declined' || b === 'expired') return 'hidden';
   if (b === 'pending') return 'pending';
+  if (b === 'offered') return 'offered';
   if (b === 'reschedule_requested' && job.requested) return 'hold';
   if (job.workState === 'waiting_parts') return 'waiting';
   if (job.workState === 'complete') return 'ready';

@@ -28,6 +28,8 @@ const money = (n: number) => `£${n.toFixed(2)}`;
 /** The badge's word for where the job is (the drawings' stage names). */
 export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested'] }): string {
   if (j.bookingState === 'pending') return 'Booking request';
+  // A time the shop offered, waiting for the customer (Jack, 20 Oct).
+  if (j.bookingState === 'offered') return 'Time offered';
   // Bookings that ended, or wait on the customer's change (Jack, 15 Oct, issue 190):
   // the diary's words, with Declined and Expired added.
   // As the diary: a change request with the time the customer asked for.
@@ -50,7 +52,7 @@ type Action = { label: string; action: string; primary: boolean };
 
 /** The buttons that move the job on from where it is (the server's state machines). */
 function stageActions(j: WorkshopJob): Action[] {
-  if (j.bookingState === 'pending' || j.bookingState === 'cancelled' || j.bookingState === 'declined' || j.bookingState === 'expired') return [];
+  if (j.bookingState === 'pending' || j.bookingState === 'offered' || j.bookingState === 'cancelled' || j.bookingState === 'declined' || j.bookingState === 'expired') return [];
   if (j.custodyState === 'collected') return [];
   // Put on hold, beside the main button, wherever the work can be held (Jack, 15 Oct).
   const hold: Action = { label: 'Put on hold', action: 'hold', primary: false };
@@ -330,7 +332,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           type="button"
                           role="switch"
                           aria-checked={here}
-                          disabled={here || sending || job.bookingState === 'pending' || ended}
+                          disabled={here || sending || job.bookingState === 'pending' || job.bookingState === 'offered' || ended}
                           onClick={() => run('book-in')}
                           className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-[13px] font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
                         >

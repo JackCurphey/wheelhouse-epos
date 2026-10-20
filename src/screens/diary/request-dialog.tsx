@@ -13,14 +13,15 @@ import { STATE_LABEL, shortDay, todayIso, type DiaryState, type WaitingItem } fr
  * answer goes to the server's existing route with the version this pop-up
  * saw, so an answer to a job someone else has just changed is refused.
  *
- * Not here yet, because the server can't do them: choosing the mechanic as
- * you accept (decision 62), "Offer another time", and a message with a
- * decline. A change request's "Open full job" opens the job page (layout review 238, item 8).
+ * "Offer another time" (Jack, 20 Oct) hands the request to the diary's pick
+ * mode (onOffer). Not here yet: choosing the mechanic as you accept
+ * (decision 62), and a message with a decline. A change request's "Open full job" opens the job page (layout review 238, item 8).
  */
 
 const CHIP: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
+  offered: 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
   answer: 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
@@ -59,7 +60,7 @@ const TITLE: Record<WaitingItem['kind'], string> = {
   customer_cancelled: 'Cancelled booking',
 };
 
-export function RequestDialog({ item, onClose, onAnswered, onOpenJob }: { item: WaitingItem; onClose: () => void; onAnswered?: () => void; onOpenJob?: (jobId: number) => void }) {
+export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }: { item: WaitingItem; onClose: () => void; onAnswered?: () => void; onOpenJob?: (jobId: number) => void; onOffer?: (job: WorkshopJob) => void }) {
   const queryClient = useQueryClient();
   const id = item.jobId as number;
   const jobQuery = useQuery({ queryKey: ['workshop-job', id], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${id}`) });
@@ -134,6 +135,8 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob }: { item: 
       <div className="flex w-full flex-col gap-2">
         <Button variant="accent" block disabled={sending || !job} onClick={() => answer('accept')}>Accept</Button>
         <div className="flex gap-2.5">
+          {/* Offer another time (Jack, 20 Oct): the diary goes into pick mode for this request. */}
+          {onOffer && <Button disabled={sending || !job} onClick={() => { if (job) { onOffer(job); onClose(); } }}>Offer another time</Button>}
           <Button variant="ghost" disabled={sending || !job} onClick={() => setConfirmDecline(true)}>Decline</Button>
         </div>
       </div>
