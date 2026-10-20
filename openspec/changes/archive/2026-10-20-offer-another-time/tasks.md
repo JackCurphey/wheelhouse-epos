@@ -17,4 +17,4 @@
 - [x] 3.1 Tests first, watched failing: the offered page's words; Accept this time; Cancel my request
 - [x] 3.2 The offered state on the booking page
 - [x] 3.3 Browser: staff offer a time, the customer accepts, against the real server
-- [ ] 3.4 A fresh review; `npm test` and `npm run test:browser` pass; archived
+- [x] 3.4 A fresh review; `npm test` and `npm run test:browser` pass; archived
