@@ -50,6 +50,8 @@ test('a customer cancels a confirmed booking from its page', async ({ page }) =>
   await expect(dialog.getByText('There’s nothing to pay or refund.')).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel booking' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Your booking is cancelled' })).toBeVisible();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('heading', { level: 1, name: 'Your booking is cancelled' })).toBeFocused();
   const code = link.split('/').pop();
   const view = await (await fetch(`${server!.baseUrl}/api/portal/${owner.shop.slug}/booking-links/${code}`)).json();
   expect(view.stage).toBe('cancelled');

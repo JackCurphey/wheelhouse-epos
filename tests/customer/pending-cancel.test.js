@@ -83,6 +83,9 @@ test('a refusal shows the server’s words in the pop-up and the booking stays',
   await click(within(dialog).getByRole('button', { name: 'Cancel booking' }));
   assert.ok(await within(dialog).findByText('Your bike is already with the shop - please contact them to cancel'));
   assert.ok(ui.queryByRole('heading', { level: 1, name: 'Your booking is cancelled' }) === null);
+  // The page reads the booking again, so it stops offering what was refused.
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.ok(current.requests.filter((r) => r.method === 'GET' && r.url.endsWith(`/booking-links/${CODE}`)).length >= 2));
 });
 
 test('a cancelled booking opened later shows the cancelled page, for a whole-day booking without a time', async () => {

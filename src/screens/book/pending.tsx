@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Link, useParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ApiError, apiMutate } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
@@ -91,7 +91,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           <p className="m-0 text-[15px] leading-normal">{cancelledLine(link)}</p>
           <div>
-            <Link to={`/book/${shopSlug}`} className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] px-4 text-sm font-semibold">Book another time</Link>
+            <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Book another time</Link>
           </div>
           <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
         </div>
@@ -194,6 +194,9 @@ function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: 
       setOpen(false);
     } catch (err) {
       setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t cancel that. Try again in a moment.');
+      // A refusal means the booking changed (the bike came in, or it can't be
+      // cancelled online now): read it again so the page stops offering it.
+      if (err instanceof ApiError && err.status === 409) void queryClient.invalidateQueries({ queryKey: ['portal', shopSlug, 'booking-link', code] });
     } finally {
       setBusy(false);
     }
@@ -201,7 +204,7 @@ function CancelBooking({ link, shopSlug, code }: { link: BookingLink; shopSlug: 
 
   return (
     <div className="mb-4">
-      <Button onClick={() => setOpen(true)}>Cancel booking</Button>
+      <Button onClick={() => { setError(null); setOpen(true); }}>Cancel booking</Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="cancel-title" aria-describedby="cancel-sub">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">

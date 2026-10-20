@@ -594,6 +594,10 @@ silent:
 5. **A refusal (the bike already with the shop, or the booking no longer
    cancellable) shows the server's words in the pop-up.** *Pattern:* the
    settings pop-ups' refusals.
+6. **Every cancelled booking shows "Your booking is cancelled", whoever
+   cancelled it**: the booking link doesn't say whether the customer or the
+   shop did. *Pattern:* bk-cancelled; the words are true either way (fresh
+   review).
 
 ## Decided here, for Jack to overrule
 
