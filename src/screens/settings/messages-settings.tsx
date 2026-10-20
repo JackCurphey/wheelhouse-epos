@@ -77,7 +77,12 @@ export function MessagesSettings() {
         {templates.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
         {jobMessages.map(row)}
         {/* The booking messages under their own heading, as drawn (msgListOpen). */}
-        {bookingMessages.length ? <h4 className="m-0 mt-2 text-sm font-bold">Booking messages</h4> : null}
+        {bookingMessages.length ? (
+          <>
+            <h4 className="m-0 mt-2 text-sm font-bold">Booking messages</h4>
+            <p className="m-0 text-[13px] text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
+          </>
+        ) : null}
         {bookingMessages.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </section>

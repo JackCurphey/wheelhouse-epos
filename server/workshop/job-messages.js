@@ -116,7 +116,11 @@ export async function bookingMessageVars(jobId, shopId, link, key) {
     vars['Suggested day and time'] = when;
     vars['The shop’s message'] = job.offer_message || null;
   }
-  if (key === 'request_declined') vars['The shop’s message'] = job.decline_message || null;
+  if (key === 'request_declined') {
+    // After an offer, the time the customer asked for, not the one offered (fresh review).
+    vars['Booked day and time'] = dayAndTime(job.offered_from_date, job.offered_from_time) ?? when;
+    vars['The shop’s message'] = job.decline_message || null;
+  }
   if (key === 'date_change_answered') vars['New day and time'] = when;
   return { ...base, vars };
 }

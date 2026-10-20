@@ -94,6 +94,7 @@ test('Messages lists the messages that send today, each with when, the customerâ
   // The booking messages under their own heading, as drawn (msgListOpen).
   const heading = list.querySelector('h4');
   assert.ok(heading !== null && heading.textContent === 'Booking messages');
+  assert.ok(list.textContent.includes('Sent the way each customer chose when booking: text, WhatsApp or email.'));
   const inList = (t) => [...list.querySelectorAll('span')].find((el) => el.textContent === t);
   assert.ok(heading.compareDocumentPosition(inList('Booking confirmed')) & 4, 'Booking confirmed under it');
   assert.ok(inList('Bike ready').compareDocumentPosition(heading) & 4, 'job messages first');

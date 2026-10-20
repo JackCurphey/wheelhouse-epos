@@ -785,6 +785,10 @@ export function register(route) {
         signer = await signOffMechanic(body.signedOffBy);
         if (signer === null) return sendJson(res, 400, SIGN_OFF_REQUIRED);
       }
+      // A booking message answers a customer's request or an offered time,
+      // not a reschedule staff asked for themselves (fresh review).
+      const answering = machine === bookingRequest && (event === 'accept' || event === 'decline')
+        ? (await db.prepare('SELECT booking_state FROM workshop_jobs WHERE id = ?').get(id))?.booking_state : null;
       let result;
       let readyMessage;
       if (signing || unsigning) {
@@ -828,8 +832,8 @@ export function register(route) {
       if (machine === bookingRequest && event === 'decline') {
         await db.prepare('UPDATE workshop_jobs SET decline_message = ? WHERE id = ?').run(declineMessage || null, id);
       }
-      if (machine === bookingRequest && event === 'accept') await sendBookingMessage(req, id, shopId, 'booking_confirmed');
-      if (machine === bookingRequest && event === 'decline') await sendBookingMessage(req, id, shopId, 'request_declined');
+      if (event === 'accept' && answering === 'pending') await sendBookingMessage(req, id, shopId, 'booking_confirmed');
+      if (event === 'decline' && (answering === 'pending' || answering === 'offered')) await sendBookingMessage(req, id, shopId, 'request_declined');
       // A staff cancellation never shows in "Waiting for you" (piece 12), and
       // the link no longer speaks of a declined change.
       if (machine === bookingRequest && event === 'cancel') {

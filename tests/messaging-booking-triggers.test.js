@@ -71,7 +71,7 @@ test('offering another time sends New time offered, with the time and the shop�
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const [m] = await messagesFor(booked.id);
   assert.equal(m.template_key, 'time_offered');
-  assert.match(m.body, /suggests \w{3} \d{1,2} \w{3}, 14:00 instead\. “Would 14:00 suit\?” Accept it or cancel your request: \[link\]\./);
+  assert.match(m.body, /can’t do \w{3} \d{1,2} \w{3}, 11:00 and suggests \w{3} \d{1,2} \w{3}, 14:00 instead\. “Would 14:00 suit\?” Accept it or cancel your request: \[link\]\./);
 });
 
 test('declining sends Request declined with the shop’s message; with none, the gap is tidied', async () => {
@@ -83,7 +83,7 @@ test('declining sends Request declined with the shop’s message; with none, the
   const quiet = await book('13:00');
   await act(quiet.id, 'decline');
   const [q] = await messagesFor(quiet.id);
-  assert.match(q.body, /12:00|13:00/);
+  assert.match(q.body, /, 13:00\./);
   assert.equal(/“|”/.test(q.body), false, 'no empty quotes');
 });
 
@@ -109,3 +109,21 @@ test('a message switched off sends nothing, and the answer still goes through', 
     await staff('/api/message-templates/booking_confirmed', { method: 'PUT', body: { enabled: true } });
   }
 });
+
+test('declining a time already offered says the time the customer asked for, not the one offered', async () => {
+  const booked = await book('09:00');
+  await act(booked.id, 'offer', { jobDate: nextDay(), startTime: '16:00', mechanicId: sam });
+  assert.equal((await act(booked.id, 'decline')).status, 200);
+  const declined = (await messagesFor(booked.id)).find((m) => m.template_key === 'request_declined');
+  assert.match(declined.body, /can’t fit in your Test service on \w{3} \d{1,2} \w{3}, 09:00\./);
+});
+
+test('a staff-made reschedule answered sends no booking message', async () => {
+  const booked = await book('15:00');
+  await act(booked.id, 'accept');
+  const asked = await act(booked.id, 'request-reschedule');
+  assert.equal(asked.status, 200, JSON.stringify(asked.body));
+  assert.equal((await act(booked.id, 'decline')).status, 200);
+  assert.deepEqual((await messagesFor(booked.id)).map((m) => m.template_key), ['booking_confirmed']);
+});
+

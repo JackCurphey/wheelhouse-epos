@@ -810,6 +810,17 @@ silent:
 4. **A message that can't be queued is logged, and the answer stands.**
    *Pattern:* nothing the customer is sent is worth refusing a staff answer
    for.
+5. **Staff aren't told when a booking message didn't go** (switched off, or
+   no phone or email): the drawings are silent, and these answers' pop-ups
+   close. *Pattern:* none drawn; Bike ready's "didn't go" line is a later
+   follow-up if wanted.
+6. **Settings' Date change answered row still reads "When the shop accepts or
+   declines a new date"**, though only accepting sends for now (item 2).
+   *Pattern:* the approved wording, kept until the decline wording is built.
+7. **Before real sending is switched on:** issue the link only once the
+   message is queued, and isolate a failed message from the answer when the
+   database runs one transaction per request (`DB_TENANT_SCOPE=transaction`).
+   Neither can happen while pretend.
 
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 
