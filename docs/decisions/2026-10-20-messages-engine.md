@@ -23,3 +23,4 @@ Twilio is real in Jack's set-up; email and WhatsApp have no account yet
    for now: each shows what Maya would get. Nothing is really sent."; newest
    first, each with its name, Waiting or Pretend, how and when ("By text to
    07700 900 142 · goes at 15:31"), and the words the customer gets.
+   **Approved, 20 Oct** (Jack: "Approve the job page's Messages drawing; build it.").
