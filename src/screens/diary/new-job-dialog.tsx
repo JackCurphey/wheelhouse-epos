@@ -20,6 +20,10 @@ import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
  * the mechanic's free time from the start chosen, and "Find the next free"
  * moves the job to that mechanic's next gap long enough (Jack, 15 Oct).
  *
+ * "+ Add a bike" (not-drawn pages row 22, answer C) opens the old job form's
+ * inline fields, Make, Model, Colour and Serial number, with Cancel and Add
+ * bike, which saves the bike to the customer and chooses it.
+ *
  * Not here yet, because the server has nowhere to keep them: storage hooks,
  * and separate customer and staff notes.
  */
@@ -103,6 +107,24 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   const [listOpen, setListOpen] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [bikeId, setBikeId] = useState<number | null>(null);
+  // "+ Add a bike": the fields while open, and why it couldn't be added.
+  const [newBike, setNewBike] = useState<{ make: string; model: string; colour: string; serialNumber: string } | null>(null);
+  const [bikeError, setBikeError] = useState<string | null>(null);
+  const [addingBike, setAddingBike] = useState(false);
+  // Focus follows the fields: Make when they open, + Add a bike on Cancel,
+  // and the Bike list once the bike is added (the old form focused Make).
+  const makeRef = useRef<HTMLInputElement>(null);
+  const addBikeRef = useRef<HTMLButtonElement>(null);
+  const bikeSelectRef = useRef<HTMLSelectElement>(null);
+  const focusAfter = useRef<'make' | 'add' | 'bike' | null>(null);
+  const bikeFieldsOpen = newBike !== null;
+  useEffect(() => {
+    const where = focusAfter.current;
+    focusAfter.current = null;
+    if (where === 'make') makeRef.current?.focus();
+    if (where === 'add') addBikeRef.current?.focus();
+    if (where === 'bike') bikeSelectRef.current?.focus();
+  }, [bikeFieldsOpen]);
   const [kind, setKind] = useState<string | null>(null);
   const [service, setService] = useState<Service | null>(null);
   const [title, setTitle] = useState('');
@@ -139,6 +161,32 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
     queryFn: () => apiGet<Bike[]>(`/api/customers/${customer?.id}/bikes`),
     enabled: Boolean(customer),
   });
+
+  async function addBike() {
+    if (!customer || !newBike) return;
+    if (!newBike.make.trim() && !newBike.model.trim()) { setBikeError('Enter a make or a model.'); return; }
+    setAddingBike(true);
+    setBikeError(null);
+    try {
+      const bike = await apiMutate<Bike>(`/api/customers/${customer.id}/bikes`, {
+        make: newBike.make.trim(), model: newBike.model.trim(), colour: newBike.colour.trim(), serialNumber: newBike.serialNumber.trim(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ['customer-bikes', customer.id] });
+      setBikeId(bike.id);
+      focusAfter.current = 'bike';
+      setNewBike(null);
+    } catch (err) {
+      setBikeError(err instanceof ApiError ? err.message : 'Wheelhouse couldn’t add the bike. Try again in a moment.');
+    } finally {
+      setAddingBike(false);
+    }
+  }
+  const bikeField = (key: 'make' | 'model' | 'colour' | 'serialNumber', label: string, placeholder = '') => (
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <label htmlFor={`nj-nb-${key}`} className={LABEL}>{label}</label>
+      <input id={`nj-nb-${key}`} ref={key === 'make' ? makeRef : undefined} className={INPUT} placeholder={placeholder} value={newBike?.[key] ?? ''} onChange={(e) => setNewBike((b) => (b ? { ...b, [key]: e.target.value } : b))} />
+    </div>
+  );
 
   const endMin = service ? startMin + service.minutes : null;
   const mechName = mech === null ? 'Shared queue' : people.find((p) => p.id === mech)?.name ?? 'Shared queue';
@@ -202,6 +250,13 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
     setCustomer(c);
     setSearch('');
     setBikeId(null);
+    closeNewBike();
+  }
+  // The bike fields belong to one customer: changing the customer closes them,
+  // as the old job form did (fresh review).
+  function closeNewBike() {
+    setNewBike(null);
+    setBikeError(null);
   }
   // A customer's only bike is chosen for them once their bikes arrive.
   const bikeList = bikes.data ?? [];
@@ -213,6 +268,11 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   }
 
   async function save() {
+    // A bike half added would be lost, and the job saved with another (fresh review).
+    if (newBike && Object.values(newBike).some((v) => v.trim())) {
+      setError('Add the bike or cancel it first.');
+      return;
+    }
     if (entered && (!/^\d{4}-\d{2}-\d{2}$/.test(dayBox) || !/^\d{2}:\d{2}$/.test(timeBox))) {
       setError('Choose a date and a start time.');
       return;
@@ -277,7 +337,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
                   <span className="text-sm font-bold">{customer.name}</span>
                   <span className="text-[13px] text-[var(--wh-muted)]">{[customer.phone, customer.email].filter(Boolean).join(' · ')}</span>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setCustomer(null)}>Change</Button>
+                <Button variant="ghost" size="sm" disabled={addingBike} onClick={() => { setCustomer(null); closeNewBike(); }}>Change</Button>
               </div>
             ) : (
               <div
@@ -317,12 +377,26 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
             )}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="nj-bike" className={LABEL}>Bike</label>
-              <select id="nj-bike" className={INPUT} disabled={!customer} value={effectiveBike ?? ''} onChange={(e) => setBikeId(e.target.value ? Number(e.target.value) : null)}>
+              <select id="nj-bike" ref={bikeSelectRef} className={INPUT} disabled={!customer} value={effectiveBike ?? ''} onChange={(e) => setBikeId(e.target.value ? Number(e.target.value) : null)}>
                 {!customer ? <option value="">Select a customer first</option> : <option value="">No bike</option>}
                 {bikeList.map((b) => (
                   <option key={b.id} value={b.id}>{bikeName(b)}</option>
                 ))}
               </select>
+              {newBike ? (
+                <div className="flex flex-col gap-2.5 rounded-md border border-[var(--wh-border)] p-3">
+                  <div className="flex flex-wrap gap-2.5">{bikeField('make', 'Make', 'e.g. Trek')}{bikeField('model', 'Model', 'e.g. FX2')}</div>
+                  <div className="flex flex-wrap gap-2.5">{bikeField('colour', 'Colour')}{bikeField('serialNumber', 'Serial number')}</div>
+                  {bikeError ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{bikeError}</p> : null}
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" aria-label="Cancel adding a bike" disabled={addingBike} onClick={() => { focusAfter.current = 'add'; closeNewBike(); }}>Cancel</Button>
+                    <Button size="sm" disabled={addingBike} onClick={() => void addBike()}>Add bike</Button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" ref={addBikeRef} disabled={!customer} onClick={() => { focusAfter.current = 'make'; setNewBike({ make: '', model: '', colour: '', serialNumber: '' }); }}
+                  className="min-h-11 self-start text-sm font-semibold text-[var(--wh-accent-dark)] underline underline-offset-2 disabled:text-[var(--wh-muted)] disabled:no-underline">+ Add a bike</button>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <span id="nj-work" className={LABEL}>Work</span>

@@ -47,8 +47,10 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
+let addedBikes = [];
 function stubServer() {
   calls = [];
+  addedBikes = [];
   answer = null;
   freeOn = () => [{ start: '09:00', end: '18:00' }];
   capacityDown = false;
@@ -58,6 +60,12 @@ function stubServer() {
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
     if (method === 'POST' && u.pathname === '/api/workshop-jobs') return answer ?? reply(201, { ...JOBS[0], id: 50, version: 1 });
+    if (method === 'POST' && u.pathname === '/api/customers/5/bikes') {
+      const body = JSON.parse(init.body);
+      const bike = { id: 8, customerId: 5, make: body.make, model: body.model, colour: body.colour, active: true };
+      addedBikes.push(bike);
+      return reply(201, bike);
+    }
     if (method === 'POST') return reply(200, { ...JOBS[0], id: 50, version: 2 });
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
@@ -75,7 +83,7 @@ function stubServer() {
       return reply(200, { days });
     }
     if (u.pathname === '/api/customers') return reply(200, CUSTOMERS.filter((c) => c.name.toLowerCase().includes((u.searchParams.get('search') || '').toLowerCase())));
-    if (u.pathname === '/api/customers/5/bikes') return reply(200, BIKES);
+    if (u.pathname === '/api/customers/5/bikes') return reply(200, [...BIKES, ...addedBikes]);
     return reply(404, { error: 'Not found' });
   };
 }
@@ -512,4 +520,84 @@ test('New job puts the focus on Enter a time instead, and room is kept at the bo
   assert.ok(r.ui.container.querySelector('[data-floating-spacer]') !== null, 'room is kept at the bottom');
   r.fireEvent.click(r.ui.getByRole('button', { name: 'Cancel' }));
   assert.ok(r.ui.container.querySelector('[data-floating-spacer]') === null);
+});
+
+// "+ Add a bike" (not-drawn pages row 22, answer C: the old job form's
+// inline Make, Model, Colour and Serial number, with Cancel and Add bike).
+async function withMaya(r) {
+  const form = await pickTuesdayTen(r);
+  r.fireEvent.change(form.getByLabelText('Find customer by name, phone or email'), { target: { value: 'Maya' } });
+  r.fireEvent.click(await form.findByRole('button', { name: /Maya Patel/ }));
+  await r.waitFor(() => assert.ok(has(form.queryByRole('option', { name: 'Trek Domane AL 3 · green' }))));
+  return form;
+}
+
+test('+ Add a bike waits for a customer', async () => {
+  const r = await openDiary();
+  const form = await pickTuesdayTen(r);
+  assert.equal(form.getByRole('button', { name: '+ Add a bike' }).disabled, true);
+});
+
+test('+ Add a bike adds the customer’s bike there and then, and chooses it', async () => {
+  const r = await openDiary();
+  const form = await withMaya(r);
+  r.fireEvent.click(form.getByRole('button', { name: '+ Add a bike' }));
+  r.fireEvent.change(form.getByLabelText('Make'), { target: { value: 'Brompton' } });
+  r.fireEvent.change(form.getByLabelText('Model'), { target: { value: 'C Line' } });
+  r.fireEvent.change(form.getByLabelText('Colour'), { target: { value: 'black' } });
+  r.fireEvent.change(form.getByLabelText('Serial number'), { target: { value: 'BR123' } });
+  r.fireEvent.click(form.getByRole('button', { name: 'Add bike' }));
+  await r.waitFor(() => assert.deepEqual(posts(), ['/api/customers/5/bikes {"make":"Brompton","model":"C Line","colour":"black","serialNumber":"BR123"}']));
+  await r.waitFor(() => assert.equal(form.getByLabelText('Bike').value, '8'));
+  assert.equal(has(form.queryByLabelText('Make')), false, 'the fields close');
+});
+
+test('a bike needs a make or a model; Cancel closes the fields and adds nothing', async () => {
+  const r = await openDiary();
+  const form = await withMaya(r);
+  r.fireEvent.click(form.getByRole('button', { name: '+ Add a bike' }));
+  r.fireEvent.click(form.getByRole('button', { name: 'Add bike' }));
+  assert.ok(has(await form.findByText('Enter a make or a model.')));
+  r.fireEvent.click(form.getByRole('button', { name: 'Cancel adding a bike' }));
+  assert.equal(has(form.queryByLabelText('Make')), false);
+  assert.deepEqual(posts(), []);
+});
+
+
+test('Save job with a bike half added says to add it or cancel it first, and saves nothing', async () => {
+  const r = await openDiary();
+  const form = await withMaya(r);
+  r.fireEvent.click(await form.findByRole('radio', { name: 'Full service' }));
+  r.fireEvent.click(form.getByRole('radio', { name: 'Standard service · 90 min' }));
+  r.fireEvent.click(form.getByRole('button', { name: '+ Add a bike' }));
+  r.fireEvent.change(form.getByLabelText('Make'), { target: { value: 'Brompton' } });
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  assert.ok(has(await form.findByText('Add the bike or cancel it first.')));
+  assert.deepEqual(posts(), []);
+});
+
+test('changing the customer closes the bike fields and clears them', async () => {
+  const r = await openDiary();
+  const form = await withMaya(r);
+  r.fireEvent.click(form.getByRole('button', { name: '+ Add a bike' }));
+  r.fireEvent.change(form.getByLabelText('Make'), { target: { value: 'Brompton' } });
+  r.fireEvent.click(form.getByRole('button', { name: 'Change' }));
+  assert.equal(has(form.queryByLabelText('Make')), false);
+  r.fireEvent.change(form.getByLabelText('Find customer by name, phone or email'), { target: { value: 'Maya' } });
+  r.fireEvent.click(await form.findByRole('button', { name: /Maya Patel/ }));
+  r.fireEvent.click(await form.findByRole('button', { name: '+ Add a bike' }));
+  assert.equal(form.getByLabelText('Make').value, '');
+});
+
+test('focus goes to Make when the fields open, back to + Add a bike on Cancel, and to Bike once added', async () => {
+  const r = await openDiary();
+  const form = await withMaya(r);
+  r.fireEvent.click(form.getByRole('button', { name: '+ Add a bike' }));
+  await r.waitFor(() => assert.ok(document.activeElement === form.getByLabelText('Make')));
+  r.fireEvent.click(form.getByRole('button', { name: 'Cancel adding a bike' }));
+  await r.waitFor(() => assert.ok(document.activeElement === form.getByRole('button', { name: '+ Add a bike' })));
+  r.fireEvent.click(form.getByRole('button', { name: '+ Add a bike' }));
+  r.fireEvent.change(form.getByLabelText('Make'), { target: { value: 'Brompton' } });
+  r.fireEvent.click(form.getByRole('button', { name: 'Add bike' }));
+  await r.waitFor(() => assert.ok(document.activeElement === form.getByLabelText('Bike')));
 });
