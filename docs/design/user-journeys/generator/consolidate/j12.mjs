@@ -19,7 +19,8 @@ export default {
   'diary-hover-summary': into('job-quick-overview', 'Workshop day 65', "Hovering a block opens the summary as a card beside it (notes, line items, the agreed total)"),
   // Requests, as a pop-up
   'request-new': keep(9),
-  'request-offer': into('request-new', '20 Oct (Jack: offer another time)', "'Offer another time': a day strip and times for the request's mechanic, 'Message to Sam'; the suggested time kept free, the first let go; 'Offer this time' or 'Keep request'"),
+  'request-offer-pick': into('diary', '20 Oct (Jack: offer another time, in the diary)', "the diary in pick mode: 'Click a free time in the diary to offer Sam Reed · 45 minutes', Cancel back to the request"),
+  'request-offer': into('request-new', '20 Oct (Jack: offer another time)', "'Offer another time': the picked time with 'Choose another time', 'Message to Sam'; the suggested time kept free, the first let go; 'Offer this time' or 'Keep request'"),
   'request-decline': into('request-new', 'Workshop day 15', "'Decline booking request': message to Sam; 'Decline & notify customer' or 'Keep request'"),
   'request-change': into('request-new', 'Workshop day 15', "Oliver Chen: 'Mon 14 Sep · 10:00' → '14:00'; 'Accept', 'Decline', 'Open full job'"),
   'request-cancel': into('request-new', 'Workshop day 15', "Aisha Khan's 'Cancelled booking': nothing to decide, one button 'Seen'"),

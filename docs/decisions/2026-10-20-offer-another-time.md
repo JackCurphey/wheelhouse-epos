@@ -12,14 +12,21 @@ time picker first ("1").
    customer; the time they first asked for is let go** (Jack, 20 Oct: "1: keep
    the suggested time free for the customer and let their first time go.").
    Chosen over keeping both times, and keeping nothing until they answer.
-2. **Drawn for Jack's approval as `request-offer`**: the request pop-up's
-   "Offer another time" opens "Offer another time" — the mechanic (as the
-   request pop-up has it), a strip of days marked "Asked for", "[n] times",
-   "Full" or "Closed", the chosen day's times, "Message to Sam" (started
-   for them), the note "Sam sees the time and your message on their booking
-   page, and accepts it or cancels. Saturday at [time] is kept free for them;
-   Friday is let go.", and Offer this time / Keep request. Following the
-   bk-when day strip (not-drawn pages row 48, answer C) and the decline
-   pop-up's message box. The mockup's "Offer another time" on the booking
-   request boards, which went to the customer's change request by mistake,
-   now goes here.
+2. **Staff choose the time in the diary itself** (Jack, 20 Oct: "instead of
+   having it show the boxes with suggested dates, could we have it show the
+   diary in one way or another so shops can have context of what is in for
+   the days?"), replacing a first drawing with a strip of day boxes. Drawn
+   for Jack's approval as two boards, following New job's pick
+   (`new-job-pick`) and the not-drawn pages' answer for row 48 (the day
+   diary):
+   - `request-offer-pick`: "Offer another time" puts the diary in pick mode,
+     "Click a free time in the diary to offer Sam Reed · 45 minutes", with
+     Cancel back to the request; the week, the mechanics and Waiting for you
+     stay in view.
+   - `request-offer`: the picked time ("Friday 18 September, 12:00 · Alex
+     Morgan") with "Choose another time", "Message to Sam" (started for them),
+     the note "Sam sees the time and your message on their booking page, and
+     accepts it or cancels. Friday at 12:00 is kept free for them; the time
+     they asked for is let go.", and Offer this time / Keep request.
+   The mockup's "Offer another time" on the booking request boards, which
+   went to the customer's change request by mistake, now goes here.

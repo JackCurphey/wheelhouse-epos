@@ -580,7 +580,7 @@ later packages.
 *Screens it builds (9) and the situations it covers:*
 
 - **`set-workshop-diary`** (block 1, Settings page) — 1 situation: `diary-settings`.
-- **`diary`** (block 23, Diary) — 9 of its 14 situations here: `desk`, `diary-mechanic`, `waiting-open`, `change-selected`, `diary-context-menu`, `diary-stack-hover`, `diary-stack-open`, `new-job-pick`, `rs-diary-arrived`; plus 6 written lines.
+- **`diary`** (block 23, Diary) — 10 of its 15 situations here: `desk`, `diary-mechanic`, `waiting-open`, `change-selected`, `diary-context-menu`, `diary-stack-hover`, `diary-stack-open`, `new-job-pick`, `request-offer-pick`, `rs-diary-arrived`; plus 6 written lines.
 - **`diary-day`** (block 23, Diary) — no other situations.
 - **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
 - **`request-new`** (block 9, Form box) — 4 of its 5 situations here: `request-decline`, `request-offer`, `request-change`, `request-cancel`.
