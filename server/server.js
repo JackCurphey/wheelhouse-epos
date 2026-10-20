@@ -786,18 +786,20 @@ async function waitForPendingShopifyPushes(pendingPushes) {
   }
 }
 
-// Exported so tests can drive it directly against a fake server/pool without
-// spawning a real process for every assertion; production only ever calls it
-// through the SIGTERM/SIGINT listeners below.
 // The messages engine's timer, stopped first on shutdown.
 let stopMessageSender = null;
 
+// Exported so tests can drive it directly against a fake server/pool without
+// spawning a real process for every assertion; production only ever calls it
+// through the SIGTERM/SIGINT listeners below.
 export function gracefulShutdown(signal, {
   httpServer = server,
   dbPool = pool,
   graceMs = SHUTDOWN_GRACE_MS,
   exit = process.exit,
   pendingPushes = pendingShopifyPushes,
+  // Stops the messages timer; resolves once a sending round in flight is done.
+  stopSender = () => stopMessageSender?.(),
   // Only the real production httpServer (the default) is gated on the
   // module-level serverListening flag - tests inject their own fake
   // httpServer objects to drive the drain/force-exit paths directly and
@@ -807,7 +809,7 @@ export function gracefulShutdown(signal, {
 } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
-  stopMessageSender?.();
+  const senderStopped = Promise.resolve(stopSender());
 
   // A signal landing before server.listen()'s callback has fired means
   // there is no HTTP server to close and no pool activity belonging to
@@ -843,7 +845,8 @@ export function gracefulShutdown(signal, {
     // firePendingShopifyPushes in lib/sales.js) - draining HTTP connections says
     // nothing about that. Wait for it before ending the pool, or pg refuses
     // its connect() with the pool already ended and the push dies silently.
-    waitForPendingShopifyPushes(pendingPushes)
+    // Likewise a messages sending round still using the pool.
+    Promise.all([waitForPendingShopifyPushes(pendingPushes), senderStopped])
       .then(() => dbPool.end())
       .catch((poolErr) => console.error('Error while closing the database pool', poolErr))
       .finally(() => {

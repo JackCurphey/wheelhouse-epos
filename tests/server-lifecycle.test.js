@@ -369,6 +369,7 @@ test('GET /healthz returns 503 with the database actually unreachable', async ()
   const proxy = createNetServer((client) => {
     const upstream = net.connect(Number(realDbUrl.port), realDbUrl.hostname);
     openSockets.add(client);
+    openSockets.add(upstream);
     client.pipe(upstream);
     upstream.pipe(client);
     client.on('error', () => {});
@@ -381,7 +382,9 @@ test('GET /healthz returns 503 with the database actually unreachable', async ()
   proxiedDbUrl.hostname = '127.0.0.1';
   proxiedDbUrl.port = String(proxyPort);
 
-  const server = await spawnServer({ DATABASE_URL: proxiedDbUrl.toString() });
+  // The messages timer (every 5 s) would keep the pool's connections busy so
+  // they never reach pg's 10 s idle timeout; slow it right down here.
+  const server = await spawnServer({ DATABASE_URL: proxiedDbUrl.toString(), WH_MESSAGES_TICK_MS: '3600000' });
   try {
     const before = await fetch(`${server.baseUrl}/healthz`);
     assert.equal(before.status, 200, 'sanity check: boot through the proxy must succeed exactly like a direct connection');
@@ -598,6 +601,25 @@ test('a deferred Shopify push in flight when shutdown begins is drained before t
     ['push-settled', 'pool-end', 'exit:0'],
     `the push must settle strictly before the pool ends, which must happen strictly before exit; stdout:\n${stdout}\nstderr:\n${stderr}`
   );
+});
+
+// The messages engine's timer (openspec/changes/messages-engine): a sending
+// round in flight when shutdown begins finishes before the pool ends, or it
+// dies with "Cannot use a pool after calling end on the pool".
+test('a messages sending round in flight when shutdown begins finishes before the pool ends', async () => {
+  const source =
+    gracefulShutdownImportLine() +
+    `const stopSender = () => new Promise((res) => setTimeout(() => { console.log('MARK round-done'); res(); }, 100));\n` +
+    `const fakeHttpServer = { close: (cb) => setImmediate(cb), closeIdleConnections: () => {} };\n` +
+    `const fakeDbPool = { end: () => { console.log('MARK pool-end'); return Promise.resolve(); } };\n` +
+    `gracefulShutdown('SIGTERM', {\n` +
+    `  httpServer: fakeHttpServer, dbPool: fakeDbPool, graceMs: 5000, pendingPushes: new Set(), stopSender,\n` +
+    `  exit: (code) => { console.log('MARK exit:' + code); process.exit(code); },\n` +
+    `});\n`;
+
+  const { stdout, stderr } = await runGracefulShutdownFixture(source);
+  const marks = [...stdout.matchAll(/MARK (\S+)/g)].map((m) => m[1]);
+  assert.deepEqual(marks, ['round-done', 'pool-end', 'exit:0'], `stdout:\n${stdout}\nstderr:\n${stderr}`);
 });
 
 // Reviewer's suggested shape for the force-exit timer (otherwise completely

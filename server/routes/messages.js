@@ -4,6 +4,7 @@
 import { prepare } from '../db.js';
 import { badRequest, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
+import { MAX_SERIAL } from '../lib/uploads.js';
 import { serializeMessage, undoMessage } from '../messaging/engine.js';
 
 export function register(route) {
@@ -16,11 +17,11 @@ export function register(route) {
     for (const [param, column] of [['customerId', 'customer_id'], ['jobId', 'job_id']]) {
       const value = query.get(param);
       if (value === null) continue;
-      if (!/^\d+$/.test(value)) return badRequest(res, `${param} must be a whole number`);
+      if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > MAX_SERIAL) return badRequest(res, `${param} must be a whole number`);
       where.push(`${column} = ?`);
       args.push(Number(value));
     }
-    const limit = Math.min(Number(query.get('limit')) || 50, 200);
+    const limit = Math.max(1, Math.min(Math.trunc(Number(query.get('limit'))) || 50, 200));
     const rows = await prepare(
       `SELECT * FROM customer_messages ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY id DESC LIMIT ${limit}`
     ).all(...args);

@@ -100,11 +100,33 @@ test('Undo within the minute stops it for good; after that it’s too late', asy
 test('an old message with no send time is never picked up, and a stuck send becomes unknown', async () => {
   const c = await customer({ phone: '07700 900142' });
   const old = await inShop(() => prepare("INSERT INTO customer_messages (customer_id, body, status, intent_state) VALUES (?, 'Old', 'sent', 'intended') RETURNING id").get(c));
-  const stuck = await inShop(() => prepare(
-    "INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address, send_after) VALUES (?, 'Stuck', 'queued', 'sending', 'sms', '07700 900142', now() - interval '10 minutes') RETURNING id"
+  const sending = (claimed) => inShop(() => prepare(
+    `INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address, send_after, claimed_at)
+     VALUES (?, 'Stuck', 'queued', 'sending', 'sms', '07700 900142', now() - interval '1 hour', now() - interval '${claimed}') RETURNING id`
   ).get(c));
+  // Timed from when it was claimed, not from its send time: one that waited
+  // an hour and was claimed a moment ago is still sending.
+  const stuck = await sending('10 minutes');
+  const justClaimed = await sending('1 second');
   await until(async () => (await message(stuck.id)).intent_state === 'unknown');
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal((await message(justClaimed.id)).intent_state, 'sending', 'claimed a moment ago');
   assert.equal((await message(old.id)).intent_state, 'intended', 'never claimed');
+});
+
+test('a claimed message records when it was claimed', async () => {
+  const c = await customer({ phone: '07700 900142' });
+  const queued = await inShop(() => queueMessage({ customerId: c, key: 'bike_ready', vars: VARS }));
+  const row = await until(async () => { const r = await message(queued.id); return r.intent_state === 'delivered' && r; });
+  assert.ok(row.claimed_at, 'claimed_at set');
+});
+
+test('the outbox refuses a customer number out of range, and any limit works', async () => {
+  assert.equal((await staff('/api/messages?customerId=99999999999')).status, 400);
+  for (const limit of ['-5', '1.5', 'x', '100000']) {
+    const res = await staff(`/api/messages?limit=${limit}`);
+    assert.equal(res.status, 200, `limit ${limit}: ${JSON.stringify(res.body)}`);
+  }
 });
 
 test('the outbox lists a customer’s messages, newest first, with how and when', async () => {

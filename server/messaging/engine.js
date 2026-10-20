@@ -59,55 +59,75 @@ export async function undoMessage(id) {
  * One run of the timer: for each shop, claims its due messages in one
  * statement (so two runs can't claim the same one), sends each outside any
  * shop scope, then records what happened. Rows with no send_after (written
- * before the engine) are never claimed.
+ * before the engine) are never claimed. One shop or message failing is
+ * logged and the round carries on with the rest.
  */
 export async function sendDue() {
   const { rows: shops } = await pool.query('SELECT id FROM shops');
   for (const { id: shopId } of shops) {
-    const now = new Date();
-    const due = await runWithShop(shopId, async () => {
-      await prepare(
-        `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
-         WHERE intent_state = 'sending' AND send_after < ?`
-      ).run(new Date(now.getTime() - STUCK_MS).toISOString());
-      return prepare(
-        `UPDATE customer_messages SET intent_state = 'sending'
-         WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
-         RETURNING id, channel, to_address, subject, body`
-      ).all(now.toISOString());
-    });
-    for (const m of due) {
-      let result;
-      try {
-        result = await senderFor(m.channel).send({ channel: m.channel, to: m.to_address, subject: m.subject, body: m.body });
-      } catch (err) {
-        result = { ok: false, error: err.message };
-      }
-      await runWithShop(shopId, () => prepare(
-        `UPDATE customer_messages SET intent_state = ?, status = ?, sent_at = ?, provider_sid = ?, pretend = ?, error = ?
-         WHERE id = ? AND intent_state = 'sending'`
-      ).run(result.ok ? 'delivered' : 'failed', result.ok ? 'sent' : 'failed', result.ok ? new Date().toISOString() : null,
-        result.providerId ?? null, Boolean(result.pretend), result.ok ? null : result.error ?? 'Not sent', m.id));
+    try {
+      await sendDueForShop(shopId);
+    } catch (err) {
+      console.error(`Messages: sending failed for shop ${shopId} this round`, err);
     }
   }
 }
 
-/** Starts the timer; returns stop(). One run at a time. */
-export function startSender(intervalMs = Number(process.env.WH_MESSAGES_TICK_MS ?? 5000)) {
-  let running = false;
-  const timer = setInterval(async () => {
-    if (running) return;
-    running = true;
+async function sendDueForShop(shopId) {
+  const now = new Date();
+  const due = await runWithShop(shopId, async () => {
+    await prepare(
+      `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
+       WHERE intent_state = 'sending' AND claimed_at < ?`
+    ).run(new Date(now.getTime() - STUCK_MS).toISOString());
+    return prepare(
+      `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
+       WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
+       RETURNING id, channel, to_address, subject, body`
+    ).all(now.toISOString(), now.toISOString());
+  });
+  for (const m of due) {
     try {
-      await sendDue();
+      await sendOne(shopId, m);
     } catch (err) {
-      console.error('Messages: sending failed this round', err);
-    } finally {
-      running = false;
+      // Left 'sending': the stuck rule moves it to unknown, never re-sent.
+      console.error(`Messages: message ${m.id} could not be recorded`, err);
     }
+  }
+}
+
+async function sendOne(shopId, m) {
+  let result;
+  try {
+    result = await senderFor(m.channel).send({ channel: m.channel, to: m.to_address, subject: m.subject, body: m.body });
+  } catch (err) {
+    result = { ok: false, error: err.message };
+  }
+  await runWithShop(shopId, () => prepare(
+    `UPDATE customer_messages SET intent_state = ?, status = ?, sent_at = ?, provider_sid = ?, pretend = ?, error = ?
+     WHERE id = ? AND intent_state = 'sending'`
+  ).run(result.ok ? 'delivered' : 'failed', result.ok ? 'sent' : 'failed', result.ok ? new Date().toISOString() : null,
+    result.providerId ?? null, Boolean(result.pretend), result.ok ? null : result.error ?? 'Not sent', m.id));
+}
+
+/**
+ * Starts the timer; returns stop(), which stops the timer and resolves once
+ * any round in flight has finished (shutdown waits for it before ending the
+ * pool). One run at a time.
+ */
+export function startSender(intervalMs = Number(process.env.WH_MESSAGES_TICK_MS ?? 5000)) {
+  let round = null;
+  const timer = setInterval(() => {
+    if (round) return;
+    round = sendDue()
+      .catch((err) => console.error('Messages: sending failed this round', err))
+      .finally(() => { round = null; });
   }, intervalMs);
   timer.unref();
-  return () => clearInterval(timer);
+  return () => {
+    clearInterval(timer);
+    return round ?? Promise.resolve();
+  };
 }
 
 /** A message as the outbox shows it. */
