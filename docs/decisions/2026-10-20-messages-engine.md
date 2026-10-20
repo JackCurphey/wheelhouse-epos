@@ -38,4 +38,5 @@ Twilio is real in Jack's set-up; email and WhatsApp have no account yet
    name and when; oldest at the top. Customers can't message the shop in
    Wheelhouse yet, so the drawn one is the staff inbox's placeholder
    "[Maya’s note to the shop]"; until replies are built only the shop's
-   messages show. For Jack's approval.
+   messages show. **Approved, 20 Oct** (Jack: "Approve the Messages
+   conversation drawing; build it.").
