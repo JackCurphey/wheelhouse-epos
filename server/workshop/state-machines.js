@@ -225,15 +225,17 @@ export const printTask = defineMachine({
 export const messageIntent = defineMachine({
   name: 'messageIntent',
   initial: 'intended',
-  states: ['intended', 'sending', 'delivered', 'failed', 'unknown'],
+  states: ['intended', 'sending', 'delivered', 'failed', 'unknown', 'undone'],
   transitions: {
-    intended: { send: 'sending', cancel: 'failed' },
+    // undo: staff took it back within its minute (the messages engine, Jack
+    // 20 Oct); final, so an undone message can never be retried into sending.
+    intended: { send: 'sending', cancel: 'failed', undo: 'undone' },
     sending: { delivered: 'delivered', reject: 'failed', timeout: 'unknown' },
     // Known-failed may be retried deliberately; unknown may not.
     failed: { retry: 'sending' },
     unknown: { confirm_delivered: 'delivered', confirm_not_sent: 'failed' },
   },
-  rest: ['delivered'],
+  rest: ['delivered', 'undone'],
 });
 
 // Every machine, so the invariants can check them generically. A new machine

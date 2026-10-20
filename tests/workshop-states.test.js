@@ -143,6 +143,14 @@ test('a scheduled booking can still be cancelled by either side', () => {
   assert.equal(bookingRequest.next('scheduled', 'cancel'), 'cancelled');
 });
 
+// The messages engine (Jack, 20 Oct): Undo is its own final state, so an
+// undone message can never be retried into sending (fresh review).
+test('a queued message can be undone, and an undone one never sends', () => {
+  assert.equal(messageIntent.next('intended', 'undo'), 'undone');
+  assert.deepEqual(messageIntent.events('undone'), []);
+  assert.ok(messageIntent.rest.includes('undone'));
+});
+
 test('work moves through the states a mechanic actually works in', () => {
   assert.equal(work.next('not_started', 'start'), 'in_progress');
   assert.equal(work.next('in_progress', 'await_parts'), 'waiting_parts');

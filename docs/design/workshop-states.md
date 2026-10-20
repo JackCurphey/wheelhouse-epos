@@ -106,12 +106,13 @@ Starts at `queued`. Rests at `acknowledged`, `failed`.
 
 ## messageIntent
 
-Starts at `intended`. Rests at `delivered`.
+Starts at `intended`. Rests at `delivered`, `undone`.
 
 | From | Event | To |
 |---|---|---|
 | `intended` | `send` | `sending` |
 | `intended` | `cancel` | `failed` |
+| `intended` | `undo` | `undone` |
 | `sending` | `delivered` | `delivered` |
 | `sending` | `reject` | `failed` |
 | `sending` | `timeout` | `unknown` |

@@ -5,8 +5,8 @@
 - [x] 1.2 The guard
 
 ## 2. Wording and filling in
-- [ ] 2.1 Tests first: Wheelhouse's wording; tap-ins filled, missing ones left out; a shop's own wording; switched off; rows already there settled, not resent; the undone state
-- [ ] 2.2 Migration 048; templates.js; render
+- [x] 2.1 Tests first: Wheelhouse's wording; tap-ins filled, missing ones left out; a shop's own wording; switched off; rows already there settled, not resent; the undone state
+- [x] 2.2 Migration 048; templates.js; render
 
 ## 3. Senders, engine and outbox
 - [ ] 3.1 Tests first: the channel; queue, Undo, the timer sends with the pretend sender; the outbox route

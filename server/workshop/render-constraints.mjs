@@ -27,7 +27,7 @@ export const MIGRATION_COLUMNS = [
   { machine: quote, column: 'state', migration: '038_quote_stage.sql' },
   { machine: capacityHold, column: 'state', migration: '018_workshop_capacity_holds.sql' },
   { machine: printTask, column: 'state', migration: '019_workshop_print_tasks.sql' },
-  { machine: messageIntent, column: 'intent_state', migration: '020_message_intent_state.sql' },
+  { machine: messageIntent, column: 'intent_state', migration: '048_messages_engine.sql' },
 ];
 
 if (import.meta.url === `file://${process.argv[1]}`) {
