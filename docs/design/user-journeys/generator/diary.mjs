@@ -3597,6 +3597,43 @@ ${dialogBody(`${note('Deleting it now would lose what’s still open:', 14)}<div
 <div style="display: flex; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('OK', { variant: 'default', href: `job-files-${size}.dc.html` })}</div>`;
 }
 
+// The job's messages (Jack, 20 Oct, docs/decisions/2026-10-20-messages-engine.md
+// answer 2: "on each job's page — a Messages list showing what that job has
+// sent (pretend for now)"): under Notes, as Files and photos are, newest
+// first, each with what it is, how and when it goes, and the words the
+// customer gets. The words are the approved wordings filled with the drawn
+// example; unknown times stay bracketed.
+const JOB_MESSAGES = [
+  { name: 'Bike ready', state: ['Waiting', 'amber'], how: 'By text to 07700 900 142 · goes at 15:31',
+    words: 'Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].' },
+  { name: 'Quote to approve', state: ['Pretend', 'grey'], how: 'By text to 07700 900 142 · [day, time]',
+    words: 'Hi Maya, North Street Cycles has a quote for more work on your Trek Domane AL 3. See it and say yes or no to each part: [link] — no app or sign-in needed. Your repair · WH-1042.' },
+];
+function messagesSection(size) {
+  const row = (m) => `<li style="display: flex; flex-direction: column; gap: 3px; padding: 8px 0; border-top: 1px solid ${C.border}">
+<span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 14px; font-weight: 700">${esc(m.name)}</span>${badge(m.state[0], m.state[1])}</span>
+<span style="font-size: 12px; color: ${C.muted}">${esc(m.how)}</span>
+<span style="font-size: 13px; line-height: 1.45">${esc(m.words)}</span>
+</li>`;
+  return `<section aria-labelledby="jp-msgs-${size}" style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px 4px; display: flex; flex-direction: column; gap: 4px">
+<h2 id="jp-msgs-${size}" style="margin: 0; font-size: 15px; font-weight: 700">Messages</h2>
+<p style="margin: 0 0 4px; font-size: 13px; color: ${C.muted}">Pretend for now: each shows what Maya would get. Nothing is really sent.</p>
+<ul style="list-style: none; margin: 0; padding: 0">${JOB_MESSAGES.map(row).join('')}</ul>
+</section>`;
+}
+function jobPageWithMessages(size) {
+  const page = screens['job-finished'][size];
+  const notesEnd = 'of 10 done · 1 note</span>\n</button>\n</div>';
+  if (page.split(notesEnd).length !== 2) throw new Error(`job-finished ${size}: the end of Notes not found`);
+  let out = page.replace(notesEnd, `${notesEnd}\n${size === 'phone' ? messagesSection(size) : `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px">${messagesSection(size)}</div>`}`);
+  if (size === 'phone') {
+    // Drawn scrolled down to Notes, as the page would be after scrolling.
+    const main = '<main data-scroll="page" style="';
+    out = out.replace(main, `${main}overflow: hidden !important; `).replace(/(<main data-scroll="page" style="[^"]*">)/, '$1<div style="display: flex; flex-direction: column; gap: 10px; margin-top: -560px">').replace('</main>', '</div></main>');
+  }
+  return out;
+}
+
 export function oldDiaryFeatureDrawings() {
   return {
     'diary-month': monthBoard(),
@@ -3617,6 +3654,8 @@ export function oldDiaryFeatureDrawings() {
     'diary-menu-pending-phone': menuPendingPhoneBoard(),
     'job-files': jobPageWithFiles('desktop'),
     'job-files-phone': jobPageWithFiles('phone'),
+    'job-messages': jobPageWithMessages('desktop'),
+    'job-messages-phone': jobPageWithMessages('phone'),
     'job-delete-confirm': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteConfirm('desktop'), { maxWidth: 520, labelledby: 'del-job-title' }),
     'job-delete-blocked': dialogOverlay(jobPageWithFiles('desktop'), DW, DH, deleteBlocked('desktop'), { maxWidth: 560, labelledby: 'del-job-blocked-title' }),
     'job-delete-confirm-phone': dialogOverlay(jobPageWithFiles('phone'), PW, PH, deleteConfirm('phone'), { pad: 16, maxWidth: 360, labelledby: 'del-job-title' }),
