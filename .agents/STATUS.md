@@ -37,7 +37,10 @@ job with money paid on its order or the bike in the shop (409
 bookings automatically, contract in `openspec/changes/auto-confirm/design.md`
 (migration 046, `confirmBookingsAutomatically`, bookings saved `scheduled`
 when on, `newOnline` and `POST /api/workshop-jobs/:id/seen`); Jack's screens
-wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #315 too** (20 Oct, on Jack's word): a new booking state
+wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #319 too** (20 Oct, on Jack's word): migration 047 adds
+`workshop_jobs.decline_message`; `POST /api/workshop-jobs/:id/decline` takes an
+optional `message` (workshop server, your approval); your `portal.js` link view
+carries `declineMessage` once declined. **Check #315 too** (20 Oct, on Jack's word): a new booking state
 `offered` (migration 046: the CHECK and the derived `status` re-made,
 `offered_from_date`/`offered_from_time`/`offer_message`/`offer_accepted_at`);
 `offered` is in `LIVE_BOOKING_STATES`; `POST /api/workshop-jobs/:id/offer`
@@ -191,7 +194,10 @@ screens only. Online booking now has everything drawn except deposits. Then
 Offer another time, whole: staff pick a time in the diary itself and add a
 message (drawings #314, redrawn at Jack's request); the suggested time is held
 and the first let go; the customer accepts or cancels on their booking page
-(#315 server, #316 staff, #317 customer). Then Files and photos on the job page,
+(#315 server, #316 staff, #317 customer). Then declining with a message: the drawn
+decline step ("Decline & notify customer") and the customer's declined page
+with the shop's message (#319). Staff can't yet decline a booking that's
+waiting on an offered time (logged for later). Then Files and photos on the job page,
 and Delete job, refused with "Settle up first" while money has been paid or
 the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
 Jack also decided Wheelhouse is built for every shop, not to move his own
