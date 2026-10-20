@@ -16,3 +16,17 @@ and their edit box for my approval; sending waits for the messages engine.").
    Booking confirmed's 3 Oct draft now says when to drop the bike off and
    the shop's own note (19 Oct decisions), instead of "bring your bike at
    11:30". No deposit wording yet; it comes with deposits.
+2. **Idea for later, for Mark's opinion: replying to a text as a shop
+   setting** (Jack, 20 Oct: "Maybe we can edit this as a kind of setting, and
+   a shop can choose whether their personalized number is replyable or they
+   can effectively just choose a cheaper option where they have to reply
+   within the link. Not something we necessarily need to build now. Maybe
+   just something to note and flag for Mark for his opinion"). Today every
+   shop sends from one shared Twilio number and the app can't receive texts
+   (Workshop day 2, 27 Sep), so every text ends "Replies to this number
+   aren't read — reply on your page: [link]" (Account and reminders
+   decision 3, 1 Oct, unchanged). The idea: a shop could choose its own
+   number whose replies land in its Wheelhouse inbox (a monthly cost per
+   number, and receiving texts to build), or keep the cheaper shared number
+   with replies on the booking page. Not built; flagged for Mark in the
+   status file.
