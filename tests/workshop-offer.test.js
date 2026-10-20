@@ -154,7 +154,8 @@ test('the old job form can’t confirm an offer by saving its status', async () 
   const booked = await book();
   await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
   const job = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
-  await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { ...job, status: 'scheduled' } });
+  const saved = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { ...job, status: 'scheduled' } });
+  assert.equal(saved.status, 200, JSON.stringify(saved.body));
   assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'offered');
 });
 
@@ -165,4 +166,22 @@ test('a link that is too late can’t accept', async () => {
   const res = await acceptOffer(booked.code);
   assert.equal(res.status, 409);
   assert.equal(res.body.code, 'in_shop');
+});
+
+// Fresh review: a day gone by can't be offered (the customer couldn't accept
+// it), and staff can still decline an offer, letting its time go.
+test('a day gone by can’t be offered', async () => {
+  const booked = await book();
+  const res = await offer(booked.id, { jobDate: '2026-08-01', startTime: '10:00', mechanicId: sam });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'That date has passed - please choose another day.');
+});
+
+test('staff can decline an offer, and its time goes', async () => {
+  const booked = await book();
+  await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
+  const res = await staff(`/api/workshop-jobs/${booked.id}/decline`, { method: 'POST', body: { version: await version(booked.id) } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.bookingState, 'declined');
+  assert.deepEqual(await liveHolds(shopId(), booked.id), []);
 });

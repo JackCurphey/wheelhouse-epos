@@ -812,6 +812,8 @@ export function register(route) {
         if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
           return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
         }
+        // The customer couldn't accept a day gone by (fresh review).
+        if (jobDate < await currentShopToday()) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
         const minutes = job.planned_minutes
           || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
         const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
