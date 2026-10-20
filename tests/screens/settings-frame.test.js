@@ -111,5 +111,8 @@ test('on a phone, Settings opens on the rooms, each with what’s in it; a room 
   uninstall?.();
   const room = await openSettings('/workshop/settings?room=office');
   assert.ok(room.ui.queryByRole('navigation', { name: 'Settings rooms' }) === null);
-  assert.equal(room.ui.getByRole('link', { name: '‹ Settings' }).getAttribute('href'), '/workshop/settings');
+  // "‹ Settings", its arrow hidden from screen readers.
+  const back = room.ui.getAllByRole('link', { name: 'Settings' }).find((a) => a.textContent === '‹\u00a0Settings');
+  assert.ok(back, 'the back link');
+  assert.equal(back.getAttribute('href'), '/workshop/settings');
 });

@@ -35,6 +35,10 @@ function Chevron({ open }: { open: boolean }) {
 }
 
 function Fold({ fold, open, onToggle, level }: { fold: SettingsFold; open: boolean; onToggle: () => void; level: 3 | 4 }) {
+  // Once opened, a fold's settings stay in place while it's closed (hidden), so
+  // what was typed, a failed save's words and a save on its way aren't lost.
+  const [opened, setOpened] = useState(open);
+  if (open && !opened) setOpened(true);
   const Heading = level === 3 ? 'h3' : 'h4';
   const panel = `set-fold-${fold.key}`;
   return (
@@ -52,7 +56,7 @@ function Fold({ fold, open, onToggle, level }: { fold: SettingsFold; open: boole
         </button>
       </Heading>
       <div id={panel} hidden={!open} className="flex flex-col gap-3 px-[18px] pb-[18px] max-md:px-3.5 max-md:pb-3.5">
-        {open ? fold.body : null}
+        {opened ? fold.body : null}
       </div>
     </div>
   );
@@ -106,7 +110,7 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
   if (!room) return null;
   return (
     <div className="mx-auto flex w-full max-w-[1040px] gap-6 p-5 max-md:p-4">
-      <nav aria-label="Settings" className="hidden w-[220px] shrink-0 flex-col gap-0.5 md:flex lg:w-[220px]">
+      <nav aria-label="Settings" className="hidden w-[190px] shrink-0 flex-col gap-0.5 md:flex lg:w-[220px]">
         {rooms.map((r) => (
           <Link key={r.key} to={roomHref(r.key)} aria-current={r.key === room.key ? 'page' : undefined}
             className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-[15px] ${r.key === room.key ? 'bg-[var(--wh-surface-muted)] font-bold' : ''}`}>
@@ -129,7 +133,7 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
         </nav>
       )}
       <div className={`min-w-0 grow flex-col gap-3 ${asked ? 'flex' : 'hidden md:flex'}`}>
-        {asked ? <Link to={ROUTES.settings} className="inline-flex min-h-11 items-center self-start text-sm font-semibold md:hidden">‹ Settings</Link> : null}
+        {asked ? <Link to={ROUTES.settings} className="inline-flex min-h-11 items-center self-start text-sm font-semibold md:hidden"><span aria-hidden="true">‹&nbsp;</span>Settings</Link> : null}
         <RoomPage key={room.key} room={room} />
       </div>
     </div>

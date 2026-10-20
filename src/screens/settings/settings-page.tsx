@@ -824,6 +824,7 @@ function closedDays(hours: DayHours[] | undefined): string {
 function noticeWords(s: WorkshopSettings): string {
   if (s.minNoticeDays) return s.minNoticeDays === 1 ? '1 day’s notice' : `${s.minNoticeDays} days’ notice`;
   const minutes = s.minNoticeMinutes ?? 0;
+  if (!minutes) return 'No notice';
   if (minutes % 60) return `${minutes} minutes’ notice`;
   return minutes === 60 ? '1 hour’s notice' : `${minutes / 60} hours’ notice`;
 }

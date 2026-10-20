@@ -151,6 +151,24 @@ test('if a box can’t be saved, it says so and keeps what was typed', async () 
   assert.equal(vat.value, '[VAT number]');
 });
 
+// Settings frame (fresh review): closing a fold hides it but keeps what was
+// typed and why it didn't save, for when it's opened again.
+test('closing and reopening a fold keeps what was typed and the failed save’s words', async () => {
+  const { ui, fireEvent } = await openSettings({ room: 'office' });
+  detailsFail = true;
+  const vat = await ui.findByLabelText('VAT number');
+  fireEvent.change(vat, { target: { value: '[VAT number]' } });
+  fireEvent.blur(vat);
+  await ui.findByText('Wheelhouse couldn’t save that. Try again in a moment.');
+  const foldButton = ui.getByRole('button', { name: /^Shop details/ });
+  fireEvent.click(foldButton);
+  assert.equal(foldButton.getAttribute('aria-expanded'), 'false');
+  assert.ok(document.getElementById(foldButton.getAttribute('aria-controls')).hidden, 'hidden while closed');
+  fireEvent.click(foldButton);
+  assert.equal(ui.getByLabelText('VAT number').value, '[VAT number]');
+  assert.ok(has(ui.queryByText('Wheelhouse couldn’t save that. Try again in a moment.')));
+});
+
 // Fresh review: what's typed while a save is on its way isn't lost, and a
 // reply only updates the box it saved.
 test('typing more while a box is saving keeps the new words, and they save too', async () => {

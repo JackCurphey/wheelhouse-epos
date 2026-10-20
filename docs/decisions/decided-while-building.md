@@ -849,6 +849,13 @@ silent:
    till's `?job=`.
 5. **No "Saved · Undo" yet**: the boxes keep their own "Saved." until Mark's
    change record is in (WP-1.2).
+6. **The phone's room lines and the Messages summary come from what's built**
+   ("Till, messages"; "[n] on" counting the messages that send and are on),
+   not the drawn full lines. *Pattern:* decision 6, show only what works.
+7. **Jump to's pills don't yet mark where the page is** (`aria-current`),
+   and a fold stays in place once opened, hidden while closed, so nothing
+   typed is lost. *Pattern:* the drawing's Jump to; the boxes' own "keeps
+   what was typed".
 
 ### 20 Oct 2026: New job's + Add a bike (not-drawn pages row 22)
 
