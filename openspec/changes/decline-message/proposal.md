@@ -24,4 +24,4 @@ Workshop day decision 15 (27 Sep) puts the decline message in the request pop-up
 ## Impact
 
 - Server: migration 047; `server/routes/workshop.js`; `server/routes/portal.js`; tests
-- Screens: `src/screens/diary/request-dialog.tsx`; `src/screens/book/pending.tsx`, `pending-rules.ts`, `pending-query.ts`; tests
+- Screens: `src/screens/diary/request-dialog.tsx`; `src/screens/book/pending.tsx`, `pending-query.ts`; tests

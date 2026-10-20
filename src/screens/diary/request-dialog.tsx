@@ -71,8 +71,10 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer }:
 
   const customer = item.customerName || job?.customerName || 'Customer';
   const bike = job?.bikeLabel || 'Bike';
-  const title = TITLE[item.kind] || `${customer} · ${bike}`;
-  const sub = item.kind === 'new_booking' ? 'Pending request' : `${customer} · ${bike}`;
+  // The decline step has its own title, as drawn (request-decline).
+  const declining = item.kind === 'new_booking' && confirmDecline;
+  const title = declining ? 'Decline booking request' : TITLE[item.kind] || `${customer} · ${bike}`;
+  const sub = declining ? `${customer} · ${bike}` : item.kind === 'new_booking' ? 'Pending request' : `${customer} · ${bike}`;
 
   // Declining with a message (Workshop day 15; Jack, 20 Oct; drawn as
   // request-decline): started for staff from the day asked for; the shop

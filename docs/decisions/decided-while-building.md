@@ -716,6 +716,13 @@ silent:
    details"** (no deposits yet; the booking flow doesn't keep the details);
    with no message, there's no quote. *Pattern:* bk-declined, saying nothing
    that isn't true.
+4. **The declined page has no grey warning icon above "Not booked"**: the
+   booking pages draw none of their big icons yet. *Pattern:* the cancelled
+   page (fresh review).
+5. **Staff can't yet decline a booking that's waiting on an offered time**:
+   it isn't in Waiting for you, and its pop-up has no answers. The server
+   allows it. For a later piece. *Pattern:* nothing drawn for it (fresh
+   review).
 
 ## Decided here, for Jack to overrule
 

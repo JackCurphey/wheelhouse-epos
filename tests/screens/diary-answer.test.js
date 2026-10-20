@@ -132,6 +132,7 @@ test('Decline opens the message to the customer, started for them; Keep request 
   const dlg = await openCard(r, 'Sam Reed');
   r.fireEvent.click(dlg.getByRole('button', { name: 'Decline' }));
   assert.ok(has(dlg.queryByText('Explain what the customer can do next')));
+  assert.ok(has(r.ui.queryByRole('dialog', { name: 'Decline booking request' })));
   assert.equal(dlg.getByLabelText('Message to Sam').value, DECLINE_WORDS);
   assert.ok(has(dlg.queryByText('Declining releases the request’s reservation. The customer is told not to travel for this request.')));
   r.fireEvent.click(dlg.getByRole('button', { name: 'Keep request' }));

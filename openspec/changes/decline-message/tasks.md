@@ -9,7 +9,7 @@
 
 - [x] 2.1 Tests first, watched failing: Decline opens the message step with the message started; Decline & notify customer posts it; Keep request goes back; the customer's declined page
 - [x] 2.2 The request pop-up's decline step; the declined page
-- [x] 2.3 Browser: staff decline with a message, the customer sees it
+- [x] 2.3 Browser: a decline with a message, sent to the server as the pop-up sends it, shows on the customer's page (the pop-up itself is covered by the screen tests)
 
 ## 3. Checks
 
