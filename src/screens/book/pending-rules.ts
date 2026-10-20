@@ -9,6 +9,7 @@ import { formatFrom, formatMoney } from './service-selection.ts';
  */
 export const STAGE_TEXT: Record<BookingStage, string> = {
   awaiting_confirmation: 'Awaiting shop confirmation',
+  time_offered: 'Another time suggested',
   confirmed: 'Confirmed',
   in_workshop: 'In the workshop',
   ready_to_collect: 'Ready to collect',
@@ -144,3 +145,11 @@ export function requestedLine(link: BookingLink): string | null {
 
 /** The declined change isn't kept, so it isn't named. */
 export const declinedLine = (link: BookingLink) => `The shop couldn’t do the new date you asked for. Your booking is still ${whenLine(link)}.`;
+
+// Offer another time (Jack, 20 Oct; drawn as bk-offered).
+/** "North Street Cycles can’t do Thursday 17 September at 11:30. They suggest:" */
+export function offerLine(link: BookingLink): string | null {
+  const o = link.offer;
+  if (!o) return null;
+  return `${link.shopName} can’t do ${dayLabel(o.fromDate)}${o.fromTime ? ` at ${o.fromTime}` : ''}. They suggest:`;
+}

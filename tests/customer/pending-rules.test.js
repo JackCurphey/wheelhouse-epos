@@ -18,6 +18,7 @@ const LINK = {
 test('every stage has its words', () => {
   assert.deepEqual(r.STAGE_TEXT, {
     awaiting_confirmation: 'Awaiting shop confirmation',
+    time_offered: 'Another time suggested',
     confirmed: 'Confirmed',
     in_workshop: 'In the workshop',
     ready_to_collect: 'Ready to collect',

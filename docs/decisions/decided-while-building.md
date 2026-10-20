@@ -681,6 +681,21 @@ silent:
    as drawn; Keep request goes back to the request.** *Pattern:*
    request-offer.
 
+### 20 Oct 2026: Offer another time, the customer's page (`docs/decisions/2026-10-20-offer-another-time.md`)
+
+1. **The offered page follows `bk-offered`**: "Your booking request", "The shop
+   has suggested another time", "[Shop] can't do [day] at [time]. They
+   suggest:", the time large, the shop's message as a quote (none if it left
+   none), Accept this time and Cancel my request, and the When row as the
+   first time "— not available". *Pattern:* bk-offered.
+2. **Cancel my request asks "Cancel this request?" first**, as Cancel request
+   does. *Pattern:* the request page (20 Oct).
+3. **Too late to accept (the bike in, or the day gone), Accept isn't
+   offered.** *Pattern:* Cancel and Change shown only while allowed.
+4. **"Need to change the date? Contact [shop]" stays under an offer**: the
+   date can't be changed online while a time is offered. *Pattern:* the
+   contact line where the page can't do it.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
