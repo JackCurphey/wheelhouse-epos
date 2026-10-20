@@ -48,3 +48,5 @@ time picker first ("1").
    - `request-offered-decline`: "Decline request", a message to Sam (staff's
      own; bracketed in the drawing), "… Friday 18 September at 12:00 is no
      longer kept for Sam.", Decline & notify customer or Keep request.
+   **Approved, 20 Oct** (Jack: "Approve the offered-time drawings (offer a
+   different time, decline); build it.").
