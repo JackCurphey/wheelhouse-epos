@@ -23,6 +23,12 @@ Starts at `pending`. Rests at `declined`, `expired`, `cancelled`.
 | `pending` | `expire` | `expired` |
 | `pending` | `cancel` | `cancelled` |
 | `pending` | `change_time` | `pending` |
+| `pending` | `offer` | `offered` |
+| `offered` | `offer` | `offered` |
+| `offered` | `accept_offer` | `scheduled` |
+| `offered` | `cancel` | `cancelled` |
+| `offered` | `decline` | `declined` |
+| `offered` | `expire` | `expired` |
 | `scheduled` | `request_reschedule` | `reschedule_requested` |
 | `scheduled` | `cancel` | `cancelled` |
 | `reschedule_requested` | `accept` | `scheduled` |
@@ -59,7 +65,7 @@ Starts at `not_started`. Rests at `complete`.
 
 ## quote
 
-Starts at `draft`. Rests at `declined`, `superseded`, `expired`.
+Starts at `draft`. Rests at `declined`, `superseded`, `expired`, `withdrawn`.
 
 | From | Event | To |
 |---|---|---|
@@ -69,6 +75,7 @@ Starts at `draft`. Rests at `declined`, `superseded`, `expired`.
 | `sent` | `decline_all` | `declined` |
 | `sent` | `revise` | `superseded` |
 | `sent` | `expire` | `expired` |
+| `sent` | `withdraw` | `withdrawn` |
 | `partly_approved` | `revise` | `superseded` |
 | `approved` | `revise` | `superseded` |
 

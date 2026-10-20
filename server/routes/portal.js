@@ -80,12 +80,17 @@ const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // reached the shop and the booking is live (piece 12) - and only while no work
 // has started on it and its day has not passed in the shop's time zone (Jack,
 // 27 Sep). `today` is the shop's today (currentShopToday).
-const CUSTOMER_ACTIONABLE = new Set(['pending', 'scheduled', 'reschedule_requested']);
+const CUSTOMER_ACTIONABLE = new Set(['pending', 'offered', 'scheduled', 'reschedule_requested']);
 function customerTooLate(row, today) {
   return row.custody_state !== 'expected' || row.work_state !== 'not_started' || row.job_date < today;
 }
 function customerCanAct(row, today) {
   return !customerTooLate(row, today) && CUSTOMER_ACTIONABLE.has(row.booking_state);
+}
+// A time the shop offered is accepted or cancelled, not changed (Jack, 1 Oct,
+// decision 12; 20 Oct, offer another time).
+function customerCanChange(row, today) {
+  return customerCanAct(row, today) && row.booking_state !== 'offered';
 }
 
 // What a customer is allowed to see about their own job. Deliberately a
@@ -128,7 +133,7 @@ function customerActionRefusal(job, action, today) {
   if (customerTooLate(job, today)) {
     return { status: 409, body: { error: CUSTOMER_REFUSALS[action].inShop, code: 'in_shop' } };
   }
-  if (!CUSTOMER_ACTIONABLE.has(job.booking_state)) {
+  if (!CUSTOMER_ACTIONABLE.has(job.booking_state) || (action === 'change' && job.booking_state === 'offered')) {
     return { status: 409, body: { error: CUSTOMER_REFUSALS[action].other, code: 'illegal' } };
   }
   return null;
@@ -290,6 +295,7 @@ async function bookingLinkView(jobId, shop) {
     `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.customer_bike_note, w.question_answers,
             w.booking_state, w.custody_state, w.work_state, w.signed_off_name,
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
+            w.offered_from_date, w.offered_from_time, w.offer_message,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
              WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
@@ -340,7 +346,11 @@ async function bookingLinkView(jobId, shop) {
     confirmationNote,
     photoCount: row.photo_count,
     requested: requested && { jobDate: requested.jobDate, startTime: requested.startTime, mechanicId: requested.mechanicId },
-    canChange: customerCanAct(row, today),
+    // The time the shop offered, and where the customer first asked (Jack, 20 Oct).
+    offer: row.booking_state === 'offered'
+      ? { fromDate: row.offered_from_date, fromTime: row.offered_from_time || '', message: row.offer_message ?? null } : null,
+    canAccept: row.booking_state === 'offered' && !customerTooLate(row, today),
+    canChange: customerCanChange(row, today),
     canCancel: customerCanAct(row, today),
     changeDeclined: row.change_declined_at !== null,
     ...(await bookedServices(row.id)),
@@ -1043,6 +1053,34 @@ export function register(route) {
       await db.prepare(
         `UPDATE workshop_jobs SET cancelled_by = 'customer', cancelled_at = now(), change_declined_at = NULL, ${CLEAR_REQUEST}
          WHERE id = ?`
+      ).run(job.id);
+      await syncJobHold(job.id);
+      return undefined;
+    });
+    if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
+    if (out) return sendJson(res, out.status, out.body);
+    sendJson(res, 200, await bookingLinkView(found.id, shop));
+  });
+
+  // The customer accepts the time the shop offered (Jack, 20 Oct,
+  // docs/decisions/2026-10-20-offer-another-time.md): it becomes a confirmed
+  // booking at that time, its hold kept. A second press after accepting
+  // answers with the confirmed booking.
+  // screens: bk-offered
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/accept-offer', async (req, res, params, query, shop) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const out = await withJobBookingLock(found.id, [], async (job) => {
+      if (job.booking_state !== 'offered') {
+        if (job.booking_state === 'scheduled' && job.offer_accepted_at) return undefined;
+        return { status: 409, body: { error: "There's no time offered to accept", code: 'illegal' } };
+      }
+      if (customerTooLate(job, await currentShopToday())) {
+        return { status: 409, body: { error: CUSTOMER_REFUSALS.change.inShop, code: 'in_shop' } };
+      }
+      await applyLocked(job, 'accept_offer');
+      await db.prepare(
+        'UPDATE workshop_jobs SET offered_from_date = NULL, offered_from_time = NULL, offer_message = NULL, offer_accepted_at = now() WHERE id = ?'
       ).run(job.id);
       await syncJobHold(job.id);
       return undefined;

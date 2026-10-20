@@ -26,7 +26,7 @@ import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from 
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
-  serializeWorkshopJob, syncJobHold, timeToMinutes, withBookingLock, withJobBookingLock, applyLocked,
+  serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
   sendQuoteResult, answerAndAddToOrder,
 } from '../workshop/jobs.js';
 
@@ -613,6 +613,9 @@ export function register(route) {
           const { booking, work: workState } = readLegacyStatus(requestedStatus);
           legacyStates = { booking, workState };
         }
+        // An offer waits for the customer: the old form can't confirm it by
+        // saving a status (Jack, 20 Oct, offer another time).
+        if (legacyStates && current?.booking_state === 'offered') legacyStates = { ...legacyStates, booking: null };
 
         const slotError = await checkJobSlot({
           jobDate,
@@ -781,6 +784,63 @@ export function register(route) {
 
   // screens: expired
   jobActionRoute('expire', bookingRequest, 'expire');
+
+  // Offer another time (Jack, 20 Oct, docs/decisions/2026-10-20-offer-another-time.md;
+  // openspec/changes/offer-another-time): staff move a request to a time they
+  // suggest, with a message. The job itself moves, so its hold follows and the
+  // time first asked for is let go (answer 1); where it was asked is kept for
+  // the customer's page. Offering again keeps that. Staff slot rules, the job
+  // itself left out; under the booking lock for both days.
+  // Drawn as request-offer-pick and request-offer.
+  // screens: requests, diary
+  route('POST', '/api/workshop-jobs/:id/offer', async (req, res, params) => {
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+    const jobDate = String(body.jobDate ?? '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
+    const mech = await resolveJobMechanicId(body.mechanicId, null);
+    if (!mech.ok || mech.mechanicId === null) return badRequest(res, 'Please choose a mechanic');
+    const message = body.message === undefined || body.message === null ? '' : String(body.message).trim();
+    if (message.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
+    const startTime = String(body.startTime ?? '').trim();
+    const taken = { status: 409, body: { error: 'That time is no longer free', code: 'capacity' } };
+    let out;
+    try {
+      out = await withJobBookingLock(id, [jobDate], async (job) => {
+        if (job.version !== body.version) return staleRefusal;
+        if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
+          return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
+        }
+        const minutes = job.planned_minutes
+          || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
+        const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
+        if (times.error) return { status: 400, body: { error: times.error } };
+        const slotError = await checkJobSlot({
+          jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId: mech.mechanicId, ignoreJobId: id,
+        });
+        if (slotError) return slotError.taken ? taken : { status: 400, body: { error: slotError.error } };
+        const first = job.booking_state === 'pending';
+        await applyLocked(job, 'offer');
+        await db.prepare(
+          `UPDATE workshop_jobs SET job_date = ?, mechanic_id = ?, start_time = ?, end_time = ?,
+             offered_from_date = ?, offered_from_time = ?, offer_message = ?, updated_at = now()
+           WHERE id = ?`
+        ).run(jobDate, mech.mechanicId, times.startTime, times.endTime,
+          first ? job.job_date : job.offered_from_date, first ? (job.start_time || '') : job.offered_from_time,
+          message || null, id);
+        await syncJobHold(id);
+        const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+        return { status: 200, body: serializeWorkshopJob(row) };
+      });
+    } catch (err) {
+      // The 024 index: another live hold sits on the offered slot.
+      if (err.code !== '23505') throw err;
+      out = taken;
+    }
+    if (out?.gone) return notFound(res, 'Job not found');
+    sendJson(res, out.status, out.body);
+  });
 
   // screens: change-pending, diary
   route('POST', '/api/workshop-jobs/:id/accept-change', async (req, res, params) =>

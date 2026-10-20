@@ -21,7 +21,7 @@ export function checkConstraint(machine, column) {
 // Which machine belongs to which column, in which migration. The drift test
 // walks this, so a machine missing from here is a machine nothing checks.
 export const MIGRATION_COLUMNS = [
-  { machine: bookingRequest, column: 'booking_state', migration: '016_workshop_job_states.sql' },
+  { machine: bookingRequest, column: 'booking_state', migration: '046_offered_bookings.sql' },
   { machine: custody, column: 'custody_state', migration: '016_workshop_job_states.sql' },
   { machine: work, column: 'work_state', migration: '016_workshop_job_states.sql' },
   { machine: quote, column: 'state', migration: '038_quote_stage.sql' },

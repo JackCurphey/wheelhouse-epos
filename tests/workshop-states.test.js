@@ -118,6 +118,27 @@ test('a confirmed booking cannot change time without asking', () => {
   assert.equal(bookingRequest.can('scheduled', 'change_time'), false);
 });
 
+// Offer another time (Jack, 20 Oct, docs/decisions/2026-10-20-offer-another-time.md):
+// the shop suggests a time; the customer accepts or cancels.
+test('a request can be offered another time, and offered again', () => {
+  assert.equal(bookingRequest.next('pending', 'offer'), 'offered');
+  assert.equal(bookingRequest.next('offered', 'offer'), 'offered');
+});
+
+test('an offer accepted becomes a confirmed booking; it can also be cancelled, declined or expire', () => {
+  assert.equal(bookingRequest.next('offered', 'accept_offer'), 'scheduled');
+  assert.equal(bookingRequest.next('offered', 'cancel'), 'cancelled');
+  assert.equal(bookingRequest.next('offered', 'decline'), 'declined');
+  assert.equal(bookingRequest.next('offered', 'expire'), 'expired');
+});
+
+test('staff can’t accept an offer for the customer, and only an offer can be accepted as one', () => {
+  assert.equal(bookingRequest.can('offered', 'accept'), false);
+  assert.equal(bookingRequest.can('offered', 'change_time'), false);
+  assert.equal(bookingRequest.can('pending', 'accept_offer'), false);
+  assert.equal(bookingRequest.can('scheduled', 'offer'), false);
+});
+
 test('a scheduled booking can still be cancelled by either side', () => {
   assert.equal(bookingRequest.next('scheduled', 'cancel'), 'cancelled');
 });

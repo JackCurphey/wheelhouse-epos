@@ -19,7 +19,7 @@ export const LEGACY_STATUS_SQL = `
     WHEN work_state = 'complete' THEN 'complete'
     WHEN work_state = 'waiting_parts' THEN 'waiting_parts'
     WHEN work_state = 'on_hold' THEN 'on_hold'
-    WHEN booking_state = 'pending' THEN 'pending'
+    WHEN booking_state IN ('pending', 'offered') THEN 'pending'
     ELSE 'scheduled'
   END`;
 
