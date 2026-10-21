@@ -947,10 +947,12 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 
 ### 21 Oct 2026: the booking page's later stages (booking-page-stages)
 
-1. **`cp-summary-inshop`, `cp-summary-collected`, `dq-in-shop`: "What we did",
-   the amount to pay and the shop's address aren't sent by the server yet.**
-   *Decided:* the booking's own rows (Service, Bike, When, Your repair) stand
-   where "What we did" goes; "To pay when you collect" has its wording without
+1. **`dq-in-shop`'s "Work agreed" and `cp-summary-inshop` /
+   `cp-summary-collected`'s "What we did", the amount to pay and the shop's
+   address aren't sent by the server yet.** *Decided:* the answered quote and
+   the booking's own rows (Service, Bike, When, Your repair, and the
+   customer's words where the drawings have "What you told us") stand in their
+   place; no checklist until the server sends it; "To pay when you collect" has its wording without
    the amount; the shop line has the name alone. *Pattern:* the confirmed
    page's rows and shop line as built. The data is in Mark's contract
    (`openspec/changes/booking-page-stages/design.md`).
@@ -960,5 +962,6 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 3. **`bk-request-expired`: the deposit line and "— we've kept your details".**
    *Decided:* left off, as on the declined page as built (no deposits yet;
    the booking flow doesn't keep the details).
-4. **The quote card on the ready and collected pages.** *Decided:* not shown;
-   their drawings have none, as the quote is answered before the work is done.
+4. **The quote card on the ready and collected pages.** *Decided:* shown; once
+   answered it lists what was agreed and declined, which is what "What we
+   did" draws (fresh review, 21 Oct).

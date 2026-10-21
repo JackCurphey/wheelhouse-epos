@@ -224,12 +224,15 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   // in the workshop (dq-in-shop; a plain line until the server sends how far
   // the work is, answer 1), ready (cp-summary-inshop: no shop takes payments
   // online yet) and collected (cp-summary-collected). Until the server sends
-  // the work done, the booking's rows stand where the drawings have "What we
-  // did". None of the drawings has Copy link or the contact line.
+  // the work done, the answered quote and the booking's rows stand where the
+  // drawings have "Work agreed" and "What we did". None of the drawings has
+  // Copy link or the contact line.
   if (link.stage === 'in_workshop' || link.stage === 'ready_to_collect' || link.stage === 'collected') {
     const inShop = link.stage === 'in_workshop';
     const bikeWords = bikeName(link) || 'bike';
-    const title = inShop ? 'Your bike is in the workshop' : `Your ${bikeWords} ${link.stage === 'collected' ? 'has been collected' : 'is ready'}`;
+    // In the workshop the heading is the bike and the work, as on the confirmed
+    // page (dq-in-shop); the plain line sits where the tracker will go.
+    const title = inShop ? pageHeading(link) : `Your ${bikeWords} ${link.stage === 'collected' ? 'has been collected' : 'is ready'}`;
     const bike = bikeRow(link);
     const row = (label: string, value: React.ReactNode) => (
       <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
@@ -245,8 +248,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
     return (
       <BookFrame title={title} eyebrow={`Your repair · ${link.reference}`}>
-        {!inShop && <Tracker />}
-        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />}
+        {inShop ? <p className="m-0 mb-4 text-[15px] font-semibold leading-normal">Your bike is in the workshop</p> : <Tracker />}
+        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
         {link.stage === 'ready_to_collect' && card('To pay when you collect', 'pay-title', (
           <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
         ))}
@@ -258,10 +261,10 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         ))}
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
-          {!inShop && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}
+          {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}
           <div>
             {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
-            {total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
+            {inShop && total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
             {bike && row('Bike', bike)}
             {row('When', whenLine(link))}
             {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}

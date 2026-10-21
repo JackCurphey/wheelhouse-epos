@@ -39,14 +39,16 @@ const noOldPage = (ui) => {
   assert.ok(ui.queryByText(/Need to change|Contact North Street Cycles/) === null, 'no contact line');
 };
 
-test('in the workshop: Your repair, the plain line, the booking’s rows and the shop; no tracker yet', async () => {
-  const { ui } = await open({});
-  assert.ok(await h1(ui, 'Your bike is in the workshop'));
+test('in the workshop: the bike and work as the heading, the plain line, the quote, the rows and the shop; no tracker yet', async () => {
+  const { ui, requests } = await open({});
+  assert.ok(await h1(ui, 'Trek Domane AL 3 · Standard service'));
   assert.ok(ui.getByText('Your repair · WH-1042'));
+  assert.ok(ui.getByText('Your bike is in the workshop'));
   assert.ok(tracker(ui) === null);
   assert.ok(ui.getByText('Standard service · £65'));
-  assert.ok(ui.getByText('Trek Domane AL 3'));
   assert.ok(document.querySelector('[data-shop-line]').textContent === 'North Street Cycles');
+  const { waitFor } = await import('@testing-library/react');
+  await waitFor(() => assert.ok(requests.some((r) => r.url.endsWith('/quote')), 'asks for any quote'));
   noOldPage(ui);
 });
 
@@ -68,12 +70,16 @@ test('ready with no bike named says “Your bike”', async () => {
   assert.ok(await h1(ui, 'Your bike is ready'));
 });
 
-test('ready and collected show no quote: it was answered before', async () => {
-  const { ui, requests } = await open({ stage: 'ready_to_collect' });
-  await h1(ui, 'Your Trek Domane AL 3 is ready');
-  await new Promise((r) => setTimeout(r, 20));
-  assert.equal(requests.some((r) => r.url.endsWith('/quote')), false);
-});
+// Fresh review, 21 Oct: the answered quote is what the drawings' "What we
+// did" shows, so it stays once the bike is ready and collected.
+for (const stage of ['ready_to_collect', 'collected']) {
+  test(`${stage} still shows the quote’s answer`, async () => {
+    const { ui, requests } = await open({ stage });
+    await ui.findByRole('list', { name: 'Where your bike is' });
+    const { waitFor } = await import('@testing-library/react');
+    await waitFor(() => assert.ok(requests.some((r) => r.url.endsWith('/quote'))));
+  });
+}
 
 test('collected: the heading, the tracker, and the Collected card', async () => {
   const { ui } = await open({ stage: 'collected' });
@@ -85,6 +91,12 @@ test('collected: the heading, the tracker, and the Collected card', async () => 
   noOldPage(ui);
 });
 
+test('collected names nobody as checking it: its drawing has no Checked by', async () => {
+  const { ui } = await open({ stage: 'collected', checkedBy: 'Alex Morgan' });
+  await h1(ui, 'Your Trek Domane AL 3 has been collected');
+  assert.ok(ui.queryByText(/Checked by/) === null);
+});
+
 test('a request the shop didn’t answer in time: Not booked, why, nothing booked, another date', async () => {
   const { ui } = await open({ stage: 'request_expired' });
   assert.ok(await h1(ui, 'Sorry, we couldn’t get back to you in time'));
@@ -93,4 +105,14 @@ test('a request the shop didn’t answer in time: Not booked, why, nothing booke
   assert.ok(ui.getByText('Nothing is booked.'));
   assert.equal(ui.getByRole('link', { name: 'Choose another date' }).getAttribute('href'), '/book/north');
   noOldPage(ui);
+});
+
+test('an expired request with no time names the day alone', async () => {
+  const { ui } = await open({ stage: 'request_expired', startTime: '' });
+  assert.ok(await ui.findByText('North Street Cycles couldn’t answer your request for Thursday 17 September in time, so it has expired.'));
+});
+
+test('the customer’s own words show on the later pages', async () => {
+  const { ui } = await open({ stage: 'ready_to_collect', description: 'Rear brake squeals' });
+  assert.ok(await ui.findByText('Rear brake squeals'));
 });

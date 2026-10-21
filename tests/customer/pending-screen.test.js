@@ -64,7 +64,7 @@ test('it reads the booking link and shows where the booking is up to as its head
 
 for (const [stage, words] of [
   ['confirmed', 'Your bike · Brake service and 1 more'],
-  ['in_workshop', 'Your bike is in the workshop'],
+  ['in_workshop', 'Your bike · Brake service and 1 more'],
   ['ready_to_collect', 'Your bike is ready'],
   ['collected', 'Your bike has been collected'],
   ['change_requested', 'Your bike · Brake service and 1 more'],
@@ -272,7 +272,7 @@ test('a booking waiting for the shop opens as a request', async () => {
 
 test('a bike in the workshop no longer has the first release’s page (21 Oct, pending-stages.test.js)', async () => {
   const { ui } = await open({ ...MAYA_LINK, stage: 'in_workshop' });
-  assert.ok(await heading(ui, 'Your bike is in the workshop'));
+  assert.ok(await ui.findByText('Your bike is in the workshop'));
   assert.ok(ui.queryByText('Reference') === null);
   assert.ok(ui.queryByText('Booking confirmed') === null);
 });
