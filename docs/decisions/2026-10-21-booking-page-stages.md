@@ -14,3 +14,6 @@ while some of the server's data (Mark's lane) isn't there yet.
 2. **A request the shop never answered, once it has expired.** Jack, 21 Oct:
    "2: say the request expired because the shop couldn't get back in time,
    with a 'Choose another date' button, like the declined page."
+3. **The drawings.** Jack, 21 Oct: "Approve the expired-request and collected
+   booking page drawings; build the booking page stages." (`bk-request-expired`,
+   `cp-summary-collected`.)
