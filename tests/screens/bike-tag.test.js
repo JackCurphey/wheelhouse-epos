@@ -125,7 +125,26 @@ for (const custodyState of ['expected', 'collected']) {
   });
 }
 
-test('a job with no customer still offers Print bike tag', async () => {
+test('a job with no customer still offers Print bike tag, and no Message', async () => {
   const { ui } = await openJob({ custodyState: 'in_shop', customerId: null, customerName: null });
   assert.ok(await ui.findByRole('button', { name: 'Print bike tag' }));
+  assert.ok(ui.queryByRole('button', { name: /^Message/ }) === null);
+});
+
+// Fresh review, 21 Oct: a job with no number has nothing for a tag to say.
+test('a job with no number has no Print bike tag', async () => {
+  const { ui } = await openJob({ custodyState: 'in_shop', reference: null });
+  await ui.findByRole('button', { name: 'Message Maya Patel' });
+  assert.ok(ui.queryByRole('button', { name: 'Print bike tag' }) === null);
+});
+
+test('the tag is 54 mm wide and wraps long words, for a 62 mm label', async () => {
+  uninstall = installDom('http://localhost/workshop/diary');
+  const rtl = await import('@testing-library/react');
+  const { createElement } = await import('react');
+  const { BikeTagPaper } = await importFresh(TAG);
+  const ui = rtl.render(createElement(BikeTagPaper, { reference: 'WH-1042', customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3' }));
+  const tag = ui.getByRole('article', { name: 'Bike tag' });
+  assert.match(tag.className, /w-\[54mm\]/);
+  assert.match(tag.className, /break-words/);
 });

@@ -2635,6 +2635,9 @@ keepDesktopSeq('job-book-in');
 // the banner". So no strip: a printer button joins the customer row's icon
 // buttons once the bike is in the shop.
 const withPrintTagButton = (html) => html.replace(/<button type="button" aria-label="Message Maya Patel"/, (m) => `<button type="button" aria-label="Print bike tag" title="Print bike tag" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon('printer', 18)}</button>${m}`);
+// Built without moving the counters that name the hover styles, so every
+// board after it keeps its class names (fresh review, 21 Oct).
+const seqsBefore = [hoverSeq, devSeq, requestConnectorSeq];
 const bookedIn = buildJobPage({
   status: 'Booked in', tone: 'blue',
   touch: {
@@ -2648,6 +2651,7 @@ const bookedIn = buildJobPage({
     footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
   },
 });
+[hoverSeq, devSeq, requestConnectorSeq] = seqsBefore;
 screens['job-book-in-print'] = Object.fromEntries(Object.entries(bookedIn).map(([k, v]) => [k, withPrintTagButton(v)]));
 // The printed tag: the job number large, its barcode (Workshop day 4: Code
 // 128, as the product stickers), the customer and the bike, on a small label

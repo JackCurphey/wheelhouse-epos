@@ -20,11 +20,13 @@ function Barcode({ value }: { value: string }) {
 
 export function BikeTagPaper({ reference, customerName, bikeLabel }: TagJob) {
   return (
-    <article aria-label="Bike tag" className="flex w-[62mm] flex-col items-center gap-1.5 p-3 text-center">
+    // 54 mm: a 62 mm label less the print styles' 4 mm page margins, as the
+    // receipt is 72 mm for 80 mm paper (fresh review).
+    <article aria-label="Bike tag" className="flex w-[54mm] flex-col items-center gap-1.5 p-3 text-center break-words">
       <strong className="font-[family-name:var(--wh-font-mono)] text-[26px] tracking-[1px]">{reference}</strong>
       <Barcode value={reference} />
-      {customerName ? <span className="text-[15px] font-bold">{customerName}</span> : null}
-      {bikeLabel ? <span className="text-[13px]">{bikeLabel}</span> : null}
+      {customerName ? <span className="max-w-full text-[15px] font-bold">{customerName}</span> : null}
+      {bikeLabel ? <span className="max-w-full text-[13px]">{bikeLabel}</span> : null}
     </article>
   );
 }

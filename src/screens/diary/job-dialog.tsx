@@ -314,12 +314,14 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 {/* Print bike tag once the bike is in (Jack, 21 Oct, bike tag answer 2:
                     "the top right where the three boxes are"; drawn as job-book-in-print),
                     then the drawn "Message [customer]" button (Jack, 20 Oct). */}
-                {job.custodyState === 'in_shop' || job.customerId ? (
+                {(job.custodyState === 'in_shop' && job.reference) || job.customerId ? (
                   <span className="ml-auto flex gap-2">
-                    {job.custodyState === 'in_shop' ? (
+                    {/* A job with no number gets no tag: its id is the database's, counting every
+                        shop's jobs, and nothing could find it from the barcode (fresh review). */}
+                    {job.custodyState === 'in_shop' && job.reference ? (
                       <button
                         type="button" aria-label="Print bike tag" title="Print bike tag"
-                        onClick={() => printBikeTag({ reference: job.reference ?? `Job ${job.id}`, customerName: job.customerName ?? null, bikeLabel: job.bikeLabel ?? null })}
+                        onClick={() => printBikeTag({ reference: job.reference as string, customerName: job.customerName ?? null, bikeLabel: job.bikeLabel ?? null })}
                         className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] hover:bg-[var(--wh-hover)]"
                       >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="8" rx="2" /><path d="M6 14h12v7H6z" /></svg>
