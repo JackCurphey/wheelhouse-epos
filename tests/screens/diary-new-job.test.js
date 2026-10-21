@@ -7,6 +7,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -22,13 +23,13 @@ const SERVICES = [
 const CUSTOMERS = [{ id: 5, name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', active: true }];
 const BIKES = [{ id: 7, customerId: 5, make: 'Trek', model: 'Domane AL 3', colour: 'green', active: true }];
 // Alex already has two hours on Tuesday; Jo has none, so Jo is chosen.
-const JOBS = [{
+const JOBS = [fakeJob({
   id: 1, title: 'Full service', reference: 'WH-1001', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane AL 3',
   mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '13:00', endTime: '15:00', status: 'scheduled',
   bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 1, notes: null, requested: null,
   cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, orderId: null, orderStatus: null, orderTotal: null,
   createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z',
-}];
+})];
 
 const realFetch = globalThis.fetch;
 let uninstall;
