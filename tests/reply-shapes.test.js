@@ -84,3 +84,19 @@ test('a job after an edit or an action has no days, and is the changed-job shape
   }
   assert.equal(bookedIn.body.custodyState, 'in_shop');
 });
+
+// A request with no set time is as long as its services (job-planned-length):
+// the diary's offer reads this, and fell back to an hour while it wasn't sent.
+test('a job comes back with its planned length: given, from its times, or none', async () => {
+  const day = nextDay();
+  const make = async (body) => (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Wheel build', jobDate: day, mechanicId: sam, ...body } })).body;
+  const given = await make({ plannedMinutes: 90 });
+  const timed = await make({ startTime: '14:00', endTime: '15:30' });
+  const neither = await make({});
+  assert.ok(given.id && timed.id && neither.id, JSON.stringify([given, timed, neither]));
+  assert.equal((await staff(`/api/workshop-jobs/${given.id}`)).body.plannedMinutes, 90);
+  assert.equal((await staff(`/api/workshop-jobs/${timed.id}`)).body.plannedMinutes, 90);
+  assert.equal((await staff(`/api/workshop-jobs/${neither.id}`)).body.plannedMinutes, null);
+  const listed = (await staff(`/api/workshop-jobs?start=${day}&end=${day}`)).body.find((j) => j.id === given.id);
+  assert.equal(listed.plannedMinutes, 90);
+});

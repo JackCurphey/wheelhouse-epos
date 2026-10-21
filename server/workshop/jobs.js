@@ -47,6 +47,9 @@ export function serializeWorkshopJob(row) {
     jobDate: row.job_date,
     startTime: row.start_time,
     endTime: row.end_time,
+    // The job's planned length in minutes (given, its times', or an online
+    // booking's services' total); null when it has none. The diary's offer reads it.
+    plannedMinutes: row.planned_minutes ?? null,
     status: row.status,
     // The states the screens actually drive from. `status` above is the derived
     // legacy field, kept only for public/app.js and the online booking pages until
