@@ -12,22 +12,21 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 1. Read the top of `.agents/STATUS.md` (where things stand, what's next).
 2. If building, read `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`
-   (what is built, in which stage) and
-   `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md` (who
-   builds which half, and in what order). Use them for the order of work and
-   the lanes only; how each piece is specified and built is below. Find out
-   whose session this is — Mark's or Jack's — and take the next piece in that
-   person's lane.
-3. **Two people build at once** (Jack, 4 Oct, agreeing to the split plan):
-   Mark takes the server half of each work package and all hosting; Jack
-   takes the screens and the whole workshop. Each file has one owner (split
-   plan §3); a pull request changing the other person's files needs their
-   approval. Adding your own line to their file doesn't. But every server
-   change Jack makes, the workshop included, needs Mark's approval. §3.1
-   lists the files both touch, some of them shared (Jack, 5 Oct).
-4. **The build has started** (Jack, 4 Oct). Take the next piece in your
-   lane in the split plan's §9 order; stage 0 closes, with its stage check,
-   before stage 1 starts.
+   (what is built, in which stage). Use it, and the split plan
+   (`docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`), for
+   what depends on what only; how work is shared is the next step, and how
+   each piece is specified and built is below.
+3. **Two people build at once, by feature, not by layer** (Mark, 21 Oct,
+   `openspec/changes/working-agreement/`; Jack is told by an issue and can
+   overrule it). Whoever starts a piece takes it from the drawing through the
+   server to the screen, migration and tests included. Either person can fix
+   or pick up anything. Take the piece in STATUS's "who is on what" block
+   before you start it, so two people never build the same one. The old
+   rules (each file has one owner; every Jack server change needs Mark's
+   approval; Mark's server half merges first) no longer apply.
+4. **The build has started** (Jack, 4 Oct). Each week STATUS names a theme per
+   person from the build plan; take the next piece in a theme. The stage check
+   is a checklist issue, ticked when its lines are in; it doesn't stop other work.
 
 ## Where things live
 
@@ -41,9 +40,9 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
   plan set only the order of work and the lanes; every piece of work is an
   OpenSpec change (proposal, specs, design, tasks) instead of a section in
   `docs/superpowers/specs/`. An area's spec is written just before work
-  first touches that area, not all at once. A package with both halves is
-  one change: the contract in its `design.md`, both people's tasks in its
-  `tasks.md`, archived once both halves are in (split plan §4.3).
+  first touches that area, not all at once. A piece is one change: the
+  contract in its `design.md`, all its tasks in its `tasks.md`, archived when
+  it is built.
 - `docs/superpowers/specs/` is history and source material; no new files go
   there. Older plans in `docs/superpowers/plans/` are history too. As each
   area's OpenSpec spec lands, a line at the top of the old documents it
@@ -60,14 +59,20 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 ## Allowed without asking (once the build has started)
 
-1. Build exactly what the drawings and decisions show, in your lane's order
-   (split plan §4.4, §7 and §9).
+1. Build exactly what the drawings and decisions show, taking pieces in this
+   week's theme.
 2. Make the database changes the plan lists.
 3. Where a drawing is silent, follow the closest pattern already built, log
    it in `decided-while-building.md`, and carry on.
-4. Merge your own pull request once CI has passed on its final commit and a
-   fresh reviewer (a subagent that didn't write the code) has checked it
-   against the spec and the drawings.
+4. Merge your own pull request once CI has passed on its final commit and you
+   have read your own diff against the spec and the drawings (a self-review).
+   **Four risky areas also need `/review` run first**, and go in the weekly
+   digest issue for the other person to read afterwards; their comments never
+   block a merge, a problem found becomes a task either can fix:
+   (1) migrations; (2) money and stock (sales, payments, refunds, `stock_qty`,
+   sign-off); (3) sign-in, customer accounts and public routes
+   (`/api/portal/*`); (4) `server/server.js` and the messaging core. The file
+   lists are in `openspec/changes/working-agreement/design.md`.
 5. Remove an old-app screen (`public/app.js`) once its new replacement is
    merged.
 6. Add a small, well-known dependency when a piece needs it; say so in the
@@ -75,8 +80,9 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 7. Keep the build board artifact (https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
    source `docs/build-progress/build-board.html`, edit only its `BOARD` block)
    and `.agents/STATUS.md` current with **one status pull request a day**,
-   made by whoever finishes last, covering both people's merges (split plan
-   §5). Feature pull requests don't touch `STATUS.md` or the board.
+   made by whoever finishes last, covering both people's merges. STATUS has
+   one "Jack is on" and one "Mark is on" block; the "Check #" list is one
+   checklist issue, not a paragraph. Feature pull requests don't touch `STATUS.md` or the board.
    `decided-while-building.md` has a section per person; append only to
    your own.
 
@@ -94,13 +100,13 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 OpenSpec change (`/opsx:propose`: proposal, specs, design, tasks, citing
 the drawings and Jack's decisions) → tests first, each watched failing for the right reason
-→ build to the drawings → fresh review → `npm test` and
+→ build to the drawings → self-review (and `/review` in a risky area) → `npm test` and
 `npm run test:browser` pass locally → pull request → `/opsx:archive` as the
 last commit in that pull request, before it merges, so `openspec/specs/`
 describes what was built → merge when CI is green on that final commit.
 The board and STATUS catch up in the day's status pull request. Where a
-package has both halves, the contract is written first and Mark's server
-half merges before Jack's screens half starts (split plan §4.3, §4.4). Pull requests aim for 250–600 changed lines.
+piece has a server and a screen part, one person builds both; the contract
+in `design.md` is a note for the reader, not a handoff. Pull requests aim for 250–600 changed lines.
 Outside services (payments, email, sign-in, accounts software, Lightspeed,
 Citrus Lime) are built behind an adapter with a pretend version until a real
 account exists.
