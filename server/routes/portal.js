@@ -412,23 +412,28 @@ async function jobMoney(jobId) {
   const items = order
     ? await db.prepare('SELECT name, unit_price, qty, line_total FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
     : [];
+  // Every revision the customer saw, not only the newest: a newer quote keeps
+  // the earlier answers (fresh review). Priced in the database, as the quote is.
   const declined = await db.prepare(
-    `SELECT l.description, l.unit_amount, l.quantity FROM workshop_quote_lines l
-      WHERE l.decision = 'declined' AND l.workshop_quote_id = (SELECT id FROM workshop_quotes WHERE workshop_job_id = ? ORDER BY revision DESC LIMIT 1)
-      ORDER BY l.id`
+    `SELECT l.description, (l.unit_amount * l.quantity) AS line_total FROM workshop_quote_lines l
+       JOIN workshop_quotes q ON q.id = l.workshop_quote_id
+      WHERE q.workshop_job_id = ? AND q.state <> 'draft' AND l.decision = 'declined'
+      ORDER BY q.revision, l.id`
   ).all(jobId);
   const paid = order?.status === 'converted' && order.paid_at
     ? { at: new Date(order.paid_at).toISOString(), amount: figure(order.paid_total) } : null;
-  let toPay = null;
+  let due = 0;
   if (order && !paid && items.length) {
-    toPay = figure((await computeOrderTotals({
+    due = (await computeOrderTotals({
       items: items.map((l) => ({ unitPrice: l.unit_price, qty: l.qty })), discount: order.discount, customerId: order.customer_id,
-    })).total);
+    })).total;
   }
   return {
     work: items.map((l) => ({ name: l.name, price: figure(l.line_total) })),
-    declined: declined.map((l) => ({ name: l.description, price: figure(Number(l.unit_amount) * Number(l.quantity)) })),
-    toPay,
+    declined: declined.map((l) => ({ name: l.description, price: figure(l.line_total) })),
+    toPay: paid || due <= 0 ? null : figure(due),
+    // Nothing owed on collection, said even with prices hidden, as Bike ready says it.
+    nothingToPay: !paid && due <= 0,
     paid,
   };
 }

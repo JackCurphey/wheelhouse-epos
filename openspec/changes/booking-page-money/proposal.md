@@ -6,8 +6,9 @@
 ## What changes
 - **Server:** the booking link adds:
   - `work`: the job's order lines;
-  - `declined`: the newest quote's declined lines;
+  - `declined`: every sent revision's declined lines;
   - `toPay`: what the till would charge, null once paid;
+  - `nothingToPay`: true when nothing is owed, even with prices hidden;
   - `paid { at, amount }`.
 
   Every figure is null with Show prices off.

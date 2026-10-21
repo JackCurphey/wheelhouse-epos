@@ -193,3 +193,41 @@ test('declined quote lines are listed; once paid, the payment shows and nothing 
   assert.equal(after.paid.amount, 83);
   assert.ok(Date.parse(after.paid.at) > 0);
 });
+
+// Fresh review, 21 Oct.
+test('a decline survives a newer quote; prices hidden hide what was paid too', async () => {
+  await setPrices(true);
+  const { booked, orderId } = await readyJob();
+  const first = await staff(`/api/workshop-jobs/${booked.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Replace gear cable', unitAmount: 12, need: 'optional' }] } });
+  assert.ok(first.status < 300, JSON.stringify(first.body));
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_quotes SET state = 'superseded' WHERE workshop_job_id = ?").run(booked.id));
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_quote_lines SET decision = 'declined' WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)").run(booked.id));
+  // A newer revision, still a draft, for something else.
+  await runWithShop(owner.shop.id, () => prepare("INSERT INTO workshop_quotes (workshop_job_id, revision, state) VALUES (?, 2, 'draft')").run(booked.id));
+  assert.deepEqual((await link.read(booked.code)).body.declined, [{ name: 'Replace gear cable', price: 12 }]);
+  const made = await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' } });
+  await act(booked.id, 'start');
+  assert.equal((await staff(`/api/sale-documents/${orderId}/convert`, { method: 'POST', body: { cardAmount: 83, cashierId: made.body.employeeId, signedOffBy: null } })).status, 201);
+  await setPrices(false);
+  try {
+    const after = (await link.read(booked.code)).body;
+    assert.equal(after.paid.amount, null);
+    assert.ok(Date.parse(after.paid.at) > 0);
+  } finally {
+    await setPrices(true);
+  }
+});
+
+test('nothing left to pay says so, whether or not prices show', async () => {
+  await setPrices(false);
+  try {
+    const booked = await book();
+    await act(booked.id, 'book-in');
+    const body = (await link.read(booked.code)).body;
+    assert.equal(body.nothingToPay, true, 'an order with nothing on it');
+  } finally {
+    await setPrices(true);
+  }
+  const { booked } = await readyJob();
+  assert.equal((await link.read(booked.code)).body.nothingToPay, false);
+});

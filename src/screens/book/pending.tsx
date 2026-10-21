@@ -261,17 +261,23 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
     // How far the bike is: In the shop until the work starts, then Being worked
     // on; Ready once it's done (Jack, 21 Oct, answer 1: the tracker once the
-    // server sends the work's progress, #359).
+    // server sends the work's progress, pull request 359).
     const current = !inShop ? 3 : link.workState && link.workState !== 'not_started' ? 2 : 1;
     const arrived = link.bookedInAt
-      ? `We’ve got your bike — booked in ${shortDayOf(link.bookedInAt)} at ${clockOf(link.bookedInAt)}.${link.expectedReady ? ` Expected ready: ${dayLabel(link.expectedReady.date)}${link.expectedReady.time ? `, ${link.expectedReady.time}` : ''}.` : ''}`
+      ? `We’ve got your bike — booked in ${shortDayOf(link.bookedInAt)} at ${clockOf(link.bookedInAt)}.${link.expectedReady ? ` Expected ready: ${shortDate(link.expectedReady.date)}${link.expectedReady.time ? `, ${link.expectedReady.time}` : ''}.` : ''}`
       : 'Your bike is in the workshop';
     const shownTracker = inShop && !link.workState ? null : <Tracker current={current} />;
     return (
       <BookFrame title={title} eyebrow={`Your repair · ${link.reference}`}>
         {shownTracker}
-        {inShop ? <p className="m-0 mb-2 text-[15px] font-semibold leading-normal">{arrived}</p> : null}
-        {inShop && link.workState === 'waiting_parts' ? <p className="m-0 mb-4 text-[15px] leading-normal">Waiting for a part — we’ll update you.</p> : inShop ? <div className="mb-2" /> : null}
+        {/* Waiting for a part (dq-waiting-part): the drawn warning, announced, in
+            place of the booked-in line, then the ready day. */}
+        {inShop && link.workState === 'waiting_parts' ? (
+          <>
+            <p role="status" className="m-0 mb-2 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><strong>Waiting for a part — we’ll update you.</strong></p>
+            {link.expectedReady ? <p className="m-0 mb-4 text-[15px] leading-normal">{`Expected ready: ${shortDate(link.expectedReady.date)}${link.expectedReady.time ? `, ${link.expectedReady.time}` : ''}.`}</p> : null}
+          </>
+        ) : inShop ? <p className="m-0 mb-4 text-[15px] font-semibold leading-normal">{arrived}</p> : null}
         {/* Paid already (cp-summary-paid), else what's left to pay at the counter (cp-summary-inshop). */}
         {link.stage === 'ready_to_collect' && (link.paid ? card('Paid', 'paid-title', (
           <>
@@ -280,25 +286,31 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           </>
         )) : card('To pay when you collect', 'pay-title', (
           <>
-            {typeof link.toPay === 'number' ? <p className="m-0 font-[family-name:var(--wh-font-mono)] text-3xl font-bold">{money(link.toPay)}</p> : null}
-            <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
+            {/* Nothing owed says so, as Bike ready does (fresh review). */}
+            {link.nothingToPay ? <p className="m-0 text-[15px] leading-normal">Nothing to pay on collection. When you come in, just give your name.</p> : (
+              <>
+                {typeof link.toPay === 'number' ? <p className="m-0 font-[family-name:var(--wh-font-mono)] text-3xl font-bold">{money(link.toPay)}</p> : null}
+                <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
+              </>
+            )}
           </>
         )))}
         {link.stage === 'collected' && card('Collected', 'collected-title', (
           <>
             <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />{link.collectedAt ? `Collected · ${shortDayOf(link.collectedAt)}` : 'Collected'}</p>
             <p className="m-0 text-[15px] leading-normal">
-              {`${link.paid?.amount != null ? `${money(link.paid.amount)} paid. ` : ''}Thanks for coming in — this page keeps working ${link.collectedAt ? `until ${shortDayOf(plusDays(link.collectedAt, 30))}, 30 days after collection` : 'for 30 days after collection'}.`}
+              {`${link.paid?.amount ? `${money(link.paid.amount)} paid. ` : ''}Thanks for coming in — this page keeps working ${link.collectedAt ? `until ${shortDate(datePlus(londonDate(link.collectedAt), 30))}, 30 days after collection` : 'for 30 days after collection'}.`}
             </p>
           </>
         ))}
         {/* The quote, while there's one to answer: only before the work is done. */}
-        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />}
+        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} hideAnswered={work.length > 0} />}
         {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
         {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
           <>
             {lines(work)}
-            {typeof link.toPay === 'number' ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-[15px] font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(link.toPay)}</span></p> : null}
+            {/* The sum of its own lines, as drawn; only when every line has its figure. */}
+            {work.every((l) => l.price !== null) ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-[15px] font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(work.reduce((n, l) => n + (l.price ?? 0), 0))}</span></p> : null}
           </>
         ))}
         {!inShop && work.length > 0 && card('What we did', 'did-title', (
@@ -369,14 +381,24 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
 const LONDON = 'Europe/London';
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-/** "Thu 17 Sep", the shop's own day, as the drawings write it (not Intl's "Sept"). */
-const shortDayOf = (iso: string) => {
-  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: LONDON }).format(new Date(iso)).split('-').map(Number);
+/** The shop's own calendar date of a moment, as YYYY-MM-DD (from formatToParts, not a locale's order). */
+const londonDate = (iso: string) => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: LONDON }).formatToParts(new Date(iso)).map((p) => [p.type, p.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+/** "Thu 17 Sep" for a calendar date, as the drawings write it (not Intl's "Sept"). */
+const shortDate = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number);
   const day = new Date(Date.UTC(y, m - 1, d));
   return `${SHORT_DAYS[day.getUTCDay()]} ${d} ${SHORT_MONTHS[m - 1]}`;
 };
+const shortDayOf = (iso: string) => shortDate(londonDate(iso));
+/** A calendar date some days on, counted in days, not hours, so a clock change can't move it. */
+const datePlus = (date: string, n: number) => {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+};
 const clockOf = (iso: string) => new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: LONDON }).format(new Date(iso));
-const plusDays = (iso: string, n: number) => { const d = new Date(iso); d.setUTCDate(d.getUTCDate() + n); return d.toISOString(); };
 const money = (n: number) => `£${n.toFixed(2)}`;
 
 /**
@@ -418,7 +440,7 @@ function ShopLines({ name, shop }: { name: string; shop?: { address: string | nu
   );
 }
 
-/** An expired link (cp-expired, bk-expired; #359): which job, why, and the shop. */
+/** An expired link (cp-expired, bk-expired; pull request 359): which job, why, and the shop. */
 function ExpiredPage({ details, shopSlug }: { details: ExpiredLink | null; shopSlug: string }) {
   if (!details?.reference || !details.shop) return <BookFrame title={EXPIRED}>{null}</BookFrame>;
   const collected = details.reason === 'collected';

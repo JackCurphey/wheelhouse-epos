@@ -52,10 +52,11 @@ test('in the workshop: the heading, the tracker at Being worked on, when it came
   const steps = within(tracker(ui)).getAllByRole('listitem');
   assert.deepEqual(steps.map((s) => s.getAttribute('aria-current')), [null, null, 'step', null]);
   assert.deepEqual(steps.map((s) => Boolean(s.querySelector('[data-done]'))), [true, true, false, false]);
-  assert.ok(ui.getByText('We’ve got your bike — booked in Thu 17 Sep at 09:42. Expected ready: Thursday 17 September.'));
+  assert.ok(ui.getByText('We’ve got your bike — booked in Thu 17 Sep at 09:42. Expected ready: Thu 17 Sep.'));
   const agreed = within(ui.getByRole('region', { name: 'Work agreed' }));
   assert.ok(agreed.getByText('Shimano brake pads'));
   assert.ok(agreed.getByText('£28.00'));
+  // The sum of its own lines, whatever the discount on the amount to pay.
   assert.ok(agreed.getByText('£111.00'));
   const { waitFor } = await import('@testing-library/react');
   await waitFor(() => assert.ok(requests.some((r) => r.url.endsWith('/quote')), 'asks for any quote'));
@@ -68,9 +69,14 @@ test('in the shop, not started yet: the tracker’s current step is In the shop'
   assert.deepEqual(within(tracker(ui)).getAllByRole('listitem').map((s) => s.getAttribute('aria-current')), [null, 'step', null, null]);
 });
 
-test('waiting for a part says so', async () => {
+test('waiting for a part: the drawn warning, announced, then the ready day, in place of the booked-in line', async () => {
   const { ui } = await open({ workState: 'waiting_parts' });
-  assert.ok(await ui.findByText('Waiting for a part — we’ll update you.'));
+  await ui.findByText('Waiting for a part — we’ll update you.');
+  const warn = ui.getAllByRole('status').find((el) => el.textContent.includes('Waiting for a part'));
+  assert.ok(warn, 'announced');
+  assert.equal(warn.textContent, 'Waiting for a part — we’ll update you.');
+  assert.ok(ui.getByText('Expected ready: Thu 17 Sep.'));
+  assert.ok(ui.queryByText(/We’ve got your bike/) === null);
 });
 
 test('with no booked-in time the plain line stays', async () => {
@@ -203,4 +209,35 @@ test('a booking that never came in, expired: Book a repair', async () => {
   assert.ok(await h1(ui, 'This booking link has expired'));
   assert.ok(ui.getByText('It was for WH-1042. A booking’s link stops working 30 days after collection — or, if the bike never came in, 30 days after the booked date.'));
   assert.equal(ui.getByRole('link', { name: 'Book a repair' }).getAttribute('href'), '/book/north');
+});
+
+// Fresh review, 21 Oct.
+test('the Work agreed total adds up its lines, even with a discount on what is to pay', async () => {
+  const { ui, within } = await open({ toPay: 99.9 });
+  const agreed = within(await ui.findByRole('region', { name: 'Work agreed' }));
+  assert.ok(agreed.getByText('£111.00'));
+});
+
+test('nothing to pay: the card says so, not "Pay at the counter"', async () => {
+  const { ui, within } = await open({ stage: 'ready_to_collect', toPay: 0, nothingToPay: true });
+  const pay = within(await ui.findByRole('region', { name: 'To pay when you collect' }));
+  assert.ok(pay.getByText('Nothing to pay on collection. When you come in, just give your name.'));
+  assert.ok(pay.queryByText(/Pay at the counter/) === null);
+  assert.ok(pay.queryByText('£0.00') === null);
+});
+
+test('an answered quote isn’t listed again while the bike is in: Work agreed has its lines', async () => {
+  const { ui, requests } = await open({});
+  await h1(ui, 'Trek Domane AL 3 · Standard service');
+  const { waitFor } = await import('@testing-library/react');
+  await waitFor(() => assert.ok(requests.some((r) => r.url.endsWith('/quote'))));
+  // The page asks for the quote only to show one waiting for an answer.
+  assert.ok(ui.queryByText('Answered') === null);
+});
+
+test('“until” counts 30 days on the shop’s own calendar, across the clocks going back', async () => {
+  // 23:30 UTC on 21 Oct is 00:30 on 22 Oct in the shop; 30 days on is 21 Nov.
+  const { ui } = await open({ stage: 'collected', collectedAt: '2026-10-21T23:30:00Z', toPay: null, paid: null });
+  assert.ok(await ui.findByText('Thanks for coming in — this page keeps working until Sat 21 Nov, 30 days after collection.'));
+  assert.ok(ui.getByText('Collected · Thu 22 Oct'));
 });

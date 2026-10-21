@@ -30,7 +30,7 @@ function sentLine(iso: string | null) {
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
-export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopSlug: string; code: string; agreedTotal: number | null; done?: boolean }) {
+export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswered = false }: { shopSlug: string; code: string; agreedTotal: number | null; done?: boolean; hideAnswered?: boolean }) {
   const queryClient = useQueryClient();
   const key = ['booking-quote', shopSlug, code];
   const quote = useQuery({
@@ -59,6 +59,8 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
   }
 
   if (q.state === 'approved' || q.state === 'partly_approved' || q.state === 'declined') {
+    // Where the page lists the agreed work itself (Work agreed), the answer isn't listed twice (fresh review).
+    if (hideAnswered) return null;
     const yes = q.lines.filter((l) => l.decision === 'approved');
     const no = q.lines.filter((l) => l.decision === 'declined');
     const phone = q.lines.find((l) => l.decidedVia === 'phone' || l.decidedVia === 'in_shop');
