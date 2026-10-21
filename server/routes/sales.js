@@ -475,9 +475,9 @@ export function register(route) {
     if (cashierResolved.cashierId === null) return badRequest(res, 'Select a staff member before completing the sale');
 
     const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
-    // A job's order may be emptied while the job is open, but nothing on it is
-    // not a sale: converting it would record a £0 sale and finish the job.
-    if (items.length === 0) return badRequest(res, 'There is nothing on this order to pay for');
+    // An order with nothing on it is not a sale. A job's order is the exception:
+    // work given free is finished by taking £0 for it (the work-action tests do).
+    if (items.length === 0 && !doc.workshop_job_id) return badRequest(res, 'There is nothing on this order to pay for');
     // A stored labour line has product_id NULL. Dropping line_type here (as a
     // bare {productId, qty, unitPrice} mapping used to) sends it into
     // loadDocumentLine looking like an incomplete product line, which rejects
