@@ -128,6 +128,19 @@ test('Amount to pay leaves out a cancelled order', async () => {
   assert.match(row.body, /£111\.00 to pay on collection/, res.body.readyMessage && row.body);
 });
 
+test('Amount to pay takes off the order discount and the customer’s group discount, as the till charges it', async () => {
+  const group = (await staff('/api/customer-groups', { method: 'POST', body: { name: `Trade ${Date.now()}`, discountPercent: 10 } })).body;
+  const { customer, job } = await mayasJob();
+  const joined = await staff(`/api/customers/${customer.id}`, { method: 'PUT', body: { name: 'Maya Patel', groupIds: [group.id] } });
+  assert.equal(joined.status, 200, JSON.stringify(joined.body));
+  const items = await staff(`/api/sale-documents/${job.orderId}/items`, { method: 'PUT', body: { items: [{ lineType: 'labour', name: 'Standard service', unitPrice: 20, minutes: 60 }], discount: 2 } });
+  assert.equal(items.status, 200, JSON.stringify(items.body));
+  const res = await finish(job);
+  const [row] = await messagesFor(job.id);
+  // £20, less the order's £2, less 10% of £20: £16.00.
+  assert.match(row.body, /£16\.00 to pay on collection/, res.body.readyMessage && row.body);
+});
+
 test('sending a quote queues Quote to approve through the engine, pretend, at once', async () => {
   const { customer, job } = await mayasJob({ phone: null, email: 'maya@example.test' });
   const quote = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Rear brake bleed', unitAmount: 25 }] } });

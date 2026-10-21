@@ -272,6 +272,20 @@ export async function resolveGroupDiscount(customerId, subtotal) {
   return { amount, name: `${top.name} (${top.discount_percent}%)` };
 }
 
+const toPence = (n) => Math.round(n * 100) / 100;
+
+// The one amount-due calculation: createSale charges it, GET
+// /api/sale-documents/:id/due shows it and the Bike ready message quotes it, so
+// all three always agree. Each part is rounded to pence once and the total is
+// worked from the rounded parts (never below zero).
+export async function computeOrderTotals({ items, discount, customerId }) {
+  const subtotal = toPence(items.reduce((sum, { unitPrice, qty }) => sum + Number(unitPrice) * qty, 0));
+  const group = await resolveGroupDiscount(customerId, subtotal);
+  const groupDiscount = { amount: toPence(group.amount), name: group.name };
+  const flat = toPence(Number(discount) || 0);
+  return { subtotal, discount: flat, groupDiscount, total: Math.max(0, toPence(subtotal - flat - groupDiscount.amount)) };
+}
+
 // The one place a request line becomes a stored line. Extracted from the three
 // near-identical blocks in createSale, POST /api/sale-documents and PUT
 // /api/sale-documents/:id/items, so the rules cannot drift between them.
@@ -373,9 +387,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock }));
   }
 
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
-  const groupDiscount = await resolveGroupDiscount(customerId, subtotal);
-  const total = Math.max(0, subtotal - discount - groupDiscount.amount);
+  const { subtotal, discount: flatDiscount, groupDiscount, total } = await computeOrderTotals({ items: loaded, discount, customerId });
 
   const cash = Math.max(0, Number(cashAmount) || 0);
   const card = Math.max(0, Number(cardAmount) || 0);
@@ -414,7 +426,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
         `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(customerId, cashierId, subtotal, discount, total, paymentMethod, cash, card, cashTendered, note, groupDiscount.amount, groupDiscount.name);
+      .run(customerId, cashierId, subtotal, flatDiscount, total, paymentMethod, cash, card, cashTendered, note, groupDiscount.amount, groupDiscount.name);
     const saleId = saleInfo.lastInsertRowid;
 
     for (const p of extraPayments) {
