@@ -165,7 +165,7 @@ test('change refuses an expired link', async () => {
   d.setUTCDate(d.getUTCDate() - 31);
   await setJob(shopId(), booked.id, 'job_date = ?', d.toISOString().slice(0, 10));
   const res = await link.change(booked.code, { jobDate: nextDay(), mechanicId: sam, startTime: '10:00' });
-  assert.deepEqual([res.status, res.body], [410, { error: 'This link has expired' }]);
+  assert.deepEqual([res.status, res.body.error], [410, 'This link has expired']);
 });
 
 test('a change waits while another booking write holds the new day', async () => {

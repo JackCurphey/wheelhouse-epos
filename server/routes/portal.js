@@ -19,7 +19,8 @@ import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from '../customer-auth.js';
-import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate } from '../capacity.js';
+import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate, openingHoursFor } from '../capacity.js';
+import { formatOpeningHours } from '../messaging/templates.js';
 import { currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import {
@@ -35,7 +36,7 @@ import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from '../booking-photos.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
-import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -273,15 +274,32 @@ export async function resolveBookingLink(req, res, code) {
     sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
     return null;
   }
+  // collected_on: the shop's own date of collection, for the 30 days after it.
   const row = /^[0-9a-f]{64}$/.test(code)
-    ? await db.prepare('SELECT id, job_date FROM workshop_jobs WHERE link_token_hash = ?').get(hashLinkCode(code))
+    ? await db.prepare(
+      `SELECT w.id, w.reference, w.job_date, w.custody_state,
+              to_char(w.collected_at AT TIME ZONE COALESCE(ws.time_zone, 'Europe/London'), 'YYYY-MM-DD') AS collected_on,
+              s.name AS shop_name, s.address AS shop_address, s.phone AS shop_phone
+         FROM workshop_jobs w
+         JOIN shops s ON s.id = w.shop_id
+         LEFT JOIN workshop_settings ws ON ws.shop_id = w.shop_id
+        WHERE w.link_token_hash = ?`
+    ).get(hashLinkCode(code))
     : null;
   if (!row) {
     sendJson(res, 404, { error: "We can't find that booking" });
     return null;
   }
-  if (isLinkExpired(row.job_date, await currentShopToday())) {
-    sendJson(res, 410, { error: 'This link has expired' });
+  const expiry = linkExpiry({ jobDate: row.job_date, custodyState: row.custody_state, collectedOn: row.collected_on }, await currentShopToday());
+  if (expiry.expired) {
+    // Which job it was and why, with the shop, for the expired page (cp-expired,
+    // bk-expired): nothing that identifies the customer.
+    sendJson(res, 410, {
+      error: 'This link has expired',
+      reference: row.reference,
+      reason: expiry.reason,
+      shop: { name: row.shop_name, address: row.shop_address || null, phone: row.shop_phone || null },
+    });
     return null;
   }
   return { id: row.id };
@@ -298,6 +316,8 @@ async function bookingLinkView(jobId, shop) {
             w.booking_state, w.custody_state, w.work_state, w.signed_off_name,
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
+            w.booked_in_at, w.collected_at,
+            (SELECT max(p.part_date) FROM workshop_job_parts p WHERE p.workshop_job_id = w.id) AS last_day,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
              WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
@@ -357,7 +377,27 @@ async function bookingLinkView(jobId, shop) {
     canChange: customerCanChange(row, today),
     canCancel: customerCanAct(row, today),
     changeDeclined: row.change_declined_at !== null,
+    // How far the bike and its work are (Jack, 21 Oct, booking page stages; the
+    // contract in openspec/changes/archive/2026-10-21-booking-page-stages/design.md).
+    workState: row.work_state,
+    bookedInAt: row.booked_in_at ? new Date(row.booked_in_at).toISOString() : null,
+    collectedAt: row.collected_at ? new Date(row.collected_at).toISOString() : null,
+    // The job's last day, as the job page's "Ready by"; no time until staff can set one.
+    expectedReady: { date: row.last_day || row.job_date, time: null },
+    shop: await shopLines(),
     ...(await bookedServices(row.id)),
+  };
+}
+
+// The shop's lines on the customer's page (cp-summary's shopLines): address,
+// phone and opening hours, each null when the shop hasn't given it.
+async function shopLines() {
+  const shop = await db.prepare('SELECT address, phone FROM shops WHERE id = current_setting(\'app.current_shop_id\')::int').get();
+  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  return {
+    address: shop?.address || null,
+    phone: shop?.phone || null,
+    openingHours: settings ? formatOpeningHours(openingHoursFor(toCapacitySettings(settings))) : null,
   };
 }
 

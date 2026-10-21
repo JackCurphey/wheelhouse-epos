@@ -64,8 +64,15 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
   // parameterise an identifier. Safe here and only here: MACHINE_COLUMNS is a
   // closed map keyed by machine name, and an unmapped machine throws above. Do
   // not extend this pattern to a caller-supplied column.
+  // When the bike came in and went (booking page stages, 21 Oct; migration 051):
+  // set by the custody moves themselves, so every way a bike moves records it.
+  const custodyTime = machine.name !== 'custody' ? ''
+    : event === 'book_in' ? ', booked_in_at = now()'
+    : event === 'collect' ? ', collected_at = now()'
+    : event === 'reopen' ? ', collected_at = NULL'
+    : '';
   const { changes } = await prepare(
-    `UPDATE workshop_jobs SET ${column} = ?, version = version + 1, updated_at = now()
+    `UPDATE workshop_jobs SET ${column} = ?${custodyTime}, version = version + 1, updated_at = now()
      WHERE id = ? AND version = ?`
   ).run(to, jobId, expectedVersion);
 
