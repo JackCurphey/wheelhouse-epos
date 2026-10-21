@@ -83,6 +83,9 @@ async function jobWithQuote(customer = maya, bike = mayaBike) {
   return { job: job.body, quote: quote.body };
 }
 const codeFrom = (link) => link.split('/booking/')[1];
+// Sending while messages are pretend leaves the customer's link alone and hands
+// staff none, so the tests that play the customer take the job's private link.
+const customerCode = async (jobId) => codeFrom((await staff(`/api/workshop-jobs/${jobId}/private-link`, { method: 'POST', body: {} })).body.privateLink);
 const readQuote = async (id) => (await staff(`/api/quotes/${id}`)).body;
 const orderNames = async (jobId) => {
   const job = (await staff(`/api/workshop-jobs/${jobId}`)).body;
@@ -108,7 +111,7 @@ test("every read of a job carries its current quote's state", async () => {
 
 // Messages are pretend for now (Jack, 20 Oct, docs/decisions/2026-10-20-messages-engine.md):
 // the quote's message goes to the outbox, and nothing reaches the text provider.
-test('Send gives the customer a fresh booking link in a pretend message; the old link stops working', async () => {
+test('Send leaves the customer\'s link working and says [link] in a pretend message', async () => {
   const { job, quote } = await jobWithQuote();
   const old = await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} });
   const oldCode = codeFrom(old.body.privateLink);
@@ -118,14 +121,13 @@ test('Send gives the customer a fresh booking link in a pretend message; the old
   assert.equal(sent.body.quote.state, 'sent');
   assert.ok(sent.body.quote.sentAt);
   assert.equal(sent.body.message.status, 'sent');
-  assert.match(sent.body.link, new RegExp(`^${server.baseUrl}/book/${owner.shop.slug}/booking/[0-9a-f]{64}$`));
+  assert.equal(sent.body.link, null, 'a pretend message issues no link, so staff get none');
   assert.equal(sent.body.message.pretend, true);
   assert.equal(sent.body.message.to, '07700 900142');
   assert.equal(texts.length, before, 'nothing really sent');
   const history = (await staff(`/api/customers/${maya.id}/texts`)).body;
-  assert.ok(history.some((m) => m.body.includes(sent.body.link)));
-  assert.equal((await portal(`/booking-links/${oldCode}`)).status, 404);
-  assert.equal((await portal(`/booking-links/${codeFrom(sent.body.link)}`)).status, 200);
+  assert.ok(history.some((m) => m.body.includes('[link]')));
+  assert.equal((await portal(`/booking-links/${oldCode}`)).status, 200, 'the link the customer already has still opens');
 });
 
 test('a customer with no phone number or email gets no message, but the quote is sent and the link given', async () => {
@@ -141,8 +143,8 @@ test('a customer with no phone number or email gets no message, but the quote is
 
 test('the customer answers on their link; approved lines join the job\'s work and parts', async () => {
   const { job, quote } = await jobWithQuote();
-  const sent = (await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).body;
-  const code = codeFrom(sent.link);
+  assert.equal((await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const code = await customerCode(job.id);
   const shown = await portal(`/booking-links/${code}/quote`);
   assert.equal(shown.status, 200, JSON.stringify(shown.body));
   assert.equal(shown.body.state, 'sent');
@@ -194,12 +196,12 @@ test('a recorded answer must decide every line', async () => {
 });
 
 test('a sent quote can be withdrawn; the customer sees it withdrawn and can no longer answer', async () => {
-  const { quote } = await jobWithQuote();
-  const sent = (await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).body;
+  const { job, quote } = await jobWithQuote();
+  assert.equal((await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).status, 200);
   const w = await staff(`/api/quotes/${quote.id}/withdraw`, { method: 'POST', body: {} });
   assert.equal(w.status, 200, JSON.stringify(w.body));
   assert.equal(w.body.state, 'withdrawn');
-  const code = codeFrom(sent.link);
+  const code = await customerCode(job.id);
   const shown = await portal(`/booking-links/${code}/quote`);
   assert.equal(shown.body.state, 'withdrawn');
   const tried = await portal(`/booking-links/${code}/quote/answer`, {
@@ -210,10 +212,11 @@ test('a sent quote can be withdrawn; the customer sees it withdrawn and can no l
 
 test('an answer for an older revision is refused', async () => {
   const { job, quote } = await jobWithQuote();
-  const sent = (await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).body;
-  const shown = (await portal(`/booking-links/${codeFrom(sent.link)}/quote`)).body;
+  assert.equal((await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const code = await customerCode(job.id);
+  const shown = (await portal(`/booking-links/${code}/quote`)).body;
   await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Bleed brakes', unitAmount: 20 }] } });
-  const tried = await portal(`/booking-links/${codeFrom(sent.link)}/quote/answer`, {
+  const tried = await portal(`/booking-links/${code}/quote/answer`, {
     method: 'POST', body: { revision: shown.revision, decisions: shown.lines.map((l) => ({ lineId: l.id, decision: 'approved' })) },
   });
   assert.equal(tried.status, 409, JSON.stringify(tried.body));

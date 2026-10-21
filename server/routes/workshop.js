@@ -1059,10 +1059,12 @@ export function register(route) {
     sendQuoteResult(res, await createQuoteRevision({ jobId: Number(params.id), lines: body.lines }), 201);
   });
 
-  // Send (journey 4 decision 5): the quote goes to sent, the customer's booking
-  // link is issued afresh (only a hash of the old one is kept, so it can't be
-  // sent again; the old link stops working), and the link goes to them by text.
-  // The answer says whether the text went. The staff app's one-minute Undo
+  // Send (journey 4 decision 5): the quote goes to sent and the message goes to
+  // the customer with their booking link. Once real sending is on that link is
+  // issued afresh (only a hash of the old one is kept; the old link stops
+  // working); while it is pretend, the message says [link] and their link is left
+  // alone. The answer says whether the message went, and carries a link for staff
+  // to hand over only when none did. The staff app's one-minute Undo
   // lives in the app, which calls this only when the minute is up.
   // screens: quote-send
   route('POST', '/api/quotes/:id/send', async (req, res, params, query, afterRelease, shopId) => {
@@ -1070,17 +1072,34 @@ export function register(route) {
     const result = await sendQuoteForApproval({ quoteId: Number(params.id) });
     if (!result.ok) return sendQuoteResult(res, result);
     const jobId = result.quote.workshop_job_id;
-    const link = await issueJobLink(req, jobId, shopId);
-    // Through the messages engine, with no further wait: the panel had its
-    // minute's Undo before calling this (pretend for now; Jack, 20 Oct).
-    const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, link);
+    // The quote is sent and committed. Everything below only tells the customer,
+    // so a fault here is logged and shown to staff as "no message went" - never a
+    // 500 that makes them send a quote that has already gone.
     let message;
-    if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
-    else {
-      const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
-      message = queued.skipped
-        ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
-        : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+    let link = null;
+    try {
+      // The message carries a link the way every other message does: while
+      // sending is pretend it says "[link]" and the customer's own link is left
+      // working (openspec/specs/messages/spec.md).
+      const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+      // Through the messages engine, with no further wait: the panel had its
+      // minute's Undo before calling this (pretend for now; Jack, 20 Oct).
+      const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+      if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
+      else {
+        const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+      // Staff read a link from this reply only when no message went (the quote
+      // panel offers it to copy and hand over). When one did, the link is the
+      // one it carries: a real one, or none while sending is pretend.
+      link = message.status === 'sent' ? (messageLinkText === '[link]' ? null : messageLinkText) : await issueJobLink(req, jobId, shopId);
+    } catch (err) {
+      console.error(`Quote ${result.quote.id} was sent but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The quote is sent, but the message could not be queued. Give the customer their link another way.' };
+      link = await issueJobLink(req, jobId, shopId).catch(() => null);
     }
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
   });

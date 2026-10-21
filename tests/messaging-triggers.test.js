@@ -6,6 +6,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
+import pg from 'pg';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
@@ -139,7 +140,7 @@ test('sending a quote queues Quote to approve through the engine, pretend, at on
   assert.equal(row.customer_id, customer.id);
   assert.equal(row.channel, 'email');
   assert.equal(row.subject, `A quote to approve — ${shopName}`);
-  assert.ok(row.body.includes(sent.body.link), 'the link that was issued');
+  assert.ok(row.body.includes('[link]'), 'pretend: no new link is issued, so the message says [link]');
   assert.ok(Date.parse(row.send_after) <= Date.now(), 'no further wait: the panel had its minute');
 });
 
@@ -171,4 +172,49 @@ test('the old app’s one-off text goes through the pretend sender, never really
   assert.equal(row.channel, 'sms');
   assert.equal(row.to_address, '07700 900142');
   assert.equal(row.provider_sid, 'pretend');
+});
+
+test('sending a quote while messages are pretend leaves the customer’s link working and shows [link]', async () => {
+  const { job } = await mayasJob({ phone: null, email: 'maya@example.test' });
+  const old = await giveLink(job);
+  assert.equal(await linkWorks(old), true);
+  const quote = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Rear brake bleed', unitAmount: 25 }] } });
+  const sent = await staff(`/api/quotes/${quote.body.id}/send`, { method: 'POST' });
+  assert.equal(sent.status, 200, JSON.stringify(sent.body));
+  assert.equal(sent.body.message.status, 'sent');
+  assert.equal(await linkWorks(old), true, 'the link the customer already has still opens');
+  const [row] = await messagesFor(job.id);
+  assert.ok(row.body.includes('[link]'), row.body);
+});
+
+test('a quote that no message goes with still gives staff a working link to hand over', async () => {
+  const { job } = await mayasJob({ phone: null });
+  const quote = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Rear brake bleed', unitAmount: 25 }] } });
+  const sent = await staff(`/api/quotes/${quote.body.id}/send`, { method: 'POST' });
+  assert.equal(sent.body.message.status, 'not_sent');
+  assert.equal(await linkWorks(sent.body.link), true);
+});
+
+// The quote is sent and committed before the message is made, so a fault in
+// making it must not turn that into a 500 that has staff send the quote twice.
+test('a quote whose message cannot be queued is still sent, and staff are told no message went', async () => {
+  const { job } = await mayasJob({ phone: null, email: 'maya@example.test' });
+  const quote = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Rear brake bleed', unitAmount: 25 }] } });
+  const admin = new pg.Client({ connectionString: process.env.ADMIN_DATABASE_URL.replace(/\/[^/]*$/, new URL(process.env.DATABASE_URL).pathname) });
+  await admin.connect();
+  const fn = `refuse_message_${job.id}_${owner.shop.id}`;
+  await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
+  await admin.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON customer_messages FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  try {
+    const sent = await staff(`/api/quotes/${quote.body.id}/send`, { method: 'POST' });
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    assert.equal(sent.body.quote.state, 'sent');
+    assert.equal(sent.body.message.status, 'not_sent');
+    assert.match(sent.body.message.reason, /could not be queued/);
+    assert.equal(await linkWorks(sent.body.link), true, 'staff still get a link to hand over');
+  } finally {
+    await admin.query(`DROP TRIGGER ${fn} ON customer_messages`);
+    await admin.query(`DROP FUNCTION ${fn}()`);
+    await admin.end();
+  }
 });
