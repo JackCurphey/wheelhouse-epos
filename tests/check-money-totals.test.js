@@ -43,12 +43,18 @@ function oldSale({ subtotal, discount = 0, group = 0, total, cash = 0, card = 0,
   });
 }
 
+// An order, with pence written beside pounds as the routes write them from
+// step A (migration 051), and paid_pence the converted sale's total.
 async function order({ subtotal, discount = 0, total, lines = [], status = 'open', convertedSaleId = null }) {
+  const p = (pounds) => Math.round(pounds * 100);
   const { id } = await prepare(
-    "INSERT INTO sale_documents (kind, status, subtotal, discount, total, converted_sale_id) VALUES ('order', ?, ?, ?, ?, ?) RETURNING id"
-  ).get(status, subtotal, discount, total, convertedSaleId);
+    `INSERT INTO sale_documents (kind, status, subtotal, discount, total, converted_sale_id, subtotal_pence, discount_pence, total_pence, paid_pence)
+     VALUES ('order', ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT ROUND(total * 100)::int FROM sales WHERE id = ?), 0)) RETURNING id`
+  ).get(status, subtotal, discount, total, convertedSaleId, p(subtotal), p(discount), p(total), convertedSaleId);
   for (const amount of lines) {
-    await prepare("INSERT INTO sale_document_items (document_id, name, unit_price, qty, line_total, line_type) VALUES (?, 'Labour', ?, 1, ?, 'labour')").run(id, amount, amount);
+    await prepare(
+      "INSERT INTO sale_document_items (document_id, name, unit_price, qty, line_total, line_type, unit_price_pence, line_total_pence) VALUES (?, 'Labour', ?, 1, ?, 'labour', ?, ?)"
+    ).run(id, amount, amount, p(amount), p(amount));
   }
   return id;
 }
@@ -81,7 +87,8 @@ test('a clean shop reports no mismatches, and how many records it checked', asyn
   });
   const result = await check(shop.id);
   assert.deepEqual(result.mismatches, []);
-  assert.deepEqual(result.checked, { orders: 2, oldSales: 1, tillSales: 1, conversion: 0, days: 0 });
+  // 2 orders and 3 order lines carry both pounds and pence.
+  assert.deepEqual(result.checked, { orders: 2, oldSales: 1, tillSales: 1, conversion: 5, days: 0 });
   assert.match(formatReport(await reportFor(shop.id)), /No mismatches/);
 });
 
@@ -163,8 +170,8 @@ test('conversion: every row with pounds and pence has pounds × 100 = pence; tab
   const shop = await newShop();
   const client = await pool.connect();
   try {
-    // A temporary table stands in for a converted one: the real pence
-    // columns arrive with task 1.3's migration.
+    // A temporary table stands in for a converted one, so each case is
+    // written directly rather than through migration 051's columns.
     await client.query('CREATE TEMP TABLE money_fixture (id SERIAL PRIMARY KEY, shop_id INTEGER, amount NUMERIC(10,2), amount_pence INTEGER)');
     await client.query('INSERT INTO money_fixture (shop_id, amount, amount_pence) VALUES ($1, 12.34, 1234), ($1, 12.34, 1235), ($2, 1, 5)', [shop.id, -1]);
     const converted = [{ table: 'money_fixture', columns: ['amount'] }, { table: 'sale_documents', columns: ['nonexistent'] }];
@@ -277,11 +284,11 @@ test('paid_pence, once it exists, is the converted sale\'s total plus the till l
   const client = await pool.connect();
   try {
     // Temporary tables of the same names come first on this connection's
-    // search path, standing in for the columns task 1.3 and step D add.
+    // search path, standing in for the column step D adds (paid_pence is
+    // migration 051's).
     for (const t of ['sales', 'sale_documents', 'sale_document_items', 'till_sale_lines']) {
       await client.query(`CREATE TEMP TABLE ${t} (LIKE public.${t} INCLUDING DEFAULTS)`);
     }
-    await client.query('ALTER TABLE sale_documents ADD COLUMN paid_pence INTEGER NOT NULL DEFAULT 0');
     await client.query('ALTER TABLE till_sale_lines ADD COLUMN order_id INTEGER');
     const s = shop.id;
     await client.query("INSERT INTO sales (id, shop_id, subtotal, total, payment_method, cash_amount) VALUES (1, $1, 20, 20, 'Cash', 20)", [s]);
