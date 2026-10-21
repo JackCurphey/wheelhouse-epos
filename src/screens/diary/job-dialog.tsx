@@ -12,6 +12,7 @@ import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
 import { JobMessagesButton, jobMessagesKey } from './job-messages.tsx';
+import { printBikeTag } from './bike-tag.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 import { channelWord } from './channel-word.ts';
 
@@ -310,8 +311,23 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <strong>{job.customerName ?? 'No customer'}</strong>
                 {customer.data?.phone ? <span>{customer.data.phone}</span> : null}
                 {customer.data?.email ? <span>{customer.data.email}</span> : null}
-                {/* The drawn "Message [customer]" button opens the job's messages (Jack, 20 Oct). */}
-                {job.customerId ? <span className="ml-auto"><JobMessagesButton jobId={job.id} customerName={job.customerName ?? 'the customer'} title={job.title} reference={job.reference ?? null} /></span> : null}
+                {/* Print bike tag once the bike is in (Jack, 21 Oct, bike tag answer 2:
+                    "the top right where the three boxes are"; drawn as job-book-in-print),
+                    then the drawn "Message [customer]" button (Jack, 20 Oct). */}
+                {job.custodyState === 'in_shop' || job.customerId ? (
+                  <span className="ml-auto flex gap-2">
+                    {job.custodyState === 'in_shop' ? (
+                      <button
+                        type="button" aria-label="Print bike tag" title="Print bike tag"
+                        onClick={() => printBikeTag({ reference: job.reference ?? `Job ${job.id}`, customerName: job.customerName ?? null, bikeLabel: job.bikeLabel ?? null })}
+                        className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] hover:bg-[var(--wh-hover)]"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="8" rx="2" /><path d="M6 14h12v7H6z" /></svg>
+                      </button>
+                    ) : null}
+                    {job.customerId ? <JobMessagesButton jobId={job.id} customerName={job.customerName ?? 'the customer'} title={job.title} reference={job.reference ?? null} /> : null}
+                  </span>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 {job.bikeLabel ? <span>{job.bikeLabel}</span> : null}
