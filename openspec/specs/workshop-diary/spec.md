@@ -842,7 +842,7 @@ On a phone, each "By mechanic" column SHALL be at least 96 pixels wide; when the
 - **THEN** each column is at least 96 pixels wide, the diary area swipes sideways, and the page itself doesn't
 
 ### Requirement: The old app's Workshop tab opens the new diary
-The old app's Workshop tab, and any old `#workshop` address, SHALL open the new diary at `/workshop/diary` (Jack, 18 Oct, `docs/decisions/2026-10-18-retire-old-diary.md`). The old job form, still opened from an order, SHALL list the shop's mechanics without the diary having been opened first.
+The old app's Workshop tab, and any old `#workshop` address, SHALL open the new diary at `/workshop/diary` (Jack, 18 Oct, `docs/decisions/2026-10-18-retire-old-diary.md`). The old app SHALL NOT have its own workshop job form; an order's workshop job opens in the new diary.
 
 #### Scenario: An old bookmark
 - **WHEN** staff open the old app at `#workshop`
@@ -854,18 +854,7 @@ The old app's Workshop tab, and any old `#workshop` address, SHALL open the new 
 
 #### Scenario: A job opened from its order
 - **WHEN** staff open an order's workshop job with "View / edit workshop job"
-- **THEN** the job form's mechanic list has the shop's mechanics
-
-### Requirement: The old job form refuses a save on a job changed elsewhere
-The old job form, opened from an order, SHALL refuse a save or "Mark complete" on a job someone else changed after it opened, say "This job changed while you were looking at it." and close (kept from the retired review pop-up requirement, which also said this).
-
-#### Scenario: Marking complete
-- **WHEN** staff press "Mark complete" on a job someone else saved after the form opened
-- **THEN** it says "This job changed while you were looking at it." and the form closes
-
-#### Scenario: Saving
-- **WHEN** staff save a job someone else saved after the form opened
-- **THEN** it says "This job changed while you were looking at it." and the form closes
+- **THEN** the new diary opens on the job's day with the job's page open, and no old-app job form opens
 
 ### Requirement: Shared queue shows only the jobs no mechanic has yet
 The diary SHALL offer "Shared queue" after the mechanics: a button on desktop and tablet, and the last line of the phone's "whose jobs" list (Jack, 18 Oct, `docs/decisions/2026-10-18-old-diary-features.md` answer 5). Picked, the diary SHALL show only the jobs with no mechanic. The Day view SHALL be one column of them, named "Shared queue", and the choice SHALL be kept in the address as `?who=shared`. With Week, Day and Month and four people buttons, the toolbar SHALL stay one row on a screen 1366 pixels wide; on a narrower screen the people buttons and New job SHALL move to a second row, as on a tablet (Jack, 18 Oct, when Month was added).
