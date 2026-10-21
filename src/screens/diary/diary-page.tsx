@@ -1,7 +1,6 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router';
-import { ROUTES } from '@/staff/routes.ts';
+import { useSearchParams } from 'react-router';
 import { createPortal } from 'react-dom';
 import { apiGet, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
@@ -14,12 +13,12 @@ import { NewJobDialog, type ForOrder } from './new-job-dialog.tsx';
 import { OfferDialog, requestMinutes, type OfferAt } from './offer-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { HoverSummary, JobMenu, OverviewDialog, StackChooser, type ChooserAt, type MenuAt } from './job-extras.tsx';
 import { Chevron, Floating, initial, shortWeek, useIsNarrow, useIsPhone, useMedia } from './diary-bits.tsx';
-import { ExtrasContext, MoveContext, PickContext, SlotContext, type ExtrasApi, type PickApi } from './diary-context.ts';
-import { BLOCK, CHIP, PHONE_SLOT_H, SLOT_H, SR, blocksOf, cardDay, describe, movable, type Col, type Mechanic, type Outline, type Settings, type Shown, type Waiting } from './diary-model.ts';
+import { ExtrasContext, MoveContext, PickContext, SlotContext, type PickApi } from './diary-context.ts';
+import { BLOCK, CHIP, PHONE_SLOT_H, SLOT_H, SR, blocksOf, cardDay, describe, type Col, type Mechanic, type Outline, type Settings, type Shown, type Waiting } from './diary-model.ts';
 import { ChooseDaySheet, MonthGrid } from './diary-month.tsx';
 import { Column, Grid } from './diary-tiles.tsx';
+import { useDiaryExtras } from './use-diary-extras.tsx';
 import { useDiaryMoves } from './use-diary-moves.ts';
 import {
   LEGEND, LEGEND_LABEL, addDays, addMonths, dropStart, monthLabel, monthOf, dayLabel, diaryState, gridRange, hhmm, todayIso, toMinutes,
@@ -38,7 +37,6 @@ import {
 
 export function DiaryPage() {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
   const isPhone = useIsPhone();
   const isNarrow = useIsNarrow();
   const today = todayIso();
@@ -198,159 +196,10 @@ export function DiaryPage() {
   const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
   const newJobPicking = picking && !offering;
 
-  // ---- The extras (piece 5b) ----
-  const [hovered, setHovered] = useState<{ job: Shown; rect: DOMRect } | null>(null);
-  const [menuFor, setMenuFor] = useState<{ job: Shown; at: MenuAt; opener: HTMLElement | null } | null>(null);
-  const [overview, setOverview] = useState<Shown | null>(null);
-  const [stackJobs, setStackJobs] = useState<Shown[] | null>(null);
-  const stackFrom = useRef<{ colIndex: number; opener: HTMLElement } | null>(null);
-  const [stackAt, setStackAt] = useState<ChooserAt>({ phone: false, touch: false, anchor: null });
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const touchPress = useRef(false);
-  const busy = Boolean(preview || picking || menuFor || overview || stackJobs || openJobId !== null || newJob || offerAt);
-  const stopHover = () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = null;
-    setHovered(null);
-  };
-  const stopPress = () => {
-    for (const t of pressTimers.current) clearTimeout(t);
-    pressTimers.current = [];
-    touchPress.current = false;
-  };
-  const showOverview = (job: Shown) => {
-    stopHover();
-    setMenuFor(null);
-    setOverview(job);
-  };
-  const extrasApi: ExtrasApi = {
-    enter(job, el) {
-      if (busy) return;
-      if (hoverTimer.current) clearTimeout(hoverTimer.current);
-      // Decision 65: about 0.6s, or at once when motion is reduced.
-      const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      hoverTimer.current = setTimeout(() => setHovered({ job, rect: el.getBoundingClientRect() }), reduced ? 0 : 600);
-    },
-    leave: stopHover,
-    menu(job, at, opener) {
-      // A long press on touch opens the menu itself; the browser's own
-      // context menu for that press is ignored.
-      if (touchPress.current) return;
-      stopHover();
-      setMenuFor({ job, at: { ...at, phone: isPhone }, opener });
-    },
-    press(job, e) {
-      const right = e.pointerType === 'mouse' && e.button === 2;
-      const touch = e.pointerType === 'touch' && e.button === 0;
-      if (!right && !touch) return;
-      stopPress();
-      const x0 = e.clientX;
-      const y0 = e.clientY;
-      const opener = e.currentTarget;
-      let longPressed = false;
-      const end = () => {
-        if (longPressed) {
-          // The click that ends a long press must not open the job.
-          justDragged.current = true;
-          setTimeout(() => { justDragged.current = false; }, 0);
-        }
-        stopPress();
-        window.removeEventListener('pointerup', end);
-        window.removeEventListener('pointercancel', end);
-        window.removeEventListener('pointermove', moved);
-      };
-      const moved = (ev: globalThis.PointerEvent) => {
-        if (Math.abs(ev.clientX - x0) > 6 || Math.abs(ev.clientY - y0) > 6) end();
-      };
-      window.addEventListener('pointerup', end);
-      window.addEventListener('pointercancel', end);
-      window.addEventListener('pointermove', moved);
-      if (right) {
-        // Holding the right button opens the overview straight away.
-        pressTimers.current.push(setTimeout(() => showOverview(job), 500));
-        return;
-      }
-      touchPress.current = true;
-      pressTimers.current.push(setTimeout(() => {
-        longPressed = true;
-        stopHover();
-        setMenuFor({ job, at: { x: x0, y: y0, touch: true, phone: isPhone }, opener });
-      }, 500));
-      pressTimers.current.push(setTimeout(() => showOverview(job), 1100));
-    },
-    stack(list, colIndex, opener, touch) {
-      stopHover();
-      stackFrom.current = { colIndex, opener };
-      setStackAt({ phone: isPhone, touch, anchor: opener.getBoundingClientRect() });
-      setStackJobs(list);
-    },
-  };
-  const extrasUi = (
-    <>
-      {hovered && !busy ? <HoverSummary job={hovered.job} rect={hovered.rect} /> : null}
-      {menuFor ? (
-        <JobMenu
-          job={menuFor.job}
-          at={menuFor.at}
-          onClose={(back) => { const el = menuFor.opener; setMenuFor(null); if (back) el?.focus(); }}
-          onOpenJob={() => { setMenuFor(null); openShown(menuFor.job); }}
-          onOverview={() => showOverview(menuFor.job)}
-          onStretch={movable(menuFor.job) && !picking ? () => { setMenuFor(null); startStretch(menuFor.job); } : undefined}
-          till={(() => {
-            const j = menuFor.job;
-            if (j.state === 'pending' || j.state === 'offered') return { reason: 'Not booked yet' };
-            if (!j.orderId) return { reason: 'No order on this job' };
-            if (j.orderStatus === 'cancelled') return { reason: 'Order cancelled' };
-            if (j.orderStatus !== 'open') return { reason: 'Already paid' };
-            return { onOpen: () => { setMenuFor(null); navigate(`${ROUTES.till}?job=${j.id}`); } };
-          })()}
-          print={(() => {
-            const j = menuFor.job;
-            if (j.orderStatus === 'cancelled') return { reason: 'Order cancelled' };
-            if (!j.orderId || j.orderStatus !== 'converted') return { reason: 'Not paid yet' };
-            return { onPrint: () => { setMenuFor(null); void printJobReceipt(j); } };
-          })()}
-          onAnswer={menuFor.job.state === 'pending' ? () => {
-            // The request's own card from Waiting for you, or one made from the job.
-            const j = menuFor.job;
-            const fromFeed = (waiting.data?.items ?? []).find((i) => i.jobId === j.id && i.kind === 'new_booking');
-            setMenuFor(null);
-            const made: WaitingItem = { kind: 'new_booking', jobId: j.id, reference: j.reference, customerName: j.customerName ?? null, serviceNames: [], mechanicId: j.mechanicId ?? null, jobDate: j.jobDate, startTime: j.startTime ?? null, endTime: j.endTime ?? null };
-            setOpenItem(fromFeed ?? made);
-          } : undefined}
-        />
-      ) : null}
-      {overview ? (
-        <OverviewDialog job={overview} onClose={() => setOverview(null)} onOpenJob={() => { setOverview(null); openShown(overview); }} />
-      ) : null}
-      {stackJobs ? (
-        <StackChooser
-          jobs={stackJobs}
-          time={stackJobs[0].startTime ?? ''}
-          at={stackAt}
-          onClose={(back) => { setStackJobs(null); if (back) stackFrom.current?.opener.focus(); }}
-          onPick={(j) => { setStackJobs(null); openShown(j); }}
-          onMove={(picked) => {
-            const from = stackFrom.current;
-            const j = stackJobs.find((x) => x.partId === picked.partId);
-            setStackJobs(null);
-            if (!from || !j || !movable(j)) return;
-            followPart.current = j.partId;
-            startKeyMove(j, from.colIndex);
-          }}
-          onMenu={(picked) => {
-            const opener = stackFrom.current?.opener ?? null;
-            const j = stackJobs.find((x) => x.partId === picked.partId);
-            setStackJobs(null);
-            if (!j) return;
-            const r = opener?.getBoundingClientRect();
-            setMenuFor({ job: j, at: { x: r?.left ?? 0, y: (r?.bottom ?? 0) + 4, touch: false, phone: isPhone }, opener });
-          }}
-        />
-      ) : null}
-    </>
-  );
+  const { extrasApi, extrasUi } = useDiaryExtras({
+    isPhone, otherBusy: Boolean(preview || picking || openJobId !== null || newJob || offerAt), picking, waitingItems: waiting.data?.items ?? [],
+    openShown, startStretch, startKeyMove, followPart, justDragged, printJobReceipt, setOpenItem,
+  });
 
   /** Decision 18: the mechanic working that day with the most free time (fewest booked minutes). */
   const freest = (day: string): number | null => {
