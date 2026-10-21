@@ -12,10 +12,10 @@ import { RequestDialog } from './request-dialog.tsx';
 import { NewJobDialog, type ForOrder } from './new-job-dialog.tsx';
 import { OfferDialog, requestMinutes, type OfferAt } from './offer-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
-import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Chevron, Floating, initial, shortWeek, useIsNarrow, useIsPhone, useMedia } from './diary-bits.tsx';
 import { ExtrasContext, MoveContext, PickContext, SlotContext, type PickApi } from './diary-context.ts';
 import { BLOCK, CHIP, PHONE_SLOT_H, SLOT_H, SR, blocksOf, cardDay, describe, type Col, type Mechanic, type Outline, type Settings, type Shown, type Waiting } from './diary-model.ts';
+import { ChosenBar, MoveErrorBox, NoticeBox, PickBar, WaitingSheet } from './diary-menus.tsx';
 import { ChooseDaySheet, MonthGrid } from './diary-month.tsx';
 import { Column, Grid } from './diary-tiles.tsx';
 import { useDiaryExtras } from './use-diary-extras.tsx';
@@ -321,20 +321,7 @@ export function DiaryPage() {
       onClose={() => setNewJob(null)}
     />
   ) : null;
-  const pickBar = picking ? (
-    <div role="status" className="pointer-events-auto flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)] shadow-[0_8px_24px_var(--wh-backdrop)]">
-      {offering ? (
-        // Drawn as request-offer-pick; Cancel goes back to the request.
-        <span className="grow font-semibold">{`${isPhone ? 'Tap a free time' : 'Click a free time in the diary'} to offer ${offering.customerName || 'the customer'} · ${requestMinutes(offering)} minutes.`}</span>
-      ) : (
-        <>
-          <span className="grow font-semibold">Choose a time for the new job.</span>
-          <button ref={enterInsteadRef} type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
-        </>
-      )}
-      <button ref={pickCancelRef} type="button" onClick={() => (offering ? backToRequest() : setPicking(false))} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
-    </div>
-  ) : null;
+  const pickBar = picking ? <PickBar offering={offering} isPhone={isPhone} enterInsteadRef={enterInsteadRef} cancelRef={pickCancelRef} onEnterInstead={enterInstead} onCancel={() => (offering ? backToRequest() : setPicking(false))} /> : null;
   const offerDialog = offering && offerAt ? (
     <OfferDialog
       key={`${offerAt.date}-${offerAt.startMin}-${offerAt.mechanicId}`}
@@ -346,23 +333,8 @@ export function DiaryPage() {
       onOffered={(note) => { setOffering(null); setOfferAt(null); setChosen(null); if (note) setNotice(note); }}
     />
   ) : null;
-  const moveErrorBox = moveError ? (
-    <div role="alert" className="pointer-events-auto flex items-center gap-2 rounded-md bg-[var(--wh-danger-bg)] py-1 pr-1 pl-3 text-sm text-[var(--wh-danger-hover)] shadow-[0_8px_24px_var(--wh-backdrop)]">
-      <span className="grow py-1">{moveError}</span>
-      <button type="button" aria-label="Close the message" onClick={() => setMoveError(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--wh-hover)]">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-      </button>
-    </div>
-  ) : null;
-  // Drawn as diary-no-message: the floating message, in the panel's colours.
-  const noticeBox = notice ? (
-    <div role="status" className="pointer-events-auto flex items-center gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-1 pr-1 pl-3.5 text-sm shadow-[0_8px_24px_var(--wh-backdrop)]">
-      <span className="grow py-1.5 leading-snug">{notice}</span>
-      <button type="button" aria-label="Close the message" onClick={() => setNotice(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-[var(--wh-hover)]">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-      </button>
-    </div>
-  ) : null;
+  const moveErrorBox = moveError ? <MoveErrorBox message={moveError} onClose={() => setMoveError(null)} /> : null;
+  const noticeBox = notice ? <NoticeBox message={notice} onClose={() => setNotice(null)} /> : null;
   const floating = pickBar || moveErrorBox || noticeBox ? <Floating>{pickBar}{moveErrorBox}{noticeBox}</Floating> : null;
   // Room at the foot of the page, so the floating bar can't hide the last
   // hour of the diary: scrolling to the bottom brings it above the bar.
@@ -403,56 +375,8 @@ export function DiaryPage() {
   // The chosen card with Open, at the foot of a phone or an upright tablet,
   // where there's no Waiting column to show it in.
   const chosenItem = items.find((i) => i.jobId === chosen) ?? null;
-  const chosenBar = chosenItem ? (
-    <div role="status" aria-label="Chosen from Waiting for you" className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
-      <div className="flex items-center gap-2.5">
-        <div className="flex min-w-0 grow flex-col gap-[3px]">
-          <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
-          <span className="text-[15px] font-bold">{waitingCard(chosenItem).customer}</span>
-          <span className="text-sm">{waitingCard(chosenItem).detail}</span>
-        </div>
-        <button
-          type="button"
-          aria-label={`Open ${waitingCard(chosenItem).customer}'s request`}
-          onClick={() => setOpenItem(chosenItem)}
-          className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
-        >
-          Open
-        </button>
-      </div>
-      <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
-    </div>
-  ) : null;
-  const waitingSheet = (
-      <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
-        <DialogHeader>
-          <DialogTitle id="waiting-sheet-title">{`Waiting for you (${waiting.data?.count ?? items.length})`}</DialogTitle>
-          <button type="button" aria-label="Close" onClick={() => setSheetOpen(false)} className="inline-flex size-11 items-center justify-center rounded-lg">
-            <NavIcon name="close" size={20} />
-          </button>
-        </DialogHeader>
-        <DialogBody className="flex flex-col gap-2">
-          {items.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing waiting.</p> : null}
-          {items.map((item) => {
-            const card = waitingCard(item);
-            const on = chosen === item.jobId;
-            return (
-              <button
-                key={`${item.kind}-${item.jobId}`}
-                type="button"
-                aria-pressed={on}
-                onClick={() => chooseItem(item)}
-                className={`flex min-h-11 flex-col gap-1 rounded-lg bg-[var(--wh-panel)] px-3 py-2.5 text-left ${on ? 'border-2 border-[var(--accent)]' : 'border border-[var(--wh-border)]'}`}
-              >
-                <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
-                <span className="text-[15px] font-bold">{card.customer}</span>
-                <span className="text-sm">{card.detail}</span>
-              </button>
-            );
-          })}
-        </DialogBody>
-      </Dialog>
-  );
+  const chosenBar = chosenItem ? <ChosenBar item={chosenItem} onOpen={() => setOpenItem(chosenItem)} /> : null;
+  const waitingSheet = <WaitingSheet open={sheetOpen} onOpenChange={setSheetOpen} count={waiting.data?.count ?? items.length} items={items} chosen={chosen} onChoose={chooseItem} />;
 
   if (isPhone) {
     const week = weekOf(date);
