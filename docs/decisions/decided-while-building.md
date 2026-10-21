@@ -802,7 +802,9 @@ silent:
    the answer itself already confirms; no Undo is drawn for these answers.
 2. **A declined date change sends nothing yet**: its wording isn't stored
    (messages engine item 3). Request received and Booking cancelled wait for
-   the customer's side, in Mark's booking server.
+   the customer's side, in Mark's booking server. *Since 21 Oct
+   (customer-booking-messages):* both send, built by Jack under the working
+   agreement.
 3. **[Service] is the job's services, else its title; [Booked day and time]
    reads "Thu 17 Sep, 11:30"; the drop-off sentence follows the booking
    page's rule in `bk-msg-confirmed`'s words.** *Pattern:* the approved

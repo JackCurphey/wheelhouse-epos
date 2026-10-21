@@ -44,7 +44,10 @@ after(async () => {
 const staff = (path, options) => staffRequest(server.baseUrl, owner.cookie, path, options);
 const version = async (id) => (await staff(`/api/workshop-jobs/${id}`)).body.version;
 const act = async (id, action, body = {}) => staff(`/api/workshop-jobs/${id}/${action}`, { method: 'POST', body: { version: await version(id), ...body } });
-const messagesFor = (jobId) => runWithShop(owner.shop.id, () => prepare('SELECT * FROM customer_messages WHERE job_id = ? ORDER BY id').all(jobId));
+// The messages after the booking was sent: every request starts with Request
+// received (21 Oct), which the tests about answers look past.
+const messagesFor = async (jobId, { all = false } = {}) => (await runWithShop(owner.shop.id, () => prepare('SELECT * FROM customer_messages WHERE job_id = ? ORDER BY id').all(jobId)))
+  .filter((m) => all || m.template_key !== 'request_received');
 const book = (startTime = '10:00') => bookOnline(server.baseUrl, customer.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime, serviceIds: [types.service] });
 const reference = async (id) => (await staff(`/api/workshop-jobs/${id}`)).body.reference;
 
@@ -162,4 +165,34 @@ test('declining or offering for a customer with no way to reach them says so too
   const res = await act(offered.id, 'offer', { jobDate: nextDay(), startTime: '15:00', mechanicId: sam });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(res.body.bookingMessage, { skipped: 'no_contact', name: 'New time offered' });
+});
+
+// Request received and Booking cancelled (Jack, 20 Oct, booking messages
+// answer 4: approved, built with their triggers; 21 Oct, under the working
+// agreement, #349): the customer's side sends them now.
+test('a booking request sent sends Request received, with the customer’s own link kept', async () => {
+  const booked = await book('09:30');
+  const messages = await messagesFor(booked.id, { all: true });
+  assert.deepEqual(messages.map((m) => m.template_key), ['request_received']);
+  assert.match(messages[0].body, /has your request for a Test service on your Dawes Galaxy, \w{3} \d{1,2} \w{3}, 09:30\. We’ll let you know when it’s confirmed\. See your booking: \[link\]/);
+  assert.equal((await link.read(booked.code)).status, 200);
+});
+
+test('the customer cancelling sends Booking cancelled', async () => {
+  const booked = await book('10:30');
+  await act(booked.id, 'accept');
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const keys = (await messagesFor(booked.id, { all: true })).map((m) => m.template_key);
+  assert.deepEqual(keys, ['request_received', 'booking_confirmed', 'booking_cancelled']);
+  const cancelled = (await messagesFor(booked.id)).find((m) => m.template_key === 'booking_cancelled');
+  assert.match(cancelled.body, /is cancelled\. There’s nothing to pay or refund\. Book another time: \[link\]/);
+});
+
+test('the shop cancelling sends Booking cancelled too, and says when it couldn’t go', async () => {
+  const booked = await book('11:30');
+  await act(booked.id, 'accept');
+  const res = await act(booked.id, 'cancel');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok((await messagesFor(booked.id)).some((m) => m.template_key === 'booking_cancelled'));
 });

@@ -506,23 +506,27 @@ async function withdrawRequest(job) {
   await syncJobHold(job.id);
 }
 
-// Booking confirmed, for an online booking confirmed at once (Jack, 19 Oct,
-// auto-confirm; pretend for now, so the link reads "[link]"). The link is the
-// one the booking reply carries, made absolute with APP_PUBLIC_URL only: this
-// route needs no sign-in, so the Host a request claims must never reach a
-// customer's message (fresh review). Without it, a real message isn't queued.
-async function sendBookedConfirmed(jobId, shopId, privateLink) {
+// A booking message from the customer's side (pretend for now, so the link
+// reads "[link]"): Booking confirmed for a booking confirmed at once (Jack, 19
+// Oct, auto-confirm), Request received for one waiting for the shop, Booking
+// cancelled when the customer cancels (Jack, 20 Oct, booking messages answer
+// 4). The link is the one the customer already has, made absolute with
+// APP_PUBLIC_URL only: these routes need no sign-in, so the Host a request
+// claims must never reach a customer's message (fresh review). Without it, a
+// real message isn't queued. After the commit; one that can't be queued is
+// logged, and what the customer did stands.
+async function sendLinkMessage(key, jobId, shopId, privateLink) {
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
-    if (await whyNotQueued('booking_confirmed', customerId)) return;
+    if (await whyNotQueued(key, customerId)) return;
     const link = await messageLink(async () => {
       if (!process.env.APP_PUBLIC_URL) throw new Error('APP_PUBLIC_URL is needed for a customer message sent from a public route');
       return `${process.env.APP_PUBLIC_URL}${privateLink}`;
     });
-    const { vars } = await bookingMessageVars(jobId, shopId, link, 'booking_confirmed');
-    await queueMessage({ customerId, jobId, key: 'booking_confirmed', vars });
+    const { vars } = await bookingMessageVars(jobId, shopId, link, key);
+    await queueMessage({ customerId, jobId, key, vars });
   } catch (err) {
-    console.error(`Messages: booking_confirmed for job ${jobId} couldn't be queued`, err);
+    console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
 }
 
@@ -1095,7 +1099,7 @@ export function register(route) {
     // confirmed at once, carrying the link the customer has just been given
     // (never a new one, which would end theirs). One that can't be queued is
     // logged; the booking stands.
-    if (out.status === 201 && confirmedAtOnce) await sendBookedConfirmed(out.body.id, shop.id, out.body.privateLink);
+    if (out.status === 201) await sendLinkMessage(confirmedAtOnce ? 'booking_confirmed' : 'request_received', out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
   });
 
@@ -1187,6 +1191,7 @@ export function register(route) {
     });
     if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
     if (out) return sendJson(res, out.status, out.body);
+    await sendLinkMessage('booking_cancelled', found.id, shop.id, linkPath(params.shopSlug, params.code));
     sendJson(res, 200, await bookingLinkView(found.id, shop));
   });
 
