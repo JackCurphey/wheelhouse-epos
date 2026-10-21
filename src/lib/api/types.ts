@@ -33,6 +33,8 @@ export type WorkshopJob = {
   status: string;
   reference: string;
   bookingState: string;
+  /** An online booking confirmed straight away, until staff open it (auto-confirm). */
+  newOnline?: boolean;
   /** While a time the shop offered waits for the customer: the day and time first asked for, and the offer's message. */
   offer?: { fromDate: string | null; fromTime: string | null; message: string | null } | null;
   /** The job's planned length in minutes (an online booking's services' total). */

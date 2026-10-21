@@ -164,7 +164,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       step={4}
       title={TITLE}
       back={back}
-      action={{ label: sending ? 'Sending…' : 'Request booking', onClick: onRequest, disabled: sending }}
+      action={{ label: sending ? 'Sending…' : services.confirmsAutomatically ? 'Confirm booking' : 'Request booking', onClick: onRequest, disabled: sending }}
       actionNote={
         note ? <p key={attempt} role="alert" className="m-0 text-[var(--wh-danger)]">{note}</p> : undefined
       }

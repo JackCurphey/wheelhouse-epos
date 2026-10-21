@@ -20,7 +20,7 @@ import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
+type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; confirmBookingsAutomatically?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
   nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
@@ -559,6 +559,36 @@ function PricesSetting() {
 }
 
 /**
+ * "Confirm bookings automatically" (Jack, 19 Oct, docs/decisions/2026-10-19-auto-confirm.md;
+ * drawn as bk-settings-auto): after Show prices, with the drawn note, saved at once.
+ */
+function ConfirmSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function change(next: boolean) {
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { confirmBookingsAutomatically: next }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <RowSwitch label="Confirm bookings automatically" on={settings.data?.confirmBookingsAutomatically === true} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Off: each booking is a request, purple in the diary until someone accepts it. On: a booking that fits the diary is confirmed straight away. Changing a confirmed booking is always a request.</p>
+      {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+    </div>
+  );
+}
+
+/**
  * A shop's own booking terms (Jack, 8 Oct, docs/decisions/2026-10-08-not-drawn-pages.md
  * row 95: a form box on bk-settings; 20 Oct). "Use your own" starts from
  * Wheelhouse's standard terms; the box saves when left, if the words differ
@@ -767,6 +797,7 @@ function OnlineBookingBox() {
       />
       <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
       <PricesSetting />
+      <ConfirmSetting />
       <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Terms</h4>
       <TermsSetting />
     </div>
@@ -852,7 +883,7 @@ function OwnerSettings() {
       key: 'workshop', name: 'Workshop', intro: '',
       areas: [
         { key: 'workshop', title: 'Workshop', intro: 'Services, who works in the workshop, and how the diary looks.', folds: [
-          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)}` : '', body: <OnlineBookingBox /> },
+          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
         ] },
       ],

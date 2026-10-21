@@ -59,7 +59,9 @@ export const dayOf = (j: Shown) => (j.partCount > 1 ? `day ${j.partPos} of ${j.p
 export function describe(j: Shown, chosen: boolean) {
   const bike = j.bikeLabel || 'Bike';
   return [bike, j.title, j.customerName || 'Customer', j.reference, STATE_LABEL[j.state], timeText(j), dayOf(j)]
-    .filter(Boolean).join(', ') + (chosen ? ', chosen from Waiting for you' : '');
+    .filter(Boolean).join(', ') + (chosen ? ', chosen from Waiting for you' : '')
+    // A booking confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm).
+    + (j.newOnline ? ', new, booked online' : '');
 }
 
 /** A job on the move, or (stretch) having its length changed: then only durationMin changes. */

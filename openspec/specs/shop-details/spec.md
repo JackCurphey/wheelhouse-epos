@@ -126,3 +126,10 @@ Settings › Workshop › Online booking SHALL show which booking terms customer
 #### Scenario: Back to the standard terms
 - **WHEN** the owner presses Go back to Wheelhouse's standard terms
 - **THEN** customers agree to the standard terms again
+
+### Requirement: The shop chooses whether online bookings are confirmed automatically
+Settings › Workshop › Online booking SHALL hold "Confirm bookings automatically", off to start (Jack, 1 Oct, decision 8). It SHALL save as soon as it is switched.
+
+#### Scenario: Switched on
+- **WHEN** the owner switches Confirm bookings automatically on
+- **THEN** it is saved, and online bookings that fit the diary are confirmed straight away
