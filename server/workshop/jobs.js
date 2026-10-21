@@ -514,6 +514,7 @@ export function toCapacityJob(row) {
     startTime: row.start_time || '',
     endTime: row.end_time || '',
     plannedMinutes: row.planned_minutes ?? null,
+    ...(row.booking_state ? { bookingState: row.booking_state } : {}),
   };
 }
 
@@ -533,7 +534,7 @@ export async function loadCapacity(start, end, { ignoreJobId = null } = {}) {
   // One row per day a job is worked (its parts), so a job's second day takes
   // that mechanic's time too. Only part 1 speaks for untimed planned minutes.
   const jobs = (await db.prepare(
-    `SELECT w.id, p.mechanic_id, p.part_date AS job_date, p.start_time, p.end_time,
+    `SELECT w.id, p.mechanic_id, p.part_date AS job_date, p.start_time, p.end_time, w.booking_state,
             CASE WHEN p.position = 1 THEN w.planned_minutes END AS planned_minutes
        FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
       WHERE p.part_date >= ? AND p.part_date <= ? AND w.booking_state IN (${LIVE_STATES_SQL})

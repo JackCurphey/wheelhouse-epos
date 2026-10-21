@@ -11,8 +11,8 @@ import { jobRefusalText } from '@/screens/diary/refusal-words.ts';
 /**
  * Workshop › Overview (drawn as overview in generator/diary.mjs; Jack, 21 Oct,
  * docs/decisions/2026-10-21-workshop-overview.md): today's figures, then the
- * day's jobs in four tabs. Planned effort waits for Mark's capacity figures
- * (openspec/changes/workshop-overview/design.md).
+ * day's jobs in four tabs, and Planned effort from the capacity figures
+ * (openspec/changes/planned-effort).
  */
 type Tab = 'arrivals' | 'shared' | 'attention' | 'ready';
 const TABS: [Tab, string][] = [['arrivals', 'Arrivals'], ['shared', 'Shared queue'], ['attention', 'Needs attention'], ['ready', 'Ready']];

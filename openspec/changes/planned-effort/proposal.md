@@ -5,7 +5,7 @@ The Workshop Overview (#346) left out Planned effort until the capacity figures 
 
 ## What changes
 - **`computeCapacity`** gives each day:
-  - `plannedMinutes`: timed work inside each mechanic's working time with overlaps counted once, plus their untimed work and the shared queue;
+  - `plannedMinutes`: bookings that stand (not a change request's held time, nor a request or offer waiting for an answer), their timed work inside each mechanic's working time with overlaps counted once, plus their untimed work and the shared queue;
   - `availableMinutes`: the mechanics' working time.
 
   `GET /api/workshop-capacity` sends both.
