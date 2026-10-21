@@ -434,6 +434,13 @@ export function register(route) {
     }
 
     const body = await readJsonBody(req);
+    // A workshop job is paid at the till, which always answers who signed the
+    // work off (null when it didn't ask). A payment with no answer comes only
+    // from the old app, which never takes a job's payment (Jack, 21 Oct,
+    // docs/decisions/2026-10-21-old-app-placeholder.md; working agreement 3.11).
+    if (doc.workshop_job_id && body.signedOffBy === undefined) {
+      return sendJson(res, 400, { error: 'Take payment for a workshop job at the till, where it asks who signed the work off.', code: 'use_till' });
+    }
     const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
     const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
     const payments = Array.isArray(body.payments) ? body.payments : [];
@@ -518,7 +525,8 @@ export function register(route) {
       // leaves the work unsigned, and the reply says so.
       // The new till always sends the key: null means it didn't ask because the
       // work read as finished, so finishing it here means it was reopened in
-      // between (answer 8: finishing again asks again). The old app sends no key.
+      // between (answer 8: finishing again asks again). A payment with no key is
+      // refused above.
       else if (body.signedOffBy === null) {
         jobWarning = 'Paid and finished, but not signed off: the work was reopened while the till was open.';
       } else if (body.signedOffBy !== undefined) {
