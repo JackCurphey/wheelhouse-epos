@@ -221,3 +221,17 @@ test('an answer for an older revision is refused', async () => {
   });
   assert.equal(tried.status, 409, JSON.stringify(tried.body));
 });
+
+// Jack, 21 Oct (docs/decisions/2026-10-21-quote-prices.md): a quote always
+// shows its prices, even with Show prices off, because the customer is
+// approving an amount. The switch hides prices in booking and on the booking
+// page's summary, never on the quote.
+test('with Show prices off the customer still sees the quote’s prices and totals', async () => {
+  assert.equal((await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: false } })).status, 200);
+  const { job, quote } = await jobWithQuote();
+  assert.equal((await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const shown = await portal(`/booking-links/${await customerCode(job.id)}/quote`);
+  assert.equal(shown.status, 200, JSON.stringify(shown.body));
+  assert.deepEqual(shown.body.lines.map((l) => [l.description, l.unitAmount, l.lineTotal]), [['Brake pads (pair)', 18, 18], ['Fit new gear cable', 12, 12]]);
+  assert.equal(shown.body.totals.all, 30);
+});
