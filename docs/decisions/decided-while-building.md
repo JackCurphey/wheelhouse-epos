@@ -965,3 +965,30 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 4. **The quote card on the ready and collected pages.** *Decided:* shown; once
    answered it lists what was agreed and declined, which is what "What we
    did" draws (fresh review, 21 Oct).
+
+### 21 Oct 2026: the Workshop Overview (workshop-overview)
+
+1. **`overview`: when an arrival gets Book in.** The drawing gives Book in
+   to an 11:30 row and the time to a 10:30 one. *Decided:* Book in once the
+   appointment is an hour away or past; before then, "[time] appointment".
+2. **`overview`: a drop-off (no time) reads "Drop-off" with no action.**
+   *Decided:* a drop-off is due all day, so it gets Book in, and its Work
+   reads "[work] · drop-off". *Pattern:* every arrival can be booked in from
+   the page, as the drawn Book in row can.
+3. **`overview`: the Custody column's "Kept on [slot]".** *Decided:* "In the
+   shop" until storage slots are built; "Part arrived" waits for WP-2.3.
+4. **`overview`: the page's title.** *Decided:* the shell's "Overview", the
+   nav label, as Diary and Till have theirs (the drawing's desktop title is
+   "Workshop overview").
+5. **`overview`: Book in links to the job page in the drawing.** *Decided:*
+   it books the bike in on the spot, as the job page's own Book in does, and
+   the job's number and name open its page (fresh review, 21 Oct).
+6. **`overview`: a waiting-for-parts row's "· Sat 19 Sep 16:00".** *Decided:*
+   left off; "· waiting for parts" only. The job page has the times.
+7. **`overview`: nothing to show, and while loading.** *Decided:* "Nothing
+   here." in the table's place, and "Loading…" while the jobs are read; a
+   failed read says so with Try again, and shows no figures.
+8. **`overview`: today.** *Decided:* the device's own date and time, as the
+   diary uses (`todayIso`); a device set to another time zone than the
+   shop's would read another day. Shared with the diary, for later.
+
