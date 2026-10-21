@@ -9,4 +9,4 @@ When the shop confirms online bookings automatically, a booking that fits the di
 
 #### Scenario: The shop answers each request
 - **WHEN** the shop doesn't confirm automatically
-- **THEN** step 4's button reads "Send booking request" and the booking waits for the shop to accept it
+- **THEN** step 4's button reads "Request booking" and the booking waits for the shop to accept it

@@ -109,11 +109,11 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const newOnline = Boolean(job?.newOnline);
   useEffect(() => {
     if (!newOnline) return;
-    let gone = false;
+    // The diary reads its jobs again even if the page has closed meanwhile,
+    // so the mark doesn't linger (fresh review).
     apiMutate(`/api/workshop-jobs/${jobId}/seen`, {})
-      .then(() => { if (!gone) void queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }); })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }))
       .catch(() => { /* the mark stays; it's cleared next time the job is opened */ });
-    return () => { gone = true; };
   }, [newOnline, jobId, queryClient]);
   // A booking that ended can't be booked in or given another day, though its page still opens (fresh review, 15 Oct).
   const ended = job?.bookingState === 'cancelled' || job?.bookingState === 'declined' || job?.bookingState === 'expired';

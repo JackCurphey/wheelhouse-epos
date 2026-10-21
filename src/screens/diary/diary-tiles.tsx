@@ -6,8 +6,18 @@ import { BLOCK, CHIP, SR, describe, movable, timeText, type Outline, type Shown 
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { STATE_LABEL, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
 
-export function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
-  job: Shown; range: { start: number }; wide: boolean; chosen: boolean; light?: boolean; lane?: { lane: number; total: number }; colIndex: number;
+/** "New, booked online", or "New online" where a narrow week column would cut it off (diary.mjs blockMark). */
+export function NewOnlineMark({ short }: { short: boolean }) {
+  return (
+    <>
+      <span className="shrink-0"><NavIcon name="website" size={12} /></span>
+      {short ? 'New online' : 'New, booked online'}
+    </>
+  );
+}
+
+export function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex, fullMark = false }: {
+  job: Shown; range: { start: number }; wide: boolean; chosen: boolean; light?: boolean; lane?: { lane: number; total: number }; colIndex: number; fullMark?: boolean;
 }) {
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
@@ -19,6 +29,9 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const top = ((start - range.start) / 30) * SLOT_H + 2;
   const height = Math.max(((end - start) / 30) * SLOT_H - 4, SLOT_H - 6);
   const cancelled = job.state === 'cancelled';
+  const mark = Boolean(job.newOnline);
+  // The full words on a phone and in a wide column; short in a narrow week column (design).
+  const shortMark = !wide && !fullMark;
   const style: CSSProperties = { top, height };
   if (moving) {
     // Shifted across by whole columns (each column is 100% of this one's width).
@@ -41,22 +54,23 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
-      <span aria-hidden="true" className={`truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
-        {job.bikeLabel || 'Bike'}
+      {/* Confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm),
+          placed as the drawing does (diary.mjs blockMark): one line, "bike · mark";
+          two lines, the bike then the mark; three or more, bike, job, mark. */}
+      <span aria-hidden="true" className={`flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
+        <span className="truncate">{job.bikeLabel || 'Bike'}</span>
+        {mark && height < TWO_LINES ? <>{' · '}<NewOnlineMark short={shortMark} /></> : null}
       </span>
       {/* A block too short for two 12px lines shows the bike only (drawn, walk 1 M3);
           the job stays in its description and summary. */}
-      {height >= TWO_LINES ? (
+      {height >= TWO_LINES && !(mark && height < THREE_LINES) ? (
         <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">
           {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
         </span>
       ) : null}
-      {/* Confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm;
-          drawn as diary.mjs blockMark): "New online" where a week column cuts the words off. */}
-      {job.newOnline ? (
+      {mark && height >= TWO_LINES ? (
         <span aria-hidden="true" className="flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]">
-          <span className="shrink-0"><NavIcon name="website" size={12} /></span>
-          {wide ? 'New, booked online' : 'New online'}
+          <NewOnlineMark short={shortMark} />
         </span>
       ) : null}
     </>
@@ -289,6 +303,7 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
 
 /** Room for two 12px lines in a block: its padding and border, and two lines (diary.mjs, D_LINE_H 14). */
 const TWO_LINES = 10 + 2 * 14;
+const THREE_LINES = TWO_LINES + 14;
 
 /** A change request's dashed outline at the time the customer asked for. */
 function RequestedOutline({ outline, range, chosen }: { outline: Outline; range: { start: number }; chosen: boolean }) {
@@ -310,8 +325,8 @@ function RequestedOutline({ outline, range, chosen }: { outline: Outline; range:
   );
 }
 
-export function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChosen = false }: {
-  label: string; index: number; jobs: Shown[]; outlines: Outline[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null; lightChosen?: boolean;
+export function Column({ label, index, jobs, outlines, range, wide, chosenId, lightChosen = false, fullMark = false }: {
+  label: string; index: number; jobs: Shown[]; outlines: Outline[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null; lightChosen?: boolean; fullMark?: boolean;
 }) {
   const SLOT_H = useContext(SlotContext);
   const timed = jobs.filter((j) => j.startTime);
@@ -360,7 +375,7 @@ export function Column({ label, index, jobs, outlines, range, wide, chosenId, li
       }}
     >
       {groups.map((g) => (g.ids.length === 1 ? (
-        <JobBlock key={g.id} job={byId.get(g.id) as Shown} range={range} wide={wide} chosen={byId.get(g.id)?.id === chosenId} light={lightChosen} lane={lanes.get(g.id)} colIndex={index} />
+        <JobBlock key={g.id} job={byId.get(g.id) as Shown} range={range} wide={wide} chosen={byId.get(g.id)?.id === chosenId} light={lightChosen} lane={lanes.get(g.id)} colIndex={index} fullMark={fullMark} />
       ) : (
         <StackBlock key={`stack-${g.id}`} jobs={g.ids.map((id) => byId.get(id) as Shown)} start={g.start} end={g.end} range={range} lane={lanes.get(g.id)} colIndex={index} chosen={g.ids.some((id) => byId.get(id)?.id === chosenId)} />
       )))}
@@ -430,7 +445,7 @@ export function Grid({ heads, columns, noTime, onOpen, range, ariaLabel }: {
             {noTime.map((j) => (
               <button type="button" key={j.partId} title={describe(j, false)} disabled={Boolean(picking)} onClick={() => onOpen(j)} className={`inline-flex min-h-6 items-center rounded-full border border-current px-2 text-xs font-bold whitespace-nowrap disabled:opacity-40 ${CHIP[j.state]}`}>
                 <span className={SR}>{describe(j, false)}</span>
-                <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
+                <span aria-hidden="true" className="inline-flex items-center gap-1">{j.bikeLabel || 'Bike'}{j.newOnline ? <>{' · '}<NewOnlineMark short /></> : null}</span>
               </button>
             ))}
           </div>

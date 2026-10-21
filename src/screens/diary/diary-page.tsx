@@ -17,7 +17,7 @@ import { ExtrasContext, MoveContext, PickContext, SlotContext, type PickApi } fr
 import { BLOCK, CHIP, PHONE_SLOT_H, SLOT_H, SR, blocksOf, cardDay, describe, type Col, type Mechanic, type Outline, type Settings, type Shown, type Waiting } from './diary-model.ts';
 import { ChosenBar, MoveErrorBox, NoticeBox, PickBar, WaitingSheet } from './diary-menus.tsx';
 import { ChooseDaySheet, MonthGrid } from './diary-month.tsx';
-import { Column, Grid } from './diary-tiles.tsx';
+import { Column, Grid, NewOnlineMark } from './diary-tiles.tsx';
 import { useDiaryExtras } from './use-diary-extras.tsx';
 import { useDiaryMoves } from './use-diary-moves.ts';
 import {
@@ -493,7 +493,7 @@ export function DiaryPage() {
                 {noTime.map((j) => (
                   <button type="button" key={j.partId} disabled={picking} onClick={() => openJob(j)} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
                     <span className={SR}>{describe(j, false)}</span>
-                    <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
+                    <span aria-hidden="true" className="inline-flex items-center gap-1">{j.bikeLabel || 'Bike'}{j.newOnline ? <>{' · '}<NewOnlineMark short={false} /></> : null}</span>
                   </button>
                 ))}
               </div>
@@ -535,7 +535,7 @@ export function DiaryPage() {
                   ))}
                 </div>
                 {columns.map((c, i) => (
-                  <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} chosenId={chosen} lightChosen={chosenTimeShown} />
+                  <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} fullMark chosenId={chosen} lightChosen={chosenTimeShown} />
                 ))}
               </div>
               </div>

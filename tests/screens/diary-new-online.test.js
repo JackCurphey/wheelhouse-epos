@@ -60,9 +60,10 @@ function stubServer() {
   };
 }
 
-async function openDiary(over = {}, query = '?date=2026-10-05') {
+async function openDiary(over = {}, query = '?date=2026-10-05', setUp = null) {
   JOB = job(over);
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
+  setUp?.(window);
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   stubServer();
@@ -105,4 +106,30 @@ test('opening a job not marked new tells the server nothing', async () => {
   await ui.findByRole('dialog', { name: /Standard service/ });
   await new Promise((r) => setTimeout(r, 50));
   assert.deepEqual(seenPosts(), []);
+});
+
+// Fresh review, 21 Oct: the drawing's line rule, the No time row, and the phone.
+test('a 30-minute booking shows the bike and the mark on its one line', async () => {
+  const { block } = await openDiary({ newOnline: true, startTime: '10:00', endTime: '10:30' });
+  assert.ok(block.textContent.includes('Trek Domane AL 3 · New online'));
+});
+
+test('a 45-minute booking shows the bike, then the mark, not the job', async () => {
+  const { block } = await openDiary({ newOnline: true, startTime: '10:00', endTime: '10:45' });
+  // The visible lines only: the screen-reader description names the job too.
+  const seen = [...block.querySelectorAll(':scope > [aria-hidden="true"]')].map((el) => el.textContent);
+  assert.deepEqual(seen.filter(Boolean), ['Trek Domane AL 3', 'New online']);
+});
+
+test('a booking with no time carries the mark on its No time chip', async () => {
+  const { ui, block } = await openDiary({ newOnline: true, startTime: null, endTime: null });
+  assert.ok(ui.getByRole('group', { name: 'No time' }).contains(block));
+  assert.ok(block.textContent.includes('Trek Domane AL 3 · New online'));
+});
+
+test('on a phone the mark reads in full', async () => {
+  const realMatch = globalThis.window?.matchMedia;
+  const { block } = await openDiary({ newOnline: true }, '?date=2026-10-08', (w) => { w.matchMedia = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} }); });
+  assert.ok(block.textContent.includes('New, booked online'));
+  void realMatch;
 });

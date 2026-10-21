@@ -724,7 +724,7 @@ test('Confirm bookings automatically shows its note, saves a switch at once, and
   fireEvent.click(sw);
   await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && 'confirmBookingsAutomatically' in c.body).map((c) => c.body), [{ confirmBookingsAutomatically: true }]));
   await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'true'));
-  await waitFor(() => assert.match(summary(), /· confirmed automatically$/));
+  await waitFor(() => assert.match(summary(), /· confirmed straight away$/));
 });
 
 test('a refused Confirm bookings automatically says why and stays as it was', async () => {
