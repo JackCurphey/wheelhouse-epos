@@ -8,6 +8,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 import { fakeJob } from '../helpers/fake-job.js';
+import { fakeOrder } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -76,7 +77,7 @@ function stubServer() {
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: waitingItems.length, items: waitingItems });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: null });
-    if (u.pathname === '/api/sale-documents/40') return reply(200, { id: 40, kind: 'order', status: 'converted', convertedSaleId: 601, items: [] });
+    if (u.pathname === '/api/sale-documents/40') return reply(200, fakeOrder({ id: 40, kind: 'order', status: 'converted', convertedSaleId: 601, items: [] }));
     if (u.pathname === '/api/sales/601') return saleFails ? reply(500, { error: 'Internal error' }) : reply(200, PAID_SALE);
     return reply(404, { error: 'Not found' });
   };

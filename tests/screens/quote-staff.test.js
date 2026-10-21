@@ -8,14 +8,15 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeOrder } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const MECHANICS = [{ id: 11, name: 'Alex Morgan', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true }];
 const PRODUCTS = [{ id: 40, sku: 'BP-01', barcode: '501', name: 'Brake pads (pair)', price: 18, stockQty: 6, active: true }];
-const ORDER = { id: 80, kind: 'order', status: 'open', subtotal: 75, discount: 0, total: 75, items: [
+const ORDER = fakeOrder({ id: 80, kind: 'order', status: 'open', subtotal: 75, discount: 0, total: 75, items: [
   { id: 1, productId: null, name: 'Standard service', sku: null, unitPrice: 75, qty: 1, lineTotal: 75, lineType: 'labour', serviceId: 1, minutes: 90 },
-] };
+] });
 let JOB;
 let QUOTE;
 function job(over) {

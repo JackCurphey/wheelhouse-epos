@@ -9,6 +9,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 import { fakeJob } from '../helpers/fake-job.js';
+import { fakeOrder } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -22,10 +23,10 @@ function job(over) {
     createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', quote: null, ...over,
   });
 }
-const ORDER = { id: 80, kind: 'order', status: 'open', subtotal: 93, discount: 0, total: 93, items: [
+const ORDER = fakeOrder({ id: 80, kind: 'order', status: 'open', subtotal: 93, discount: 0, total: 93, items: [
   { id: 1, productId: null, name: 'Standard service', sku: null, unitPrice: 75, qty: 1, lineTotal: 75, lineType: 'labour', serviceId: 1, minutes: 60 },
   { id: 2, productId: 40, name: 'Brake pads (pair)', sku: 'BP-01', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null },
-] };
+] });
 const QUOTE = { id: 9, workshopJobId: 1, revision: 1, state: 'partly_approved', lines: [
   { id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'approved', lineTotal: 18 },
   { id: 2, kind: 'labour', description: 'Replace gear cable', productId: null, quantity: 1, unitAmount: 12, decision: 'declined', lineTotal: 12 },
