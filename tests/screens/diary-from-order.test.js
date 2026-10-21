@@ -7,6 +7,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 import { fakeJob } from '../helpers/fake-job.js';
+import { fakeOrder } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -117,7 +118,7 @@ async function openDiary(query) {
 }
 
 
-const ORDER = { id: 9, kind: 'order', status: 'open', title: 'Wheel build', customerId: 5, customerName: 'Maya Patel', note: 'Rims ordered', workshopJobId: null, items: [] };
+const ORDER = fakeOrder({ id: 9, kind: 'order', status: 'open', title: 'Wheel build', customerId: 5, customerName: 'Maya Patel', note: 'Rims ordered', workshopJobId: null, items: [] });
 
 const has = (q) => Boolean(q);
 const puts = () => calls.filter((c) => c.method === 'PUT').map((c) => `${c.url} ${JSON.stringify(c.body)}`);

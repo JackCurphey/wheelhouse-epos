@@ -100,3 +100,19 @@ test('a job comes back with its planned length: given, from its times, or none',
   const listed = (await staff(`/api/workshop-jobs?start=${day}&end=${day}`)).body.find((j) => j.id === given.id);
   assert.equal(listed.plannedMinutes, 90);
 });
+
+// The till reads a job's order to pay it (till-job.test.js fakes it).
+test('a job’s order, as the till reads it, is the order shape', async () => {
+  const made = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: nextDay(), startTime: '11:00', endTime: '12:00', mechanicId: sam } })).body;
+  assert.ok(made.orderId, JSON.stringify(made));
+  const order = await staff(`/api/sale-documents/${made.orderId}`);
+  assert.equal(order.status, 200, JSON.stringify(order.body));
+  assert.deepEqual(shapes.shapeProblems(shapes.ORDER, order.body), []);
+  assert.equal(order.body.workshopJobId, made.id);
+  const placed = await staff('/api/sale-documents', { method: 'POST', body: { kind: 'order', note: 'Collect Friday', items: [{ lineType: 'labour', name: 'Puncture repair', unitPrice: 12, qty: 1, minutes: 20 }] } });
+  assert.equal(placed.status, 201, JSON.stringify(placed.body));
+  const read = (await staff(`/api/sale-documents/${placed.body.id}`)).body;
+  assert.ok(read.items.length > 0, JSON.stringify(read));
+  assert.deepEqual(shapes.shapeProblems(shapes.ORDER, read), []);
+  for (const line of read.items) assert.deepEqual(shapes.shapeProblems(shapes.ORDER_LINE, line), []);
+});

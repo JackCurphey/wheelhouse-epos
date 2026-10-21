@@ -7,6 +7,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 import { fakeJob } from '../helpers/fake-job.js';
+import { fakeOrder } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -83,7 +84,7 @@ async function openJob(order) {
 
 const LABOUR = { id: 1, productId: null, name: 'Standard service', sku: null, unitPrice: 75, qty: 1, lineTotal: 75, lineType: 'labour', serviceId: 1, minutes: 90 };
 const PADS = { id: 2, productId: 40, name: 'Brake pads (pair)', sku: 'BP-01', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null };
-const open = (items) => ({ id: 80, kind: 'order', status: 'open', subtotal: items.reduce((s, i) => s + i.lineTotal, 0), discount: 0, total: items.reduce((s, i) => s + i.lineTotal, 0), items });
+const open = (items) => (fakeOrder({ id: 80, kind: 'order', status: 'open', subtotal: items.reduce((s, i) => s + i.lineTotal, 0), discount: 0, total: items.reduce((s, i) => s + i.lineTotal, 0), items }));
 const puts = () => calls.filter((c) => c.method === 'PUT').map((c) => JSON.stringify(c.body));
 const has = (q) => Boolean(q);
 

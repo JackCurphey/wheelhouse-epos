@@ -8,6 +8,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 import { fakeJob, changed } from '../helpers/fake-job.js';
+import { fakeOrder, fakeOrderLine } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const JO = { id: 21, name: 'Jo Taylor', isCashier: true };
@@ -49,11 +50,11 @@ function job(over = {}) {
     workState: 'complete', version: 7, orderId: 40, orderStatus: 'open', orderTotal: 83, ...over });
 }
 function order(over = {}) {
-  return { id: 40, kind: 'order', status: 'open', customerId: 5, customerName: 'Maya Patel', subtotal: 83, discount: 0, total: 83, workshopJobId: 1,
+  return fakeOrder({ id: 40, kind: 'order', status: 'open', customerId: 5, customerName: 'Maya Patel', subtotal: 83, discount: 0, total: 83, workshopJobId: 1,
     items: [
-      { id: 1, productId: null, name: 'Standard service', unitPrice: 65, qty: 1, lineTotal: 65, lineType: 'labour', serviceId: 3, minutes: 60 },
-      { id: 2, productId: 7, name: 'Shimano brake pads', sku: 'B05S-RX', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null },
-    ], ...over };
+      fakeOrderLine({ id: 1, productId: null, name: 'Standard service', unitPrice: 65, qty: 1, lineTotal: 65, lineType: 'labour', serviceId: 3, minutes: 60 }),
+      fakeOrderLine({ id: 2, productId: 7, name: 'Shimano brake pads', sku: 'B05S-RX', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null }),
+    ], ...over });
 }
 
 function stubServer(employee) {

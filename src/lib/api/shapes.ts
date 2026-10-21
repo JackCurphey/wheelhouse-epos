@@ -75,3 +75,19 @@ export function shapeProblems(shape: Shape, value: Record<string, unknown>): str
   }
   return problems;
 }
+
+/** One line of an order or quote (serializeSaleDocument's items). */
+export const ORDER_LINE: Shape = {
+  id: N, productId: NN, name: S, sku: SN, unitPrice: N, qty: N, lineTotal: N, lineType: S, serviceId: NN, minutes: NN,
+};
+
+/** An order or quote with its lines (GET /api/sale-documents/:id): what the
+ * till reads to pay a job's order. Money is in pounds until sales in pence. */
+export const ORDER: Shape = {
+  id: N, kind: S, status: S, title: S,
+  customerId: NN, customerName: SN, cashierId: NN, cashierName: SN,
+  subtotal: N, discount: N, total: N, note: SN,
+  convertedSaleId: NN, workshopJobId: NN,
+  items: ['array'],
+  createdAt: S, updatedAt: S,
+};
