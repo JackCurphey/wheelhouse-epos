@@ -12,6 +12,10 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { formatOpeningHours } from '../server/messaging/templates.js';
+import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
+// The admin address on this test database, as the other tests find it: from
+// ADMIN_DATABASE_URL or the superuser password in .env (it crashed without the first).
+const adminDatabaseUrl = () => { const u = new URL(adminUrlFrom(process.env)); u.pathname = new URL(process.env.DATABASE_URL).pathname; return u.href; };
 
 let server;
 let owner;
@@ -213,7 +217,7 @@ test('a quote that no message goes with still gives staff a working link to hand
 test('a quote whose message cannot be queued is still sent, and staff are told no message went', async () => {
   const { job } = await mayasJob({ phone: null, email: 'maya@example.test' });
   const quote = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Rear brake bleed', unitAmount: 25 }] } });
-  const admin = new pg.Client({ connectionString: process.env.ADMIN_DATABASE_URL.replace(/\/[^/]*$/, new URL(process.env.DATABASE_URL).pathname) });
+  const admin = new pg.Client({ connectionString: adminDatabaseUrl() });
   await admin.connect();
   const fn = `refuse_message_${job.id}_${owner.shop.id}`;
   await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
