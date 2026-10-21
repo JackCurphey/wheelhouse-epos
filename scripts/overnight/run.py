@@ -57,12 +57,38 @@ def set_state(path, item_id, state, note=''):
     path.write_text('\n'.join(out) + '\n')
 
 
+def open_pr(branch, base, item, verdict, tests, last, commits, log):
+    """Push the branch and open a DRAFT pull request against the branch before it. Never merges."""
+    clean = {k: v for k, v in os.environ.items() if not k.startswith(('GIT_CONFIG', 'TWILIO', 'EMAIL_', 'WHATSAPP'))}
+    try:
+        sh(['git', 'push', '-u', 'origin', branch], cwd=WORKTREE, env=clean, timeout=300)
+    except Exception as e:
+        log(f'- push failed: {str(e)[:300]}')
+        return 'push failed'
+    body = (f"Written unattended by the overnight loop (`scripts/overnight/`). **Draft: needs a human review before it merges.**\n\n"
+            f"- Queue item: `{item['id']}` — {item['title']}\n- Agent said: {verdict}\n"
+            f"- Runner's own `npm test`: **{tests}**\n- Stacked: targets `{base}`; merge in order.\n\n"
+            f"Commits:\n```\n{commits}\n```\n\nAgent's closing message:\n\n" + '\n'.join('> ' + l for l in last.strip().splitlines()[-12:]))
+    r = sh(['gh', 'pr', 'create', '--draft', '--base', base, '--head', branch,
+            '--title', f"[overnight] {item['title']}", '--body', body], cwd=WORKTREE, env=clean, check=False, timeout=120)
+    if r.returncode:
+        log(f'- branch pushed; pull request not opened: {r.stderr.strip()[:300]}')
+        return 'pushed'
+    url = r.stdout.strip().splitlines()[-1]
+    log(f'- pull request: {url}')
+    return url
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--hours', type=float, default=8)
     ap.add_argument('--item-minutes', type=int, default=75, help='cap for one agent session')
     ap.add_argument('--attempts', type=int, default=2, help='sessions per item before giving up')
-    ap.add_argument('--max-usd-item', type=float, default=0, help='0 = no per-session cap')
+    ap.add_argument('--max-usd', type=float, default=500, help='total budget for the whole run')
+    ap.add_argument('--max-usd-item', type=float, default=60, help='cap for one agent session')
+    ap.add_argument('--base-branch', default='fix/p2-review-findings',
+                    help='pushed branch the first pull request targets')
+    ap.add_argument('--no-push', action='store_true', help='keep everything local')
     ap.add_argument('--model', default='')
     ap.add_argument('--base', default='HEAD', help='commit/branch the first item stacks on')
     ap.add_argument('--dry-run', action='store_true')
@@ -107,12 +133,15 @@ def main():
         env.pop(k)
 
     prev_branch = base_sha
+    prev_pr_base = a.base_branch
+    spent = 0.0
     results = []
     while True:
         remaining = deadline - time.time()
         todo = [i for i in parse_queue(queue) if i['state'] == ' ']
-        if not todo or remaining < 20 * 60:
-            log('\nStopping: ' + ('queue empty' if not todo else 'under 20 minutes left'))
+        if not todo or remaining < 20 * 60 or a.max_usd - spent < 5:
+            log('\nStopping: ' + ('queue empty' if not todo else 'under 20 minutes left'
+                                   if remaining < 20 * 60 else f'budget used (${spent:.2f} of ${a.max_usd:.0f})'))
             break
         item = todo[0]
         branch = f"overnight/{stamp[:8]}-{item['id']}"
@@ -135,8 +164,10 @@ def main():
                    '--disallowedTools', *DENY, '--no-session-persistence']
             if a.model:
                 cmd += ['--model', a.model]
-            if a.max_usd_item:
-                cmd += ['--max-budget-usd', str(a.max_usd_item)]
+            cap = min(a.max_usd_item, a.max_usd - spent)
+            if cap < 5:
+                break
+            cmd += ['--max-budget-usd', f'{cap:.2f}']
             try:
                 r = subprocess.run(cmd, cwd=WORKTREE, env=env, capture_output=True,
                                    text=True, timeout=budget)
@@ -146,9 +177,13 @@ def main():
                 out += '\nRESULT: partial\nSUMMARY: session timed out'
             (run / f"{item['id']}.attempt{attempt}.json").write_text(out)
             try:
-                last = json.loads(out).get('result', '')
+                j = json.loads(out)
+                last = j.get('result', '')
+                spent += float(j.get('total_cost_usd', cap))
             except Exception:
                 last = out[-3000:]
+                spent += cap  # cost unknown (timeout or crash): charge the session's cap
+            log(f"- attempt {attempt}: running spend ${spent:.2f} of ${a.max_usd:.0f}")
             (run / f"{item['id']}.attempt{attempt}.txt").write_text(last)
             m = re.search(r'^RESULT:\s*(done|partial|blocked)', last, re.M | re.I)
             verdict = m[1].lower() if m else 'partial'
@@ -180,13 +215,18 @@ def main():
         log(f"- agent said: **{verdict}**; runner's `npm test`: **{tests}**\n"
             f"- commits:\n```\n{commits or '(none)'}\n```\n- agent's last message:\n\n"
             + '\n'.join('  > ' + l for l in last.strip().splitlines()[-12:]))
-        results.append((item['id'], verdict, tests, branch if changed else '-'))
+        pr = '-'
+        if changed and not a.no_push:
+            pr = open_pr(branch, prev_pr_base, item, verdict, tests, last, commits, log)
+            if pr.startswith('http') or pr == 'pushed':
+                prev_pr_base = branch
+        results.append((item['id'], verdict, tests, branch if changed else '-', pr))
 
     sh(['git', 'switch', '--detach', prev_branch], cwd=WORKTREE, check=False)
-    log('\n## Summary\n| item | agent | npm test | branch |\n|---|---|---|---|\n'
-        + '\n'.join(f'| {i} | {v} | {t} | {b} |' for i, v, t, b in results))
-    log(f'\nNothing was pushed or merged. Branches are in {WORKTREE} (same repo): '
-        '`git log --oneline --graph --branches="overnight/*"`.')
+    log(f'\n## Summary (spent about ${spent:.2f} of ${a.max_usd:.0f})\n| item | agent | npm test | branch | pull request |\n|---|---|---|---|---|\n'
+        + '\n'.join(f'| {i} | {v} | {t} | {b} | {p} |' for i, v, t, b, p in results))
+    log('\nNothing was merged. Pull requests are stacked: each targets the branch before it, '
+        'so merge them in order.')
 
 
 if __name__ == '__main__':

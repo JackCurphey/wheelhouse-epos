@@ -21,6 +21,9 @@ owns the screens and the workshop screens; do not touch his files.
    split if bigger and say so).
 6. Tick the task boxes you finished in the change's `tasks.md`.
 
+The runner, not you, pushes your branch and opens a draft pull request after you
+finish. Do not run git push or gh yourself.
+
 ## Hard limits (a breach is a failure, whatever else you achieved)
 - NEVER push, merge, rebase, reset --hard, force anything, delete branches, or
   switch to or commit on `main`. Stay on the branch you start on.
