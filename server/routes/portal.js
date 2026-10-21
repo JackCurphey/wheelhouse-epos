@@ -383,7 +383,9 @@ async function bookingLinkView(jobId, shop) {
     bookedInAt: row.booked_in_at ? new Date(row.booked_in_at).toISOString() : null,
     collectedAt: row.collected_at ? new Date(row.collected_at).toISOString() : null,
     // The job's last day, as the job page's "Ready by"; no time until staff can set one.
-    expectedReady: { date: row.last_day || row.job_date, time: null },
+    // Only while the booking stands and the bike hasn't gone (fresh review).
+    expectedReady: (row.booking_state === 'scheduled' || row.booking_state === 'reschedule_requested') && row.custody_state !== 'collected'
+      ? { date: row.last_day || row.job_date, time: null } : null,
     shop: await shopLines(),
     ...(await bookedServices(row.id)),
   };
@@ -397,7 +399,7 @@ async function shopLines() {
   return {
     address: shop?.address || null,
     phone: shop?.phone || null,
-    openingHours: settings ? formatOpeningHours(openingHoursFor(toCapacitySettings(settings))) : null,
+    openingHours: (settings && formatOpeningHours(openingHoursFor(toCapacitySettings(settings)))) || null,
   };
 }
 

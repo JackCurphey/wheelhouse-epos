@@ -94,8 +94,9 @@ test('a collected bike’s link lasts 30 days from collection, then says which j
   assert.equal(gone.body.error, 'This link has expired');
   assert.equal(gone.body.reason, 'collected');
   assert.match(gone.body.reference, /^WH-\d+$/);
+  // Exactly these: nothing that identifies the customer.
+  assert.deepEqual(gone.body, { error: 'This link has expired', reference: gone.body.reference, reason: 'collected', shop: { name: gone.body.shop.name, address: '12 North Street, Bolton', phone: '01204 000000' } });
   assert.match(gone.body.shop.name, /^North Street Cycles/);
-  assert.deepEqual([gone.body.shop.address, gone.body.shop.phone], ['12 North Street, Bolton', '01204 000000']);
 });
 
 test('a bike still in the shop keeps its link, however long ago it was booked', async () => {
@@ -109,5 +110,34 @@ test('a booking whose bike never came in expires 30 days after its day, as never
   await setJob(booked.id, 'job_date = ?', daysAgo(31).slice(0, 10));
   const gone = await link.read(booked.code);
   assert.equal(gone.status, 410);
+  assert.deepEqual(Object.keys(gone.body).sort(), ['error', 'reason', 'reference', 'shop']);
   assert.equal(gone.body.reason, 'never_came_in');
+  assert.match(gone.body.reference, /^WH-\d+$/);
+  assert.deepEqual(Object.keys(gone.body.shop).sort(), ['address', 'name', 'phone']);
+});
+
+// Fresh review, 21 Oct.
+test('a waiting-for-parts job made with the bike already here records when it came in', async () => {
+  const made = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Wobbly wheel', jobDate: nextDay(), startTime: '10:00', endTime: '11:00', mechanicId: sam, status: 'waiting_parts' } });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const row = await runWithShop(owner.shop.id, () => prepare('SELECT custody_state, booked_in_at FROM workshop_jobs WHERE id = ?').get(made.body.id));
+  assert.equal(row.custody_state, 'in_shop');
+  assert.ok(row.booked_in_at !== null, 'booked in when made');
+});
+
+test('collection late in the evening counts by the shop’s own date', async () => {
+  const booked = await book();
+  // 23:30 UTC in British Summer Time is 00:30 the next day in the shop: the
+  // link's 30 days start from that next day.
+  const shopDay = shopToday('Europe/London', new Date(TEST_CLOCK_PIN));
+  const d = new Date(`${shopDay}T23:30:00Z`);
+  d.setUTCDate(d.getUTCDate() - 31);
+  await setJob(booked.id, "custody_state = 'collected', collected_at = ?", d.toISOString());
+  assert.equal((await link.read(booked.code)).status, 200, 'on the shop’s date it was collected 30 days ago');
+});
+
+test('a booking that ended, or a bike already collected, has no ready day', async () => {
+  const booked = await book();
+  await setJob(booked.id, "custody_state = 'collected', collected_at = now()");
+  assert.equal((await link.read(booked.code)).body.expectedReady, null);
 });

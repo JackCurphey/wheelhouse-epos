@@ -369,8 +369,8 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
     }
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, booked_in_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, CASE WHEN ? = 'in_shop' THEN now() END, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
@@ -381,6 +381,8 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         bookingRequestKeyHash ?? null, bookingRequestBodyHash ?? null,
         onlineUnseen ? 1 : 0,
+        // A job made with the bike already here was booked in as it was made (fresh review).
+        custodyState,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
