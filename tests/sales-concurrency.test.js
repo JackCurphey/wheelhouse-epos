@@ -102,3 +102,26 @@ test('an order with nothing on it cannot be converted into a £0 sale', async ()
     await deleteTestShop(shop.id);
   }
 });
+
+// Jack's check of this fix, 21 Oct: a sale must not wait on the light lock a
+// foreign-key check takes on a product (an order line or an offline till's
+// sync being saved for it at the same moment). FOR UPDATE waits on it, which
+// can deadlock with two products locked in opposite orders; FOR NO KEY UPDATE
+// still makes two sales queue but lets the key check through.
+test('a sale isn’t held up by another transaction’s key check on its product', async () => {
+  const { req, shop, cashierId, product } = await setUp({ stockQty: 5 });
+  const other = await pool.connect();
+  try {
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(shop.id)]);
+    // The lock Postgres takes when a new row's foreign key points at the product.
+    await other.query('SELECT id FROM products WHERE id = $1 FOR KEY SHARE', [product.id]);
+    const sale = req('/api/sales', { method: 'POST', body: { cashierId, items: [{ productId: product.id, qty: 1 }], cashAmount: 5, cashTendered: 5 } });
+    const outcome = await Promise.race([sale.then((r) => r.status), new Promise((resolve) => setTimeout(() => resolve('held up'), 3000))]);
+    assert.equal(outcome, 201, 'the sale went through while the key check was held');
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
+    await deleteTestShop(shop.id);
+  }
+});
