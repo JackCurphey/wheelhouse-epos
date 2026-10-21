@@ -47,8 +47,8 @@ const waiting = async () => {
   return res.body;
 };
 const itemFor = async (id) => (await waiting()).items.find((i) => i.jobId === id);
-const book = (serviceIds = [types.repair]) => bookOnline(server.baseUrl, customer.cookie, owner.shop.slug, {
-  mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds,
+const book = (serviceIds = [types.repair], extra = {}) => bookOnline(server.baseUrl, customer.cookie, owner.shop.slug, {
+  mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds, ...extra,
 });
 
 test('a new online booking is listed with what the diary needs', async () => {
@@ -67,6 +67,7 @@ test('a new online booking is listed with what the diary needs', async () => {
     mechanicId: sam,
     mechanicName: 'Sam',
     customerName: 'Wendy Waiting',
+    bikeLabel: 'Dawes Galaxy',
     serviceNames: ['Test repair', 'Test quick'],
     arrivedAt: (await read(booked.id)).createdAt,
   });
@@ -177,4 +178,31 @@ test("the job carries the customer's own description and bike note", async () =>
   const job = await read(booked.id);
   assert.equal(job.customerDescription, 'Squeaky brakes');
   assert.equal(job.customerBikeNote, null);
+});
+
+// The tablet cards' drawn bike line (`diary` drawing, touchWaitingCard; #241):
+// the bike as the diary's own jobs name it, make then model.
+test('every kind of waiting item carries the bike', async () => {
+  const sirrus = { newBike: { make: 'Specialized', model: 'Sirrus' } };
+  const fresh = await book([types.repair], sirrus);
+  assert.equal((await itemFor(fresh.id)).bikeLabel, 'Specialized Sirrus');
+
+  const moving = await book([types.repair], sirrus);
+  assert.equal((await act(moving.id, 'accept', { version: 1 })).status, 200);
+  assert.equal((await link.change(moving.code, { jobDate: nextDay(), mechanicId: alex, startTime: '14:00' })).status, 200);
+  const change = await itemFor(moving.id);
+  assert.equal(change.kind, 'change_request');
+  assert.equal(change.bikeLabel, 'Specialized Sirrus');
+
+  const gone = await book([types.repair], sirrus);
+  assert.equal((await link.cancel(gone.code)).status, 200);
+  const cancelled = await itemFor(gone.id);
+  assert.equal(cancelled.kind, 'customer_cancelled');
+  assert.equal(cancelled.bikeLabel, 'Specialized Sirrus');
+});
+
+test('a booking made without a bike carries no bike', async () => {
+  const bikeless = await book([types.repair], { newBike: undefined });
+  assert.equal((await read(bikeless.id)).bikeId, null);
+  assert.equal((await itemFor(bikeless.id)).bikeLabel, null);
 });
