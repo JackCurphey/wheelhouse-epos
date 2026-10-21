@@ -15,7 +15,7 @@ Owner "either" means whoever is free first; say so on the pull request.
 - [ ] 2.1 Owner-only list and test (design 3), covering the routes found open on 21 Oct: service categories and services, label settings, shop theme, employee change and permanent delete
 - [ ] 2.2 Concurrency tests for convert and for the last unit (these are tasks 3.1 and 3.2's tests; one test file)
 - [ ] 2.3 The browser-test-per-screen check, with today's gaps listed and allowed
-- [ ] 2.4 The reply-shape file, used first by the screens that read the till and the workshop overview
+- [x] 2.4 The reply-shape file, used first by the screens that read the till and the workshop overview (`src/lib/api/shapes.ts`, next to `types.ts`; a job as read (`WORKSHOP_JOB`, with its days) and as an edit or action sends it back (`WORKSHOP_JOB_CHANGED`, without), checked against real replies, an online booking's among them, by `tests/reply-shapes.test.js` and by the Overview and till tests through `tests/helpers/fake-job.js`. The other screen tests that fake a job move to the helper under 3.13)
 - [ ] 2.5 For each check, break the code it covers, show it going red, restore
 - [ ] 2.6 Editing CI to run 2.1–2.4: ask first per the global rule, then split the 9-minute job in parallel if it helps (either)
 
