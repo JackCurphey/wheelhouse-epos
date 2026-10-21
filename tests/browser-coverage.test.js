@@ -8,8 +8,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROUTES } from '../src/staff/routes.ts';
 
-// Screens built but with no browser spec yet. Remove each one when its spec lands.
-const GAPS = ['overview'];
+// Screens built but with no browser spec yet. Remove each one when its spec lands
+// (the Overview's landed in #353, 21 Oct).
+const GAPS = [];
 
 const shell = readFileSync(new URL('../src/staff/app-shell.tsx', import.meta.url), 'utf8');
 const screens = shell.match(/const SCREENS[^=]*=\s*\{([^}]*)\}/)?.[1];
