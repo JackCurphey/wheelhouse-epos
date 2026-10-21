@@ -8,18 +8,19 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const MECHANICS = [{ id: 11, name: 'Alex Morgan', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true }];
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'in_shop', workState: 'not_started', version: 3, notes: null, requested: null,
     customerDescription: null, cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, orderId: null, orderStatus: null, orderTotal: null,
     createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', quote: null, ...over,
-  };
+  });
 }
 const ORDER = { id: 80, kind: 'order', status: 'open', subtotal: 93, discount: 0, total: 93, items: [
   { id: 1, productId: null, name: 'Standard service', sku: null, unitPrice: 75, qty: 1, lineTotal: 75, lineType: 'labour', serviceId: 1, minutes: 60 },

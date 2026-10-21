@@ -9,6 +9,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -19,13 +20,13 @@ const MECHANICS = [
 const SETTINGS = { openingHours: [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '18:00' })) };
 
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Brake service', reference: 'WH-1001', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 3, notes: null, requested: null,
     cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, changeDeclinedAt: null, orderId: null, orderStatus: null, orderTotal: null,
     createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', ...over,
-  };
+  });
 }
 
 const JOBS = [

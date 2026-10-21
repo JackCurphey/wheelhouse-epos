@@ -8,10 +8,8 @@ import {
   diaryState, weekOf, addDays, gridRange, toMinutes, layoutLanes, stackGroups, waitingCard, dayLabel, weekLabel,
 } from '../../src/screens/diary/rules.ts';
 
-const job = (over = {}) => ({
-  bookingState: 'scheduled', workState: 'not_started', custodyState: 'expected',
-  requested: null, cancelledBy: null, cancellationSeenAt: null, ...over,
-});
+// The diary's rules read a job as the server sends it.
+const job = (over = {}) => fakeJob(over);
 
 test('a booking request is Pending (purple)', () => {
   assert.equal(diaryState(job({ bookingState: 'pending' })), 'pending');
@@ -158,6 +156,7 @@ test('a length reads in hours and minutes', () => {
 // Month view (Jack, 18 Oct): the weeks that hold the month, Monday to
 // Sunday, its name, and the arrows' step of a month.
 import { monthOf, monthLabel, addMonths } from '../../src/screens/diary/rules.ts';
+import { fakeJob } from '../helpers/fake-job.js';
 
 test('a month is the weeks that hold it, Monday to Sunday', () => {
   const sep = monthOf('2026-09-17');
