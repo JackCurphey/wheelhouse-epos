@@ -3,8 +3,10 @@
 // paying a job's order that finishes its work records the sign-off sent with
 // it. The card is taken before this call, so the payment is never refused
 // over the sign-off: an invalid one finishes the work unsigned, with a warning.
+import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import pg from 'pg';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -138,6 +140,37 @@ test('a till that saw finished work, reopened since, gets a warning that nobody 
     assert.equal(paid.body.jobWarning, 'Paid and finished, but not signed off: the work was reopened while the till was open.');
     assert.equal((await req(`/api/workshop-jobs/${job.id}`)).body.signedOffBy, null);
   } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Review, 21 Oct: the sign-off is two writes and the till pays inside one
+// transaction, so a failed second write must leave neither behind and must not
+// take the payment down with it. A trigger that refuses this one job's history
+// row makes the second write fail for real.
+test('a sign-off whose history row cannot be saved leaves no half sign-off, and the payment stands', async () => {
+  const { shop, req, alex, job, pay } = await jobInProgress();
+  // The admin address as the other tests find it, from ADMIN_DATABASE_URL or the
+  // superuser password in .env (Jack's check, 21 Oct: it crashed without the first).
+  const adminUrl = new URL(adminUrlFrom(process.env));
+  adminUrl.pathname = new URL(process.env.DATABASE_URL).pathname;
+  const admin = new pg.Client({ connectionString: adminUrl.href });
+  await admin.connect();
+  const fn = `refuse_sign_off_${job.id}_${shop.id}`;
+  await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.workshop_job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
+  await admin.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON workshop_job_sign_offs FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  try {
+    const paid = await pay({ signedOffBy: alex });
+    assert.equal(paid.status, 201, JSON.stringify(paid.body));
+    assert.match(paid.body.jobWarning, /couldn’t be saved/);
+    const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
+    assert.deepEqual([now.workState, now.signedOffBy, now.signedOffByName], ['complete', null, null], 'no half sign-off on the job');
+    const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
+    assert.equal(order.status, 'converted', 'the payment stands');
+  } finally {
+    await admin.query(`DROP TRIGGER ${fn} ON workshop_job_sign_offs`);
+    await admin.query(`DROP FUNCTION ${fn}()`);
+    await admin.end();
     await deleteTestShop(shop.id);
   }
 });
