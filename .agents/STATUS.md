@@ -7,15 +7,17 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** the workshop fixes from Mark's 21 Oct review
-  (`openspec/changes/working-agreement/tasks.md` 3.5–3.9 and 3.11): ended
-  bookings can't be booked in or started, the job's old status edit goes, job
-  actions inside the booking lock with messages after commit, a quote send
-  leaves the link alone while sending is pretend, one amount-to-pay, the
-  till's unsigned-finish exception goes.
-- **Mark:** his fixes, #348 (double payment, lost stock, sign-up takeover,
-  half sign-off), with Jack's lock change and test fix pushed on 21 Oct; the
-  working agreement's checks (tasks group 2) and STATUS tidy (1.5).
+- **Jack:** what #351 leaves open: a browser spec for the Workshop
+  Overview and for Settings › Messages (#351's `tests/browser-coverage.test.js`
+  names the Overview as the known gap), and the old app's two converts that
+  skip the sign-off (`public/app.js` `completeOrderFulfillment` and the order
+  modal; working-agreement task 3.11).
+- **Mark:** his review fixes: #348 (double payment, lost stock, sign-up
+  takeover, half sign-off; Jack's lock change and test fix pushed to it on
+  21 Oct), #351 stacked on it (Owner-only routes, ended bookings, job actions
+  under the booking lock, quote link, one `computeOrderTotals`: tasks
+  3.4–3.9), #350 (diary-page.tsx split, no behaviour change); then the
+  agreement's checks (tasks group 2) and the STATUS tidy (1.5).
 - **Waiting on Jack:** how an existing in-shop customer who signs up online
   is joined to their record (#348 makes every sign-up a new customer; no
   merge tool exists yet).
