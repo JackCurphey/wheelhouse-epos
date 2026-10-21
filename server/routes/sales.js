@@ -390,7 +390,35 @@ export function register(route) {
     sendJson(res, 200, { subtotal: round(subtotal), discount: round(discount), groupDiscount: group.amount, groupName: group.name, total: round(total), stock });
   });
 
+  // Paying an order. The order's row is locked first and held until the sale and
+  // the order's new status commit together, so a second tap, or a second till,
+  // waits and then finds the order already converted: one order, one payment.
+  // (Found in the 21 Oct review: the check, the sale and the status write were
+  // separate, so two quick requests both paid.) createSale's own BEGIN becomes a
+  // savepoint inside this transaction. The reply goes out after the commit, so
+  // nobody is told "paid" about a payment that can still roll back.
   route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
+    await db.exec('BEGIN');
+    let reply;
+    try {
+      await db.prepare('SELECT id FROM sale_documents WHERE id = ? FOR UPDATE').get(Number(params.id));
+      reply = await convertOrder(req, res, params);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK');
+      throw err;
+    }
+    if (!reply) return;
+    sendJson(res, 201, reply.payload);
+    if (afterRelease && reply.shopifyPushes.length) {
+      afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
+    }
+  });
+
+  // Answers a refusal straight away (nothing was written, so nothing to wait
+  // for) and otherwise returns {payload, shopifyPushes} for the route to send
+  // once the payment has committed.
+  async function convertOrder(req, res, params) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
@@ -447,6 +475,9 @@ export function register(route) {
     if (cashierResolved.cashierId === null) return badRequest(res, 'Select a staff member before completing the sale');
 
     const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+    // A job's order may be emptied while the job is open, but nothing on it is
+    // not a sale: converting it would record a £0 sale and finish the job.
+    if (items.length === 0) return badRequest(res, 'There is nothing on this order to pay for');
     // A stored labour line has product_id NULL. Dropping line_type here (as a
     // bare {productId, qty, unitPrice} mapping used to) sends it into
     // loadDocumentLine looking like an incomplete product line, which rejects
@@ -551,9 +582,6 @@ export function register(route) {
     const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
     const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
     const payload = serializeSale(sale, savedItems, savedPayments);
-    sendJson(res, 201, jobWarning ? { ...payload, jobWarning } : payload);
-    if (afterRelease && shopifyPushes.length) {
-      afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
-    }
-  });
+    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes };
+  }
 }

@@ -440,8 +440,19 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
       // labour line reaching this block is a constraint violation, not a
       // cosmetic bug.
       if (line.lineType === 'product') {
-        const newQty = line.product.stock_qty - line.qty;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), line.product.id);
+        // Counted down from what the row holds now, in one statement: the
+        // quantity loadDocumentLine read earlier may be out of date by now, and
+        // writing "that minus qty" back lost a sale when two tills sold at once.
+        // The stock check repeats here for the same reason; the row lock makes a
+        // second till wait, then see what the first left.
+        const updated = await db.prepare(
+          `UPDATE products SET stock_qty = stock_qty - ?, updated_at = ?
+            WHERE id = ? AND (? OR stock_qty >= ?) RETURNING stock_qty`
+        ).get(line.qty, nowIso(), line.product.id, sellPastStock, line.qty);
+        if (!updated) {
+          throw new ValidationError(`Not enough stock for "${line.product.name}" (need ${line.qty})`);
+        }
+        const newQty = updated.stock_qty;
         await db.prepare(
           `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
         ).run(line.product.id, -line.qty, `Sale #${saleId}`);

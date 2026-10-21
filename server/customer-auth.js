@@ -25,12 +25,10 @@ export function serializeCustomerLogin(login) {
   return { id: login.id, email: login.email, customerId: login.customer_id, active: !!login.active };
 }
 
-// Signs a customer up for a specific shop's portal. Matches them to an
-// existing customers row by email if the shop already has one on file
-// (e.g. from an in-store purchase), otherwise creates a new one - either
-// way, customer_id is the link from then on, so later edits to a
-// customer's email in the Office UI never re-run this match or break the
-// connection to their login.
+// Signs a customer up for a specific shop's portal with a new customers row;
+// customer_id is the link from then on, so later edits to a customer's email
+// in the Office UI never break the connection to their login. It does not
+// match the email to a customer the shop already has: see the note below.
 export async function signupCustomer({ shopSlug, email, password, name }) {
   email = (email || '').trim().toLowerCase();
   name = (name || '').trim();
@@ -55,13 +53,16 @@ export async function signupCustomer({ shopSlug, email, password, name }) {
     );
     if (existingLogin) throw new CustomerAuthError('An account with that email already exists');
 
-    let { rows: [customer] } = await client.query('SELECT * FROM customers WHERE email = $1', [email]);
-    if (!customer) {
-      ({ rows: [customer] } = await client.query(
-        'INSERT INTO customers (name, email, updated_at) VALUES ($1, $2, now()) RETURNING *',
-        [name, email]
-      ));
-    }
+    // Always a new customers row. Nothing here proves the person typing the
+    // email owns it, so attaching to the shop's existing customer with that
+    // address handed their bikes, bookings and quotes to whoever signed up
+    // (21 Oct review). Duplicates are for staff to merge in the Office UI,
+    // as with guest bookings (resolveGuestCustomer, DS-7). Matching an existing
+    // customer waits for email verification.
+    const { rows: [customer] } = await client.query(
+      'INSERT INTO customers (name, email, updated_at) VALUES ($1, $2, now()) RETURNING *',
+      [name, email]
+    );
 
     const { rows: [login] } = await client.query(
       'INSERT INTO customer_logins (shop_id, customer_id, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING *',

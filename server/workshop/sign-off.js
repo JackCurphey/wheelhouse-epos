@@ -2,7 +2,7 @@
 // docs/decisions/2026-10-16-mechanic-sign-off.md; migration 040). Finishing
 // the work records who signed it off and when; reopening clears it, the
 // earlier sign-off kept in workshop_job_sign_offs, marked cleared.
-import { prepare } from '../db.js';
+import { prepare, dbExec } from '../db.js';
 
 export const SIGN_OFF_REQUIRED = { error: 'Choose who is signing this off', code: 'sign_off_required' };
 
@@ -15,10 +15,23 @@ export async function signOffMechanic(raw) {
 
 // The name is kept as it was when they signed, so the sign-off still says who
 // after the person is deleted (Jack, 18 Oct).
+//
+// The job's columns and the history row are written together or not at all
+// (a savepoint when a transaction is already open, as when the till pays; a
+// failed write must not leave the caller's transaction aborted either).
 export async function recordSignOff(jobId, employeeId) {
-  const { name } = await prepare('SELECT name FROM employees WHERE id = ?').get(employeeId);
-  await prepare('UPDATE workshop_jobs SET signed_off_by = ?, signed_off_name = ?, signed_off_at = now() WHERE id = ?').run(employeeId, name, jobId);
-  await prepare('INSERT INTO workshop_job_sign_offs (workshop_job_id, employee_id, employee_name) VALUES (?, ?, ?)').run(jobId, employeeId, name);
+  await dbExec('BEGIN');
+  try {
+    const row = await prepare('SELECT name FROM employees WHERE id = ?').get(employeeId);
+    if (!row) throw new Error(`recordSignOff: employee ${employeeId} not found`);
+    const { name } = row;
+    await prepare('UPDATE workshop_jobs SET signed_off_by = ?, signed_off_name = ?, signed_off_at = now() WHERE id = ?').run(employeeId, name, jobId);
+    await prepare('INSERT INTO workshop_job_sign_offs (workshop_job_id, employee_id, employee_name) VALUES (?, ?, ?)').run(jobId, employeeId, name);
+    await dbExec('COMMIT');
+  } catch (err) {
+    await dbExec('ROLLBACK');
+    throw err;
+  }
 }
 
 export async function clearSignOff(jobId) {
