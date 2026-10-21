@@ -30,6 +30,8 @@ const JOB_FIELDS: Shape = {
   customerId: NN, customerName: SN, bikeId: NN, bikeLabel: SN, bikeColour: SN,
   mechanicId: NN, mechanicName: SN,
   jobDate: S, startTime: SN, endTime: SN,
+  // The job's planned length: given, its times', or an online booking's services'; null when none.
+  plannedMinutes: NN,
   status: S, bookingState: S, custodyState: S, workState: S, newOnline: ['boolean'],
   // A list: each answer to the services' questions (an online booking's, even
   // when there were none), or null for a staff job.

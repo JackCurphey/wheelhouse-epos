@@ -6,7 +6,7 @@ export function fakeJob(over = {}) {
   const j = {
     id: 1, title: '', reference: '', version: 1,
     customerId: null, customerName: null, bikeId: null, bikeLabel: null, bikeColour: null,
-    mechanicId: null, mechanicName: null, jobDate: '', startTime: null, endTime: null,
+    mechanicId: null, mechanicName: null, jobDate: '', startTime: null, endTime: null, plannedMinutes: null,
     status: 'scheduled', bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', newOnline: false,
     notes: null, questionAnswers: null, customerDescription: null, customerBikeNote: null, requested: null, offer: null,
     cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, changeDeclinedAt: null,
