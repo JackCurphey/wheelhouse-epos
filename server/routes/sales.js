@@ -398,16 +398,13 @@ export function register(route) {
   // savepoint inside this transaction. The reply is sent from afterRelease, which
   // the dispatcher runs once runWithShop has committed (with DB_TENANT_SCOPE=
   // transaction that is a later commit than this one), so nobody is told "paid"
-  // about a payment that can still roll back. A job's row is locked before the
-  // order's, the order the booking code takes them in.
+  // about a payment that can still roll back. The job's row is deliberately not
+  // locked here: a reopen during payment is a decided case (the sale stands and
+  // the reply warns; docs/decisions/2026-10-08-paying-for-finished-work.md).
   route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
     await db.exec('BEGIN');
     let reply;
     try {
-      const linked = await db.prepare('SELECT workshop_job_id FROM sale_documents WHERE id = ?').get(Number(params.id));
-      if (linked && linked.workshop_job_id) {
-        await db.prepare('SELECT id FROM workshop_jobs WHERE id = ? FOR UPDATE').get(linked.workshop_job_id);
-      }
       await db.prepare('SELECT id FROM sale_documents WHERE id = ? FOR UPDATE').get(Number(params.id));
       reply = await convertOrder(req, res, params);
       await db.exec('COMMIT');
