@@ -242,7 +242,7 @@ async function loadMechanicsAndHours() {
   // Default to every mechanic shown side by side, matching the staff
   // diary's own default - only on first load (loadMechanicsAndHours() can
   // be called again later without this clobbering a filter the customer
-  // has since changed, same guard as app.js's loadMechanics()).
+  // has since changed).
   if (!selectedMechanicIds.length && mechanics.length) selectedMechanicIds = mechanics.map((m) => m.id);
 }
 
