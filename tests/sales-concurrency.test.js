@@ -9,6 +9,7 @@
 // way to see these.
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -25,7 +26,7 @@ after(async () => {
 async function setUp({ stockQty }) {
   const { cookie, shop } = await staffSignup(server.baseUrl);
   const req = (path, options) => staffRequest(server.baseUrl, cookie, path, options);
-  const cashier = (await req('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' } })).body;
+  const cashier = (await req('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
   const product = (await req('/api/products', { method: 'POST', body: { name: 'Inner tube', price: 5, sku: 'TUBE-1', stockQty } })).body;
   return { req, shop, cashierId: cashier.employeeId, product };
 }

@@ -5,6 +5,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -17,7 +18,7 @@ let jo;
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
-  const made = await staffRequest(server.baseUrl, owner.cookie, '/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' } });
+  const made = await staffRequest(server.baseUrl, owner.cookie, '/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } });
   assert.equal(made.status, 201, JSON.stringify(made.body));
   jo = { cookie: await staffFreshCookie(made.body.loginId) };
 });
