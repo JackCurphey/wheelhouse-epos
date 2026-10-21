@@ -16,3 +16,8 @@ new customer, so someone who has been in the shop ends up with two records.
    with jobs, sales and bikes from both kept together. A new online account
    whose email matches an existing customer is one such possible duplicate.
    The drawings are in the Customers package (WP-3.2), which isn't built yet.
+
+2. **Built with the Customers package, as planned.** Jack, 21 Oct: "1: build
+   the merge with the Customers package (WP-3.2), as planned." Not pulled
+   forward: until then a sign-up from someone already in the shop stays a
+   second record, which can't happen to a real customer before a shop is live.
