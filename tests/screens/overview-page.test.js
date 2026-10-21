@@ -37,6 +37,7 @@ let shell;
 let calls;
 let bookIn;
 let booked;
+let capacity = null;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -44,6 +45,7 @@ afterEach(async () => {
   uninstall?.();
   globalThis.fetch = realFetch;
   mock.timers.reset();
+  capacity = null;
 });
 
 async function openOverview({ phone = false, coarse = false, inShopDown = false, extra = [], interval = false } = {}) {
@@ -64,6 +66,7 @@ async function openOverview({ phone = false, coarse = false, inShopDown = false,
       return reply(200, { ...MAYA, custodyState: 'in_shop', version: 4 });
     }
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
+    if (u.pathname === '/api/workshop-capacity' && capacity) return reply(200, capacity);
     if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('custody') === 'in_shop' && inShopDown) return reply(404, { error: 'Not found' });
     if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('custody') === 'in_shop') return reply(200, [...(booked ? [maya] : []), PARTS, READY, QUEUED]);
     // Today's list also has a bike in the shop carried over to today: counted once.
@@ -91,7 +94,7 @@ test('today’s date, then the bikes expected and in the workshop; no Planned ef
   const inWorkshop = within(ui.getByRole('region', { name: 'In the workshop' }));
   assert.ok(inWorkshop.getByText('3'));
   assert.ok(inWorkshop.getByText('1 ready to collect'));
-  assert.ok(ui.queryByText(/Planned effort/) === null);
+  assert.ok(ui.queryByText(/Planned effort/) === null, 'no capacity figures, no Planned effort');
 });
 
 test('four tabs with their counts; Arrivals first, by time, a drop-off last; a request isn’t counted', async () => {
@@ -225,4 +228,23 @@ test('after Book in from the Shared queue the focus is on the Shared queue tab',
   fireEvent.click(ui.getByRole('button', { name: 'Book in WH-1047' }));
   await waitFor(() => assert.ok(calls.some((c) => c.method === 'POST')));
   await waitFor(() => assert.ok(document.activeElement === tab(ui, 'Shared queue')));
+});
+
+// Planned effort (Jack, 21 Oct, workshop overview answer 2: once the capacity
+// figures give it; drawn with its fill bar, audit M7).
+test('Planned effort: the day’s work against the mechanics’ time, with its bar', async () => {
+  capacity = { days: [{ date: TODAY, plannedMinutes: 360, availableMinutes: 480, mechanics: [] }] };
+  const { ui, within } = await openOverview();
+  const effort = within(await ui.findByRole('region', { name: 'Planned effort' }));
+  assert.ok(effort.getByText('6h / 8h'));
+  assert.ok(effort.getByText('Shared and assigned, counted once'));
+  assert.ok(effort.getByRole('img', { name: '75% of planned effort used today' }));
+});
+
+test('Planned effort in half hours, and a closed day', async () => {
+  capacity = { days: [{ date: TODAY, plannedMinutes: 390, availableMinutes: 0, mechanics: [] }] };
+  const { ui, within } = await openOverview();
+  const effort = within(await ui.findByRole('region', { name: 'Planned effort' }));
+  assert.ok(effort.getByText('6.5h / 0h'));
+  assert.ok(effort.queryByRole('img') === null, 'no bar with no time');
 });

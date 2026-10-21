@@ -219,6 +219,9 @@ const total = (windows) => windows.reduce((n, [s, e]) => n + (e - s), 0);
 // `jobs` must already be live jobs only (LIVE_BOOKING_STATES). `mechanics` must
 // be every active mechanic, even when a caller wants one: the walk-in queue is
 // split across everyone working, so leaving one out changes the others' share.
+// Bookings that stand: what Planned effort counts (the Workshop Overview's Expected today does the same).
+const STANDING = new Set(['scheduled', 'reschedule_requested']);
+
 export function computeCapacity({ settings, mechanics, blocks, jobs, dates }) {
   return dates.map((date) => {
     const weekday = weekdayOf(date);
@@ -237,14 +240,7 @@ export function computeCapacity({ settings, mechanics, blocks, jobs, dates }) {
     const workingCount = rows.filter((r) => total(r.availableWindows) > 0).length;
     const queueShare = workingCount ? queueMinutes / workingCount : 0;
 
-    return {
-      date,
-      weekday,
-      mode: modeForDate(settings, date),
-      shopClosed,
-      shopBlocks,
-      queueMinutes,
-      mechanics: rows.map(({ m, scheduled, ownBlocks, availableWindows }) => {
+    const mechanicDays = rows.map(({ m, scheduled, ownBlocks, availableWindows }) => {
         const mine = dayJobs.filter((j) => j.mechanicId === m.id);
         const timed = mine.filter(isTimed).map((j) => [toMinutes(j.startTime), toMinutes(j.endTime)]);
         const untimedMinutes = mine.filter((j) => !isTimed(j)).reduce((n, j) => n + jobMinutes(j), 0);
@@ -254,7 +250,30 @@ export function computeCapacity({ settings, mechanics, blocks, jobs, dates }) {
           ? total(freeWindows) - untimedMinutes - queueShare - settings.reserveMinutes
           : 0;
         return { mechanicId: m.id, scheduled, working, availableWindows, freeWindows, freeMinutes, blocks: ownBlocks };
-      }),
+      });
+    // Planned effort (the Workshop Overview; Jack, 21 Oct): bookings that stand
+    // (not a change request's held time, nor a request or offer waiting for an
+    // answer, as Expected today counts them; fresh review), their timed work
+    // inside each mechanic's working time with overlaps counted once, their
+    // untimed work and the shared queue, against the time the mechanics have.
+    const booked = dayJobs.filter((j) => !j.requested && (!j.bookingState || STANDING.has(j.bookingState)));
+    const availableMinutes = mechanicDays.reduce((n, d) => n + total(d.availableWindows), 0);
+    const plannedMinutes = mechanicDays.reduce((n, d) => {
+      const mine = booked.filter((j) => j.mechanicId === d.mechanicId);
+      const timed = mine.filter(isTimed).map((j) => [toMinutes(j.startTime), toMinutes(j.endTime)]);
+      const untimed = mine.filter((j) => !isTimed(j)).reduce((u, j) => u + jobMinutes(j), 0);
+      return n + total(d.availableWindows) - total(subtractIntervals(d.availableWindows, timed)) + untimed;
+    }, 0) + booked.filter((j) => j.mechanicId === null).reduce((n, j) => n + jobMinutes(j), 0);
+    return {
+      date,
+      weekday,
+      mode: modeForDate(settings, date),
+      shopClosed,
+      shopBlocks,
+      queueMinutes,
+      plannedMinutes,
+      availableMinutes,
+      mechanics: mechanicDays,
     };
   });
 }
