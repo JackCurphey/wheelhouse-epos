@@ -221,8 +221,7 @@ const legacySave = (id, body) => staff(`/api/workshop-jobs/${id}`, { method: 'PU
 
 test("the old diary's ordinary save keeps the customer's request and its hold", async () => {
   const job = await requested();
-  // The form save sends the status the diary shows: 'scheduled' for a request.
-  const res = await legacySave(job.id, { notes: 'Rang to confirm', status: 'scheduled' });
+  const res = await legacySave(job.id, { notes: 'Rang to confirm' });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.bookingState, 'reschedule_requested');
   assert.deepEqual(res.body.requested, { jobDate: job.to, startTime: '14:00', endTime: '15:00', mechanicId: sam });
@@ -261,13 +260,15 @@ test('dropping a job anywhere else in the old diary leaves the request standing'
   ]);
 });
 
-test('an old diary status change that ends a request clears it and lets its time go', async () => {
+test('saving a status no longer ends a request', async () => {
   const job = await requested();
   const res = await legacySave(job.id, { status: 'pending' });
-  assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal(res.body.bookingState, 'pending');
-  assert.deepEqual(await requestColumns(job.id), [null, null, null, null, null]);
-  assert.deepEqual(await liveHolds(shopId(), job.id), [{ job_date: job.jobDate, start_time: '10:00', mechanic_id: sam, purpose: 'booking' }]);
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal((await jobRow(shopId(), job.id)).booking_state, 'reschedule_requested');
+  assert.deepEqual(await liveHolds(shopId(), job.id), [
+    { job_date: job.jobDate, start_time: '10:00', mechanic_id: sam, purpose: 'booking' },
+    { job_date: job.to, start_time: '14:00', mechanic_id: sam, purpose: 'requested' },
+  ]);
 });
 
 test('a staff cancellation of a requested booking clears the request', async () => {

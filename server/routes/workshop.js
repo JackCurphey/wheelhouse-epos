@@ -618,25 +618,12 @@ export function register(route) {
       ? Math.max(0, timeToMinutes(times.endTime) - timeToMinutes(times.startTime))
       : planned.value;
 
-    // The staff diary still changes a job's state by PUTting a legacy status
-    // (public/app.js approveJob() and the complete/reopen toggle), and will until
-    // Phase 4 replaces it. This translates that into the state columns.
-    //
-    // Deliberately NOT routed through applyEvent: some of its moves are not
-    // single machine events, and this is the unguarded legacy path - the reason
-    // the action endpoints exist beside it rather than instead of it. It dies
-    // with public/app.js. The old diary now sends the version it last read
-    // (staff diary piece), checked above when present, and every save through
-    // this route bumps it - so it does take part in the optimistic-concurrency
-    // contract even though it isn't routed through applyEvent.
-    //
-    // custody_state is left alone. The old status never expressed custody (Phase
-    // 1: readLegacyStatus('complete') returns custody: null), so deriving one
-    // here would reset a bike that is in the shop back to 'expected'.
-    let requestedStatus = null;
+    // A job's state moves through the action routes (state machines, version,
+    // sign-off), never by saving it. The old form's `status` field wrote the
+    // state columns directly - finishing without a sign-off, un-cancelling a
+    // booking - and nothing sends it any more, so it is refused rather than obeyed.
     if (body.status !== undefined) {
-      requestedStatus = resolveJobStatus(body.status, null);
-      if (requestedStatus === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+      return badRequest(res, "A job's status can't be changed by saving it. Use the job's own actions instead: book in, start, hold, finish, reopen or cancel.");
     }
 
     // A complete job is a record of work already done, so its details are
@@ -668,26 +655,11 @@ export function register(route) {
     try {
       out = await withBookingLock([existing.job_date, jobDate, existing.requested_job_date].filter(Boolean), async () => {
         // A customer's change request (piece 12), read again under the lock.
-        // The old diary knows nothing of requests and sends 'scheduled' for one,
-        // so an ordinary save keeps it; dropping the job onto exactly the
-        // requested time answers it - the change is accepted; a status that
-        // takes the job anywhere else ends it. Request columns left on a job
+        // An ordinary save keeps it; dropping the job onto exactly the requested
+        // time answers it - the change is accepted. Request columns left on a job
         // that is no longer a request are cleared on any save.
         const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
         if (body.version !== undefined && current && current.version !== body.version) return staleRefusal;
-        // The old form sends its dropdown's status on every Save, and the old
-        // statuses have no "in progress": a status the job already reads changes
-        // nothing, or every Save would reset work in progress (Jack, 8 Oct).
-        // Compared with the job as read under the lock (Mark's review on #189).
-        let legacyStates = null;
-        if (requestedStatus !== null && requestedStatus !== current?.status) {
-          const { booking, work: workState } = readLegacyStatus(requestedStatus);
-          legacyStates = { booking, workState };
-        }
-        // An offer waits for the customer: the old form can't confirm it by
-        // saving a status (Jack, 20 Oct, offer another time).
-        if (legacyStates && current?.booking_state === 'offered') legacyStates = { ...legacyStates, booking: null };
-
         const slotError = await checkJobSlot({
           jobDate,
           startTime: times.startTime,
@@ -698,19 +670,15 @@ export function register(route) {
         if (slotError) return refusal(slotError.error);
 
         const request = current ? requestedOf(current) : null;
-        let bookingState = legacyStates?.booking ?? null;
+        let bookingState = null;
         let clearRequest = Boolean(current?.requested_job_date) && !request;
         if (request) {
           // Same day, start and mechanic answers the request whatever the
           // length (staff diary piece): the drop is the staff member's answer.
           const onRequested = jobDate === request.jobDate && times.startTime === request.startTime
             && mechResolved.mechanicId === request.mechanicId;
-          if (onRequested && (bookingState === null || bookingState === 'scheduled')) {
+          if (onRequested) {
             bookingState = 'scheduled';
-            clearRequest = true;
-          } else if (bookingState === 'scheduled') {
-            bookingState = null;
-          } else if (bookingState !== null) {
             clearRequest = true;
           }
         }
@@ -718,7 +686,7 @@ export function register(route) {
         await db.prepare(
           `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
            version = version + 1,
-           booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
+           booking_state = COALESCE(?, booking_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
          WHERE id = ?`
         ).run(
           title,
@@ -732,11 +700,8 @@ export function register(route) {
           plannedMinutes,
           nowIso(),
           bookingState,
-          legacyStates?.workState ?? null,
           id
         );
-        // The old form's "Reopen job" takes finished work back: its sign-off goes (answer 4).
-        if (current?.work_state === 'complete' && legacyStates?.workState && legacyStates.workState !== 'complete') await clearSignOff(id);
         await syncJobHold(id);
         const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
         return { status: 200, body: serializeWorkshopJob(row) };
