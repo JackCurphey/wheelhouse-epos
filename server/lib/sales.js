@@ -405,9 +405,13 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
   try {
     // Product rows are locked in id order up front, so two sales with the same
     // products in a different order wait for each other instead of deadlocking.
+    // NO KEY UPDATE, not UPDATE: a foreign-key check on a product (an order line
+    // or an offline till's sync saved at the same moment) takes KEY SHARE, which
+    // FOR UPDATE would wait on, and lines saved in another order could then
+    // deadlock with this sale (Jack's check, 21 Oct).
     const productIds = [...new Set(loaded.filter((l) => l.product).map((l) => l.product.id))].sort((a, b) => a - b);
     if (productIds.length) {
-      await db.prepare(`SELECT id FROM products WHERE id IN (${productIds.map(() => '?').join(', ')}) ORDER BY id FOR UPDATE`).all(...productIds);
+      await db.prepare(`SELECT id FROM products WHERE id IN (${productIds.map(() => '?').join(', ')}) ORDER BY id FOR NO KEY UPDATE`).all(...productIds);
     }
     const saleInfo = await db
       .prepare(
