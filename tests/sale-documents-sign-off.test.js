@@ -82,6 +82,22 @@ test('a job’s payment with no sign-off answer is refused: take it at the till'
   }
 });
 
+// Fresh review, 21 Oct: Jack's words are about a finished job, which the
+// route reaches by its own path; the refusal covers it too.
+test('a finished job’s payment with no sign-off answer is refused too', async () => {
+  const { shop, req, alex, job, pay } = await jobInProgress();
+  try {
+    const done = await req(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: alex } });
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    const paid = await pay();
+    assert.equal(paid.status, 400, JSON.stringify(paid.body));
+    assert.equal(paid.body.code, 'use_till');
+    assert.equal((await req(`/api/sale-documents/${job.orderId}`)).body.status, 'open');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('an order with no workshop job still converts with no sign-off answer', async () => {
   const { shop, req } = await jobInProgress();
   try {
@@ -113,7 +129,7 @@ test('paying for work already signed off keeps that sign-off', async () => {
 
 // Fresh review: the till sends signedOffBy: null when it didn't ask (the work
 // read as finished). If the work was reopened meanwhile, paying finishes it
-// unsigned, and the reply says so; the old app, which sends no key, doesn't warn.
+// unsigned, and the reply says so. A payment with no key at all is refused.
 test('a till that saw finished work, reopened since, gets a warning that nobody signed it off', async () => {
   const { shop, req, job, pay } = await jobInProgress();
   try {
