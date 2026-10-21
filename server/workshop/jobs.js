@@ -51,6 +51,8 @@ export function serializeWorkshopJob(row) {
     // Phase 4 replaces them.
     reference: row.reference,
     bookingState: row.booking_state,
+    // An online booking confirmed straight away, until staff open it (Jack, 19 Oct, auto-confirm).
+    newOnline: row.online_unseen === 1,
     custodyState: row.custody_state,
     workState: row.work_state,
     // Every action endpoint requires the version the caller last saw, so it has
@@ -348,7 +350,7 @@ export async function syncJobHold(jobId) {
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
 // race, which is not the same thing as being wrong.
-export async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash }) {
+export async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash, onlineUnseen = false }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -367,8 +369,8 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
     }
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
@@ -378,6 +380,7 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
         linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         bookingRequestKeyHash ?? null, bookingRequestBodyHash ?? null,
+        onlineUnseen ? 1 : 0,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;

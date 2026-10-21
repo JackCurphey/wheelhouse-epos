@@ -1,7 +1,7 @@
 # Design: confirming online bookings automatically
 
-The contract is written first; Mark's server half merges before Jack's
-screens start (split plan §4.3, §4.4).
+The contract was written first for the split plan's halves; from 21 Oct one
+person builds both under the working agreement (#349), server first.
 
 ## Storage (the next free migration number, additive)
 
@@ -22,7 +22,7 @@ screens start (split plan §4.3, §4.4).
 
 - Every check stays as it is: a booking that doesn't fit is refused as today, so "fits the diary" needs no new rule.
 - Setting off: unchanged (`booking_state = 'pending'`).
-- Setting on: the job is saved with `booking_state = 'scheduled'`, where the booking-request machine's `accept` moves a pending job (`server/workshop/state-machines.js`), with any side effects accepting has, and `online_unseen = 1`. Read inside the booking lock, so a switch mid-booking can't half-apply.
+- Setting on: the job is saved with `booking_state = 'scheduled'`, where the booking-request machine's `accept` moves a pending job (`server/workshop/state-machines.js`), and `online_unseen = 1`. Read inside the booking lock, so a switch mid-booking can't half-apply. Accepting's side effect, Booking confirmed, is queued after the commit, carrying the link the reply gives the customer (never a new one, which would end theirs).
 - The reply's `privateLink` is unchanged; the booking link then reads `stage: 'confirmed'`, so the customer's page shows "Confirmed" with the drop-off line and the note.
 
 ### Staff

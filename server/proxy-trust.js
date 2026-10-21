@@ -31,3 +31,9 @@ export function isHttpsRequest(req, { trustProxy = TRUST_PROXY } = {}) {
   if (trustProxy) return req.headers['x-forwarded-proto'] === 'https';
   return false;
 }
+
+// The address a customer opens: APP_PUBLIC_URL when set, else the address the
+// request came in on. Shared by the staff and customer routes (auto-confirm, 21 Oct).
+export function publicBase(req) {
+  return process.env.APP_PUBLIC_URL || `${isHttpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
+}
