@@ -1034,3 +1034,28 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    blocks show it once opened, and each job's name for screen readers says
    it. For a later piece.
 
+### 21 Oct 2026: the booking page's money and progress (booking-page-money)
+
+1. **`bk-expired`: "booked for [day] and cancelled".** The expired reply
+   carries the job's number, not its day. *Decided:* "It was for [number]."
+   and the 30-day rule, then Book a repair and the shop.
+2. **`dq-in-shop`: "Expected ready: [day], [time]".** *Decided:* the job's
+   last day, with no time until staff can set one.
+3. **`cp-summary`: the full service checklist.** *Decided:* not shown; no
+   checklist is kept yet.
+4. **The booking's rows once the work is listed.** *Decided:* the Service row
+   gives way to Work agreed / What we did; Bike, When and Your repair stay.
+5. **The quote card once the work is done.** *Decided:* only while the bike is
+   in the workshop; What we did comes from the job once it's ready. This
+   reverses the 21 Oct log's item 4 under the booking page's later stages.
+6. **`dq-in-shop`'s tracker card.** The drawing puts the in-shop tracker in a
+   card headed "Where your bike is", numbering the steps to come and saying
+   ", done" and ", to come" to screen readers. *Decided:* the list is labelled
+   "Where your bike is", earlier steps ticked, the current one marked; the
+   card, the numbers and the spoken words are for a later piece.
+7. **`cp-expired` / `bk-expired`: "Open [opening hours]".** The expired reply
+   carries the shop's name, address and phone. *Decided:* no hours there yet.
+8. **`dq-waiting-part`: the reason ("Your new brake pads are taking longer to
+   arrive").** Not kept for the customer yet. *Decided:* the bold warning
+   alone, then the ready day.
+

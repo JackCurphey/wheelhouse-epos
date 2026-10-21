@@ -17,3 +17,9 @@ while some of the server's data (Mark's lane) isn't there yet.
 3. **The drawings.** Jack, 21 Oct: "Approve the expired-request and collected
    booking page drawings; build the booking page stages." (`bk-request-expired`,
    `cp-summary-collected`.)
+4. **Prices when "Show prices on the booking page" is off.** Jack, 21 Oct:
+   "In regards to the show prices switched off, as far as I'm thinking about
+   it, all it will be is that it will just have the numbers of the prices not
+   visible. Everything else will still be fine. It will basically just be a
+   switch that will turn that off." So the ready page's work, what was
+   declined and the amount to pay still show, without their figures.
