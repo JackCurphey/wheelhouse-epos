@@ -381,6 +381,15 @@ export function register(route) {
       sql += ' AND w.status = ?';
       args.push(status);
     }
+    // The bikes in the shop whatever their days, for the Overview (Jack, 21 Oct,
+    // docs/decisions/2026-10-21-workshop-overview.md): a ready bike from an
+    // earlier day has no part today.
+    const custody = query.get('custody');
+    if (custody !== null) {
+      if (!['expected', 'in_shop', 'collected'].includes(custody)) return badRequest(res, "custody must be 'expected', 'in_shop' or 'collected'");
+      sql += ' AND w.custody_state = ?';
+      args.push(custody);
+    }
     sql += ' ORDER BY w.job_date, w.start_time';
     const rows = await db.prepare(sql).all(...args);
     sendJson(res, 200, await attachParts(rows.map(serializeWorkshopJob)));
