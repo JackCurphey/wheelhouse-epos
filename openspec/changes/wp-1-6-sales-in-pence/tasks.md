@@ -19,7 +19,7 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
   - amounts are backfilled with `ROUND(x * 100)`;
   - `paid_pence` equals the converted sale's total for converted orders;
   - `vat_rate_bp` comes from the product for product lines, and is empty for labour lines.
-- [ ] 1.4 Tests first for the sale-documents routes, `loadDocumentLine` and convert writing pence and pounds together (convert also setting `paid_pence` to the sale's total), and returning `…Pence` fields beside the pound fields, with statuses unchanged. Watch them fail, then build. Verify `saleDocuments` and `saleDocumentsConvertApi` pass unchanged apart from the new fields
+- [x] 1.4 Tests first for the sale-documents routes, `loadDocumentLine` and convert writing pence and pounds together (convert also setting `paid_pence` to the sale's total), and returning `…Pence` fields beside the pound fields, with statuses unchanged. Watch them fail, then build. Verify `saleDocuments` and `saleDocumentsConvertApi` pass unchanged apart from the new fields
 - [ ] 1.5 Verify that `npm test`, `npm run test:browser` and the totals check pass, then get a fresh review against `specs/sales/spec.md` and the money contract
 
 ## 2. Step A′: workshop amounts in pence (Jack, workshop, after group 1 merges)
