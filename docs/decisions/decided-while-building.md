@@ -980,4 +980,15 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 4. **`overview`: the page's title.** *Decided:* the shell's "Overview", the
    nav label, as Diary and Till have theirs (the drawing's desktop title is
    "Workshop overview").
+5. **`overview`: Book in links to the job page in the drawing.** *Decided:*
+   it books the bike in on the spot, as the job page's own Book in does, and
+   the job's number and name open its page (fresh review, 21 Oct).
+6. **`overview`: a waiting-for-parts row's "· Sat 19 Sep 16:00".** *Decided:*
+   left off; "· waiting for parts" only. The job page has the times.
+7. **`overview`: nothing to show, and while loading.** *Decided:* "Nothing
+   here." in the table's place, and "Loading…" while the jobs are read; a
+   failed read says so with Try again, and shows no figures.
+8. **`overview`: today.** *Decided:* the device's own date and time, as the
+   diary uses (`todayIso`); a device set to another time zone than the
+   shop's would read another day. Shared with the diary, for later.
 

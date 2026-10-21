@@ -44,11 +44,11 @@ afterEach(async () => {
   mock.timers.reset();
 });
 
-async function openOverview({ phone = false } = {}) {
+async function openOverview({ phone = false, coarse = false, inShopDown = false, extra = [], interval = false } = {}) {
   calls = [];
   bookIn = null;
   booked = false;
-  mock.timers.enable({ apis: ['Date'], now: NOW });
+  mock.timers.enable({ apis: interval ? ['Date', 'setInterval'] : ['Date'], now: NOW });
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
@@ -61,19 +61,20 @@ async function openOverview({ phone = false } = {}) {
       return reply(200, { ...MAYA, custodyState: 'in_shop', version: 4 });
     }
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
+    if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('custody') === 'in_shop' && inShopDown) return reply(404, { error: 'Not found' });
     if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('custody') === 'in_shop') return reply(200, [...(booked ? [maya] : []), PARTS, READY, QUEUED]);
     // Today's list also has a bike in the shop carried over to today: counted once.
-    if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('start') === TODAY && u.searchParams.get('end') === TODAY) return reply(200, [maya, JAMIE, AISHA, REQUEST, PARTS]);
+    if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('start') === TODAY && u.searchParams.get('end') === TODAY) return reply(200, [maya, JAMIE, AISHA, REQUEST, PARTS, ...extra]);
     return reply(404, { error: 'Not found' });
   };
   uninstall = installDom('http://localhost/workshop/overview');
-  if (phone) window.matchMedia = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} });
+  if (phone || coarse) window.matchMedia = (q) => ({ matches: (phone && q.includes('max-width')) || (coarse && q.includes('coarse')), media: q, addEventListener() {}, removeEventListener() {} });
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
   await ui.findByText('Wednesday 21 October · one shop, one view of the work');
-  await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' });
+  if (!inShopDown) await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' });
   return { ...rtl, ui };
 }
 const tab = (ui, name) => ui.getByRole('button', { name: new RegExp(`^${name} · `) });
@@ -120,6 +121,7 @@ test('the table: bike, work, custody; Book in when due, the time when later, Boo
   assert.ok(rows[0].getByText('Trek Domane AL 3'));
   assert.ok(rows[0].getByText('Expected'));
   assert.ok(rows[0].getByRole('button', { name: 'Book in WH-1042' }));
+  assert.ok(rows[0].getByText('Standard service · 10:30 appointment'), 'a due arrival keeps its time beside the work, as drawn');
   assert.ok(raw[1].lastElementChild.textContent === '14:00 appointment');
   assert.ok(rows[1].queryByRole('button') === null);
   assert.ok(rows[2].getByText('Safety check · drop-off'));
@@ -157,5 +159,59 @@ test('on a phone the jobs are rows, not a table, each with its action', async ()
   assert.ok(ui.queryByRole('table') === null);
   assert.deepEqual(rowNames(ui), ['WH-1042 · Maya Patel', 'WH-1045 · Jamie Brooks', 'WH-1047 · Aisha Khan']);
   assert.ok(ui.getByRole('button', { name: 'Book in WH-1042' }));
-  assert.ok(ui.getByText('Trek Domane AL 3 · Standard service'));
+  assert.ok(ui.getByText('Trek Domane AL 3 · Standard service · 10:30 appointment'));
+});
+
+// Fresh review, 21 Oct.
+test('a read that fails says so, and shows no figures that look real', async () => {
+  const { ui } = await openOverview({ inShopDown: true });
+  assert.match((await ui.findByRole('alert')).textContent, /couldn’t load the workshop’s jobs/);
+  assert.ok(ui.queryByRole('region', { name: 'Expected today' }) === null);
+  assert.ok(ui.queryByRole('group', { name: 'Show jobs' }) === null);
+});
+
+test('a Book in the server refuses is said in the job page’s plain words', async () => {
+  const { ui, fireEvent } = await openOverview();
+  bookIn = { status: 409, ok: false, json: async () => ({ error: 'cannot book_in a job that is in_shop; from here you can collect', code: 'illegal' }) };
+  fireEvent.click(ui.getByRole('button', { name: 'Book in WH-1042' }));
+  assert.equal((await ui.findByRole('alert')).textContent, 'The bike is already here.');
+});
+
+test('a refusal goes when another tab is chosen', async () => {
+  const { ui, fireEvent } = await openOverview();
+  bookIn = { status: 409, ok: false, json: async () => ({ error: 'x', code: 'stale' }) };
+  fireEvent.click(ui.getByRole('button', { name: 'Book in WH-1042' }));
+  await ui.findByRole('alert');
+  fireEvent.click(tab(ui, 'Ready'));
+  assert.ok(ui.queryByRole('alert') === null);
+});
+
+test('after Book in the focus stays on the page, on the Arrivals tab', async () => {
+  const { ui, fireEvent, waitFor } = await openOverview();
+  fireEvent.click(ui.getByRole('button', { name: 'Book in WH-1042' }));
+  await waitFor(() => assert.equal(tab(ui, 'Arrivals').textContent, 'Arrivals · 2'));
+  assert.ok(document.activeElement === tab(ui, 'Arrivals'));
+});
+
+test('the time moves on by itself: an appointment becomes due without anything pressed', async () => {
+  const { ui, act } = await openOverview({ interval: true });
+  assert.ok(ui.queryByRole('button', { name: 'Book in WH-1045' }) === null);
+  await act(async () => { mock.timers.tick(3 * 60 * 60 * 1000); });
+  assert.ok(await ui.findByRole('button', { name: 'Book in WH-1045' }));
+});
+
+test('a job over several days is read from today’s day: its mechanic and its arrival', async () => {
+  // Started yesterday with Alex; today's day is in the shared queue, and the bike isn't in yet.
+  const TWO_DAY = job({ id: 8, reference: 'WH-1053', title: 'Full rebuild', customerName: 'Ella Ward', bikeLabel: 'Surly Cross-Check', jobDate: '2026-10-20', startTime: '09:00',
+    parts: [{ id: 81, position: 0, date: '2026-10-20', startTime: '09:00', endTime: '17:00', mechanicId: 11, mechanicName: 'Alex Morgan' }, { id: 82, position: 1, date: TODAY, startTime: '09:30', endTime: '12:00', mechanicId: null, mechanicName: null }] });
+  const { ui, fireEvent } = await openOverview({ extra: [TWO_DAY] });
+  assert.deepEqual(rowNames(ui), ['WH-1053 · Ella Ward', 'WH-1042 · Maya Patel', 'WH-1045 · Jamie Brooks', 'WH-1047 · Aisha Khan']);
+  fireEvent.click(tab(ui, 'Shared queue'));
+  assert.ok(rowNames(ui).includes('WH-1053 · Ella Ward'));
+});
+
+test('on a touch screen the tabs and buttons are 44px', async () => {
+  const { ui } = await openOverview({ coarse: true });
+  assert.match(tab(ui, 'Arrivals').className, /min-h-11/);
+  assert.match(ui.getByRole('button', { name: 'Book in WH-1042' }).className, /min-h-11/);
 });

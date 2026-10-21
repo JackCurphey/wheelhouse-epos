@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, ApiError, jobAction } from '@/lib/api/client.ts';
@@ -6,6 +6,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { dayLabel, todayIso, toMinutes } from '@/screens/diary/rules.ts';
+import { jobRefusalText } from '@/screens/diary/refusal-words.ts';
 
 /**
  * Workshop › Overview (drawn as overview in generator/diary.mjs; Jack, 21 Oct,
@@ -19,17 +20,20 @@ const TABS: [Tab, string][] = [['arrivals', 'Arrivals'], ['shared', 'Shared queu
 // A booking that stands: not a request, an offer, or one that has ended.
 const live = (j: WorkshopJob) => j.bookingState === 'scheduled' || j.bookingState === 'reschedule_requested';
 const inShop = (j: WorkshopJob) => j.custodyState === 'in_shop';
-const byTime = (a: WorkshopJob, b: WorkshopJob) =>
-  a.jobDate.localeCompare(b.jobDate) || (a.startTime ? (b.startTime ? a.startTime.localeCompare(b.startTime) : -1) : b.startTime ? 1 : 0);
+// A job over several days is read from today's own day, as the diary draws it:
+// its time and its mechanic (fresh review, 21 Oct).
+const todayPart = (j: WorkshopJob, today: string) => j.parts?.find((p) => p.date === today);
+const startOf = (j: WorkshopJob, today: string) => todayPart(j, today)?.startTime ?? (j.jobDate === today ? j.startTime : null) ?? null;
+const mechanicOf = (j: WorkshopJob, today: string) => { const p = todayPart(j, today); return p ? p.mechanicId : j.mechanicId; };
+const bookedToday = (j: WorkshopJob, today: string) => j.jobDate === today || Boolean(todayPart(j, today));
 
 /** Due to be booked in: no more than an hour away, or past; a drop-off is due all day. */
-function due(j: WorkshopJob, now: Date): boolean {
-  if (!j.startTime) return true;
-  return toMinutes(j.startTime) - (now.getHours() * 60 + now.getMinutes()) <= 60;
+function due(start: string | null, now: Date): boolean {
+  if (!start) return true;
+  return toMinutes(start) - (now.getHours() * 60 + now.getMinutes()) <= 60;
 }
 
-function useIsPhone(): boolean {
-  const query = '(max-width: 767px)';
+function useMedia(query: string): boolean {
   return useSyncExternalStore(
     (onChange) => {
       const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
@@ -38,6 +42,16 @@ function useIsPhone(): boolean {
     },
     () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false),
   );
+}
+
+/** The time, moving on by itself each minute, so "due" and today keep up on a page left open. */
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
 }
 
 function Figure({ id, label, value, note }: { id: string; label: string; value: string; note: string }) {
@@ -59,10 +73,13 @@ function Custody({ job }: { job: WorkshopJob }) {
 
 export function OverviewPage() {
   const queryClient = useQueryClient();
-  const isPhone = useIsPhone();
-  const now = new Date();
+  const isPhone = useMedia('(max-width: 767px)');
+  // A touch screen gets 44px tabs and buttons, as the diary's (decision 68).
+  const touch = useMedia('(pointer: coarse)') || isPhone;
+  const now = useNow();
   const today = todayIso(now);
   const [tab, setTab] = useState<Tab>('arrivals');
+  const arrivalsTab = useRef<HTMLButtonElement>(null);
   const [refused, setRefused] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   // Today's jobs, and every bike in the shop whatever its days (a ready bike
@@ -73,12 +90,14 @@ export function OverviewPage() {
 
   const jobs = new Map<number, WorkshopJob>();
   for (const j of [...(todays.data ?? []), ...(kept.data ?? [])]) jobs.set(j.id, j);
-  const all = [...jobs.values()].sort(byTime);
-  const expectedToday = all.filter((j) => live(j) && j.jobDate === today);
+  const sortKey = (j: WorkshopJob) => `${bookedToday(j, today) ? today : j.jobDate} ${startOf(j, today) ?? j.startTime ?? '~'}`;
+  // Compared as plain text, so a job with no time ("~") comes last.
+  const all = [...jobs.values()].sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : sortKey(a) > sortKey(b) ? 1 : 0));
+  const expectedToday = all.filter((j) => live(j) && bookedToday(j, today));
   const inWorkshop = all.filter(inShop);
   const lists: Record<Tab, WorkshopJob[]> = {
     arrivals: expectedToday.filter((j) => j.custodyState === 'expected'),
-    shared: all.filter((j) => live(j) && j.mechanicId === null && j.workState !== 'complete' && (inShop(j) || (j.custodyState === 'expected' && j.jobDate === today))),
+    shared: all.filter((j) => live(j) && mechanicOf(j, today) === null && j.workState !== 'complete' && (inShop(j) || (j.custodyState === 'expected' && bookedToday(j, today)))),
     attention: inWorkshop.filter((j) => j.workState === 'waiting_parts' || j.workState === 'on_hold'),
     ready: inWorkshop.filter((j) => j.workState === 'complete'),
   };
@@ -88,18 +107,26 @@ export function OverviewPage() {
   async function bookIn(j: WorkshopJob) {
     setBusy(j.id);
     setRefused(null);
+    let done = false;
     try {
       await jobAction(j.id, 'book-in', j.version);
+      done = true;
     } catch (err) {
-      setRefused(err instanceof ApiError ? err.message : 'Wheelhouse couldn’t book that in. Try again in a moment.');
+      setRefused(err instanceof ApiError ? jobRefusalText(err) : 'Wheelhouse couldn’t book that in. Try again in a moment.');
     } finally {
       await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
       setBusy(null);
     }
+    // The row has gone from Arrivals: the focus stays on the page, on its tab.
+    if (done) arrivalsTab.current?.focus();
   }
+  const choose = (key: Tab) => { setTab(key); setRefused(null); };
 
   const work = (j: WorkshopJob) => {
-    const extra = j.custodyState === 'expected' && !j.startTime ? 'drop-off'
+    const start = startOf(j, today);
+    // A due arrival keeps its time beside the work, as drawn ("· 11:30 appointment").
+    const extra = j.custodyState === 'expected' && !start ? 'drop-off'
+      : j.custodyState === 'expected' && due(start, now) ? `${start} appointment`
       : j.workState === 'waiting_parts' ? 'waiting for parts'
       : j.workState === 'on_hold' ? 'on hold' : null;
     return extra ? `${j.title} · ${extra}` : j.title;
@@ -111,24 +138,37 @@ export function OverviewPage() {
   );
   const action = (j: WorkshopJob): ReactNode => {
     if (j.custodyState === 'expected') {
-      return due(j, now)
-        ? <Button size={isPhone ? 'default' : 'sm'} disabled={busy === j.id} aria-label={`Book in ${j.reference}`} onClick={() => void bookIn(j)}>Book in</Button>
-        : <span className="text-[13px] whitespace-nowrap max-md:text-sm"><span className="font-[family-name:var(--wh-font-mono)]">{j.startTime}</span> appointment</span>;
+      const start = startOf(j, today);
+      return due(start, now)
+        ? <Button variant="accent" size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={busy === j.id} aria-label={`Book in ${j.reference}`} onClick={() => void bookIn(j)}>Book in</Button>
+        : <span className="text-[13px] whitespace-nowrap max-md:text-sm"><span className="font-[family-name:var(--wh-font-mono)]">{start}</span> appointment</span>;
     }
-    return <Link to={`${ROUTES.diary}?job=${j.id}`} aria-label={`Open job ${j.reference}`} className="inline-flex min-h-9 items-center rounded-md border border-[var(--wh-input-border)] px-3 text-sm font-semibold max-md:min-h-11">Open job</Link>;
+    return <Link to={`${ROUTES.diary}?job=${j.id}`} aria-label={`Open job ${j.reference}`} className={`inline-flex items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)] ${touch ? 'min-h-11' : 'min-h-8'}`}>Open job</Link>;
   };
+
+  const dateLine = <p className="m-0 text-[15px] text-[var(--wh-muted)] max-md:text-sm">{`${dayLabel(today)} · one shop, one view of the work`}</p>;
+  // Either read failing would make the figures look real when they aren't.
+  if (todays.isError || kept.isError) {
+    return (
+      <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
+        {dateLine}
+        <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load the workshop’s jobs. Try again in a moment.</p>
+        <div><Button className={touch ? 'min-h-11' : undefined} onClick={() => { void todays.refetch(); void kept.refetch(); }}>Try again</Button></div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
-      <p className="m-0 text-[15px] text-[var(--wh-muted)] max-md:text-sm">{`${dayLabel(today)} · one shop, one view of the work`}</p>
+      {dateLine}
       <div className="grid grid-cols-2 gap-3.5 max-md:grid-cols-1 max-md:gap-2.5">
         <Figure id="ov-expected" label="Expected today" value={`${expectedToday.length} ${expectedToday.length === 1 ? 'bike' : 'bikes'}`} note={`${stillToArrive} still to arrive`} />
         <Figure id="ov-in-workshop" label="In the workshop" value={String(inWorkshop.length)} note={`${lists.ready.length} ready to collect`} />
       </div>
       <div role="group" aria-label="Show jobs" className="flex flex-wrap gap-1.5">
         {TABS.map(([key, label]) => (
-          <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}
-            className={`inline-flex items-center rounded-full border px-3.5 text-sm font-semibold ${isPhone ? 'min-h-11' : 'min-h-9'} ${tab === key ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}>
+          <button key={key} ref={key === 'arrivals' ? arrivalsTab : undefined} type="button" aria-pressed={tab === key} onClick={() => choose(key)}
+            className={`inline-flex items-center rounded-full border px-3.5 text-sm font-semibold ${touch ? 'min-h-11' : 'min-h-9'} ${tab === key ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}>
             {`${label} · ${lists[key].length}`}
           </button>
         ))}
