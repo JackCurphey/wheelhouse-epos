@@ -873,6 +873,17 @@ export function register(route) {
     });
   }
 
+  // The job page says it was opened (Jack, 19 Oct, auto-confirm): an online
+  // booking confirmed at once loses its "new, booked online" mark. Any signed-in
+  // staff member; no version (seeing a job is not an edit), and doing it again
+  // changes nothing. A GET never changes data, so this is its own POST.
+  // screens: job-page, diary
+  route('POST', '/api/workshop-jobs/:id/seen', async (req, res, params) => {
+    const { changes } = await db.prepare('UPDATE workshop_jobs SET online_unseen = 0 WHERE id = ?').run(Number(params.id));
+    if (!changes) return notFound(res, 'Job not found');
+    res.writeHead(204).end();
+  });
+
   // screens: requests, review
   jobActionRoute('accept', bookingRequest, 'accept');
 

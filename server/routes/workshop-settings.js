@@ -51,6 +51,8 @@ function serializeWorkshopSettings(row) {
     showPricesOnline: row.show_prices_online === 1,
     // "Show who signed off to customers" (mechanic sign-off answer 3; Jack, 18 Oct).
     showSignOffToCustomers: row.show_sign_off_to_customers === 1,
+    // "Confirm bookings automatically", off to start (Jack, 19 Oct, auto-confirm decision 8; migration 050).
+    confirmBookingsAutomatically: row.confirm_bookings_automatically === 1,
     // The shop's additional note on the confirmation, '' for none (Jack, 19 Oct; migration 045).
     confirmationNote: row.confirmation_note ?? '',
     // null: this shop has no terms of its own, so the standard Wheelhouse
@@ -396,6 +398,8 @@ export function register(route) {
       ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
     const showSignOff = body.showSignOffToCustomers === undefined
       ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
+    const confirmAutomatically = body.confirmBookingsAutomatically === undefined
+      ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
 
     // The additional note on the confirmation: trimmed, up to 300 characters;
     // empty shows none (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
@@ -428,12 +432,12 @@ export function register(route) {
          dropoff_window_start = ?,
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
-         show_prices_online = ?, show_sign_off_to_customers = ?, booking_terms = ?, confirmation_note = ?, updated_at = ? WHERE id = ?`
+         show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
-          showPricesOnline, showSignOff, bookingTerms, confirmationNote, nowIso(), existing.id);
+          showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });

@@ -13,6 +13,8 @@ import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
 import { currentCustomerSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
+import { queueMessage, whyNotQueued } from '../messaging/engine.js';
+import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
@@ -415,6 +417,26 @@ async function withdrawRequest(job) {
   await syncJobHold(job.id);
 }
 
+// Booking confirmed, for an online booking confirmed at once (Jack, 19 Oct,
+// auto-confirm; pretend for now, so the link reads "[link]"). The link is the
+// one the booking reply carries, made absolute with APP_PUBLIC_URL only: this
+// route needs no sign-in, so the Host a request claims must never reach a
+// customer's message (fresh review). Without it, a real message isn't queued.
+async function sendBookedConfirmed(jobId, shopId, privateLink) {
+  try {
+    const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
+    if (await whyNotQueued('booking_confirmed', customerId)) return;
+    const link = await messageLink(async () => {
+      if (!process.env.APP_PUBLIC_URL) throw new Error('APP_PUBLIC_URL is needed for a customer message sent from a public route');
+      return `${process.env.APP_PUBLIC_URL}${privateLink}`;
+    });
+    const { vars } = await bookingMessageVars(jobId, shopId, link, 'booking_confirmed');
+    await queueMessage({ customerId, jobId, key: 'booking_confirmed', vars });
+  } catch (err) {
+    console.error(`Messages: booking_confirmed for job ${jobId} couldn't be queued`, err);
+  }
+}
+
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
     const ip = clientIp(req);
@@ -505,7 +527,7 @@ export function register(route) {
   // screens: service, service-list
   // Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
   route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
-    const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
+    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
       `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
@@ -528,6 +550,8 @@ export function register(route) {
     sendJson(res, 200, {
       shopName: shop.name,
       showPrices,
+      // Step 4 words its button by it (Jack, 19 Oct, auto-confirm; drawn as bk-details-auto).
+      confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({
@@ -708,7 +732,7 @@ export function register(route) {
     sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
   });
 
-  route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
+  route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params, query, shop) => {
     const ctx = await currentCustomerSession(req);
     const signedIn = ctx && ctx.shop.slug === params.shopSlug;
     let body;
@@ -851,6 +875,7 @@ export function register(route) {
     if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
     // Inside the lock: the time checks (checkCustomerTime), then the writes.
+    let confirmedAtOnce = false;
     const out = await withBookingLock([jobDate], async () => {
       if (requestKey) {
         const replay = await replayBookingRequest(requestKey, params.shopSlug);
@@ -890,8 +915,14 @@ export function register(route) {
 
       // Never trusts a client-sent customerId or status - always the resolved
       // customer (signed-in, or a new guest row each time, see
-      // resolveGuestCustomer), always 'pending' until a mechanic reviews it,
-      // same principle as createSale() never trusting a client-sent total.
+      // resolveGuestCustomer), 'pending' until a mechanic reviews it, same
+      // principle as createSale() never trusting a client-sent total. With the
+      // shop's "Confirm bookings automatically" on, a booking that has passed
+      // every check above is saved confirmed instead, where accepting would put
+      // it, and marked new until staff open it (Jack, 19 Oct, auto-confirm).
+      // Read here, inside the lock, so a switch mid-booking can't half-apply.
+      const autoSetting = await db.prepare('SELECT confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
+      confirmedAtOnce = autoSetting?.confirm_bookings_automatically === 1;
       const linkCode = requestKey ? requestKey.linkCode : newLinkCode();
       let jobId;
       try {
@@ -907,7 +938,8 @@ export function register(route) {
           jobDate,
           startTime: times.startTime,
           endTime: times.endTime,
-          bookingState: 'pending',
+          bookingState: confirmedAtOnce ? 'scheduled' : 'pending',
+          onlineUnseen: confirmedAtOnce,
           workState: 'not_started',
           custodyState: 'expected',
           notes: bookingNotes({ bikeNote: bikeNoteValue, questionAnswers, description }),
@@ -970,6 +1002,11 @@ export function register(route) {
         },
       };
     });
+    // After the commit, as accepting sends it: Booking confirmed for a booking
+    // confirmed at once, carrying the link the customer has just been given
+    // (never a new one, which would end theirs). One that can't be queued is
+    // logged; the booking stands.
+    if (out.status === 201 && confirmedAtOnce) await sendBookedConfirmed(out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
   });
 
