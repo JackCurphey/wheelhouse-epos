@@ -534,3 +534,11 @@ for (const back of [false, true]) {
   });
 }
 
+
+// Confirming bookings automatically (Jack, 19 Oct; drawn as bk-details-auto):
+// when the shop confirms automatically, the button says so.
+test('when the shop confirms automatically, the button reads Confirm booking', async () => {
+  const { ui } = await open({ services: { ...SERVICES, confirmsAutomatically: true } });
+  assert.ok(ui.getByRole('button', { name: 'Confirm booking' }));
+  assert.ok(ui.queryByRole('button', { name: 'Request booking' }) === null);
+});

@@ -20,6 +20,8 @@ export type PortalFullService = PortalService & { includes: { id: number; name: 
 export type ServicesResponse = {
   shopName: string;
   showPrices: boolean;
+  /** Step 4's button: a booking that fits is confirmed at once (auto-confirm). */
+  confirmsAutomatically?: boolean;
   full: PortalFullService[];
   categories: { id: number; name: string; services: PortalService[] }[];
   uncategorised: PortalService[];
