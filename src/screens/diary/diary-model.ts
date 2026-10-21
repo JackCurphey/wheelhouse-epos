@@ -79,3 +79,6 @@ export function cardDay(item: WaitingItem): string | null | undefined {
   if (to && item.jobDate && weekOf(to)[0] !== weekOf(item.jobDate)[0]) return to;
   return item.jobDate;
 }
+
+/** One column of the grid: a day of the week, or a mechanic in the Day view. */
+export type Col = { key: string; label: string; date: string; mechanicId: number | null; all?: boolean };
