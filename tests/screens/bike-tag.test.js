@@ -148,3 +148,12 @@ test('the tag is 54 mm wide and wraps long words, for a 62 mm label', async () =
   assert.match(tag.className, /w-\[54mm\]/);
   assert.match(tag.className, /break-words/);
 });
+
+// The drawn tag's bike carries its colour ("Trek Domane AL 3 · green"), 21 Oct.
+test('the tag names the bike’s colour when the job has one', async () => {
+  const { ui, fireEvent } = await openJob({ custodyState: 'in_shop', bikeColour: 'green' });
+  let printed = null;
+  window.print = () => { printed = document.getElementById('wh-print')?.textContent ?? null; };
+  fireEvent.click(await ui.findByRole('button', { name: 'Print bike tag' }));
+  assert.equal(printed, 'WH-1042Maya PatelTrek Domane AL 3 · green');
+});

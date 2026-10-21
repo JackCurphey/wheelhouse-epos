@@ -45,6 +45,16 @@ test('staff see free minutes, windows, block reasons and clashes', async () => {
   assert.deepEqual(day.clashes, [{ jobId, blockId: lunch.id }]);
 });
 
+// Planned effort on the Workshop Overview (Jack, 21 Oct): the day's booked
+// work inside working time, and the time the mechanics have.
+test('each day carries the work planned and the time available', async () => {
+  const day = (await as(`/api/workshop-capacity?start=${MONDAY}&end=${MONDAY}`)).body.days[0];
+  // The 12:45-13:15 job above, less the quarter hour inside Sam's lunch;
+  // Sam's day 09:00-18:00 less the half-hour lunch.
+  assert.equal(day.plannedMinutes, 15);
+  assert.equal(day.availableMinutes, 510);
+});
+
 test('a shop closure shows as closed, with its reason', async () => {
   await as('/api/workshop-unavailability', {
     method: 'POST', body: { kind: 'dates', mechanicId: null, startDate: '2026-09-08', endDate: '2026-09-08', reason: 'Training' },
