@@ -97,7 +97,7 @@ test('the server rejects an edit to a complete job', async () => {
   }
 });
 
-test('reopening a complete job is still allowed', async () => {
+test('reopening a complete job is still allowed, by the reopen action', async () => {
   const { cookie, shop, mechanicId } = await newShop();
   try {
     const created = await postJob(cookie, {
@@ -106,9 +106,9 @@ test('reopening a complete job is still allowed', async () => {
     });
     assert.equal(created.status, 201, `setup failed: ${JSON.stringify(created.body)}`);
 
-    const reopened = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`, {
-      method: 'PUT',
-      body: { status: 'scheduled' },
+    const reopened = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}/reopen-work`, {
+      method: 'POST',
+      body: { version: created.body.version },
     });
     assert.equal(reopened.status, 200, `reopening was rejected: ${JSON.stringify(reopened.body)}`);
     // Asserting the 200 alone let this pass even when the PUT wrote nothing at

@@ -104,6 +104,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/label-settings', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
     const existing = await getOrCreateLabelSettings();
     const body = await readJsonBody(req);
     const widthMm = body.widthMm !== undefined ? Number(body.widthMm) : Number(existing.width_mm);
@@ -125,6 +126,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/shop-theme', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
     const existing = await getOrCreateShopTheme();
     const body = await readJsonBody(req);
     const preset = String(body.preset || '');

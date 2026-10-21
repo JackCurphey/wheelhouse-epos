@@ -141,15 +141,15 @@ Staff SHALL be able to change a job's title, date, times, notes, customer, bike,
 - **THEN** the change is saved
 
 ### Requirement: Finished work is frozen against edits
-When a job's work is finished, staff SHALL NOT be able to change its title, date, times, notes, customer, bike or mechanic. Changing its old-app status SHALL stay open, because that is how the old app reopens a job; reopening this way SHALL set the work to not started. The freeze SHALL NOT cover the job's later days, its files, or making a new private link.
+When a job's work is finished, staff SHALL NOT be able to change its title, date, times, notes, customer, bike or mechanic. A job is reopened with the reopen-work action, never by saving it. The freeze SHALL NOT cover the job's later days, its files, or making a new private link.
 
 #### Scenario: Editing a finished job
 - **WHEN** staff try to change the title or the notes of a job whose work is finished
 - **THEN** it is refused with "This job is complete - reopen it before making changes."
 
-#### Scenario: Reopening a finished job from the old app
-- **WHEN** staff set a finished job's old-app status back to "scheduled"
-- **THEN** the job reads as "scheduled" when read back, with the work not started
+#### Scenario: Reopening a finished job
+- **WHEN** staff reopen a finished job's work with the reopen-work action
+- **THEN** the job reads as "scheduled" when read back, with the work in progress
 
 #### Scenario: Adding a day to a finished job
 - **WHEN** staff add another day to a job whose work is finished
@@ -439,31 +439,31 @@ For screens not yet replaced, every job SHALL also show one of five old statuses
 - **WHEN** any combination of booking, bike and work states is worked out
 - **THEN** the old status is one of pending, scheduled, waiting_parts, on_hold, complete
 
-### Requirement: The old app can still set a job's status on create and save
-Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save whose status matches the status the job already reads SHALL change none of the job's states. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop. While a customer's change request is waiting, an old status whose booking is scheduled (scheduled, waiting_parts, on_hold or complete) SHALL leave the booking and the request as they are, unless the save puts the job on exactly the requested day, start and mechanic, which SHALL accept the request; "pending" SHALL end the request.
+### Requirement: Creating a job may carry an old status; saving one may not
+Creating a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A create with waiting_parts or on_hold SHALL put the bike in the shop. A save SHALL NOT carry a status: it is refused with a message naming the job's own actions, so a save can never skip the move rules or the mechanic's sign-off. While a customer's change request is waiting, a save SHALL leave the booking and the request as they are, unless it puts the job on exactly the requested day, start and mechanic, which SHALL accept the request.
 
 #### Scenario: Saving a job with a change request waiting
-- **WHEN** a customer's change request is waiting and staff save the job from the old form, which sends the status "scheduled", without moving it to the requested time
+- **WHEN** a customer's change request is waiting and staff save the job without moving it to the requested time
 - **THEN** the request stays waiting and the booking is unchanged
 
 #### Scenario: Dropping a job onto the time the customer asked for
-- **WHEN** a customer's change request is waiting and a save puts the job on the requested day, start and mechanic, with no status or "scheduled"
+- **WHEN** a customer's change request is waiting and a save puts the job on the requested day, start and mechanic
 - **THEN** the request is accepted and the booking is scheduled
 
 #### Scenario: A cancelled booking saved as scheduled
-- **WHEN** staff save a cancelled job with the old status "scheduled"
-- **THEN** the booking is scheduled again
+- **WHEN** staff save a cancelled job with the status "scheduled"
+- **THEN** it is refused and the booking stays cancelled
 
-#### Scenario: Saving work in progress from the old form
-- **WHEN** a job's work is in progress and staff save it from the old form, which sends the status "scheduled" it already reads
-- **THEN** the work stays in progress and the other changes are saved
+#### Scenario: Saving work in progress
+- **WHEN** a job's work is in progress and staff save it with a new note
+- **THEN** the work stays in progress and the note is saved
 
-#### Scenario: Changing the status from the old form
-- **WHEN** a job's work is in progress and staff save it with the status "on_hold"
-- **THEN** the work is on hold
+#### Scenario: Finishing by saving a status
+- **WHEN** a job's work is in progress and staff save it with the status "complete"
+- **THEN** it is refused, the message names finishing, and the work stays in progress with no sign-off
 
-#### Scenario: An unknown status
-- **WHEN** a create or save sends a status that is not one of the five
+#### Scenario: An unknown status on create
+- **WHEN** a create sends a status that is not one of the five
 - **THEN** it is refused with "status must be one of: pending, scheduled, waiting_parts, on_hold, complete"
 
 ### Requirement: The job page opens from the diary and shows where the job is
@@ -705,7 +705,7 @@ Each sign-off SHALL keep the mechanic's name as it was when they signed, so dele
 - **THEN** the delete goes through, and the job still shows "Signed off by Jo Taylor"
 
 ### Requirement: Paying for a job records its sign-off, and never refuses over it
-Paying a job's order that finishes its work SHALL record the sign-off sent with the payment (answer 5). A sign-off that is no longer valid SHALL NOT refuse the payment: the work finishes unsigned and the reply warns. A payment sent with no sign-off finishes the work unsigned, as before.
+Paying a job's order that finishes its work SHALL record the sign-off sent with the payment (answer 5). A sign-off that is no longer valid SHALL NOT refuse the payment: the work finishes unsigned and the reply warns. A payment that doesn't answer the sign-off question at all SHALL be refused with `use_till`, and nothing sold: only the old app sends none, and it never takes a job's payment (Jack, 21 Oct, `docs/decisions/2026-10-21-old-app-placeholder.md`).
 
 #### Scenario: Signed at the till
 - **WHEN** WH-1042, in progress, is paid with Alex Morgan signing off
@@ -714,6 +714,10 @@ Paying a job's order that finishes its work SHALL record the sign-off sent with 
 #### Scenario: The mechanic was made inactive meanwhile
 - **WHEN** the payment names a mechanic who is no longer active
 - **THEN** the sale stands, the work is finished unsigned, and the reply warns "Paid and finished, but not signed off"
+
+#### Scenario: No answer to the sign-off question
+- **WHEN** a job's order is paid with no answer to who signed it off, its work in progress or finished
+- **THEN** it is refused with `use_till`, nothing is sold, and the job is as it was
 
 ### Requirement: A shop chooses whether customers see who signed off
 A shop setting, "Show who signed off to customers", SHALL start off (Jack, 16 Oct, answer 3), and SHALL be changed in Settings › Workshop › Mechanics. While it is off, customers SHALL NOT see who signed a job off.
@@ -743,3 +747,14 @@ A booking request SHALL be able to move to a time the shop suggests, as an "offe
 #### Scenario: Accepting
 - **WHEN** Sam accepts the time
 - **THEN** the booking is confirmed at Friday 18 September, 12:00
+
+### Requirement: Staff print a bike tag once the bike is in
+Once a job's bike is in the shop, the job page SHALL offer "Print bike tag". Pressing it SHALL print only the tag, on the computer's own printer. The tag SHALL show the job number, a Code 128 barcode of it, the customer and the bike.
+
+#### Scenario: Printing the tag
+- **WHEN** staff press Print bike tag on a booked-in job
+- **THEN** the print box opens with only the tag: the job number, its barcode, the customer's name and the bike
+
+#### Scenario: No tag before the bike arrives or after it leaves
+- **WHEN** a job's bike is expected or has been collected
+- **THEN** the job page offers no Print bike tag

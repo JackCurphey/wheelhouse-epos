@@ -111,25 +111,26 @@ test('reopening the work clears the sign-off; the history keeps it, marked clear
   }
 });
 
-test('the old form reopening finished work clears the sign-off too', async () => {
+test('saving a finished job with a status cannot reopen it or clear the sign-off', async () => {
   const { shop, req, alex, job } = await shopWithJob();
   try {
     const done = (await req(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: alex } })).body;
     const res = await req(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: 'scheduled', version: done.version } });
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.workState, 'not_started');
-    assert.equal(res.body.signedOffBy, null);
-    assert.ok((await history(shop.id, job.id))[0].cleared_at !== null);
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    const after = (await req(`/api/workshop-jobs/${job.id}`)).body;
+    assert.equal(after.workState, 'complete');
+    assert.equal(after.signedOffBy, alex);
+    assert.equal((await history(shop.id, job.id))[0].cleared_at, null);
   } finally {
     await deleteTestShop(shop.id);
   }
 });
 
-test('an old-form save that leaves finished work finished keeps the sign-off', async () => {
+test('a plain save that leaves finished work finished keeps the sign-off', async () => {
   const { shop, req, alex, job } = await shopWithJob();
   try {
     const done = (await req(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: alex } })).body;
-    const res = await req(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: done.status, version: done.version } });
+    const res = await req(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { version: done.version } });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.signedOffBy, alex);
     assert.equal((await history(shop.id, job.id))[0].cleared_at, null);

@@ -8,6 +8,7 @@ import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { resolveWorkingDays } from '../capacity.js';
 import { parseWorkingDays } from '../workshop/jobs.js';
+import { ownerOnly } from '../lib/owner-only.js';
 import { currentSession } from '../lib/session.js';
 import { TeamError, attachLogin, attachRoles, createTeamMember, deactivateLoginOnly, deactivateTeamMember, listTeam, reactivateLoginOnly, reactivateTeamMember } from '../team.js';
 
@@ -144,6 +145,7 @@ export function register(route) {
   // with how removing a customer/bike/product never destroys sale/job history.
   // Till sales are unassigned the same way; staff check-ins are deleted.
   route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Employee not found');
@@ -183,6 +185,7 @@ export function register(route) {
   // /api/team routes above for creating a person, and for deactivate/
   // reactivate, which also has to cascade to their login when they have one.
   route('PUT', '/api/employees/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Employee not found');

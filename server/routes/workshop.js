@@ -618,25 +618,12 @@ export function register(route) {
       ? Math.max(0, timeToMinutes(times.endTime) - timeToMinutes(times.startTime))
       : planned.value;
 
-    // The staff diary still changes a job's state by PUTting a legacy status
-    // (public/app.js approveJob() and the complete/reopen toggle), and will until
-    // Phase 4 replaces it. This translates that into the state columns.
-    //
-    // Deliberately NOT routed through applyEvent: some of its moves are not
-    // single machine events, and this is the unguarded legacy path - the reason
-    // the action endpoints exist beside it rather than instead of it. It dies
-    // with public/app.js. The old diary now sends the version it last read
-    // (staff diary piece), checked above when present, and every save through
-    // this route bumps it - so it does take part in the optimistic-concurrency
-    // contract even though it isn't routed through applyEvent.
-    //
-    // custody_state is left alone. The old status never expressed custody (Phase
-    // 1: readLegacyStatus('complete') returns custody: null), so deriving one
-    // here would reset a bike that is in the shop back to 'expected'.
-    let requestedStatus = null;
+    // A job's state moves through the action routes (state machines, version,
+    // sign-off), never by saving it. The old form's `status` field wrote the
+    // state columns directly - finishing without a sign-off, un-cancelling a
+    // booking - and nothing sends it any more, so it is refused rather than obeyed.
     if (body.status !== undefined) {
-      requestedStatus = resolveJobStatus(body.status, null);
-      if (requestedStatus === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+      return badRequest(res, "A job's status can't be changed by saving it. Use the job's own actions instead: book in, start, hold, finish, reopen or cancel.");
     }
 
     // A complete job is a record of work already done, so its details are
@@ -668,26 +655,11 @@ export function register(route) {
     try {
       out = await withBookingLock([existing.job_date, jobDate, existing.requested_job_date].filter(Boolean), async () => {
         // A customer's change request (piece 12), read again under the lock.
-        // The old diary knows nothing of requests and sends 'scheduled' for one,
-        // so an ordinary save keeps it; dropping the job onto exactly the
-        // requested time answers it - the change is accepted; a status that
-        // takes the job anywhere else ends it. Request columns left on a job
+        // An ordinary save keeps it; dropping the job onto exactly the requested
+        // time answers it - the change is accepted. Request columns left on a job
         // that is no longer a request are cleared on any save.
         const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
         if (body.version !== undefined && current && current.version !== body.version) return staleRefusal;
-        // The old form sends its dropdown's status on every Save, and the old
-        // statuses have no "in progress": a status the job already reads changes
-        // nothing, or every Save would reset work in progress (Jack, 8 Oct).
-        // Compared with the job as read under the lock (Mark's review on #189).
-        let legacyStates = null;
-        if (requestedStatus !== null && requestedStatus !== current?.status) {
-          const { booking, work: workState } = readLegacyStatus(requestedStatus);
-          legacyStates = { booking, workState };
-        }
-        // An offer waits for the customer: the old form can't confirm it by
-        // saving a status (Jack, 20 Oct, offer another time).
-        if (legacyStates && current?.booking_state === 'offered') legacyStates = { ...legacyStates, booking: null };
-
         const slotError = await checkJobSlot({
           jobDate,
           startTime: times.startTime,
@@ -698,19 +670,15 @@ export function register(route) {
         if (slotError) return refusal(slotError.error);
 
         const request = current ? requestedOf(current) : null;
-        let bookingState = legacyStates?.booking ?? null;
+        let bookingState = null;
         let clearRequest = Boolean(current?.requested_job_date) && !request;
         if (request) {
           // Same day, start and mechanic answers the request whatever the
           // length (staff diary piece): the drop is the staff member's answer.
           const onRequested = jobDate === request.jobDate && times.startTime === request.startTime
             && mechResolved.mechanicId === request.mechanicId;
-          if (onRequested && (bookingState === null || bookingState === 'scheduled')) {
+          if (onRequested) {
             bookingState = 'scheduled';
-            clearRequest = true;
-          } else if (bookingState === 'scheduled') {
-            bookingState = null;
-          } else if (bookingState !== null) {
             clearRequest = true;
           }
         }
@@ -718,7 +686,7 @@ export function register(route) {
         await db.prepare(
           `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
            version = version + 1,
-           booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
+           booking_state = COALESCE(?, booking_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
          WHERE id = ?`
         ).run(
           title,
@@ -732,11 +700,8 @@ export function register(route) {
           plannedMinutes,
           nowIso(),
           bookingState,
-          legacyStates?.workState ?? null,
           id
         );
-        // The old form's "Reopen job" takes finished work back: its sign-off goes (answer 4).
-        if (current?.work_state === 'complete' && legacyStates?.workState && legacyStates.workState !== 'complete') await clearSignOff(id);
         await syncJobHold(id);
         const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
         return { status: 200, body: serializeWorkshopJob(row) };
@@ -779,17 +744,7 @@ export function register(route) {
         declineMessage = body.message.trim();
         if (declineMessage.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
       }
-      // A customer's change request is answered with accept-change or
-      // decline-change (piece 12): plain accept/decline would return the job to
-      // scheduled without moving it or telling the customer.
-      if (machine === bookingRequest && (event === 'accept' || event === 'decline')) {
-        const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
-        if (current && requestedOf(current)) {
-          return sendJson(res, 409, {
-            error: 'This booking has a change request from the customer - accept or decline the change instead', code: 'illegal',
-          });
-        }
-      }
+      const answeringRequest = machine === bookingRequest && (event === 'accept' || event === 'decline');
       // Finishing the work needs a mechanic to sign it off, and reopening it
       // clears the sign-off (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
       // answers 1 and 4), in the same transaction as the move.
@@ -809,10 +764,10 @@ export function register(route) {
         if (!chosen.ok) return badRequest(res, 'Mechanic not found or inactive');
         acceptMechanic = chosen.mechanicId;
       }
-      // A booking message answers a customer's request or an offered time,
-      // not a reschedule staff asked for themselves (fresh review).
-      const answering = machine === bookingRequest && (event === 'accept' || event === 'decline')
-        ? (await db.prepare('SELECT booking_state FROM workshop_jobs WHERE id = ?').get(id))?.booking_state : null;
+      // A booking message answers a customer's request or an offered time, not a
+      // reschedule staff asked for themselves (fresh review): the state it
+      // answered, read under the lock.
+      let answering = null;
       let result;
       let readyMessage;
       if (signing || unsigning) {
@@ -835,25 +790,62 @@ export function register(route) {
           await db.exec('ROLLBACK');
           throw err;
         }
-      } else if (acceptMechanic !== undefined) {
-        // Under the job's day lock (re-read if it moves meanwhile): the version
-        // first, then the mechanic free at the booked time, then the accept,
-        // the move and its held time, together (as the job's save does).
+      } else if (machine === bookingRequest) {
+        // Under the job's day lock (re-read if it moves meanwhile): the event,
+        // the clearing of any change request, who cancelled and the decline
+        // message, and the job's held time all commit together or not at all.
+        // A customer's change request is answered with accept-change or
+        // decline-change (piece 12): plain accept/decline would return the job to
+        // scheduled without moving it or telling the customer. With a chosen
+        // mechanic: the version first, then the mechanic free at the booked time,
+        // then the accept and the move together (as the job's save does).
         try {
           result = await withJobBookingLock(id, [], async (current) => {
-            if (current.version !== body.version) return { refused: staleRefusal };
-            const moving = current.mechanic_id !== acceptMechanic;
-            if (moving) {
-              const slotError = await checkJobSlot({
-                jobDate: current.job_date, startTime: current.start_time, endTime: current.end_time, mechanicId: acceptMechanic, ignoreJobId: id,
-              });
-              if (slotError) return { refused: refusal(slotError.error) };
+            if (answeringRequest && requestedOf(current)) {
+              return { refused: { status: 409, body: {
+                error: 'This booking has a change request from the customer - accept or decline the change instead', code: 'illegal',
+              } } };
             }
-            const accepted = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
-            if (!accepted.ok || !moving) return accepted;
-            await db.prepare('UPDATE workshop_jobs SET mechanic_id = ?, version = version + 1, updated_at = now() WHERE id = ?').run(acceptMechanic, id);
+            answering = answeringRequest ? current.booking_state : null;
+            let moving = false;
+            if (acceptMechanic !== undefined) {
+              if (current.version !== body.version) return { refused: staleRefusal };
+              moving = current.mechanic_id !== acceptMechanic;
+              if (moving) {
+                const slotError = await checkJobSlot({
+                  jobDate: current.job_date, startTime: current.start_time, endTime: current.end_time, mechanicId: acceptMechanic, ignoreJobId: id,
+                });
+                if (slotError) return { refused: refusal(slotError.error) };
+              }
+            }
+            const applied = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+            if (!applied.ok) return applied;
+            if (moving) {
+              await db.prepare('UPDATE workshop_jobs SET mechanic_id = ?, version = version + 1, updated_at = now() WHERE id = ?').run(acceptMechanic, id);
+            }
+            // No staff booking event keeps a customer's request (accept and decline
+            // of one are refused above), so any request columns left on the job go -
+            // a staff request_reschedule must never hold a time nobody checked
+            // (piece 12). The job is locked, so nothing wrote it since the event.
+            await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST} WHERE id = ?`).run(id);
+            if (event === 'decline') {
+              await db.prepare('UPDATE workshop_jobs SET decline_message = ? WHERE id = ?').run(declineMessage || null, id);
+            }
+            // A staff cancellation never shows in "Waiting for you" (piece 12), and
+            // the link no longer speaks of a declined change.
+            if (event === 'cancel') {
+              await db.prepare(
+                "UPDATE workshop_jobs SET cancelled_by = 'staff', cancelled_at = now(), change_declined_at = NULL WHERE id = ?"
+              ).run(id);
+            }
+            // A hold that outlives its booking is capacity the diary is still promising
+            // away, released in the same request rather than on a timer - but a
+            // reschedule declined back onto a still-live booking (scheduled) must keep
+            // its hold. syncJobHold decides from the job's current state, not from
+            // which event fired, so it releases only when the job is no longer live
+            // and otherwise keeps (or realigns) the one hold a live job holds.
             await syncJobHold(id);
-            return { ...accepted, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
+            return { ...applied, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
           });
         } catch (err) {
           if (err.code !== '23505') throw err;
@@ -871,34 +863,11 @@ export function register(route) {
         // help. The message is for people and may be reworded; the code may not.
         return sendJson(res, 409, { error: result.message, code: result.code });
       }
-      if (machine === bookingRequest) {
-        // No staff booking event keeps a customer's request (accept and decline
-        // of one are refused above), so any request columns left on the job go -
-        // a staff request_reschedule must never hold a time nobody checked
-        // (piece 12). Only if nothing has written the job since this event: a
-        // customer's request made after it is theirs to keep.
-        await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST} WHERE id = ? AND version = ?`).run(id, result.job.version);
-      }
-      if (machine === bookingRequest && event === 'decline') {
-        await db.prepare('UPDATE workshop_jobs SET decline_message = ? WHERE id = ?').run(declineMessage || null, id);
-      }
+      // After the commit: a message that can't be queued is logged, not an error
+      // (the answer it follows has been made and stands).
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');
-      // A staff cancellation never shows in "Waiting for you" (piece 12), and
-      // the link no longer speaks of a declined change.
-      if (machine === bookingRequest && event === 'cancel') {
-        await db.prepare(
-          "UPDATE workshop_jobs SET cancelled_by = 'staff', cancelled_at = now(), change_declined_at = NULL WHERE id = ?"
-        ).run(id);
-      }
-      // A hold that outlives its booking is capacity the diary is still promising
-      // away, released in the same request rather than on a timer - but a
-      // reschedule declined back onto a still-live booking (scheduled) must keep
-      // its hold. syncJobHold decides from the job's current state, not from
-      // which event fired, so it releases only when the job is no longer live
-      // and otherwise keeps (or realigns) the one hold a live job holds.
-      await syncJobHold(id);
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
       sendJson(res, 200, { ...serializeWorkshopJob(row), ...(readyMessage ? { readyMessage } : {}), ...(bookingMessage ? { bookingMessage } : {}) });
     });
@@ -1090,10 +1059,12 @@ export function register(route) {
     sendQuoteResult(res, await createQuoteRevision({ jobId: Number(params.id), lines: body.lines }), 201);
   });
 
-  // Send (journey 4 decision 5): the quote goes to sent, the customer's booking
-  // link is issued afresh (only a hash of the old one is kept, so it can't be
-  // sent again; the old link stops working), and the link goes to them by text.
-  // The answer says whether the text went. The staff app's one-minute Undo
+  // Send (journey 4 decision 5): the quote goes to sent and the message goes to
+  // the customer with their booking link. Once real sending is on that link is
+  // issued afresh (only a hash of the old one is kept; the old link stops
+  // working); while it is pretend, the message says [link] and their link is left
+  // alone. The answer says whether the message went, and carries a link for staff
+  // to hand over only when none did. The staff app's one-minute Undo
   // lives in the app, which calls this only when the minute is up.
   // screens: quote-send
   route('POST', '/api/quotes/:id/send', async (req, res, params, query, afterRelease, shopId) => {
@@ -1101,17 +1072,34 @@ export function register(route) {
     const result = await sendQuoteForApproval({ quoteId: Number(params.id) });
     if (!result.ok) return sendQuoteResult(res, result);
     const jobId = result.quote.workshop_job_id;
-    const link = await issueJobLink(req, jobId, shopId);
-    // Through the messages engine, with no further wait: the panel had its
-    // minute's Undo before calling this (pretend for now; Jack, 20 Oct).
-    const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, link);
+    // The quote is sent and committed. Everything below only tells the customer,
+    // so a fault here is logged and shown to staff as "no message went" - never a
+    // 500 that makes them send a quote that has already gone.
     let message;
-    if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
-    else {
-      const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
-      message = queued.skipped
-        ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
-        : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+    let link = null;
+    try {
+      // The message carries a link the way every other message does: while
+      // sending is pretend it says "[link]" and the customer's own link is left
+      // working (openspec/specs/messages/spec.md).
+      const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+      // Through the messages engine, with no further wait: the panel had its
+      // minute's Undo before calling this (pretend for now; Jack, 20 Oct).
+      const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+      if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
+      else {
+        const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+      // Staff read a link from this reply only when no message went (the quote
+      // panel offers it to copy and hand over). When one did, the link is the
+      // one it carries: a real one, or none while sending is pretend.
+      link = message.status === 'sent' ? (messageLinkText === '[link]' ? null : messageLinkText) : await issueJobLink(req, jobId, shopId);
+    } catch (err) {
+      console.error(`Quote ${result.quote.id} was sent but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The quote is sent, but the message could not be queued. Give the customer their link another way.' };
+      link = await issueJobLink(req, jobId, shopId).catch(() => null);
     }
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
   });
@@ -1141,31 +1129,57 @@ export function register(route) {
     // Jack, 18 Oct (docs/decisions/2026-10-18-attachments-and-delete.md): not
     // while money has been paid on its order or the bike is in the shop. The
     // reply says which, so the job page can say "Settle up first".
-    // Any paid order linked to the job counts (a job can have more than one).
-    const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
-    const inShop = existing.custody_state === 'in_shop';
-    if (paid || inShop) {
-      return sendJson(res, 409, {
-        error: `Settle up first: ${paid && inShop ? 'refund what was paid and hand the bike back' : paid ? 'refund what was paid' : 'hand the bike back'}, then delete.`,
-        code: 'settle_first', paid, inShop,
+    //
+    // The check and every write run in one transaction, under the job's booking
+    // lock and with the job's orders locked first - the same order a payment takes
+    // them (order, then job), so the two cannot deadlock. A payment already in
+    // flight finishes first and the delete then sees it; one that arrives later
+    // finds the order unlinked and pays an order with no job. Without this, a
+    // payment landing between the check and the writes left a paid order cut
+    // loose from a deleted job.
+    let attachments = [];
+    let out;
+    await db.exec('BEGIN');
+    try {
+      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').all(id);
+      out = await withJobBookingLock(id, [], async (job) => {
+        // Any paid order linked to the job counts (a job can have more than one).
+        const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
+        const inShop = job.custody_state === 'in_shop';
+        if (paid || inShop) {
+          return {
+            status: 409,
+            body: {
+              error: `Settle up first: ${paid && inShop ? 'refund what was paid and hand the bike back' : paid ? 'refund what was paid' : 'hand the bike back'}, then delete.`,
+              code: 'settle_first', paid, inShop,
+            },
+          };
+        }
+        // The attachments row is ON DELETE CASCADE, but that only removes the DB
+        // record - the file on disk needs its own cleanup (after the commit) or it
+        // just sits there forever with nothing pointing at it.
+        attachments = await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE workshop_job_id = ?').all(id);
+        await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
+        // The capacity hold references this job, so it has to go first or the delete
+        // fails on the foreign key. Deleted rather than released: a released hold is
+        // a record of a slot the shop gave back, and there is no longer a booking for
+        // it to be a record of.
+        await db.prepare('DELETE FROM workshop_capacity_holds WHERE workshop_job_id = ?').run(id);
+        // Its quotes and print tasks point at it with no cascade, so they go first
+        // too (fresh review: a job with a quote couldn't be deleted at all).
+        await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
+        await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
+        await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
+        await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
+        return undefined;
       });
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
     }
-    // The attachments row is ON DELETE CASCADE, but that only removes the DB
-    // record - the file on disk needs its own cleanup or it just sits there
-    // forever with nothing pointing at it.
-    const attachments = await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE workshop_job_id = ?').all(id);
-    await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
-    // The capacity hold references this job, so it has to go first or the delete
-    // fails on the foreign key. Deleted rather than released: a released hold is
-    // a record of a slot the shop gave back, and there is no longer a booking for
-    // it to be a record of.
-    await db.prepare('DELETE FROM workshop_capacity_holds WHERE workshop_job_id = ?').run(id);
-    // Its quotes and print tasks point at it with no cascade, so they go first
-    // too (fresh review: a job with a quote couldn't be deleted at all).
-    await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
-    await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
-    await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
-    await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
+    if (out?.gone) return notFound(res, 'Job not found');
+    if (out) return sendJson(res, out.status, out.body);
     await Promise.all(attachments.map((a) => unlink(path.join(UPLOADS_DIR, a.storage_key)).catch(() => {})));
     sendJson(res, 200, { ok: true });
   });

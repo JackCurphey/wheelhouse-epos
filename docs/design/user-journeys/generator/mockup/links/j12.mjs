@@ -54,6 +54,7 @@ export default {
   'new-job-entered': NEW_JOB,
   // The job
   // Close goes back to where the job was opened from (third walk, walk-through 9 L1).
+  'job-book-in-print': { ...JOB, 'Print bike tag': go('job-bike-tag') },
   'job-overview': { ...JOB, 'Close, back to the diary': BACK },
   'job-quote': { 'Send quote': go('dq-job-sent') },
   'job-waiting-parts': { 'Mark ready for collection': go('job-finished') },

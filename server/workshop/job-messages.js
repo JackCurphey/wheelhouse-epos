@@ -6,6 +6,7 @@ import { openingHoursFor, modeForDate } from '../capacity.js';
 import { toCapacitySettings, addMinutesToTime, timeToMinutes } from './jobs.js';
 import { formatOpeningHours } from '../messaging/templates.js';
 import { isPretend } from '../messaging/senders/index.js';
+import { computeOrderTotals } from '../lib/sales.js';
 
 /**
  * The link a message carries. While sending is pretend nothing reaches the
@@ -23,7 +24,7 @@ const money = (amount) => `£${Number(amount).toFixed(2)}`;
 export async function jobMessageVars(jobId, shopId, link) {
   const job = await prepare(
     `SELECT w.reference, w.customer_id, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label,
-            d.total AS order_total, d.status AS order_status
+            d.id AS order_id, d.discount AS order_discount, d.status AS order_status
        FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
        LEFT JOIN sale_documents d ON d.workshop_job_id = w.id AND d.kind = 'order' AND d.status <> 'cancelled'
@@ -32,7 +33,15 @@ export async function jobMessageVars(jobId, shopId, link) {
   const { rows: [shop] } = await pool.query('SELECT name FROM shops WHERE id = $1', [shopId]);
   const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   // Paid already, or nothing on the order: "Nothing to pay on collection".
-  const owed = job.order_status === 'converted' || !(Number(job.order_total) > 0) ? 'Nothing' : money(job.order_total);
+  // What the till would charge: the same sum as the amount due (group discount included).
+  let due = 0;
+  if (job.order_id && job.order_status !== 'converted') {
+    const lines = await prepare('SELECT unit_price, qty FROM sale_document_items WHERE document_id = ?').all(job.order_id);
+    due = (await computeOrderTotals({
+      items: lines.map((l) => ({ unitPrice: l.unit_price, qty: l.qty })), discount: job.order_discount, customerId: job.customer_id,
+    })).total;
+  }
+  const owed = due > 0 ? money(due) : 'Nothing';
   return {
     customerId: job.customer_id,
     customerName: job.customer_name,

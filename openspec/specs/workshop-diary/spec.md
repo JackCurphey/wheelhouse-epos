@@ -407,15 +407,15 @@ When an answer from a request pop-up is refused, the pop-up SHALL stay open, say
 - **THEN** the pop-up says "The requested time is no longer free."
 
 ### Requirement: Other ways a booking changes keep or end a customer's request
-A save from the old app's job form SHALL keep a customer's change request and its hold, and keep it in "Waiting for you", whether it resends the confirmed status or sets Waiting for parts, On hold or Complete (the booking stays confirmed). Only saving the old "pending" status SHALL end the request and let its time go. A cancellation by the shop SHALL clear the request and release every hold; a staff reschedule request SHALL never hold a time.
+An ordinary save of a job SHALL keep a customer's change request and its hold, and keep it in "Waiting for you". A save SHALL NOT carry a status, so saving cannot end the request. A cancellation by the shop SHALL clear the request and release every hold; a staff reschedule request SHALL never hold a time.
 
 #### Scenario: An ordinary old-app save
 - **WHEN** staff add a note ([note]) from the old form while a change request waits
 - **THEN** the booking still reads Change requested and is still listed in "Waiting for you"
 
-#### Scenario: Saving the old pending status
-- **WHEN** staff save the status "pending" from the old form while a change request waits
-- **THEN** the request ends and only the booking's own time stays held
+#### Scenario: Saving a status while a change request waits
+- **WHEN** staff save the status "pending" while a change request waits
+- **THEN** the save is refused and the request and both held times stay
 
 #### Scenario: The shop cancels a requested booking
 - **WHEN** staff cancel a booking whose customer asked to move it

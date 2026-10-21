@@ -116,7 +116,7 @@ test('tendering the linked order finishes the work through the machine', async (
 
     const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${orderId}/convert`, {
       method: 'POST',
-      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+      body: { cashierId, cashAmount: 0, cashTendered: 0, signedOffBy: null },
     });
     assert.equal(converted.status, 201, JSON.stringify(converted.body));
 
@@ -146,7 +146,7 @@ test('tendering an order for work that never started is refused, not forced', as
 
     const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
       method: 'POST',
-      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+      body: { cashierId, cashAmount: 0, cashTendered: 0, signedOffBy: null },
     });
     assert.equal(converted.status, 409, JSON.stringify(converted.body));
     assert.match(converted.body.error, /cannot finish a job that is not_started/);
@@ -180,7 +180,7 @@ test('a job on hold or waiting for parts is refused too, and says how to proceed
 
     const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
       method: 'POST',
-      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+      body: { cashierId, cashAmount: 0, cashTendered: 0, signedOffBy: null },
     });
     assert.equal(converted.status, 409, JSON.stringify(converted.body));
     assert.match(converted.body.error, /cannot finish a job that is on_hold/);
@@ -193,7 +193,7 @@ test('a job on hold or waiting for parts is refused too, and says how to proceed
     assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
     const retried = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
       method: 'POST',
-      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+      body: { cashierId, cashAmount: 0, cashTendered: 0, signedOffBy: null },
     });
     assert.equal(retried.status, 201, JSON.stringify(retried.body));
   } finally {
@@ -218,7 +218,7 @@ test('tendering the order for work already finished goes through and leaves the 
 
     const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
       method: 'POST',
-      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+      body: { cashierId, cashAmount: 0, cashTendered: 0, signedOffBy: null },
     });
     assert.equal(converted.status, 201, JSON.stringify(converted.body));
     assert.equal(converted.body.jobWarning, undefined, 'nothing went wrong, so no warning');
@@ -262,7 +262,7 @@ test('paying real money for work already finished goes through and leaves the jo
 
     const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${orderId}/convert`, {
       method: 'POST',
-      body: { cashierId, cashAmount: total, cashTendered: total },
+      body: { cashierId, cashAmount: total, cashTendered: total, signedOffBy: null },
     });
     assert.equal(converted.status, 201, JSON.stringify(converted.body));
     assert.equal(Number(converted.body.total), total, 'the sale is for the order\'s total');
@@ -278,7 +278,7 @@ test('paying real money for work already finished goes through and leaves the jo
 });
 
 // Waits until the server's sale is blocked on this test's row lock: another
-// backend waiting on a lock, running the sale's stock UPDATE, with `ourPid`
+// backend waiting on a lock, running the sale's stock lock or UPDATE, with `ourPid`
 // among the backends blocking it. The same seam as till-sync-api.test.js's
 // deadlock test; here there is no second lock, so no deadlock head start.
 async function waitUntilSaleBlockedBy(ourPid, timeoutMs = 10000) {
@@ -287,7 +287,7 @@ async function waitUntilSaleBlockedBy(ourPid, timeoutMs = 10000) {
     const { rows } = await pool.query(
       `SELECT 1 FROM pg_stat_activity a
         WHERE a.pid <> $1 AND a.wait_event_type = 'Lock'
-          AND a.query LIKE 'UPDATE products SET stock_qty = %'
+          AND (a.query LIKE 'UPDATE products SET stock_qty = %' OR a.query LIKE 'SELECT id FROM products WHERE id IN%')
           AND $1 = ANY(pg_blocking_pids(a.pid))`,
       [ourPid]
     );
@@ -323,7 +323,7 @@ test('work reopened while the payment for finished work goes through: the sale s
         await prepare('UPDATE products SET stock_qty = stock_qty WHERE id = ?').run(productId);
         pending = staffRequest(server.baseUrl, cookie, `/api/sale-documents/${orderId}/convert`, {
           method: 'POST',
-          body: { cashierId, cashAmount: total, cashTendered: total },
+          body: { cashierId, cashAmount: total, cashTendered: total, signedOffBy: null },
         });
         await waitUntilSaleBlockedBy(ourPid);
         reopened = await act(cookie, jobId, 'reopen-work', finished.version);

@@ -33,6 +33,8 @@ export default {
   'new-job-day': into('new-job', 'Workshop day 18, 54', "From Jo's day column: mechanic pre-filled, no customer yet, 'The bike is here now' on"),
   // The job — one page, no tabs (the 7 stages are its situation list)
   'job-overview': keep(15, { sizes: ['desktop', 'tablet', 'phone'] }), // rule 3: own touch layout (Workshop day 3)
+  'job-book-in-print': into('job-overview', 'Bike tag 1', "A printer button beside Message: prints the bike tag through the browser"),
+  'job-bike-tag': into('job-overview', 'Bike tag 1', "The printed tag: job number, barcode, customer, bike"),
   'job-book-in': into('job-overview', 'Workshop day 20', "'Booked in'; 'Bike tag sent' strip with barcode; 'Send quote' and 'Start work'"),
   'job-quote': into('job-overview', 'Workshop day 20', "'Quoting'; new lines pending, 'Proposed' total; 'Send quote'"),
   'job-mechanic': into('job-overview', 'Workshop day 20', "Alex Morgan's view: checklist progress, approved lines; 'Mark ready for collection'"),

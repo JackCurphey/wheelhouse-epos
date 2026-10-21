@@ -3,8 +3,10 @@
 // paying a job's order that finishes its work records the sign-off sent with
 // it. The card is taken before this call, so the payment is never refused
 // over the sign-off: an invalid one finishes the work unsigned, with a warning.
+import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import pg from 'pg';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -62,14 +64,50 @@ test('a sign-off that is no longer valid never refuses the payment: finished uns
   }
 });
 
-test('paying with no sign-off (the old app) finishes the work unsigned, as before', async () => {
+// The old app never takes payment for a workshop job (Jack, 21 Oct,
+// docs/decisions/2026-10-21-old-app-placeholder.md): a job's payment that
+// doesn't answer the sign-off question (only the old app sends none) is
+// refused, nothing is sold, and the job stays as it was.
+test('a job’s payment with no sign-off answer is refused: take it at the till', async () => {
   const { shop, req, job, pay } = await jobInProgress();
   try {
     const paid = await pay();
-    assert.equal(paid.status, 201, JSON.stringify(paid.body));
-    assert.equal(paid.body.jobWarning, undefined);
+    assert.equal(paid.status, 400, JSON.stringify(paid.body));
+    assert.equal(paid.body.code, 'use_till');
+    assert.match(paid.body.error, /Take payment for a workshop job at the till/);
     const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
-    assert.deepEqual([now.workState, now.signedOffBy], ['complete', null]);
+    assert.equal(now.workState, 'in_progress');
+    const order = (await req(`/api/sale-documents/${job.orderId}`)).body;
+    assert.equal(order.status, 'open', 'nothing sold');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Fresh review, 21 Oct: Jack's words are about a finished job, which the
+// route reaches by its own path; the refusal covers it too.
+test('a finished job’s payment with no sign-off answer is refused too', async () => {
+  const { shop, req, alex, job, pay } = await jobInProgress();
+  try {
+    const done = await req(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: alex } });
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    const paid = await pay();
+    assert.equal(paid.status, 400, JSON.stringify(paid.body));
+    assert.equal(paid.body.code, 'use_till');
+    assert.equal((await req(`/api/sale-documents/${job.orderId}`)).body.status, 'open');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('an order with no workshop job still converts with no sign-off answer', async () => {
+  const { shop, req } = await jobInProgress();
+  try {
+    const product = (await req('/api/products', { method: 'POST', body: { name: 'Inner tube', price: 5, sku: `TUBE-${shop.id}`, stockQty: 5 } })).body;
+    const order = (await req('/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ productId: product.id, qty: 1, unitPrice: 5 }] } })).body;
+    const cashier = (await req('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${shop.id}-${Date.now()}@example.test`, password: 'password123' } })).body.employeeId;
+    const paid = await req(`/api/sale-documents/${order.id}/convert`, { method: 'POST', body: { cashAmount: 5, cashTendered: 5, cashierId: cashier } });
+    assert.equal(paid.status, 201, JSON.stringify(paid.body));
   } finally {
     await deleteTestShop(shop.id);
   }
@@ -93,7 +131,7 @@ test('paying for work already signed off keeps that sign-off', async () => {
 
 // Fresh review: the till sends signedOffBy: null when it didn't ask (the work
 // read as finished). If the work was reopened meanwhile, paying finishes it
-// unsigned, and the reply says so; the old app, which sends no key, doesn't warn.
+// unsigned, and the reply says so. A payment with no key at all is refused.
 test('a till that saw finished work, reopened since, gets a warning that nobody signed it off', async () => {
   const { shop, req, job, pay } = await jobInProgress();
   try {
@@ -102,6 +140,37 @@ test('a till that saw finished work, reopened since, gets a warning that nobody 
     assert.equal(paid.body.jobWarning, 'Paid and finished, but not signed off: the work was reopened while the till was open.');
     assert.equal((await req(`/api/workshop-jobs/${job.id}`)).body.signedOffBy, null);
   } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Review, 21 Oct: the sign-off is two writes and the till pays inside one
+// transaction, so a failed second write must leave neither behind and must not
+// take the payment down with it. A trigger that refuses this one job's history
+// row makes the second write fail for real.
+test('a sign-off whose history row cannot be saved leaves no half sign-off, and the payment stands', async () => {
+  const { shop, req, alex, job, pay } = await jobInProgress();
+  // The admin address as the other tests find it, from ADMIN_DATABASE_URL or the
+  // superuser password in .env (Jack's check, 21 Oct: it crashed without the first).
+  const adminUrl = new URL(adminUrlFrom(process.env));
+  adminUrl.pathname = new URL(process.env.DATABASE_URL).pathname;
+  const admin = new pg.Client({ connectionString: adminUrl.href });
+  await admin.connect();
+  const fn = `refuse_sign_off_${job.id}_${shop.id}`;
+  await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.workshop_job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
+  await admin.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON workshop_job_sign_offs FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  try {
+    const paid = await pay({ signedOffBy: alex });
+    assert.equal(paid.status, 201, JSON.stringify(paid.body));
+    assert.match(paid.body.jobWarning, /couldn’t be saved/);
+    const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
+    assert.deepEqual([now.workState, now.signedOffBy, now.signedOffByName], ['complete', null, null], 'no half sign-off on the job');
+    const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
+    assert.equal(order.status, 'converted', 'the payment stands');
+  } finally {
+    await admin.query(`DROP TRIGGER ${fn} ON workshop_job_sign_offs`);
+    await admin.query(`DROP FUNCTION ${fn}()`);
+    await admin.end();
     await deleteTestShop(shop.id);
   }
 });

@@ -9,7 +9,7 @@
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
-  serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, resolveGroupDiscount,
+  serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
 import { work } from '../workshop/state-machines.js';
@@ -361,6 +361,8 @@ export function register(route) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
+    // Nothing is due on an order already paid or cancelled (the wording convert uses).
+    if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
     const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
     // Paying re-checks every line (a retired service or product is refused),
     // so the same check here keeps the till from taking a card payment for a
@@ -376,21 +378,51 @@ export function register(route) {
         throw err;
       }
     }
-    const subtotal = items.reduce((sum, it) => sum + Number(it.unit_price) * it.qty, 0);
-    const group = await resolveGroupDiscount(doc.customer_id, subtotal);
-    const discount = Number(doc.discount) || 0;
-    const total = Math.max(0, subtotal - discount - group.amount);
+    const { subtotal, discount, groupDiscount: group, total } = await computeOrderTotals({
+      items: items.map((it) => ({ unitPrice: it.unit_price, qty: it.qty })), discount: doc.discount, customerId: doc.customer_id,
+    });
     const stock = {};
     for (const it of items) {
       if (!it.product_id) continue;
       const product = await db.prepare('SELECT stock_qty FROM products WHERE id = ?').get(it.product_id);
       if (product) stock[it.product_id] = product.stock_qty;
     }
-    const round = (n) => Math.round(n * 100) / 100;
-    sendJson(res, 200, { subtotal: round(subtotal), discount: round(discount), groupDiscount: group.amount, groupName: group.name, total: round(total), stock });
+    sendJson(res, 200, { subtotal, discount, groupDiscount: group.amount, groupName: group.name, total, stock });
   });
 
+  // Paying an order. The order's row is locked first and held until the sale and
+  // the order's new status commit together, so a second tap, or a second till,
+  // waits and then finds the order already converted: one order, one payment.
+  // (Found in the 21 Oct review: the check, the sale and the status write were
+  // separate, so two quick requests both paid.) createSale's own BEGIN becomes a
+  // savepoint inside this transaction. The reply is sent from afterRelease, which
+  // the dispatcher runs once runWithShop has committed (with DB_TENANT_SCOPE=
+  // transaction that is a later commit than this one), so nobody is told "paid"
+  // about a payment that can still roll back. The job's row is deliberately not
+  // locked here: a reopen during payment is a decided case (the sale stands and
+  // the reply warns; docs/decisions/2026-10-08-paying-for-finished-work.md).
   route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
+    await db.exec('BEGIN');
+    let reply;
+    try {
+      await db.prepare('SELECT id FROM sale_documents WHERE id = ? FOR UPDATE').get(Number(params.id));
+      reply = await convertOrder(req, res, params);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    if (!reply) return;
+    afterRelease.push(() => sendJson(res, 201, reply.payload));
+    if (reply.shopifyPushes.length) {
+      afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
+    }
+  });
+
+  // Answers a refusal straight away (nothing was written, so nothing to wait
+  // for) and otherwise returns {payload, shopifyPushes} for the route to send
+  // once the payment has committed.
+  async function convertOrder(req, res, params) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
@@ -434,6 +466,13 @@ export function register(route) {
     }
 
     const body = await readJsonBody(req);
+    // A workshop job is paid at the till, which always answers who signed the
+    // work off (null when it didn't ask). A payment with no answer comes only
+    // from the old app, which never takes a job's payment (Jack, 21 Oct,
+    // docs/decisions/2026-10-21-old-app-placeholder.md; working agreement 3.11).
+    if (doc.workshop_job_id && body.signedOffBy === undefined) {
+      return sendJson(res, 400, { error: 'Take payment for a workshop job at the till, where it asks who signed the work off.', code: 'use_till' });
+    }
     const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
     const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
     const payments = Array.isArray(body.payments) ? body.payments : [];
@@ -447,6 +486,9 @@ export function register(route) {
     if (cashierResolved.cashierId === null) return badRequest(res, 'Select a staff member before completing the sale');
 
     const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+    // An order with nothing on it is not a sale. A job's order is the exception:
+    // work given free is finished by taking £0 for it (the work-action tests do).
+    if (items.length === 0 && !doc.workshop_job_id) return badRequest(res, 'There is nothing on this order to pay for');
     // A stored labour line has product_id NULL. Dropping line_type here (as a
     // bare {productId, qty, unitPrice} mapping used to) sends it into
     // loadDocumentLine looking like an incomplete product line, which rejects
@@ -518,7 +560,8 @@ export function register(route) {
       // leaves the work unsigned, and the reply says so.
       // The new till always sends the key: null means it didn't ask because the
       // work read as finished, so finishing it here means it was reopened in
-      // between (answer 8: finishing again asks again). The old app sends no key.
+      // between (answer 8: finishing again asks again). A payment with no key is
+      // refused above.
       else if (body.signedOffBy === null) {
         jobWarning = 'Paid and finished, but not signed off: the work was reopened while the till was open.';
       } else if (body.signedOffBy !== undefined) {
@@ -551,9 +594,6 @@ export function register(route) {
     const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
     const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
     const payload = serializeSale(sale, savedItems, savedPayments);
-    sendJson(res, 201, jobWarning ? { ...payload, jobWarning } : payload);
-    if (afterRelease && shopifyPushes.length) {
-      afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
-    }
-  });
+    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes };
+  }
 }

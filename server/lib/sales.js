@@ -272,6 +272,20 @@ export async function resolveGroupDiscount(customerId, subtotal) {
   return { amount, name: `${top.name} (${top.discount_percent}%)` };
 }
 
+const toPence = (n) => Math.round(n * 100) / 100;
+
+// The one amount-due calculation: createSale charges it, GET
+// /api/sale-documents/:id/due shows it and the Bike ready message quotes it, so
+// all three always agree. Each part is rounded to pence once and the total is
+// worked from the rounded parts (never below zero).
+export async function computeOrderTotals({ items, discount, customerId }) {
+  const subtotal = toPence(items.reduce((sum, { unitPrice, qty }) => sum + Number(unitPrice) * qty, 0));
+  const group = await resolveGroupDiscount(customerId, subtotal);
+  const groupDiscount = { amount: toPence(group.amount), name: group.name };
+  const flat = toPence(Number(discount) || 0);
+  return { subtotal, discount: flat, groupDiscount, total: Math.max(0, toPence(subtotal - flat - groupDiscount.amount)) };
+}
+
 // The one place a request line becomes a stored line. Extracted from the three
 // near-identical blocks in createSale, POST /api/sale-documents and PUT
 // /api/sale-documents/:id/items, so the rules cannot drift between them.
@@ -373,9 +387,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock }));
   }
 
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
-  const groupDiscount = await resolveGroupDiscount(customerId, subtotal);
-  const total = Math.max(0, subtotal - discount - groupDiscount.amount);
+  const { subtotal, discount: flatDiscount, groupDiscount, total } = await computeOrderTotals({ items: loaded, discount, customerId });
 
   const cash = Math.max(0, Number(cashAmount) || 0);
   const card = Math.max(0, Number(cardAmount) || 0);
@@ -403,12 +415,22 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
 
   await db.exec('BEGIN');
   try {
+    // Product rows are locked in id order up front, so two sales with the same
+    // products in a different order wait for each other instead of deadlocking.
+    // NO KEY UPDATE, not UPDATE: a foreign-key check on a product (an order line
+    // or an offline till's sync saved at the same moment) takes KEY SHARE, which
+    // FOR UPDATE would wait on, and lines saved in another order could then
+    // deadlock with this sale (Jack's check, 21 Oct).
+    const productIds = [...new Set(loaded.filter((l) => l.product).map((l) => l.product.id))].sort((a, b) => a - b);
+    if (productIds.length) {
+      await db.prepare(`SELECT id FROM products WHERE id IN (${productIds.map(() => '?').join(', ')}) ORDER BY id FOR NO KEY UPDATE`).all(...productIds);
+    }
     const saleInfo = await db
       .prepare(
         `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(customerId, cashierId, subtotal, discount, total, paymentMethod, cash, card, cashTendered, note, groupDiscount.amount, groupDiscount.name);
+      .run(customerId, cashierId, subtotal, flatDiscount, total, paymentMethod, cash, card, cashTendered, note, groupDiscount.amount, groupDiscount.name);
     const saleId = saleInfo.lastInsertRowid;
 
     for (const p of extraPayments) {
@@ -440,8 +462,19 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
       // labour line reaching this block is a constraint violation, not a
       // cosmetic bug.
       if (line.lineType === 'product') {
-        const newQty = line.product.stock_qty - line.qty;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), line.product.id);
+        // Counted down from what the row holds now, in one statement: the
+        // quantity loadDocumentLine read earlier may be out of date by now, and
+        // writing "that minus qty" back lost a sale when two tills sold at once.
+        // The stock check repeats here for the same reason; the row lock makes a
+        // second till wait, then see what the first left.
+        const updated = await db.prepare(
+          `UPDATE products SET stock_qty = stock_qty - ?, updated_at = ?
+            WHERE id = ? AND (? OR stock_qty >= ?) RETURNING stock_qty`
+        ).get(line.qty, nowIso(), line.product.id, sellPastStock, line.qty);
+        if (!updated) {
+          throw new ValidationError(`Not enough stock for "${line.product.name}" (need ${line.qty})`);
+        }
+        const newQty = updated.stock_qty;
         await db.prepare(
           `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
         ).run(line.product.id, -line.qty, `Sale #${saleId}`);
