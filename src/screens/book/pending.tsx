@@ -249,7 +249,6 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     return (
       <BookFrame title={title} eyebrow={`Your repair · ${link.reference}`}>
         {inShop ? <p className="m-0 mb-4 text-[15px] font-semibold leading-normal">Your bike is in the workshop</p> : <Tracker />}
-        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
         {link.stage === 'ready_to_collect' && card('To pay when you collect', 'pay-title', (
           <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
         ))}
@@ -259,6 +258,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             <p className="m-0 text-[15px] leading-normal">Thanks for coming in — this page keeps working for 30 days after collection.</p>
           </>
         ))}
+        {/* After the pay card, as the drawings' reading order has it (cp-summary). */}
+        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} done={!inShop} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
           {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}

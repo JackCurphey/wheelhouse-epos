@@ -73,7 +73,7 @@ test('ready with no bike named says “Your bike”', async () => {
 // Fresh review, 21 Oct: the answered quote is what the drawings' "What we
 // did" shows, so it stays once the bike is ready and collected.
 for (const stage of ['ready_to_collect', 'collected']) {
-  test(`${stage} still shows the quote’s answer`, async () => {
+  test(`${stage} still asks for the quote`, async () => {
     const { ui, requests } = await open({ stage });
     await ui.findByRole('list', { name: 'Where your bike is' });
     const { waitFor } = await import('@testing-library/react');
@@ -115,4 +115,36 @@ test('an expired request with no time names the day alone', async () => {
 test('the customer’s own words show on the later pages', async () => {
   const { ui } = await open({ stage: 'ready_to_collect', description: 'Rear brake squeals' });
   assert.ok(await ui.findByText('Rear brake squeals'));
+});
+
+// Fresh review, 21 Oct (second look): once the work is done, the answered
+// quote reads as the drawings' "What we did", after the pay card.
+const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'approved', lineTotal: 28, need: 'needed', reason: null, decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, ...over });
+const ANSWERED = { id: 9, workshopJobId: 1, revision: 1, state: 'partly_approved', createdAt: '2026-09-17T09:00:00Z', sentAt: '2026-09-17T10:15:00Z',
+  lines: [qline({}), qline({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 18, lineTotal: 18 }), qline({ id: 3, description: 'Replace gear cable', productId: null, unitAmount: 12, lineTotal: 12, need: 'optional', decision: 'declined' })],
+  totals: { all: 58, approved: 46, pending: 0, declined: 12 } };
+const openWithQuote = async (stage) => {
+  current = await renderBookScreen({
+    file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
+    url: `/book/north/booking/${CODE}`, services: SERVICES,
+    bookingLink: (url) => (url.endsWith('/quote') ? { status: 200, body: ANSWERED } : { status: 200, body: { ...MAYA, stage } }),
+  });
+  return current;
+};
+
+test('ready: the answered quote reads “What we did”, with the agreed lines, after the pay card', async () => {
+  const { ui } = await openWithQuote('ready_to_collect');
+  const did = await ui.findByRole('heading', { level: 2, name: 'What we did' });
+  assert.ok(ui.getByText('Shimano brake pads'));
+  assert.ok(ui.getByText('Fit and adjust brakes'));
+  assert.ok(ui.queryByText(/going ahead/) === null);
+  assert.ok(ui.queryByText('Answered') === null);
+  const pay = ui.getByRole('heading', { level: 2, name: 'To pay when you collect' });
+  assert.ok(pay.compareDocumentPosition(did) & 4, 'the pay card comes first');
+});
+
+test('collected: the Collected card, then “What we did”', async () => {
+  const { ui } = await openWithQuote('collected');
+  const did = await ui.findByRole('heading', { level: 2, name: 'What we did' });
+  assert.ok(ui.getByRole('heading', { level: 2, name: 'Collected' }).compareDocumentPosition(did) & 4);
 });
