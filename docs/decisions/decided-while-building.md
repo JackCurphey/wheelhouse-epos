@@ -1017,3 +1017,16 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    server refuses the payment. *Decided:* left; nobody uses the old till, and
    a fresh page can't reach it.
 
+### 21 Oct 2026: confirming bookings automatically, the screens (auto-confirm)
+
+1. **`bk-details-auto`: step 4's off wording.** The drawing's off button is
+   "Send booking request"; the built step 4 says "Request booking" (unchanged
+   here). *Decided:* on, "Confirm booking", as drawn; off stays as built. The
+   built step 4's terms line is the "I agree to the booking terms" tick, not
+   the drawing's "By sending…" sentence, so it has no word to change.
+2. **`bk-settings-auto` / `set-workshop`: the Online booking summary when on.**
+   The drawing's summary ends "each booking a request" (off). *Decided:*
+   "confirmed automatically" when on.
+3. **The diary's mark on a phone.** *Decided:* the same line, "New online"
+   where the column is narrow, as the drawing's week column.
+

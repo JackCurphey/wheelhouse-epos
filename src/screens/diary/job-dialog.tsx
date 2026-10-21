@@ -104,6 +104,17 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const navigate = useNavigate();
   const jobQuery = useQuery({ queryKey: ['workshop-job', jobId], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${jobId}`) });
   const job = jobQuery.data;
+  // Opening a booking confirmed straight away clears its "New, booked online"
+  // mark (Jack, 19 Oct, auto-confirm): once, then the diary reads it again.
+  const newOnline = Boolean(job?.newOnline);
+  useEffect(() => {
+    if (!newOnline) return;
+    let gone = false;
+    apiMutate(`/api/workshop-jobs/${jobId}/seen`, {})
+      .then(() => { if (!gone) void queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }); })
+      .catch(() => { /* the mark stays; it's cleared next time the job is opened */ });
+    return () => { gone = true; };
+  }, [newOnline, jobId, queryClient]);
   // A booking that ended can't be booked in or given another day, though its page still opens (fresh review, 15 Oct).
   const ended = job?.bookingState === 'cancelled' || job?.bookingState === 'declined' || job?.bookingState === 'expired';
   // Finished work's notes are read-only: what was typed and not saved is not shown as if saved.

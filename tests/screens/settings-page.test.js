@@ -33,7 +33,7 @@ afterEach(async () => {
 const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'Office' };
 async function openSettings({ me = OWNER, room = 'workshop', open = null } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
   refuseHours = null;
   termsFail = false;
   putFails = false;
@@ -60,6 +60,7 @@ async function openSettings({ me = OWNER, room = 'workshop', open = null } = {})
       if (refuseHours && body.fullDayThresholdMinutes !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.nextBookingMode !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.showPricesOnline !== undefined) return reply(400, { error: refuseHours });
+      if (refuseHours && body.confirmBookingsAutomatically !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.confirmationNote !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.bookingTerms !== undefined) return reply(400, { error: refuseHours });
       settings = { ...settings, ...body };
@@ -707,4 +708,31 @@ test('if the standard terms can’t be loaded, it says so', async () => {
   shell.queryClient.setDefaultOptions({ queries: { retry: false } });
   fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
   assert.ok(await ui.findByText('Wheelhouse couldn’t load the standard terms to start from. Try again in a moment.'));
+});
+
+// Confirm bookings automatically (Jack, 19 Oct, docs/decisions/2026-10-19-auto-confirm.md;
+// drawn as bk-settings-auto): after Show prices, with its note, saved at once;
+// the Online booking summary ends with what happens to a booking.
+test('Confirm bookings automatically shows its note, saves a switch at once, and the summary follows it', async () => {
+  const t = await openSettings();
+  const { ui, fireEvent, waitFor } = t;
+  const sw = await ui.findByRole('switch', { name: 'Confirm bookings automatically' });
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'false'));
+  assert.ok(has(ui.getByText('Off: each booking is a request, purple in the diary until someone accepts it. On: a booking that fits the diary is confirmed straight away. Changing a confirmed booking is always a request.')));
+  const summary = () => ui.getByRole('button', { name: /^Online booking/ }).textContent;
+  assert.match(summary(), /· each booking a request$/);
+  fireEvent.click(sw);
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && 'confirmBookingsAutomatically' in c.body).map((c) => c.body), [{ confirmBookingsAutomatically: true }]));
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'true'));
+  await waitFor(() => assert.match(summary(), /· confirmed automatically$/));
+});
+
+test('a refused Confirm bookings automatically says why and stays as it was', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  refuseHours = "Only the shop's owner can change settings";
+  const sw = await ui.findByRole('switch', { name: 'Confirm bookings automatically' });
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'false'));
+  fireEvent.click(sw);
+  assert.ok(has(await ui.findByText("Only the shop's owner can change settings")));
+  assert.equal(sw.getAttribute('aria-checked'), 'false');
 });

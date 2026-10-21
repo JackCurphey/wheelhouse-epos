@@ -3,6 +3,7 @@ import { tileClass } from './job-extras.tsx';
 import { Chevron } from './diary-bits.tsx';
 import { ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
 import { BLOCK, CHIP, SR, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
+import { NavIcon } from '@/staff/nav-icon.tsx';
 import { STATE_LABEL, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
 
 export function JobBlock({ job, range, wide, chosen, light = false, lane, colIndex }: {
@@ -48,6 +49,14 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
       {height >= TWO_LINES ? (
         <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">
           {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
+        </span>
+      ) : null}
+      {/* Confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm;
+          drawn as diary.mjs blockMark): "New online" where a week column cuts the words off. */}
+      {job.newOnline ? (
+        <span aria-hidden="true" className="flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]">
+          <span className="shrink-0"><NavIcon name="website" size={12} /></span>
+          {wide ? 'New, booked online' : 'New online'}
         </span>
       ) : null}
     </>
