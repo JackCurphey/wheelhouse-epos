@@ -53,7 +53,7 @@ checks fail the build instead (tasks group 2):
   file under `src/screens/` is named in a `tests/browser/*.spec.ts`, with an
   allowed-gaps list that may only shrink.
 - **One reply-shape file:** each API reply the screens read is described once
-  (for example `src/api/shapes.ts`), imported by the screens' tests' mocks
+  (`src/lib/api/shapes.ts`, beside the compile-time types in `types.ts`), imported by the screens' tests' mocks
   and by a server test that checks real replies against it.
 
 ### 4. Themes and the stage check

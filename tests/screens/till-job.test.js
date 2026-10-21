@@ -7,6 +7,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const JO = { id: 21, name: 'Jo Taylor', isCashier: true };
@@ -43,9 +44,9 @@ afterEach(async () => {
 });
 
 function job(over = {}) {
-  return { id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3',
+  return fakeJob({ id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3',
     mechanicId: 11, jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', bookingState: 'scheduled', custodyState: 'in_shop',
-    workState: 'complete', version: 7, orderId: 40, orderStatus: 'open', orderTotal: 83, requested: null, ...over };
+    workState: 'complete', version: 7, orderId: 40, orderStatus: 'open', orderTotal: 83, ...over });
 }
 function order(over = {}) {
   return { id: 40, kind: 'order', status: 'open', customerId: 5, customerName: 'Maya Patel', subtotal: 83, discount: 0, total: 83, workshopJobId: 1,
@@ -373,4 +374,10 @@ test('a job’s receipt from the till prints what the customer told us', async (
   const dlg = await payByCard(t);
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
   assert.ok(printed?.includes('WH-1042 · Trek Domane AL 3From the customer: Rear brake squeals and feels weak.'), String(printed));
+});
+
+// The reply-shape file (working agreement task 2.4): the fake job is the shape the server sends.
+test('the fake job here is the shape of the server’s', async () => {
+  const shapes = await import(new URL('../../.test-build/lib/api/shapes.js', import.meta.url).href);
+  assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB, job()), []);
 });
