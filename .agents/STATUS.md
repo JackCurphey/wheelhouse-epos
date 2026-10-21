@@ -66,6 +66,20 @@ old app's one-off text goes through the pretend sender; #330 adds
 `direction` to the outbox's messages. `server/sms.js` is now unused by the
 app (kept for real sending). The change is archived:
 `openspec/specs/messages/spec.md`.
+**Check these too** (20 Oct, on Jack's word, your workshop server): #333
+`serializeWorkshopJob` gains `offer`; #335 a new job takes
+`customerDescription`; #336 accept, decline, offer and accept-change send the
+booking messages at once through `sendBookingMessage`
+(`server/workshop/job-messages.js`, the templates' `group: 'booking'`,
+`isPretend()`); #337 accept takes `mechanicId`, checked free under the day's
+lock; #341 their replies carry `bookingMessage` when the customer has no way
+to be reached. **New for you** (21 Oct, #344): the booking page's later
+stages are built with what the link sends; your server half's contract is in
+`openspec/changes/archive/2026-10-21-booking-page-stages/design.md` (work
+progress, what was done and the amount to pay, the checklist, paid and
+collected dates, the shop's address, phone and hours, the 410 reply's
+details). It also notes `isLinkExpired` counts 30 days from `job_date`, where
+build-plan Q8 says from collection.
 **Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
 answer 2): replying to a text as a shop setting, a shop's own number whose
 replies land in its inbox (a monthly cost, and receiving texts to build), or
@@ -127,7 +141,15 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 20 Oct: the messages engine is built, pretend for now
+**Jack is on:** 20–21 Oct: staff decline or re-offer an offered time
+(#332, #333); New job's + Add a bike and "From the customer" printed on the
+receipt (#334, #335); the booking messages staff answers send, pretend, and
+the diary's note when one couldn't go (#336, #340, #341); the mechanic chosen
+as a request is accepted (#337); pills work from the keyboard (#338); the
+Settings frame of rooms and folds (#339); an order's workshop job opens in the
+new diary (#342; the old job form's removal, #343, is green, waiting to
+merge); the booking page's later stages (#344,
+`docs/decisions/2026-10-21-booking-page-stages.md`). 20 Oct: the messages engine is built, pretend for now
 (#321–#330, `docs/decisions/2026-10-20-messages-engine.md`): Settings ›
 Messages, Quote to approve and Bike ready with its minute's Undo, and each
 job's Messages as a conversation from the job page's Message button. The
