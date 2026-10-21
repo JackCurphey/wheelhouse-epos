@@ -182,7 +182,7 @@ test('cancel refuses an expired link', async () => {
   await setJob(shopId(), booked.id, 'job_date = ?', d.toISOString().slice(0, 10));
   const res = await link.cancel(booked.code);
   assert.equal(res.status, 410);
-  assert.deepEqual(res.body, { error: 'This link has expired' });
+  assert.equal(res.body.error, 'This link has expired');
   assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'pending');
 });
 

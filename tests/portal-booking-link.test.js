@@ -96,7 +96,14 @@ test('a booking returns a booking link, and the link reads the booking back', as
     canChange: true,
     canCancel: true,
     changeDeclined: false,
+    // Booking page stages (21 Oct): progress, the ready day and the shop's lines.
+    workState: 'not_started',
+    bookedInAt: null,
+    collectedAt: null,
+    expectedReady: null, // a request still waiting: no ready day yet
+    shop: { address: null, phone: null, openingHours: res.body.shop?.openingHours },
   });
+  assert.equal(typeof res.body.shop.openingHours, 'string');
 });
 
 test('the database holds the hash, never the code', async () => {
@@ -180,7 +187,8 @@ test('31 days after the booked date the link has expired; moving the date revive
   await setJob(booked.id, 'job_date = ?', daysAgo(31));
   const expired = await read(code);
   assert.equal(expired.status, 410);
-  assert.deepEqual(expired.body, { error: 'This link has expired' });
+  assert.equal(expired.body.error, 'This link has expired');
+  assert.equal(expired.body.reason, 'never_came_in');
   await setJob(booked.id, 'job_date = ?', daysAgo(30));
   assert.equal((await read(code)).status, 200);
 });

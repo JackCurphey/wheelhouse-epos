@@ -126,6 +126,28 @@ A booking request the shop never answered SHALL, once expired, say "Sorry, we co
 - **WHEN** the customer opens the link of an expired request
 - **THEN** the page says it has expired and nothing is booked, and "Choose another date" opens the shop's booking start
 
+### Requirement: The booking link says how far the bike is, and who to contact
+The booking link SHALL carry:
+- how far the work is;
+- when the bike was booked in and collected;
+- the day the bike is expected to be ready (the job's last day);
+- the shop's address, phone and opening hours.
+
+#### Scenario: A bike in the workshop
+- **WHEN** the customer opens the link after their bike is booked in and started
+- **THEN** it says the work is in progress and when the bike was booked in, with the shop's address, phone and hours
+
+### Requirement: A booking link lasts 30 days after collection
+A booking link SHALL stop working 30 days after its bike was collected. A link SHALL keep working while its bike is in the shop. A link whose bike never came in SHALL stop working 30 days after its booked day. An expired link SHALL say which job it was, why it expired, and the shop's name, address and phone, with nothing that identifies the customer.
+
+#### Scenario: Collected 31 days ago
+- **WHEN** the customer opens the link of a bike collected 31 days ago
+- **THEN** it is refused as expired, giving the job's number, "collected", and the shop's details
+
+#### Scenario: Still in the shop
+- **WHEN** a bike booked 40 days ago is still in the shop
+- **THEN** its link still works
+
 ### Requirement: A booking is confirmed straight away when the shop confirms automatically
 When the shop confirms online bookings automatically, a booking that fits the diary SHALL be confirmed when sent: step 4's button reads "Confirm booking", and the customer's booking page shows it confirmed at once (Jack, 1 Oct, decision 8; 19 Oct).
 

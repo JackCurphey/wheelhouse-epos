@@ -28,6 +28,21 @@ export function isLinkExpired(jobDate, today) {
   return today > last.toISOString().slice(0, 10);
 }
 
+// When a link stops working (build-plan Q8, Jack 3 Oct; booking page stages,
+// 21 Oct): 30 days after collection; a bike still in the shop keeps its link;
+// otherwise 30 days after the booked date (the bike never came in). A bike
+// collected before collection was recorded counts from its booked date.
+// collectedOn is the shop's own date of collection. reason says which, for the
+// expired page (cp-expired, bk-expired).
+export function linkExpiry({ jobDate, custodyState, collectedOn }, today) {
+  if (custodyState === 'in_shop') return { expired: false, reason: null };
+  const collected = custodyState === 'collected';
+  const from = collected && collectedOn ? collectedOn : jobDate;
+  return isLinkExpired(from, today)
+    ? { expired: true, reason: collected ? 'collected' : 'never_came_in' }
+    : { expired: false, reason: null };
+}
+
 const BOOKING_STAGES = {
   pending: 'awaiting_confirmation',
   // The shop suggested another time (Jack, 20 Oct, offer another time).
