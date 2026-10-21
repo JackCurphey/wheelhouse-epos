@@ -1081,3 +1081,19 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    match the database; the type and the receipt stay as they are, since no
    shop on the new app has a job from before 16 Oct. What a receipt says for
    one is yours to choose if a shop ever brings old jobs across.
+
+### 21 Oct 2026: the New online mark on stacks and in the month view (new-online-on-stacks)
+
+Closes item 3 of the auto-confirm screens entry above. Not drawn; the closest
+pattern is the No time chip's "bike · mark".
+
+1. **A stack's front card.** *Decided:* the mark shows when any job in the
+   stack is new, on its own line under the bike (beside it when the stack
+   has room for one line only, as a short block has it), with the job on the
+   third line. Beside the bike on every stack, it pushed the bike's name off
+   the card in a week column (seen in a real browser).
+2. **A fanned-out stack.** *Decided:* the new job's tile reads bike, job,
+   then the mark, as a tall block does.
+3. **The month view.** *Decided:* the chip shows the globe alone after the
+   bike, since a month chip has no room for words; its name and the day's
+   list say "new, booked online" / "New online".

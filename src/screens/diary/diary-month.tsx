@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Chevron } from './diary-bits.tsx';
+import { NewOnlineMark } from './diary-tiles.tsx';
 import { CHIP, SR, blocksOf, type Shown } from './diary-model.ts';
 import { STATE_LABEL, addMonths, dayLabel, diaryState, monthLabel, monthOf, todayIso } from './rules.ts';
 
@@ -34,9 +35,12 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
     <>
       <span className="font-mono font-bold">{j.startTime ?? 'No time'}</span>
       <span className="truncate">{j.bikeLabel || 'Bike'}</span>
+      {/* Not drawn: the globe alone, as a month chip has no room for words; the
+          day's list and the chip's name say it (decided-while-building, 21 Oct). */}
+      {j.newOnline ? <span className="shrink-0"><NavIcon name="website" size={12} /></span> : null}
     </>
   );
-  const chipName = (j: Shown) => `${j.startTime ?? 'No time'}, ${j.bikeLabel || 'Bike'}, ${j.title}, ${j.customerName || 'Customer'}, ${STATE_LABEL[j.state]}`;
+  const chipName = (j: Shown) => `${j.startTime ?? 'No time'}, ${j.bikeLabel || 'Bike'}, ${j.title}, ${j.customerName || 'Customer'}, ${STATE_LABEL[j.state]}${j.newOnline ? ', new, booked online' : ''}`;
   const chipClass = (j: Shown) => `flex min-w-0 items-center gap-1 rounded-[4px] border-l-[3px] px-1 text-left text-xs leading-[18px] ${CHIP[j.state]} ${j.state === 'cancelled' ? 'line-through' : ''}`;
   const listJobs = listDay ? jobsOn(listDay) : [];
   return (
@@ -117,7 +121,10 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
               className="grid min-h-[52px] grid-cols-[48px_1fr_auto] items-center gap-x-2.5 gap-y-0.5 border-t border-[var(--wh-border)] px-2 py-1.5 text-left first:border-t-0"
             >
               <span className="font-mono text-[13px] font-bold">{j.startTime ?? 'No time'}</span>
-              <span className={`truncate text-[13px] font-bold ${j.state === 'cancelled' ? 'line-through' : ''}`}>{j.bikeLabel || 'Bike'} · {j.title}</span>
+              <span className={`flex items-center gap-1 truncate text-[13px] font-bold ${j.state === 'cancelled' ? 'line-through' : ''}`}>
+                <span className="truncate">{j.bikeLabel || 'Bike'} · {j.title}</span>
+                {j.newOnline ? <>{' · '}<NewOnlineMark short /></> : null}
+              </span>
               <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[j.state]}`}>{STATE_LABEL[j.state]}</span>
               <span />
               <span className="col-span-2 text-xs text-[var(--wh-muted)]">{j.customerName || 'Customer'} · {j.mechanicName || 'Shared queue'}</span>

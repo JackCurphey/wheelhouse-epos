@@ -223,7 +223,11 @@ export function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: 
     holdTimer.current = setTimeout(() => { held.current = true; setFanned(true); }, 500);
   };
   const front = jobs[0];
-  const names = jobs.map((j) => `${j.bikeLabel || 'Bike'} · ${j.title} (${j.reference})`).join(', ');
+  const names = jobs.map((j) => `${j.bikeLabel || 'Bike'} · ${j.title} (${j.reference})${j.newOnline ? ', new, booked online' : ''}`).join(', ');
+  // Not drawn: a stack with a new online booking in it says so on its front, and
+  // its name says which job (decided-while-building, 21 Oct, new-online-on-stacks).
+  const anyNew = jobs.some((j) => j.newOnline);
+  const inner = ((end - start) / 30) * SLOT_H - 4;
   const edge = (offset: number, opacity: number) => (
     <div aria-hidden="true" className="absolute bottom-0 rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)]" style={{ left: offset, right: -offset, top: -offset, opacity }} />
   );
@@ -250,8 +254,15 @@ export function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: 
           {jobs.length}
           <Chevron dir="prev" small />
         </span>
-        <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]">{front.bikeLabel || 'Bike'}</span>
-        {((end - start) / 30) * SLOT_H - 4 >= TWO_LINES ? (
+        {/* As a block places it: beside the bike on a one-line stack, else on its own line. */}
+        <span aria-hidden="true" className="flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]">
+          <span className="truncate">{front.bikeLabel || 'Bike'}</span>
+          {anyNew && inner < TWO_LINES ? <>{' · '}<NewOnlineMark short /></> : null}
+        </span>
+        {anyNew && inner >= TWO_LINES ? (
+          <span aria-hidden="true" className="flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]"><NewOnlineMark short /></span>
+        ) : null}
+        {inner >= (anyNew ? THREE_LINES : TWO_LINES) ? (
           <span aria-hidden="true" className="truncate text-xs leading-[14px] font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
         ) : null}
       </button>
@@ -295,6 +306,8 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
     >
       <span className="truncate text-xs font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>
       <span className="truncate text-xs font-bold">{job.title}</span>
+      {/* Bike, job, then the mark, as a tall block has it. */}
+      {job.newOnline ? <span className="flex items-center gap-1 truncate text-xs font-bold text-[var(--wh-ink)]"><NewOnlineMark short /></span> : null}
       {/* Fanned by a press and hold: the touch tile's number and times (touchStackTile). */}
       <span className="truncate text-xs text-[var(--wh-muted)]">{touch ? `${job.reference} · ${job.startTime}–${job.endTime ?? ''}` : job.reference}</span>
     </button>

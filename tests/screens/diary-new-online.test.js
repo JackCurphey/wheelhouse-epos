@@ -17,6 +17,7 @@ const ORDER = { id: 80, status: 'draft', total: 111, items: [
 ] };
 
 let JOB;
+let OTHERS = [];
 function job(over) {
   return fakeJob({
     id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane AL 3',
@@ -38,6 +39,7 @@ afterEach(async () => {
   shell?.queryClient.clear();
   uninstall?.();
   globalThis.fetch = realFetch;
+  OTHERS = [];
 });
 
 function stubServer() {
@@ -53,7 +55,7 @@ function stubServer() {
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
-    if (u.pathname === '/api/workshop-jobs') return reply(200, [JOB]);
+    if (u.pathname === '/api/workshop-jobs') return reply(200, [JOB, ...OTHERS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/customers/5') return reply(200, CUSTOMER);
     if (u.pathname === '/api/sale-documents/80') return reply(200, ORDER);
@@ -61,7 +63,7 @@ function stubServer() {
   };
 }
 
-async function openDiary(over = {}, query = '?date=2026-10-05', setUp = null) {
+async function openDiary(over = {}, query = '?date=2026-10-05', setUp = null, first = /^Trek Domane AL 3, Standard service/) {
   JOB = job(over);
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
   setUp?.(window);
@@ -72,7 +74,7 @@ async function openDiary(over = {}, query = '?date=2026-10-05', setUp = null) {
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  const block = await ui.findByRole('button', { name: /^Trek Domane AL 3, Standard service/ });
+  const block = await ui.findByRole('button', { name: first });
   return { ...rtl, ui, block };
 }
 const seenPosts = () => calls.filter((c) => c.method === 'POST' && c.url.endsWith('/seen')).map((c) => c.url);
@@ -133,4 +135,36 @@ test('on a phone the mark reads in full', async () => {
   const { block } = await openDiary({ newOnline: true }, '?date=2026-10-08', (w) => { w.matchMedia = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} }); });
   assert.ok(block.textContent.includes('New, booked online'));
   void realMatch;
+});
+
+// Not drawn (decided-while-building, 21 Oct, the mark on stacks and the month
+// view): the closest pattern is the No time chip's "bike · mark".
+const SIRRUS = (over = {}) => job({ id: 2, reference: 'WH-1043', title: 'Puncture repair', bikeLabel: 'Specialized Sirrus', customerName: 'Sam Reed', ...over });
+
+test('a stack carries the mark when a job in it is new, and its name says which', async () => {
+  OTHERS = [SIRRUS({ newOnline: true })];
+  const { ui } = await openDiary({}, '?date=2026-10-05', null, /^2 jobs booked/);
+  const stack = ui.getByRole('button', { name: /^2 jobs booked/ });
+  assert.match(stack.getAttribute('aria-label'), /Specialized Sirrus · Puncture repair \(WH-1043\), new, booked online/);
+  assert.ok(!/WH-1042\), new/.test(stack.getAttribute('aria-label')));
+  assert.ok(stack.textContent.includes('New online'));
+  const tiles = [...ui.container.querySelectorAll('[data-fan] button')];
+  assert.deepEqual(tiles.map((t) => t.textContent.includes('New online')), [false, true]);
+});
+
+test('a stack with no new job carries no mark', async () => {
+  OTHERS = [SIRRUS()];
+  const { ui } = await openDiary({}, '?date=2026-10-05', null, /^2 jobs booked/);
+  assert.ok(!ui.getByRole('button', { name: /^2 jobs booked/ }).textContent.includes('New online'));
+});
+
+test('in the month view a new job’s chip has the mark, and its name says new, booked online', async () => {
+  OTHERS = [SIRRUS({ startTime: '14:00', endTime: '15:00' })];
+  const { ui } = await openDiary({ newOnline: true }, '?date=2026-10-08&view=month', null, /^10:00, Trek Domane AL 3/);
+  const chip = ui.getByRole('button', { name: /^10:00, Trek Domane AL 3/ });
+  assert.match(chip.getAttribute('aria-label'), /, new, booked online$/);
+  assert.ok(chip.querySelector('svg') !== null, 'the globe shows on the chip');
+  const other = ui.getByRole('button', { name: /^14:00, Specialized Sirrus/ });
+  assert.ok(!/new, booked online/.test(other.getAttribute('aria-label')));
+  assert.ok(other.querySelector('svg') === null);
 });
