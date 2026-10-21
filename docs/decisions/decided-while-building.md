@@ -1060,3 +1060,12 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    arrive").** Not kept for the customer yet. *Decided:* the bold warning
    alone, then the ready day.
 
+### 21 Oct 2026: Request received and Booking cancelled (customer-booking-messages)
+
+1. **Booking cancelled after an offer never accepted.** Not drawn.
+   *Decided:* it names the time the customer asked for, as Request declined
+   does.
+2. **A booking sent with no bike.** Request received reads "on your [Bike]";
+   with no bike that tap-in is left out. *Decided:* left as the tidy-up makes
+   it, for now.
+

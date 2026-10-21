@@ -189,10 +189,50 @@ test('the customer cancelling sends Booking cancelled', async () => {
   assert.match(cancelled.body, /is cancelled\. There’s nothing to pay or refund\. Book another time: \[link\]/);
 });
 
-test('the shop cancelling sends Booking cancelled too, and says when it couldn’t go', async () => {
+test('the shop cancelling sends Booking cancelled too', async () => {
   const booked = await book('11:30');
   await act(booked.id, 'accept');
   const res = await act(booked.id, 'cancel');
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.ok((await messagesFor(booked.id)).some((m) => m.template_key === 'booking_cancelled'));
+});
+
+// Fresh review, 21 Oct.
+test('cancelling twice sends Booking cancelled once', async () => {
+  const booked = await book('12:30');
+  assert.equal((await link.cancel(booked.code)).status, 200);
+  assert.equal((await link.cancel(booked.code)).status, 200);
+  assert.equal((await messagesFor(booked.id)).filter((m) => m.template_key === 'booking_cancelled').length, 1);
+});
+
+test('cancelling an offered time names the time the customer asked for', async () => {
+  const booked = await book('13:30');
+  await act(booked.id, 'offer', { jobDate: nextDay(), startTime: '16:00', mechanicId: sam });
+  assert.equal((await link.cancel(booked.code)).status, 200);
+  const cancelled = (await messagesFor(booked.id)).find((m) => m.template_key === 'booking_cancelled');
+  assert.match(cancelled.body, /on \w{3} \d{1,2} \w{3}, 13:30 is cancelled/);
+});
+
+test('Request received and Booking cancelled switched off send nothing', async () => {
+  for (const key of ['request_received', 'booking_cancelled']) {
+    assert.equal((await staff(`/api/message-templates/${key}`, { method: 'PUT', body: { enabled: false } })).status, 200);
+  }
+  try {
+    const booked = await book('14:30');
+    assert.equal((await link.cancel(booked.code)).status, 200);
+    assert.deepEqual(await messagesFor(booked.id, { all: true }), []);
+  } finally {
+    for (const key of ['request_received', 'booking_cancelled']) await staff(`/api/message-templates/${key}`, { method: 'PUT', body: { enabled: true } });
+  }
+});
+
+test('the shop cancelling for a customer with no way to reach them says so, by name', async () => {
+  const quiet = await portalSignup(server.baseUrl, owner.shop.slug, {});
+  const booked = await bookOnline(server.baseUrl, quiet.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime: '15:30', serviceIds: [types.service] });
+  await runWithShop(owner.shop.id, async () => {
+    const { customer_id: id } = await prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(booked.id);
+    await prepare('UPDATE customers SET phone = NULL, email = NULL WHERE id = ?').run(id);
+  });
+  const res = await act(booked.id, 'cancel');
+  assert.deepEqual(res.body.bookingMessage, { skipped: 'no_contact', name: 'Booking cancelled' });
 });

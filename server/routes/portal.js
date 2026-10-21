@@ -1177,8 +1177,9 @@ export function register(route) {
     if (!found) return;
     const out = await withJobBookingLock(found.id, [], async (job) => {
       // A double tap: the customer's own cancel already went through, so the
-      // answer is the cancelled booking, unchanged (final review).
-      if (job.booking_state === 'cancelled' && job.cancelled_by === 'customer') return undefined;
+      // answer is the cancelled booking, unchanged (final review), and no second
+      // message goes (fresh review, 21 Oct).
+      if (job.booking_state === 'cancelled' && job.cancelled_by === 'customer') return { already: true };
       const refused = customerActionRefusal(job, 'cancel', await currentShopToday());
       if (refused) return refused;
       await applyLocked(job, 'cancel');
@@ -1190,8 +1191,8 @@ export function register(route) {
       return undefined;
     });
     if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
-    if (out) return sendJson(res, out.status, out.body);
-    await sendLinkMessage('booking_cancelled', found.id, shop.id, linkPath(params.shopSlug, params.code));
+    if (out && !out.already) return sendJson(res, out.status, out.body);
+    if (!out?.already) await sendLinkMessage('booking_cancelled', found.id, shop.id, linkPath(params.shopSlug, params.code));
     sendJson(res, 200, await bookingLinkView(found.id, shop));
   });
 

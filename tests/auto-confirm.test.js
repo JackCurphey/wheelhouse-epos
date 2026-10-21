@@ -67,7 +67,7 @@ test('the booking screens are told whether a booking confirms at once', async ()
   }
 });
 
-test('off: a booking waits for the shop, as before, with no mark and no message', async () => {
+test('off: a booking waits for the shop, as before, with no mark, and gets Request received', async () => {
   const booked = await book('10:00');
   const job = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
   assert.equal(job.bookingState, 'pending');
