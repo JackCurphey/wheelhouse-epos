@@ -67,13 +67,14 @@ test('the booking screens are told whether a booking confirms at once', async ()
   }
 });
 
-test('off: a booking waits for the shop, as before, with no mark and no message', async () => {
+test('off: a booking waits for the shop, as before, with no mark, and gets Request received', async () => {
   const booked = await book('10:00');
   const job = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
   assert.equal(job.bookingState, 'pending');
   assert.equal(job.newOnline, false);
   assert.equal((await link.read(booked.code)).body.stage, 'awaiting_confirmation');
-  assert.deepEqual(await messagesFor(booked.id), []);
+  // Request received, not Booking confirmed (21 Oct).
+  assert.deepEqual((await messagesFor(booked.id)).map((m) => m.template_key), ['request_received']);
 });
 
 test('on: a booking that fits is confirmed at once, marked new, and Booking confirmed goes; the link keeps working', async () => {

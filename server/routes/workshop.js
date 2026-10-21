@@ -868,6 +868,8 @@ export function register(route) {
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');
+      // The shop cancelling (Jack, 20 Oct, booking messages answer 4; 21 Oct).
+      if (event === 'cancel') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_cancelled');
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
       sendJson(res, 200, { ...serializeWorkshopJob(row), ...(readyMessage ? { readyMessage } : {}), ...(bookingMessage ? { bookingMessage } : {}) });
     });
