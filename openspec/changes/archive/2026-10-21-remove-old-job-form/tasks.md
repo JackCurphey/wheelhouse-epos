@@ -7,5 +7,5 @@
 
 ## 2. Check
 
-- [ ] 2.1 `npm run lint`, `npm run typecheck`, `npm test` and `npm run test:browser` pass
-- [ ] 2.2 A fresh reviewer checks the change against this proposal
+- [x] 2.1 `npm run lint`, `npm run typecheck`, `npm test` and `npm run test:browser` pass
+- [x] 2.2 A fresh reviewer checks the change against this proposal
