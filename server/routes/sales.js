@@ -395,22 +395,29 @@ export function register(route) {
   // waits and then finds the order already converted: one order, one payment.
   // (Found in the 21 Oct review: the check, the sale and the status write were
   // separate, so two quick requests both paid.) createSale's own BEGIN becomes a
-  // savepoint inside this transaction. The reply goes out after the commit, so
-  // nobody is told "paid" about a payment that can still roll back.
+  // savepoint inside this transaction. The reply is sent from afterRelease, which
+  // the dispatcher runs once runWithShop has committed (with DB_TENANT_SCOPE=
+  // transaction that is a later commit than this one), so nobody is told "paid"
+  // about a payment that can still roll back. A job's row is locked before the
+  // order's, the order the booking code takes them in.
   route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
     await db.exec('BEGIN');
     let reply;
     try {
+      const linked = await db.prepare('SELECT workshop_job_id FROM sale_documents WHERE id = ?').get(Number(params.id));
+      if (linked && linked.workshop_job_id) {
+        await db.prepare('SELECT id FROM workshop_jobs WHERE id = ? FOR UPDATE').get(linked.workshop_job_id);
+      }
       await db.prepare('SELECT id FROM sale_documents WHERE id = ? FOR UPDATE').get(Number(params.id));
       reply = await convertOrder(req, res, params);
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
     if (!reply) return;
-    sendJson(res, 201, reply.payload);
-    if (afterRelease && reply.shopifyPushes.length) {
+    afterRelease.push(() => sendJson(res, 201, reply.payload));
+    if (reply.shopifyPushes.length) {
       afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
     }
   });

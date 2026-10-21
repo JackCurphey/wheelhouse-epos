@@ -113,7 +113,7 @@ test('a till that saw finished work, reopened since, gets a warning that nobody 
 // row makes the second write fail for real.
 test('a sign-off whose history row cannot be saved leaves no half sign-off, and the payment stands', async () => {
   const { shop, req, alex, job, pay } = await jobInProgress();
-  const admin = new pg.Client({ connectionString: process.env.ADMIN_DATABASE_URL.replace(/\/[^/]*$/, '/epos') });
+  const admin = new pg.Client({ connectionString: process.env.ADMIN_DATABASE_URL.replace(/\/[^/]*$/, new URL(process.env.DATABASE_URL).pathname) });
   await admin.connect();
   const fn = `refuse_sign_off_${job.id}_${shop.id}`;
   await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.workshop_job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);

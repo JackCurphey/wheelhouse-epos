@@ -278,7 +278,7 @@ test('paying real money for work already finished goes through and leaves the jo
 });
 
 // Waits until the server's sale is blocked on this test's row lock: another
-// backend waiting on a lock, running the sale's stock UPDATE, with `ourPid`
+// backend waiting on a lock, running the sale's stock lock or UPDATE, with `ourPid`
 // among the backends blocking it. The same seam as till-sync-api.test.js's
 // deadlock test; here there is no second lock, so no deadlock head start.
 async function waitUntilSaleBlockedBy(ourPid, timeoutMs = 10000) {
@@ -287,7 +287,7 @@ async function waitUntilSaleBlockedBy(ourPid, timeoutMs = 10000) {
     const { rows } = await pool.query(
       `SELECT 1 FROM pg_stat_activity a
         WHERE a.pid <> $1 AND a.wait_event_type = 'Lock'
-          AND a.query LIKE 'UPDATE products SET stock_qty = %'
+          AND (a.query LIKE 'UPDATE products SET stock_qty = %' OR a.query LIKE 'SELECT id FROM products WHERE id IN%')
           AND $1 = ANY(pg_blocking_pids(a.pid))`,
       [ourPid]
     );
