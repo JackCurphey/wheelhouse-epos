@@ -457,6 +457,7 @@ export function register(route) {
 
   // screens: hours
   route('POST', '/api/workshop-unavailability', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
     const checked = validateBlock(await readJsonBody(req));
     if (checked.error) return badRequest(res, checked.error);
     const b = checked.block;
@@ -472,6 +473,7 @@ export function register(route) {
 
   // screens: hours
   route('PUT', '/api/workshop-unavailability/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const row = await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
     if (!row) return notFound(res, 'Block not found');
     const body = await readJsonBody(req);
@@ -490,6 +492,7 @@ export function register(route) {
 
   // screens: hours
   route('DELETE', '/api/workshop-unavailability/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const row = await db.prepare('SELECT id FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
     if (!row) return notFound(res, 'Block not found');
     await db.prepare('DELETE FROM workshop_unavailability WHERE id = ?').run(row.id);
@@ -542,6 +545,7 @@ export function register(route) {
 
   // screens: services, service-edit
   route('POST', '/api/workshop-service-categories', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
     let fields;
     try {
@@ -558,6 +562,7 @@ export function register(route) {
 
   // screens: services, service-edit
   route('PUT', '/api/workshop-service-categories/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Not found');
@@ -577,6 +582,7 @@ export function register(route) {
 
   // screens: services, service-edit
   route('DELETE', '/api/workshop-service-categories/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Not found');
@@ -593,6 +599,7 @@ export function register(route) {
 
   // screens: services, service-edit
   route('POST', '/api/workshop-services', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
     let fields;
     let placement;
@@ -626,6 +633,7 @@ export function register(route) {
 
   // screens: services, service-edit
   route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Not found');
@@ -683,6 +691,7 @@ export function register(route) {
   // link must not dangle.
   // screens: services, service-edit
   route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Not found');
