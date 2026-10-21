@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import JsBarcode from 'jsbarcode';
@@ -104,13 +104,14 @@ let printRoot: Root | null = null;
 let printHost: HTMLElement | null = null;
 
 /**
- * Prints the receipt on the computer's own printer: drawn into #wh-print,
- * which the print styles (theme.css) make the only thing on the page, then
- * the browser's print box. It stays there, hidden on screen, until the next
- * print replaces it: a browser that prints after print() returns would
- * otherwise get a blank page (fresh review).
+ * Prints a piece of paper on the computer's own printer: drawn into
+ * #wh-print, which the print styles (theme.css) make the only thing on the
+ * page, then the browser's print box. It stays there, hidden on screen, until
+ * the next print replaces it: a browser that prints after print() returns
+ * would otherwise get a blank page (fresh review). The receipt and the bike
+ * tag (21 Oct) both print this way.
  */
-export function printReceipt(props: ReceiptProps) {
+export function printPaper(paper: ReactElement) {
   let host = document.getElementById('wh-print');
   if (!host) {
     host = document.createElement('div');
@@ -123,6 +124,11 @@ export function printReceipt(props: ReceiptProps) {
     printHost = host;
   }
   const root = printRoot;
-  flushSync(() => root.render(<ReceiptPaper {...props} />));
+  flushSync(() => root.render(paper));
   window.print();
+}
+
+/** Prints the receipt (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md). */
+export function printReceipt(props: ReceiptProps) {
+  printPaper(<ReceiptPaper {...props} />);
 }

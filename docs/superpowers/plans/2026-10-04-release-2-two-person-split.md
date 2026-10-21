@@ -1,5 +1,7 @@
 # Release 2 build — splitting the work between Mark and Jack
 
+> **Superseded in part (21 Oct 2026, Mark):** who owns which files (§3, §3.1) and the server-half-first order (§4.3, §4.4) are replaced by `openspec/changes/working-agreement/`; the stage check is a checklist, not a gate.
+
 > **Which comes first (18 Oct 2026, Jack):** "Release 2" is the name of the
 > all-in-one build, and it now comes first; the Lightspeed version is
 > adapted from it afterwards (`docs/decisions/2026-10-18-build-for-every-shop.md`,

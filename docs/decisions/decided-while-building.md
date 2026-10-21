@@ -992,3 +992,28 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    diary uses (`todayIso`); a device set to another time zone than the
    shop's would read another day. Shared with the diary, for later.
 
+### 21 Oct 2026: the bike tag (bike-tag)
+
+1. **`job-bike-tag`: the bike's colour ("Trek Domane AL 3 · green").**
+   *Decided:* the tag prints the job's bike label, make and model, as the job
+   page shows it; the server's job doesn't send the colour (a change for
+   Mark, noted in the change's design).
+2. **`job-bike-tag`: the tag's size.** *Decided:* 54 mm wide, to fit a 62 mm
+   label once the print styles' 4 mm margins are off, as the receipt is
+   72 mm for 80 mm paper. A template builder replaces it later (Jack).
+3. **A job with no number.** *Decided:* no Print bike tag; its id counts
+   every shop's jobs and nothing could find it from the barcode.
+4. **A job with no customer.** *Decided:* Print bike tag alone at the right
+   of the customer row, where Message would be.
+
+### 21 Oct 2026: the old app's job payments (old-app-job-payments)
+
+1. **The old app's order pop-up: Convert to sale on a job's order.**
+   *Decided:* it opens the new till without saving what was typed in the
+   pop-up, as its Convert never did; the old app is a placeholder (Jack, 21
+   Oct).
+2. **An old-app till tab left open since before this change**, holding a
+   job's order in its cart, can still rewrite that order's lines before the
+   server refuses the payment. *Decided:* left; nobody uses the old till, and
+   a fresh page can't reach it.
+

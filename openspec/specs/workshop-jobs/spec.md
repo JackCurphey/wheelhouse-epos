@@ -705,7 +705,7 @@ Each sign-off SHALL keep the mechanic's name as it was when they signed, so dele
 - **THEN** the delete goes through, and the job still shows "Signed off by Jo Taylor"
 
 ### Requirement: Paying for a job records its sign-off, and never refuses over it
-Paying a job's order that finishes its work SHALL record the sign-off sent with the payment (answer 5). A sign-off that is no longer valid SHALL NOT refuse the payment: the work finishes unsigned and the reply warns. A payment sent with no sign-off finishes the work unsigned, as before.
+Paying a job's order that finishes its work SHALL record the sign-off sent with the payment (answer 5). A sign-off that is no longer valid SHALL NOT refuse the payment: the work finishes unsigned and the reply warns. A payment that doesn't answer the sign-off question at all SHALL be refused with `use_till`, and nothing sold: only the old app sends none, and it never takes a job's payment (Jack, 21 Oct, `docs/decisions/2026-10-21-old-app-placeholder.md`).
 
 #### Scenario: Signed at the till
 - **WHEN** WH-1042, in progress, is paid with Alex Morgan signing off
@@ -714,6 +714,10 @@ Paying a job's order that finishes its work SHALL record the sign-off sent with 
 #### Scenario: The mechanic was made inactive meanwhile
 - **WHEN** the payment names a mechanic who is no longer active
 - **THEN** the sale stands, the work is finished unsigned, and the reply warns "Paid and finished, but not signed off"
+
+#### Scenario: No answer to the sign-off question
+- **WHEN** a job's order is paid with no answer to who signed it off, its work in progress or finished
+- **THEN** it is refused with `use_till`, nothing is sold, and the job is as it was
 
 ### Requirement: A shop chooses whether customers see who signed off
 A shop setting, "Show who signed off to customers", SHALL start off (Jack, 16 Oct, answer 3), and SHALL be changed in Settings › Workshop › Mechanics. While it is off, customers SHALL NOT see who signed a job off.
@@ -743,3 +747,14 @@ A booking request SHALL be able to move to a time the shop suggests, as an "offe
 #### Scenario: Accepting
 - **WHEN** Sam accepts the time
 - **THEN** the booking is confirmed at Friday 18 September, 12:00
+
+### Requirement: Staff print a bike tag once the bike is in
+Once a job's bike is in the shop, the job page SHALL offer "Print bike tag". Pressing it SHALL print only the tag, on the computer's own printer. The tag SHALL show the job number, a Code 128 barcode of it, the customer and the bike.
+
+#### Scenario: Printing the tag
+- **WHEN** staff press Print bike tag on a booked-in job
+- **THEN** the print box opens with only the tag: the job number, its barcode, the customer's name and the bike
+
+#### Scenario: No tag before the bike arrives or after it leaves
+- **WHEN** a job's bike is expected or has been collected
+- **THEN** the job page offers no Print bike tag

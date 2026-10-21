@@ -824,6 +824,8 @@ export const journeys = [
       { label: 'The job — one page, no tabs', screens: [
         sd('job-overview', 'Job · expected', 'Staff'),
         sd('job-book-in', 'Job · booked in, tag printed', 'Staff'),
+        sd('job-book-in-print', 'Job · booked in, the Print bike tag button', 'Staff'),
+        sd('job-bike-tag', 'The printed bike tag', 'Staff'),
         sd('job-quote', 'Job · quote', 'Staff'),
         sd('job-mechanic', 'Job · in the workshop (mechanic)', 'Mechanic'),
         sd('job-waiting-parts', 'Job · waiting for parts', 'Staff'),

@@ -1181,6 +1181,13 @@ function renderFrontDeskOrderTable() {
 }
 
 function loadOrderIntoCart(doc) {
+  // The old app never takes payment for a workshop job (Jack, 21 Oct,
+  // docs/decisions/2026-10-21-old-app-placeholder.md): the new till asks who
+  // signed the work off.
+  if (doc.workshopJobId) {
+    location.assign(`/workshop/till?job=${doc.workshopJobId}`);
+    return;
+  }
   cart = doc.items.map((it) => {
     const product = products.find((p) => p.id === it.productId);
     return {
@@ -4734,6 +4741,11 @@ function renderDocumentModal(holder, doc) {
   const convertBtn = document.getElementById('doc-convert-btn');
   if (convertBtn) {
     convertBtn.addEventListener('click', async () => {
+      // A workshop job's order is paid at the new till (Jack, 21 Oct).
+      if (doc.workshopJobId) {
+        location.assign(`/workshop/till?job=${doc.workshopJobId}`);
+        return;
+      }
       if (!activeCashierId) {
         showToast('Select a staff member before completing the sale');
         return;
