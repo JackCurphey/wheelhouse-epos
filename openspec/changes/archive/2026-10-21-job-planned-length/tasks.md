@@ -4,4 +4,4 @@
 - [x] 1.2 `serializeWorkshopJob` sends `plannedMinutes`
 - [x] 1.3 The reply shapes and the fake job carry the field
 - [x] 1.4 `npm test` and the browser tests pass
-- [ ] 1.5 Archive into `openspec/specs/workshop-jobs`
+- [x] 1.5 Archive into `openspec/specs/workshop-jobs`
