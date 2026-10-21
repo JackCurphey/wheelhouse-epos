@@ -75,9 +75,9 @@ export const TEMPLATES = {
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
-// The booking messages staff answers send (Jack, 20 Oct); Request received and
-// Booking cancelled come with the customer's side (Mark's booking server).
-export const LIVE_KEYS = ['quote_to_approve', 'bike_ready', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered'];
+// The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
+// customer's side: Request received and Booking cancelled.
+export const LIVE_KEYS = ['quote_to_approve', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

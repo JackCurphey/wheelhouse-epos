@@ -18,9 +18,9 @@ test('the approved booking wording and the first live messages', () => {
   assert.equal(TEMPLATES.booking_confirmed.wording,
     'Hi [Customer’s first name], your [Service] at [Shop name] is booked for [Booked day and time]. [When to drop off] [Your note on the confirmation] See or change your booking: [Link to the booking] — no app or sign-in needed. Your repair · [Job number].');
   assert.equal(TEMPLATES.bike_ready.name, 'Bike ready');
-  // The booking messages staff answers send (Jack, 20 Oct); Request received
-  // and Booking cancelled wait for the customer's side (Mark's booking server).
-  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'bike_ready', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered']);
+  // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct
+  // the customer's side: Request received and Booking cancelled.
+  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled']);
   assert.deepEqual(Object.keys(TEMPLATES).filter((k) => TEMPLATES[k].group === 'booking'),
     ['request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled']);
 });

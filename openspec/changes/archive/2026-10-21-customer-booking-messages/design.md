@@ -1,0 +1,6 @@
+# Design
+- `sendLinkMessage(key, jobId, shopId, privateLink)` in `portal.js` is the customer's side of `sendBookingMessage`. It runs after the commit. A message switched off, or a customer with no way to be reached, is left out quietly, and the public reply never says which, so it can't tell anyone with the link what's on file. The link is `APP_PUBLIC_URL` plus the customer's own link path, never a new one and never the request's Host.
+- **The booking route:** a 201 sends `booking_confirmed` when confirmed at once, otherwise `request_received`. A replay answers 200 and sends nothing.
+- **The customer's cancel:** sends `booking_cancelled` only on a real cancel. A second press (`{ already: true }` from the lock) answers with the cancelled booking and sends nothing.
+- **The staff cancel:** in `jobActionRoute`, `event === 'cancel'`, which only the booking machine has, sends `booking_cancelled` through `sendBookingMessage`, and replies with `bookingMessage` when it couldn't go. No staff screen calls the cancel action yet; when one does, it shows the didn't-go note as the request pop-up does.
+- **[Booked day and time] for Booking cancelled:** the time the customer asked for while an offer was never accepted, as Request declined does. Accepting an offer clears that time.

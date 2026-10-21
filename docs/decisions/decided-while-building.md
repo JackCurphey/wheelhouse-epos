@@ -802,7 +802,9 @@ silent:
    the answer itself already confirms; no Undo is drawn for these answers.
 2. **A declined date change sends nothing yet**: its wording isn't stored
    (messages engine item 3). Request received and Booking cancelled wait for
-   the customer's side, in Mark's booking server.
+   the customer's side, in Mark's booking server. *Since 21 Oct
+   (customer-booking-messages):* both send, built by Jack under the working
+   agreement.
 3. **[Service] is the job's services, else its title; [Booked day and time]
    reads "Thu 17 Sep, 11:30"; the drop-off sentence follows the booking
    page's rule in `bk-msg-confirmed`'s words.** *Pattern:* the approved
@@ -1058,4 +1060,13 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 8. **`dq-waiting-part`: the reason ("Your new brake pads are taking longer to
    arrive").** Not kept for the customer yet. *Decided:* the bold warning
    alone, then the ready day.
+
+### 21 Oct 2026: Request received and Booking cancelled (customer-booking-messages)
+
+1. **Booking cancelled after an offer never accepted.** Not drawn.
+   *Decided:* it names the time the customer asked for, as Request declined
+   does.
+2. **A booking sent with no bike.** Request received reads "on your [Bike]";
+   with no bike that tap-in is left out. *Decided:* left as the tidy-up makes
+   it, for now.
 

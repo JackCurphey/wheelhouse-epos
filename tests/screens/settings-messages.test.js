@@ -92,7 +92,8 @@ test('Messages lists the messages that send today, each with when, the customerâ
   assert.ok(list.textContent.includes('Bike ready'));
   assert.ok(has(ui.queryByText('When a job is marked ready')));
   assert.ok(has(ui.queryByText('Quote to approve')));
-  assert.equal(list.textContent.includes('Booking cancelled'), false, 'not sent yet, so not listed');
+  // A message the server marks as not sent (this fixture's Booking cancelled) isn't listed.
+  assert.equal(list.textContent.includes('Booking cancelled'), false, 'a message not sent is not listed');
   // The booking messages under their own heading, as drawn (msgListOpen).
   const heading = list.querySelector('h5');
   assert.ok(heading !== null && heading.textContent === 'Booking messages');
