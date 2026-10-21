@@ -237,14 +237,7 @@ export function computeCapacity({ settings, mechanics, blocks, jobs, dates }) {
     const workingCount = rows.filter((r) => total(r.availableWindows) > 0).length;
     const queueShare = workingCount ? queueMinutes / workingCount : 0;
 
-    return {
-      date,
-      weekday,
-      mode: modeForDate(settings, date),
-      shopClosed,
-      shopBlocks,
-      queueMinutes,
-      mechanics: rows.map(({ m, scheduled, ownBlocks, availableWindows }) => {
+    const mechanicDays = rows.map(({ m, scheduled, ownBlocks, availableWindows }) => {
         const mine = dayJobs.filter((j) => j.mechanicId === m.id);
         const timed = mine.filter(isTimed).map((j) => [toMinutes(j.startTime), toMinutes(j.endTime)]);
         const untimedMinutes = mine.filter((j) => !isTimed(j)).reduce((n, j) => n + jobMinutes(j), 0);
@@ -253,8 +246,23 @@ export function computeCapacity({ settings, mechanics, blocks, jobs, dates }) {
         const freeMinutes = working
           ? total(freeWindows) - untimedMinutes - queueShare - settings.reserveMinutes
           : 0;
-        return { mechanicId: m.id, scheduled, working, availableWindows, freeWindows, freeMinutes, blocks: ownBlocks };
-      }),
+        return { mechanicId: m.id, scheduled, working, availableWindows, freeWindows, freeMinutes, blocks: ownBlocks, untimedMinutes };
+      });
+    // Planned effort (the Workshop Overview; Jack, 21 Oct): the timed work inside
+    // each mechanic's working time, overlaps counted once (what's no longer
+    // free), their untimed work and the shared queue, against the time they have.
+    const availableMinutes = mechanicDays.reduce((n, d) => n + total(d.availableWindows), 0);
+    const plannedMinutes = mechanicDays.reduce((n, d) => n + total(d.availableWindows) - total(d.freeWindows) + d.untimedMinutes, 0) + queueMinutes;
+    return {
+      date,
+      weekday,
+      mode: modeForDate(settings, date),
+      shopClosed,
+      shopBlocks,
+      queueMinutes,
+      plannedMinutes,
+      availableMinutes,
+      mechanics: mechanicDays.map(({ untimedMinutes, ...rest }) => { void untimedMinutes; return rest; }),
     };
   });
 }

@@ -528,6 +528,10 @@ export function register(route) {
           shopClosed: day.shopClosed,
           closures: day.shopBlocks,
           queueMinutes: day.queueMinutes,
+          // Planned effort on the Workshop Overview (Jack, 21 Oct): booked work inside
+          // working time, overlaps counted once, and the time the mechanics have.
+          plannedMinutes: day.plannedMinutes,
+          availableMinutes: day.availableMinutes,
           clashes,
           mechanics: day.mechanics.map((m) => ({
             mechanicId: m.mechanicId,

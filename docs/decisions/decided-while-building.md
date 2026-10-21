@@ -997,7 +997,8 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 1. **`job-bike-tag`: the bike's colour ("Trek Domane AL 3 · green").**
    *Decided:* the tag prints the job's bike label, make and model, as the job
    page shows it; the server's job doesn't send the colour (a change for
-   Mark, noted in the change's design).
+   Mark, noted in the change's design). *Since 21 Oct (planned-effort):* the
+   job sends it and the tag prints it, as drawn.
 2. **`job-bike-tag`: the tag's size.** *Decided:* 54 mm wide, to fit a 62 mm
    label once the print styles' 4 mm margins are off, as the receipt is
    72 mm for 80 mm paper. A template builder replaces it later (Jack).

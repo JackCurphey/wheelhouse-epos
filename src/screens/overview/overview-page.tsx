@@ -34,6 +34,9 @@ function due(start: string | null, now: Date): boolean {
   return toMinutes(start) - (now.getHours() * 60 + now.getMinutes()) <= 60;
 }
 
+/** "6h", or "6.5h" to the half hour, as drawn. */
+const hoursOf = (minutes: number) => `${Math.round(minutes / 30) / 2}h`;
+
 function useMedia(query: string): boolean {
   return useSyncExternalStore(
     (onChange) => {
@@ -55,11 +58,17 @@ function useNow(): Date {
   return now;
 }
 
-function Figure({ id, label, value, note }: { id: string; label: string; value: string; note: string }) {
+function Figure({ id, label, value, note, fill }: { id: string; label: string; value: string; note: string; fill?: number }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-1 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-4 max-md:flex-row max-md:flex-wrap max-md:items-baseline max-md:justify-between max-md:px-3.5 max-md:py-2.5">
       <h2 id={id} className="m-0 text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">{label}</h2>
       <p className="m-0 text-2xl font-bold max-md:text-xl">{value}</p>
+      {/* A thin bar for the one figure that is a share (audit M7). */}
+      {fill !== undefined ? (
+        <div role="img" aria-label={`${fill}% of planned effort used today`} className="h-1 w-full overflow-hidden rounded-full bg-[var(--wh-surface-muted)] max-md:basis-full">
+          <div className="h-full bg-[var(--accent)]" style={{ width: `${fill}%` }} />
+        </div>
+      ) : null}
       <p className="m-0 text-[13px] text-[var(--wh-muted)] max-md:basis-full">{note}</p>
     </section>
   );
@@ -88,6 +97,13 @@ export function OverviewPage() {
   // diary's changes refresh them too.
   const todays = useQuery({ queryKey: ['workshop-jobs', 'overview', today], queryFn: () => apiGet<WorkshopJob[]>(`/api/workshop-jobs?start=${today}&end=${today}`) });
   const kept = useQuery({ queryKey: ['workshop-jobs', 'in-shop'], queryFn: () => apiGet<WorkshopJob[]>('/api/workshop-jobs?custody=in_shop') });
+  // Planned effort (Jack, 21 Oct, answer 2: once the capacity figures give it).
+  // Left out, not shown as zero, while they can't be read.
+  const effort = useQuery({
+    queryKey: ['workshop-capacity', 'overview', today],
+    queryFn: () => apiGet<{ days: { date: string; plannedMinutes?: number; availableMinutes?: number }[] }>(`/api/workshop-capacity?start=${today}&end=${today}`),
+  });
+  const effortDay = effort.data?.days.find((d) => d.date === today && typeof d.plannedMinutes === 'number' && typeof d.availableMinutes === 'number');
 
   const jobs = new Map<number, WorkshopJob>();
   for (const j of [...(todays.data ?? []), ...(kept.data ?? [])]) jobs.set(j.id, j);
@@ -162,9 +178,13 @@ export function OverviewPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
       {dateLine}
-      <div className="grid grid-cols-2 gap-3.5 max-md:grid-cols-1 max-md:gap-2.5">
+      <div className={`grid gap-3.5 max-md:grid-cols-1 max-md:gap-2.5 ${effortDay ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <Figure id="ov-expected" label="Expected today" value={`${expectedToday.length} ${expectedToday.length === 1 ? 'bike' : 'bikes'}`} note={`${stillToArrive} still to arrive`} />
         <Figure id="ov-in-workshop" label="In the workshop" value={String(inWorkshop.length)} note={`${lists.ready.length} ready to collect`} />
+        {effortDay ? (
+          <Figure id="ov-effort" label="Planned effort" value={`${hoursOf(effortDay.plannedMinutes as number)} / ${hoursOf(effortDay.availableMinutes as number)}`} note="Shared and assigned, counted once"
+            fill={(effortDay.availableMinutes as number) > 0 ? Math.min(100, Math.round(((effortDay.plannedMinutes as number) / (effortDay.availableMinutes as number)) * 100)) : undefined} />
+        ) : null}
       </div>
       <div role="group" aria-label="Show jobs" className="flex flex-wrap gap-1.5">
         {TABS.map(([key, label]) => (

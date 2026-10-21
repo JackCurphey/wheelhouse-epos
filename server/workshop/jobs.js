@@ -40,6 +40,8 @@ export function serializeWorkshopJob(row) {
     customerName: row.customer_name !== undefined ? row.customer_name : undefined,
     bikeId: row.bike_id,
     bikeLabel: row.bike_label !== undefined ? row.bike_label : undefined,
+    // The bike's colour, for the bike tag ("Trek Domane AL 3 · green"; 21 Oct).
+    bikeColour: row.bike_colour ?? null,
     mechanicId: row.mechanic_id,
     mechanicName: row.mechanic_name !== undefined ? row.mechanic_name : undefined,
     jobDate: row.job_date,
@@ -93,7 +95,7 @@ export function serializeWorkshopJob(row) {
   };
 }
 
-export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
+export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
   FROM workshop_jobs w
   LEFT JOIN customers c ON c.id = w.customer_id
   LEFT JOIN customer_bikes b ON b.id = w.bike_id
