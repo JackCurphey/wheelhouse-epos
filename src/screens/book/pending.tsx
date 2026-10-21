@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, useParams } from 'react-router';
-import { TriangleAlert } from 'lucide-react';
+import { Check, TriangleAlert } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ApiError, apiMutate } from '@/lib/api/client.ts';
@@ -11,7 +11,7 @@ import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
 import {
-  COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -119,6 +119,24 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
   }
 
+  // A request the shop never answered, once expired (Jack, 21 Oct, booking
+  // page stages answer 2; drawn as bk-request-expired). As the declined page
+  // is built: no deposits yet, so no deposit line.
+  if (link.stage === 'request_expired') {
+    return (
+      <BookFrame title="Sorry, we couldn’t get back to you in time" eyebrow="Not booked">
+        <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+          <p className="m-0 text-[15px] leading-normal">{`${link.shopName} couldn’t answer your request for ${whenLine(link)} in time, so it has expired.`}</p>
+          <p className="m-0 text-[15px] leading-normal">Nothing is booked.</p>
+          <div>
+            <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Choose another date</Link>
+          </div>
+          <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
+        </div>
+      </BookFrame>
+    );
+  }
+
   if (link.stage === 'cancelled') {
     return (
       <BookFrame title="Your booking is cancelled" eyebrow="Cancelled">
@@ -202,6 +220,68 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
   }
 
+  // Once the bike is dropped off (Jack, 21 Oct, docs/decisions/2026-10-21-booking-page-stages.md):
+  // in the workshop (dq-in-shop; a plain line until the server sends how far
+  // the work is, answer 1), ready (cp-summary-inshop: no shop takes payments
+  // online yet) and collected (cp-summary-collected). Until the server sends
+  // the work done, the answered quote and the booking's rows stand where the
+  // drawings have "Work agreed" and "What we did". None of the drawings has
+  // Copy link or the contact line.
+  if (link.stage === 'in_workshop' || link.stage === 'ready_to_collect' || link.stage === 'collected') {
+    const inShop = link.stage === 'in_workshop';
+    const bikeWords = bikeName(link) || 'bike';
+    // In the workshop the heading is the bike and the work, as on the confirmed
+    // page (dq-in-shop); the plain line sits where the tracker will go.
+    const title = inShop ? pageHeading(link) : `Your ${bikeWords} ${link.stage === 'collected' ? 'has been collected' : 'is ready'}`;
+    const bike = bikeRow(link);
+    const row = (label: string, value: React.ReactNode) => (
+      <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+        <span data-row="label" className="text-[var(--wh-muted)]">{label}</span>{' '}
+        <span className="text-right font-semibold">{value}</span>
+      </div>
+    );
+    const card = (heading: string, id: string, body: React.ReactNode) => (
+      <section aria-labelledby={id} className="mb-4 flex flex-col gap-2.5 rounded-[10px] border border-[var(--wh-border)] p-4">
+        <h2 id={id} className="m-0 text-lg font-bold">{heading}</h2>
+        {body}
+      </section>
+    );
+    return (
+      <BookFrame title={title} eyebrow={`Your repair · ${link.reference}`}>
+        {inShop ? <p className="m-0 mb-4 text-[15px] font-semibold leading-normal">Your bike is in the workshop</p> : <Tracker />}
+        {link.stage === 'ready_to_collect' && card('To pay when you collect', 'pay-title', (
+          <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
+        ))}
+        {link.stage === 'collected' && card('Collected', 'collected-title', (
+          <>
+            <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />Collected</p>
+            <p className="m-0 text-[15px] leading-normal">Thanks for coming in — this page keeps working for 30 days after collection.</p>
+          </>
+        ))}
+        {/* After the pay card, as the drawings' reading order has it (cp-summary). */}
+        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} done={!inShop} />
+        <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+          {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
+          {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}
+          <div>
+            {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
+            {inShop && total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
+            {bike && row('Bike', bike)}
+            {row('When', whenLine(link))}
+            {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
+          </div>
+          {(link.description || answerList) && (
+            <div className="text-sm">
+              {link.description && <p className="m-0">{link.description}</p>}
+              {answerList}
+            </div>
+          )}
+          <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
+        </div>
+      </BookFrame>
+    );
+  }
+
   // An unrecognised stage (statusText returns undefined) must not break the
   // screen: the heading is left empty rather than crashing BookFrame, which
   // requires a string title, and the rest of the summary still renders.
@@ -235,6 +315,27 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       </div>
       {keep}
     </BookFrame>
+  );
+}
+
+/**
+ * Where the bike is (drawn as collect.mjs trackerDone): once it's ready,
+ * every step is done and Ready is the current one.
+ */
+const STEPS = ['Booked', 'In the shop', 'Being worked on', 'Ready'];
+function Tracker() {
+  return (
+    <ol aria-label="Where your bike is" className="m-0 mb-4 flex list-none flex-wrap gap-x-4 gap-y-2 p-0">
+      {STEPS.map((step, i) => {
+        const current = i === STEPS.length - 1;
+        return (
+          <li key={step} aria-current={current ? 'step' : undefined} className={`inline-flex items-center gap-1.5 text-sm ${current ? 'font-bold' : 'font-medium'}`}>
+            <span aria-hidden="true" className={`inline-flex size-6 items-center justify-center rounded-full ${current ? 'bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'bg-[var(--wh-status-complete-bg)] text-[var(--wh-status-complete-ink)]'}`}><Check className="size-3" /></span>
+            {step}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

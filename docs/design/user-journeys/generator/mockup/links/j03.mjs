@@ -47,6 +47,7 @@ const map = {
   'bk-bookings': { Open: go('bk-page') },
   'bk-offered': { 'Accept this time': go('bk-page'), 'Cancel my request': go('bk-cancel') },
   'bk-declined': { 'Choose another date — we’ve kept your details': go('bk-when') },
+  'bk-request-expired': { 'Choose another date — we’ve kept your details': go('bk-when') },
   'bk-change': { 'Ask for this date': go('bk-change-pending'), 'Keep Thursday': go('bk-page') },
   'bk-change-pending': { 'Cancel my date change': go('bk-page') },
   // The cancel box: the page behind it keeps its own buttons

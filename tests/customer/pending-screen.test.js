@@ -23,9 +23,9 @@ const LINK = {
     { wording: "What's wrong with the brakes?", answer: 'Squeaking', text: 'Front only' },
     { wording: 'Tubeless?', answer: null },
   ],
-  // A bike in the workshop: the first release's page, which waiting, confirmed
-  // and cancelled bookings no longer use (19 and 20 Oct).
-  bike: null, stage: 'in_workshop', photoCount: 1,
+  // A stage with no page of its own yet: the first release's page, which every
+  // known stage now has its own drawing for (19, 20 and 21 Oct).
+  bike: null, stage: 'some_future_stage', photoCount: 1,
   services: [{ name: 'Brake service', price: 20 }, { name: 'Gear service', price: 25 }], totalPrice: 45,
 };
 
@@ -50,10 +50,12 @@ const click = async (el) => {
   });
 };
 const heading = (ui, name) => ui.findByRole('heading', { level: 1, name });
+// The first release's page, which has no heading for an unknown stage.
+const oldPage = async (ui) => { await ui.findByText('Reference'); return true; };
 
 test('it reads the booking link and shows where the booking is up to as its heading; no step, back link or action', async () => {
   const { ui, requests } = await open();
-  assert.ok(await heading(ui, 'In the workshop'));
+  assert.ok(await oldPage(ui));
   assert.ok(requests.some((r) => r.url === `/api/portal/north/booking-links/${CODE}`), JSON.stringify(requests));
   assert.ok(ui.queryByText(/^Step /) === null);
   assert.ok(ui.queryByRole('link', { name: /Back/ }) === null);
@@ -62,13 +64,13 @@ test('it reads the booking link and shows where the booking is up to as its head
 
 for (const [stage, words] of [
   ['confirmed', 'Your bike · Brake service and 1 more'],
-  ['in_workshop', 'In the workshop'],
-  ['ready_to_collect', 'Ready to collect'],
-  ['collected', 'Collected'],
+  ['in_workshop', 'Your bike · Brake service and 1 more'],
+  ['ready_to_collect', 'Your bike is ready'],
+  ['collected', 'Your bike has been collected'],
   ['change_requested', 'Your bike · Brake service and 1 more'],
   ['declined', 'Sorry, we can’t fit this booking in'],
   ['cancelled', 'Your booking is cancelled'],
-  ['request_expired', 'Request expired'],
+  ['request_expired', 'Sorry, we couldn’t get back to you in time'],
 ]) {
   test(`stage ${stage} reads "${words}"`, async () => {
     const { ui } = await open({ ...LINK, stage });
@@ -86,7 +88,7 @@ test('an unknown stage leaves the heading empty but still renders the summary', 
 
 test('the summary: reference, services with prices, the total, day and time, bike note, description and answers', async () => {
   const { ui } = await open();
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   for (const text of [
     'Reference', 'WH-1042', 'Brake service', '£20', 'Gear service', '£25', 'From £45', 'Monday 5 October, 09:30',
     'Blue Trek road bike', 'Squeals when braking', "What's wrong with the brakes?", 'Squeaking - Front only',
@@ -96,7 +98,7 @@ test('the summary: reference, services with prices, the total, day and time, bik
 
 test('with prices hidden only the names show; a drop-off booking shows the day alone', async () => {
   const { ui } = await open({ ...LINK, startTime: '', services: [{ name: 'Brake service', price: null }], totalPrice: null });
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   assert.ok(ui.getByText('Brake service'));
   assert.ok(ui.queryByText(/£/) === null);
   assert.ok(ui.getByText('Monday 5 October'));
@@ -104,7 +106,7 @@ test('with prices hidden only the names show; a drop-off booking shows the day a
 
 test('with a single service there is no "From £" total line, only the service\'s own price', async () => {
   const { ui } = await open({ ...LINK, services: [{ name: 'Brake service', price: 20 }], totalPrice: 20 });
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   assert.ok(ui.getByText('Brake service'));
   assert.ok(ui.getByText('£20'));
   assert.ok(ui.queryByText(/^From £/) === null);
@@ -112,7 +114,7 @@ test('with a single service there is no "From £" total line, only the service\'
 
 test('Copy link copies this page\'s address and says "Copied" briefly', async () => {
   const { ui } = await open();
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   const copied = [];
   Object.defineProperty(window.navigator, 'clipboard', {
     value: { writeText: async (text) => { copied.push(text); } }, configurable: true,
@@ -127,7 +129,7 @@ test('Copy link copies this page\'s address and says "Copied" briefly', async ()
 
 test('Copy link also announces "Copied" to a screen reader, via a live region, not only the button text', async () => {
   const { ui } = await open();
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   Object.defineProperty(window.navigator, 'clipboard', {
     value: { writeText: async () => {} }, configurable: true,
   });
@@ -140,7 +142,7 @@ test('Copy link also announces "Copied" to a screen reader, via a live region, n
 
 test('Copy link with no clipboard does not throw, and the button stays "Copy link"', async () => {
   const { ui } = await open();
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   Object.defineProperty(window.navigator, 'clipboard', { value: undefined, configurable: true });
   await click(ui.getByRole('button', { name: 'Copy link' }));
   assert.ok(ui.getByRole('button', { name: 'Copy link' }));
@@ -148,7 +150,7 @@ test('Copy link with no clipboard does not throw, and the button stays "Copy lin
 
 test('it says to contact the shop to change or cancel', async () => {
   const { ui } = await open();
-  await heading(ui, 'In the workshop');
+  await oldPage(ui);
   assert.ok(ui.getByText('Need to change or cancel? Contact North Street Cycles'));
 });
 
@@ -175,7 +177,7 @@ test('any other failure offers Try again, which asks again', async () => {
   });
   assert.ok(await heading(ui, "We couldn't load this booking"));
   await click(ui.getByRole('button', { name: 'Try again' }));
-  assert.ok(await heading(ui, 'In the workshop'));
+  assert.ok(await oldPage(ui));
   assert.equal(calls, 2);
   const { waitFor } = await rtl();
   await waitFor(() => assert.ok(quoteAsked));
@@ -186,14 +188,14 @@ test('any other failure offers Try again, which asks again', async () => {
 // line): with the shop's setting on, a ready bike's link says who checked it.
 test('a ready bike’s link says who checked it, when the shop shows it', async () => {
   const { ui } = await open({ ...LINK, stage: 'ready_to_collect', checkedBy: 'Alex Morgan' });
-  assert.ok(await heading(ui, 'Ready to collect'));
+  assert.ok(await heading(ui, 'Your bike is ready'));
   const line = ui.getByText((_, el) => el?.getAttribute('data-checked-by') === 'true');
   assert.equal(line.textContent, 'Checked by Alex Morgan');
 });
 
 test('with no one to name, the link names nobody', async () => {
   const { ui } = await open({ ...LINK, stage: 'ready_to_collect', checkedBy: null });
-  assert.ok(await heading(ui, 'Ready to collect'));
+  assert.ok(await heading(ui, 'Your bike is ready'));
   assert.ok(ui.queryByText(/Checked by/) === null);
 });
 
@@ -268,9 +270,9 @@ test('a booking waiting for the shop opens as a request', async () => {
   assert.ok(ui.queryByText('Reference') === null);
 });
 
-test('a bike in the workshop keeps the first release’s page', async () => {
+test('a bike in the workshop no longer has the first release’s page (21 Oct, pending-stages.test.js)', async () => {
   const { ui } = await open({ ...MAYA_LINK, stage: 'in_workshop' });
-  assert.ok(await heading(ui, 'In the workshop'));
-  assert.ok(ui.queryByText('Reference') !== null);
+  assert.ok(await ui.findByText('Your bike is in the workshop'));
+  assert.ok(ui.queryByText('Reference') === null);
   assert.ok(ui.queryByText('Booking confirmed') === null);
 });

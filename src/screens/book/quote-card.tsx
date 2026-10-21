@@ -30,7 +30,7 @@ function sentLine(iso: string | null) {
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
-export function QuoteCard({ shopSlug, code, agreedTotal }: { shopSlug: string; code: string; agreedTotal: number | null }) {
+export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopSlug: string; code: string; agreedTotal: number | null; done?: boolean }) {
   const queryClient = useQueryClient();
   const key = ['booking-quote', shopSlug, code];
   const quote = useQuery({
@@ -64,9 +64,11 @@ export function QuoteCard({ shopSlug, code, agreedTotal }: { shopSlug: string; c
     const phone = q.lines.find((l) => l.decidedVia === 'phone' || l.decidedVia === 'in_shop');
     return (
       <section className={CARD} aria-labelledby="quote-heading">
-        <span className={`${BADGE} bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]`}>Answered</span>
+        {/* Once the work is done, the answer is the drawings' "What we did"
+            (cp-summary; booking page stages, 21 Oct). */}
+        {!done && <span className={`${BADGE} bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]`}>Answered</span>}
         <h2 id="quote-heading" className="m-0 text-xl font-bold">
-          {yes.length ? 'Thanks — the work you agreed is going ahead.' : 'Thanks — the booked work is going ahead.'}
+          {done ? 'What we did' : yes.length ? 'Thanks — the work you agreed is going ahead.' : 'Thanks — the booked work is going ahead.'}
         </h2>
         {phone ? (
           <p className="m-0">{`You answered ${phone.decidedVia === 'phone' ? 'by phone' : 'in the shop'}${phone.decidedByName ? ` with ${phone.decidedByName}` : ''}.`}</p>
