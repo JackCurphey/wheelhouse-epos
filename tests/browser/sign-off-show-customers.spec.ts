@@ -30,7 +30,7 @@ test.beforeAll(async () => {
     job = r.body;
   }
   const cashier = made.body.employeeId;
-  const paid = await staff(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: cashier } });
+  const paid = await staff(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: cashier, signedOffBy: null } });
   expect(paid.status, JSON.stringify(paid.body)).toBe(201);
 });
 
