@@ -9,11 +9,11 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
 
 ## 1. Step A: orders in pence, and the totals check (Mark, server)
 
-- [ ] 1.1 Write the totals check tests first, and watch each fail because `scripts/ci/check-money-totals.mjs` doesn't exist. Use fixtures for:
+- [x] 1.1 Write the totals check tests first, and watch each fail because `scripts/ci/check-money-totals.mjs` doesn't exist. Use fixtures for:
   - each mismatch kind (conversion, order lines, sale lines, payments, days);
   - the two known kinds (group-discount rounding, the 1p tolerance);
   - a clean database.
-- [ ] 1.2 Write `scripts/ci/check-money-totals.mjs` (`design.md` Decision 7). Verify the 1.1 tests pass, and that a fresh test database reports no mismatches, with counts
+- [x] 1.2 Write `scripts/ci/check-money-totals.mjs` (`design.md` Decision 7). Verify the 1.1 tests pass, and that a fresh test database reports no mismatches, with counts
 - [ ] 1.3 Write the migration test first, on a scratch database with pounds orders. Watch it fail, then write the migration (next free number) and verify the totals check is clean after it. The test checks that:
   - the new columns exist, as `INTEGER NOT NULL DEFAULT 0` (`vat_rate_bp` nullable);
   - amounts are backfilled with `ROUND(x * 100)`;
