@@ -106,6 +106,7 @@ test('a booking returns a booking link, and the link reads the booking back', as
     work: [],
     declined: [],
     toPay: null,
+    nothingToPay: true,
     paid: null,
   });
   assert.equal(typeof res.body.shop.openingHours, 'string');
