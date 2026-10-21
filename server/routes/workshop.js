@@ -14,7 +14,7 @@ import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
-import { publicBase } from '../proxy-trust.js';
+import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
@@ -280,6 +280,12 @@ function waitingItem(row) {
       }
       : {}),
   };
+}
+
+// The address a customer opens: APP_PUBLIC_URL when set, else the address
+// the member of staff is using.
+function publicBase(req) {
+  return process.env.APP_PUBLIC_URL || `${isHttpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
 }
 
 // A job's booking link, issued afresh for a message that carries it (journey
@@ -867,17 +873,18 @@ export function register(route) {
     });
   }
 
-  // screens: requests, review
   // The job page says it was opened (Jack, 19 Oct, auto-confirm): an online
   // booking confirmed at once loses its "new, booked online" mark. Any signed-in
   // staff member; no version (seeing a job is not an edit), and doing it again
   // changes nothing. A GET never changes data, so this is its own POST.
+  // screens: job-page, diary
   route('POST', '/api/workshop-jobs/:id/seen', async (req, res, params) => {
     const { changes } = await db.prepare('UPDATE workshop_jobs SET online_unseen = 0 WHERE id = ?').run(Number(params.id));
     if (!changes) return notFound(res, 'Job not found');
     res.writeHead(204).end();
   });
 
+  // screens: requests, review
   jobActionRoute('accept', bookingRequest, 'accept');
 
   // screens: reject, rejected

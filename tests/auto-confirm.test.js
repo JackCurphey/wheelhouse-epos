@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from './helpers/staff.js';
 import { portalSignup } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedJobTypes } from './helpers/bookable.js';
@@ -127,4 +127,28 @@ test('opening the job clears its mark; seen again changes nothing', async () => 
   assert.equal(afterSeen.version, before.version, 'seeing it is not an edit');
   assert.equal((await staff(`/api/workshop-jobs/${booked.id}/seen`, { method: 'POST', body: {} })).status, 204);
   assert.equal((await staff('/api/workshop-jobs/999999/seen', { method: 'POST', body: {} })).status, 404);
+});
+
+// Fresh review, 21 Oct.
+test('only the Owner can change the setting', async () => {
+  const made = await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' } });
+  assert.ok(made.status < 300, JSON.stringify(made.body));
+  const jo = await staffFreshCookie(made.body.loginId);
+  const res = await staffRequest(server.baseUrl, jo, '/api/workshop-settings', { method: 'PUT', body: { confirmBookingsAutomatically: true } });
+  assert.equal(res.status, 403, JSON.stringify(res.body));
+  assert.equal((await staff('/api/workshop-settings')).body.confirmBookingsAutomatically, false);
+});
+
+test('a confirmed booking sent again with its request key is answered once, with one message', async () => {
+  await setAuto(true);
+  try {
+    const body = { mechanicId: sam, jobDate: nextDay(), startTime: '16:00', serviceIds: [types.service], requestKey: `auto-confirm-${Date.now()}-retry-key` };
+    const first = await tryBooking(server.baseUrl, customer.cookie, owner.shop.slug, body);
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    const again = await tryBooking(server.baseUrl, customer.cookie, owner.shop.slug, body);
+    assert.equal(again.body.id, first.body.id, JSON.stringify(again.body));
+    assert.deepEqual((await messagesFor(first.body.id)).map((m) => m.template_key), ['booking_confirmed']);
+  } finally {
+    await setAuto(false);
+  }
 });

@@ -12,7 +12,7 @@ import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBo
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
 import { currentCustomerSession } from '../lib/session.js';
-import { clientIp, isHttpsRequest, publicBase } from '../proxy-trust.js';
+import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
@@ -419,12 +419,17 @@ async function withdrawRequest(job) {
 
 // Booking confirmed, for an online booking confirmed at once (Jack, 19 Oct,
 // auto-confirm; pretend for now, so the link reads "[link]"). The link is the
-// one the booking reply carries, made absolute.
-async function sendBookedConfirmed(req, jobId, shopId, privateLink) {
+// one the booking reply carries, made absolute with APP_PUBLIC_URL only: this
+// route needs no sign-in, so the Host a request claims must never reach a
+// customer's message (fresh review). Without it, a real message isn't queued.
+async function sendBookedConfirmed(jobId, shopId, privateLink) {
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
     if (await whyNotQueued('booking_confirmed', customerId)) return;
-    const link = await messageLink(async () => `${publicBase(req)}${privateLink}`);
+    const link = await messageLink(async () => {
+      if (!process.env.APP_PUBLIC_URL) throw new Error('APP_PUBLIC_URL is needed for a customer message sent from a public route');
+      return `${process.env.APP_PUBLIC_URL}${privateLink}`;
+    });
     const { vars } = await bookingMessageVars(jobId, shopId, link, 'booking_confirmed');
     await queueMessage({ customerId, jobId, key: 'booking_confirmed', vars });
   } catch (err) {
@@ -1001,7 +1006,7 @@ export function register(route) {
     // confirmed at once, carrying the link the customer has just been given
     // (never a new one, which would end theirs). One that can't be queued is
     // logged; the booking stands.
-    if (out.status === 201 && confirmedAtOnce) await sendBookedConfirmed(req, out.body.id, shop.id, out.body.privateLink);
+    if (out.status === 201 && confirmedAtOnce) await sendBookedConfirmed(out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
   });
 

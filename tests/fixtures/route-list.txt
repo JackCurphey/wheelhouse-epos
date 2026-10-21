@@ -91,6 +91,7 @@ POST /api/workshop-jobs/:id/hold
 POST /api/workshop-jobs/:id/resume
 POST /api/workshop-jobs/:id/finish
 POST /api/workshop-jobs/:id/reopen-work
+POST /api/workshop-jobs/:id/seen
 DELETE /api/workshop-jobs/:id
 GET /api/workshop-jobs/:jobId/attachments
 POST /api/workshop-jobs/:jobId/attachments
