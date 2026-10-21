@@ -2624,6 +2624,42 @@ screens['job-book-in'] = buildJobPage({
 });
 keepDesktopSeq('job-book-in');
 
+// The bike tag, printed through the browser for now, like receipts (Jack, 21
+// Oct, docs/decisions/2026-10-21-bike-tag.md: "1: build the bike tag at
+// book-in, printed through the browser for now like receipts"). The browser
+// can't say whether a tag came out, so the strip has Print bike tag where
+// job-book-in has the print agent's "Bike tag sent · Acknowledged". Drawn for
+// Jack's approval, 21 Oct.
+const TAG_ATTACH = 'Attach the tag where it can be scanned without removing it from the bike.';
+function tagStripPrint(size = 'desktop') {
+  const f = size === 'desktop' ? 11 : 12;
+  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-grow: 1">${jpH2('Bike tag', 13)}<span style="font-size: ${f}px; color: ${C.muted}">${TAG_ATTACH}</span></div>${button('Print bike tag', { variant: 'default', size: 'sm' })}`, 12, 'align-items: center')}`, '', 6, 0);
+}
+const tagStripPrintPhone = () => phoneStagePanel(`${jpH2('Bike tag', 15)}${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">${TAG_ATTACH}</span><div>${button('Print bike tag', { variant: 'default' })}</div>`);
+screens['job-book-in-print'] = buildJobPage({
+  status: 'Booked in', tone: 'blue',
+  touch: {
+    footer: (size) => `${button('Send quote', { variant: 'default', block: true, href: `job-quote-${size}.dc.html` })}${button('Start work', { variant: 'primary', block: true, href: `job-mechanic-${size}.dc.html` })}`,
+    stageTop: (size) => tagStripPrint(size), phoneTop: tagStripPrintPhone,
+  },
+  desktop: {
+    stageTop: tagStripPrint(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: 'Booked in', bikeHere: true,
+    lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
+    footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
+  },
+});
+// The printed tag: the job number large, its barcode (Workshop day 4: Code
+// 128, as the product stickers), the customer and the bike, on a 62 × 29 mm
+// label or the top of a page. Nothing else: no prices, no work.
+const bikeTagPaper = (w, h, pad) => `<div style="width: ${w}px; height: ${h}px; box-sizing: border-box; padding: ${pad}px; display: flex; justify-content: center; align-items: flex-start; background: ${C.bg}; overflow: hidden">
+<article aria-label="Printed bike tag" style="width: 312px; box-sizing: border-box; padding: 14px 16px; background: #ffffff; box-shadow: 0 2px 10px rgba(28,30,25,0.18); display: flex; flex-direction: column; align-items: center; gap: 6px; color: #111111; text-align: center">
+<strong style="font-family: ${MONO}; font-size: 26px; letter-spacing: 1px">WH-1042</strong>${barcode128('WH-1042', 260, 44)}<span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px">Trek Domane AL 3 · green</span>
+</article></div>`;
+screens['job-bike-tag'] = { desktop: bikeTagPaper(1440, 900, 40), tablet: bikeTagPaper(TW, TH, 40), phone: bikeTagPaper(390, 844, 16) };
+
 // 11. job-quote — "Job · quote"; the quote (left column) is in edit mode on
 // tablet/phone. Desktop: the four lines pending approval, "Send quote" both
 // in the table toolbar and the footer.
@@ -3029,7 +3065,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -3048,7 +3084,7 @@ export const ROWS = [
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
-  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
+  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },
 ];

@@ -585,7 +585,7 @@ later packages.
 - **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
 - **`request-new`** (block 9, Form box) — 6 of its 7 situations here: `request-decline`, `request-offer`, `request-offered`, `request-offered-decline`, `request-change`, `request-cancel`.
 - **`new-job`** (block 9, Form box) — 2 of its 3 situations here: `new-job-day`, `new-job-entered`; plus 1 written line.
-- **`job-overview`** (block 15, The job page, reused as it is) — 11 of its 22 situations here: `job-book-in`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 10 of its 11 written lines.
+- **`job-overview`** (block 15, The job page, reused as it is) — 13 of its 24 situations here: `job-book-in`, `job-book-in-print`, `job-bike-tag`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 10 of its 11 written lines.
 - **`job-checklist`** (block 7, Step-by-step checklist) — no other situations.
 - **`overview`** (block 3, Table with search and filters) — 1 situation: `rs-overview-arrived`.
 <!-- /screens -->
