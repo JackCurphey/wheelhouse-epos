@@ -1006,3 +1006,14 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
 4. **A job with no customer.** *Decided:* Print bike tag alone at the right
    of the customer row, where Message would be.
 
+### 21 Oct 2026: the old app's job payments (old-app-job-payments)
+
+1. **The old app's order pop-up: Convert to sale on a job's order.**
+   *Decided:* it opens the new till without saving what was typed in the
+   pop-up, as its Convert never did; the old app is a placeholder (Jack, 21
+   Oct).
+2. **An old-app till tab left open since before this change**, holding a
+   job's order in its cart, can still rewrite that order's lines before the
+   server refuses the payment. *Decided:* left; nobody uses the old till, and
+   a fresh page can't reach it.
+

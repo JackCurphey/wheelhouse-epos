@@ -29,7 +29,7 @@ test.beforeAll(async () => {
     expect(r.status, `${step}: ${JSON.stringify(r.body)}`).toBe(200);
     job = r.body;
   }
-  const paid = await staff(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: made.body.employeeId } });
+  const paid = await staff(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: made.body.employeeId, signedOffBy: null } });
   expect(paid.status, JSON.stringify(paid.body)).toBe(201);
 });
 
