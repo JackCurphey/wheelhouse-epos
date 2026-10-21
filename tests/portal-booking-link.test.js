@@ -100,7 +100,7 @@ test('a booking returns a booking link, and the link reads the booking back', as
     workState: 'not_started',
     bookedInAt: null,
     collectedAt: null,
-    expectedReady: { date: res.body.jobDate, time: null },
+    expectedReady: null, // a request still waiting: no ready day yet
     shop: { address: null, phone: null, openingHours: res.body.shop?.openingHours },
   });
   assert.equal(typeof res.body.shop.openingHours, 'string');
