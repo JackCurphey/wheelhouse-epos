@@ -21,7 +21,9 @@ const job = (over) => ({
 // Today's arrivals: due now, later today, and a drop-off with no time and no mechanic.
 const MAYA = job({});
 const JAMIE = job({ id: 2, reference: 'WH-1045', title: 'Gear adjustment', customerName: 'Jamie Brooks', bikeLabel: 'Giant Escape 2', startTime: '14:00', endTime: '15:00' });
-const AISHA = job({ id: 3, reference: 'WH-1047', title: 'Safety check', customerName: 'Aisha Khan', bikeLabel: 'Cannondale Quick', startTime: null, endTime: null, mechanicId: null, mechanicName: null });
+// As the server sends it: a drop-off's day has an empty start time (fresh review, 21 Oct).
+const AISHA = job({ id: 3, reference: 'WH-1047', title: 'Safety check', customerName: 'Aisha Khan', bikeLabel: 'Cannondale Quick', startTime: null, endTime: null, mechanicId: null, mechanicName: null,
+  parts: [{ id: 31, position: 0, date: TODAY, startTime: '', endTime: '', mechanicId: null, mechanicName: null }] });
 // A request still waiting for the shop: not a booking yet, so not counted.
 const REQUEST = job({ id: 4, reference: 'WH-1048', title: 'Puncture repair', customerName: 'Sam Reed', bikeLabel: 'Specialized Sirrus', startTime: '11:00', bookingState: 'pending' });
 // In the shop since earlier days.
@@ -55,6 +57,7 @@ async function openOverview({ phone = false, coarse = false, inShopDown = false,
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
     const maya = booked ? { ...MAYA, custodyState: 'in_shop', version: 4 } : MAYA;
+    if (method === 'POST' && u.pathname === '/api/workshop-jobs/3/book-in') return reply(200, { ...AISHA, custodyState: 'in_shop', version: 4 });
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/book-in') {
       if (bookIn) return bookIn;
       booked = true;
@@ -214,4 +217,12 @@ test('on a touch screen the tabs and buttons are 44px', async () => {
   const { ui } = await openOverview({ coarse: true });
   assert.match(tab(ui, 'Arrivals').className, /min-h-11/);
   assert.match(ui.getByRole('button', { name: 'Book in WH-1042' }).className, /min-h-11/);
+});
+
+test('after Book in from the Shared queue the focus is on the Shared queue tab', async () => {
+  const { ui, fireEvent, waitFor } = await openOverview();
+  fireEvent.click(tab(ui, 'Shared queue'));
+  fireEvent.click(ui.getByRole('button', { name: 'Book in WH-1047' }));
+  await waitFor(() => assert.ok(calls.some((c) => c.method === 'POST')));
+  await waitFor(() => assert.ok(document.activeElement === tab(ui, 'Shared queue')));
 });

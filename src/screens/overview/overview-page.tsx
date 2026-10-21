@@ -23,7 +23,8 @@ const inShop = (j: WorkshopJob) => j.custodyState === 'in_shop';
 // A job over several days is read from today's own day, as the diary draws it:
 // its time and its mechanic (fresh review, 21 Oct).
 const todayPart = (j: WorkshopJob, today: string) => j.parts?.find((p) => p.date === today);
-const startOf = (j: WorkshopJob, today: string) => todayPart(j, today)?.startTime ?? (j.jobDate === today ? j.startTime : null) ?? null;
+// A drop-off's day comes back with an empty start time: that is no time too.
+const startOf = (j: WorkshopJob, today: string) => todayPart(j, today)?.startTime || (j.jobDate === today ? j.startTime : null) || null;
 const mechanicOf = (j: WorkshopJob, today: string) => { const p = todayPart(j, today); return p ? p.mechanicId : j.mechanicId; };
 const bookedToday = (j: WorkshopJob, today: string) => j.jobDate === today || Boolean(todayPart(j, today));
 
@@ -79,7 +80,7 @@ export function OverviewPage() {
   const now = useNow();
   const today = todayIso(now);
   const [tab, setTab] = useState<Tab>('arrivals');
-  const arrivalsTab = useRef<HTMLButtonElement>(null);
+  const tabButtons = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const [refused, setRefused] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   // Today's jobs, and every bike in the shop whatever its days (a ready bike
@@ -117,8 +118,8 @@ export function OverviewPage() {
       await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
       setBusy(null);
     }
-    // The row has gone from Arrivals: the focus stays on the page, on its tab.
-    if (done) arrivalsTab.current?.focus();
+    // The row has gone from its list: the focus stays on the page, on the tab showing.
+    if (done) tabButtons.current[tab]?.focus();
   }
   const choose = (key: Tab) => { setTab(key); setRefused(null); };
 
@@ -167,7 +168,7 @@ export function OverviewPage() {
       </div>
       <div role="group" aria-label="Show jobs" className="flex flex-wrap gap-1.5">
         {TABS.map(([key, label]) => (
-          <button key={key} ref={key === 'arrivals' ? arrivalsTab : undefined} type="button" aria-pressed={tab === key} onClick={() => choose(key)}
+          <button key={key} ref={(el) => { tabButtons.current[key] = el; }} type="button" aria-pressed={tab === key} onClick={() => choose(key)}
             className={`inline-flex items-center rounded-full border px-3.5 text-sm font-semibold ${touch ? 'min-h-11' : 'min-h-9'} ${tab === key ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}>
             {`${label} · ${lists[key].length}`}
           </button>
