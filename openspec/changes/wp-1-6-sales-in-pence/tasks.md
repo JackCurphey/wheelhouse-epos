@@ -14,7 +14,7 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
   - the two known kinds (group-discount rounding, the 1p tolerance);
   - a clean database.
 - [x] 1.2 Write `scripts/ci/check-money-totals.mjs` (`design.md` Decision 7). Verify the 1.1 tests pass, and that a fresh test database reports no mismatches, with counts
-- [ ] 1.3 Write the migration test first, on a scratch database with pounds orders. Watch it fail, then write the migration (next free number) and verify the totals check is clean after it. The test checks that:
+- [x] 1.3 Write the migration test first, on a scratch database with pounds orders. Watch it fail, then write the migration (next free number) and verify the totals check is clean after it. The test checks that:
   - the new columns exist, as `INTEGER NOT NULL DEFAULT 0` (`vat_rate_bp` nullable);
   - amounts are backfilled with `ROUND(x * 100)`;
   - `paid_pence` equals the converted sale's total for converted orders;
