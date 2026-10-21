@@ -12,6 +12,8 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { dayMaker } from './helpers/linkActions.js';
+import { portalSignup, portalRequest } from './helpers/portal.js';
+import { BOOKING_CONTACT } from './helpers/bookable.js';
 
 const SHAPES = new URL('../.test-build/lib/api/shapes.js', import.meta.url).href;
 let server;
@@ -54,4 +56,31 @@ test('a workshop job, from the list and on its own, is the shape the screens exp
     assert.ok(job.parts.length > 0, `job ${job.id} has its days`);
     for (const part of job.parts) assert.deepEqual(shapes.shapeProblems(shapes.JOB_PART, part), [], `job ${job.id} part ${part.position}`);
   }
+});
+
+test('an online booking with answers is the same shape: its answers are a list', async () => {
+  const svc = (await staff('/api/workshop-services', { method: 'POST', body: {
+    name: 'Brake check', price: 20, minutes: 60, bookableOnline: true, questions: [{ wording: 'What is wrong?', kind: 'text', required: true }],
+  } })).body;
+  const customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
+  const booked = await portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, { method: 'POST', body: {
+    mechanicId: sam, jobDate: nextDay(), startTime: '10:00', description: 'Brakes rub', newBike: { make: 'Dawes', model: 'Galaxy' },
+    serviceIds: [svc.id], answers: [{ serviceId: svc.id, questionId: svc.questions[0].id, text: 'Rubs at the back' }], ...BOOKING_CONTACT,
+  } });
+  assert.equal(booked.status, 201, JSON.stringify(booked.body));
+  const job = (await staff(`/api/workshop-jobs/${booked.body.id}`)).body;
+  assert.ok(Array.isArray(job.questionAnswers) && job.questionAnswers.length === 1, JSON.stringify(job.questionAnswers));
+  assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB, job), []);
+});
+
+test('a job after an edit or an action has no days, and is the changed-job shape', async () => {
+  const made = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Gear adjustment', jobDate: nextDay(), startTime: '09:00', endTime: '10:00', mechanicId: sam } })).body;
+  const edited = await staff(`/api/workshop-jobs/${made.id}`, { method: 'PUT', body: { notes: 'Front mech', version: made.version } });
+  assert.equal(edited.status, 200, JSON.stringify(edited.body));
+  const bookedIn = await staff(`/api/workshop-jobs/${made.id}/book-in`, { method: 'POST', body: { version: edited.body.version } });
+  assert.equal(bookedIn.status, 200, JSON.stringify(bookedIn.body));
+  for (const reply of [edited.body, bookedIn.body]) {
+    assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB_CHANGED, reply), []);
+  }
+  assert.equal(bookedIn.body.custodyState, 'in_shop');
 });

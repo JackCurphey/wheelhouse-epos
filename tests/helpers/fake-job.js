@@ -20,3 +20,9 @@ export function fakeJob(over = {}) {
     ...j,
   };
 }
+
+// A job as an edit or an action sends it back (WORKSHOP_JOB_CHANGED): no days.
+export function changed(job) {
+  const { parts: _days, ...rest } = job;
+  return rest;
+}

@@ -7,7 +7,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
-import { fakeJob } from '../helpers/fake-job.js';
+import { fakeJob, changed } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const JO = { id: 21, name: 'Jo Taylor', isCashier: true };
@@ -68,7 +68,7 @@ function stubServer(employee) {
       JOB = { ...JOB, workState: 'complete', version: JOB.version + 1, orderStatus: 'converted' };
       return reply(201, SALE);
     }
-    if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, { ...JOB, custodyState: 'collected', version: JOB.version + 1 });
+    if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, changed({ ...JOB, custodyState: 'collected', version: JOB.version + 1 }));
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
     if (u.pathname === '/api/employees') return reply(200, u.searchParams.get('role') === 'mechanic' ? MECHANICS : CASHIERS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
@@ -380,4 +380,5 @@ test('a job’s receipt from the till prints what the customer told us', async (
 test('the fake job here is the shape of the server’s', async () => {
   const shapes = await import(new URL('../../.test-build/lib/api/shapes.js', import.meta.url).href);
   assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB, job()), []);
+  for (const part of job().parts) assert.deepEqual(shapes.shapeProblems(shapes.JOB_PART, part), []);
 });

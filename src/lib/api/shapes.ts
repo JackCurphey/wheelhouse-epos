@@ -25,21 +25,31 @@ export const JOB_PART: Shape = {
   id: N, position: N, date: S, startTime: S, endTime: S, mechanicId: NN, mechanicName: SN,
 };
 
-/** A workshop job: serializeWorkshopJob plus the `parts` every job route adds. */
-export const WORKSHOP_JOB: Shape = {
+const JOB_FIELDS: Shape = {
   id: N, title: S, reference: S, version: N,
   customerId: NN, customerName: SN, bikeId: NN, bikeLabel: SN, bikeColour: SN,
   mechanicId: NN, mechanicName: SN,
   jobDate: S, startTime: SN, endTime: SN,
   status: S, bookingState: S, custodyState: S, workState: S, newOnline: ['boolean'],
-  notes: SN, questionAnswers: ON, customerDescription: SN, customerBikeNote: SN,
+  // A list: each answer to the services' questions (an online booking's, even
+  // when there were none), or null for a staff job.
+  notes: SN, questionAnswers: ['array', 'null'], customerDescription: SN, customerBikeNote: SN,
   requested: ON, offer: ON,
   cancelledBy: SN, cancelledAt: SN, cancellationSeenAt: SN, changeDeclinedAt: SN,
   orderId: NN, orderStatus: SN, orderTotal: NN,
   quote: ON,
   signedOffBy: NN, signedOffByName: SN, signedOffAt: SN,
-  parts: ['array'],
   createdAt: S, updatedAt: S,
+};
+
+/** A job as read: the list, one job, a new job, and the day routes, which add
+ * the job's days (`parts`, each a JOB_PART). */
+export const WORKSHOP_JOB: Shape = { ...JOB_FIELDS, parts: ['array'] };
+
+/** A job after an edit or an action (book in, collect, accept, offer...): no
+ * days, and the message it queued when there was one. */
+export const WORKSHOP_JOB_CHANGED: Shape = {
+  ...JOB_FIELDS, readyMessage: ['object', 'undefined'], bookingMessage: ['object', 'undefined'],
 };
 
 function typeOf(value: unknown): FieldType {
