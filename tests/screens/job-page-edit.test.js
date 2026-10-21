@@ -6,13 +6,14 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const MECHANICS = [{ id: 11, name: 'Alex Morgan', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true }];
 let JOB;
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Frame rebuild', reference: 'WH-1050', customerId: null, customerName: null, bikeId: null, bikeLabel: 'Trek Domane AL 3',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-05', startTime: '10:00', endTime: '12:00', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 6, notes: 'Check the hub.', requested: null,
@@ -23,7 +24,7 @@ function job(over) {
       { id: 22, position: 2, date: '2026-10-06', startTime: '10:00', endTime: '12:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
     ],
     ...over,
-  };
+  });
 }
 
 const realFetch = globalThis.fetch;

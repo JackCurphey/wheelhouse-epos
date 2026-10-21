@@ -6,6 +6,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -16,14 +17,14 @@ const PRODUCTS = [
   { id: 41, sku: 'TB-700', barcode: '5098765432100', name: 'Inner tube 700c', price: 6.5, stockQty: 0, active: true },
 ];
 let ORDER;
-const JOB = {
+const JOB = fakeJob({
   id: 1, title: 'Standard service', reference: 'WH-1042', customerId: null, customerName: 'Maya Patel', bikeId: null, bikeLabel: 'Trek Domane AL 3',
   mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-05', startTime: '10:00', endTime: '11:30', status: 'scheduled',
   bookingState: 'scheduled', custodyState: 'in_shop', workState: 'in_progress', version: 3, notes: null, requested: null,
   customerDescription: null, cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, orderId: 80, orderStatus: 'open', orderTotal: 75,
   createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z',
   parts: [{ id: 21, position: 1, date: '2026-10-05', startTime: '10:00', endTime: '11:30', mechanicId: 11, mechanicName: 'Alex Morgan' }],
-};
+});
 
 const realFetch = globalThis.fetch;
 let uninstall;
