@@ -39,8 +39,9 @@ export type WorkshopJob = {
   newOnline?: boolean;
   /** While a time the shop offered waits for the customer: the day and time first asked for, and the offer's message. */
   offer?: { fromDate: string | null; fromTime: string | null; message: string | null } | null;
-  /** The job's planned length in minutes (an online booking's services' total). */
-  plannedMinutes?: number | null;
+  /** The job's planned length in minutes: given when made (an online booking's
+   * services' total), else its times'; null when it has neither. */
+  plannedMinutes: number | null;
   custodyState: string;
   workState: string;
   /** Echoed on every action; see jobAction in client.ts. */
