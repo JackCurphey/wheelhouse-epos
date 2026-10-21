@@ -5,6 +5,21 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
+**Who is on what** (from 21 Oct, the working agreement, #349: take a piece
+here before starting it, so two people never build the same one):
+- **Jack:** the workshop fixes from Mark's 21 Oct review
+  (`openspec/changes/working-agreement/tasks.md` 3.5–3.9 and 3.11): ended
+  bookings can't be booked in or started, the job's old status edit goes, job
+  actions inside the booking lock with messages after commit, a quote send
+  leaves the link alone while sending is pretend, one amount-to-pay, the
+  till's unsigned-finish exception goes.
+- **Mark:** his fixes, #348 (double payment, lost stock, sign-up takeover,
+  half sign-off), with Jack's lock change and test fix pushed on 21 Oct; the
+  working agreement's checks (tasks group 2) and STATUS tidy (1.5).
+- **Waiting on Jack:** how an existing in-shop customer who signs up online
+  is joined to their record (#348 makes every sign-up a new customer; no
+  merge tool exists yet).
+
 **Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
 #208 were Jack's #151 follow-ups). WP-0.5: the host is DigitalOcean in
@@ -141,7 +156,13 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 20–21 Oct: staff decline or re-offer an offered time
+**Jack is on:** 21 Oct: the Workshop Overview (#346, its `custody=in_shop`
+jobs filter in the workshop server, Planned effort waiting on capacity
+figures: `openspec/changes/archive/2026-10-21-workshop-overview/design.md`),
+the bike tag printed through the browser (#347, a stand-in until a template
+builder for receipts and tags). Agreed Mark's working agreement (#349,
+merged). Checked Mark's #348 and pushed a lock change and a test fix to it.
+20–21 Oct: staff decline or re-offer an offered time
 (#332, #333); New job's + Add a bike and "From the customer" printed on the
 receipt (#334, #335); the booking messages staff answers send, pretend, and
 the diary's note when one couldn't go (#336, #340, #341); the mechanic chosen
