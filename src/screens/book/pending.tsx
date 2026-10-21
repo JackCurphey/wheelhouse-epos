@@ -8,7 +8,7 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitl
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
 import { ChangeDate } from './change-date.tsx';
-import { bookingLinkPath, useBookingLink, type BookingLink } from './pending-query.ts';
+import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
 import {
   COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
@@ -29,7 +29,7 @@ export function PendingScreen() {
   if (link.isError) {
     const status = link.error instanceof ApiError ? link.error.status : 0;
     if (status === 404) return <BookFrame title={NOT_FOUND}>{null}</BookFrame>;
-    if (status === 410) return <BookFrame title={EXPIRED}>{null}</BookFrame>;
+    if (status === 410) return <ExpiredPage details={(link.error as ApiError).body as ExpiredLink} shopSlug={shopSlug} />;
     return (
       <BookFrame title={LOAD_FAILED}>
         <Button variant="accent" onClick={() => void link.refetch()}>Try again</Button>
@@ -246,26 +246,73 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         {body}
       </section>
     );
+    const work = link.work ?? [];
+    const declined = link.declined ?? [];
+    const priced = (n: number | null) => (n === null ? null : money(n));
+    const lines = (items: { name: string; price: number | null }[]) => (
+      <div role="list" className="flex flex-col">
+        {items.map((l, i) => (
+          <div role="listitem" key={i} className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px] first:border-t-0">
+            <span className="font-semibold">{l.name}</span>
+            {l.price !== null ? <span className="font-[family-name:var(--wh-font-mono)]">{priced(l.price)}</span> : null}
+          </div>
+        ))}
+      </div>
+    );
+    // How far the bike is: In the shop until the work starts, then Being worked
+    // on; Ready once it's done (Jack, 21 Oct, answer 1: the tracker once the
+    // server sends the work's progress, #359).
+    const current = !inShop ? 3 : link.workState && link.workState !== 'not_started' ? 2 : 1;
+    const arrived = link.bookedInAt
+      ? `We’ve got your bike — booked in ${shortDayOf(link.bookedInAt)} at ${clockOf(link.bookedInAt)}.${link.expectedReady ? ` Expected ready: ${dayLabel(link.expectedReady.date)}${link.expectedReady.time ? `, ${link.expectedReady.time}` : ''}.` : ''}`
+      : 'Your bike is in the workshop';
+    const shownTracker = inShop && !link.workState ? null : <Tracker current={current} />;
     return (
       <BookFrame title={title} eyebrow={`Your repair · ${link.reference}`}>
-        {inShop ? <p className="m-0 mb-4 text-[15px] font-semibold leading-normal">Your bike is in the workshop</p> : <Tracker />}
-        {link.stage === 'ready_to_collect' && card('To pay when you collect', 'pay-title', (
-          <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
-        ))}
+        {shownTracker}
+        {inShop ? <p className="m-0 mb-2 text-[15px] font-semibold leading-normal">{arrived}</p> : null}
+        {inShop && link.workState === 'waiting_parts' ? <p className="m-0 mb-4 text-[15px] leading-normal">Waiting for a part — we’ll update you.</p> : inShop ? <div className="mb-2" /> : null}
+        {/* Paid already (cp-summary-paid), else what's left to pay at the counter (cp-summary-inshop). */}
+        {link.stage === 'ready_to_collect' && (link.paid ? card('Paid', 'paid-title', (
+          <>
+            <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />{link.paid.amount !== null ? `${money(link.paid.amount)} paid on ${shortDayOf(link.paid.at)}` : `Paid on ${shortDayOf(link.paid.at)}`}</p>
+            <p className="m-0 text-[15px] leading-normal">Nothing more to pay. When you come in, just give your name.</p>
+          </>
+        )) : card('To pay when you collect', 'pay-title', (
+          <>
+            {typeof link.toPay === 'number' ? <p className="m-0 font-[family-name:var(--wh-font-mono)] text-3xl font-bold">{money(link.toPay)}</p> : null}
+            <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
+          </>
+        )))}
         {link.stage === 'collected' && card('Collected', 'collected-title', (
           <>
-            <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />Collected</p>
-            <p className="m-0 text-[15px] leading-normal">Thanks for coming in — this page keeps working for 30 days after collection.</p>
+            <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />{link.collectedAt ? `Collected · ${shortDayOf(link.collectedAt)}` : 'Collected'}</p>
+            <p className="m-0 text-[15px] leading-normal">
+              {`${link.paid?.amount != null ? `${money(link.paid.amount)} paid. ` : ''}Thanks for coming in — this page keeps working ${link.collectedAt ? `until ${shortDayOf(plusDays(link.collectedAt, 30))}, 30 days after collection` : 'for 30 days after collection'}.`}
+            </p>
           </>
         ))}
-        {/* After the pay card, as the drawings' reading order has it (cp-summary). */}
-        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} done={!inShop} />
+        {/* The quote, while there's one to answer: only before the work is done. */}
+        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />}
+        {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
+        {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
+          <>
+            {lines(work)}
+            {typeof link.toPay === 'number' ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-[15px] font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(link.toPay)}</span></p> : null}
+          </>
+        ))}
+        {!inShop && work.length > 0 && card('What we did', 'did-title', (
+          <>
+            {lines(work)}
+            {declined.map((d, i) => <p key={i} className="m-0 text-sm text-[var(--wh-muted)]">{`Not done — you said no thanks: ${d.name}${d.price !== null ? ` (${money(d.price)})` : ''}`}</p>)}
+          </>
+        ))}
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
           {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}
           <div>
-            {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
-            {inShop && total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
+            {work.length === 0 && row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
+            {work.length === 0 && inShop && total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
             {bike && row('Bike', bike)}
             {row('When', whenLine(link))}
             {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
@@ -276,7 +323,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
               {answerList}
             </div>
           )}
-          <p data-shop-line className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm"><strong>{link.shopName}</strong></p>
+          <ShopLines name={link.shopName} shop={link.shop} />
         </div>
       </BookFrame>
     );
@@ -318,24 +365,75 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   );
 }
 
+// Days and times in the shop's own words (Europe/London, the UK shops Wheelhouse serves).
+const LONDON = 'Europe/London';
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "Thu 17 Sep", the shop's own day, as the drawings write it (not Intl's "Sept"). */
+const shortDayOf = (iso: string) => {
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: LONDON }).format(new Date(iso)).split('-').map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d));
+  return `${SHORT_DAYS[day.getUTCDay()]} ${d} ${SHORT_MONTHS[m - 1]}`;
+};
+const clockOf = (iso: string) => new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: LONDON }).format(new Date(iso));
+const plusDays = (iso: string, n: number) => { const d = new Date(iso); d.setUTCDate(d.getUTCDate() + n); return d.toISOString(); };
+const money = (n: number) => `£${n.toFixed(2)}`;
+
 /**
- * Where the bike is (drawn as collect.mjs trackerDone): once it's ready,
- * every step is done and Ready is the current one.
+ * Where the bike is (drawn as collect.mjs trackerDone, quote.mjs dq-in-shop):
+ * the steps before the current one ticked, the current one marked.
  */
 const STEPS = ['Booked', 'In the shop', 'Being worked on', 'Ready'];
-function Tracker() {
+function Tracker({ current }: { current: number }) {
   return (
     <ol aria-label="Where your bike is" className="m-0 mb-4 flex list-none flex-wrap gap-x-4 gap-y-2 p-0">
       {STEPS.map((step, i) => {
-        const current = i === STEPS.length - 1;
+        const done = i < current || (i === current && current === STEPS.length - 1);
         return (
-          <li key={step} aria-current={current ? 'step' : undefined} className={`inline-flex items-center gap-1.5 text-sm ${current ? 'font-bold' : 'font-medium'}`}>
-            <span aria-hidden="true" className={`inline-flex size-6 items-center justify-center rounded-full ${current ? 'bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'bg-[var(--wh-status-complete-bg)] text-[var(--wh-status-complete-ink)]'}`}><Check className="size-3" /></span>
+          <li key={step} aria-current={i === current ? 'step' : undefined} className={`inline-flex items-center gap-1.5 text-sm ${i === current ? 'font-bold' : 'font-medium'} ${i > current ? 'text-[var(--wh-muted)]' : ''}`}>
+            <span aria-hidden="true" data-done={done ? '' : undefined} className={`inline-flex size-6 items-center justify-center rounded-full ${i === current ? 'bg-[var(--wh-ink)] text-[var(--wh-panel)]' : done ? 'bg-[var(--wh-status-complete-bg)] text-[var(--wh-status-complete-ink)]' : 'border border-[var(--wh-border)]'}`}>{done || i === current ? <Check className="size-3" /> : null}</span>
             {step}
           </li>
         );
       })}
     </ol>
+  );
+}
+
+/** The shop's lines (cp-summary's shopLines): its name, opening hours, address and a phone to call. */
+function ShopLines({ name, shop }: { name: string; shop?: { address: string | null; phone: string | null; openingHours?: string | null } }) {
+  const where = [shop?.address, shop?.phone].filter(Boolean);
+  return (
+    <div data-shop-line className="flex flex-col gap-1 border-t border-[var(--wh-border)] pt-2.5 text-sm leading-normal">
+      <strong>{name}</strong>
+      {shop?.openingHours ? <span>{`Open ${shop.openingHours}`}</span> : null}
+      {where.length ? (
+        <span>
+          {shop?.address ? shop.address : null}
+          {shop?.address && shop?.phone ? ' · ' : null}
+          {shop?.phone ? <a href={`tel:${shop.phone}`} className="font-semibold text-[var(--wh-ink)]">{shop.phone}</a> : null}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** An expired link (cp-expired, bk-expired; #359): which job, why, and the shop. */
+function ExpiredPage({ details, shopSlug }: { details: ExpiredLink | null; shopSlug: string }) {
+  if (!details?.reference || !details.shop) return <BookFrame title={EXPIRED}>{null}</BookFrame>;
+  const collected = details.reason === 'collected';
+  return (
+    <BookFrame title={collected ? 'This link has expired' : 'This booking link has expired'}>
+      <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
+        <p className="m-0 text-[15px] leading-normal">
+          {collected
+            ? `It was for job ${details.reference}, which has been collected. If you need a copy of anything, get in touch.`
+            : `It was for ${details.reference}. A booking’s link stops working 30 days after collection — or, if the bike never came in, 30 days after the booked date.`}
+        </p>
+        {collected ? null : <div><Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Book a repair</Link></div>}
+        <ShopLines name={details.shop.name} shop={details.shop} />
+      </div>
+    </BookFrame>
   );
 }
 

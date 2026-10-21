@@ -55,7 +55,20 @@ export type BookingLink = {
   changeDeclined?: boolean;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
+  /** Once the bike is in (#359; booking page stages): how far it is, its times, the shop, and the money (figures null with Show prices off). */
+  workState?: string;
+  bookedInAt?: string | null;
+  collectedAt?: string | null;
+  expectedReady?: { date: string; time: string | null } | null;
+  shop?: { address: string | null; phone: string | null; openingHours: string | null };
+  work?: { name: string; price: number | null }[];
+  declined?: { name: string; price: number | null }[];
+  toPay?: number | null;
+  paid?: { at: string; amount: number | null } | null;
 };
+
+/** The 410 reply's details (#359): which job, why, and the shop. */
+export type ExpiredLink = { reference?: string; reason?: 'collected' | 'never_came_in'; shop?: { name: string; address: string | null; phone: string | null } };
 
 export const bookingLinkPath = (shopSlug: string, code: string) =>
   `/api/portal/${encodeURIComponent(shopSlug)}/booking-links/${encodeURIComponent(code)}`;
