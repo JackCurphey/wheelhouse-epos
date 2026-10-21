@@ -150,12 +150,12 @@ test('an offer is nothing for staff to answer: Waiting for you leaves it out', a
   assert.ok(!items.some((i) => i.jobId === booked.id || i.id === booked.id), JSON.stringify(items));
 });
 
-test('the old job form can’t confirm an offer by saving its status', async () => {
+test('saving a status can’t confirm an offer', async () => {
   const booked = await book();
   await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
   const job = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
   const saved = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { ...job, status: 'scheduled' } });
-  assert.equal(saved.status, 200, JSON.stringify(saved.body));
+  assert.equal(saved.status, 400, JSON.stringify(saved.body));
   assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'offered');
 });
 

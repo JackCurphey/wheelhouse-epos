@@ -209,14 +209,11 @@ const daysFromToday = (n) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const legacySave = (id, status) =>
-  staffRequest(server.baseUrl, owner.cookie, `/api/workshop-jobs/${id}`, { method: 'PUT', body: { status } });
 
 for (const status of ['waiting_parts', 'complete']) {
   test(`once work has started (${status}) the link offers neither and refuses to cancel`, async () => {
     const booked = await book();
-    const saved = await legacySave(booked.id, status);
-    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    await setJob(shopId(), booked.id, "booking_state = 'scheduled', work_state = ?", status);
     const before = await jobRow(shopId(), booked.id);
     assert.equal(before.custody_state, 'expected', 'the bike has not been marked in the shop');
     assert.equal(before.work_state, status);

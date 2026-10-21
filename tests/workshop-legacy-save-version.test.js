@@ -83,10 +83,8 @@ test('a version that is not a whole number is refused', async () => {
   assert.equal(res.status, 400);
 });
 
-// Jack, 8 Oct (found writing the workshop-jobs spec): the old job form sends
-// its dropdown's status on every Save, and the old statuses have no "in
-// progress", so every Save put work in progress back to "not started". A
-// status that matches what the job already reads now leaves its states alone.
+// Jack, 8 Oct (found writing the workshop-jobs spec): saving a job must not
+// put work in progress back to "not started".
 // Finishing needs a mechanic to sign it off (Jack, 16 Oct, mechanic sign-off).
 const act = (id, action, version) =>
   staff(`/api/workshop-jobs/${id}/${action}`, { method: 'POST', body: action === 'finish' ? { version, signedOffBy: sam } : { version } });
@@ -106,45 +104,37 @@ async function startedJob() {
   return read(created.body.id);
 }
 
-test('an old-form save that leaves the status as it was keeps work in progress', async () => {
+test('a plain save keeps work in progress', async () => {
   const before = await startedJob();
   assert.equal(before.workState, 'in_progress');
   assert.equal(before.status, 'scheduled', 'the old status for work in progress');
-  const res = await save(before.id, { status: before.status, notes: 'Rang the customer', version: before.version });
+  const res = await save(before.id, { notes: 'Rang the customer', version: before.version });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const after = await read(before.id);
   assert.equal(after.workState, 'in_progress');
   assert.equal(after.notes, 'Rang the customer');
 });
 
-test('an old-form save that changes the status still changes the job', async () => {
+// The old form's status field wrote the state columns directly, skipping the
+// state machines and the mechanic sign-off. Nothing sends it any more, so a
+// save that carries one is refused and says where to go instead.
+test('a save with status complete does not finish work in progress', async () => {
   const before = await startedJob();
-  const res = await save(before.id, { status: 'on_hold', version: before.version });
-  assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal((await read(before.id)).workState, 'on_hold');
+  const res = await save(before.id, { status: 'complete', version: before.version });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /finish/i);
+  const after = await read(before.id);
+  assert.equal(after.workState, 'in_progress');
+  assert.equal(after.signedOffBy, null);
+  assert.equal(after.version, before.version);
 });
 
-test('an old-form save that changes a cancelled job to scheduled still reopens it', async () => {
-  // The old form's "Reopen job" is a real change of status, so it still applies.
+test('a save with status scheduled does not un-cancel a cancelled booking', async () => {
   const booked = await book();
   const cancelled = await act(booked.id, 'cancel', (await read(booked.id)).version);
   assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
-  assert.equal(cancelled.body.status, 'complete', 'a cancelled booking reads complete to the old app');
   const res = await save(booked.id, { status: 'scheduled', version: cancelled.body.version });
-  assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal((await read(booked.id)).bookingState, 'scheduled');
-});
-
-test('an old-form save that changes a finished job to scheduled still reopens it', async () => {
-  // The decision promises the old form's "Reopen job" still reopens finished
-  // work, not only a cancelled booking (Mark's review on #189).
-  const started = await startedJob();
-  const finished = await act(started.id, 'finish', started.version);
-  assert.equal(finished.status, 200, JSON.stringify(finished.body));
-  assert.equal(finished.body.status, 'complete', 'finished work reads complete to the old app');
-  const res = await save(started.id, { status: 'scheduled', version: finished.body.version });
-  assert.equal(res.status, 200, JSON.stringify(res.body));
-  const after = await read(started.id);
-  assert.equal(after.workState, 'not_started');
-  assert.equal(after.status, 'scheduled');
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  const after = await read(booked.id);
+  assert.equal(after.bookingState, 'cancelled');
 });

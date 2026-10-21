@@ -22,6 +22,17 @@ export const MACHINE_COLUMNS = {
   work: 'work_state',
 };
 
+// Moves that start or reopen a job's life make no sense once its booking has
+// ended (issue #190 A). Collecting a bike already in the shop stays allowed -
+// the bike really is there (docs/decisions/2026-10-15-job-page-fixes.md, 5).
+// A pending request is not ended and may still be booked in.
+const ENDED_BOOKING = new Set(['cancelled', 'declined', 'expired']);
+const REFUSED_ON_ENDED_BOOKING = {
+  custody: new Set(['book_in']),
+  work: new Set(['start', 'hold', 'reopen']),
+};
+const ENDED_BOOKING_VERB = { book_in: 'booked in', start: 'started', hold: 'put on hold', reopen: 'reopened' };
+
 export async function applyEvent({ jobId, machine, event, expectedVersion }) {
   const column = MACHINE_COLUMNS[machine.name];
   if (!column) throw new Error(`no column is mapped for machine ${machine.name}`);
@@ -37,6 +48,14 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
       // Names the legal moves, because the caller's next question is always
       // "then what can I do?" and the machine already knows.
       message: `cannot ${event} a job that is ${from}; from here you can ${machine.events(from).join(', ') || 'do nothing'}`,
+    };
+  }
+
+  if (ENDED_BOOKING.has(job.booking_state) && REFUSED_ON_ENDED_BOOKING[machine.name]?.has(event)) {
+    return {
+      ok: false,
+      code: 'illegal',
+      message: `This booking was ${job.booking_state}, so the job can't be ${ENDED_BOOKING_VERB[event]}.`,
     };
   }
 
