@@ -51,10 +51,10 @@ test('paying a job\'s order sells past zero stock when asked, for the amount due
   const { req, shop, job } = await setUp();
   try {
     const cashier = (await req('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' } })).body;
-    const refused = await req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 16, cashierId: cashier.employeeId } });
+    const refused = await req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 16, cashierId: cashier.employeeId, signedOffBy: null } });
     assert.equal(refused.status, 400);
     assert.match(refused.body.error, /Not enough stock/);
-    const paid = await req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 16, cashierId: cashier.employeeId, sellPastStock: true } });
+    const paid = await req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 16, cashierId: cashier.employeeId, sellPastStock: true, signedOffBy: null } });
     assert.equal(paid.status, 201, JSON.stringify(paid.body));
     const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
     assert.equal(order.status, 'converted');
