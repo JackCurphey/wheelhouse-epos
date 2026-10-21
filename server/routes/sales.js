@@ -362,6 +362,7 @@ export function register(route) {
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
     // Nothing is due on an order already paid or cancelled (the wording convert uses).
+    if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
     const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
     // Paying re-checks every line (a retired service or product is refused),
     // so the same check here keeps the till from taking a card payment for a
