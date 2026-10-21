@@ -31,9 +31,9 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   - each refusal comes before any migration runs and names the setting;
   - it starts with none of these.
 - [x] 2.2 Add the guard before `runMigrations()` in the start-up order, with the known real-key list starting at Twilio. Verify the 2.1 tests pass
-- [ ] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off
-- [ ] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
-- [ ] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail
+- [x] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off. Refused with 403 before the request is read (`tests/hosted-copy-switches.test.js`); watched failing first with 400 "Could not connect"
+- [x] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
+- [x] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail. Seen: without line 16 it failed with "expected the real time, got 2026-09-01T06:00:00.000Z"; line 16 put back unchanged
 - [ ] 2.6 Verify `npm test` and `npm run test:browser` pass, then get a fresh review
 
 ## 3. The host and the first deploy (Mark; waits for Jack's yes on #137)

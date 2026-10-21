@@ -43,7 +43,12 @@ export function register(route) {
     sendJson(res, 200, serializeShopifyConnection(await getShopifyConnection()));
   });
 
+  // The hosted test copy never connects a real online shop (add-hosted-copy
+  // design §5), so it refuses before reading anything and saves nothing.
   route('POST', '/api/shopify/connection', async (req, res) => {
+    if (process.env.WHEELHOUSE_HOSTED_COPY === '1') {
+      return sendJson(res, 403, { error: 'This is a test copy of Wheelhouse: connecting Shopify is switched off.' });
+    }
     const body = await readJsonBody(req);
     const shopDomain = String(body.shopDomain || '').trim();
     const accessToken = String(body.accessToken || '').trim();
