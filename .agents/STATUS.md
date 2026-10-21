@@ -7,20 +7,22 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** what #351 leaves open: a browser spec for the Workshop
-  Overview and for Settings › Messages (#351's `tests/browser-coverage.test.js`
-  names the Overview as the known gap), and the old app's two converts that
-  skip the sign-off (`public/app.js` `completeOrderFulfillment` and the order
-  modal; working-agreement task 3.11).
-- **Mark:** his review fixes: #348 (double payment, lost stock, sign-up
-  takeover, half sign-off; Jack's lock change and test fix pushed to it on
-  21 Oct), #351 stacked on it (Owner-only routes, ended bookings, job actions
-  under the booking lock, quote link, one `computeOrderTotals`: tasks
-  3.4–3.9), #350 (diary-page.tsx split, no behaviour change); then the
-  agreement's checks (tasks group 2) and the STATUS tidy (1.5).
-- **Waiting on Jack:** how an existing in-shop customer who signs up online
-  is joined to their record (#348 makes every sign-up a new customer; no
-  merge tool exists yet).
+- **Jack:** the rest of the reply-shape work: about 25 screen tests still
+  fake a workshop job by hand; they move to `tests/helpers/fake-job.js`
+  (working-agreement task 3.13). Then the offer dialog's planned length:
+  `src/screens/diary/offer-dialog.tsx` reads `plannedMinutes`, which the
+  server never sends, so a request with no times is offered as an hour
+  (found in #363's review; already wrong before it).
+- **Mark:** the agreement's other checks: the Owner-only list (2.1), the
+  convert and last-unit race tests (2.2), the STATUS tidy (1.5); then the
+  online test copy's safety checks and sales in pence step A. #348, #351 and
+  #350 are merged.
+- **Waiting on Jack:** (1) how an existing in-shop customer who signs up
+  online is joined to their record (#348 makes every sign-up a new customer;
+  no merge tool exists yet); (2) whether a quote shows its prices when Show
+  prices is off (proposed: always, since the customer is approving an
+  amount); (3) when to delete the old app, once its last screens are replaced
+  (`docs/decisions/2026-10-21-old-app-placeholder.md`).
 
 **Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
@@ -158,7 +160,16 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 21 Oct: the Workshop Overview (#346, its `custody=in_shop`
+**Jack is on:** 21 Oct, late: browser tests for the Workshop Overview and
+Settings › Messages (#353); the old app's job orders open the new till and it
+never takes a job's payment (#355); the spec for what ended bookings can't do
+(#356); confirming online bookings automatically, server and screens (#357,
+#358); the booking link's later-stage data and 30 days from collection
+(#359); the booking page's progress, money and what was done (#360); Planned
+effort on the Overview and the bike's colour on its tag (#361); Request
+received and Booking cancelled sent, pretend (#362); the reply-shape file
+(#363). Merged Mark's #348, #351 and #350 after checking each.
+21 Oct: the Workshop Overview (#346, its `custody=in_shop`
 jobs filter in the workshop server, Planned effort waiting on capacity
 figures: `openspec/changes/archive/2026-10-21-workshop-overview/design.md`),
 the bike tag printed through the browser (#347, a stand-in until a template
