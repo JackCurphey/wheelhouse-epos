@@ -92,7 +92,7 @@ export function dropOffLine(link: BookingLink): string | null {
 }
 
 // The confirmed page, to its drawing (Jack, 19 Oct; drawn as bk-page).
-const bikeName = (link: Pick<BookingLink, 'bike'>) => (link.bike ? [link.bike.make, link.bike.model].filter(Boolean).join(' ') : '');
+export const bikeName = (link: Pick<BookingLink, 'bike'>) => (link.bike ? [link.bike.make, link.bike.model].filter(Boolean).join(' ') : '');
 
 /** "Trek Domane AL 3 · Standard service": the bike, else "Your bike"; the one service, "[first] and [n] more", or "Repair". */
 export function pageHeading(link: Pick<BookingLink, 'bike' | 'services'>): string {

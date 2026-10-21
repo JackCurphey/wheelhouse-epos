@@ -41,6 +41,7 @@ export default {
   'bk-cancelled': into('bk-page', 'Quote 1', "'Your booking is cancelled': deposit back in [n] working days; 'Book another time'"),
   'bk-cancelled-late': into('bk-page', 'Quote 1', "'Your booking is cancelled': deposit 'was kept, because it was after [date and time]'"),
   'bk-declined': into('bk-page', 'Quote 1', "'Sorry, we can’t fit this booking in', the shop’s message, deposit refunded"),
+  'bk-request-expired': into('bk-page', 'Booking page stages 2', "'Sorry, we couldn’t get back to you in time', nothing booked, Choose another date"),
   'bk-expired': into('bk-page', 'Walk-through 1 M5', "'This booking link has expired' — only 'Book a repair' and shop details"),
   'bk-unavailable': into('bk-service', '', "no steps: 'Online booking is unavailable just now' — call the shop"), // inferred — edge case not in the merge table; shown in place of the booking page
   // A Lightspeed shop

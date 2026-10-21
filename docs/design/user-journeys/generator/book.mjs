@@ -304,6 +304,13 @@ const cancelled = (late = false) => centred(answerCard(`${bigIcon('grey', 'close
 const declined = () => centred(answerCard(`${bigIcon('grey', 'alert')}${announce(`<span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Not booked</span>`)}${h1('Sorry, we can’t fit this booking in')}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">A message from North Street Cycles:</p><blockquote style="margin: 0; padding: 12px 16px; border-left: 3px solid ${C.border}; font-size: 15px; line-height: 1.5">“[The shop’s message]”</blockquote>
 <p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing is booked${lightspeedShop() ? ', and there’s nothing to pay or refund' : `. Your £[deposit] deposit comes back to your card within [n] working days`}.</p>${button('Choose another date — we’ve kept your details', { variant: 'default' })}${shopLines}`));
+// A request the shop never answered, once it has expired (Jack, 21 Oct,
+// docs/decisions/2026-10-21-booking-page-stages.md answer 2: "say the request
+// expired because the shop couldn't get back in time, with a 'Choose another
+// date' button, like the declined page").
+const requestExpired = () => centred(answerCard(`${bigIcon('grey', 'alert')}${announce(`<span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Not booked</span>`)}${h1('Sorry, we couldn’t get back to you in time')}
+<p style="margin: 0; font-size: 15px; line-height: 1.5">North Street Cycles couldn’t answer your request for ${DAY}, ${mono('11:30')} in time, so it has expired.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing is booked${lightspeedShop() ? ', and there’s nothing to pay or refund' : `. Your £[deposit] deposit comes back to your card within [n] working days`}.</p>${button('Choose another date — we’ve kept your details', { variant: 'default' })}${shopLines}`));
 const expired = () => centred(answerCard(`${h1('This booking link has expired', 24)}<p style="margin: 0; font-size: 15px; line-height: 1.5">It was for ${mono('WH-1042')}, booked for ${DAY} and cancelled. A booking’s link stops working [n] days after collection — or, if the bike never came in, [n] days after the booked date.</p>${button('Book a repair', { variant: 'default' })}${shopLines}`));
 const unavailable = () => centred(answerCard(`${h1('Online booking is unavailable just now', 24)}<p style="margin: 0; font-size: 15px; line-height: 1.5">Please try again in a little while, or call the shop to book.</p>${shopLines}`));
 // Signed in: Your bookings (decision 10; audit H2). The second booking is a
@@ -423,6 +430,7 @@ def('bk-cancel-late', () => bookingPage({ dialog: cancelDialog(true) }));
 def('bk-cancelled', () => cancelled());
 def('bk-cancelled-late', () => cancelled(true));
 def('bk-declined', () => declined());
+def('bk-request-expired', () => requestExpired());
 def('bk-expired', () => expired());
 def('bk-unavailable', () => unavailable());
 // UX walk-through 6 H1: Maya's booking at a Lightspeed shop — no deposit, no
@@ -531,6 +539,7 @@ export const TITLES = {
   'bk-cancelled': 'Cancelled, deposit refunded',
   'bk-cancelled-late': 'Cancelled after the cut-off, deposit kept',
   'bk-declined': 'The shop couldn’t fit it in',
+  'bk-request-expired': 'The shop didn’t answer in time',
   'bk-expired': 'The link, [n] days after a booking that never came in',
   'bk-unavailable': 'Online booking unavailable',
   'bk-page-ls': 'A Lightspeed shop: the booking’s page, no deposit',
@@ -560,7 +569,7 @@ export const ROWS = [
   { label: 'Booking', screens: ['bk-service', 'bk-service-chosen', 'bk-service-many', 'bk-bike', 'bk-bike-signed-in', 'bk-not-sure', 'bk-when', 'bk-when-full', 'bk-when-dropoff', 'bk-details', 'bk-details-auto', 'bk-details-deposit'] },
   { label: 'Sending', screens: ['bk-sending', 'bk-card-failed', 'bk-not-sent', 'bk-checking-payment', 'bk-resume', 'bk-request', 'bk-request-deposit', 'bk-confirmed'] },
   { label: 'Your booking', screens: ['bk-bookings', 'bk-page-request', 'bk-offered', 'bk-page', 'bk-page-dropoff', 'bk-change', 'bk-change-pending', 'bk-change-declined'] },
-  { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
+  { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-request-expired', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
   { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-msg-request', 'bk-msg-confirmed', 'bk-msg-offered', 'bk-msg-declined', 'bk-msg-change', 'bk-msg-cancelled', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-preview', 'bk-settings-deposits'] },

@@ -86,6 +86,10 @@ function pay(state, remind = false) {
     return box('Pay when you collect', `<p style="margin: 0; font-size: 17px; line-height: 1.5">Agreed price ${mono(money(WORK_TOTAL_APPROVED), 'font-size: 22px; font-weight: 700')} — pay at the till</p>
 ${note(`When you come in, give your name or job number ${mono('WH-1042')}.`)}${remindHtml}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
   }
+  // Collected, while the link still works: 30 days after collection
+  // (build plan questions, 3 Oct, Q8). Drawn for Jack's approval, 21 Oct.
+  if (state === 'collected') return box('Collected', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}Collected · [date]</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5">${money(WORK_TOTAL_APPROVED)} paid. Thanks for coming in — this page keeps working until [date], 30 days after collection.</p>${shopLines}`);
   if (state === 'paid') return box('Paid', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${money(WORK_TOTAL_APPROVED)} paid on [date]</p>
 <p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing more to pay. When you come in, just give your name.</p>${shopLines}`);
   if (state === 'counter') return box('To pay', `${mono(money(WORK_TOTAL_APPROVED), 'font-size: 30px')}
@@ -100,12 +104,12 @@ ${button(`Pay ${dueText} now`, { block: true })}${note('Or pay when you collect 
 // the quote — the "Your booking" line and the tracker, now at Ready.
 const STEPS = ['Booked', 'In the shop', 'Being worked on', 'Ready'];
 const trackerDone = () => `<ol aria-label="Where your bike is" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: ${isPhone() ? 8 : 16}px">${STEPS.map((t, i) => `<li${i === 3 ? ' aria-current="step"' : ''} style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: ${i === 3 ? 700 : 500}"><span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; box-sizing: border-box; border-radius: 999px; ${i === 3 ? `background: ${C.ink}; color: #ffffff` : `background: ${C.okBg}; color: ${C.successInk}`}">${icon('check', 12)}</span>${t}</li>`).join('')}</ol>`;
-const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your repair · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
+const heading = (collected = false) => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your repair · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 ${collected ? 'has been collected' : 'is ready'}</h1>${trackerDone()}</div>`;
 // Audit L1: the pay card comes first in reading order; on a wide screen it
 // sits in the right-hand column.
 function summary(state, remind = true, checked = false) {
-  if (isPhone()) return site(`${heading()}${pay(state, remind)}${work(checked)}${checks()}${yourNote()}`);
-  return site(`${heading()}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state, remind)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work(checked)}${checks()}${yourNote()}</div></div>`);
+  if (isPhone()) return site(`${heading(state === 'collected')}${pay(state, remind)}${work(checked)}${checks()}${yourNote()}`);
+  return site(`${heading(state === 'collected')}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state, remind)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work(checked)}${checks()}${yourNote()}</div></div>`);
 }
 
 // Paying online: the payment provider's own card form sits inside the page
@@ -159,6 +163,7 @@ def('cp-pay-balance', () => payOnline(false, true));
 def('cp-paid', () => paid());
 def('cp-paid-balance', () => paid(true));
 def('cp-summary-paid', () => summary('paid'));
+def('cp-summary-collected', () => summary('collected', false));
 def('cp-summary-counter', () => summary('counter'));
 def('cp-summary-inshop', () => summary('inshop'));
 def('cp-expired', () => expired());
@@ -274,6 +279,7 @@ export const TITLES = {
   'cp-paid-balance': 'Paid after a deposit',
   'cp-paid': 'Paid — see you soon',
   'cp-summary-paid': 'The link opened again after paying',
+  'cp-summary-collected': 'The link after collection, while it still works',
   'cp-summary-counter': 'The link while it’s being paid at the counter',
   'cp-summary-inshop': 'The same link, for a shop without online payments',
   'cp-expired': 'The link, [n] days after collection',
@@ -304,7 +310,7 @@ export const TITLES = {
   'cp-receipt-address-offline': 'The till is offline: it sends when back online',
 };
 export const ROWS = [
-  { label: 'The customer’s link', screens: ['cp-summary', 'cp-summary-said-yes', 'cp-summary-deposit', 'cp-summary-checked', 'cp-pay', 'cp-pay-failed', 'cp-pay-balance', 'cp-paid', 'cp-paid-balance', 'cp-summary-paid', 'cp-summary-counter', 'cp-summary-inshop', 'cp-expired'] },
+  { label: 'The customer’s link', screens: ['cp-summary', 'cp-summary-said-yes', 'cp-summary-deposit', 'cp-summary-checked', 'cp-pay', 'cp-pay-failed', 'cp-pay-balance', 'cp-paid', 'cp-paid-balance', 'cp-summary-paid', 'cp-summary-collected', 'cp-summary-counter', 'cp-summary-inshop', 'cp-expired'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['cp-summary-ls', 'cp-summary-ls-paid'] },
   { label: 'At the counter', screens: ['cp-ready-unpaid', 'cp-ready-deposit', 'cp-till', 'cp-ready-paid', 'cp-ready-ticks', 'cp-collected'] },

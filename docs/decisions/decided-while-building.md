@@ -944,3 +944,24 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    would let a second Save make a second job (Jack, 8 Oct).
 3. **The old job form is no longer opened from anywhere.** *Decided:* its
    code is removed in its own pull request (rule 5), to keep this one small.
+
+### 21 Oct 2026: the booking page's later stages (booking-page-stages)
+
+1. **`dq-in-shop`'s "Work agreed" and `cp-summary-inshop` /
+   `cp-summary-collected`'s "What we did", the amount to pay and the shop's
+   address aren't sent by the server yet.** *Decided:* the answered quote and
+   the booking's own rows (Service, Bike, When, Your repair, and the
+   customer's words where the drawings have "What you told us") stand in their
+   place; no checklist until the server sends it; "To pay when you collect" has its wording without
+   the amount; the shop line has the name alone. *Pattern:* the confirmed
+   page's rows and shop line as built. The data is in Mark's contract
+   (`openspec/changes/booking-page-stages/design.md`).
+2. **`cp-summary-collected`: the date collected and "until [date]".**
+   *Decided:* "Collected", and "keeps working for 30 days after collection"
+   in place of the date, until the server sends it.
+3. **`bk-request-expired`: the deposit line and "— we've kept your details".**
+   *Decided:* left off, as on the declined page as built (no deposits yet;
+   the booking flow doesn't keep the details).
+4. **The quote card on the ready and collected pages.** *Decided:* shown; once
+   answered it lists what was agreed and declined, which is what "What we
+   did" draws (fresh review, 21 Oct).

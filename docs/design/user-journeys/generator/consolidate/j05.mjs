@@ -16,6 +16,7 @@ export default {
   'cp-summary-paid': into('cp-summary', 'Quote 1', "'Paid' card: '£111.00 paid on [date]', 'Nothing more to pay'; no Pay now"),
   'cp-summary-counter': into('cp-summary', 'Quote 1; 3 Oct (third walk, walk-through 12 M2)', "'This is being paid at the counter right now'; no Pay now; '[shop phone]' opens the phone app"),
   'cp-summary-inshop': into('cp-summary', 'Quote 1', "'To pay when you collect': 'Pay at the counter by card or cash'; no Pay now"),
+  'cp-summary-collected': into('cp-summary', 'Booking page stages (drawn 21 Oct)', "'has been collected'; 'Collected' card: '£111.00 paid', works 30 days after collection"),
   'cp-expired': into('cp-summary', 'Walk-through 1 M5', "'This link has expired' — the job was collected; shop details only"),
   // A Lightspeed shop
   'cp-summary-ls': into('cp-summary', 'Quote 1', "'Agreed price £111.00 — pay at the till'; no Pay now, no Basket"),

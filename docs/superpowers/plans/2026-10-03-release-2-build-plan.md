@@ -620,7 +620,7 @@ later packages.
 
 *Screens it builds (5) and the situations it covers:*
 
-- **`cp-summary`** (block 37, Customer job page) — 10 of its 13 situations here: `dq-ready`, `customer-message`, `cp-summary-said-yes`, `cp-summary-deposit`, `cp-summary-checked`, `cp-summary-paid`, `cp-summary-counter`, `cp-summary-inshop`, `cp-expired`, `ready` (the Checked by line built early on today's booking link: Jack, 18 Oct, mechanic sign-off).
+- **`cp-summary`** (block 37, Customer job page) — 11 of its 14 situations here: `dq-ready`, `customer-message`, `cp-summary-said-yes`, `cp-summary-deposit`, `cp-summary-checked`, `cp-summary-paid`, `cp-summary-collected`, `cp-summary-counter`, `cp-summary-inshop`, `cp-expired`, `ready` (the Checked by line built early on today's booking link: Jack, 18 Oct, mechanic sign-off).
 - **`cp-pay`** (block 39, Card payment box) — 4 situations: `cp-pay-failed`, `cp-pay-balance`, `cp-paid`, `cp-paid-balance`.
 - **`cp-receipt-email`** (block 41, Receipt and printed documents) — 4 situations: `cp-receipt-email-guest`, `cp-invoice-email`, `cp-receipt-email-till`, `cp-receipt-email-deposit`.
 - **`cp-receipt-text`** (block 41, Receipt and printed documents) — 1 situation: `cp-receipt-text-email`.
@@ -653,7 +653,7 @@ later packages.
 - **`bk-cancel`** (block 8, "Are you sure?" box) — 1 of its 2 situations here: `bk-cancel-late`.
 - **`bk-settings`** (block 1, Settings page) — 9 situations: `bk-settings-reserve`, `bk-settings-whole-day`, `bk-settings-notice-days`, `bk-settings-mode-change`, `bk-settings-mode-scheduled`, `bk-settings-auto`, `bk-settings-preview`, `bk-settings-deposits`, `cp-setting`; plus 2 written lines.
 - **`pending`** (block 40, Message or outcome page) — 1 situation: `expired`.
-- Added to the `bk-page` board (built in WP-4.2) — 10 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-expired`; plus 1 written line.
+- Added to the `bk-page` board (built in WP-4.2) — 11 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-request-expired`, `bk-expired`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 3 situations: `bk-staff-request`, `bk-staff-confirmed`, `bk-staff-decline`.
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `bk-messages`.
 - Added to the `set-msg-edit` board (built in WP-1.8) — 6 situations: `bk-msg-request`, `bk-msg-confirmed`, `bk-msg-offered`, `bk-msg-declined`, `bk-msg-change`, `bk-msg-cancelled`.
