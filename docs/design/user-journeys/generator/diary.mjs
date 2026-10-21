@@ -2630,20 +2630,17 @@ keepDesktopSeq('job-book-in');
 // can't say whether a tag came out, so the strip has Print bike tag where
 // job-book-in has the print agent's "Bike tag sent · Acknowledged". Drawn for
 // Jack's approval, 21 Oct.
-const TAG_ATTACH = 'Attach the tag where it can be scanned without removing it from the bike.';
-function tagStripPrint(size = 'desktop') {
-  const f = size === 'desktop' ? 11 : 12;
-  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-grow: 1">${jpH2('Bike tag', 13)}<span style="font-size: ${f}px; color: ${C.muted}">${TAG_ATTACH}</span></div>${button('Print bike tag', { variant: 'default', size: 'sm' })}`, 12, 'align-items: center')}`, '', 6, 0);
-}
-const tagStripPrintPhone = () => phoneStagePanel(`${jpH2('Bike tag', 15)}${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">${TAG_ATTACH}</span><div>${button('Print bike tag', { variant: 'default' })}</div>`);
-screens['job-book-in-print'] = buildJobPage({
+// Jack, 21 Oct (approving with changes): "move the print tag button to the
+// top right where the three boxes are and just have the button instead of
+// the banner". So no strip: a printer button joins the customer row's icon
+// buttons once the bike is in the shop.
+const withPrintTagButton = (html) => html.replace(/<button type="button" aria-label="Message Maya Patel"/, (m) => `<button type="button" aria-label="Print bike tag" title="Print bike tag" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon('printer', 18)}</button>${m}`);
+const bookedIn = buildJobPage({
   status: 'Booked in', tone: 'blue',
   touch: {
     footer: (size) => `${button('Send quote', { variant: 'default', block: true, href: `job-quote-${size}.dc.html` })}${button('Start work', { variant: 'primary', block: true, href: `job-mechanic-${size}.dc.html` })}`,
-    stageTop: (size) => tagStripPrint(size), phoneTop: tagStripPrintPhone,
   },
   desktop: {
-    stageTop: tagStripPrint(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
     checkedCount: 0, notedCount: 0,
     leftStatus: 'Booked in', bikeHere: true,
@@ -2651,9 +2648,11 @@ screens['job-book-in-print'] = buildJobPage({
     footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
   },
 });
+screens['job-book-in-print'] = Object.fromEntries(Object.entries(bookedIn).map(([k, v]) => [k, withPrintTagButton(v)]));
 // The printed tag: the job number large, its barcode (Workshop day 4: Code
-// 128, as the product stickers), the customer and the bike, on a 62 × 29 mm
-// label or the top of a page. Nothing else: no prices, no work.
+// 128, as the product stickers), the customer and the bike, on a small label
+// or the top of a page. Nothing else: no prices, no work. Approved 21 Oct as
+// a stand-in: a template builder for receipts and tags comes later (Jack).
 const bikeTagPaper = (w, h, pad) => `<div style="width: ${w}px; height: ${h}px; box-sizing: border-box; padding: ${pad}px; display: flex; justify-content: center; align-items: flex-start; background: ${C.bg}; overflow: hidden">
 <article aria-label="Printed bike tag" style="width: 312px; box-sizing: border-box; padding: 14px 16px; background: #ffffff; box-shadow: 0 2px 10px rgba(28,30,25,0.18); display: flex; flex-direction: column; align-items: center; gap: 6px; color: #111111; text-align: center">
 <strong style="font-family: ${MONO}; font-size: 26px; letter-spacing: 1px">WH-1042</strong>${barcode128('WH-1042', 260, 44)}<span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px">Trek Domane AL 3 · green</span>
