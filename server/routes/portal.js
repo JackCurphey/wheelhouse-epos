@@ -505,7 +505,7 @@ export function register(route) {
   // screens: service, service-list
   // Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
   route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
-    const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
+    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
       `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
@@ -528,6 +528,9 @@ export function register(route) {
     sendJson(res, 200, {
       shopName: shop.name,
       showPrices,
+      // Step 4's button: "Confirm booking" or "Send booking request" (Jack,
+      // 19 Oct, docs/decisions/2026-10-19-auto-confirm.md).
+      confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({
@@ -890,8 +893,18 @@ export function register(route) {
 
       // Never trusts a client-sent customerId or status - always the resolved
       // customer (signed-in, or a new guest row each time, see
-      // resolveGuestCustomer), always 'pending' until a mechanic reviews it,
-      // same principle as createSale() never trusting a client-sent total.
+      // resolveGuestCustomer), and a state the shop's setting decides, same
+      // principle as createSale() never trusting a client-sent total.
+      // 'pending' until staff accept it; or, when the shop confirms
+      // automatically, 'scheduled' - where the booking-request machine's accept
+      // moves a pending job - marked new until staff open it (Book a repair
+      // decision 8; Jack, 19 Oct, docs/decisions/2026-10-19-auto-confirm.md).
+      // Read here, inside the lock, so a switch mid-booking can't half-apply.
+      // Every check above stands either way: a booking that doesn't fit is
+      // refused as before.
+      const { confirm_bookings_automatically: autoConfirm } = await db
+        .prepare('SELECT confirm_bookings_automatically FROM workshop_settings LIMIT 1').get() ?? {};
+      const confirmed = autoConfirm === 1;
       const linkCode = requestKey ? requestKey.linkCode : newLinkCode();
       let jobId;
       try {
@@ -907,7 +920,8 @@ export function register(route) {
           jobDate,
           startTime: times.startTime,
           endTime: times.endTime,
-          bookingState: 'pending',
+          bookingState: confirmed ? 'scheduled' : 'pending',
+          onlineUnseen: confirmed,
           workState: 'not_started',
           custodyState: 'expected',
           notes: bookingNotes({ bikeNote: bikeNoteValue, questionAnswers, description }),

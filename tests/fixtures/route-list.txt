@@ -80,6 +80,7 @@ POST /api/workshop-jobs/:id/offer
 POST /api/workshop-jobs/:id/accept-change
 POST /api/workshop-jobs/:id/decline-change
 POST /api/workshop-jobs/:id/cancellation-seen
+POST /api/workshop-jobs/:id/seen
 GET /api/workshop-waiting
 POST /api/workshop-jobs/:id/book-in
 POST /api/workshop-jobs/:id/collect

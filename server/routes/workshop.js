@@ -977,6 +977,21 @@ export function register(route) {
     sendJson(res, 200, serializeWorkshopJob(row));
   });
 
+  // Staff opened an online booking confirmed straight away: it stops being
+  // marked "New, booked online" (Jack, 19 Oct, auto-confirm answer 1). The job
+  // page posts it when it opens; a GET never changes data. Any staff member,
+  // and again is fine. Takes no version and bumps none: it's only the mark,
+  // and the job page that sent it keeps the version it loaded.
+  // Spec: openspec/changes/auto-confirm/design.md
+  // screens: job-page, diary
+  route('POST', '/api/workshop-jobs/:id/seen', async (req, res, params) => {
+    const id = Number(params.id);
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    await db.prepare('UPDATE workshop_jobs SET online_unseen = 0 WHERE id = ? AND online_unseen = 1').run(id);
+    res.writeHead(204).end();
+  });
+
   // "Waiting for you" (piece 12, decision 3): new online bookings (only the
   // portal sets terms_accepted_at), customers' change requests and customers'
   // cancellations not yet seen - oldest first by when each arrived.
