@@ -21,6 +21,7 @@ import {
 } from '../customer-auth.js';
 import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate, openingHoursFor } from '../capacity.js';
 import { formatOpeningHours } from '../messaging/templates.js';
+import { computeOrderTotals } from '../lib/sales.js';
 import { currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import {
@@ -387,7 +388,48 @@ async function bookingLinkView(jobId, shop) {
     expectedReady: (row.booking_state === 'scheduled' || row.booking_state === 'reschedule_requested') && row.custody_state !== 'collected'
       ? { date: row.last_day || row.job_date, time: null } : null,
     shop: await shopLines(),
+    ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
+  };
+}
+
+// What was done, what was declined, what's left to pay and what's been paid
+// (cp-summary's "What we did" and pay card; Jack, 21 Oct, booking page stages
+// answer 4: with Show prices off, every figure is null and the rest shows).
+// The work is the job's order's lines; declined is the newest quote's
+// declined lines; to pay is what the till would charge (computeOrderTotals,
+// group discount included), null once paid; paid is the sale that paid it.
+async function jobMoney(jobId) {
+  const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
+  const showPrices = settings?.show_prices_online === 1;
+  const figure = (n) => (showPrices && n !== null && n !== undefined ? Number(n) : null);
+  const order = await db.prepare(
+    `SELECT d.id, d.status, d.discount, d.customer_id, s.total AS paid_total, s.created_at AS paid_at
+       FROM sale_documents d LEFT JOIN sales s ON s.id = d.converted_sale_id
+      WHERE d.workshop_job_id = ? AND d.kind = 'order' AND d.status <> 'cancelled'
+      ORDER BY d.id DESC LIMIT 1`
+  ).get(jobId);
+  const items = order
+    ? await db.prepare('SELECT name, unit_price, qty, line_total FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
+    : [];
+  const declined = await db.prepare(
+    `SELECT l.description, l.unit_amount, l.quantity FROM workshop_quote_lines l
+      WHERE l.decision = 'declined' AND l.workshop_quote_id = (SELECT id FROM workshop_quotes WHERE workshop_job_id = ? ORDER BY revision DESC LIMIT 1)
+      ORDER BY l.id`
+  ).all(jobId);
+  const paid = order?.status === 'converted' && order.paid_at
+    ? { at: new Date(order.paid_at).toISOString(), amount: figure(order.paid_total) } : null;
+  let toPay = null;
+  if (order && !paid && items.length) {
+    toPay = figure((await computeOrderTotals({
+      items: items.map((l) => ({ unitPrice: l.unit_price, qty: l.qty })), discount: order.discount, customerId: order.customer_id,
+    })).total);
+  }
+  return {
+    work: items.map((l) => ({ name: l.name, price: figure(l.line_total) })),
+    declined: declined.map((l) => ({ name: l.description, price: figure(Number(l.unit_amount) * Number(l.quantity)) })),
+    toPay,
+    paid,
   };
 }
 

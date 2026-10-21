@@ -102,6 +102,11 @@ test('a booking returns a booking link, and the link reads the booking back', as
     collectedAt: null,
     expectedReady: null, // a request still waiting: no ready day yet
     shop: { address: null, phone: null, openingHours: res.body.shop?.openingHours },
+    // Nothing done or paid yet (booking page stages answer 4).
+    work: [],
+    declined: [],
+    toPay: null,
+    paid: null,
   });
   assert.equal(typeof res.body.shop.openingHours, 'string');
 });
