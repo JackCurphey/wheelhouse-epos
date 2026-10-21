@@ -25,8 +25,11 @@ export const MACHINE_COLUMNS = {
 // Moves that start or reopen a job's life make no sense once its booking has
 // ended (issue #190 A). Collecting a bike already in the shop stays allowed -
 // the bike really is there (docs/decisions/2026-10-15-job-page-fixes.md, 5).
-// A pending request is not ended and may still be booked in.
-const ENDED_BOOKING = new Set(['cancelled', 'declined', 'expired']);
+// A pending request is not ended and may still be booked in. Hold is refused
+// only before the work starts: staff can cancel a booking whose work is under
+// way, and that work can still be held, finished or wait for parts.
+// The words follow Jack's plain refusals ("This booking expired.").
+const ENDED_BOOKING_WORDS = { cancelled: 'This booking was cancelled', declined: 'This booking was declined', expired: 'This booking expired' };
 const REFUSED_ON_ENDED_BOOKING = {
   custody: new Set(['book_in']),
   work: new Set(['start', 'hold', 'reopen']),
@@ -51,11 +54,13 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
     };
   }
 
-  if (ENDED_BOOKING.has(job.booking_state) && REFUSED_ON_ENDED_BOOKING[machine.name]?.has(event)) {
+  const endedWords = ENDED_BOOKING_WORDS[job.booking_state];
+  const holdOnStartedWork = event === 'hold' && from !== 'not_started';
+  if (endedWords && !holdOnStartedWork && REFUSED_ON_ENDED_BOOKING[machine.name]?.has(event)) {
     return {
       ok: false,
       code: 'illegal',
-      message: `This booking was ${job.booking_state}, so the job can't be ${ENDED_BOOKING_VERB[event]}.`,
+      message: `${endedWords}, so the job can't be ${ENDED_BOOKING_VERB[event]}.`,
     };
   }
 

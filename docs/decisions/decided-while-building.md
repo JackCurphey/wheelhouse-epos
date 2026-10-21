@@ -54,6 +54,27 @@ No screen: server only.
    fields** beside its pounds. *Pattern:* the money contract (Decision 6):
    an endpoint that returns pounds adds the pence beside them.
 
+### 21 Oct 2026: a booking that has ended can't be booked in or started (`openspec/changes/guard-ended-booking`, issue 190 A)
+
+No screen: server only. Follows `docs/decisions/2026-10-15-job-page-fixes.md`
+item 5.
+
+1. **Hold is refused too, while the work hasn't started**, on a cancelled,
+   declined or expired booking: "This booking was cancelled, so the job
+   can't be put on hold." Work already under way when staff cancelled can
+   still be held, wait for parts and be finished. *Pattern:* the job page
+   offers no next step on an ended booking; holding work not yet started
+   puts it into the workshop as surely as starting it.
+2. **Finished work on an ended booking can't be reopened**: "This booking
+   expired, so the job can't be reopened." A collected bike can still be
+   brought back into the shop, but its work then needs a new job.
+   *Pattern:* the same; reopening would start the work again.
+3. **The words and code.** Code "illegal", the machine's own refusal (the
+   move is never allowed from here); `settle_first` was not copied, as it
+   sends staff to the till. The words start with Jack's plain refusals
+   ("This booking expired.") and add ", so the job can't be [booked in /
+   started / put on hold / reopened]." *Pattern:* Jack's quote refusals.
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
