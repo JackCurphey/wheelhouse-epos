@@ -26,7 +26,9 @@ export const JOB_PART: Shape = {
 };
 
 const JOB_FIELDS: Shape = {
-  id: N, title: S, reference: S, version: N,
+  // Null only on jobs made before migration 016 gave every job a number. types.ts
+  // still says text: no shop on the new app has such a job (decided-while-building, 21 Oct).
+  id: N, title: S, reference: SN, version: N,
   customerId: NN, customerName: SN, bikeId: NN, bikeLabel: SN, bikeColour: SN,
   mechanicId: NN, mechanicName: SN,
   jobDate: S, startTime: SN, endTime: SN,

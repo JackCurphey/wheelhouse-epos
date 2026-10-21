@@ -1070,3 +1070,14 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    with no bike that tap-in is left out. *Decided:* left as the tidy-up makes
    it, for now.
 
+
+### 21 Oct 2026: screen tests built from the reply shape (working agreement 3.13)
+
+1. **A job with no number.** Migration 016 added job numbers without filling
+   them in for older jobs, so the server can send `reference: null`, and the
+   bike tag already hides Print bike tag for one. The screens' type says a
+   job always has a number, and a receipt for such a job would print "null"
+   before the bike. *Decided:* the reply shape allows an empty number, to
+   match the database; the type and the receipt stay as they are, since no
+   shop on the new app has a job from before 16 Oct. What a receipt says for
+   one is yours to choose if a shop ever brings old jobs across.

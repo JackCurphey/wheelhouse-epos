@@ -36,7 +36,7 @@ P2:
 - [ ] 3.10 An order with no lines can't be converted, or saved empty
 - [ ] 3.11 Remove the till's unsigned-finish exception now that the old job form is gone (#343)
 - [ ] 3.12 Split `src/screens/diary/diary-page.tsx` with no behaviour change, guarded by the existing diary tests
-- [ ] 3.13 Screens' tests stop mocking the whole server (design 3, reply-shape file) and each new screen gets a browser spec (in progress: `tests/helpers/fake-job.js` checks every fake job against the reply shape as it is made; the diary's 13 screen tests use it; the job page's, the bike tag's and the quote's next)
+- [ ] 3.13 Screens' tests stop mocking the whole server (design 3, reply-shape file) and each new screen gets a browser spec (in progress: `tests/helpers/fake-job.js` checks every fake job against the reply shape as it is made, and every screen test that fakes a workshop job uses it; other replies, the till's order first, still to get shapes)
 
 P3, for later, not started unasked: raw 500 text on public routes; `null` bodies on public routes; sign-up wording that names known emails; no rate limit on public availability; rate limiter never forgets keys; link expiry from the job date, not collection (Q8); messages: hung send blocks every shop, Undo leaves a dead link, subject line breaks, failure can block finishing a job; guard knows only three key prefixes; upload type is the client's claim; migration 046's table rewrite; `public-portal/` dead code; two pill implementations; one serial CI job; the `migration-048` queued row never asserted.
 

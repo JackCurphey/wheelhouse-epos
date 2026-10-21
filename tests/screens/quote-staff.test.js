@@ -8,6 +8,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -19,7 +20,7 @@ const ORDER = { id: 80, kind: 'order', status: 'open', subtotal: 75, discount: 0
 let JOB;
 let QUOTE;
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane AL 3',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-05', startTime: '10:00', endTime: '11:30', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'in_shop', workState: 'not_started', version: 3, notes: null, requested: null,
@@ -27,7 +28,7 @@ function job(over) {
     createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', quote: null,
     parts: [{ id: 21, position: 1, date: '2026-10-05', startTime: '10:00', endTime: '11:30', mechanicId: 11, mechanicName: 'Alex Morgan' }],
     ...over,
-  };
+  });
 }
 const line = (over) => ({ id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'pending', lineTotal: 18, need: 'needed', reason: 'Worn down to 1mm', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, ...over });
 const quote = (state, lines) => ({ id: 9, workshopJobId: 1, revision: 1, state, createdAt: '2026-10-05T09:00:00Z', sentAt: null, lines,
