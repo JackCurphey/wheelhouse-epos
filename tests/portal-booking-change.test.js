@@ -230,8 +230,7 @@ const daysFromToday = (n) => {
 for (const status of ['waiting_parts', 'complete']) {
   test(`once work has started (${status}) the booking cannot be moved through the link`, async () => {
     const booked = await book();
-    const saved = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { status } });
-    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    await setJob(shopId(), booked.id, "booking_state = 'scheduled', work_state = ?", status);
     assert.equal((await jobRow(shopId(), booked.id)).custody_state, 'expected', 'the bike has not been marked in the shop');
     const res = await link.change(booked.code, { jobDate: nextDay(), mechanicId: sam, startTime: '10:00' });
     assert.deepEqual([res.status, res.body], [409, IN_SHOP_CHANGE]);
