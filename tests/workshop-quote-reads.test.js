@@ -2,7 +2,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest } from './helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { customerIdForLogin } from './helpers/workshopFixtures.js';
@@ -284,6 +284,41 @@ test('the owning customer reads their quote with the same totals staff see', asy
   assert.equal(customerFirstName, 'Portal');
   assert.equal(mechanicName, null);
   assert.deepEqual(rest, staffRes.body);
+});
+
+// The signed-in quote read hides staff names too, unless the shop's "Show
+// who signed off to customers" switch is on (Jack, 22 Oct; fresh review).
+test('the signed-in quote read names staff only with the shop’s switch on', async () => {
+  const sam = await seedMechanic(session.shop.id, { name: 'Sam Reed' });
+  const job = await staffRequest(server.baseUrl, session.cookie, '/api/workshop-jobs', {
+    method: 'POST', body: { title: 'Portal quote names fixture', jobDate: '2026-10-01', customerId: portalCustomerId, mechanicId: sam },
+  });
+  assert.equal(job.status, 201, JSON.stringify(job.body));
+  const quote = await staffRequest(server.baseUrl, session.cookie, `/api/workshop-jobs/${job.body.id}/quotes`, {
+    method: 'POST', body: { lines: [{ kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 }] },
+  });
+  assert.equal(quote.status, 201, JSON.stringify(quote.body));
+  const quoteId = quote.body.id;
+  assert.equal((await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, { method: 'POST' })).status, 200);
+  const lineId = (await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}`)).body.lines[0].id;
+  const answered = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/answer`, {
+    method: 'POST', body: { via: 'phone', decisions: [{ lineId, decision: 'approved' }] },
+  });
+  assert.equal(answered.status, 200, JSON.stringify(answered.body));
+  const setNames = async (on) => assert.equal((await staffRequest(server.baseUrl, session.cookie, '/api/workshop-settings', { method: 'PUT', body: { showSignOffToCustomers: on } })).status, 200);
+  const read = async () => (await portalRequest(server.baseUrl, portalCustomer.cookie, `/api/portal/${session.shop.slug}/quotes/${quoteId}`)).body;
+  try {
+    await setNames(false);
+    const hidden = await read();
+    assert.equal(hidden.mechanicName, null);
+    assert.equal(hidden.lines[0].decidedByName, null, 'who took the call isn’t named');
+    await setNames(true);
+    const shown = await read();
+    assert.equal(shown.mechanicName, 'Sam Reed');
+    assert.ok(shown.lines[0].decidedByName, 'named once the shop chooses');
+  } finally {
+    await setNames(false);
+  }
 });
 
 // This is the test that proves the controller ruling: quoteForCustomer scopes
