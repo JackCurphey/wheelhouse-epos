@@ -98,3 +98,11 @@ check (answer 3).
 **Piece 3's drawings approved** (Jack, 18 Oct: "Approve all three drawings;
 go ahead and build piece 3, flagging Mark's two files for him"):
 `set-workshop-sign-off`, `till-receipt-paper-checked`, `cp-summary-checked`.
+
+## Staff names on quotes (22 Oct 2026)
+
+The quote drawings (journey 4) name the mechanic and who took a phone answer
+to the customer. Jack: "1: show staff names on the quote only when the
+shop's Show who signed off to customers switch is on; otherwise say we."
+Chosen over always naming them, and over never naming them. Built in
+`openspec/changes/quote-names-and-wording`.

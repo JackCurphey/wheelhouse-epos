@@ -52,6 +52,8 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   });
   const q = current && quoteQuery.data ? quoteQuery.data : null;
   const customer = job.customerName || 'the customer';
+  // The dialogs call the customer by first name, as drawn ("Record Maya’s answer").
+  const first = job.customerName?.trim().split(/\s+/)[0] || 'the customer';
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +244,8 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
 
       {recording && q ? (
         <RecordAnswer
-          customer={customer}
+          customer={first}
+          reference={job.reference}
           lines={q.lines}
           busy={busy}
           onClose={() => setRecording(false)}
@@ -253,13 +256,18 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
       {withdrawing && q ? (
         <Dialog open onOpenChange={(o) => { if (!o) setWithdrawing(false); }} aria-labelledby="withdraw-title">
-          <DialogHeader><DialogTitle id="withdraw-title">Withdraw this quote?</DialogTitle></DialogHeader>
-          <DialogBody><p className="m-0 text-sm">{`${customer}'s page will say the quote was withdrawn. Only the booked work stays agreed.`}</p></DialogBody>
+          <DialogHeader>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <DialogTitle id="withdraw-title">Withdraw this quote?</DialogTitle>
+              <span className="text-[13px] text-[var(--wh-muted)]">{[job.reference, job.customerName].filter(Boolean).join(' · ')}</span>
+            </div>
+          </DialogHeader>
+          <DialogBody><p className="m-0 text-sm">{`${first}’s page will say the quote was withdrawn and there’s nothing to answer. Only the booked work stays agreed.`}</p></DialogBody>
           <DialogFooter>
             <Button onClick={() => setWithdrawing(false)}>Keep the quote</Button>
             <Button variant="danger" disabled={busy} onClick={async () => {
               if (await act(() => apiMutate(`/api/quotes/${q.id}/withdraw`, {}))) setWithdrawing(false);
-            }}>Withdraw</Button>
+            }}>Withdraw quote</Button>
           </DialogFooter>
         </Dialog>
       ) : null}
@@ -268,8 +276,8 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
 }
 
 /** Record their answer (journey 4 decision 4): ticks start the way the mechanic recommended. */
-function RecordAnswer({ customer, lines, busy, onClose, onSave }: {
-  customer: string; lines: QuoteLine[]; busy: boolean; onClose: () => void;
+function RecordAnswer({ customer, reference, lines, busy, onClose, onSave }: {
+  customer: string; reference: string | null; lines: QuoteLine[]; busy: boolean; onClose: () => void;
   onSave: (via: 'phone' | 'in_shop', decisions: { lineId: number; decision: 'approved' | 'declined' }[]) => void;
 }) {
   const [yes, setYes] = useState<Record<number, boolean>>(() => Object.fromEntries(lines.map((l) => [l.id, l.need === 'needed'])));
@@ -279,7 +287,12 @@ function RecordAnswer({ customer, lines, busy, onClose, onSave }: {
   const plural = (n: number) => `${n} line${n === 1 ? '' : 's'}`;
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="record-title">
-      <DialogHeader><DialogTitle id="record-title">{`Record ${customer}'s answer`}</DialogTitle></DialogHeader>
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="record-title">{`Record ${customer}’s answer`}</DialogTitle>
+          <span className="text-[13px] text-[var(--wh-muted)]">{`Quote${reference ? ` for ${reference}` : ''} · answered ${via === 'phone' ? 'by phone' : 'in the shop'}`}</span>
+        </div>
+      </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
         <fieldset className="m-0 flex gap-2 border-0 p-0">
           <legend className="mb-1 text-sm font-semibold">How did they answer?</legend>
@@ -290,6 +303,7 @@ function RecordAnswer({ customer, lines, busy, onClose, onSave }: {
             </label>
           ))}
         </fieldset>
+        <p className="m-0 text-sm">{`Tick what ${customer} agreed to ${via === 'phone' ? 'on the phone' : 'in the shop'}. These answers are final once saved, as if answered online.`}</p>
         <div className="flex flex-col gap-1">
           {lines.map((l) => (
             <label key={l.id} className="flex min-h-11 items-center gap-2.5 text-sm">
@@ -299,7 +313,6 @@ function RecordAnswer({ customer, lines, busy, onClose, onSave }: {
             </label>
           ))}
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">Answers are final. A change later needs a new quote.</p>
       </DialogBody>
       <DialogFooter>
         <Button onClick={onClose}>Cancel</Button>

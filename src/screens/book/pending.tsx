@@ -165,7 +165,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
     return (
       <BookFrame title={request ? 'Your booking request' : pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
-        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
+        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {link.stage === 'confirmed' && link.changeDeclined && (
             <p role="status" className="m-0 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>{declinedLine(link)}</span></p>
@@ -304,7 +304,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           </>
         ))}
         {/* The quote, while there's one to answer: only before the work is done. */}
-        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} hideAnswered={work.length > 0} />}
+        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} hideAnswered={work.length > 0} />}
         {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
         {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
           <>
@@ -371,7 +371,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   return (
     <BookFrame title={statusText(link.stage) ?? ''}>
       {/* A quote waiting for the customer's answer comes first (journey 4). */}
-      <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
+      <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} />
       {/* When to drop the bike off, then the shop's additional note, once the
           booking stands (Jack, 19 Oct; drawn in bk-confirmed as one paragraph). */}
       {arrival && <p className="m-0 mb-3 text-[15px] leading-normal">{arrival}</p>}

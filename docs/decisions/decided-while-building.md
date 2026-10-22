@@ -1203,6 +1203,29 @@ The drawings show where slots appear but not these rules. *Decided:*
    width below. The built page had drifted from it (Work and parts in the
    right column); it now matches the drawing.
 
+### 22 Oct 2026: the quote's drawn words (`openspec/changes/quote-names-and-wording`)
+
+1. **"We" in place of the mechanic's name, with the switch off.** The
+   drawings name Alex throughout; Jack's 22 Oct answer puts names behind
+   the "Show who signed off to customers" switch. Off, each drawn line takes
+   "we": "We recommend more work", "We recommend this.", "Thanks, Maya —
+   we’re carrying on", "Thanks, Maya — we’ll carry on with the service",
+   "We’ve withdrawn this quote", "You answered by phone at [time]."
+2. **"Call the shop" with no phone.** "Not sure? Call [shop phone]" and the
+   withdrawn line read "Call the shop" when the shop has no phone in Shop
+   details.
+3. **The withdraw box keeps "Only the booked work stays agreed."** The drawing
+   names the booked Standard service; a job's title is free text, so the
+   general words stay.
+4. **The Record-answer intro follows How did they answer?** "Tick what Maya
+   agreed to on the phone" changes to "in the shop" with the choice, so it
+   sits under the choice. Its drawn note ("Maya gets a text … with what was
+   agreed") waits for that message (a later WP-4.2 piece) and isn't shown.
+5. **The switch's note says it covers quotes:** "Adds “Checked by [name]” to
+   their receipt and booking link, and the mechanic’s name to quotes. Off:
+   only staff see who signed a job off, and quotes say “we”." The drawings of
+   the switch (`set-workshop-sign-off`) keep the older note until redrawn.
+
 ### 22 Oct 2026: the checklist on the customer's booking page (customer-checklist)
 
 1. **When.** *Decided:* once the work is finished (the ready and collected
