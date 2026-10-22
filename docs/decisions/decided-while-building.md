@@ -1283,3 +1283,21 @@ The drawings show where slots appear but not these rules. *Decided:*
    data (CX-2; booking photos don't yet either) and the photo on Ready to
    collect.
 7. **Migration 057**, after the goes-with piece's 056.
+
+### 22 Oct 2026: the spending limit at booking (`openspec/changes/spend-limit-booking`)
+
+1. **The summary line.** Not drawn for a customer who sets a limit (every
+   drawn summary asks first). *Decided:* "Extra work: go ahead if the whole
+   bill is no more than £200", in the drawing's words; nothing when asking
+   first.
+2. **Typing an amount chooses Go ahead**, so the box can't hold a limit the
+   radio doesn't.
+3. **Whole pounds from £1 to £100,000.** The box is drawn numeric, "in
+   pounds". Otherwise Continue says "Enter the most the whole bill can come
+   to, in whole pounds."
+4. **Shown on every booking**, Not sure included, after the photos as drawn.
+5. **The job's tag shows on every job**, "Ask before any extra work" when
+   there's no limit (staff-made jobs included), as drawn.
+6. **Staff can't set or change a limit yet**: not drawn; a question for Jack
+   when the within-limit piece is built.
+7. **Migration 058.**

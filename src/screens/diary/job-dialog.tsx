@@ -381,6 +381,10 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                   </button>
                 ) : null}
                 <span>{`Mechanic: ${job.mechanicName ?? 'Shared queue'}`}</span>
+                {/* The customer's spending limit (Workshop day 42): the one tag that stops unapproved work, outlined to stand out. */}
+                <span className="inline-flex rounded-full border border-[var(--wh-state-scheduled-ink)] bg-[var(--wh-state-scheduled-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-state-scheduled-ink)]">
+                  {job.spendLimit ? `Customer OK up to £${job.spendLimit}` : 'Ask before any extra work'}
+                </span>
                 <Tag>{`Ready by ${shortDay(readyBy as string)}`}</Tag>
                 {job.orderTotal ? <Tag>{`Total ${money(job.orderTotal)}`}</Tag> : null}
               </div>

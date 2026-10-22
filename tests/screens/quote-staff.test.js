@@ -318,3 +318,15 @@ test('a photo saved after a slow upload keeps a reason saved meanwhile', async (
   assert.match(posts()[1], /"Saved while uploading"/);
   assert.match(posts()[1], /"photoId":9/);
 });
+
+// The customer's spending limit, as a tag on the job (Workshop day 42; job-page.mjs SPEND_LIMIT).
+test('the job shows the customer’s spending limit, or that they want asking first', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 200 } });
+  assert.ok(has(await dlg.findByText('Customer OK up to £200')));
+  assert.equal(has(dlg.queryByText('Ask before any extra work')), false);
+});
+
+test('a job with no limit says to ask before any extra work', async () => {
+  const { dlg } = await openJob();
+  assert.ok(has(await dlg.findByText('Ask before any extra work')));
+});
