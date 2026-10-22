@@ -534,7 +534,7 @@ export function register(route) {
       throw err;
     }
 
-    // What was paid is the sale's total, in pence, as the 051 backfill has it
+    // What was paid is the sale's total, in pence, as the 055 backfill has it
     // (design.md Decisions 1 and 8: from step A, convert sets paid_pence).
     await db.prepare(
       `UPDATE sale_documents SET status = ?, converted_sale_id = ?, updated_at = ?,
