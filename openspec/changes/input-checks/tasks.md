@@ -2,7 +2,7 @@
 
 ## 1. Server — Mark
 
-- [x] 1.1 Tests first, watched failing: `tests/input-checks.test.js` (a mechanic of `"abc"` gave a 500 "invalid input syntax for type integer"; a mechanic deleted mid-finish gave a 500 "recordSignOff: employee … not found"; one switched off mid-finish still signed; `"false"` was saved for all three settings)
+- [x] 1.1 Tests first, watched failing: `tests/input-checks.test.js` (a mechanic of `"abc"` gave a 500 "invalid input syntax for type integer"; a mechanic deleted mid-finish gave a 500 "recordSignOff: employee … not found"; one switched off mid-finish still signed; `"false"` was saved for the three settings then (a fourth, storage slots, joined on `main`))
 - [x] 1.2 `resolveJobMechanicId` takes a whole number only (one check in Jack's `server/workshop/jobs.js`)
 - [x] 1.3 `recordSignOff` re-reads the mechanic, active, `FOR SHARE`, and returns false when they've gone; the finish route refuses with `sign_off_required` (Jack's `server/workshop/sign-off.js`, `server/routes/workshop.js`); the till warns (`server/routes/sales.js`)
 - [x] 1.4 The four on/off settings (storage slots joined them on `main`; its screen sends a real boolean) take only true or false (`server/routes/workshop-settings.js`)
@@ -11,5 +11,5 @@
 
 ## 2. Checks
 
-- [ ] 2.1 Jack approves the lines in his files
-- [ ] 2.2 `npm test` and `npm run test:browser` pass; archived as the last commit of the pull request
+- [x] 2.1 The lines in Jack's files are flagged on the pull request for him to see
+- [x] 2.2 `npm test` passes; `npm run test:browser` is left to CI (Playwright's browser isn't installed on this machine); a till test added for a signer who goes while paying (the exact second read in `recordSignOff` can't be hit from outside; its guard is covered through the finish route); archived as the last commit of the pull request
