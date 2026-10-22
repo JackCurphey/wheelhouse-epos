@@ -455,11 +455,10 @@ export function register(route) {
     // The services New job chose, kept as an online booking's are, so the job
     // has its service's checklist (Jack, 22 Oct, service checklists).
     if (body.serviceIds !== undefined && !Array.isArray(body.serviceIds)) return badRequest(res, 'serviceIds must be a list');
-    const serviceIds = [...new Set((body.serviceIds ?? []).map(Number))];
+    if (!(body.serviceIds ?? []).every(Number.isInteger)) return badRequest(res, 'Service not found');
+    const serviceIds = [...new Set(body.serviceIds ?? [])];
     for (const serviceId of serviceIds) {
-      if (!Number.isInteger(serviceId) || !(await db.prepare('SELECT 1 FROM workshop_services WHERE id = ?').get(serviceId))) {
-        return badRequest(res, 'Service not found');
-      }
+      if (!(await db.prepare('SELECT 1 FROM workshop_services WHERE id = ?').get(serviceId))) return badRequest(res, 'Service not found');
     }
 
     const status = resolveJobStatus(body.status, null);
@@ -908,6 +907,7 @@ export function register(route) {
     sendJson(res, 200, await jobChecklist(id));
   });
 
+  // screens: job-page
   route('PUT', '/api/workshop-jobs/:id/checklist/items/:index', async (req, res, params) => {
     const body = await readJsonBody(req);
     try {

@@ -551,6 +551,7 @@ export function register(route) {
   // set-workshop-checklists and set-workshop-checklist-edit). Everyone signed
   // in reads them; only the Owner changes them, as all Settings until roles.
   // `{ template: true }` makes the full service checklist, used for no service yet.
+  // screens: services, service-edit
   route('GET', '/api/workshop-checklists', async (req, res) => {
     sendJson(res, 200, await listChecklists());
   });
@@ -566,18 +567,21 @@ export function register(route) {
     }
   };
 
+  // screens: services, service-edit
   route('POST', '/api/workshop-checklists', async (req, res) => {
     if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
     await checklistReply(res, () => createChecklist(body), 201);
   });
 
+  // screens: services, service-edit
   route('PUT', '/api/workshop-checklists/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
     await checklistReply(res, () => updateChecklist(Number(params.id), body));
   });
 
+  // screens: services, service-edit
   route('DELETE', '/api/workshop-checklists/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
     await checklistReply(res, () => deleteChecklist(Number(params.id)));

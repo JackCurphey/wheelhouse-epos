@@ -278,3 +278,45 @@ test('finished work is frozen: ticks and notes are refused until it is reopened'
     await remove(full.id);
   }
 });
+
+// ---------- Fresh review, 22 Oct ----------
+
+test('a quote linked to the job doesn’t give it a checklist; only its order does', async () => {
+  const full = await fromTemplate();
+  try {
+    await staff(`/api/workshop-checklists/${full.id}`, { method: 'PUT', body: { serviceIds: [standard.id] } });
+    const job = await staffJob();
+    const quote = await staff('/api/sale-documents', { method: 'POST', body: { kind: 'quote', items: [{ lineType: 'labour', serviceId: standard.id, qty: 1 }] } });
+    assert.equal(quote.status, 201, JSON.stringify(quote.body));
+    assert.equal((await staff(`/api/sale-documents/${quote.body.id}`, { method: 'PUT', body: { workshopJobId: job.id } })).status, 200);
+    assert.equal(await checklistOf(job.id), null);
+  } finally {
+    await remove(full.id);
+  }
+});
+
+test('a refused or empty change leaves the job following Settings', async () => {
+  const full = await fromTemplate();
+  try {
+    await staff(`/api/workshop-checklists/${full.id}`, { method: 'PUT', body: { serviceIds: [standard.id] } });
+    const job = await staffJob({ serviceIds: [standard.id] });
+    assert.equal((await setItem(job.id, 99, { done: true })).status, 404);
+    assert.equal((await setItem(job.id, 0, {})).status, 400);
+    await staff(`/api/workshop-checklists/${full.id}`, { method: 'PUT', body: { items: ['Brakes'] } });
+    assert.equal((await checklistOf(job.id)).total, 1);
+  } finally {
+    await remove(full.id);
+  }
+});
+
+test('service ids must be whole numbers of this shop’s services', async () => {
+  for (const serviceIds of [[String(standard.id)], [true], [1.5]]) {
+    const res = await staff('/api/workshop-checklists', { method: 'POST', body: { name: 'Odd', items: ['Brakes'], serviceIds } });
+    assert.equal(res.status, 400, JSON.stringify([serviceIds, res.body]));
+    const job = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'x', jobDate: nextDay(), startTime: '10:00', endTime: '11:00', mechanicId: sam, serviceIds } });
+    assert.equal(job.status, 400, JSON.stringify([serviceIds, job.body]));
+  }
+  const theirs = (await staffRequest(server.baseUrl, other.cookie, '/api/workshop-services', { method: 'POST', body: { name: 'Their service', price: 10, minutes: 30 } })).body;
+  assert.equal((await staff('/api/workshop-checklists', { method: 'POST', body: { name: 'Theirs', items: ['Brakes'], serviceIds: [theirs.id] } })).status, 400);
+  assert.equal((await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'x', jobDate: nextDay(), startTime: '10:00', endTime: '11:00', mechanicId: sam, serviceIds: [theirs.id] } })).status, 400);
+});

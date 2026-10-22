@@ -49,11 +49,10 @@ function cleanItems(items) {
 
 async function cleanServiceIds(ids) {
   if (!Array.isArray(ids)) throw refuse('Choose the services as a list.');
-  const unique = [...new Set(ids.map(Number))];
+  if (!ids.every(Number.isInteger)) throw refuse('One of those services doesn’t exist.');
+  const unique = [...new Set(ids)];
   for (const id of unique) {
-    if (!Number.isInteger(id) || !(await db.prepare('SELECT 1 FROM workshop_services WHERE id = ?').get(id))) {
-      throw refuse('One of those services doesn’t exist.');
-    }
+    if (!(await db.prepare('SELECT 1 FROM workshop_services WHERE id = ?').get(id))) throw refuse('One of those services doesn’t exist.');
   }
   return unique;
 }
@@ -102,14 +101,16 @@ export async function createChecklist(body) {
 }
 
 export async function updateChecklist(id, body) {
-  const existing = await db.prepare('SELECT * FROM workshop_checklists WHERE id = ?').get(id);
-  if (!existing) throw new ChecklistError(404, 'That checklist no longer exists.');
-  const name = body.name === undefined ? existing.name : cleanName(body.name);
-  const items = body.items === undefined ? existing.items : cleanItems(body.items);
+  const name = body.name === undefined ? undefined : cleanName(body.name);
+  const items = body.items === undefined ? undefined : cleanItems(body.items);
   const serviceIds = body.serviceIds === undefined ? null : await cleanServiceIds(body.serviceIds);
   return inTransaction(async () => {
+    // Read and locked inside the transaction, so a removal at the same moment
+    // gives "no longer exists", not a failed write (fresh review).
+    const existing = await db.prepare('SELECT * FROM workshop_checklists WHERE id = ? FOR UPDATE').get(id);
+    if (!existing) throw new ChecklistError(404, 'That checklist no longer exists.');
     await db.prepare('UPDATE workshop_checklists SET name = ?, items = CAST(? AS jsonb), updated_at = now() WHERE id = ?')
-      .run(name, JSON.stringify(items), id);
+      .run(name ?? existing.name, JSON.stringify(items ?? existing.items), id);
     if (serviceIds) await setServices(id, serviceIds);
     return serialize(await db.prepare('SELECT * FROM workshop_checklists WHERE id = ?').get(id));
   });
@@ -129,7 +130,7 @@ async function serviceChecklist(jobId) {
         UNION ALL
         SELECT i.service_id, 1 AS source, i.id AS seq FROM sale_document_items i
           JOIN sale_documents d ON d.id = i.document_id
-         WHERE d.workshop_job_id = ? AND d.status <> 'cancelled' AND i.service_id IS NOT NULL
+         WHERE d.workshop_job_id = ? AND d.kind = 'order' AND d.status <> 'cancelled' AND i.service_id IS NOT NULL
       ) s
       JOIN workshop_services ws ON ws.id = s.service_id
       JOIN workshop_checklists c ON c.id = ws.checklist_id
@@ -170,31 +171,37 @@ export async function setJobChecklistItem(jobId, index, body) {
     note = typeof body.note === 'string' ? body.note.trim() || null : null;
     if (note && note.length > NOTE_MAX) throw refuse(`A note can be up to ${NOTE_MAX} letters.`);
   }
+  if (body.done === undefined && note === undefined) throw refuse('Say what changes: done, or a note.');
   if (job.work_state === 'complete') {
     throw new ChecklistError(409, 'This work is finished, so its checklist can’t change. Reopen the work first.', 'illegal');
   }
-  if (!(await db.prepare('SELECT 1 FROM workshop_job_checklists WHERE workshop_job_id = ?').get(jobId))) {
+  const copy = await db.prepare('SELECT jsonb_array_length(items) AS n FROM workshop_job_checklists WHERE workshop_job_id = ?').get(jobId);
+  if (!copy) {
     const found = await serviceChecklist(jobId);
     if (!found) throw new ChecklistError(404, 'This job has no checklist.');
+    // A refused change copies nothing: the job keeps following Settings (fresh review).
+    if (!Number.isInteger(index) || index < 0 || index >= found.items.length) throw new ChecklistError(404, 'That item isn’t on this checklist.');
     // Two first ticks at once: the second finds the copy the first made.
     await db.prepare(
       `INSERT INTO workshop_job_checklists (workshop_job_id, checklist_id, name, items)
        VALUES (?, ?, ?, CAST(? AS jsonb)) ON CONFLICT (workshop_job_id) DO NOTHING`
     ).run(jobId, found.id, found.name, JSON.stringify(found.items.map((label) => ({ label, done: false, note: null }))));
+  } else if (!Number.isInteger(index) || index < 0 || index >= copy.n) {
+    throw new ChecklistError(404, 'That item isn’t on this checklist.');
   }
-  const row = await db.prepare('SELECT jsonb_array_length(items) AS n FROM workshop_job_checklists WHERE workshop_job_id = ?').get(jobId);
-  if (!Number.isInteger(index) || index < 0 || index >= row.n) throw new ChecklistError(404, 'That item isn’t on this checklist.');
-  if (body.done !== undefined) {
-    await db.prepare(
-      `UPDATE workshop_job_checklists SET items = jsonb_set(items, ARRAY[?::text, 'done'], to_jsonb(CAST(? AS boolean))), updated_at = now()
-        WHERE workshop_job_id = ?`
-    ).run(String(index), body.done, jobId);
-  }
-  if (note !== undefined) {
-    await db.prepare(
-      `UPDATE workshop_job_checklists SET items = jsonb_set(items, ARRAY[?::text, 'note'], COALESCE(to_jsonb(CAST(? AS text)), 'null'::jsonb)), updated_at = now()
-        WHERE workshop_job_id = ?`
-    ).run(String(index), note, jobId);
+  // Each write re-checks the work isn't finished, so a tick racing Finish
+  // can't land after it (fresh review).
+  const notFinished = 'AND EXISTS (SELECT 1 FROM workshop_jobs WHERE id = ? AND work_state <> \'complete\')';
+  const done = body.done === undefined ? { changes: 1 } : await db.prepare(
+    `UPDATE workshop_job_checklists SET items = jsonb_set(items, ARRAY[?::text, 'done'], to_jsonb(CAST(? AS boolean))), updated_at = now()
+      WHERE workshop_job_id = ? ${notFinished}`
+  ).run(String(index), body.done, jobId, jobId);
+  const noted = note === undefined ? { changes: 1 } : await db.prepare(
+    `UPDATE workshop_job_checklists SET items = jsonb_set(items, ARRAY[?::text, 'note'], COALESCE(to_jsonb(CAST(? AS text)), 'null'::jsonb)), updated_at = now()
+      WHERE workshop_job_id = ? ${notFinished}`
+  ).run(String(index), note, jobId, jobId);
+  if (!done.changes || !noted.changes) {
+    throw new ChecklistError(409, 'This work is finished, so its checklist can’t change. Reopen the work first.', 'illegal');
   }
   return jobChecklist(jobId);
 }
