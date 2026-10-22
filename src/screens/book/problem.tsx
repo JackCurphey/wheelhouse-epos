@@ -197,7 +197,7 @@ function ProblemForm() {
                 aria-describedby={limitProblem ? `${limitId}-error` : undefined}
                 value={draft.limitText ?? LIMIT_START}
                 onChange={(e) => update({ limitOn: true, limitText: e.target.value })}
-                className="w-[72px] font-mono"
+                className="min-h-11 w-[72px] font-mono"
               />
             </span>
           </span>

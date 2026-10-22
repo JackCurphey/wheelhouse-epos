@@ -71,3 +71,18 @@ test('a staff-made job has no limit, and every job read carries the field', asyn
   const list = (await staff('/api/workshop-jobs?start=2026-10-20&end=2026-10-20')).body;
   assert.equal(list.find((j) => j.id === job.id).spendLimit, null);
 });
+
+// From the fresh review: guests and Not sure go through the same check, before
+// anything is made.
+test('a guest’s bad limit is refused before any customer is made, and Not sure keeps a good one', async () => {
+  const guest = { guestName: 'Gina Guestname', guestPhone: '07700 900123', email: 'gina@example.com' };
+  const before = (await staff('/api/customers')).body.length;
+  const bad = await portalRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/bookings`, {
+    method: 'POST', body: { mechanicId: sam, jobDate: nextDate(), startTime: '10:00', serviceIds: [svc.id], ...BOOKING_CONTACT, ...guest, spendLimit: 0 },
+  });
+  assert.equal(bad.status, 400, JSON.stringify(bad.body));
+  assert.equal((await staff('/api/customers')).body.length, before);
+  const notSure = await book({ serviceIds: undefined, notSure: true, description: 'Clicks when pedalling', spendLimit: 150 });
+  assert.equal(notSure.status, 201, JSON.stringify(notSure.body));
+  assert.equal((await staff(`/api/workshop-jobs/${notSure.body.id}`)).body.spendLimit, 150);
+});

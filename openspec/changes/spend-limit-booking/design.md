@@ -4,7 +4,10 @@
 pounds, as drawn (`inputmode="numeric"`, "in pounds"). Null is "Ask me before
 any extra work", the default.
 
-The booking draft keeps `spendLimit?: number` (absent for ask first). The
+The booking draft keeps `limitOn?: true` (Go ahead chosen) and `limitText`
+(the box as typed); `spendLimit(draft)` turns them into whole pounds or
+none, and the date screen's guard (`hasProblem`) sends a bad amount back to
+the bike step, so a limit is never dropped unseen (fresh review). The
 bike step's second choice fills £200 to start, as drawn; an empty or
 non-whole amount is refused on Continue with "Enter the most the whole bill
 can come to, in whole pounds." `bookingBody` sends `spendLimit` only when

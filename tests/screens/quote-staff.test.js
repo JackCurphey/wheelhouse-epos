@@ -330,3 +330,8 @@ test('a job with no limit says to ask before any extra work', async () => {
   const { dlg } = await openJob();
   assert.ok(has(await dlg.findByText('Ask before any extra work')));
 });
+
+test('a large limit reads with a thousands comma', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 100000 } });
+  assert.ok(has(await dlg.findByText('Customer OK up to £100,000')));
+});
