@@ -256,3 +256,20 @@ test('M picks a job up to move it from the keyboard', async () => {
   rtl.fireEvent.keyDown(block, { key: 'm' });
   assert.ok(has(ui.queryByText(/Moving Trek Domane AL 3\. Thu 8 Oct, 10:00–11:30\./)));
 });
+
+// As drawn (job-page.mjs jobPopupContent; Jack, 22 Oct, "so that the notes have
+// more space on the page"): the job's details beside Notes in the wider
+// column, then Work and parts across the full width below them.
+test('the job’s details sit beside Notes, with Work and parts across the page below', async () => {
+  const { dlg } = await openJob();
+  const section = (name) => dlg.getByRole('heading', { name }).closest('section');
+  const details = section('Job details');
+  const notes = section('Notes');
+  const work = section('Work and parts');
+  const grid = details.parentElement.parentElement;
+  assert.ok(grid.contains(notes), 'Notes is in the two columns with the details');
+  assert.ok(details.parentElement !== notes.parentElement, 'in the other column');
+  assert.ok(details.parentElement.compareDocumentPosition(notes.parentElement) & 4, 'Notes is the second column');
+  assert.ok(!grid.contains(work), 'Work and parts is below both columns');
+  assert.ok(grid.compareDocumentPosition(work) & 4, 'and after them');
+});

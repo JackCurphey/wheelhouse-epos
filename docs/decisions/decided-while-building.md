@@ -1189,3 +1189,16 @@ The drawings show where slots appear but not these rules. *Decided:*
 5. **The diary block.** *Decided:* the slot on the line after the job (after
    the New online mark when that shows), where there's room; a block's name
    for screen readers doesn't say the slot yet.
+
+### 22 Oct 2026: the job page's layout (Jack's answer)
+
+1. **The roomier customer strip.** The tappable "Kept on Hook 3" (44px tall)
+   made the strip's second row taller than drawn. Jack, 22 Oct, on seeing it:
+   "I like the way it looks now more"; kept as approved.
+2. **Notes with more space.** Jack, 22 Oct: "if we can just swap around the
+   work/parts section with the notes section, so that the notes have more
+   space on the page i think then it would be perfect". The drawing
+   (job-page.mjs jobPopupContent) already has this: the job's details (420px)
+   beside Notes in the wider column, then Work and parts across the full
+   width below. The built page had drifted from it (Work and parts in the
+   right column); it now matches the drawing.
