@@ -53,6 +53,12 @@ const ROUTES = [
   ['POST', `/api/team/logins/${MISSING}/attach-roles`, {}],
   ['POST', `/api/team/logins/${MISSING}/deactivate`, {}],
   ['POST', `/api/team/logins/${MISSING}/reactivate`, {}],
+  // Added with the wider scan below (22 Oct audit, missing tests item 10).
+  ['PUT', '/api/message-templates/no_such_message', {}],
+  ['POST', '/api/sites', {}],
+  ['POST', '/api/tills', {}],
+  ['POST', `/api/tills/${MISSING}/deactivate`, {}],
+  ['PUT', `/api/employees/${MISSING}/pin`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
@@ -67,27 +73,74 @@ for (const [method, path, body] of ROUTES) {
 }
 
 // ---- Structural check ----
-// Changing routes deliberately NOT owner-only. Empty today: anything added
-// here needs a reason, in a comment beside it.
-const NOT_OWNER_ONLY = new Set([
-  // 'POST /api/example', // reason
+// Changing routes not owner-only, each with its reason. The 19 Oct decision
+// covers settings and the team; the day-to-day ones are outside it, not
+// approved by name.
+const NOT_OWNER_ONLY = new Map([
+  ['POST /api/messages/:id/undo', 'day-to-day: Undo a message in its minute, from the diary'],
+  ['POST /api/message-templates/:key/preview', 'changes nothing: fills in the wording being typed'],
+  ['POST /api/till/:shopSlug/sync', "a till's own sync, signed in with its token, not a staff session"],
+  ['POST /api/till-attention/:id/resolve', 'day-to-day: clearing a till sale that needs attention'],
+  // Open question, not a decision (22 Oct audit, finding 1, follows on from
+  // #283): the website settings and the Shopify connection are not Owner-only
+  // today. Listed so the scan covers website.js; for Jack or Mark to decide.
+  ['PUT /api/storefront-settings', 'open question: audit finding 1'],
+  ['POST /api/shopify/connection', 'open question: audit finding 1'],
+  ['POST /api/storefront-settings/logo', 'open question: audit finding 1'],
+  ['POST /api/storefront-settings/hero', 'open question: audit finding 1'],
 ]);
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js'];
+// The settings and team files, and the ones the 22 Oct audit found unscanned
+// (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js'];
 
-test('every POST/PUT/DELETE route in the settings and team files is owner-only or on the allow-list', () => {
+// Comments out, so a guard named only in a comment doesn't count. A "//"
+// straight after ":" is left, as in a URL.
+const withoutComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+const GUARD = /ownerOnly\(req, res\)|login\.is_owner/;
+
+function unguardedRoutes(source, file) {
+  const code = withoutComments(source);
+  const starts = [...code.matchAll(/route\('(GET|POST|PUT|DELETE|PATCH)', '([^']+)'/g)];
+  // Every route( call is one the pattern read, so a route written another way isn't skipped.
+  assert.equal(starts.length, (code.match(/\broute\(/g) || []).length, `${file}: a route the scan can't read`);
+  // And stripping comments removed none (a "/*" inside a string would).
+  assert.equal(starts.length, (source.match(/route\('(GET|POST|PUT|DELETE|PATCH)', '/g) || []).length, `${file}: comment stripping removed a route`);
+  const found = [];
+  starts.forEach((m, i) => {
+    if (m[1] === 'GET') return;
+    const chunk = code.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : code.length);
+    if (!GUARD.test(chunk)) found.push(`${m[1]} ${m[2]}`);
+  });
+  return { changing: starts.filter((m) => m[1] !== 'GET').length, found };
+}
+
+test('every POST/PUT/DELETE route in the scanned files is owner-only or on the allow-list', () => {
   const unguarded = [];
+  const allowed = [];
   let seen = 0;
   for (const file of FILES) {
     const source = readFileSync(new URL(`../server/routes/${file}`, import.meta.url), 'utf8');
-    const starts = [...source.matchAll(/route\('(GET|POST|PUT|DELETE|PATCH)', '([^']+)'/g)];
-    starts.forEach((m, i) => {
-      if (m[1] === 'GET') return;
-      seen += 1;
-      const chunk = source.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : source.length);
-      const guarded = /ownerOnly\(req, res\)/.test(chunk) || /login\.is_owner/.test(chunk);
-      if (!guarded && !NOT_OWNER_ONLY.has(`${m[1]} ${m[2]}`)) unguarded.push(`${m[1]} ${m[2]} (${file})`);
-    });
+    const { changing, found } = unguardedRoutes(source, file);
+    seen += changing;
+    for (const route of found) (NOT_OWNER_ONLY.has(route) ? allowed : unguarded).push(`${route} (${file})`);
   }
-  assert.ok(seen >= 20, `expected to find the changing routes, found ${seen}`);
+  assert.ok(seen >= 35, `expected to find the changing routes, found ${seen}`);
   assert.deepEqual(unguarded, []);
+  // The allow-list holds only routes that are still unguarded: one that gains
+  // the check comes off the list.
+  assert.equal(allowed.length, NOT_OWNER_ONLY.size, `allow-listed routes now guarded or gone: ${[...NOT_OWNER_ONLY.keys()].filter((r) => !allowed.some((a) => a.startsWith(`${r} (`)))}`);
+});
+
+test('the scan ignores a guard that is only in a comment', () => {
+  const source = [
+    "route('PUT', '/api/a', async (req, res) => {",
+    '  // login.is_owner is checked elsewhere',
+    '  /* if (await ownerOnly(req, res)) return; */',
+    '});',
+    "route('PUT', '/api/b', async (req, res) => {",
+    '  if (await ownerOnly(req, res)) return;',
+    "  sendJson(res, 200, { link: 'https://example.test' });",
+    '});',
+  ].join('\n');
+  assert.deepEqual(unguardedRoutes(source, 'example').found, ['PUT /api/a']);
 });
