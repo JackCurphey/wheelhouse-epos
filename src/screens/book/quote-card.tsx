@@ -56,8 +56,10 @@ function Phone({ phone }: { phone: string | null }) {
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
-export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booked = [], done = false, hideAnswered = false }: {
+export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booked = [], done = false, hideAnswered = false, onAddNote }: {
   shopSlug: string; code: string; agreedTotal: number | null; shopPhone?: string | null; booked?: string[]; done?: boolean; hideAnswered?: boolean;
+  /** To the Notes with the shop card's box, where the page has one (quote.mjs). */
+  onAddNote?: () => void;
 }) {
   const queryClient = useQueryClient();
   const key = ['booking-quote', shopSlug, code];
@@ -305,7 +307,13 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
           <DialogFooter className="flex justify-end"><Button onClick={() => setEnlarged(null)}>Close</Button></DialogFooter>
         </Dialog>
       ) : null}
-      <p className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm">Not sure? Call <Phone phone={shopPhone} />.</p>
+      {/* "or Add a note for the shop" where the page has the notes card to go to (dq-quote). */}
+      {onAddNote ? (
+        <div className="flex flex-wrap items-center gap-2.5 border-t border-[var(--wh-border)] pt-2.5 text-sm">
+          <span>Not sure? Call <Phone phone={shopPhone} />, or</span>{' '}
+          <Button className="min-h-11" onClick={onAddNote}>Add a note for the shop</Button>
+        </div>
+      ) : <p className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm">Not sure? Call <Phone phone={shopPhone} />.</p>}
     </section>
   );
 }
