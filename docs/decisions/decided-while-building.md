@@ -75,6 +75,19 @@ item 5.
    ("This booking expired.") and add ", so the job can't be [booked in /
    started / put on hold / reopened]." *Pattern:* Jack's quote refusals.
 
+### 22 Oct 2026: a deleted job's waiting messages (`openspec/changes/delete-job-messages`, audit item 11 on #265)
+
+No screen: server only. Touches `docs/decisions/2026-10-18-attachments-and-delete.md`
+(deleting a job) and `2026-10-20-messages-engine.md` (Undo), without
+reopening either.
+
+1. **Deleting a job stops its messages that haven't gone yet**, marked
+   undone as Undo marks them, even one whose minute is up but which the
+   timer hasn't picked up. One already being sent, or sent, is left as it
+   is. A refused delete stops nothing. *Pattern:* reopening the work stops a
+   waiting "Bike ready" (`undoWaiting`): nothing is sent about work that no
+   longer stands.
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)

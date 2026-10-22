@@ -15,7 +15,7 @@ import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/htt
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
@@ -1158,7 +1158,7 @@ export function register(route) {
     let out;
     await db.exec('BEGIN');
     try {
-      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').all(id);
+      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? ORDER BY id FOR UPDATE').all(id);
       out = await withJobBookingLock(id, [], async (job) => {
         // Any paid order linked to the job counts (a job can have more than one).
         const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
@@ -1187,6 +1187,7 @@ export function register(route) {
         await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
         await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
         await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
+        await undoJobMessages(id);
         await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
         return undefined;
       });
