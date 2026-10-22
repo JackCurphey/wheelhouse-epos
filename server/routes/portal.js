@@ -38,6 +38,7 @@ import {
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
+import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
@@ -1237,6 +1238,26 @@ export function register(route) {
       'Cache-Control': 'private, max-age=300',
     });
     res.end(bytes);
+  });
+
+  // Notes with the shop (decisions 3 and 7; ac-job-note): the customer's notes
+  // and the shop's replies on their job, read and added through the link.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    sendJson(res, 200, await jobNotes(found.id, { forCustomer: true }));
+  });
+
+  // screens: approval
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req);
+    const text = cleanNote(body.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: found.id, fromCustomer: true, text });
+    sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
   });
 
   // The customer cancels through their booking link (piece 12, decision 1):

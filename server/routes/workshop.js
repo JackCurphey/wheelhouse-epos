@@ -26,6 +26,7 @@ import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/sta
 import { applyEvent } from '../workshop/transitions.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
+import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -1329,6 +1330,54 @@ export function register(route) {
       }
     }
     sendQuoteResult(res, result);
+  });
+
+  // ---------- Notes with the shop (decisions 3 and 7; ac-inbox) ----------
+  // screens: diary
+  route('GET', '/api/job-notes/conversations', async (req, res, params, query) => {
+    sendJson(res, 200, await noteConversations(query.get('filter') === 'needs-reply' ? 'needs-reply' : 'all'));
+  });
+
+  // screens: diary
+  route('GET', '/api/workshop-jobs/:id/notes', async (req, res, params) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    sendJson(res, 200, await jobNotes(job.id));
+  });
+
+  // A staff reply, saved on the job; the customer is told with Reply from the
+  // shop, the way they chose (pretend for now). A customer who gets nothing
+  // keeps the link they have, as Bike ready.
+  // screens: diary
+  route('POST', '/api/workshop-jobs/:id/notes', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const job = await db.prepare('SELECT id, customer_id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    const body = await readJsonBody(req);
+    const text = cleanNote(body.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
+    let message;
+    try {
+      const why = job.customer_id ? await whyNotQueued('shop_reply', job.customer_id) : 'no_customer';
+      if (why) {
+        const who = why === 'no_customer' ? null : (await db.prepare('SELECT name FROM customers WHERE id = ?').get(job.customer_id))?.name;
+        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : notSent(why, 'Reply from the shop', who ?? 'The customer') };
+      } else {
+        const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
+        const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
+        // The drawn text puts its own full stop after the reply, so the reply's own goes.
+        vars['The shop’s reply'] = text.replace(/\.+$/, '');
+        const queued = await queueMessage({ customerId, jobId: job.id, key: 'shop_reply', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply from the shop', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The reply is saved, but the message could not be queued.' };
+    }
+    sendJson(res, 201, { notes: await jobNotes(job.id), message });
   });
 
   // ---------- Deleting a job, and its attachments ----------

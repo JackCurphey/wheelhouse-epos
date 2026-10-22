@@ -1384,3 +1384,21 @@ The drawings show where slots appear but not these rules. *Decided:*
    was shown to him straight after, and it's a one-line change.
 5. **No word on the job page** that it went: not drawn; the job's Messages
    show it.
+
+### 22 Oct 2026: notes with the shop, the server (`openspec/changes/notes-with-the-shop`)
+
+1. **Where the notes live.** A job's own conversation (`job_notes`), the
+   words themselves; the text telling the customer of a reply is a message
+   like any other. Questions from a customer's account come later.
+2. **Needs a reply** while the customer's note is the newest; a staff reply
+   clears it (the drawn "Send reply" then "Sent to Maya by text"). No
+   separate "No reply needed".
+3. **Staff names to the customer** only with "Show who signed off to
+   customers" on, as quotes (Jack, 22 Oct); otherwise the shop's name.
+4. **Up to 1,000 letters** a note; otherwise "Write a note of up to 1,000
+   letters."
+5. **The reply's own full stop** goes before the drawn ". Replies to this
+   number aren’t read…", so the text never reads "check it..".
+6. **Reply from the shop** is listed in Settings › Messages with the other
+   messages, in its drawn wording (ac-reply-text).
+7. **Migration 061.**
