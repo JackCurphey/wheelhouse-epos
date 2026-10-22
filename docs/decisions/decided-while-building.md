@@ -1438,3 +1438,19 @@ The drawings show where slots appear but not these rules. *Decided:*
    "Wheelhouse couldn’t load your notes." with Try again.
 4. **Bubbles as drawn:** yours light with a border on the right, the shop's
    on the panel on the left.
+
+### 22 Oct 2026: the staff Messages inbox (`openspec/changes/messages-inbox`)
+
+1. **No "Customer page" link yet.** Drawn beside Open the job; the Customers
+   page isn't built, so it would open a placeholder. Added with Customers.
+2. **The hint before sending** says "Goes to Maya the way they chose, with a
+   link to reply on the job’s page." The drawing shows "Sent to Maya by
+   text…" under the box before sending; that line is now said after
+   sending, with the way it really went (text, email or WhatsApp), or why
+   no text went ("Saved on the job, but no text went: …").
+3. **Read again every 30 seconds** while Messages is open: there are no live
+   updates between devices yet (WP-1.9).
+4. **The open conversation is in the address** (`?job=`), so Back works and
+   a link can open one.
+5. **"You (Jo Taylor)"** for your own replies, as drawn; another member of
+   staff's by their name.
