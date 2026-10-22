@@ -416,7 +416,7 @@ async function bookingLinkView(jobId, shop) {
 async function customerQuote(result, jobId) {
   const shows = (await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get())?.show_sign_off_to_customers === 1;
   const who = await db.prepare(
-    `SELECT m.name AS mechanic_name, c.name AS customer_name FROM workshop_jobs j
+    `SELECT m.name AS mechanic_name, c.name AS customer_name, j.spend_limit FROM workshop_jobs j
        LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
       WHERE j.id = ?`
   ).get(jobId);
@@ -428,6 +428,12 @@ async function customerQuote(result, jobId) {
     mechanicName: shows ? who?.mechanic_name ?? null : null,
     earlier: await earlierAnswers(result.quote),
     agreedTotal: await agreedBefore(result.quote, showPrices),
+    spendLimit: who?.spend_limit ?? null,
+    // When the quote's reminder went, if it has (dq-quote-reminded).
+    reminderSentAt: (await db.prepare(
+      `SELECT max(sent_at) AS at FROM customer_messages
+        WHERE job_id = ? AND template_key = 'quote_reminder' AND sent_at IS NOT NULL AND sent_at >= ?`
+    ).get(jobId, result.quote.sent_at ?? '9999-12-31'))?.at ?? null,
     customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
   };
 }
@@ -915,6 +921,11 @@ export function register(route) {
     }
     const bikeNote = typeof body.bikeNote === 'string' ? body.bikeNote.trim() : '';
     if (bikeNote.length > 200) return badRequest(res, 'Your bike description can be up to 200 characters');
+    // The spending limit (Workshop day 41): whole pounds, or none to ask first.
+    const spendLimit = body.spendLimit ?? null;
+    if (spendLimit !== null && !(Number.isInteger(spendLimit) && spendLimit >= 1 && spendLimit <= 100000)) {
+      return badRequest(res, 'Enter the most the whole bill can come to, in whole pounds.');
+    }
 
     // What the customer chose: one or more services this shop ticked bookable
     // online, in the order chosen, or the "not sure" hour. Read through the
@@ -1076,6 +1087,7 @@ export function register(route) {
           linkTokenHash: hashLinkCode(linkCode),
           customerDescription: description || null,
           customerBikeNote: bikeNoteValue,
+          spendLimit,
           questionAnswers,
           bookingRequestKeyHash: requestKey?.keyHash,
           bookingRequestBodyHash: requestKey?.bodyHash,

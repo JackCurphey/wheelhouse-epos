@@ -12,6 +12,7 @@ import {
 import { shopToday } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import { serializeQuote, answerAll as answerQuote } from './quotes.js';
+import { quote as quoteMachine } from './state-machines.js';
 import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
 import { allocateReference } from './references.js';
@@ -74,6 +75,8 @@ export function serializeWorkshopJob(row) {
     // notes they were also copied into - the review pop-up shows them alone.
     customerDescription: row.customer_description ?? null,
     customerBikeNote: row.customer_bike_note ?? null,
+    // Whole pounds the whole bill may come to, or null to ask first (Workshop day 41).
+    spendLimit: row.spend_limit ?? null,
     // Piece 12: the customer's change request while it waits, and who
     // cancelled (a customer's shows in "Waiting for you" until seen).
     requested: requestedOf(row),
@@ -359,7 +362,7 @@ export async function syncJobHold(jobId) {
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
 // race, which is not the same thing as being wrong.
-export async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash, onlineUnseen = false }) {
+export async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, spendLimit, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash, onlineUnseen = false }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -378,15 +381,15 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
     }
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, booked_in_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, CASE WHEN ? = 'in_shop' THEN now() END, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, spend_limit, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, booked_in_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, CASE WHEN ? = 'in_shop' THEN now() END, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
         termsText,
-        linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
+        linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null, spendLimit ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         bookingRequestKeyHash ?? null, bookingRequestBodyHash ?? null,
         onlineUnseen ? 1 : 0,
@@ -591,6 +594,66 @@ export async function addApprovedLinesToOrder(quoteId) {
 }
 
 // An answer and its lines joining the order happen together, or not at all.
+// Work within the customer's spending limit (Workshop day 41-43): a draft
+// quote whose whole bill stays within the limit is agreed without going to
+// the customer, and joins the job. The whole bill is the order, any booked
+// service not on it yet, and this quote, summed by the database. In one
+// transaction, the quote locked, so two presses agree it once.
+// The whole bill with a quote's work, and the job's limit: the job's order,
+// plus each booked service's price not already on it (matched by service),
+// plus the quote's lines, summed by the database.
+export async function wholeBill(quoteId, jobId) {
+  const row = await db.prepare(
+    `SELECT j.spend_limit,
+            COALESCE(d.total, 0)
+            + COALESCE((SELECT sum(js.booked_price) FROM workshop_job_services js
+                         WHERE js.workshop_job_id = j.id
+                           AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
+            + COALESCE((SELECT sum(l.quantity * l.unit_amount) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?), 0) AS whole_bill,
+            (SELECT count(*) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?) AS lines
+       FROM workshop_jobs j
+       LEFT JOIN sale_documents d ON d.workshop_job_id = j.id AND d.kind = 'order' AND d.status <> 'cancelled'
+      WHERE j.id = ?
+      ORDER BY d.id DESC LIMIT 1`
+  ).get(quoteId, quoteId, jobId);
+  return row ? { spendLimit: row.spend_limit ?? null, wholeBill: Number(row.whole_bill), lines: Number(row.lines) } : null;
+}
+
+export async function agreeWithinLimit({ quoteId, loginId = null }) {
+  await db.exec('BEGIN');
+  try {
+    const quote = await db.prepare('SELECT * FROM workshop_quotes WHERE id = ? FOR UPDATE').get(quoteId);
+    if (!quote) { await db.exec('ROLLBACK'); return { ok: false, code: 'not_found', message: 'Quote not found' }; }
+    const refuse = async (message) => { await db.exec('ROLLBACK'); return { ok: false, code: 'illegal', message }; };
+    if (!quoteMachine.can(quote.state, 'within_limit')) return refuse(`A quote that is ${quote.state} can’t be saved within the limit.`);
+    // The order is locked too, so an edit to it can't slip the bill past the
+    // limit between this check and the add (fresh review).
+    await db.prepare(
+      "SELECT id FROM sale_documents WHERE workshop_job_id = ? AND kind = 'order' AND status <> 'cancelled' FOR UPDATE"
+    ).all(quote.workshop_job_id);
+    const bill = await wholeBill(quoteId, quote.workshop_job_id);
+    if (!bill || bill.lines === 0) return refuse('Add the extra work first.');
+    if (bill.spendLimit === null) return refuse('This customer asked to be asked before any extra work. Send a quote instead.');
+    if (bill.wholeBill > bill.spendLimit) {
+      return refuse(`That takes the whole bill to £${bill.wholeBill.toFixed(2)}, over the £${bill.spendLimit} limit. Send a quote instead.`);
+    }
+    await db.prepare(
+      `UPDATE workshop_quote_lines SET decision = 'approved', decided_via = 'limit', decided_by_login_id = ?, decided_at = now()
+        WHERE workshop_quote_id = ? AND decision = 'pending'`
+    ).run(loginId, quoteId);
+    await db.prepare('UPDATE workshop_quotes SET state = ?, sent_at = now() WHERE id = ?').run(quoteMachine.next(quote.state, 'within_limit'), quoteId);
+    await addApprovedLinesToOrder(quoteId);
+    await db.exec('COMMIT');
+    return { ok: true, quote: await db.prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId), spendLimit: bill.spendLimit };
+  } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
+    // An order that can't take the work (paid, or a part no longer sold)
+    // says why, as answering a quote does (fresh review).
+    if (err instanceof ValidationError) return { ok: false, code: 'illegal', message: err.message };
+    throw err;
+  }
+}
+
 export async function answerAndAddToOrder(args) {
   await db.exec('BEGIN');
   try {

@@ -3,6 +3,7 @@ import { Navigate, useParams } from 'react-router';
 import { useDraft, type BookingDraft } from './draft.tsx';
 import type { ServicesResponse } from './services-query.ts';
 import { descriptionError, missingAnswers } from './problem-rules.ts';
+import { limitError } from './details-rules.ts';
 
 /**
  * A screen that needs earlier answers, opened without them (an old link, a
@@ -20,7 +21,9 @@ export const hasService = (draft: BookingDraft) => (draft.serviceIds?.length ?? 
  * Spec: docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md
  */
 export const hasProblem = (draft: BookingDraft, services: ServicesResponse) =>
-  hasService(draft) && missingAnswers(services, draft).length === 0 && descriptionError(draft) === null;
+  hasService(draft) && missingAnswers(services, draft).length === 0 && descriptionError(draft) === null
+  // A spending limit that isn't whole pounds goes back to the bike step (fresh review).
+  && limitError(draft) === null;
 
 const DAY_FORMAT = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_FORMAT = /^\d{2}:\d{2}$/;

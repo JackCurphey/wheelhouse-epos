@@ -88,3 +88,28 @@ A booking request that waits for the shop SHALL send Request received. Cancellin
 #### Scenario: Cancelled from the booking page
 - **WHEN** Maya cancels her booking from its page
 - **THEN** she gets Booking cancelled: "There's nothing to pay or refund. Book another time: [link]."
+
+### Requirement: The customer is told about work added within their limit
+The "Work added within your limit" message SHALL go to the customer when work is agreed within their spending limit, saying what was added, its cost and their limit, with their link and the shop's phone.
+
+#### Scenario: Pads and fitting
+- **WHEN** pads and fitting for £46 are agreed within Maya's £200 limit
+- **THEN** Maya's message says "Added: Shimano brake pads, Fit and adjust brakes, £46.00" and mentions the £200 limit
+
+### Requirement: A quote with no answer gets one reminder
+When a quote is sent, the customer SHALL get one "Quote reminder" after the shop's hours (24 to start) if they haven't answered; answering, the shop withdrawing it, or a newer quote SHALL stop it (Jack, 1 Oct and 22 Oct). A quote never expires by itself.
+
+#### Scenario: No answer after 24 hours
+- **WHEN** Maya's quote was sent and she hasn't answered 24 hours later
+- **THEN** she is sent the Quote reminder, once
+
+#### Scenario: Answered first
+- **WHEN** Maya answers before the 24 hours are up
+- **THEN** no reminder goes
+
+### Requirement: The customer gets their answers after a call
+When staff record a customer's quote answer taken by phone, the customer SHALL be sent "Your answers" at once, saying what is going ahead and its cost, and what they said no thanks to (dq-record-answer; Jack, 22 Oct).
+
+#### Scenario: Pads yes, cable no
+- **WHEN** Jo records by phone that Maya said yes to the pads and fitting and no to the cable
+- **THEN** Maya is sent "Going ahead: Shimano brake pads and Fit and adjust brakes, £46.00. No thanks: Replace gear cable."
