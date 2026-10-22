@@ -12,14 +12,48 @@
 import { prepare } from '../db.js';
 import { quote as quoteMachine, canApprove } from './state-machines.js';
 
+const WITHOUT_MAX = 300;
+const withoutText = (w) => (typeof w === 'string' ? w.trim() || null : null);
+
+// A line's partner is named by its index in the same list (`goesWith`), since
+// a draft's lines get new ids on every save; the ids are filled in once every
+// line is in.
 async function insertLines(quoteId, lines) {
+  const ids = [];
   for (const line of lines) {
-    await prepare(
-      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, need, reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    const { lastInsertRowid } = await prepare(
+      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, need, reason, without_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(quoteId, line.kind, line.description, line.productId ?? null, line.quantity ?? 1, line.unitAmount,
-      line.need === 'optional' ? 'optional' : 'needed', line.reason ? String(line.reason).trim() || null : null);
+      line.need === 'optional' ? 'optional' : 'needed', line.reason ? String(line.reason).trim() || null : null, withoutText(line.without));
+    ids.push(lastInsertRowid);
   }
+  for (const [i, line] of lines.entries()) {
+    if (line.goesWith !== undefined && line.goesWith !== null) {
+      await prepare('UPDATE workshop_quote_lines SET goes_with_line_id = ? WHERE id = ?').run(ids[line.goesWith], ids[i]);
+    }
+  }
+}
+
+// Goes with (decision 7, M2): only a labour line, and only with a part in the
+// same list, so a pair never chains and no line goes with itself.
+function pairProblem(lines) {
+  for (const line of lines) {
+    if (line.goesWith === undefined || line.goesWith === null) continue;
+    const partner = Number.isInteger(line.goesWith) ? lines[line.goesWith] : undefined;
+    if (line.kind !== 'labour' || !partner || partner.kind !== 'part') {
+      return 'a labour line can go with one of the quote’s parts only';
+    }
+  }
+  for (const line of lines) {
+    if (line.without !== undefined && line.without !== null && typeof line.without !== 'string') {
+      return 'what happens without it is some words';
+    }
+    if (withoutText(line.without)?.length > WITHOUT_MAX) {
+      return `what happens without it can be up to ${WITHOUT_MAX} letters`;
+    }
+  }
+  return null;
 }
 
 // Creates the next revision for a job, superseding the current one. A quote
@@ -38,6 +72,9 @@ export async function createRevision({ jobId, lines }) {
       return { ok: false, code: 'illegal', message: "each line's need must be 'needed' or 'optional'" };
     }
   }
+
+  const problem = pairProblem(lines);
+  if (problem) return { ok: false, code: 'illegal', message: problem };
 
   const job = await prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
   if (!job) return { ok: false, code: 'not_found', message: 'Job not found' };
@@ -130,10 +167,17 @@ export async function answerAll({ quoteId, jobId = null, decisions, via, loginId
   } else if (row.state !== 'sent') {
     return { ok: false, code: 'illegal', message: `a quote that is ${row.state} is not open for an answer` };
   }
-  const lines = await prepare('SELECT id, decision FROM workshop_quote_lines WHERE workshop_quote_id = ?').all(quoteId);
+  const lines = await prepare('SELECT id, decision, description, goes_with_line_id FROM workshop_quote_lines WHERE workshop_quote_id = ?').all(quoteId);
   const given = new Map((Array.isArray(decisions) ? decisions : []).map((d) => [Number(d.lineId), d.decision]));
   if (lines.some((l) => !['approved', 'declined'].includes(given.get(l.id)))) {
     return { ok: false, code: 'illegal', message: 'every line needs a yes or a no before the answer can be saved' };
+  }
+  // Lines that go together are answered together (decision 2).
+  for (const l of lines) {
+    const partner = l.goes_with_line_id ? lines.find((p) => p.id === l.goes_with_line_id) : null;
+    if (partner && given.get(l.id) !== given.get(partner.id)) {
+      return { ok: false, code: 'pair', message: `Lines that go together need the same answer: ${l.description} goes with ${partner.description}.` };
+    }
   }
   if (lines.some((l) => l.decision !== 'pending')) {
     return { ok: false, code: 'illegal', message: 'this quote has already been answered' };
@@ -183,6 +227,13 @@ export async function recordLineDecision({ quoteId, lineId, decision, customerId
   if (row.state !== 'sent') {
     return { ok: false, code: 'illegal', message: `a quote that is ${row.state} is not open for decisions` };
   }
+  // A line in a pair can't be answered alone (decision 2): the whole answer
+  // (answerAll) decides both together.
+  const paired = await prepare(
+    `SELECT 1 FROM workshop_quote_lines WHERE workshop_quote_id = ? AND id = ? AND (goes_with_line_id IS NOT NULL
+       OR EXISTS (SELECT 1 FROM workshop_quote_lines o WHERE o.goes_with_line_id = workshop_quote_lines.id))`
+  ).get(quoteId, lineId);
+  if (paired) return { ok: false, code: 'illegal', message: 'This line goes with another; answer the whole quote.' };
   // A decision is final (docs/decisions/2026-09-23-quote-line-decisions-are-final.md).
   // The UPDATE is constrained to a still-pending line rather than checked
   // first and written second: two taps on a slow phone would both pass a
@@ -269,6 +320,7 @@ const LINE_TOTALS = `
   SELECT
     l.id, l.kind, l.description, l.product_id, l.quantity, l.unit_amount, l.decision,
     l.need, l.reason, l.decided_via, l.decided_at, l.added_to_order_at, who.name AS decided_by_name,
+    l.goes_with_line_id, l.without_text,
     (l.quantity * l.unit_amount) AS line_total
   FROM workshop_quote_lines l
   LEFT JOIN logins who ON who.id = l.decided_by_login_id
@@ -359,6 +411,8 @@ export function serializeQuoteWithLines(quote, lines, totals) {
       decidedAt: l.decided_at ?? null,
       decidedByName: l.decided_by_name ?? null,
       addedToOrderAt: l.added_to_order_at ?? null,
+      goesWithLineId: l.goes_with_line_id ?? null,
+      without: l.without_text ?? null,
     })),
     totals: {
       all: Number(totals.all_total),

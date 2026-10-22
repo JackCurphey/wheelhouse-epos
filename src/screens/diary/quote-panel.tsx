@@ -21,6 +21,7 @@ type QuoteLine = {
   id: number; kind: 'labour' | 'part'; description: string; productId: number | null; quantity: number; unitAmount: number;
   decision: 'pending' | 'approved' | 'declined'; lineTotal: number; need: 'needed' | 'optional'; reason: string | null;
   decidedVia: string | null; decidedAt: string | null; decidedByName: string | null; addedToOrderAt: string | null;
+  goesWithLineId?: number | null; without?: string | null;
 };
 type Quote = { id: number; revision: number; state: string; lines: QuoteLine[]; totals: { all: number; approved: number; pending: number; declined: number } };
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
@@ -34,10 +35,29 @@ const CHIP: Record<QuoteLine['decision'], [string, string]> = {
   declined: ['Declined', 'bg-[var(--wh-danger-bg)] text-[var(--wh-danger-hover)]'],
 };
 
-/** A line as the server takes it back (POST /api/workshop-jobs/:id/quotes). */
-const asInput = (l: Pick<QuoteLine, 'kind' | 'description' | 'productId' | 'quantity' | 'unitAmount' | 'need' | 'reason'>) => ({
-  kind: l.kind, description: l.description, productId: l.productId, quantity: l.quantity, unitAmount: l.unitAmount, need: l.need, reason: l.reason ?? '',
+type DraftLine = Pick<QuoteLine, 'kind' | 'description' | 'productId' | 'quantity' | 'unitAmount' | 'need' | 'reason'>
+  & Partial<Pick<QuoteLine, 'id' | 'goesWithLineId' | 'without'>>;
+
+/**
+ * The lines as the server takes them back (POST /api/workshop-jobs/:id/quotes).
+ * A pair is named by the part's place in the list, as every save gives the
+ * lines new ids (openspec quote-goes-with).
+ */
+const asInputs = (lines: DraftLine[]) => lines.map((l) => {
+  const partner = l.goesWithLineId ? lines.findIndex((o) => o.id === l.goesWithLineId) : -1;
+  return {
+    kind: l.kind, description: l.description, productId: l.productId, quantity: l.quantity, unitAmount: l.unitAmount, need: l.need, reason: l.reason ?? '',
+    ...(partner >= 0 ? { goesWith: partner } : {}),
+    ...(l.without ? { without: l.without } : {}),
+  };
 });
+
+/** A line's group: a part and every labour line that goes with it, or the line alone. */
+function groupOf(lines: QuoteLine[], l: QuoteLine) {
+  const part = l.goesWithLineId ?? (lines.some((o) => o.goesWithLineId === l.id) ? l.id : null);
+  return part === null ? [l] : lines.filter((o) => o.id === part || o.goesWithLineId === part);
+}
+const partnersOf = (lines: QuoteLine[], l: QuoteLine) => groupOf(lines, l).filter((o) => o.id !== l.id);
 
 /** How long Send waits for an Undo (journey 4 decision 5); the tests shorten it. */
 const sendDelay = () => (window as unknown as { WH_QUOTE_SEND_DELAY_MS?: number }).WH_QUOTE_SEND_DELAY_MS ?? 60_000;
@@ -62,6 +82,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   const [recording, setRecording] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [reasons, setReasons] = useState<Record<number, string>>({});
+  const [withouts, setWithouts] = useState<Record<number, string>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -90,13 +111,14 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   // The draft's lines, or none: answered, withdrawn and superseded quotes are
   // finished with, so adding to the quote starts the next revision.
   const draftLines = q && q.state === 'draft' ? q.lines : [];
-  const saveDraft = (lines: ReturnType<typeof asInput>[]) => act(() => apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines }));
+  const saveDraft = (lines: DraftLine[]) => act(() => apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines: asInputs(lines) }));
+  const parts = draftLines.filter((x) => x.kind === 'part');
 
   async function addLine(p: Picked) {
     const line = p.type === 'service'
       ? { kind: 'labour' as const, description: p.service.name, productId: null, quantity: 1, unitAmount: p.service.price, need: 'needed' as const, reason: '' }
       : { kind: 'part' as const, description: p.product.name, productId: p.product.id, quantity: 1, unitAmount: p.product.price, need: 'needed' as const, reason: '' };
-    if (await saveDraft([...draftLines.map(asInput), line])) setAdding(false);
+    if (await saveDraft([...draftLines, line])) setAdding(false);
   }
 
   function startSend() {
@@ -160,7 +182,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
                             aria-checked={l.need === 'needed'}
                             aria-label={`${l.description}: ${l.need}`}
                             disabled={busy}
-                            onClick={() => saveDraft(draftLines.map((x) => asInput(x.id === l.id ? { ...x, need: x.need === 'needed' ? 'optional' : 'needed' } : x)))}
+                            onClick={() => saveDraft(draftLines.map((x) => (x.id === l.id ? { ...x, need: x.need === 'needed' ? 'optional' : 'needed' } : x)))}
                             className="inline-flex min-h-11 self-start items-center rounded-full border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-xs font-semibold no-underline"
                           >
                             {l.need === 'needed' ? 'Needed' : 'Optional'}
@@ -180,11 +202,46 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
                           onBlur={() => {
                             const v = reasons[l.id];
                             if (v === undefined || v === (l.reason ?? '')) return;
-                            void saveDraft(draftLines.map((x) => asInput(x.id === l.id ? { ...x, reason: v } : x)));
+                            void saveDraft(draftLines.map((x) => (x.id === l.id ? { ...x, reason: v } : x)));
                           }}
                           className="min-h-9 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2"
                         />
                       ) : (l.reason ?? '')}
+                      {/* What happens without it (decision 7, H1): the mechanic's words for a Needed line. */}
+                      {draft && l.need === 'needed' ? (
+                        <input
+                          aria-label={`What happens without ${l.description}`}
+                          value={withouts[l.id] ?? l.without ?? ''}
+                          placeholder="What happens without it"
+                          maxLength={300}
+                          onChange={(e) => setWithouts((w) => ({ ...w, [l.id]: e.target.value }))}
+                          onBlur={() => {
+                            const v = withouts[l.id];
+                            if (v === undefined || v === (l.without ?? '')) return;
+                            void saveDraft(draftLines.map((x) => (x.id === l.id ? { ...x, without: v } : x)));
+                          }}
+                          className="mt-1 min-h-9 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2"
+                        />
+                      ) : null}
+                      {/* Goes with (decision 7, M2): a labour line and one of the quote's parts. */}
+                      {draft && l.kind === 'labour' && parts.length ? (
+                        <label className="mt-1 inline-flex items-center gap-1 text-xs no-underline">
+                          Goes with
+                          <select
+                            aria-label={`${l.description} goes with`}
+                            value={l.goesWithLineId ? String(l.goesWithLineId) : ''}
+                            disabled={busy}
+                            onChange={(e) => void saveDraft(draftLines.map((x) => (x.id === l.id ? { ...x, goesWithLineId: e.target.value ? Number(e.target.value) : null } : x)))}
+                            className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-1.5 text-xs"
+                          >
+                            <option value="">Nothing</option>
+                            {parts.map((p) => <option key={p.id} value={String(p.id)}>{p.description}</option>)}
+                          </select>
+                        </label>
+                      ) : null}
+                      {!draft && l.goesWithLineId ? (
+                        <span className="block text-xs text-[var(--wh-muted)] no-underline">{`Goes with ${q?.lines.find((x) => x.id === l.goesWithLineId)?.description ?? ''}`}</span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{money(l.lineTotal)}</td>
                     <td className="px-3 py-2">
@@ -280,7 +337,7 @@ function RecordAnswer({ customer, reference, lines, busy, onClose, onSave }: {
   customer: string; reference: string | null; lines: QuoteLine[]; busy: boolean; onClose: () => void;
   onSave: (via: 'phone' | 'in_shop', decisions: { lineId: number; decision: 'approved' | 'declined' }[]) => void;
 }) {
-  const [yes, setYes] = useState<Record<number, boolean>>(() => Object.fromEntries(lines.map((l) => [l.id, l.need === 'needed'])));
+  const [yes, setYes] = useState<Record<number, boolean>>(() => Object.fromEntries(lines.map((l) => [l.id, groupOf(lines, l).some((o) => o.need === 'needed')])));
   const [via, setVia] = useState<'phone' | 'in_shop'>('phone');
   const yesCount = lines.filter((l) => yes[l.id]).length;
   const noCount = lines.length - yesCount;
@@ -307,7 +364,8 @@ function RecordAnswer({ customer, reference, lines, busy, onClose, onSave }: {
         <div className="flex flex-col gap-1">
           {lines.map((l) => (
             <label key={l.id} className="flex min-h-11 items-center gap-2.5 text-sm">
-              <input type="checkbox" aria-label={`Yes to ${l.description}`} checked={Boolean(yes[l.id])} onChange={(e) => setYes((y) => ({ ...y, [l.id]: e.target.checked }))} />
+              <input type="checkbox" aria-label={`Yes to ${l.description}`} checked={Boolean(yes[l.id])}
+                onChange={(e) => { const on = e.target.checked; setYes((y) => ({ ...y, [l.id]: on, ...Object.fromEntries(partnersOf(lines, l).map((o) => [o.id, on])) })); }} />
               <span className="grow">{l.description}</span>
               <span className="tabular-nums">{money(l.lineTotal)}</span>
             </label>

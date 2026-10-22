@@ -15,6 +15,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 type QuoteLine = {
   id: number; description: string; lineTotal: number; decision: 'pending' | 'approved' | 'declined';
   need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedAt?: string | null; decidedByName: string | null;
+  goesWithLineId?: number | null; without?: string | null;
 };
 // mechanicName and each line's decidedByName come only with the shop's "Show
 // who signed off to customers" switch on; without them the card says "we"
@@ -58,10 +59,18 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
   const [ticks, setTicks] = React.useState<Record<number, boolean> | null>(null);
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  // Said to screen readers when a tick also changed the line's partner.
+  const [pairNote, setPairNote] = React.useState('');
   // Nothing to show without a quote (a 404 means the booking has none).
   if (!q || !Array.isArray(q.lines)) return null;
 
-  const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, l.need === 'needed']));
+  // Lines that go together (decision 2): a part and every labour line that
+  // goes with it tick and untick as one, starting ticked if any is Needed.
+  const groupOf = (l: QuoteLine) => {
+    const part = l.goesWithLineId ?? (q.lines.some((o) => o.goesWithLineId === l.id) ? l.id : null);
+    return part === null ? [l] : q.lines.filter((o) => o.id === part || o.goesWithLineId === part);
+  };
+  const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, groupOf(l).some((o) => o.need === 'needed')]));
   const agreed = agreedTotal ?? 0;
   const mechanic = firstName(q.mechanicName);
   const thanks = q.customerFirstName ? `Thanks, ${q.customerFirstName}` : 'Thanks';
@@ -118,6 +127,12 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
 
   if (q.state !== 'sent') return null;
   const ticked = q.lines.filter((l) => tick[l.id]);
+  const partners = (l: QuoteLine) => groupOf(l).filter((o) => o.id !== l.id);
+  function setTick(l: QuoteLine, on: boolean) {
+    const others = partners(l).filter((o) => Boolean(tick[o.id]) !== on);
+    setTicks({ ...tick, [l.id]: on, ...Object.fromEntries(others.map((o) => [o.id, on])) });
+    setPairNote(others.map((o) => `${o.description} ${on ? 'ticked' : 'unticked'} too.`).join(' '));
+  }
   const total = agreed + ticked.reduce((s, l) => s + Number(l.lineTotal), 0);
   const label = ticked.length ? `Approve ${money(total)}` : 'Decline the extra work';
 
@@ -135,7 +150,10 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
         lines: q.lines.map((l) => ({ ...l, decision: tick[l.id] ? 'approved' : 'declined', decidedVia: 'online' })),
       });
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.code === 'pair') {
+        // A split pair: the shop's words, and the ticks stay as they were.
+        setMessage(err.message);
+      } else if (err instanceof ApiError && err.status === 409) {
         setMessage('The quote has changed since you opened it. Please look at it again.');
         setTicks(null);
         void quote.refetch();
@@ -161,7 +179,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
                 type="checkbox"
                 className="mt-0.5 size-[22px] shrink-0 accent-[var(--wh-ink)]"
                 checked={Boolean(tick[l.id])}
-                onChange={(e) => setTicks({ ...tick, [l.id]: e.target.checked })}
+                onChange={(e) => setTick(l, e.target.checked)}
                 aria-label={`${l.description}, ${l.need}, ${money(l.lineTotal)}`}
               />
               <span className="flex min-w-0 grow flex-col gap-0.5">
@@ -175,8 +193,11 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
                 {l.reason ? <span className="text-sm">{l.reason}</span> : null}
               </span>
             </label>
-            {l.need === 'needed' && !tick[l.id] ? (
-              <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]"><strong>{mechanic ? `${mechanic} recommends this.` : 'We recommend this.'}</strong></p>
+            {/* Drawn only when the mechanic wrote what happens without it (dq-quote-decline). */}
+            {l.need === 'needed' && !tick[l.id] && l.without ? (
+              <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
+                <strong>{mechanic ? `${mechanic} recommends this.` : 'We recommend this.'}</strong> <span>{l.without}</span>
+              </p>
             ) : null}
           </li>
         ))}
@@ -188,6 +209,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
       ) : null}
       <p aria-live="polite" className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2">
         <strong>New total</strong><strong>{money(total)}</strong>
+        {pairNote ? <span className="sr-only">{pairNote}</span> : null}
       </p>
       <p className="m-0 text-sm font-semibold">Your answers are final once sent.</p>
       <p className="m-0 text-sm text-[var(--wh-muted)]">Prices include VAT. Nothing to pay today.</p>

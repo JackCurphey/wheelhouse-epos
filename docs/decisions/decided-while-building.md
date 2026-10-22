@@ -1237,3 +1237,30 @@ The drawings show where slots appear but not these rules. *Decided:*
    then the job's own copy, so it's fixed and never says "0 of 10 checks done"
    for a service done without the ticks. A note on a check not done isn't
    shown, as drawn.
+
+### 22 Oct 2026: quote lines that go together (`openspec/changes/quote-goes-with`)
+
+1. **Only a labour line goes with something, and only with a part.** The
+   drawing (dq-job-quote) puts "Goes with" on the fitting line and offers the
+   pads; decision 2's example is pads and fitting. Keeping it labour-to-part
+   means a pair never chains and no line goes with itself. "Goes with" shows
+   on a draft's labour lines once the quote has a part; Nothing takes it off.
+   More than one labour line can go with the same part (fitting and a bleed
+   with the pads); the part and all of them tick together (fresh review).
+   A group starts ticked if any line in it is Needed, so a Needed part with
+   Optional fitting opens ticked together rather than split.
+2. **A pair can't be split.** Decision 2 says they "tick and untick as a
+   pair": the customer's card and Record their answer move both, and the
+   server refuses an answer that splits them. A customer bringing their own
+   pads means staff take the pads off the quote, or choose Nothing.
+3. **Where staff write what happens without it.** Not drawn; the audit (H1)
+   asks for "a new field on the job page". *Decided:* a box under the reason
+   on a draft's Needed lines, "What happens without it", saved when you
+   leave it, as the reason is. Up to 300 letters.
+4. **No words, no box.** The drawing shows "Alex recommends this. [words]"
+   only when there are words (dq-quote-decline). The card had shown "We
+   recommend this." alone on any unticked Needed line; it now follows the
+   drawing.
+5. **The older one-line answer refuses a line in a pair** ("This line goes
+   with another; answer the whole quote."), so it can't split one either.
+6. **Migration 056**, as Mark's sales in pence (#404) has 055.
