@@ -7,6 +7,8 @@
 // themselves with currentCustomerSession(). Mark's file. Moved out of
 // server.js unchanged (split plan §4.1, WP-0.4); bookings and booking links
 // follow in the next move.
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
@@ -15,6 +17,7 @@ import { currentCustomerSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobChecklistCopy } from '../workshop/checklists.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
@@ -31,10 +34,11 @@ import {
   checkJobSlot, loadCapacity,
 } from '../workshop/jobs.js';
 import {
-  approve as approveQuote, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
+  approve as approveQuote, earlierAnswers, agreedBefore, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
-import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from '../booking-photos.js';
+import { MAX_BOOKING_BODY_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
+import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
@@ -388,6 +392,12 @@ async function bookingLinkView(jobId, shop) {
     expectedReady: (row.booking_state === 'scheduled' || row.booking_state === 'reschedule_requested') && row.custody_state !== 'collected'
       ? { date: row.last_day || row.job_date, time: null } : null,
     shop: await shopLines(),
+    // The job's checklist once the work is finished (cp-summary's "Full service
+    // checklist"; Jack, 22 Oct): every item, ticked or not, and what the
+    // mechanic found. Only one a mechanic used (its own copy, fixed), so
+    // never "0 of 10" for a service done without the ticks; none while the
+    // work is under way, or for a job without one.
+    checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklistCopy(row.id)) : null,
     ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
   };
@@ -399,6 +409,40 @@ async function bookingLinkView(jobId, shop) {
 // The work is the job's order's lines; declined is the newest quote's
 // declined lines; to pay is what the till would charge (computeOrderTotals,
 // group discount included), null once paid; paid is the sale that paid it.
+// The quote as a customer sees it (Jack, 22 Oct): staff names only when the
+// shop's "Show who signed off to customers" switch is on (mechanic sign-off
+// answer 3: no staff names reach customers until a shop chooses), so "Alex
+// recommends more work" or "We recommend more work"; and the customer's own
+// first name, for "Thanks, Maya".
+async function customerQuote(result, jobId) {
+  const shows = (await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get())?.show_sign_off_to_customers === 1;
+  const who = await db.prepare(
+    `SELECT m.name AS mechanic_name, c.name AS customer_name, j.spend_limit FROM workshop_jobs j
+       LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
+      WHERE j.id = ?`
+  ).get(jobId);
+  const showPrices = (await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get())?.show_prices_online === 1;
+  const q = serializeQuoteWithLines(result.quote, result.lines, result.totals);
+  return {
+    ...q,
+    lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
+    mechanicName: shows ? who?.mechanic_name ?? null : null,
+    earlier: await earlierAnswers(result.quote),
+    agreedTotal: await agreedBefore(result.quote, showPrices),
+    spendLimit: who?.spend_limit ?? null,
+    // When the quote's reminder went, if it has (dq-quote-reminded).
+    reminderSentAt: (await db.prepare(
+      `SELECT max(sent_at) AS at FROM customer_messages
+        WHERE job_id = ? AND template_key = 'quote_reminder' AND sent_at IS NOT NULL AND sent_at >= ?`
+    ).get(jobId, result.quote.sent_at ?? '9999-12-31'))?.at ?? null,
+    customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
+  };
+}
+
+function customerChecklist(c) {
+  return c ? { name: c.name, items: c.items.map((i) => ({ name: i.label, done: i.done, note: i.note })) } : null;
+}
+
 async function jobMoney(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
@@ -414,12 +458,8 @@ async function jobMoney(jobId) {
     : [];
   // Every revision the customer saw, not only the newest: a newer quote keeps
   // the earlier answers (fresh review). Priced in the database, as the quote is.
-  const declined = await db.prepare(
-    `SELECT l.description, (l.unit_amount * l.quantity) AS line_total FROM workshop_quote_lines l
-       JOIN workshop_quotes q ON q.id = l.workshop_quote_id
-      WHERE q.workshop_job_id = ? AND q.state <> 'draft' AND l.decision = 'declined'
-      ORDER BY q.revision, l.id`
-  ).all(jobId);
+  // Each line's latest answer: pads said no to and then yes to aren't "no thanks".
+  const declined = (await latestAnswers(jobId)).filter((l) => l.decision === 'declined');
   const paid = order?.status === 'converted' && order.paid_at
     ? { at: new Date(order.paid_at).toISOString(), amount: figure(order.paid_total) } : null;
   let due = 0;
@@ -779,7 +819,7 @@ export function register(route) {
       customerId: ctx.login.customer_id,
     });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, result.quote.workshop_job_id));
   });
 
   // screens: approval
@@ -882,6 +922,11 @@ export function register(route) {
     }
     const bikeNote = typeof body.bikeNote === 'string' ? body.bikeNote.trim() : '';
     if (bikeNote.length > 200) return badRequest(res, 'Your bike description can be up to 200 characters');
+    // The spending limit (Workshop day 41): whole pounds, or none to ask first.
+    const spendLimit = body.spendLimit ?? null;
+    if (spendLimit !== null && !(Number.isInteger(spendLimit) && spendLimit >= 1 && spendLimit <= 100000)) {
+      return badRequest(res, 'Enter the most the whole bill can come to, in whole pounds.');
+    }
 
     // What the customer chose: one or more services this shop ticked bookable
     // online, in the order chosen, or the "not sure" hour. Read through the
@@ -1043,6 +1088,7 @@ export function register(route) {
           linkTokenHash: hashLinkCode(linkCode),
           customerDescription: description || null,
           customerBikeNote: bikeNoteValue,
+          spendLimit,
           questionAnswers,
           bookingRequestKeyHash: requestKey?.keyHash,
           bookingRequestBodyHash: requestKey?.bodyHash,
@@ -1164,7 +1210,54 @@ export function register(route) {
     if (!found) return;
     const result = await currentQuoteForJob(found.id);
     if (!result.ok) return notFound(res, 'There is no quote for this booking');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, found.id));
+  });
+
+  // A quote line's photo (Jack, 1 Oct; dq-quote-photo), for the customer's
+  // card: only a line of the booking's current customer-readable quote, sent
+  // as the picture its bytes show. Anything else is not found.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/quote/lines/:lineId/photo', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const result = await currentQuoteForJob(found.id);
+    const line = result.ok ? result.lines.find((l) => l.id === Number(params.lineId)) : null;
+    const file = line?.photo_attachment_id
+      ? await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?').get(line.photo_attachment_id, found.id)
+      : null;
+    const bytes = file ? await readFile(path.join(UPLOADS_DIR, file.storage_key)).catch(() => null) : null;
+    const kind = bytes ? sniffImage(bytes) : null;
+    if (!kind) return notFound(res, 'There is no photo for that line');
+    res.writeHead(200, {
+      'Content-Type': kind.contentType,
+      'Content-Length': bytes.length,
+      'Content-Disposition': 'inline',
+      'X-Content-Type-Options': 'nosniff',
+      // Kept a few minutes by the customer's browser, so each view doesn't
+      // spend the link's guessing limit again (fresh review).
+      'Cache-Control': 'private, max-age=300',
+    });
+    res.end(bytes);
+  });
+
+  // Notes with the shop (decisions 3 and 7; ac-job-note): the customer's notes
+  // and the shop's replies on their job, read and added through the link.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    sendJson(res, 200, await jobNotes(found.id, { forCustomer: true }));
+  });
+
+  // screens: approval
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: found.id, fromCustomer: true, text });
+    sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
   });
 
   // The customer cancels through their booking link (piece 12, decision 1):

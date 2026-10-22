@@ -88,3 +88,42 @@ A booking request that waits for the shop SHALL send Request received. Cancellin
 #### Scenario: Cancelled from the booking page
 - **WHEN** Maya cancels her booking from its page
 - **THEN** she gets Booking cancelled: "There's nothing to pay or refund. Book another time: [link]."
+
+### Requirement: The customer is told about work added within their limit
+The "Work added within your limit" message SHALL go to the customer when work is agreed within their spending limit, saying what was added, its cost and their limit, with their link and the shop's phone.
+
+#### Scenario: Pads and fitting
+- **WHEN** pads and fitting for £46 are agreed within Maya's £200 limit
+- **THEN** Maya's message says "Added: Shimano brake pads, Fit and adjust brakes, £46.00" and mentions the £200 limit
+
+### Requirement: A quote with no answer gets one reminder
+When a quote is sent, the customer SHALL get one "Quote reminder" after the shop's hours (24 to start) if they haven't answered; answering, the shop withdrawing it, or a newer quote SHALL stop it (Jack, 1 Oct and 22 Oct). A quote never expires by itself.
+
+#### Scenario: No answer after 24 hours
+- **WHEN** Maya's quote was sent and she hasn't answered 24 hours later
+- **THEN** she is sent the Quote reminder, once
+
+#### Scenario: Answered first
+- **WHEN** Maya answers before the 24 hours are up
+- **THEN** no reminder goes
+
+### Requirement: The customer gets their answers after a call
+When staff record a customer's quote answer taken by phone, the customer SHALL be sent "Your answers" at once, saying what is going ahead and its cost, and what they said no thanks to (dq-record-answer; Jack, 22 Oct).
+
+#### Scenario: Pads yes, cable no
+- **WHEN** Jo records by phone that Maya said yes to the pads and fitting and no to the cable
+- **THEN** Maya is sent "Going ahead: Shimano brake pads and Fit and adjust brakes, £46.00. No thanks: Replace gear cable."
+
+### Requirement: Staff answer customers' notes from one inbox
+Staff SHALL see a conversation per job with notes, newest first, marked "Needs a reply" while the customer's note is the newest; a staff reply SHALL be saved on the job and the customer told with "Reply from the shop", the way they chose (decisions 3 and 7).
+
+#### Scenario: Replying
+- **WHEN** Jo replies "Yes, we'll check it" to Maya's note
+- **THEN** the conversation no longer needs a reply, and Maya is sent "North Street Cycles replied about your Trek Domane AL 3 (WH-1042): Yes, we'll check it. Replies to this number aren’t read — reply on your page: [link]"
+
+### Requirement: Staff read and answer customers' notes in the Messages inbox
+Front desk › Messages SHALL list a conversation per job with notes, "Needs a reply" first with its count, and open one beside the list (on a phone, on its own with a way back) with the customer, the job, the thread and a reply box; sending SHALL say how the reply went (decision 7; ac-inbox).
+
+#### Scenario: Answering Maya
+- **WHEN** Jo opens Messages, chooses Maya Patel's conversation and sends "Yes, we’ll check it"
+- **THEN** the reply joins the thread, the page says "Sent to Maya by text, with a link to reply on the job’s page.", and Maya's conversation leaves Needs a reply

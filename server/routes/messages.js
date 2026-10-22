@@ -33,6 +33,13 @@ const EXAMPLE = {
   'Suggested day and time': 'Sat 19 Sep, [time]',
   'The shop’s message': '[The shop’s message]',
   'New day and time': 'Fri 25 Sep, [time]',
+  // The quote messages' own (dq-within-limit, dq-record-answer).
+  'Work added': 'Shimano brake pads and Fit and adjust brakes',
+  'Amount added': '£46.00',
+  'Spending limit': '£200',
+  'Shop phone': '[shop phone]',
+  'The shop’s reply': '[Jo’s reply]',
+  'What was agreed': 'Going ahead: Shimano brake pads and Fit and adjust brakes, £46.00. No thanks: Replace gear cable.',
 };
 // Where a message's drawing fills a tap-in differently (bk-msg-change: the
 // new day's drop-off time is open).

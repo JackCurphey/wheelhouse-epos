@@ -63,6 +63,8 @@ function serializeWorkshopSettings(row) {
     blockSecond: row.block_second,
     // Storage slots on for this shop (Workshop day 27; migration 054), off to start.
     storageSlotsOn: row.storage_slots_on === 1,
+    // Hours before a quote with no answer is reminded (Jack, 22 Oct; migration 060).
+    quoteReminderHours: row.quote_reminder_hours,
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -408,6 +410,10 @@ export function register(route) {
       ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
     const storageSlotsOn = body.storageSlotsOn === undefined
       ? existing.storage_slots_on : (body.storageSlotsOn ? 1 : 0);
+    const quoteReminderHours = body.quoteReminderHours === undefined ? existing.quote_reminder_hours : body.quoteReminderHours;
+    if (!Number.isInteger(quoteReminderHours) || quoteReminderHours < 1 || quoteReminderHours > 168) {
+      return badRequest(res, 'Choose from 1 to 168 hours.');
+    }
     const confirmAutomatically = body.confirmBookingsAutomatically === undefined
       ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
 
@@ -450,13 +456,13 @@ export function register(route) {
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
          show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
-         block_first = ?, block_second = ?, storage_slots_on = ?, updated_at = ? WHERE id = ?`
+         block_first = ?, block_second = ?, storage_slots_on = ?, quote_reminder_hours = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
           showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
-          blockFirst, blockSecond, storageSlotsOn, nowIso(), existing.id);
+          blockFirst, blockSecond, storageSlotsOn, quoteReminderHours, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });

@@ -125,3 +125,12 @@ test('hasDate needs a day and a real mechanic, and a start time only when one wa
   assert.equal(hasDate({ date: '2026-10-05', mechanicId: '1' }), false);
   assert.equal(hasDate({ date: '2026-10-05', mechanicId: 1, startTime: '9.30' }), false);
 });
+
+// A spending limit that isn't whole pounds sends the customer back to the bike
+// step, rather than booking as "ask first" unseen (fresh review).
+test('hasProblem needs a good spending limit when Go ahead is chosen', async () => {
+  const { hasProblem } = await import(GUARD);
+  assert.equal(hasProblem({ serviceIds: [12], limitOn: true, limitText: '1,000' }, PROBLEM_SERVICES), false);
+  assert.equal(hasProblem({ serviceIds: [12], limitOn: true, limitText: '250' }, PROBLEM_SERVICES), true);
+  assert.equal(hasProblem({ serviceIds: [12], limitText: '1,000' }, PROBLEM_SERVICES), true, 'asking first');
+});

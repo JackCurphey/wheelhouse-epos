@@ -7,6 +7,7 @@ import { ApiError, apiMutate } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
+import { NotesCard } from './notes-card.tsx';
 import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
@@ -165,7 +166,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     );
     return (
       <BookFrame title={request ? 'Your booking request' : pageHeading(link)} eyebrow={`Your repair · ${link.reference}`}>
-        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
+        <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {link.stage === 'confirmed' && link.changeDeclined && (
             <p role="status" className="m-0 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>{declinedLine(link)}</span></p>
@@ -304,7 +305,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           </>
         ))}
         {/* The quote, while there's one to answer: only before the work is done. */}
-        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} hideAnswered={work.length > 0} />}
+        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} hideAnswered={work.length > 0} />}
+        {/* Notes with the shop while the bike is in, as drawn (ac-job-note). */}
+        {inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
         {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
           <>
@@ -319,6 +322,33 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             {declined.map((d, i) => <p key={i} className="m-0 text-sm text-[var(--wh-muted)]">{`Not done — you said no thanks: ${d.name}${d.price !== null ? ` (${money(d.price)})` : ''}`}</p>)}
           </>
         ))}
+        {/* The checklist once the work is finished (cp-summary's checks()): the checks done,
+            each "All working well" or what the mechanic found (Workshop day 21; audit M1),
+            then how many were done and which weren't (UX walk-through 1 L5). */}
+        {!inShop && link.checklist ? (() => {
+          const c = link.checklist;
+          const done = c.items.filter((i) => i.done);
+          const notDone = c.items.filter((i) => !i.done);
+          return card(c.name, 'checks-title', (
+            <>
+              <ul className="m-0 flex list-none flex-col p-0">
+                {done.map((i, n) => (
+                  <li key={n} className="flex items-start justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px] first:border-t-0">
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span className="font-semibold">{i.name}</span>
+                      {i.note ? <span className="text-sm leading-[1.45]"><span className="font-semibold">What the mechanic found:</span> {i.note}</span> : null}
+                    </span>
+                    {i.note ? null : <span className="inline-flex shrink-0 items-center gap-1.5 text-sm text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-3.5" />All working well</span>}
+                  </li>
+                ))}
+              </ul>
+              <p className="m-0 text-sm text-[var(--wh-muted)]">{`${done.length} of ${c.items.length} checks done.${notDone.length ? ` Not done: ${notDone.map((i) => i.name).join(', ')}.` : ''}`}</p>
+            </>
+          ));
+        })() : null}
+        {/* And once it's ready or collected, where a reply's link brings them back
+            (collect-and-pay review; drop-off review decision 7, H4; fresh review). */}
+        {!inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
           {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}
@@ -347,7 +377,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   return (
     <BookFrame title={statusText(link.stage) ?? ''}>
       {/* A quote waiting for the customer's answer comes first (journey 4). */}
-      <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
+      <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} />
       {/* When to drop the bike off, then the shop's additional note, once the
           booking stands (Jack, 19 Oct; drawn in bk-confirmed as one paragraph). */}
       {arrival && <p className="m-0 mb-3 text-[15px] leading-normal">{arrival}</p>}

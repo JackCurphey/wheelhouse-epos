@@ -854,3 +854,42 @@ The job page SHALL show "Kept on [slot]" for a bike in the shop with a slot, the
 #### Scenario: The Overview
 - **WHEN** a bike is in the shop on Hook 3
 - **THEN** its Custody reads "Kept on Hook 3"
+
+### Requirement: Staff say which part a quoted labour line goes with
+On the job page, a draft quote's labour line SHALL offer "Goes with" (Nothing, or one of the quote's parts), and a Needed line SHALL take "What happens without it" in the mechanic's words (Jack, 1 Oct, decision 7). Once sent, the line SHALL read "Goes with [part]". Recording an answer by phone or in the shop SHALL tick a pair together.
+
+#### Scenario: Pairing fitting with pads
+- **WHEN** staff choose Goes with Shimano brake pads on Fit and adjust brakes and send the quote
+- **THEN** the job page shows "Goes with Shimano brake pads" on that line, and the customer's card ticks them together
+
+### Requirement: Staff add a photo to a quote line
+On the job page, a draft quote's line SHALL offer "Add photo for [line]"; with a photo it SHALL read "1 photo — view or add for [line]" and open the photo larger, with Replace photo and Remove from line (Jack, 1 Oct). The photo SHALL be a JPEG, PNG or WebP picture and SHALL also be one of the job's files.
+
+#### Scenario: Adding the pads photo
+- **WHEN** staff choose Add photo for Shimano brake pads and pick a picture
+- **THEN** the line reads "1 photo — view or add for Shimano brake pads", and the picture is among the job's files
+
+### Requirement: Staff can quote again after the customer says no to everything
+After a customer declines every line of a quote, staff SHALL be able to add to the quote again, which starts a new quote with only the new lines and supersedes the declined one (Jack, 22 Oct).
+
+#### Scenario: Quoting again
+- **WHEN** Maya's quote was declined and staff use Add to quote for Shimano brake pads
+- **THEN** a new quote with just the pads is made, and the declined one is superseded
+
+### Requirement: The job page shows the customer's spending limit
+The job page SHALL show the customer's choice as a tag: "Customer OK up to £[amount]" when they set a limit, or "Ask before any extra work" (Workshop day 42).
+
+#### Scenario: A limit of £200
+- **WHEN** staff open Maya's job, booked with a £200 limit
+- **THEN** the job's details show "Customer OK up to £200"
+
+### Requirement: Work within the customer's spending limit is agreed without a quote
+When the customer set a spending limit and the whole bill with the extra work stays within it, staff SHALL be able to agree the work without sending a quote; it SHALL join the job and the customer SHALL be told (Workshop day 41–43). Over the limit, or with no limit, a quote SHALL be needed.
+
+#### Scenario: Within £200
+- **WHEN** Maya set £200, her service is £65 and staff add pads and fitting for £46
+- **THEN** the work is agreed, joins the job, and Maya is sent "Work added within your limit"
+
+#### Scenario: Over the limit
+- **WHEN** Maya set £100 and the same work takes the whole bill to £111
+- **THEN** it is refused with "That takes the whole bill to £111.00, over the £100 limit. Send a quote instead.", and nothing changes

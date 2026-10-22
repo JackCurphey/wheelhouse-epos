@@ -42,6 +42,8 @@ export type WorkshopJob = {
   /** The job's planned length in minutes: given when made (an online booking's
    * services' total), else its times'; null when it has neither. */
   plannedMinutes: number | null;
+  // Whole pounds the whole bill may come to, or null to ask first (Workshop day 41).
+  spendLimit: number | null;
   /** Where a bike in the shop is kept (storage slots); null when none. */
   storageSlotId: number | null;
   storageSlotName: string | null;
@@ -77,7 +79,7 @@ export type WorkshopJob = {
  * `reused_key`: a booking's request key was sent again with different details. */
 export type ApiErrorBody = {
   error: string;
-  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key' | 'settle_first';
+  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key' | 'settle_first' | 'pair';
 };
 
 /** WP-0.2, added to the online booking's body (POST /api/portal/:shopSlug/bookings).
