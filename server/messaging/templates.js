@@ -17,6 +17,15 @@ export const TEMPLATES = {
     subject: 'A quote to approve — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
   },
+  // One reminder when a quote has no answer, facts only (decision 7); wording
+  // approved by Jack, 22 Oct. Settings shows it under Quote to approve.
+  quote_reminder: {
+    name: 'Quote reminder',
+    when: 'Once, when a quote has had no answer for the hours the shop sets',
+    wording: 'Hi [Customer’s first name], a reminder from [Shop name]: the quote for more work on your [Bike] is still waiting for your answer. See it and say yes or no to each part: [Link to the quote] — no app or sign-in needed. Your repair · [Job number].',
+    subject: 'A reminder: your quote is waiting — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
+  },
   // Work within the customer's spending limit (Workshop day 41-43); wording
   // approved by Jack, 22 Oct ("1: use the drafted wording").
   work_within_limit: {
@@ -86,7 +95,7 @@ export const TEMPLATES = {
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'work_within_limit', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

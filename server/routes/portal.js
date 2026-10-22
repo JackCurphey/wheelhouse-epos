@@ -429,6 +429,11 @@ async function customerQuote(result, jobId) {
     earlier: await earlierAnswers(result.quote),
     agreedTotal: await agreedBefore(result.quote, showPrices),
     spendLimit: who?.spend_limit ?? null,
+    // When the quote's reminder went, if it has (dq-quote-reminded).
+    reminderSentAt: (await db.prepare(
+      `SELECT max(sent_at) AS at FROM customer_messages
+        WHERE job_id = ? AND template_key = 'quote_reminder' AND sent_at IS NOT NULL AND sent_at >= ?`
+    ).get(jobId, result.quote.sent_at ?? '9999-12-31'))?.at ?? null,
     customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
   };
 }

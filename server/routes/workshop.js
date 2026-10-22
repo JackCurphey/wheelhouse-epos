@@ -1218,6 +1218,13 @@ export function register(route) {
       if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
       else {
         const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+        // One reminder, the shop's hours later, unless the quote is answered,
+        // withdrawn or replaced first (Jack, 22 Oct). It goes only with the quote.
+        if (!queued.skipped) {
+          await undoWaiting(jobId, 'quote_reminder');
+          const settings = await db.prepare('SELECT quote_reminder_hours FROM workshop_settings LIMIT 1').get();
+          await queueMessage({ customerId, jobId, key: 'quote_reminder', vars, delayMs: (settings?.quote_reminder_hours ?? 24) * 3600_000, loginId: ctx?.login?.id ?? null });
+        }
         message = queued.skipped
           ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
           : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
