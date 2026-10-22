@@ -28,3 +28,18 @@ answers, one at a time.
    money-check questions to Mark; they're technical details of his pence
    work. Suggest he fixes the rounding at the source rather than accepting
    1p differences."
+
+5. **Website settings and the Shopify connection** (audit P2 1). Jack, 22
+   Oct: "make the website settings and the Shopify connection Owner-only now,
+   like the rest of Settings." Built in #393.
+
+6. **Accepting a time the customer wasn't shown** (audit P2 2, #315). Jack,
+   22 Oct: "refuse an Accept for a time the customer wasn't shown; show them
+   the new time to accept instead. And an offered booking can't be dragged
+   in the diary; staff offer again instead." Built in the offer-accept-shown
+   change.
+
+7. **Booking answers and Undo** (audit P2 3, #336). Jack, 22 Oct: "keep
+   booking answers sending at once and correct the messages spec." The spec
+   now names Quote to approve and Bike ready as the messages with a minute's
+   Undo.
