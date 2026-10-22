@@ -868,3 +868,10 @@ On the job page, a draft quote's line SHALL offer "Add photo for [line]"; with a
 #### Scenario: Adding the pads photo
 - **WHEN** staff choose Add photo for Shimano brake pads and pick a picture
 - **THEN** the line reads "1 photo — view or add for Shimano brake pads", and the picture is among the job's files
+
+### Requirement: Staff can quote again after the customer says no to everything
+After a customer declines every line of a quote, staff SHALL be able to add to the quote again, which starts a new quote with only the new lines and supersedes the declined one (Jack, 22 Oct).
+
+#### Scenario: Quoting again
+- **WHEN** Maya's quote was declined and staff use Add to quote for Shimano brake pads
+- **THEN** a new quote with just the pads is made, and the declined one is superseded
