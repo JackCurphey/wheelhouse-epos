@@ -42,6 +42,8 @@ const ROUTES = [
   ['POST', '/api/workshop-services', {}],
   ['PUT', `/api/workshop-services/${MISSING}`, {}],
   ['DELETE', `/api/workshop-services/${MISSING}`],
+  ['POST', '/api/storage-slots', {}],
+  ['DELETE', `/api/storage-slots/${MISSING}`],
   ['POST', '/api/workshop-checklists', {}],
   ['PUT', `/api/workshop-checklists/${MISSING}`, {}],
   ['DELETE', `/api/workshop-checklists/${MISSING}`],
