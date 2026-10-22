@@ -47,6 +47,11 @@ const ROUTES = [
   ['POST', '/api/workshop-checklists', {}],
   ['PUT', `/api/workshop-checklists/${MISSING}`, {}],
   ['DELETE', `/api/workshop-checklists/${MISSING}`],
+  // Website settings and the Shopify connection (Jack, 22 Oct, Mark's audit P2 1).
+  ['PUT', '/api/storefront-settings', {}],
+  ['POST', '/api/shopify/connection', {}],
+  ['POST', '/api/storefront-settings/logo', {}],
+  ['POST', '/api/storefront-settings/hero', {}],
   ['PUT', '/api/label-settings', { widthMm: 50, heightMm: 30 }],
   ['PUT', '/api/shop-theme', {}],
   ['PUT', `/api/employees/${MISSING}`, {}],
@@ -77,7 +82,7 @@ for (const [method, path, body] of ROUTES) {
 const NOT_OWNER_ONLY = new Set([
   // 'POST /api/example', // reason
 ]);
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js'];
 
 test('every POST/PUT/DELETE route in the settings and team files is owner-only or on the allow-list', () => {
   const unguarded = [];
