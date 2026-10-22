@@ -21,6 +21,7 @@ const CODE = 'b'.repeat(64);
 const LINK = {
   reference: 'WH-1042', shopName: 'North Street Cycles', jobDate: '2026-10-05', startTime: '09:30', description: null, bikeNote: null,
   answers: [], bike: null, stage: 'in_workshop', photoCount: 0, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
+  shop: { address: null, phone: '[shop phone]' },
 };
 const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, ...over });
 const LINES = [
@@ -44,6 +45,8 @@ const open = async (quote, answer = null) => {
 };
 const rtl = () => import('@testing-library/react');
 const has = (q) => Boolean(q);
+// The phone link inside the quote card (the page's shop lines have one too).
+const quotePhone = (ui) => ui.getAllByRole('link', { name: '[shop phone]' }).find((a) => a.closest('section[aria-labelledby="quote-heading"]'))?.getAttribute('href');
 
 test('no quote, no quote card', async () => {
   const { ui } = await open(null);
@@ -77,7 +80,8 @@ test('the answer is sent once, with the revision shown, and then thanks them', a
   const { ui, requests } = await open(QUOTE('sent'));
   const { fireEvent } = await rtl();
   fireEvent.click(await ui.findByRole('button', { name: 'Approve £111.00' }));
-  assert.ok(has(await ui.findByText('Thanks — the work you agreed is going ahead.')));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Thanks — we’re carrying on' })));
+  assert.ok(has(ui.queryByText('We’ve saved your answers. The work you agreed is going ahead.')));
   const sent = requests.filter((r) => r.method === 'POST');
   assert.equal(sent.length, 1);
   assert.match(sent[0].url, /\/booking-links\/b{64}\/quote\/answer$/);
@@ -102,14 +106,70 @@ test('an answered quote shows what was agreed, and what they said no to', async 
 });
 
 test('an answer taken by phone says who it was with', async () => {
-  const lines = LINES.map((l) => ({ ...l, decision: 'approved', decidedVia: 'phone', decidedByName: 'Jo Taylor' }));
+  const lines = LINES.map((l) => ({ ...l, decision: 'approved', decidedVia: 'phone', decidedByName: 'Jo Taylor', decidedAt: '2026-10-05T10:40:00Z' }));
   const { ui } = await open(QUOTE('approved', lines));
-  assert.ok(has(await ui.findByText('You answered by phone with Jo Taylor.')));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Your answers, from your call' })));
+  const at = new Date('2026-10-05T10:40:00Z');
+  const time = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+  assert.ok(has(ui.queryByText(`You answered by phone with Jo Taylor at ${time}. Here’s what was agreed.`)));
 });
 
 test('a withdrawn quote has nothing to answer', async () => {
   const { ui } = await open(QUOTE('withdrawn'));
   assert.ok(has(await ui.findByText('Quote withdrawn')));
-  assert.ok(has(ui.queryByText('The shop has withdrawn this quote. There is nothing to answer.')));
+  assert.ok(has(ui.queryByRole('heading', { name: 'We’ve withdrawn this quote' })));
+  assert.ok(has(ui.queryByText(/^Nothing to answer\. Call/)));
+  assert.equal(quotePhone(ui), 'tel:[shop phone]');
   assert.equal(has(ui.queryByRole('checkbox')), false);
+});
+
+// Staff names only with the shop's "Show who signed off to customers" switch
+// on (Jack, 22 Oct): the server sends mechanicName and decidedByName only
+// then, and the card says "we" without them.
+const NAMED = (state, lines = LINES) => ({ ...QUOTE(state, lines), mechanicName: 'Alex Morgan', customerFirstName: 'Maya' });
+
+test('with the switch on, the quote is the mechanic’s recommendation, by first name', async () => {
+  const { ui } = await open(NAMED('sent'));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Alex recommends more work' })));
+  const { fireEvent } = await rtl();
+  fireEvent.click(ui.getByRole('checkbox', { name: /Shimano brake pads/ }));
+  assert.ok(has(ui.queryByText('Alex recommends this.')));
+  assert.equal(has(ui.queryByText('We recommend this.')), false);
+});
+
+test('a sent quote offers the shop’s phone for anyone not sure', async () => {
+  const { ui } = await open(QUOTE('sent'));
+  assert.ok(has(await ui.findByText(/^Not sure\? Call/)));
+  assert.equal(quotePhone(ui), 'tel:[shop phone]');
+});
+
+test('an answered quote thanks the customer by first name, and names the mechanic with the switch on', async () => {
+  const lines = [qline({ decision: 'approved' }), qline({ id: 3, description: 'Replace gear cable', need: 'optional', decision: 'declined' })];
+  const { ui } = await open(NAMED('partly_approved', lines));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Thanks, Maya — Alex is carrying on' })));
+  assert.ok(has(ui.queryByText('We’ve saved your answers. The work you agreed is going ahead.')));
+});
+
+test('all declined: the booked service carries on, said with “we” when the switch is off', async () => {
+  const lines = LINES.map((l) => ({ ...l, decision: 'declined' }));
+  const { ui } = await open({ ...QUOTE('declined', lines), customerFirstName: 'Maya' });
+  assert.ok(has(await ui.findByRole('heading', { name: 'Thanks, Maya — we’ll carry on with the service' })));
+  assert.ok(has(ui.queryByText('You didn’t add any extra work. We’ve saved your answers.')));
+});
+
+test('all declined with the switch on names the mechanic', async () => {
+  const lines = LINES.map((l) => ({ ...l, decision: 'declined' }));
+  const { ui } = await open(NAMED('declined', lines));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Thanks, Maya — Alex will carry on with the service' })));
+});
+
+test('a phone answer with the switch off doesn’t name who took it', async () => {
+  const lines = LINES.map((l) => ({ ...l, decision: 'approved', decidedVia: 'phone', decidedByName: null, decidedAt: '2026-10-05T10:40:00Z' }));
+  const { ui } = await open(QUOTE('approved', lines));
+  assert.ok(has(await ui.findByText(/^You answered by phone at \d\d:\d\d\. Here’s what was agreed\.$/)));
+});
+
+test('a withdrawn quote names the mechanic with the switch on', async () => {
+  const { ui } = await open(NAMED('withdrawn'));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Alex has withdrawn this quote' })));
 });

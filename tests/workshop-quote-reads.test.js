@@ -278,7 +278,12 @@ test('the owning customer reads their quote with the same totals staff see', asy
   );
 
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.deepEqual(res.body, staffRes.body);
+  // The customer's copy adds who it's for and, with the shop's switch on, the
+  // mechanic (Jack, 22 Oct); everything else is what staff see.
+  const { customerFirstName, mechanicName, ...rest } = res.body;
+  assert.equal(customerFirstName, 'Portal');
+  assert.equal(mechanicName, null);
+  assert.deepEqual(rest, staffRes.body);
 });
 
 // This is the test that proves the controller ruling: quoteForCustomer scopes

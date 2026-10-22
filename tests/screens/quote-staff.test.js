@@ -149,10 +149,16 @@ test('while waiting, the job says so, and staff can record the answer taken by p
   const { dlg, fireEvent, waitFor, within, ui } = await openJob({ q: quote('sent', lines) });
   assert.ok(has(await dlg.findByText('Quoting')));
   fireEvent.click(dlg.getByRole('button', { name: 'Record their answer' }));
-  const rec = within(await ui.findByRole('dialog', { name: "Record Maya Patel's answer" }));
+  const rec = within(await ui.findByRole('dialog', { name: 'Record Maya’s answer' }));
   // Ticks start the way the mechanic recommended: Needed yes, Optional no.
   assert.equal(rec.getByRole('checkbox', { name: 'Yes to Brake pads (pair)' }).checked, true);
   assert.equal(rec.getByRole('checkbox', { name: 'Yes to Fit new gear cable' }).checked, false);
+  // The drawn dq-record-answer wording, following how they answered.
+  assert.ok(has(rec.queryByText('Quote for WH-1042 · answered by phone')));
+  assert.ok(has(rec.queryByText('Tick what Maya agreed to on the phone. These answers are final once saved, as if answered online.')));
+  fireEvent.click(rec.getByRole('radio', { name: 'In the shop' }));
+  assert.ok(has(rec.queryByText('Quote for WH-1042 · answered in the shop')));
+  assert.ok(has(rec.queryByText('Tick what Maya agreed to in the shop. These answers are final once saved, as if answered online.')));
   fireEvent.click(rec.getByRole('radio', { name: 'By phone' }));
   fireEvent.click(rec.getByRole('button', { name: 'Save: yes to 1 line, no thanks to 1' }));
   await waitFor(() => assert.deepEqual(posts(), ['/api/quotes/9/answer {"via":"phone","decisions":[{"lineId":1,"decision":"approved"},{"lineId":2,"decision":"declined"}]}']));
@@ -162,7 +168,10 @@ test('a sent quote can be withdrawn, after asking', async () => {
   const { dlg, fireEvent, waitFor, within, ui } = await openJob({ q: quote('sent', [line({})]) });
   fireEvent.click(await dlg.findByRole('button', { name: 'Withdraw quote' }));
   const confirm = within(await ui.findByRole('dialog', { name: 'Withdraw this quote?' }));
-  fireEvent.click(confirm.getByRole('button', { name: 'Withdraw' }));
+  // The drawn withdraw-title wording.
+  assert.ok(has(confirm.queryByText('WH-1042 · Maya Patel')));
+  assert.ok(has(confirm.queryByText('Maya’s page will say the quote was withdrawn and there’s nothing to answer. Only the booked work stays agreed.')));
+  fireEvent.click(confirm.getByRole('button', { name: 'Withdraw quote' }));
   await waitFor(() => assert.deepEqual(posts(), ['/api/quotes/9/withdraw {}']));
 });
 
@@ -173,7 +182,7 @@ test('a refused quote action says why in plain words', async () => {
   try {
     fireEvent.click(await dlg.findByRole('button', { name: 'Withdraw quote' }));
     const confirm = within(await ui.findByRole('dialog', { name: 'Withdraw this quote?' }));
-    fireEvent.click(confirm.getByRole('button', { name: 'Withdraw' }));
+    fireEvent.click(confirm.getByRole('button', { name: 'Withdraw quote' }));
     assert.ok(Boolean(await ui.findByText('This quote has been approved, so it can\'t be withdrawn.')));
     assert.ok(ui.queryByText(/cannot be withdrawn/) === null);
   } finally { refuse = null; }
@@ -185,7 +194,7 @@ test('an answer the customer beat staff to says so in plain words', async () => 
   refuse = 'a quote that is approved is not open for an answer';
   try {
     fireEvent.click(await dlg.findByRole('button', { name: 'Record their answer' }));
-    const rec = within(await ui.findByRole('dialog', { name: "Record Maya Patel's answer" }));
+    const rec = within(await ui.findByRole('dialog', { name: 'Record Maya’s answer' }));
     fireEvent.click(rec.getByRole('radio', { name: 'By phone' }));
     fireEvent.click(rec.getByRole('button', { name: /^Save/ }));
     assert.ok(Boolean(await ui.findByText('This quote has been approved, so it can\'t be answered.')));

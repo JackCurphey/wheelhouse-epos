@@ -14,9 +14,15 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 
 type QuoteLine = {
   id: number; description: string; lineTotal: number; decision: 'pending' | 'approved' | 'declined';
-  need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedByName: string | null;
+  need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedAt?: string | null; decidedByName: string | null;
 };
-type Quote = { id: number; revision: number; state: string; sentAt: string | null; lines: QuoteLine[] };
+// mechanicName and each line's decidedByName come only with the shop's "Show
+// who signed off to customers" switch on; without them the card says "we"
+// (Jack, 22 Oct).
+type Quote = {
+  id: number; revision: number; state: string; sentAt: string | null; lines: QuoteLine[];
+  mechanicName?: string | null; customerFirstName?: string | null;
+};
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -24,13 +30,23 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 function sentLine(iso: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
-  return `Sent ${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `Sent ${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${hhmm(d)}`;
+}
+
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const firstName = (name: string | null | undefined) => (name ? name.trim().split(/\s+/)[0] : null);
+
+/** The drawn "Call [shop phone]" link, or the words "the shop" with no phone. */
+function Phone({ phone }: { phone: string | null }) {
+  return phone ? <a href={`tel:${phone}`} className="font-semibold text-[var(--wh-ink)]">{phone}</a> : <>the shop</>;
 }
 
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
-export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswered = false }: { shopSlug: string; code: string; agreedTotal: number | null; done?: boolean; hideAnswered?: boolean }) {
+export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done = false, hideAnswered = false }: {
+  shopSlug: string; code: string; agreedTotal: number | null; shopPhone?: string | null; done?: boolean; hideAnswered?: boolean;
+}) {
   const queryClient = useQueryClient();
   const key = ['booking-quote', shopSlug, code];
   const quote = useQuery({
@@ -47,13 +63,15 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswe
 
   const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, l.need === 'needed']));
   const agreed = agreedTotal ?? 0;
+  const mechanic = firstName(q.mechanicName);
+  const thanks = q.customerFirstName ? `Thanks, ${q.customerFirstName}` : 'Thanks';
 
   if (q.state === 'withdrawn') {
     return (
       <section className={CARD} aria-labelledby="quote-heading">
         <span className={`${BADGE} bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]`}>Quote withdrawn</span>
-        <h2 id="quote-heading" className="m-0 text-xl font-bold">The quote was withdrawn</h2>
-        <p className="m-0">The shop has withdrawn this quote. There is nothing to answer.</p>
+        <h2 id="quote-heading" className="m-0 text-xl font-bold">{mechanic ? `${mechanic} has withdrawn this quote` : 'We’ve withdrawn this quote'}</h2>
+        <p className="m-0">Nothing to answer. Call <Phone phone={shopPhone} /> if you have a question.</p>
       </section>
     );
   }
@@ -70,11 +88,16 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswe
             (cp-summary; booking page stages, 21 Oct). */}
         {!done && <span className={`${BADGE} bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]`}>Answered</span>}
         <h2 id="quote-heading" className="m-0 text-xl font-bold">
-          {done ? 'What we did' : yes.length ? 'Thanks — the work you agreed is going ahead.' : 'Thanks — the booked work is going ahead.'}
+          {done ? 'What we did'
+            : phone ? `Your answers, from your ${phone.decidedVia === 'phone' ? 'call' : 'visit'}`
+            : yes.length ? `${thanks} — ${mechanic ? `${mechanic} is carrying on` : 'we’re carrying on'}`
+            : `${thanks} — ${mechanic ? `${mechanic} will` : 'we’ll'} carry on with the service`}
         </h2>
-        {phone ? (
-          <p className="m-0">{`You answered ${phone.decidedVia === 'phone' ? 'by phone' : 'in the shop'}${phone.decidedByName ? ` with ${phone.decidedByName}` : ''}.`}</p>
-        ) : null}
+        {done ? null : phone ? (
+          <p className="m-0">{`You answered ${phone.decidedVia === 'phone' ? 'by phone' : 'in the shop'}${phone.decidedByName ? ` with ${phone.decidedByName}` : ''}${phone.decidedAt ? ` at ${hhmm(new Date(phone.decidedAt))}` : ''}. Here’s what was agreed.`}</p>
+        ) : (
+          <p className="m-0">{yes.length ? 'We’ve saved your answers. The work you agreed is going ahead.' : 'You didn’t add any extra work. We’ve saved your answers.'}</p>
+        )}
         <ul className="m-0 list-none p-0 text-sm">
           {yes.map((l) => (
             <li key={l.id} className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
@@ -127,7 +150,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswe
   return (
     <section className={CARD} aria-labelledby="quote-heading">
       <span className={`${BADGE} bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]`}>Waiting for your answer</span>
-      <h2 id="quote-heading" className="m-0 text-xl font-bold">We recommend more work</h2>
+      <h2 id="quote-heading" className="m-0 text-xl font-bold">{mechanic ? `${mechanic} recommends more work` : 'We recommend more work'}</h2>
       {sentLine(q.sentAt) ? <p className="m-0 text-sm text-[var(--wh-muted)]">{sentLine(q.sentAt)}</p> : null}
       <p className="m-0 font-semibold">Untick anything you don&apos;t want.</p>
       <ul className="m-0 list-none p-0" aria-labelledby="quote-heading">
@@ -153,7 +176,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswe
               </span>
             </label>
             {l.need === 'needed' && !tick[l.id] ? (
-              <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]"><strong>We recommend this.</strong></p>
+              <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]"><strong>{mechanic ? `${mechanic} recommends this.` : 'We recommend this.'}</strong></p>
             ) : null}
           </li>
         ))}
@@ -170,6 +193,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false, hideAnswe
       <p className="m-0 text-sm text-[var(--wh-muted)]">Prices include VAT. Nothing to pay today.</p>
       {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
       <Button variant="accent" className="self-end" disabled={sending} onClick={() => void send()}>{label}</Button>
+      <p className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm">Not sure? Call <Phone phone={shopPhone} />.</p>
     </section>
   );
 }

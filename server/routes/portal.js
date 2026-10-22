@@ -399,6 +399,27 @@ async function bookingLinkView(jobId, shop) {
 // The work is the job's order's lines; declined is the newest quote's
 // declined lines; to pay is what the till would charge (computeOrderTotals,
 // group discount included), null once paid; paid is the sale that paid it.
+// The quote as a customer sees it (Jack, 22 Oct): staff names only when the
+// shop's "Show who signed off to customers" switch is on (mechanic sign-off
+// answer 3: no staff names reach customers until a shop chooses), so "Alex
+// recommends more work" or "We recommend more work"; and the customer's own
+// first name, for "Thanks, Maya".
+async function customerQuote(result, jobId) {
+  const shows = (await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get())?.show_sign_off_to_customers === 1;
+  const who = await db.prepare(
+    `SELECT m.name AS mechanic_name, c.name AS customer_name FROM workshop_jobs j
+       LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
+      WHERE j.id = ?`
+  ).get(jobId);
+  const q = serializeQuoteWithLines(result.quote, result.lines, result.totals);
+  return {
+    ...q,
+    lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
+    mechanicName: shows ? who?.mechanic_name ?? null : null,
+    customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
+  };
+}
+
 async function jobMoney(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
@@ -779,7 +800,7 @@ export function register(route) {
       customerId: ctx.login.customer_id,
     });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, result.quote.workshop_job_id));
   });
 
   // screens: approval
@@ -1164,7 +1185,7 @@ export function register(route) {
     if (!found) return;
     const result = await currentQuoteForJob(found.id);
     if (!result.ok) return notFound(res, 'There is no quote for this booking');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, found.id));
   });
 
   // The customer cancels through their booking link (piece 12, decision 1):
