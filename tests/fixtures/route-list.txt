@@ -183,3 +183,8 @@ POST /api/portal/:shopSlug/booking-links/:code/cancel
 POST /api/portal/:shopSlug/booking-links/:code/accept-offer
 POST /api/portal/:shopSlug/booking-links/:code/change
 POST /api/portal/:shopSlug/booking-links/:code/withdraw-change
+GET /api/portal/:shopSlug/booking-links/:code/notes
+POST /api/portal/:shopSlug/booking-links/:code/notes
+GET /api/job-notes/conversations
+GET /api/workshop-jobs/:id/notes
+POST /api/workshop-jobs/:id/notes

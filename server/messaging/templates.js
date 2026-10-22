@@ -45,6 +45,14 @@ export const TEMPLATES = {
     subject: 'Your answers — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'What was agreed', 'Link to the job', 'Job number', 'Shop name'],
   },
+  // A staff reply to the customer's note (decision 3; ac-reply-text, as drawn).
+  shop_reply: {
+    name: 'Reply from the shop',
+    when: 'When staff reply to a customer’s note',
+    wording: '[Shop name] replied about your [Bike] ([Job number]): [The shop’s reply]. Replies to this number aren’t read — reply on your page: [Link to the job]',
+    subject: '[Shop name] replied about your repair',
+    tapIns: ['Shop name', 'Bike', 'Job number', 'The shop’s reply', 'Link to the job'],
+  },
   bike_ready: {
     name: 'Bike ready',
     when: 'When a job is marked ready',
@@ -105,7 +113,7 @@ export const TEMPLATES = {
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

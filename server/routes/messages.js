@@ -38,6 +38,7 @@ const EXAMPLE = {
   'Amount added': '£46.00',
   'Spending limit': '£200',
   'Shop phone': '[shop phone]',
+  'The shop’s reply': '[Jo’s reply]',
   'What was agreed': 'Going ahead: Shimano brake pads and Fit and adjust brakes, £46.00. No thanks: Replace gear cable.',
 };
 // Where a message's drawing fills a tap-in differently (bk-msg-change: the

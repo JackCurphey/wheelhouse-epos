@@ -261,3 +261,10 @@ Once the reminder has gone, the customer's quote SHALL say so beside when it was
 #### Scenario: After the reminder
 - **WHEN** Maya opens her quote after the reminder went at 10:15
 - **THEN** the sent line ends "· we sent a reminder at 10:15"
+
+### Requirement: The customer can write to the shop from their booking page
+Through their booking link, the customer SHALL be able to add a note for the shop and read the shop's replies, oldest first, with staff names only when the shop shows who signed off (decision 3).
+
+#### Scenario: A note
+- **WHEN** Maya adds "Can you check the back light too?" on her booking page
+- **THEN** it is saved on her job, and her page lists it as hers
