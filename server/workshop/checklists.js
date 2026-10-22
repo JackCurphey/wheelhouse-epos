@@ -149,6 +149,14 @@ function summary(name, items) {
   };
 }
 
+// The job's own copy only, made by its first tick or note, or null: what the
+// customer is shown, so it's fixed and never "0 of 10" for a list nobody
+// used (customer-checklist, fresh review 22 Oct).
+export async function jobChecklistCopy(jobId) {
+  const copy = await db.prepare('SELECT name, items FROM workshop_job_checklists WHERE workshop_job_id = ?').get(jobId);
+  return copy ? summary(copy.name, copy.items) : null;
+}
+
 // The job's checklist as the job page shows it, or null when it has none.
 export async function jobChecklist(jobId) {
   const copy = await db.prepare('SELECT name, items FROM workshop_job_checklists WHERE workshop_job_id = ?').get(jobId);

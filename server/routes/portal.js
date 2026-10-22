@@ -15,6 +15,7 @@ import { currentCustomerSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobChecklistCopy } from '../workshop/checklists.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
@@ -388,6 +389,12 @@ async function bookingLinkView(jobId, shop) {
     expectedReady: (row.booking_state === 'scheduled' || row.booking_state === 'reschedule_requested') && row.custody_state !== 'collected'
       ? { date: row.last_day || row.job_date, time: null } : null,
     shop: await shopLines(),
+    // The job's checklist once the work is finished (cp-summary's "Full service
+    // checklist"; Jack, 22 Oct): every item, ticked or not, and what the
+    // mechanic found. Only one a mechanic used (its own copy, fixed), so
+    // never "0 of 10" for a service done without the ticks; none while the
+    // work is under way, or for a job without one.
+    checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklistCopy(row.id)) : null,
     ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
   };
@@ -399,6 +406,10 @@ async function bookingLinkView(jobId, shop) {
 // The work is the job's order's lines; declined is the newest quote's
 // declined lines; to pay is what the till would charge (computeOrderTotals,
 // group discount included), null once paid; paid is the sale that paid it.
+function customerChecklist(c) {
+  return c ? { name: c.name, items: c.items.map((i) => ({ name: i.label, done: i.done, note: i.note })) } : null;
+}
+
 async function jobMoney(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
