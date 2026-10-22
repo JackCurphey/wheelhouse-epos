@@ -15,6 +15,7 @@ import { JobMessagesButton, jobMessagesKey } from './job-messages.tsx';
 import { printBikeTag } from './bike-tag.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 import { JobChecklistBar } from './job-checklist.tsx';
+import { SlotDialog, useStorageSlots } from './storage-slots.tsx';
 import { channelWord } from './channel-word.ts';
 
 /**
@@ -132,6 +133,10 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const [notesNote, setNotesNote] = useState('');
   // "Change details" (Jack, 18 Oct): not for finished work, which is frozen until reopened.
   const [changing, setChanging] = useState(false);
+  // Storage slots (Workshop day 27): Book in asks where the bike is kept, and
+  // "Kept on [slot]" moves it, when the shop's slots are on.
+  const { on: slotsOn, slots, ask: askSlot } = useStorageSlots();
+  const [slotBox, setSlotBox] = useState<'book-in' | 'move' | null>(null);
   // Deleting a job (Jack, 18 Oct, docs/decisions/2026-10-18-attachments-and-delete.md):
   // asks first, or says "Settle up first" while money has been paid on its
   // order or the bike is in the shop. The server refuses the same cases.
@@ -190,6 +195,30 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     } catch (err) {
       setReady(null);
       setMessage(refusalText(err));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function bookIn() {
+    if (askSlot) setSlotBox('book-in');
+    else void run('book-in');
+  }
+
+  async function moveSlot(storageSlotId: number | null) {
+    if (!job) return;
+    setSending(true);
+    setMessage(null);
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}/storage-slot`, { storageSlotId }, { method: 'PUT' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+      ]);
+    } catch (err) {
+      // Refused (say the bike was collected meanwhile): show the job as it is now.
+      setMessage(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+      void jobQuery.refetch();
     } finally {
       setSending(false);
     }
@@ -345,6 +374,12 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 {job.bikeLabel ? <span>{job.bikeLabel}</span> : null}
+                {/* Where a bike in the shop is kept (job-book-in's "Kept on Hook 3"); a button to move it. */}
+                {slotsOn && job.custodyState === 'in_shop' ? (
+                  <button type="button" disabled={sending} onClick={() => setSlotBox('move')} className="min-h-11 text-[var(--wh-muted)] underline-offset-2 hover:underline">
+                    {job.storageSlotName ? `Kept on ${job.storageSlotName}` : 'Choose where it’s kept'}
+                  </button>
+                ) : null}
                 <span>{`Mechanic: ${job.mechanicName ?? 'Shared queue'}`}</span>
                 <Tag>{`Ready by ${shortDay(readyBy as string)}`}</Tag>
                 {job.orderTotal ? <Tag>{`Total ${money(job.orderTotal)}`}</Tag> : null}
@@ -402,7 +437,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           role="switch"
                           aria-checked={here}
                           disabled={here || sending || job.bookingState === 'pending' || job.bookingState === 'offered' || ended}
-                          onClick={() => run('book-in')}
+                          onClick={() => bookIn()}
                           className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-[13px] font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
                         >
                           <span aria-hidden="true" className={`inline-block size-3 rounded-full border ${here ? 'border-[var(--wh-accent-soft-ink)] bg-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)]'}`} />
@@ -459,13 +494,26 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
               ))}
               {actions.filter((a) => a.primary).map((a) => (
-                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : a.action === 'finish' ? setSigning(true) : run(a.action))}>{a.label}</Button>
+                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : a.action === 'finish' ? setSigning(true) : a.action === 'book-in' ? bookIn() : run(a.action))}>{a.label}</Button>
               ))}
             </footer>
           </>
         ) : null}
       </div>
       {changing && job ? <ChangeDetailsDialog job={job} onClose={() => setChanging(false)} /> : null}
+      {slotBox && job ? (
+        <SlotDialog
+          job={job} slots={slots} busy={sending}
+          title={slotBox === 'book-in' ? (job.reference ? `Book in · job ${job.reference}` : 'Book in') : 'Where the bike is kept'}
+          onClose={() => setSlotBox(null)}
+          onDone={(slot) => {
+            const was = slotBox;
+            setSlotBox(null);
+            if (was === 'book-in') void run('book-in', slot === null ? {} : { storageSlotId: slot });
+            else void moveSlot(slot);
+          }}
+        />
+      ) : null}
       {signing && job ? <SignOffDialog job={job} busy={sending} onClose={() => setSigning(false)} onSign={(id) => { setSigning(false); void run('finish', { signedOffBy: id }); }} /> : null}
       <Dialog open={deleting === 'ask'} onOpenChange={(o) => { if (!o) setDeleting(null); }} aria-labelledby="delete-job-title">
         <DialogHeader>

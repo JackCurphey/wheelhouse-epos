@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
+import { SlotPills, useStorageSlots } from './storage-slots.tsx';
 
 /**
  * New job (journey 12; drawn as new-job and new-job-day in
@@ -156,6 +157,11 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   }
   const [status, setStatus] = useState<'scheduled' | 'waiting_parts'>('scheduled');
   const [bikeHere, setBikeHere] = useState(false);
+  // Where the bike is kept, when the shop's storage slots are on and the bike
+  // is here (Workshop day 27; drawn on new-job): none chosen to start.
+  const { slots } = useStorageSlots();
+  const [slot, setSlot] = useState<number | null>(null);
+  const keptOn = bikeHere && slots.length ? slot : null;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -318,6 +324,8 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
     if (service) body.plannedMinutes = service.minutes;
     // The service chosen, so the job has its checklist (Jack, 22 Oct, service checklists).
     if (service) body.serviceIds = [service.id];
+    // A waiting-for-parts job is made with the bike in, so it goes on its slot as it's made.
+    if (keptOn !== null && status === 'waiting_parts') body.storageSlotId = keptOn;
     let job: WorkshopJob;
     try {
       job = await apiMutate<WorkshopJob>('/api/workshop-jobs', body);
@@ -334,7 +342,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
     // A waiting-for-parts job is created with the bike already in, so
     // booking it in again would be refused (Jack, 8 Oct).
     if (bikeHere && job.custodyState !== 'in_shop') {
-      try { await jobAction(job.id, 'book-in', job.version); } catch (err) { problems.push(`The job is saved, but couldn’t be booked in: ${words(err)}`); }
+      try { await jobAction(job.id, 'book-in', job.version, keptOn === null ? {} : { storageSlotId: keptOn }); } catch (err) { problems.push(`The job is saved, but couldn’t be booked in: ${words(err)}`); }
     }
     // Opened for an order, the job is linked to it, as the old form did
     // (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md).
@@ -505,6 +513,12 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               </RadioPillGroup>
             </div>
             <Toggle on={bikeHere} onChange={setBikeHere} label="The bike is here now" hint="Books it in straight away." />
+            {bikeHere && slots.length ? (
+              <div className="flex flex-col gap-1.5">
+                <SlotPills id="nj-slot" slots={slots} value={slot} onChange={setSlot} />
+                <p className="m-0 text-[13px] text-[var(--wh-muted)]">Storage slots are on for this shop. Turn them off in Settings.</p>
+              </div>
+            ) : null}
           </div>
         </div>
         {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}

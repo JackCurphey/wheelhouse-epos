@@ -6,7 +6,7 @@
 - [x] 1.3 Lint, `npm test`, `/review`, pull request
 
 ## 2. Screens
-- [ ] 2.1 Tests first: the Settings fold, New job's pills, the Book in box, "Kept on" on the job page and the Overview, the diary block's third line
-- [ ] 2.2 Build them to the drawings
-- [ ] 2.3 A browser spec and the real-browser check
-- [ ] 2.4 Archive into `openspec/specs/settings` and `openspec/specs/workshop-jobs`
+- [x] 2.1 Tests first: the Settings fold, New job's pills, the Book in box, "Kept on" on the job page and the Overview, the diary block's third line
+- [x] 2.2 Build them to the drawings
+- [x] 2.3 A browser spec and the real-browser check
+- [x] 2.4 Archive into `openspec/specs/settings` and `openspec/specs/workshop-jobs`
