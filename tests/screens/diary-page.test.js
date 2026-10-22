@@ -139,6 +139,27 @@ test('on a phone a block shows the shop’s chosen lines too', async () => {
   }
 });
 
+// Storage slots (Workshop day 27): a block shows where the bike is kept on
+// its third line, where there's room, when the shop's slots are on.
+test('a block shows its storage slot on a third line, only with slots on', async () => {
+  const kept = JOBS.find((j) => j.reference === 'WH-1001');
+  Object.assign(kept, { custodyState: 'in_shop', storageSlotId: 3, storageSlotName: 'Hook 3' });
+  try {
+    SETTINGS.storageSlotsOn = false;
+    const off = await openDiary();
+    assert.ok(!has(off.within(off.ui.getByRole('group', { name: 'Tuesday 6 October' })).queryByText('Hook 3')));
+    off.cleanup();
+    shell.queryClient.clear();
+    uninstall();
+    SETTINGS.storageSlotsOn = true;
+    const { ui, within } = await openDiary();
+    assert.ok(has(await within(ui.getByRole('group', { name: 'Tuesday 6 October' })).findByText('Hook 3')));
+  } finally {
+    delete SETTINGS.storageSlotsOn;
+    Object.assign(kept, { custodyState: 'expected', storageSlotId: null, storageSlotName: null });
+  }
+});
+
 test('the week runs Monday to Sunday and is named in the toolbar', async () => {
   const { ui } = await openDiary();
   assert.ok(has(ui.queryByText('5–11 October 2026')));

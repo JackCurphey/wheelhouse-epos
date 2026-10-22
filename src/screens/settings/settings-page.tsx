@@ -10,7 +10,9 @@ import { previewLines } from './booking-preview.ts';
 import { AutomaticMessages, useMessagesSummary } from './messages-settings.tsx';
 import { ChecklistsSettings, useChecklistsSummary } from './checklists-settings.tsx';
 import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
+import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
+import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
@@ -93,27 +95,6 @@ function ShopDetailsBox() {
 
 // The settings pages' own switch (settings-frame.mjs rowSwitch): the label,
 // On or Off in words, and the track; the whole row is the control.
-function RowSwitch({ label, on, disabled, onChange }: { label: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!on)}
-      className="flex min-h-12 w-full items-center justify-between gap-3 text-left"
-    >
-      <span className="text-[15px] font-bold">{label}</span>
-      <span className="inline-flex items-center gap-2.5">
-        <span className={`text-sm font-semibold ${on ? '' : 'text-[var(--wh-muted)]'}`}>{on ? 'On' : 'Off'}</span>
-        <span aria-hidden="true" className={`relative inline-block h-[26px] w-11 rounded-full ${on ? 'bg-[var(--wh-brand)]' : 'bg-[var(--wh-input-border)]'}`}>
-          <span className={`absolute top-[3px] size-5 rounded-full bg-[var(--wh-panel)] shadow ${on ? 'left-[21px]' : 'left-[3px]'}`} />
-        </span>
-      </span>
-    </button>
-  );
-}
 
 /**
  * Settings › Till › Receipts, first piece (Jack, 19 Oct, docs/decisions/2026-10-19-receipt-words.md;
@@ -868,6 +849,7 @@ function OwnerSettings() {
   const messages = useMessagesSummary();
   const checklists = useChecklistsSummary();
   const diaryBlocks = useDiaryBlocksSummary();
+  const storageSlots = useStorageSlotsSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
@@ -892,6 +874,7 @@ function OwnerSettings() {
           { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
           { key: 'diary-blocks', title: 'Diary blocks', summary: diaryBlocks, body: <DiaryBlocksSettings /> },
+          { key: 'storage-slots', title: 'Storage slots', summary: storageSlots, body: <StorageSlotsSettings /> },
         ] },
       ],
     },

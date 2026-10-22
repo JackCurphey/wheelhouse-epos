@@ -1169,3 +1169,23 @@ The drawings show where slots appear but not these rules. *Decided:*
    ones until they're switched on.
 5. **Sites.** Per shop for now; the plan's per-site slots wait for sites in
    the workshop (WP-1.4).
+
+### 22 Oct 2026: storage slots, the screens (storage-slots)
+
+1. **Book in on the job page and the Overview.** Only the till's book-in is
+   drawn with a slot (till-book-in). *Decided:* the same box opens from the
+   job page's Book in (and its Bike is here switch) and the Overview's Book
+   in, when the shop's slots are on; Not now books nothing; with slots off,
+   Book in books in at once as before.
+2. **Moving a bike.** Not drawn. *Decided:* "Kept on Hook 3" on the job page
+   is a button opening the same box, titled "Where the bike is kept"; a bike
+   in with no slot shows "Choose where it’s kept". Tapping the chosen slot
+   again takes the bike off it.
+3. **New job.** *Decided:* "Where the bike is kept" shows only once "The bike
+   is here now" is on, with none chosen, then the drawn note.
+4. **Settings.** Not drawn: what "+ Add a slot" opens and the off state.
+   *Decided:* a box for the name with Add and Cancel; switched off, the note
+   reads "Off for this shop. Switch it on to note where each bike is kept."
+5. **The diary block.** *Decided:* the slot on the line after the job (after
+   the New online mark when that shows), where there's room; a block's name
+   for screen readers doesn't say the slot yet.

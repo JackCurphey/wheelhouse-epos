@@ -75,6 +75,10 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
           <NewOnlineMark short={shortMark} />
         </span>
       ) : null}
+      {/* Where the bike is kept, on the next line where there's room (storage slots; diary.mjs jobBlock). */}
+      {lines.slotsOn && job.storageSlotName && height >= (mark ? FOUR_LINES : THREE_LINES) ? (
+        <span aria-hidden="true" className="truncate text-xs leading-[14px] font-semibold text-[var(--wh-muted)]">{job.storageSlotName}</span>
+      ) : null}
     </>
   );
   // An offered time opens its pop-up, but isn't dragged (Jack, 20 Oct, request-offered).
@@ -321,6 +325,7 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
 /** Room for two 12px lines in a block: its padding and border, and two lines (diary.mjs, D_LINE_H 14). */
 const TWO_LINES = 10 + 2 * 14;
 const THREE_LINES = TWO_LINES + 14;
+const FOUR_LINES = THREE_LINES + 14;
 
 /** A change request's dashed outline at the time the customer asked for. */
 function RequestedOutline({ outline, range, chosen }: { outline: Outline; range: { start: number }; chosen: boolean }) {

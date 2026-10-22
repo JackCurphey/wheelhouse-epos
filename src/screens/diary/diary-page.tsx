@@ -379,7 +379,7 @@ export function DiaryPage() {
   const waitingSheet = <WaitingSheet open={sheetOpen} onOpenChange={setSheetOpen} count={waiting.data?.count ?? items.length} items={items} chosen={chosen} onChoose={chooseItem} />;
 
   // What a block shows first and second, the shop's choice (Settings › Workshop › Diary blocks).
-  const blockLines = { first: settings.data?.blockFirst ?? 'bike', second: settings.data?.blockSecond ?? 'jobTitle' } as const;
+  const blockLines = { first: settings.data?.blockFirst ?? 'bike', second: settings.data?.blockSecond ?? 'jobTitle', slotsOn: Boolean(settings.data?.storageSlotsOn) } as const;
   if (isPhone) {
     const week = weekOf(date);
     const showing = shared ? 'Shared queue' : whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';

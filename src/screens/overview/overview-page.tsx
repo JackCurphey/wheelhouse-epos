@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { dayLabel, todayIso, toMinutes } from '@/screens/diary/rules.ts';
 import { jobRefusalText } from '@/screens/diary/refusal-words.ts';
+import { SlotDialog, useStorageSlots } from '@/screens/diary/storage-slots.tsx';
 
 /**
  * Workshop › Overview (drawn as overview in generator/diary.mjs; Jack, 21 Oct,
@@ -75,9 +76,11 @@ function Figure({ id, label, value, note, fill }: { id: string; label: string; v
 }
 
 const BADGE = 'inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap';
-function Custody({ job }: { job: WorkshopJob }) {
+// "Kept on [slot]" for a bike in on a slot when the shop's slots are on
+// (rs-overview-arrived; storage slots, 22 Oct), else "In the shop".
+function Custody({ job, slotsOn }: { job: WorkshopJob; slotsOn: boolean }) {
   return inShop(job)
-    ? <span className={`${BADGE} bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]`}>In the shop</span>
+    ? <span className={`${BADGE} bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]`}>{slotsOn && job.storageSlotName ? `Kept on ${job.storageSlotName}` : 'In the shop'}</span>
     : <span className={`${BADGE} bg-[var(--wh-status-scheduled-bg)] text-[var(--wh-status-scheduled-ink)]`}>Expected</span>;
 }
 
@@ -92,6 +95,9 @@ export function OverviewPage() {
   const tabButtons = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const [refused, setRefused] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
+  // Storage slots (Workshop day 27): the shop's, when they're on.
+  const slots = useStorageSlots();
+  const [slotFor, setSlotFor] = useState<WorkshopJob | null>(null);
   // Today's jobs, and every bike in the shop whatever its days (a ready bike
   // from an earlier day has none today). Under 'workshop-jobs', so the
   // diary's changes refresh them too.
@@ -121,12 +127,18 @@ export function OverviewPage() {
   const shown = lists[tab];
   const stillToArrive = lists.arrivals.length;
 
-  async function bookIn(j: WorkshopJob) {
+  // With slots on, Book in asks where the bike is kept first (till-book-in).
+  function startBookIn(j: WorkshopJob) {
+    if (slots.length) setSlotFor(j);
+    else void bookIn(j);
+  }
+
+  async function bookIn(j: WorkshopJob, storageSlotId: number | null = null) {
     setBusy(j.id);
     setRefused(null);
     let done = false;
     try {
-      await jobAction(j.id, 'book-in', j.version);
+      await jobAction(j.id, 'book-in', j.version, storageSlotId === null ? {} : { storageSlotId });
       done = true;
     } catch (err) {
       setRefused(err instanceof ApiError ? jobRefusalText(err) : 'Wheelhouse couldn’t book that in. Try again in a moment.');
@@ -157,7 +169,7 @@ export function OverviewPage() {
     if (j.custodyState === 'expected') {
       const start = startOf(j, today);
       return due(start, now)
-        ? <Button variant="accent" size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={busy === j.id} aria-label={`Book in ${j.reference}`} onClick={() => void bookIn(j)}>Book in</Button>
+        ? <Button variant="accent" size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={busy === j.id} aria-label={`Book in ${j.reference}`} onClick={() => startBookIn(j)}>Book in</Button>
         : <span className="text-[13px] whitespace-nowrap max-md:text-sm"><span className="font-[family-name:var(--wh-font-mono)]">{start}</span> appointment</span>;
     }
     return <Link to={`${ROUTES.diary}?job=${j.id}`} aria-label={`Open job ${j.reference}`} className={`inline-flex items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)] ${touch ? 'min-h-11' : 'min-h-8'}`}>Open job</Link>;
@@ -204,7 +216,7 @@ export function OverviewPage() {
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-[15px]">{name(j)}</span>
                     <span className="text-[13px] text-[var(--wh-muted)]">{`${j.bikeLabel ?? 'No bike'} · ${work(j)}`}</span>
-                    <span><Custody job={j} /></span>
+                    <span><Custody job={j} slotsOn={slots.length > 0} /></span>
                   </div>
                   <div className="shrink-0">{action(j)}</div>
                 </li>
@@ -227,7 +239,7 @@ export function OverviewPage() {
                     <td className="px-4 py-2.5">{name(j)}</td>
                     <td className="px-4 py-2.5">{j.bikeLabel ?? '—'}</td>
                     <td className="px-4 py-2.5">{work(j)}</td>
-                    <td className="px-4 py-2.5"><Custody job={j} /></td>
+                    <td className="px-4 py-2.5"><Custody job={j} slotsOn={slots.length > 0} /></td>
                     <td className="px-4 py-2.5 text-right">{action(j)}</td>
                   </tr>
                 ))}
@@ -235,6 +247,13 @@ export function OverviewPage() {
             </table>
           )}
       </div>
+      {slotFor ? (
+        <SlotDialog
+          job={slotFor} slots={slots} busy={busy === slotFor.id} title={`Book in · job ${slotFor.reference ?? ''}`}
+          onClose={() => setSlotFor(null)}
+          onDone={(slot) => { const j = slotFor; setSlotFor(null); void bookIn(j, slot); }}
+        />
+      ) : null}
     </div>
   );
 }
