@@ -43,7 +43,9 @@ after(async () => {
 const staff = (path, options) => staffRequest(server.baseUrl, owner.cookie, path, options);
 const version = async (id) => (await staff(`/api/workshop-jobs/${id}`)).body.version;
 const act = async (id, action, body = {}) => staff(`/api/workshop-jobs/${id}/${action}`, { method: 'POST', body: { version: await version(id), ...body } });
-const messagesFor = (jobId) => runWithShop(owner.shop.id, () => prepare('SELECT template_key FROM customer_messages WHERE job_id = ? ORDER BY id').all(jobId))
+// Booking online itself queues Request received; these tests are about the
+// answers staff give afterwards, so it is left out.
+const messagesFor = (jobId) => runWithShop(owner.shop.id, () => prepare("SELECT template_key FROM customer_messages WHERE job_id = ? AND template_key <> 'request_received' ORDER BY id").all(jobId))
   .then((rows) => rows.map((r) => r.template_key));
 const book = (jobDate = nextDay(), startTime = '10:00', who = customer) => bookOnline(server.baseUrl, who.cookie, owner.shop.slug, {
   mechanicId: sam, jobDate, startTime, serviceIds: [types.service],
