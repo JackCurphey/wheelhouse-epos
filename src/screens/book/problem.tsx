@@ -13,7 +13,7 @@ import {
   ANSWER_TEXT_MAX, BIKE_NOTE_MAX, MAX_PHOTOS, MAX_PHOTO_BYTES, cleanAnswers, descriptionError, findAnswer, missingAnswers,
   photosCleared, pillChange, pillOptions, pillValue, questionGroups, questionLabel, setAnswer, type AnswerChange,
 } from './problem-rules.ts';
-import type { SendRefusalState } from './details-rules.ts';
+import { LIMIT_START, limitError, type SendRefusalState } from './details-rules.ts';
 
 /**
  * The problem screen (screen design `problem`, step 2): the bike in the customer's own
@@ -67,8 +67,10 @@ function ProblemForm() {
   const groups = questionGroups(data, draft);
   const missing = checked ? missingAnswers(data, draft) : [];
   const descError = checked ? descriptionError(draft) : null;
-  const failed = missing.length > 0 || descError !== null;
+  const limitProblem = checked ? limitError(draft) : null;
+  const failed = missing.length > 0 || descError !== null || limitProblem !== null;
   const descId = `${base}-description`;
+  const limitId = `${base}-limit`;
 
   const answer = (serviceId: number, questionId: string, change: AnswerChange) =>
     update({ answers: setAnswer(draft.answers, serviceId, questionId, change) });
@@ -76,7 +78,8 @@ function ProblemForm() {
   const onContinue = () => {
     const nowMissing = missingAnswers(data, draft);
     const nowDescError = descriptionError(draft);
-    if (nowMissing.length > 0 || nowDescError !== null) {
+    const nowLimit = limitError(draft);
+    if (nowMissing.length > 0 || nowDescError !== null || nowLimit !== null) {
       setChecked(true);
       setAttempt((a) => a + 1);
       // Questions come before the description on screen, so the first
@@ -84,7 +87,7 @@ function ProblemForm() {
       const first = nowMissing[0];
       const target = first
         ? document.getElementById(blockId(base, first.serviceId, first.questionId))?.querySelector<HTMLElement>('input, textarea')
-        : document.getElementById(descId);
+        : document.getElementById(nowDescError !== null ? descId : limitId);
       target?.focus();
       return;
     }
@@ -171,6 +174,36 @@ function ProblemForm() {
         />
         <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">You can also show us at drop-off.</p>
       </section>
+      {/* The spending limit (Workshop day 41; book.mjs limit()): the whole bill, in whole pounds. */}
+      <fieldset className="m-0 mb-4 flex flex-col gap-2 border-0 p-0">
+        <legend className="mb-1.5 p-0 text-sm font-semibold">If the mechanic finds more to do</legend>
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
+          <input type="radio" name={`${base}-limit-choice`} className="size-5 shrink-0 accent-[var(--wh-ink)]"
+            checked={!draft.limitOn} onChange={() => update({ limitOn: undefined })} />
+          Ask me before any extra work
+        </label>
+        <div className="flex min-h-11 items-center gap-2.5">
+          <input type="radio" id={`${limitId}-on`} name={`${base}-limit-choice`} className="size-5 shrink-0 accent-[var(--wh-ink)]"
+            checked={Boolean(draft.limitOn)} onChange={() => update({ limitOn: true })} />
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <label htmlFor={`${limitId}-on`} className="cursor-pointer">Go ahead if the whole bill comes to no more than</label>
+            <span className="inline-flex items-center gap-1">
+              £
+              <Input
+                id={limitId}
+                inputMode="numeric"
+                aria-label="Most the whole bill can come to, in pounds"
+                aria-invalid={limitProblem ? true : undefined}
+                aria-describedby={limitProblem ? `${limitId}-error` : undefined}
+                value={draft.limitText ?? LIMIT_START}
+                onChange={(e) => update({ limitOn: true, limitText: e.target.value })}
+                className="w-[72px] font-mono"
+              />
+            </span>
+          </span>
+        </div>
+        {limitProblem && <FieldError id={`${limitId}-error`}>{limitProblem}</FieldError>}
+      </fieldset>
     </BookFrame>
   );
 }
