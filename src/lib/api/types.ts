@@ -42,6 +42,8 @@ export type WorkshopJob = {
   /** The job's planned length in minutes: given when made (an online booking's
    * services' total), else its times'; null when it has neither. */
   plannedMinutes: number | null;
+  // Whole pounds the whole bill may come to, or null to ask first (Workshop day 41).
+  spendLimit: number | null;
   /** Where a bike in the shop is kept (storage slots); null when none. */
   storageSlotId: number | null;
   storageSlotName: string | null;
@@ -55,7 +57,8 @@ export type WorkshopJob = {
   cancelledAt?: string | null;
   cancellationSeenAt?: string | null;
   /** The job's current quote (its latest revision), or null (journey 4). */
-  quote?: { id: number; state: string; revision: number } | null;
+  // When it was sent, and when its one reminder went while it still waits ("No answer yet").
+  quote?: { id: number; state: string; revision: number; sentAt?: string | null; reminderSentAt?: string | null } | null;
   /** Each day the job is worked, in order; part 1 is the job's own date (migration 037). */
   parts?: JobPart[];
   /** What the customer wrote when booking online, if anything. */
@@ -77,7 +80,7 @@ export type WorkshopJob = {
  * `reused_key`: a booking's request key was sent again with different details. */
 export type ApiErrorBody = {
   error: string;
-  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key' | 'settle_first';
+  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key' | 'settle_first' | 'pair';
 };
 
 /** WP-0.2, added to the online booking's body (POST /api/portal/:shopSlug/bookings).

@@ -93,7 +93,8 @@ miss.
 
 - **Updates are by hand for now.** Mark is adding automatic updates after
   every finished change next. Until then, running `scripts/hosting/setup.sh`
-  again picks up the latest version (it keeps your sign-up code).
+  again picks up the latest version (it keeps your sign-up code). See
+  "Updating it, checking it, and undoing a bad update" below.
 - **Photos and attachments disappear** when the copy is updated.
 - **To stop paying,** delete the server (`wheelhouse-test`) and the database
   (`wheelhouse-test-db`) in DigitalOcean. That deletes everything on them.
@@ -101,6 +102,206 @@ miss.
 - **Your token** expires after 30 days. It can be deleted in DigitalOcean
   (API) once setup is done; to run the script again later, make a new one and
   run `doctl auth init` again.
+
+## Updating it, checking it, and undoing a bad update
+
+This part is the way back (design Decision 8). Mark normally does it, but
+it's written so you can follow it too. Where something hasn't been tried
+on the real copy yet, it says so, and anything not known yet is in
+brackets like `[n]`.
+
+**How it works today:** updates are by hand (re-running the setup script).
+The automatic update after every merge (task 3.4) isn't built yet. When it
+is, this section changes: it will keep the previous version ready to start
+again, write down the time before each update, and show the running commit
+in the health check. Until then, the steps below do those things by hand.
+
+### Getting onto the server
+
+Some steps run on the server itself. Your web address has the server's
+address in it: `https://1-2-3-4.sslip.io` means the server is `1.2.3.4`.
+In Terminal, on your Mac:
+
+```
+ssh root@1.2.3.4
+```
+
+(Use your own numbers.) When you're done on the server, type `exit`.
+
+### A. Updating to the latest version
+
+1. **Write down the time and the version that's running now.** On the
+   server:
+
+   ```
+   date -u
+   git -C /opt/wheelhouse/app rev-parse HEAD
+   ```
+
+   The first line is the time in UTC (what DigitalOcean uses, so there's
+   no summer-time confusion). The second is a long code of 40 letters and
+   numbers (the commit). Keep both. If the update
+   goes wrong, this is the moment the database goes back to and the
+   version that comes back.
+2. On your Mac, in the Wheelhouse folder, run the setup script again:
+
+   ```
+   git checkout main
+   git pull
+   scripts/hosting/setup.sh
+   ```
+
+   If `git checkout` or `git pull` complains, stop and tell Mark. If your
+   DigitalOcean token has expired or been deleted, the script stops and
+   says so: make a new one (step 2 near the top) and run `doctl auth init`
+   first. Type `yes` when it asks. It reuses everything that exists, fetches the latest `main` onto the
+   server, rebuilds the app and restarts it. The copy is down for a
+   moment while the new version starts. It ends with "All done" and the
+   web address. Any database changes in the new version are made as it
+   starts, before it answers. If it stops with an error instead, copy the
+   message to Mark, and don't try C or D on your own.
+3. Do the checks in B.
+
+### B. Checking it's right
+
+1. **It answers.** Open `https://<your web address>/healthz`. It should
+   show `{"status":"ok"}`. `"status":"error"` means the app can't reach
+   its database; a blank or "502" error page means the app isn't running
+   at all. Either way, tell Mark.
+2. **It's the version you expect.** On the server:
+
+   ```
+   git -C /opt/wheelhouse/app rev-parse HEAD
+   ```
+
+   It should match the latest commit on `main` on GitHub (GitHub shows
+   the first 7 characters). This shows the code the server fetched, so it
+   only counts once the setup script ended with "All done". (The health
+   check will show this itself once the automatic update passes it in.)
+3. **It knows it's a test copy.** On the server:
+
+   ```
+   cd /opt/wheelhouse
+   grep '^WHEELHOUSE_HOSTED_COPY=' .env
+   docker compose exec app printenv WHEELHOUSE_HOSTED_COPY
+   ```
+
+   Both lines must say `1` (the first prints
+   `WHEELHOUSE_HOSTED_COPY=1`, the second just `1`). This setting is what
+   makes the app refuse real texting and email keys and refuse to connect
+   Shopify. If either is missing or different, don't use the copy: tell
+   Mark. Running the setup script again writes it back.
+4. **No real keys.** Still on the server:
+
+   ```
+   grep -E '^(TWILIO_|EMAIL_|WHATSAPP_)' .env
+   ```
+
+   This should print nothing. (The app wouldn't start with one of these
+   anyway: it refuses, naming the setting.)
+
+### C. Undoing a bad update that didn't change the database
+
+Use this when an update broke something and it added no database change.
+To tell, on your Mac in the Wheelhouse folder (with the two long codes:
+the one from A step 1, then the bad one):
+
+```
+git diff --stat <old code> <bad code> -- server/migrations/
+```
+
+If it prints nothing, use C. If it lists a file, use D. Nothing made on
+the copy is lost, except photos and attachments, which go whenever the
+app is rebuilt (they aren't kept on the test copy yet).
+
+1. Find the version to go back to: the long code you wrote down in A
+   step 1, or the full commit before the bad one on GitHub. It must be
+   the whole 40-character code, not the short one.
+2. On the server, put that version back and rebuild it (replace
+   `<code>` with your code, both times):
+
+   ```
+   cd /opt/wheelhouse
+   git -C app fetch --quiet --depth 1 origin <code>
+   git -C app checkout --quiet --force <code>
+   docker compose up -d --build
+   ```
+
+   The rebuild takes several minutes, as in the first setup: the setup
+   script doesn't keep the previous version's image, so it's built again.
+   (The fetch is needed because the server keeps only the latest version
+   of the code.)
+3. Do the checks in B. In step 2 the code should be the one you went
+   back to, not the latest `main`.
+4. **Don't run the setup script again** until the fix is merged: it
+   always puts the latest `main` back.
+
+Time it took on the hosted copy: `[n]` minutes (not tried yet).
+
+### D. Undoing a bad update that changed the database
+
+Use this when the bad update added a database change (a new file in
+`server/migrations/`). The old version may not work with the changed
+database, so the database goes back too, to the moment written down in A
+step 1. **Anything made on the copy after that moment is lost.** Do the
+steps in this order:
+
+1. **Stop the bad version**, so its database change can't run again. On
+   the server:
+
+   ```
+   cd /opt/wheelhouse
+   docker compose stop app
+   ```
+
+   The web address shows an error page until step 4.
+2. **Restore the database to the moment before the update.** DigitalOcean
+   restores into a *new* database with a new address; the old one is left
+   as it is. In DigitalOcean, open **Databases → wheelhouse-test-db** and
+   restore it to the UTC date and time from A step 1. The exact menu and the new
+   database's name are `[to confirm on the first practice run]`: that
+   point-in-time restore is offered on this plan is still to be checked
+   (task 3.3). It takes `[n]` minutes.
+3. **Point the app at the restored database.**
+   1. Let the server reach it: in the new database's settings, add the
+      server `wheelhouse-test` to its trusted sources, as setup did for
+      the first one.
+   2. On the server, open the settings file with
+      `nano /opt/wheelhouse/.env` and change the database
+      address in the `DATABASE_URL` line (the part between `@` and
+      `:25060`) to the new database's host. Keep port **25060** (the
+      direct connection, never 25061). Save with Ctrl-O, Enter, then
+      Ctrl-X. Whether the app's login (`epos_app`) keeps the same
+      password in the restored database is
+      `[to confirm on the first practice run]`. If it doesn't, ask Mark to
+      write that line: the password has to be written in a special form
+      there.
+   3. Whether the new database has a different certificate is
+      `[to confirm on the first practice run]`. If it does, replace the
+      server's copy. On your Mac, in the Wheelhouse folder (with the new
+      database's id from DigitalOcean, and the server's address):
+
+      ```
+      doctl databases certificate get-ca <new database id> -o json | jq -r '(if type == "array" then .[] else . end) | .certificate' | base64 --decode > /tmp/ca.crt
+      scp /tmp/ca.crt root@1.2.3.4:/opt/wheelhouse/ca.crt
+      ```
+4. **Start the previous version** on the server, exactly as C step 2,
+   using the code written down in A step 1. Then do the checks in B. The
+   health check showing `ok` means the app reaches the database it's
+   set to. To be sure it's the restored one, open the copy and check that
+   something you made after the moment in A step 1 is gone.
+5. **Tell Jack** (or, if you're Jack, tell Mark) that anything made on the
+   copy after the moment in A step 1 is gone, and photos and attachments
+   with it.
+
+Afterwards:
+- **Don't run the setup script again** yet. It looks for the database by
+  its old name, so it would point the app back at the old, broken one.
+  Mark changes it to use the new database first (not written yet).
+- The old database keeps costing money until it's deleted. Deleting it is
+  your decision, and only once the restored one is working.
+
+Time it took on the hosted copy: `[n]` minutes (not tried yet).
 
 ## For Mark: what the script does, and where
 

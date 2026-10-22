@@ -148,8 +148,9 @@ failed migration never gives a healthy `/healthz`. We run one copy of the
 app, so the advisory lock never has to wait on another one.
 
 **The commit it runs.** The workflow passes the commit in as
-`WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, and
-leaves `commit` out when the setting is unset.
+`WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, on
+the 503 when the database is down as well as on the 200, and leaves `commit`
+out when the setting is unset.
 
 **Old code against a new schema.** A rollback starts the previous image
 against a database the new version may already have migrated, so the old
