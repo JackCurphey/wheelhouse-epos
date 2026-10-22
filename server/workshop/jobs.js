@@ -74,6 +74,8 @@ export function serializeWorkshopJob(row) {
     // notes they were also copied into - the review pop-up shows them alone.
     customerDescription: row.customer_description ?? null,
     customerBikeNote: row.customer_bike_note ?? null,
+    // Whole pounds the whole bill may come to, or null to ask first (Workshop day 41).
+    spendLimit: row.spend_limit ?? null,
     // Piece 12: the customer's change request while it waits, and who
     // cancelled (a customer's shows in "Waiting for you" until seen).
     requested: requestedOf(row),
@@ -359,7 +361,7 @@ export async function syncJobHold(jobId) {
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
 // race, which is not the same thing as being wrong.
-export async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash, onlineUnseen = false }) {
+export async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, spendLimit, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash, onlineUnseen = false }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -378,15 +380,15 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
     }
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, booked_in_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, CASE WHEN ? = 'in_shop' THEN now() END, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, spend_limit, question_answers, booking_request_key_hash, booking_request_body_hash, online_unseen, booked_in_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, CASE WHEN ? = 'in_shop' THEN now() END, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
         termsText,
-        linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
+        linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null, spendLimit ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         bookingRequestKeyHash ?? null, bookingRequestBodyHash ?? null,
         onlineUnseen ? 1 : 0,
