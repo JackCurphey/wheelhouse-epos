@@ -104,7 +104,8 @@ test('a quote line carries Needed or Optional and a reason for the customer', as
 test("every read of a job carries its current quote's state", async () => {
   const { job, quote } = await jobWithQuote();
   const read = (await staff(`/api/workshop-jobs/${job.id}`)).body;
-  assert.deepEqual(read.quote, { id: quote.id, state: 'draft', revision: 1 });
+  // A draft hasn't been sent, so it has no sent or reminder time (quote-no-answer).
+  assert.deepEqual(read.quote, { id: quote.id, state: 'draft', revision: 1, sentAt: null, reminderSentAt: null });
   const list = (await staff(`/api/workshop-jobs?start=${job.jobDate}&end=${job.jobDate}`)).body;
   assert.equal(list.find((j) => j.id === job.id).quote.state, 'draft');
 });
