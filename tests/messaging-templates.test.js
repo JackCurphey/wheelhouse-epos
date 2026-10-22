@@ -20,8 +20,8 @@ test('the approved booking wording and the first live messages', () => {
   assert.equal(TEMPLATES.bike_ready.name, 'Bike ready');
   // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct
   // the customer's side: Request received and Booking cancelled.
-  // Work added within your limit and Quote reminder joined 22 Oct (openspec/changes/spend-limit-within, quote-reminder).
-  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled']);
+  // Work added within your limit, Quote reminder and Your answers joined 22 Oct (openspec/changes/spend-limit-within, quote-reminder, your-answers-message).
+  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled']);
   assert.deepEqual(Object.keys(TEMPLATES).filter((k) => TEMPLATES[k].group === 'booking'),
     ['request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled']);
 });

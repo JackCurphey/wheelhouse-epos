@@ -1293,13 +1293,42 @@ export function register(route) {
   // Record their answer (journey 4 decision 4): staff, after a phone call or a
   // chat in the shop. Who took it and when are recorded with each line.
   // screens: approved
-  route('POST', '/api/quotes/:id/answer', async (req, res, params) => {
+  route('POST', '/api/quotes/:id/answer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     const body = await readJsonBody(req);
     if (!['phone', 'in_shop'].includes(body.via)) return badRequest(res, "via must be 'phone' or 'in_shop'");
-    sendQuoteResult(res, await answerAndAddToOrder({
+    const result = await answerAndAddToOrder({
       quoteId: Number(params.id), decisions: body.decisions, via: body.via, loginId: ctx?.login?.id ?? null,
-    }));
+    });
+    // An answer from a call: the customer is sent what was agreed, at once
+    // (dq-record-answer; Jack, 22 Oct). In the shop they were there. A fault
+    // here is logged; the answer is saved either way.
+    if (result.ok && body.via === 'phone') {
+      try {
+        const jobId = result.quote.workshop_job_id;
+        // A customer who gets nothing keeps the link they have (fresh review),
+        // as Bike ready does: checked before a link is issued.
+        const owner = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(jobId);
+        if (!owner?.customer_id || (await whyNotQueued('your_answers', owner.customer_id))) return sendQuoteResult(res, result);
+        const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+        const { customerId, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+        const lines = await db.prepare('SELECT description, decision FROM workshop_quote_lines WHERE workshop_quote_id = ? ORDER BY id').all(result.quote.id);
+        const { total } = await db.prepare(
+          "SELECT sum(quantity * unit_amount) AS total FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved'"
+        ).get(result.quote.id);
+        const list = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]);
+        const yes = lines.filter((l) => l.decision === 'approved').map((l) => l.description);
+        const no = lines.filter((l) => l.decision === 'declined').map((l) => l.description);
+        vars['What was agreed'] = [
+          yes.length ? `Going ahead: ${list(yes)}, £${Number(total).toFixed(2)}.` : 'Going ahead: just the booked work.',
+          no.length ? `No thanks: ${list(no)}.` : null,
+        ].filter(Boolean).join(' ');
+        if (customerId) await queueMessage({ customerId, jobId, key: 'your_answers', vars, loginId: ctx?.login?.id ?? null });
+      } catch (err) {
+        console.error(`Quote ${result.quote.id}'s Your answers message couldn't be queued`, err);
+      }
+    }
+    sendQuoteResult(res, result);
   });
 
   // ---------- Deleting a job, and its attachments ----------
