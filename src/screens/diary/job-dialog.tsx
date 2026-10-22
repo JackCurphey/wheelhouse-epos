@@ -14,6 +14,7 @@ import { JobFiles } from './job-files.tsx';
 import { JobMessagesButton, jobMessagesKey } from './job-messages.tsx';
 import { printBikeTag } from './bike-tag.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
+import { JobChecklistBar } from './job-checklist.tsx';
 import { channelWord } from './channel-word.ts';
 
 /**
@@ -438,6 +439,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                         <span role="status" className="text-[13px] text-[var(--wh-muted)]">{notesNote}</span>
                       </div>
                     )}
+                    {/* The service's checklist, under the notes as drawn (job-mechanic). */}
+                    <JobChecklistBar job={job} />
                   </section>
                   <JobFiles jobId={job.id} />
                 </div>

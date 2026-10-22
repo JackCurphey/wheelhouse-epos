@@ -31,7 +31,9 @@ afterEach(async () => {
 // Settings' rooms (WP-1.3): each test opens the room its setting is in, and
 // the fold if it isn't the room's first.
 const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'Office' };
-async function openSettings({ me = OWNER, room = 'workshop', open = null } = {}) {
+// Checklists comes first in Settings › Workshop (Jack, 22 Oct), so the booking
+// settings these tests are about are opened, not found open.
+async function openSettings({ me = OWNER, room = 'workshop', open = room === 'workshop' && me.isOwner ? 'Online booking' : null } = {}) {
   calls = [];
   settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
   refuseHours = null;
@@ -83,6 +85,8 @@ async function openSettings({ me = OWNER, room = 'workshop', open = null } = {})
   if (open) {
     const button = ui.getByRole('button', { name: new RegExp(`^${open}`) });
     if (button.getAttribute('aria-expanded') !== 'true') rtl.fireEvent.click(button);
+    // Opening a fold reads the settings again; tests change them only once it has.
+    await rtl.waitFor(() => assert.equal(shell.queryClient.isFetching(), 0));
   }
   return { ...rtl, ui };
 }
