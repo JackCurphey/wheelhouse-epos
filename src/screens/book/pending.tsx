@@ -7,7 +7,7 @@ import { ApiError, apiMutate } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
-import { NotesCard } from './notes-card.tsx';
+import { NotesCard, goToNoteBox } from './notes-card.tsx';
 import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
@@ -305,7 +305,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           </>
         ))}
         {/* The quote, while there's one to answer: only before the work is done. */}
-        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} hideAnswered={work.length > 0} />}
+        {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} hideAnswered={work.length > 0} onAddNote={goToNoteBox} />}
         {/* Notes with the shop while the bike is in, as drawn (ac-job-note). */}
         {inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
@@ -314,6 +314,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             {lines(work)}
             {/* The sum of its own lines, as drawn; only when every line has its figure. */}
             {work.every((l) => l.price !== null) ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-[15px] font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(work.reduce((n, l) => n + (l.price ?? 0), 0))}</span></p> : null}
+            {/* As drawn (agreed() in quote.mjs): to the notes card's box. */}
+            <Button className="min-h-11 self-start" onClick={goToNoteBox}>Add a note for the shop</Button>
           </>
         ))}
         {!inShop && work.length > 0 && card('What we did', 'did-title', (

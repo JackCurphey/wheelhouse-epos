@@ -1463,6 +1463,20 @@ The drawings show where slots appear but not these rules. *Decided:*
    "Wheelhouse couldn’t load this conversation." with Try again, and offers
    no reply box.
 
+### 22 Oct 2026: "Add a note for the shop" from the quote (`openspec/changes/quote-note-button`)
+
+1. **The button goes to the Notes with the shop box on the same page, cursor
+   in it** (dq-quote, dq-in-shop). The mock-up sends it to the job's page
+   with its note box (ac-job-note); since #422 that box is a card on the
+   booking page itself, so the button moves to it rather than opening
+   anything new. With notes already there, the box is "Reply".
+2. **No button where the page has no notes card.** Before the bike is in,
+   the quote card says "Not sure? Call [shop phone]." as before: a button
+   that went nowhere would be a dead end. Pattern: the notes card's own
+   stages (notes-card, item 1).
+3. **The Ready to collect card's button (collect.mjs) isn't in this piece**;
+   the notes card is already under it on that page.
+
 ### 22 Oct 2026: "No answer yet" after the quote reminder (`openspec/changes/quote-no-answer`)
 
 1. **Today isn't built yet, so its line waits for it.** When Today (WP-1.10)

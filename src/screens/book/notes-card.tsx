@@ -18,6 +18,20 @@ type Note = { id: number; fromCustomer: boolean; from: string | null; text: stri
 const part = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', ...o }).format(new Date(iso));
 const when = (iso: string) => `${part(iso, { weekday: 'short' })} ${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' })}, ${part(iso, { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 
+const BOX_ID = 'job-note';
+
+/**
+ * "Add a note for the shop" on the quote and Work agreed cards (quote.mjs; the
+ * mock-up sends it to the note box, ac-job-note): to the box, cursor in it, or
+ * to the card's heading while the card is loading or couldn't load.
+ */
+export function goToNoteBox() {
+  const box = document.getElementById(BOX_ID);
+  const to = box ?? document.getElementById('notes-heading');
+  to?.scrollIntoView?.({ block: 'center' });
+  box?.focus({ preventScroll: true });
+}
+
 export function NotesCard({ shopSlug, code, shopName }: { shopSlug: string; code: string; shopName: string }) {
   const queryClient = useQueryClient();
   const key = ['booking-notes', shopSlug, code];
@@ -41,7 +55,7 @@ export function NotesCard({ shopSlug, code, shopName }: { shopSlug: string; code
   const list = notes.data;
   const waiting = list.length > 0 && list[list.length - 1].fromCustomer;
   const first = list.length === 0;
-  const boxId = 'job-note';
+  const boxId = BOX_ID;
 
   async function send() {
     const words = text.trim();
