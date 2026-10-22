@@ -70,6 +70,7 @@ Starts at `draft`. Rests at `superseded`, `expired`, `withdrawn`.
 | From | Event | To |
 |---|---|---|
 | `draft` | `send` | `sent` |
+| `draft` | `within_limit` | `approved` |
 | `sent` | `approve_all` | `approved` |
 | `sent` | `approve_some` | `partly_approved` |
 | `sent` | `decline_all` | `declined` |

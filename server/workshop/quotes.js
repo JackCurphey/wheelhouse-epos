@@ -15,6 +15,11 @@ import { prepare, dbExec } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { sniffImage } from '../booking-photos.js';
 import { quote as quoteMachine, canApprove } from './state-machines.js';
+import { undoWaiting } from '../messaging/engine.js';
+
+// A quote answered, withdrawn or replaced needs no reminder: one still
+// waiting stops (Jack, 22 Oct; openspec/changes/quote-reminder).
+const stopReminder = (jobId) => undoWaiting(jobId, 'quote_reminder');
 
 const WITHOUT_MAX = 300;
 const withoutText = (w) => (typeof w === 'string' ? w.trim() || null : null);
@@ -154,6 +159,7 @@ async function createRevisionInTransaction({ jobId, lines }) {
   if (current) {
     await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?')
       .run(quoteMachine.next(current.state, 'revise'), current.id);
+    await stopReminder(jobId);
   }
 
   const revision = current ? current.revision + 1 : 1;
@@ -188,6 +194,7 @@ export async function withdraw({ quoteId }) {
     return { ok: false, code: 'illegal', message: `a quote that is ${row.state} cannot be withdrawn` };
   }
   await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?').run(quoteMachine.next(row.state, 'withdraw'), quoteId);
+  await stopReminder(row.workshop_job_id);
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
 }
 
@@ -235,6 +242,7 @@ export async function answerAll({ quoteId, jobId = null, decisions, via, loginId
   const approved = lines.filter((l) => given.get(l.id) === 'approved').length;
   const event = approved === lines.length ? 'approve_all' : approved === 0 ? 'decline_all' : 'approve_some';
   await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?').run(quoteMachine.next(row.state, event), quoteId);
+  await stopReminder(row.workshop_job_id);
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
 }
 
@@ -377,6 +385,7 @@ export async function approve({ quoteId, linkRevision, customerId }) {
   const event = approved === lines.length ? 'approve_all' : approved === 0 ? 'decline_all' : 'approve_some';
   await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?')
     .run(quoteMachine.next(row.state, event), quoteId);
+  await stopReminder(row.workshop_job_id);
 
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
 }

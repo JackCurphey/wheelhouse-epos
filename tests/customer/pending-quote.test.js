@@ -303,3 +303,36 @@ test('a newer quote with nothing booked and no total has no empty Already agreed
   await ui.findByText('The quote has changed');
   assert.equal(has(ui.queryByText('Already agreed')), false);
 });
+
+// Work added within the customer's limit (Workshop day 41-43; dq-within-limit).
+const WITHIN = (over = {}) => ({ ...QUOTE('approved', LINES.map((l) => ({ ...l, decision: 'approved', decidedVia: 'limit' }))),
+  totals: { all: 58, approved: 58, pending: 0, declined: 0 }, spendLimit: 200, ...over });
+
+test('work added within the limit says so, what it was and what it cost, with the shop’s phone', async () => {
+  const { ui } = await open(WITHIN());
+  assert.ok(has(await ui.findByText('Work added')));
+  assert.ok(has(ui.queryByRole('heading', { name: 'We added some work, within your limit' })));
+  assert.ok(has(ui.queryByText('Shimano brake pads, Fit and adjust brakes and Replace gear cable, £58.00 — within your £200 limit, so we’ve gone ahead. Nothing to pay today.')));
+  assert.ok(has(ui.queryByText(/^Not what you wanted\? Call/)));
+  assert.equal(quotePhone(ui), 'tel:[shop phone]');
+  assert.equal(has(ui.queryByText('Answered')), false);
+});
+
+test('with the switch on, the mechanic added the work', async () => {
+  const { ui } = await open(WITHIN({ mechanicName: 'Alex Morgan' }));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Alex added some work, within your limit' })));
+});
+
+// The quote reminder (dq-quote-reminded): once it has gone, the sent line says when.
+test('after the reminder, the sent line says when it went', async () => {
+  const { ui } = await open({ ...QUOTE('sent'), reminderSentAt: '2026-10-06T10:15:00Z' });
+  const at = new Date('2026-10-06T10:15:00Z');
+  const hhmm = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+  assert.ok(has(await ui.findByText(new RegExp(`^Sent .+ · we sent a reminder at ${hhmm}$`))));
+});
+
+test('before any reminder, the sent line is as it was', async () => {
+  const { ui } = await open({ ...QUOTE('sent'), reminderSentAt: null });
+  await ui.findByText('Waiting for your answer');
+  assert.equal(has(ui.queryByText(/we sent a reminder/)), false);
+});

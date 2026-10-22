@@ -163,3 +163,24 @@ test('with no messages there is no empty list, and the button asks for up to 200
   assert.equal(has(pop.queryByRole('list', { name: 'Messages with Maya Patel' })), false);
   assert.ok(calls.some((c) => c.url.includes('/api/messages?jobId=1&limit=200')));
 });
+
+// The quote reminder (Jack, 22 Oct; fresh review): it waits up to a week, and
+// one stopped because the quote was answered isn't news.
+test('a message waiting past today says which day it goes', async () => {
+  const later = new Date(Date.now() + 26 * 3600_000).toISOString();
+  const { pop } = await openMessages([msg({ id: 3, key: 'quote_reminder', name: 'Quote reminder', state: 'intended', sendAfter: later, sentAt: null, pretend: false })]);
+  const [only] = await items(pop);
+  const london = (o) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', ...o }).format(new Date(later));
+  const day = `${london({ weekday: 'short' })} ${london({ day: 'numeric' })} ${london({ month: 'short' })}`;
+  assert.ok(only.textContent.endsWith(`goes ${day}, ${london({ hour: '2-digit', minute: '2-digit', hour12: false })}`), only.textContent);
+});
+
+test('a quote reminder stopped because the quote moved on isn’t listed', async () => {
+  const { pop } = await openMessages([
+    msg({ id: 3, key: 'quote_reminder', name: 'Quote reminder', state: 'undone', sentAt: null, pretend: false }),
+    msg({ id: 1, key: 'quote_to_approve', name: 'Quote to approve', body: QUOTE }),
+  ]);
+  const list = await items(pop);
+  assert.equal(list.length, 1);
+  assert.match(list[0].textContent, /^Quote to approve/);
+});
