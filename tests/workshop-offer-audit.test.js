@@ -50,11 +50,10 @@ const act = async (id, action, body = {}) => staff(`/api/workshop-jobs/${id}/${a
 const acceptOffer = (code, body = {}) => jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${code}/accept-offer`, { method: 'POST', body });
 const shopId = () => owner.shop.id;
 
-// The offer race (audit P2 finding 2): the customer accepts what their page
-// shows. The accept carries no date or time today, so the shop can't tell an
-// accept of a time the customer never saw; the request's shape here (the date
-// and time shown) is the audit's suggested fix, not yet decided.
-test('accepting after staff offered a different time is refused, and the new offer still waits', { skip: 'Real bug, audit finding 2 (#315): accept-offer confirms whatever is offered now, so it answers 200 and confirms the time the customer never saw. Unskip once accept-offer checks what the customer saw (the request shape is for Mark or Jack to decide).' }, async () => {
+// The offer race (audit P2 finding 2; Jack, 22 Oct, built in #396): the
+// customer's accept carries the date and time their page shows, and is refused
+// if the shop has offered a different one since.
+test('accepting after staff offered a different time is refused, and the new offer still waits', async () => {
   const booked = await book(nextDay(), '10:00');
   const first = nextDay();
   assert.equal((await act(booked.id, 'offer', { jobDate: first, startTime: '12:00', mechanicId: alex })).status, 200);
@@ -70,20 +69,20 @@ test('accepting after staff offered a different time is refused, and the new off
   assert.equal(row.job_date, second);
 });
 
-test('accepting after staff moved the offered booking is refused, and it still waits', { skip: 'Real bug, audit finding 2 (#315): the job save moves an offered booking, and accept-offer then confirms the moved time the customer never saw (200). Whether the job save may move an offered booking is also undecided.' }, async () => {
+test('staff can’t move an offered booking by saving the job, so an accept can only ever confirm the time shown', async () => {
   const booked = await book(nextDay(), '10:00');
   assert.equal((await act(booked.id, 'offer', { jobDate: nextDay(), startTime: '12:00', mechanicId: alex })).status, 200);
   const seen = (await link.read(booked.code)).body;
   // As the diary's drag saves it: everything but the status (the save refuses one).
   const { status, ...job } = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
-  const moved = nextDay();
-  const saved = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { ...job, jobDate: moved } });
-  assert.equal(saved.status, 200, JSON.stringify(saved.body));
-  assert.equal((await jobRow(shopId(), booked.id)).job_date, moved, 'the save moved it');
+  const saved = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { ...job, jobDate: nextDay() } });
+  assert.equal(saved.status, 409, JSON.stringify(saved.body));
+  assert.equal(saved.body.code, 'illegal');
+  const row = await jobRow(shopId(), booked.id);
+  assert.equal(row.job_date, seen.jobDate, 'the save did not move it');
+  assert.equal(row.booking_state, 'offered');
   const res = await acceptOffer(booked.code, { jobDate: seen.jobDate, startTime: seen.startTime });
-  assert.equal(res.status, 409, JSON.stringify(res.body));
-  assert.equal(res.body.code, 'stale');
-  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'offered');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
 });
 
 // Only a request still waiting (pending or offered) can be offered a time.
