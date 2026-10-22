@@ -1202,3 +1202,10 @@ The drawings show where slots appear but not these rules. *Decided:*
    beside Notes in the wider column, then Work and parts across the full
    width below. The built page had drifted from it (Work and parts in the
    right column); it now matches the drawing.
+
+### 22 Oct 2026: the checklist on the customer's booking page (customer-checklist)
+
+1. **When.** *Decided:* once the work is finished (the ready and collected
+   pages, where it's drawn); not while it's under way.
+2. **Its title.** Drawn as "Full service checklist". *Decided:* the
+   checklist's own name, as on the job page (the template's is that).

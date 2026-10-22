@@ -231,3 +231,40 @@ test('nothing left to pay says so, whether or not prices show', async () => {
   const { booked } = await readyJob();
   assert.equal((await link.read(booked.code)).body.nothingToPay, false);
 });
+
+// The checklist on the customer's page (cp-summary's "Full service checklist";
+// Workshop day 21; audit M1, Jack 30 Sep; the checklist, Jack 22 Oct): once
+// the work is finished, each item ticked or not, with what the mechanic found.
+test('once the work is finished the link carries the job’s checklist; before then, none', async () => {
+  const made = await staff('/api/workshop-checklists', { method: 'POST', body: { template: true } });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  try {
+    assert.equal((await staff(`/api/workshop-checklists/${made.body.id}`, { method: 'PUT', body: { serviceIds: [types.service] } })).status, 200);
+    const booked = await book();
+    await act(booked.id, 'book-in');
+    await act(booked.id, 'start');
+    for (let i = 0; i < 8; i += 1) {
+      assert.equal((await staff(`/api/workshop-jobs/${booked.id}/checklist/items/${i}`, { method: 'PUT', body: { done: true } })).status, 200);
+    }
+    await staff(`/api/workshop-jobs/${booked.id}/checklist/items/3`, { method: 'PUT', body: { note: 'The rear pads are worn.' } });
+    assert.equal((await link.read(booked.code)).body.checklist, null, 'not while the work is being done');
+    const v = (await staff(`/api/workshop-jobs/${booked.id}`)).body.version;
+    assert.equal((await staff(`/api/workshop-jobs/${booked.id}/finish`, { method: 'POST', body: { version: v, signedOffBy: sam } })).status, 200);
+    const { checklist } = (await link.read(booked.code)).body;
+    assert.equal(checklist.name, 'Full service checklist');
+    assert.equal(checklist.items.length, 10);
+    assert.deepEqual(checklist.items[3], { name: 'Brakes bled & adjusted', done: true, note: 'The rear pads are worn.' });
+    assert.deepEqual(checklist.items[9], { name: 'Bolts torqued', done: false, note: null });
+  } finally {
+    await staff(`/api/workshop-checklists/${made.body.id}`, { method: 'DELETE' });
+  }
+});
+
+test('a finished job with no checklist has none on its link', async () => {
+  const booked = await book();
+  await act(booked.id, 'book-in');
+  await act(booked.id, 'start');
+  const v = (await staff(`/api/workshop-jobs/${booked.id}`)).body.version;
+  await staff(`/api/workshop-jobs/${booked.id}/finish`, { method: 'POST', body: { version: v, signedOffBy: sam } });
+  assert.equal((await link.read(booked.code)).body.checklist, null);
+});
