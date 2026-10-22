@@ -116,7 +116,18 @@ async function bringForward(jobId) {
     "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE (job_id = ? OR job_id IS NULL) AND template_key = 'quote_reminder' AND intent_state = 'intended'"
   ).run(jobId));
 }
-const settle = () => new Promise((r) => setTimeout(r, 800));
+// Until the sender's tick has dealt with every due reminder (no longer
+// waiting), up to 10 seconds, so a busy machine doesn't decide the result.
+async function settle() {
+  for (let i = 0; i < 100; i++) {
+    const waiting = await runWithShop(owner.shop.id, () => prepare(
+      "SELECT count(*)::int AS n FROM customer_messages WHERE template_key = 'quote_reminder' AND intent_state IN ('intended', 'sending') AND send_after <= now()"
+    ).get());
+    if (waiting.n === 0) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('the sender never dealt with the due reminders');
+}
 
 test('a deleted job’s reminder never goes', async () => {
   const { job } = await sentQuote();
