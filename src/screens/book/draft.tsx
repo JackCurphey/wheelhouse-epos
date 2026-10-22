@@ -28,6 +28,10 @@ export type BookingDraft = {
   // Photos were added in this tab. They live in memory only, so after a
   // refresh the problem screen says they were cleared (d3).
   hadPhotos?: boolean;
+  // The spending limit (Workshop day 41): Go ahead chosen, and the amount
+  // box as typed (whole pounds; £200 when untouched). Absent: ask first.
+  limitOn?: true;
+  limitText?: string;
   // The date screen (d4): the day, and always a real mechanic. A drop-off
   // day stores no startTime. anyMechanic (drop-off only, Jack, 26 Sep,
   // .superpowers/sdd/d4-followups/brief.md) records that the customer chose

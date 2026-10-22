@@ -57,6 +57,7 @@ function stubServer() {
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
+    if (method === 'POST' && !refuse && u.pathname === '/api/quotes/9/within-limit') return reply(200, { quote: { ...QUOTE, state: 'approved' }, message: { status: 'sent', channel: 'sms' } });
     if (method === 'POST' && u.pathname === '/api/quotes/9/send') return reply(200, sendAnswer ?? { quote: { ...QUOTE, state: 'sent' }, message: { status: 'sent' }, link: 'http://localhost/book/north-street/booking/abc' });
     if (method === 'POST' && refuse) return reply(409, { error: refuse, code: 'illegal' });
     if (method === 'DELETE') return reply(200, { ok: true });
@@ -327,4 +328,74 @@ test('after a quote is declined, Add to quote starts a new quote with just the n
   fireEvent.change(dlg.getByLabelText('Search products or services, or scan a barcode'), { target: { value: 'brake' } });
   fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
   await waitFor(() => assert.deepEqual(posts(), ['/api/workshop-jobs/1/quotes {"lines":[{"kind":"part","description":"Brake pads (pair)","productId":40,"quantity":1,"unitAmount":18,"need":"needed","reason":""}]}']));
+});
+
+// The customer's spending limit, as a tag on the job (Workshop day 42; job-page.mjs SPEND_LIMIT).
+test('the job shows the customer’s spending limit, or that they want asking first', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 200 } });
+  assert.ok(has(await dlg.findByText('Customer OK up to £200')));
+  assert.equal(has(dlg.queryByText('Ask before any extra work')), false);
+});
+
+test('a job with no limit says to ask before any extra work', async () => {
+  const { dlg } = await openJob();
+  assert.ok(has(await dlg.findByText('Ask before any extra work')));
+});
+
+test('a large limit reads with a thousands comma', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 100000 } });
+  assert.ok(has(await dlg.findByText('Customer OK up to £100,000')));
+});
+
+// Work within the customer's spending limit (Workshop day 41-43; dq-job-within).
+const withinQuote = (wholeBill) => ({ ...quote('draft', [line({}), line({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 28, lineTotal: 28 })]), limit: { spendLimit: 200, wholeBill } });
+
+test('within the customer’s limit, the quote isn’t sent: Save and tell them, with a minute to Undo', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
+  assert.ok(has(await dlg.findByText('Within Maya’s £200 limit — no quote needed. Maya will be told what was added.')));
+  assert.ok(dlg.queryByRole('button', { name: 'Send quote' }) === null);
+  fireEvent.click(dlg.getByRole('button', { name: 'Save and tell Maya' }));
+  assert.ok(has(await dlg.findByText('Adding the work and telling Maya by text in 1 minute.')));
+  await waitFor(() => assert.deepEqual(posts(), ['/api/quotes/9/within-limit {}']));
+  assert.ok(has(await dlg.findByText('Added, and Maya was told by text.')));
+});
+
+test('Undo stops Save and tell before anything is added', async () => {
+  const { dlg, fireEvent } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
+  window.WH_QUOTE_SEND_DELAY_MS = 400;
+  fireEvent.click(await dlg.findByRole('button', { name: 'Save and tell Maya' }));
+  fireEvent.click(await dlg.findByRole('button', { name: 'Undo' }));
+  await new Promise((r) => setTimeout(r, 500));
+  assert.deepEqual(posts(), []);
+});
+
+test('over the customer’s limit, the quote goes to them as usual', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(250) });
+  assert.ok(has(await dlg.findByRole('button', { name: 'Send quote' })));
+  assert.ok(dlg.queryByRole('button', { name: 'Save and tell Maya' }) === null);
+  assert.ok(has(dlg.queryByText('Quotes are sent when the customer asked to be called first, or the total is over their limit.')));
+});
+
+// From the fresh review.
+test('a refused Save and tell reads the quote again, so the panel can offer Send quote', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
+  const reads = () => calls.filter((c) => c.method === 'GET' && c.url === '/api/quotes/9').length;
+  refuse = 'That takes the whole bill to £260.00, over the £200 limit. Send a quote instead.';
+  try {
+    fireEvent.click(await dlg.findByRole('button', { name: 'Save and tell Maya' }));
+    const before = reads();
+    assert.ok(has(await dlg.findByText('That takes the whole bill to £260.00, over the £200 limit. Send a quote instead.')));
+    await waitFor(() => assert.ok(reads() > before));
+  } finally { refuse = null; }
+});
+
+test('the proposed total is the whole bill the limit is checked against', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
+  assert.ok(has(await dlg.findByText('Proposed total £111.00')));
+});
+
+test('with no limit, the drawn hint says when quotes go', async () => {
+  const { dlg } = await openJob({ q: { ...quote('draft', [line({})]), limit: { spendLimit: null, wholeBill: 93 } } });
+  assert.ok(has(await dlg.findByText('Quotes are sent when the customer asked to be called first, or the total is over their limit.')));
+  assert.ok(has(dlg.queryByRole('button', { name: 'Send quote' })));
 });

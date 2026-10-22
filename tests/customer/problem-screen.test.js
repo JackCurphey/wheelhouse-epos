@@ -87,7 +87,8 @@ test('a required text question is aria-required; the words box of a required cho
 test('services ticked but no questions: the bike box and the optional description only', async () => {
   const { ui } = await open({ serviceIds: [12] });
   assert.equal(ui.queryAllByRole('heading', { level: 2 }).length, 0);
-  assert.equal(ui.getAllByRole('textbox').length, 2);
+  // The bike box, the description and the spending limit's amount.
+  assert.equal(ui.getAllByRole('textbox').length, 3);
   assert.ok(ui.getByRole('textbox', { name: 'Your bike (optional)' }));
   assert.ok(ui.getByRole('textbox', { name: 'Anything else we should know? (optional)' }));
 });
@@ -95,7 +96,9 @@ test('services ticked but no questions: the bike box and the optional descriptio
 test('Not sure: no questions, a required description, and Back goes to the first screen', async () => {
   const { ui } = await open({ notSure: true, serviceIds: [], answers: [] });
   assert.equal(ui.queryAllByRole('heading', { level: 2 }).length, 0);
-  assert.ok(ui.queryByRole('radio') === null);
+  // No question pills: the only radios are the spending limit's two.
+  assert.equal(ui.getAllByRole('radio').length, 2);
+  assert.ok(ui.getByRole('group', { name: 'If the mechanic finds more to do' }));
   assert.ok(ui.getByRole('textbox', { name: "What's wrong with it?" }));
   assert.ok(ui.queryByText('Anything else we should know? (optional)') === null);
   await click(ui.getByRole('link', { name: /Back/ }));
@@ -305,4 +308,55 @@ test('the refusal message is cleared from history once read, so a refresh does n
   assert.ok(ui.getByText(CHANGED), 'the message still shows, from component state');
   const { waitFor } = await rtl();
   await waitFor(() => assert.ok(router.state.location.state === null, 'the refusal was not cleared from history'));
+});
+
+// The spending limit (Workshop day 41; book.mjs limit(); openspec/changes/spend-limit-booking).
+const AMOUNT = 'Most the whole bill can come to, in pounds';
+const GO_AHEAD = /^Go ahead if the whole bill comes to no more than/;
+const answerAll = async (ui) => {
+  await type(ui.getByRole('textbox', { name: BRAKE_WORDS }), 'Grinding');
+  await type(ui.getByRole('textbox', { name: 'Which wheel needs truing?' }), 'Front');
+};
+
+test('the spending limit asks first to start, with £200 ready in the box', async () => {
+  const { ui } = await open();
+  const { within } = await rtl();
+  const group = within(ui.getByRole('group', { name: 'If the mechanic finds more to do' }));
+  assert.equal(group.getByRole('radio', { name: 'Ask me before any extra work' }).checked, true);
+  assert.equal(group.getByRole('radio', { name: GO_AHEAD }).checked, false);
+  assert.equal(group.getByRole('textbox', { name: AMOUNT }).value, '200');
+  assert.equal(group.getByRole('textbox', { name: AMOUNT }).getAttribute('inputmode'), 'numeric');
+});
+
+test('choosing Go ahead, or typing an amount, saves the limit to the draft', async () => {
+  const { ui, readDraft } = await open();
+  await click(ui.getByRole('radio', { name: GO_AHEAD }));
+  assert.equal(readDraft().limitOn, true);
+  await click(ui.getByRole('radio', { name: 'Ask me before any extra work' }));
+  assert.equal(readDraft().limitOn, undefined);
+  await type(ui.getByRole('textbox', { name: AMOUNT }), '150');
+  assert.equal(readDraft().limitOn, true, 'typing an amount chooses Go ahead');
+  assert.equal(readDraft().limitText, '150');
+  assert.equal(ui.getByRole('radio', { name: GO_AHEAD }).checked, true);
+});
+
+test('Go ahead with an amount that isn’t whole pounds stops Continue and says why', async () => {
+  const { ui } = await open();
+  await answerAll(ui);
+  await type(ui.getByRole('textbox', { name: AMOUNT }), '150.50');
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  assert.ok(await ui.findByText('Enter the most the whole bill can come to, in whole pounds.'));
+  const box = ui.getByRole('textbox', { name: AMOUNT });
+  assert.equal(box.getAttribute('aria-invalid'), 'true');
+  assert.ok(document.activeElement === box);
+  assert.ok(ui.queryByText('At /book/north/date') === null);
+});
+
+test('asking first continues whatever the box holds', async () => {
+  const { ui } = await open();
+  await answerAll(ui);
+  await type(ui.getByRole('textbox', { name: AMOUNT }), 'abc');
+  await click(ui.getByRole('radio', { name: 'Ask me before any extra work' }));
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  assert.ok(await ui.findByText('At /book/north/date'));
 });
