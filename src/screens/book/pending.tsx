@@ -7,6 +7,7 @@ import { ApiError, apiMutate } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
+import { NotesCard } from './notes-card.tsx';
 import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
@@ -305,6 +306,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         ))}
         {/* The quote, while there's one to answer: only before the work is done. */}
         {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} hideAnswered={work.length > 0} />}
+        {/* Notes with the shop while the bike is in, as drawn (ac-job-note). */}
+        {inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
         {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
           <>
@@ -343,6 +346,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             </>
           ));
         })() : null}
+        {/* And once it's ready or collected, where a reply's link brings them back
+            (collect-and-pay review; drop-off review decision 7, H4; fresh review). */}
+        {!inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
           {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}
