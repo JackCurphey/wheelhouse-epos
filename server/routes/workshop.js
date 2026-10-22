@@ -30,7 +30,7 @@ import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
-  sendQuoteResult, answerAndAddToOrder,
+  sendQuoteResult, answerAndAddToOrder, agreeWithinLimit, wholeBill,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -1169,7 +1169,11 @@ export function register(route) {
   route('GET', '/api/quotes/:id', async (req, res, params) => {
     const result = await readQuote({ quoteId: Number(params.id) });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    // The customer's limit and the whole bill with this quote, so the job page
+    // offers Save and tell within it (Workshop day 41-43).
+    const bill = await wholeBill(result.quote.id, result.quote.workshop_job_id);
+    sendJson(res, 200, { ...serializeQuoteWithLines(result.quote, result.lines, result.totals),
+      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null });
   });
 
   // screens: quote-editor, approved, job
@@ -1228,6 +1232,45 @@ export function register(route) {
       link = await issueJobLink(req, jobId, shopId).catch(() => null);
     }
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
+  });
+
+  // Work within the customer's spending limit (Workshop day 41-43; dq-job-within):
+  // agreed without a quote, and the customer is told what was added. The
+  // panel had its minute's Undo before calling this, as for Send quote.
+  // screens: quote-send
+  route('POST', '/api/quotes/:id/within-limit', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const result = await agreeWithinLimit({ quoteId: Number(params.id), loginId: ctx?.login?.id ?? null });
+    if (!result.ok) return sendQuoteResult(res, result);
+    const jobId = result.quote.workshop_job_id;
+    let message;
+    try {
+      const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+      const added = await db.prepare(
+        `SELECT string_agg(description, ', ' ORDER BY id) AS names, sum(quantity * unit_amount) AS total
+           FROM workshop_quote_lines WHERE workshop_quote_id = ?`
+      ).get(result.quote.id);
+      const shop = await db.prepare('SELECT phone FROM shops WHERE id = ?').get(shopId);
+      Object.assign(vars, {
+        'Work added': added.names,
+        'Amount added': `£${Number(added.total).toFixed(2)}`,
+        'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
+        // With no phone in Shop details, "Call the shop", as the customer's page says.
+        'Shop phone': shop?.phone || 'the shop',
+      });
+      if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
+      else {
+        const queued = await queueMessage({ customerId, jobId, key: 'work_within_limit', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Work added within your limit', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`Quote ${result.quote.id} was agreed within the limit but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The work is added, but the message could not be queued. Let the customer know another way.' };
+    }
+    sendJson(res, 200, { quote: serializeQuote(result.quote), message });
   });
 
   // screens: quote-send

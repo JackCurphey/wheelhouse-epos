@@ -416,7 +416,7 @@ async function bookingLinkView(jobId, shop) {
 async function customerQuote(result, jobId) {
   const shows = (await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get())?.show_sign_off_to_customers === 1;
   const who = await db.prepare(
-    `SELECT m.name AS mechanic_name, c.name AS customer_name FROM workshop_jobs j
+    `SELECT m.name AS mechanic_name, c.name AS customer_name, j.spend_limit FROM workshop_jobs j
        LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
       WHERE j.id = ?`
   ).get(jobId);
@@ -428,6 +428,7 @@ async function customerQuote(result, jobId) {
     mechanicName: shows ? who?.mechanic_name ?? null : null,
     earlier: await earlierAnswers(result.quote),
     agreedTotal: await agreedBefore(result.quote, showPrices),
+    spendLimit: who?.spend_limit ?? null,
     customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
   };
 }

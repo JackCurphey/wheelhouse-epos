@@ -139,7 +139,9 @@ export const quote = defineMachine({
   initial: 'draft',
   states: ['draft', 'sent', 'partly_approved', 'approved', 'declined', 'superseded', 'expired', 'withdrawn'],
   transitions: {
-    draft: { send: 'sent' },
+    // Within the customer's spending limit, no quote goes: the work is agreed
+    // and they are told (Workshop day 41-43).
+    draft: { send: 'sent', within_limit: 'approved' },
     sent: {
       approve_all: 'approved',
       approve_some: 'partly_approved',

@@ -88,3 +88,10 @@ A booking request that waits for the shop SHALL send Request received. Cancellin
 #### Scenario: Cancelled from the booking page
 - **WHEN** Maya cancels her booking from its page
 - **THEN** she gets Booking cancelled: "There's nothing to pay or refund. Book another time: [link]."
+
+### Requirement: The customer is told about work added within their limit
+The "Work added within your limit" message SHALL go to the customer when work is agreed within their spending limit, saying what was added, its cost and their limit, with their link and the shop's phone.
+
+#### Scenario: Pads and fitting
+- **WHEN** pads and fitting for £46 are agreed within Maya's £200 limit
+- **THEN** Maya's message says "Added: Shimano brake pads, Fit and adjust brakes, £46.00" and mentions the £200 limit

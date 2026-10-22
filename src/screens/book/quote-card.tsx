@@ -29,6 +29,9 @@ type Quote = {
   earlier?: { agreed: string[]; declined: string[] };
   // Booked work plus earlier yeses, summed by the server (fresh review).
   agreedTotal?: number | null;
+  // The limit the customer set when booking (Workshop day 41-43).
+  spendLimit?: number | null;
+  totals?: { all: number; approved: number; pending: number; declined: number };
 };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
@@ -93,6 +96,21 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
         <span className={`${BADGE} bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]`}>Quote withdrawn</span>
         <h2 id="quote-heading" className="m-0 text-xl font-bold">{mechanic ? `${mechanic} has withdrawn this quote` : 'We’ve withdrawn this quote'}</h2>
         <p className="m-0">Nothing to answer. Call <Phone phone={shopPhone} /> if you have a question.</p>
+      </section>
+    );
+  }
+
+  // Work added within the customer's limit (dq-within-limit): no quote went,
+  // so this says what was added and that the shop went ahead.
+  if (!done && q.state === 'approved' && q.lines.length && q.lines.every((l) => l.decidedVia === 'limit')) {
+    const names = q.lines.map((l) => l.description);
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+    return (
+      <section className={CARD} aria-labelledby="quote-heading">
+        <span role="status" className={`${BADGE} bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]`}>Work added</span>
+        <h2 id="quote-heading" className="m-0 text-xl font-bold">{`${mechanic ?? 'We'} added some work, within your limit`}</h2>
+        <p className="m-0">{`${list}, ${money(q.totals?.approved ?? 0)} — within your ${q.spendLimit ? `£${q.spendLimit.toLocaleString('en-GB')} ` : ''}limit, so we’ve gone ahead. Nothing to pay today.`}</p>
+        <p className="m-0">Not what you wanted? Call <Phone phone={shopPhone} />.</p>
       </section>
     );
   }

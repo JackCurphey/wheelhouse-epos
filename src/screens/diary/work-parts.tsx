@@ -61,6 +61,8 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['sale-document', orderId] }),
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+        // The quote's whole bill counts this order: the limit check follows it (fresh review).
+        queryClient.invalidateQueries({ queryKey: ['quote'] }),
       ]);
       return true;
     } catch (err) {
