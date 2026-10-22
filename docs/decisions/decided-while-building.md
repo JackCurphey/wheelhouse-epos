@@ -1335,8 +1335,13 @@ The drawings show where slots appear but not these rules. *Decided:*
 3. **"Maya will be told what was added."** The drawing says "She’ll"; the
    app doesn't know anyone's pronouns, so it uses the name.
 4. **A minute to Undo**, as Send quote, since a message goes.
-5. **Over the limit**, the drawn hint "Quotes are sent when the customer
-   asked to be called first, or the total is over their limit." shows under
-   the quote, and Send quote is as before.
+5. **Over the limit, or with no limit**, the drawn hint "Quotes are sent
+   when the customer asked to be called first, or the total is over their
+   limit." shows under a draft quote, and Send quote is as before (fresh
+   review: the drawing shows it whether or not a limit was set).
+8. **Proposed total is the whole bill** the limit is checked against, booked
+   work included, so the two never disagree (fresh review).
+9. **No shop phone:** the message says "Call the shop", as the customer's
+   page does.
 6. **The message wording** is drafted, for Jack to read (asked 22 Oct).
 7. **Migration 059.**

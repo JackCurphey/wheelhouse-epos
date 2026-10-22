@@ -626,6 +626,11 @@ export async function agreeWithinLimit({ quoteId, loginId = null }) {
     if (!quote) { await db.exec('ROLLBACK'); return { ok: false, code: 'not_found', message: 'Quote not found' }; }
     const refuse = async (message) => { await db.exec('ROLLBACK'); return { ok: false, code: 'illegal', message }; };
     if (!quoteMachine.can(quote.state, 'within_limit')) return refuse(`A quote that is ${quote.state} can’t be saved within the limit.`);
+    // The order is locked too, so an edit to it can't slip the bill past the
+    // limit between this check and the add (fresh review).
+    await db.prepare(
+      "SELECT id FROM sale_documents WHERE workshop_job_id = ? AND kind = 'order' AND status <> 'cancelled' FOR UPDATE"
+    ).all(quote.workshop_job_id);
     const bill = await wholeBill(quoteId, quote.workshop_job_id);
     if (!bill || bill.lines === 0) return refuse('Add the extra work first.');
     if (bill.spendLimit === null) return refuse('This customer asked to be asked before any extra work. Send a quote instead.');
@@ -642,6 +647,9 @@ export async function agreeWithinLimit({ quoteId, loginId = null }) {
     return { ok: true, quote: await db.prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId), spendLimit: bill.spendLimit };
   } catch (err) {
     await db.exec('ROLLBACK').catch(() => {});
+    // An order that can't take the work (paid, or a part no longer sold)
+    // says why, as answering a quote does (fresh review).
+    if (err instanceof ValidationError) return { ok: false, code: 'illegal', message: err.message };
     throw err;
   }
 }

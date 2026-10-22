@@ -1255,8 +1255,9 @@ export function register(route) {
       Object.assign(vars, {
         'Work added': added.names,
         'Amount added': `£${Number(added.total).toFixed(2)}`,
-        'Spending limit': `£${result.spendLimit}`,
-        'Shop phone': shop?.phone || null,
+        'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
+        // With no phone in Shop details, "Call the shop", as the customer's page says.
+        'Shop phone': shop?.phone || 'the shop',
       });
       if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
       else {

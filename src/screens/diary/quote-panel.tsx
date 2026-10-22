@@ -174,7 +174,10 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
     timer.current = setTimeout(async () => {
       timer.current = null;
       setTelling(false);
-      await act(async () => setTold((await apiMutate<{ message: SendResult['message'] }>(`/api/quotes/${q.id}/within-limit`, {})).message));
+      const done = await act(async () => setTold((await apiMutate<{ message: SendResult['message'] }>(`/api/quotes/${q.id}/within-limit`, {})).message));
+      // Refused (the bill moved over the limit meanwhile): read the quote again,
+      // so the panel offers Send quote (fresh review).
+      if (!done) await refresh();
     }, sendDelay());
   }
   function undoTell() {
@@ -325,7 +328,10 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
 
       {q && (q.state === 'draft' || q.state === 'sent') && q.lines.length ? (
-        <p className="m-0 text-right text-sm font-bold">{`Proposed total ${money(orderTotal + (q.state === 'draft' ? q.totals.all : q.totals.pending))}`}</p>
+        <p className="m-0 text-right text-sm font-bold">
+          {/* The whole bill the limit is checked against, booked work included (fresh review). */}
+          {`Proposed total ${money(q.state === 'draft' && q.limit ? q.limit.wholeBill : orderTotal + (q.state === 'draft' ? q.totals.all : q.totals.pending))}`}
+        </p>
       ) : null}
       {answered ? (
         <div className="flex flex-col items-end gap-0.5">
@@ -337,9 +343,9 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
       {q?.state === 'withdrawn' ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">The quote was withdrawn. Only the booked work stays agreed.</p> : null}
 
-      {limit && limit.spendLimit !== null ? (
+      {limit ? (
         <p className="m-0 text-right text-[13px] text-[var(--wh-muted)]">
-          {within ? `Within ${first}’s £${limit.spendLimit.toLocaleString('en-GB')} limit — no quote needed. ${first} will be told what was added.`
+          {within && limit.spendLimit !== null ? `Within ${first}’s £${limit.spendLimit.toLocaleString('en-GB')} limit — no quote needed. ${first} will be told what was added.`
             : 'Quotes are sent when the customer asked to be called first, or the total is over their limit.'}
         </p>
       ) : null}

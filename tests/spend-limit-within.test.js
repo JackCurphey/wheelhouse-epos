@@ -131,3 +131,37 @@ test('the staff quote read gives the limit and the whole bill, so the job page k
   const q2 = await draft(none.id, [PADS]);
   assert.deepEqual((await staff(`/api/quotes/${q2.id}`)).body.limit, { spendLimit: null, wholeBill: 93 });
 });
+
+// From the fresh review.
+test('an order that can’t take the work gives its reason, not an error page', async () => {
+  const job = await bookedJob(200);
+  const product = (await staff('/api/products', { method: 'POST', body: { name: 'Shimano brake pads', price: 28, sku: 'BP-WL' } })).body;
+  const q = await draft(job.id, [{ ...PADS, productId: product.id }]);
+  const off = await staff(`/api/products/${product.id}`, { method: 'PUT', body: { ...product, active: false } });
+  assert.equal(off.status, 200, JSON.stringify(off.body));
+  const res = await within(q.id);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal((await staff(`/api/quotes/${q.id}`)).body.state, 'draft', 'nothing changed');
+});
+
+test('work agreed within the limit earlier counts once in the next whole bill', async () => {
+  const job = await bookedJob(140);
+  const first = await draft(job.id, [PADS]);
+  assert.equal((await within(first.id)).status, 200, '£65 + £28 = £93');
+  const second = await draft(job.id, [FIT]);
+  assert.deepEqual((await staff(`/api/quotes/${second.id}`)).body.limit, { spendLimit: 140, wholeBill: 111 });
+  assert.equal((await within(second.id)).status, 200, '£93 + £18 = £111');
+});
+
+test('with no shop phone, the message says to call the shop; with one, it gives the number', async () => {
+  const job = await bookedJob(200);
+  assert.equal((await within((await draft(job.id, [PADS])).id)).status, 200);
+  const told = (await staff(`/api/messages?jobId=${job.id}`)).body.find((m) => m.key === 'work_within_limit');
+  assert.match(told.body, /Not what you wanted\? Call the shop\./);
+  assert.equal((await staff('/api/shop-details', { method: 'PUT', body: { phone: '[shop phone]' } })).status, 200);
+  const job2 = await bookedJob(1000);
+  assert.equal((await within((await draft(job2.id, [PADS])).id)).status, 200);
+  const told2 = (await staff(`/api/messages?jobId=${job2.id}`)).body.find((m) => m.key === 'work_within_limit');
+  assert.match(told2.body, /Call \[shop phone\]\./);
+  assert.match(told2.body, /£1,000 limit/);
+});

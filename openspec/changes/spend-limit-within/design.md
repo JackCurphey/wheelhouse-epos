@@ -19,3 +19,15 @@ Refusals (409 `illegal`): no limit ("This customer asked to be asked before
 any extra work. Send a quote instead."), over it ("That takes the whole bill
 to £111.00, over the £100 limit. Send a quote instead."), not a draft, no
 lines.
+
+## From the fresh review
+- The order is locked with the quote, and an order that can't take the work
+  (paid, or a part no longer sold) is a 409 with its reason, not a 500.
+- A refused Save and tell reads the quote again; saving Work and parts does
+  too, so the panel's within-or-over follows the bill.
+- Proposed total shows the whole bill; the drawn hint shows on every draft
+  quote that isn't within a limit.
+- The message's limit reads "£1,000"; with no shop phone it says "Call the
+  shop".
+- Left as is: a draft saved at the very moment Save and tell runs (Send quote
+  has the same window).

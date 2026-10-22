@@ -57,7 +57,7 @@ function stubServer() {
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
-    if (method === 'POST' && u.pathname === '/api/quotes/9/within-limit') return reply(200, { quote: { ...QUOTE, state: 'approved' }, message: { status: 'sent', channel: 'sms' } });
+    if (method === 'POST' && !refuse && u.pathname === '/api/quotes/9/within-limit') return reply(200, { quote: { ...QUOTE, state: 'approved' }, message: { status: 'sent', channel: 'sms' } });
     if (method === 'POST' && u.pathname === '/api/quotes/9/send') return reply(200, sendAnswer ?? { quote: { ...QUOTE, state: 'sent' }, message: { status: 'sent' }, link: 'http://localhost/book/north-street/booking/abc' });
     if (method === 'POST' && refuse) return reply(409, { error: refuse, code: 'illegal' });
     if (method === 'DELETE') return reply(200, { ok: true });
@@ -374,4 +374,28 @@ test('over the customer’s limit, the quote goes to them as usual', async () =>
   assert.ok(has(await dlg.findByRole('button', { name: 'Send quote' })));
   assert.ok(dlg.queryByRole('button', { name: 'Save and tell Maya' }) === null);
   assert.ok(has(dlg.queryByText('Quotes are sent when the customer asked to be called first, or the total is over their limit.')));
+});
+
+// From the fresh review.
+test('a refused Save and tell reads the quote again, so the panel can offer Send quote', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
+  const reads = () => calls.filter((c) => c.method === 'GET' && c.url === '/api/quotes/9').length;
+  refuse = 'That takes the whole bill to £260.00, over the £200 limit. Send a quote instead.';
+  try {
+    fireEvent.click(await dlg.findByRole('button', { name: 'Save and tell Maya' }));
+    const before = reads();
+    assert.ok(has(await dlg.findByText('That takes the whole bill to £260.00, over the £200 limit. Send a quote instead.')));
+    await waitFor(() => assert.ok(reads() > before));
+  } finally { refuse = null; }
+});
+
+test('the proposed total is the whole bill the limit is checked against', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
+  assert.ok(has(await dlg.findByText('Proposed total £111.00')));
+});
+
+test('with no limit, the drawn hint says when quotes go', async () => {
+  const { dlg } = await openJob({ q: { ...quote('draft', [line({})]), limit: { spendLimit: null, wholeBill: 93 } } });
+  assert.ok(has(await dlg.findByText('Quotes are sent when the customer asked to be called first, or the total is over their limit.')));
+  assert.ok(has(dlg.queryByRole('button', { name: 'Send quote' })));
 });
