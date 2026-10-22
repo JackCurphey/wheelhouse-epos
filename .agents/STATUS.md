@@ -10,18 +10,22 @@ here before starting it, so two people never build the same one):
 - **Jack:** next in WP-4.1, ahead of stage 4 on his word: the rest of the
   workshop day ("I'll do this", "Who did what"), or the rest of quotes
   (WP-4.2) – to choose. The checklist's per-line Done ticks wait for Mark's
-  sales in pence (#376, #377), which rewrites the same order lines.
-- **Mark:** his overnight drafts. Jack answered all their questions on 22
-  Oct (`docs/decisions/2026-10-22-marks-overnight-questions.md`): ended
-  bookings refuse hold and reopen too (#378, his to finish); "Booking
-  confirmed" on automatic confirmation is already on main (#357, #362), so
-  #373 isn't needed and its migration 050 would clash; the money check's two
-  questions are his, fixing the rounding where order lines are written rather
-  than accepting 1p; and the audit's three: website settings Owner-only (#393,
-  merged), Accept only at the time shown (#396), booking answers at once with
-  the spec corrected (#395). His drafts #376/#377 number their migrations 051,
-  which main already has (main is at 054). #379 no longer needs Jack's
-  approval under the working agreement.
+  sales in pence (#404), which rewrites the same order lines.
+- **Mark:** the overnight drafts, rebuilt on `main` on 22 Oct (the old stack
+  of draft pull requests pointed at a branch that had already merged, and
+  clashed with `main`'s migrations): #401 (hosted copy: Shopify refused, the
+  commit in `/healthz`, the deploy and rollback guide), #402 (held work can't
+  be resumed on an ended booking; one question for Jack on the pull request),
+  #404 (sales in pence step A, migration 055; one question for Jack),
+  #406 (the bike on "Waiting for you" items, server half), #407 (the audit's
+  missing tests), #408 (a deleted job's waiting messages stop; the delete and
+  quote answer can't deadlock), #410 (input checks), #414 (the test command
+  `/review` runs). Each has a fresh review with no serious findings. Browser
+  tests weren't run on Mark's machine (Playwright's browser isn't installed
+  there): wait for CI before merging. #378/#379/#373 and the other old drafts
+  are replaced. Still open from the audit: items 12, 15–18, 20, 23 and 24
+  (`docs/reviews/2026-10-22-flagged-merges-audit.md`). Next: step B of sales
+  in pence (reports read both records), after #404 merges.
 - **Waiting on Jack:** when to delete the old app, once its last screens are
   replaced (`docs/decisions/2026-10-21-old-app-placeholder.md`).
 
