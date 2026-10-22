@@ -121,6 +121,11 @@ def main():
     base_sha = sh(['git', 'rev-parse', a.base], cwd=REPO).stdout.strip()
     if not WORKTREE.exists():
         sh(['git', 'worktree', 'add', '--detach', str(WORKTREE), base_sha], cwd=REPO)
+    excl = Path(sh(['git', 'rev-parse', '--git-path', 'info/exclude'], cwd=WORKTREE).stdout.strip())
+    excl = excl if excl.is_absolute() else WORKTREE / excl
+    excl.parent.mkdir(parents=True, exist_ok=True)
+    if 'node_modules' not in (excl.read_text() if excl.exists() else ''):
+        excl.open('a').write('\nnode_modules\n.env\n')  # a symlink escapes the .gitignore's `node_modules/`
     shutil.copy(REPO / '.env', WORKTREE / '.env')  # gitignored; the worktree needs its own
     if not (WORKTREE / 'node_modules').exists():
         os.symlink(REPO / 'node_modules', WORKTREE / 'node_modules')
