@@ -79,3 +79,42 @@ test('a first quote has no earlier answers', async () => {
   const code = (await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} })).body.privateLink.split('/booking/')[1];
   assert.deepEqual((await portal(`/booking-links/${code}/quote`)).body.earlier, { agreed: [], declined: [] });
 });
+
+// From the fresh review.
+async function revise(jobId, lines) {
+  const q = (await staff(`/api/workshop-jobs/${jobId}/quotes`, { method: 'POST', body: { lines } })).body;
+  assert.equal((await staff(`/api/quotes/${q.id}/send`, { method: 'POST', body: {} })).status, 200);
+  return q;
+}
+async function answer(quoteId, decide) {
+  const lines = (await staff(`/api/quotes/${quoteId}`)).body.lines;
+  const res = await staff(`/api/quotes/${quoteId}/answer`, { method: 'POST', body: { via: 'phone', decisions: lines.map((l) => ({ lineId: l.id, decision: decide(l) })) } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+}
+
+test('the newer quote’s agreed total counts the earlier yeses', async () => {
+  const { job, code } = await answeredQuote((l) => (l.description === 'Shimano brake pads' ? 'approved' : 'declined'));
+  await revise(job.id, [{ ...CABLE, description: 'Bleed rear brake', unitAmount: 15 }]);
+  const shown = (await portal(`/booking-links/${code}/quote`)).body;
+  assert.equal(shown.agreedTotal, 28, 'the pads she said yes to (this job has no booked services)');
+});
+
+test('a line said no to, then yes to on a later quote, is agreed, not no thanks', async () => {
+  const { job, code } = await answeredQuote(() => 'declined');
+  const second = await revise(job.id, [PADS]);
+  await answer(second.id, () => 'approved');
+  await revise(job.id, [{ ...CABLE, description: 'Bleed rear brake', unitAmount: 15 }]);
+  const shown = (await portal(`/booking-links/${code}/quote`)).body;
+  assert.deepEqual(shown.earlier, { agreed: ['Shimano brake pads'], declined: ['Replace gear cable'] });
+  // The booking page's "Not done — you said no thanks" agrees.
+  const link = (await portal(`/booking-links/${code}`)).body;
+  assert.deepEqual(link.declined.map((d) => d.name), ['Replace gear cable']);
+});
+
+test('a quote changed before it was answered leaves no earlier answers', async () => {
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: `2026-10-${String(jobDay++).padStart(2, '0')}`, customerId: maya.id } })).body;
+  await revise(job.id, [PADS, CABLE]);
+  await revise(job.id, [PADS]);
+  const code = (await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} })).body.privateLink.split('/booking/')[1];
+  assert.deepEqual((await portal(`/booking-links/${code}/quote`)).body.earlier, { agreed: [], declined: [] });
+});

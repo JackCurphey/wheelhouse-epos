@@ -27,6 +27,8 @@ type Quote = {
   mechanicName?: string | null; customerFirstName?: string | null;
   // What the customer answered on the job's earlier quotes (dq-quote-newer).
   earlier?: { agreed: string[]; declined: string[] };
+  // Booked work plus earlier yeses, summed by the server (fresh review).
+  agreedTotal?: number | null;
 };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
@@ -78,7 +80,10 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
     return part === null ? [l] : q.lines.filter((o) => o.id === part || o.goesWithLineId === part);
   };
   const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, groupOf(l).some((o) => o.need === 'needed')]));
-  const agreed = agreedTotal ?? 0;
+  // The server's figure counts earlier yeses too; the booking's total is the
+  // fallback for a reply without it.
+  const agreedSoFar = q.agreedTotal !== undefined ? q.agreedTotal : agreedTotal;
+  const agreed = agreedSoFar ?? 0;
   const mechanic = firstName(q.mechanicName);
   const thanks = q.customerFirstName ? `Thanks, ${q.customerFirstName}` : 'Thanks';
 
@@ -135,6 +140,8 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
   if (q.state !== 'sent') return null;
   // A later quote after earlier answers (Jack, 22 Oct; dq-quote-newer).
   const newer = Boolean(q.earlier && (q.earlier.agreed.length || q.earlier.declined.length));
+  // Shown only when there is something to say (fresh review).
+  const alreadyAgreed = [[...booked, ...(q.earlier?.agreed ?? [])].join(', '), agreedSoFar !== null ? money(agreedSoFar) : null].filter(Boolean).join(' · ');
   const ticked = q.lines.filter((l) => tick[l.id]);
   const partners = (l: QuoteLine) => groupOf(l).filter((o) => o.id !== l.id);
   function setTick(l: QuoteLine, on: boolean) {
@@ -185,10 +192,12 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
         <>
           <p className="m-0">{`Your earlier answers are kept. Please answer the new ${q.lines.length === 1 ? 'line' : 'lines'} below.`}</p>
           <div className="text-sm">
-            <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
-              <span className="text-[var(--wh-muted)]">Already agreed</span>
-              <span className="text-right">{[[...booked, ...(q.earlier?.agreed ?? [])].join(', '), agreedTotal !== null ? money(agreedTotal) : null].filter(Boolean).join(' · ')}</span>
-            </p>
+            {alreadyAgreed ? (
+              <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
+                <span className="text-[var(--wh-muted)]">Already agreed</span>
+                <span className="text-right">{alreadyAgreed}</span>
+              </p>
+            ) : null}
             {q.earlier?.declined.length ? (
               <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
                 <span className="text-[var(--wh-muted)]">You said no thanks</span><span className="text-right">{q.earlier.declined.join(', ')}</span>
@@ -247,9 +256,9 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
           </li>
         ))}
       </ul>
-      {agreedTotal !== null && !newer ? (
+      {agreedSoFar !== null && !newer ? (
         <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2 text-sm">
-          <span className="text-[var(--wh-muted)]">Already agreed</span><span>{money(agreedTotal)}</span>
+          <span className="text-[var(--wh-muted)]">Already agreed</span><span>{money(agreedSoFar)}</span>
         </p>
       ) : null}
       <p aria-live="polite" className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2">

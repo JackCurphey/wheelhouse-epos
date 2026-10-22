@@ -1293,3 +1293,12 @@ The drawings show where slots appear but not these rules. *Decided:*
    reads as a first quote ("Waiting for your answer").
 3. **"line" or "lines"**: "Please answer the new line below." follows how
    many new lines there are.
+4. **Each line's latest answer counts** (fresh review). Pads said no to on
+   one quote and yes to on a later one are agreed: they aren't listed as "You
+   said no thanks", on the newer quote or on the finished-work page. Lines
+   are matched by their words, as quotes don't link one revision's line to
+   the next.
+5. **A quote changed before it was answered in full leaves no earlier
+   answers**, even a line answered on its own.
+6. **The agreed total counts the earlier yeses** (fresh review): the booked
+   services plus the lines agreed before, as the drawing's £111.00 does.

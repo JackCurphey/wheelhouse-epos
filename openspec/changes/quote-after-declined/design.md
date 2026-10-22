@@ -14,3 +14,13 @@ after a withdrawn one reads as a first quote. "Already agreed" lists the
 booking's services, then the earlier yeses, with the booking's agreed total
 (the link's `totalPrice`); the usual "Already agreed £[n]" row under the lines
 isn't repeated, as drawn.
+
+## From the fresh review
+- `latestAnswers(jobId, below)` keeps each line's latest answer by its words,
+  and only from quotes answered in full; `earlierAnswers` and the finished
+  page's "you said no thanks" (`jobMoney`) both use it.
+- The customer's quote reply carries `agreedTotal`: the booked services (when
+  their prices show online) plus the earlier yeses, summed by the database.
+  The card uses it for "Already agreed", the new total and the button.
+- The "Already agreed" row shows only when it has something to say.
+- `docs/design/workshop-states.md` regenerated.

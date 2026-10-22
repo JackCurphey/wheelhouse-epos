@@ -31,14 +31,14 @@ const LINES = [
 ];
 const QUOTE = (state, lines = LINES) => ({ id: 9, workshopJobId: 1, revision: 2, state, createdAt: '2026-10-05T09:00:00Z', sentAt: '2026-10-05T10:15:00Z', lines, totals: { all: 58, approved: 0, pending: 58, declined: 0 } });
 
-const open = async (quote, answer = null) => {
+const open = async (quote, answer = null, linkOver = {}) => {
   current = await renderBookScreen({
     file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
     url: `/book/north/booking/${CODE}`, services: SERVICES,
     bookingLink: (url, init) => {
       if (url.endsWith('/quote/answer')) return answer ?? { status: 200, body: { ...quote, state: 'partly_approved' } };
       if (url.endsWith('/quote')) return quote ? { status: 200, body: quote } : { status: 404, body: { error: 'There is no quote for this booking' } };
-      return { status: 200, body: LINK };
+      return { status: 200, body: { ...LINK, ...linkOver } };
     },
   });
   return current;
@@ -290,4 +290,16 @@ test('a second quote with no earlier answers (the first was withdrawn) reads as 
   const { ui } = await open(NEWER({ earlier: { agreed: [], declined: [] } }));
   assert.ok(has(await ui.findByText('Waiting for your answer')));
   assert.equal(has(ui.queryByText('The quote has changed')), false);
+});
+
+test('a newer quote’s totals use the agreed total the server sends, earlier yeses included', async () => {
+  const { ui } = await open(NEWER({ agreedTotal: 111 }));
+  assert.ok(has(await ui.findByText('Standard service, Fit and adjust brakes · £111.00')));
+  assert.ok(has(ui.queryByRole('button', { name: 'Approve £139.00' })));
+});
+
+test('a newer quote with nothing booked and no total has no empty Already agreed row', async () => {
+  const { ui } = await open(NEWER({ earlier: { agreed: [], declined: ['Replace gear cable'] }, agreedTotal: null }), null, { services: [], totalPrice: null });
+  await ui.findByText('The quote has changed');
+  assert.equal(has(ui.queryByText('Already agreed')), false);
 });

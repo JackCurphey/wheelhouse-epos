@@ -34,7 +34,7 @@ import {
   checkJobSlot, loadCapacity,
 } from '../workshop/jobs.js';
 import {
-  approve as approveQuote, earlierAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
+  approve as approveQuote, earlierAnswers, agreedBefore, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
@@ -420,12 +420,14 @@ async function customerQuote(result, jobId) {
        LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
       WHERE j.id = ?`
   ).get(jobId);
+  const showPrices = (await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get())?.show_prices_online === 1;
   const q = serializeQuoteWithLines(result.quote, result.lines, result.totals);
   return {
     ...q,
     lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
     mechanicName: shows ? who?.mechanic_name ?? null : null,
     earlier: await earlierAnswers(result.quote),
+    agreedTotal: await agreedBefore(result.quote, showPrices),
     customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
   };
 }
@@ -449,12 +451,8 @@ async function jobMoney(jobId) {
     : [];
   // Every revision the customer saw, not only the newest: a newer quote keeps
   // the earlier answers (fresh review). Priced in the database, as the quote is.
-  const declined = await db.prepare(
-    `SELECT l.description, (l.unit_amount * l.quantity) AS line_total FROM workshop_quote_lines l
-       JOIN workshop_quotes q ON q.id = l.workshop_quote_id
-      WHERE q.workshop_job_id = ? AND q.state <> 'draft' AND l.decision = 'declined'
-      ORDER BY q.revision, l.id`
-  ).all(jobId);
+  // Each line's latest answer: pads said no to and then yes to aren't "no thanks".
+  const declined = (await latestAnswers(jobId)).filter((l) => l.decision === 'declined');
   const paid = order?.status === 'converted' && order.paid_at
     ? { at: new Date(order.paid_at).toISOString(), amount: figure(order.paid_total) } : null;
   let due = 0;

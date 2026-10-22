@@ -280,7 +280,8 @@ test('the owning customer reads their quote with the same totals staff see', asy
   assert.equal(res.status, 200, JSON.stringify(res.body));
   // The customer's copy adds who it's for and, with the shop's switch on, the
   // mechanic (Jack, 22 Oct); everything else is what staff see.
-  const { customerFirstName, mechanicName, earlier, ...rest } = res.body;
+  const { customerFirstName, mechanicName, earlier, agreedTotal, ...rest } = res.body;
+  assert.equal(agreedTotal, null, 'nothing booked or agreed before');
   assert.equal(customerFirstName, 'Portal');
   assert.equal(mechanicName, null);
   assert.deepEqual(earlier, { agreed: [], declined: [] }, 'a first quote has no earlier answers');
