@@ -60,7 +60,8 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
 ## 4. The way back (Mark; after group 3)
 
-- [ ] 4.1 In `docs/runbooks/hosted-copy.md`, write deploying, checking that `WHEELHOUSE_HOSTED_COPY=1` is set, rolling back with no migration, and rolling back with a migration in Decision 8's order. Verify each rollback by doing it once on the hosted copy and writing down the time
+- [x] 4.1 In `docs/runbooks/hosted-copy.md`, write deploying, checking that `WHEELHOUSE_HOSTED_COPY=1` is set, rolling back with no migration, and rolling back with a migration in Decision 8's order. Written for today's by-hand updates (the deploy workflow, 3.4, isn't built yet) and checked against `scripts/hosting/`; the restore details read `[to confirm …]` until 4.1b
+- [ ] 4.1b Verify each rollback by doing it once on the hosted copy and writing down the time in the runbook (split from 4.1 on 22 Oct, so 4.1's tick doesn't claim a run that hasn't happened; the hosted copy isn't set up yet)
 
 ## 5. The restore rehearsal (PL-3: Jack's hands, Mark's eyes)
 
