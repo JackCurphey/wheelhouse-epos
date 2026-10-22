@@ -23,9 +23,9 @@ const LINK = {
   answers: [], bike: null, stage: 'in_workshop', photoCount: 0, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
   shop: { address: null, phone: '[shop phone]' },
 };
-const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, ...over });
+const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, ...over });
 const LINES = [
-  qline({}),
+  qline({ without: 'The rear brake stays worn.' }),
   qline({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 18, lineTotal: 18, reason: 'Needed with the new pads.' }),
   qline({ id: 3, kind: 'part', description: 'Replace gear cable', productId: null, unitAmount: 12, lineTotal: 12, need: 'optional', reason: 'Shifting is a little stiff.' }),
 ];
@@ -172,4 +172,42 @@ test('a phone answer with the switch off doesn’t name who took it', async () =
 test('a withdrawn quote names the mechanic with the switch on', async () => {
   const { ui } = await open(NAMED('withdrawn'));
   assert.ok(has(await ui.findByRole('heading', { name: 'Alex has withdrawn this quote' })));
+});
+
+// Lines that go together (Jack, 1 Oct, decision 2) and what happens without a
+// Needed line (decision 7): dq-quote, dq-quote-decline.
+const PAIRED = LINES.map((l) => (l.id === 2 ? { ...l, goesWithLineId: 1 } : l));
+
+test('unticking the part unticks the labour that goes with it, and says so', async () => {
+  const { ui } = await open(QUOTE('sent', PAIRED));
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('checkbox', { name: /Shimano brake pads/ }));
+  assert.equal(ui.getByRole('checkbox', { name: /Fit and adjust brakes/ }).checked, false);
+  assert.ok(has(ui.queryByText('Fit and adjust brakes unticked too.')));
+  assert.ok(has(ui.queryByRole('button', { name: 'Decline the extra work' })));
+  // Ticking the labour again ticks its part too.
+  fireEvent.click(ui.getByRole('checkbox', { name: /Fit and adjust brakes/ }));
+  assert.equal(ui.getByRole('checkbox', { name: /Shimano brake pads/ }).checked, true);
+  assert.ok(has(ui.queryByText('Shimano brake pads ticked too.')));
+  assert.ok(has(ui.queryByRole('button', { name: 'Approve £111.00' })));
+});
+
+test('a pair is sent with the same answer for both', async () => {
+  const { ui, requests } = await open(QUOTE('sent', PAIRED));
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('checkbox', { name: /Fit and adjust brakes/ }));
+  fireEvent.click(ui.getByRole('button', { name: 'Decline the extra work' }));
+  await ui.findByRole('heading', { name: /carry on with the service/ });
+  const sent = requests.find((r) => r.method === 'POST');
+  assert.deepEqual(sent.body.decisions.slice(0, 2), [{ lineId: 1, decision: 'declined' }, { lineId: 2, decision: 'declined' }]);
+});
+
+test('an unticked Needed line shows what happens without it, and nothing when there are no words', async () => {
+  const { ui } = await open(QUOTE('sent'));
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('checkbox', { name: /Fit and adjust brakes/ }));
+  assert.equal(has(ui.queryByText('We recommend this.')), false, 'no words, no box (as drawn)');
+  fireEvent.click(ui.getByRole('checkbox', { name: /Shimano brake pads/ }));
+  assert.ok(has(ui.queryByText('We recommend this.')));
+  assert.ok(has(ui.queryByText('The rear brake stays worn.')));
 });
