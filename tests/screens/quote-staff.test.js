@@ -328,3 +328,20 @@ test('after a quote is declined, Add to quote starts a new quote with just the n
   fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
   await waitFor(() => assert.deepEqual(posts(), ['/api/workshop-jobs/1/quotes {"lines":[{"kind":"part","description":"Brake pads (pair)","productId":40,"quantity":1,"unitAmount":18,"need":"needed","reason":""}]}']));
 });
+
+// The customer's spending limit, as a tag on the job (Workshop day 42; job-page.mjs SPEND_LIMIT).
+test('the job shows the customer’s spending limit, or that they want asking first', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 200 } });
+  assert.ok(has(await dlg.findByText('Customer OK up to £200')));
+  assert.equal(has(dlg.queryByText('Ask before any extra work')), false);
+});
+
+test('a job with no limit says to ask before any extra work', async () => {
+  const { dlg } = await openJob();
+  assert.ok(has(await dlg.findByText('Ask before any extra work')));
+});
+
+test('a large limit reads with a thousands comma', async () => {
+  const { dlg } = await openJob({ jobOver: { spendLimit: 100000 } });
+  assert.ok(has(await dlg.findByText('Customer OK up to £100,000')));
+});
