@@ -46,6 +46,18 @@ export async function undoWaiting(jobId, key) {
 }
 
 /**
+ * Stops every message for a job that hasn't gone yet, minute up or not: the
+ * job is being deleted, so there is nothing left for it to be about (audit
+ * item 11). Run in the delete's transaction. One already claimed is left.
+ */
+export async function undoJobMessages(jobId) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE job_id = ? AND intent_state = 'intended'`
+  ).run(jobId);
+}
+
+/**
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
