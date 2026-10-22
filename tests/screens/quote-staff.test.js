@@ -250,3 +250,10 @@ test('once sent, the pair reads Goes with, and recording an answer ticks it toge
   assert.equal(rec.getByRole('checkbox', { name: 'Yes to Fit and adjust brakes' }).checked, false);
   assert.ok(has(rec.queryByRole('button', { name: 'Save: yes to 0 lines, no thanks to 2' })));
 });
+
+test('Record their answer starts a mixed Needed and Optional pair ticked together', async () => {
+  const { dlg, fireEvent, within, ui } = await openJob({ q: quote('sent', [line({}), FIT({ goesWithLineId: 1, need: 'optional' })]) });
+  fireEvent.click(await dlg.findByRole('button', { name: 'Record their answer' }));
+  const rec = within(await ui.findByRole('dialog', { name: 'Record Maya’s answer' }));
+  assert.equal(rec.getByRole('checkbox', { name: 'Yes to Fit and adjust brakes' }).checked, true);
+});

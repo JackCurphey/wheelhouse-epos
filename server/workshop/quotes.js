@@ -176,7 +176,7 @@ export async function answerAll({ quoteId, jobId = null, decisions, via, loginId
   for (const l of lines) {
     const partner = l.goes_with_line_id ? lines.find((p) => p.id === l.goes_with_line_id) : null;
     if (partner && given.get(l.id) !== given.get(partner.id)) {
-      return { ok: false, code: 'illegal', message: `Lines that go together need the same answer: ${l.description} goes with ${partner.description}.` };
+      return { ok: false, code: 'pair', message: `Lines that go together need the same answer: ${l.description} goes with ${partner.description}.` };
     }
   }
   if (lines.some((l) => l.decision !== 'pending')) {

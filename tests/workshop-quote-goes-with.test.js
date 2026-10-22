@@ -129,6 +129,7 @@ test('an answer that splits a pair is refused, and nothing is saved', async () =
   const online = await portal(`/booking-links/${code}/quote/answer`, { method: 'POST', body: { revision: quote.revision, decisions: split } });
   assert.equal(online.status, 409, JSON.stringify(online.body));
   assert.match(online.body.error, /Fit and adjust brakes goes with Shimano brake pads/);
+  assert.equal(online.body.code, 'pair', 'its own code, so the card can tell it from a changed quote');
   const byPhone = await staff(`/api/quotes/${quote.id}/answer`, { method: 'POST', body: { via: 'phone', decisions: split } });
   assert.equal(byPhone.status, 409, JSON.stringify(byPhone.body));
   const after = await readQuote(quote.id);

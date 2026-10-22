@@ -1245,6 +1245,10 @@ The drawings show where slots appear but not these rules. *Decided:*
    pads; decision 2's example is pads and fitting. Keeping it labour-to-part
    means a pair never chains and no line goes with itself. "Goes with" shows
    on a draft's labour lines once the quote has a part; Nothing takes it off.
+   More than one labour line can go with the same part (fitting and a bleed
+   with the pads); the part and all of them tick together (fresh review).
+   A group starts ticked if any line in it is Needed, so a Needed part with
+   Optional fitting opens ticked together rather than split.
 2. **A pair can't be split.** Decision 2 says they "tick and untick as a
    pair": the customer's card and Record their answer move both, and the
    server refuses an answer that splits them. A customer bringing their own

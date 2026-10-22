@@ -64,7 +64,13 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
   // Nothing to show without a quote (a 404 means the booking has none).
   if (!q || !Array.isArray(q.lines)) return null;
 
-  const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, l.need === 'needed']));
+  // Lines that go together (decision 2): a part and every labour line that
+  // goes with it tick and untick as one, starting ticked if any is Needed.
+  const groupOf = (l: QuoteLine) => {
+    const part = l.goesWithLineId ?? (q.lines.some((o) => o.goesWithLineId === l.id) ? l.id : null);
+    return part === null ? [l] : q.lines.filter((o) => o.id === part || o.goesWithLineId === part);
+  };
+  const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, groupOf(l).some((o) => o.need === 'needed')]));
   const agreed = agreedTotal ?? 0;
   const mechanic = firstName(q.mechanicName);
   const thanks = q.customerFirstName ? `Thanks, ${q.customerFirstName}` : 'Thanks';
@@ -121,9 +127,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
 
   if (q.state !== 'sent') return null;
   const ticked = q.lines.filter((l) => tick[l.id]);
-  // Lines that go together tick and untick together (decision 2): a labour
-  // line and the part it goes with.
-  const partners = (l: QuoteLine) => q.lines.filter((o) => o.id !== l.id && (o.id === l.goesWithLineId || o.goesWithLineId === l.id));
+  const partners = (l: QuoteLine) => groupOf(l).filter((o) => o.id !== l.id);
   function setTick(l: QuoteLine, on: boolean) {
     const others = partners(l).filter((o) => Boolean(tick[o.id]) !== on);
     setTicks({ ...tick, [l.id]: on, ...Object.fromEntries(others.map((o) => [o.id, on])) });
@@ -146,7 +150,10 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
         lines: q.lines.map((l) => ({ ...l, decision: tick[l.id] ? 'approved' : 'declined', decidedVia: 'online' })),
       });
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.code === 'pair') {
+        // A split pair: the shop's words, and the ticks stay as they were.
+        setMessage(err.message);
+      } else if (err instanceof ApiError && err.status === 409) {
         setMessage('The quote has changed since you opened it. Please look at it again.');
         setTicks(null);
         void quote.refetch();

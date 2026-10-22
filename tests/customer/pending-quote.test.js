@@ -211,3 +211,35 @@ test('an unticked Needed line shows what happens without it, and nothing when th
   assert.ok(has(ui.queryByText('We recommend this.')));
   assert.ok(has(ui.queryByText('The rear brake stays worn.')));
 });
+
+// From the fresh review: a pair may mix Needed and Optional, and a part may
+// have more than one labour line going with it.
+test('a pair with one Needed and one Optional line starts ticked together, and sends', async () => {
+  const lines = PAIRED.map((l) => (l.id === 2 ? { ...l, need: 'optional' } : l));
+  const { ui, requests } = await open(QUOTE('sent', lines));
+  const { fireEvent } = await rtl();
+  assert.equal((await ui.findByRole('checkbox', { name: /Fit and adjust brakes/ })).checked, true);
+  fireEvent.click(ui.getByRole('button', { name: 'Approve £111.00' }));
+  await ui.findByRole('heading', { name: /carrying on/ });
+  assert.deepEqual(requests.find((r) => r.method === 'POST').body.decisions.slice(0, 2), [{ lineId: 1, decision: 'approved' }, { lineId: 2, decision: 'approved' }]);
+});
+
+test('every labour line that goes with a part ticks and unticks with the rest', async () => {
+  const lines = [...PAIRED.slice(0, 2), qline({ id: 4, kind: 'labour', description: 'Bleed rear brake', productId: null, unitAmount: 15, lineTotal: 15, goesWithLineId: 1 }), PAIRED[2]];
+  const { ui } = await open(QUOTE('sent', lines));
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('checkbox', { name: /Fit and adjust brakes/ }));
+  assert.equal(ui.getByRole('checkbox', { name: /Shimano brake pads/ }).checked, false);
+  assert.equal(ui.getByRole('checkbox', { name: /Bleed rear brake/ }).checked, false);
+  assert.ok(has(ui.queryByText('Shimano brake pads unticked too. Bleed rear brake unticked too.')));
+});
+
+test('a refused split answer shows the shop’s words and keeps the ticks', async () => {
+  const { ui } = await open(QUOTE('sent'), { status: 409, body: { error: 'Lines that go together need the same answer: Fit and adjust brakes goes with Shimano brake pads.', code: 'pair' } });
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('checkbox', { name: /Replace gear cable/ }));
+  fireEvent.click(ui.getByRole('button', { name: 'Approve £123.00' }));
+  assert.ok(has(await ui.findByText('Lines that go together need the same answer: Fit and adjust brakes goes with Shimano brake pads.')));
+  assert.equal(has(ui.queryByText('The quote has changed since you opened it. Please look at it again.')), false);
+  assert.equal(ui.getByRole('checkbox', { name: /Replace gear cable/ }).checked, true);
+});

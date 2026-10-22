@@ -52,8 +52,12 @@ const asInputs = (lines: DraftLine[]) => lines.map((l) => {
   };
 });
 
-/** The lines a line goes together with: its part, or the labour that goes with it. */
-const partnersOf = (lines: QuoteLine[], l: QuoteLine) => lines.filter((o) => o.id !== l.id && (o.id === l.goesWithLineId || o.goesWithLineId === l.id));
+/** A line's group: a part and every labour line that goes with it, or the line alone. */
+function groupOf(lines: QuoteLine[], l: QuoteLine) {
+  const part = l.goesWithLineId ?? (lines.some((o) => o.goesWithLineId === l.id) ? l.id : null);
+  return part === null ? [l] : lines.filter((o) => o.id === part || o.goesWithLineId === part);
+}
+const partnersOf = (lines: QuoteLine[], l: QuoteLine) => groupOf(lines, l).filter((o) => o.id !== l.id);
 
 /** How long Send waits for an Undo (journey 4 decision 5); the tests shorten it. */
 const sendDelay = () => (window as unknown as { WH_QUOTE_SEND_DELAY_MS?: number }).WH_QUOTE_SEND_DELAY_MS ?? 60_000;
@@ -333,7 +337,7 @@ function RecordAnswer({ customer, reference, lines, busy, onClose, onSave }: {
   customer: string; reference: string | null; lines: QuoteLine[]; busy: boolean; onClose: () => void;
   onSave: (via: 'phone' | 'in_shop', decisions: { lineId: number; decision: 'approved' | 'declined' }[]) => void;
 }) {
-  const [yes, setYes] = useState<Record<number, boolean>>(() => Object.fromEntries(lines.map((l) => [l.id, l.need === 'needed'])));
+  const [yes, setYes] = useState<Record<number, boolean>>(() => Object.fromEntries(lines.map((l) => [l.id, groupOf(lines, l).some((o) => o.need === 'needed')])));
   const [via, setVia] = useState<'phone' | 'in_shop'>('phone');
   const yesCount = lines.filter((l) => yes[l.id]).length;
   const noCount = lines.length - yesCount;
