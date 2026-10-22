@@ -31,7 +31,7 @@ function job(over) {
     ...over,
   });
 }
-const line = (over) => ({ id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'pending', lineTotal: 18, need: 'needed', reason: 'Worn down to 1mm', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, ...over });
+const line = (over) => ({ id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'pending', lineTotal: 18, need: 'needed', reason: 'Worn down to 1mm', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, ...over });
 const quote = (state, lines) => ({ id: 9, workshopJobId: 1, revision: 1, state, createdAt: '2026-10-05T09:00:00Z', sentAt: null, lines,
   totals: { all: lines.reduce((s, l) => s + l.lineTotal, 0), approved: lines.filter((l) => l.decision === 'approved').reduce((s, l) => s + l.lineTotal, 0), pending: lines.filter((l) => l.decision === 'pending').reduce((s, l) => s + l.lineTotal, 0), declined: lines.filter((l) => l.decision === 'declined').reduce((s, l) => s + l.lineTotal, 0) } });
 
@@ -209,4 +209,44 @@ test('an answered quote strikes out what was declined and shows the Approved tot
   assert.ok(has(dlg.queryByText('Declined')));
   assert.ok(has(dlg.queryByText('Approved total £75.00')));
   assert.ok(has(dlg.queryByText('Fit new gear cable declined. Anything beyond these lines needs a new approval.')));
+});
+
+// Goes with (decision 7, M2; dq-job-quote) and what happens without a Needed
+// line (decision 7, H1).
+const FIT = (over) => line({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 12, lineTotal: 12, reason: 'Needed with the new pads', ...over });
+
+test('a draft labour line can go with one of the quote’s parts, and the part line has no choice', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({}), FIT({})]) });
+  const pick = await dlg.findByRole('combobox', { name: 'Fit and adjust brakes goes with' });
+  assert.deepEqual([...pick.options].map((o) => o.textContent), ['Nothing', 'Brake pads (pair)']);
+  assert.ok(dlg.queryByRole('combobox', { name: 'Brake pads (pair) goes with' }) === null);
+  fireEvent.change(pick, { target: { value: '1' } });
+  await waitFor(() => assert.match(posts().at(-1) ?? '', /"description":"Fit and adjust brakes".*"goesWith":0/));
+});
+
+test('a saved pair shows as chosen, and Nothing takes it off', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({}), FIT({ goesWithLineId: 1 })]) });
+  const pick = await dlg.findByRole('combobox', { name: 'Fit and adjust brakes goes with' });
+  assert.equal(pick.value, '1');
+  fireEvent.change(pick, { target: { value: '' } });
+  await waitFor(() => assert.ok(posts().length === 1 && !posts()[0].includes('goesWith')));
+});
+
+test('a draft Needed line takes what happens without it, in the mechanic’s words', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({}), FIT({ need: 'optional' })]) });
+  const box = await dlg.findByRole('textbox', { name: 'What happens without Brake pads (pair)' });
+  assert.ok(dlg.queryByRole('textbox', { name: 'What happens without Fit and adjust brakes' }) === null, 'Optional lines have none');
+  fireEvent.change(box, { target: { value: 'The rear brake stays worn.' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.match(posts().at(-1) ?? '', /"without":"The rear brake stays worn\."/));
+});
+
+test('once sent, the pair reads Goes with, and recording an answer ticks it together', async () => {
+  const { dlg, fireEvent, within, ui } = await openJob({ q: quote('sent', [line({}), FIT({ goesWithLineId: 1 })]) });
+  assert.ok(has(await dlg.findByText('Goes with Brake pads (pair)')));
+  fireEvent.click(dlg.getByRole('button', { name: 'Record their answer' }));
+  const rec = within(await ui.findByRole('dialog', { name: 'Record Maya’s answer' }));
+  fireEvent.click(rec.getByRole('checkbox', { name: 'Yes to Brake pads (pair)' }));
+  assert.equal(rec.getByRole('checkbox', { name: 'Yes to Fit and adjust brakes' }).checked, false);
+  assert.ok(has(rec.queryByRole('button', { name: 'Save: yes to 0 lines, no thanks to 2' })));
 });
