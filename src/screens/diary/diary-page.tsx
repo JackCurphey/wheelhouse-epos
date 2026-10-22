@@ -13,7 +13,7 @@ import { NewJobDialog, type ForOrder } from './new-job-dialog.tsx';
 import { OfferDialog, requestMinutes, type OfferAt } from './offer-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { Chevron, Floating, initial, shortWeek, useIsNarrow, useIsPhone, useMedia } from './diary-bits.tsx';
-import { ExtrasContext, MoveContext, PickContext, SlotContext, type PickApi } from './diary-context.ts';
+import { BlockLinesContext, ExtrasContext, MoveContext, PickContext, SlotContext, type PickApi } from './diary-context.ts';
 import { BLOCK, CHIP, PHONE_SLOT_H, SLOT_H, SR, blocksOf, cardDay, describe, type Col, type Mechanic, type Outline, type Settings, type Shown, type Waiting } from './diary-model.ts';
 import { ChosenBar, MoveErrorBox, NoticeBox, PickBar, WaitingSheet } from './diary-menus.tsx';
 import { ChooseDaySheet, MonthGrid } from './diary-month.tsx';
@@ -565,6 +565,7 @@ export function DiaryPage() {
   }
 
   return (
+    <BlockLinesContext.Provider value={{ first: settings.data?.blockFirst ?? 'bike', second: settings.data?.blockSecond ?? 'jobTitle' }}>
     <div className="flex flex-col gap-3">
       {/* Toolbar (decision 60): view and dates together · people and New job.
           From 1280px, spaced as the desktop Shared queue drawing (Jack, 18 Oct)
@@ -721,5 +722,6 @@ export function DiaryPage() {
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
       {extrasUi}
     </div>
+    </BlockLinesContext.Provider>
   );
 }

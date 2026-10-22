@@ -1,8 +1,8 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { tileClass } from './job-extras.tsx';
 import { Chevron } from './diary-bits.tsx';
-import { ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
-import { BLOCK, CHIP, SR, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
+import { BlockLinesContext, ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
+import { BLOCK, CHIP, SR, blockLine, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { STATE_LABEL, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
 
@@ -22,6 +22,7 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
   const picking = useContext(PickContext);
+  const lines = useContext(BlockLinesContext);
   const moving = move?.preview?.partId === job.partId ? move.preview : null;
   const { onMenuKey, onPress, ...hover } = useExtrasHandlers(job);
   const start = moving ? moving.startMin : toMinutes(job.startTime as string);
@@ -58,14 +59,14 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
           placed as the drawing does (diary.mjs blockMark): one line, "bike · mark";
           two lines, the bike then the mark; three or more, bike, job, mark. */}
       <span aria-hidden="true" className={`flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
-        <span className="truncate">{job.bikeLabel || 'Bike'}</span>
+        <span className="truncate">{blockLine(job, lines.first)}</span>
         {mark && height < TWO_LINES ? <>{' · '}<NewOnlineMark short={shortMark} /></> : null}
       </span>
       {/* A block too short for two 12px lines shows the bike only (drawn, walk 1 M3);
           the job stays in its description and summary. */}
       {height >= TWO_LINES && !(mark && height < THREE_LINES) ? (
         <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">
-          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
+          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', blockLine(job, lines.second), wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
         </span>
       ) : null}
       {mark && height >= TWO_LINES ? (
@@ -157,6 +158,7 @@ export function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: 
   const SLOT_H = useContext(SlotContext);
   const extras = useContext(ExtrasContext);
   const picking = useContext(PickContext);
+  const lines = useContext(BlockLinesContext);
   const top = ((start - range.start) / 30) * SLOT_H + 2;
   const height = Math.max(((end - start) / 30) * SLOT_H - 4, SLOT_H - 6);
   const style: CSSProperties = { top, height };
@@ -256,14 +258,14 @@ export function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: 
         </span>
         {/* As a block places it: beside the bike on a one-line stack, else on its own line. */}
         <span aria-hidden="true" className="flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]">
-          <span className="truncate">{front.bikeLabel || 'Bike'}</span>
+          <span className="truncate">{blockLine(front, lines.first)}</span>
           {anyNew && inner < TWO_LINES ? <>{' · '}<NewOnlineMark short /></> : null}
         </span>
         {anyNew && inner >= TWO_LINES ? (
           <span aria-hidden="true" className="flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)]"><NewOnlineMark short /></span>
         ) : null}
         {inner >= (anyNew ? THREE_LINES : TWO_LINES) ? (
-          <span aria-hidden="true" className="truncate text-xs leading-[14px] font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
+          <span aria-hidden="true" className="truncate text-xs leading-[14px] font-semibold text-[var(--wh-muted)]">{`${blockLine(front, lines.second)} · ${hhmm(start)}`}</span>
         ) : null}
       </button>
       {/* Hidden (not just see-through) until the 0.3s is up, so a quick
@@ -289,6 +291,7 @@ export function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: 
 function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch: boolean }) {
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
+  const lines = useContext(BlockLinesContext);
   const { onMenuKey: _menuKey, onPress, ...hover } = useExtrasHandlers(job);
   void _menuKey;
   const s0 = toMinutes(job.startTime as string);
@@ -304,8 +307,8 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
       style={{ height: Math.max((dur / 30) * SLOT_H - 4, touch ? 56 : SLOT_H - 6) }}
       {...hover}
     >
-      <span className="truncate text-xs font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>
-      <span className="truncate text-xs font-bold">{job.title}</span>
+      <span className="truncate text-xs font-bold text-[var(--wh-ink)]">{blockLine(job, lines.first)}</span>
+      <span className="truncate text-xs font-bold">{blockLine(job, lines.second)}</span>
       {/* Bike, job, then the mark, as a tall block has it. */}
       {job.newOnline ? <span className="flex items-center gap-1 truncate text-xs font-bold text-[var(--wh-ink)]"><NewOnlineMark short /></span> : null}
       {/* Fanned by a press and hold: the touch tile's number and times (touchStackTile). */}

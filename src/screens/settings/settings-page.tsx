@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitl
 import { previewLines } from './booking-preview.ts';
 import { AutomaticMessages, useMessagesSummary } from './messages-settings.tsx';
 import { ChecklistsSettings, useChecklistsSummary } from './checklists-settings.tsx';
+import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
@@ -866,6 +867,7 @@ function OwnerSettings() {
   const details = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails>('/api/shop-details') });
   const messages = useMessagesSummary();
   const checklists = useChecklistsSummary();
+  const diaryBlocks = useDiaryBlocksSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
@@ -889,6 +891,7 @@ function OwnerSettings() {
           { key: 'checklists', title: 'Checklists', summary: checklists, body: <ChecklistsSettings /> },
           { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
+          { key: 'diary-blocks', title: 'Diary blocks', summary: diaryBlocks, body: <DiaryBlocksSettings /> },
         ] },
       ],
     },

@@ -108,6 +108,24 @@ test('a job sits in its own day, showing the bike and the job', async () => {
   assert.ok(has(tue.queryByText('Trek Domane, Brake service, Maya Patel, WH-1001, Expected, 10:00–11:00')));
 });
 
+// What a block shows first and second is the shop's choice (Workshop day 17,
+// 29; set-workshop-diary's Diary blocks): bike, then job title, by default.
+test('a block shows what the shop chose first and second', async () => {
+  Object.assign(SETTINGS, { blockFirst: 'customer', blockSecond: 'reference' });
+  try {
+    const { ui, within } = await openDiary('?date=2026-10-05', 'WH-1001');
+    const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
+    assert.ok(has(tue.queryByText('Maya Patel')));
+    assert.ok(has(tue.queryByText('WH-1001')));
+    assert.ok(!has(tue.queryByText('Brake service')));
+    // Its name for screen readers still says everything.
+    assert.ok(has(tue.queryByText('Trek Domane, Brake service, Maya Patel, WH-1001, Expected, 10:00–11:00')));
+  } finally {
+    delete SETTINGS.blockFirst;
+    delete SETTINGS.blockSecond;
+  }
+});
+
 test('the week runs Monday to Sunday and is named in the toolbar', async () => {
   const { ui } = await openDiary();
   assert.ok(has(ui.queryByText('5–11 October 2026')));

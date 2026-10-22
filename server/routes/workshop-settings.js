@@ -27,6 +27,8 @@ import {
 const db = { prepare, exec: dbExec };
 // ---------- Workshop settings ----------
 
+const BLOCK_FIELDS = ['bike', 'jobTitle', 'customer', 'reference'];
+
 function serializeWorkshopSettings(row) {
   return {
     openingTime: row.opening_time,
@@ -56,6 +58,9 @@ function serializeWorkshopSettings(row) {
     confirmBookingsAutomatically: row.confirm_bookings_automatically === 1,
     // The shop's additional note on the confirmation, '' for none (Jack, 19 Oct; migration 045).
     confirmationNote: row.confirmation_note ?? '',
+    // What a diary block shows first and second (Workshop day 17, 29; migration 053).
+    blockFirst: row.block_first,
+    blockSecond: row.block_second,
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -402,6 +407,13 @@ export function register(route) {
     const confirmAutomatically = body.confirmBookingsAutomatically === undefined
       ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
 
+    // What a diary block shows first and second: two different things from
+    // bike, job title, customer and job number (Workshop day 17, 29).
+    const blockFirst = body.blockFirst === undefined ? existing.block_first : body.blockFirst;
+    const blockSecond = body.blockSecond === undefined ? existing.block_second : body.blockSecond;
+    if (![blockFirst, blockSecond].every((f) => BLOCK_FIELDS.includes(f))) return badRequest(res, 'Choose bike, job title, customer or job number');
+    if (blockFirst === blockSecond) return badRequest(res, 'Choose two different things for the two lines');
+
     // The additional note on the confirmation: trimmed, up to 300 characters;
     // empty shows none (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
     let confirmationNote = existing.confirmation_note;
@@ -433,12 +445,14 @@ export function register(route) {
          dropoff_window_start = ?,
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
-         show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?, updated_at = ? WHERE id = ?`
+         show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
+         block_first = ?, block_second = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
-          showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote, nowIso(), existing.id);
+          showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
+          blockFirst, blockSecond, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });
