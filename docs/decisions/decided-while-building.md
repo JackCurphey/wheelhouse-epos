@@ -1402,3 +1402,21 @@ The drawings show where slots appear but not these rules. *Decided:*
 6. **Reply from the shop** is listed in Settings › Messages with the other
    messages, in its drawn wording (ac-reply-text).
 7. **Migration 061.**
+8. **Notes at any stage the page is open** (fresh review). Decision 3 says
+   "a job's page"; the drawing shows the box on the in-the-shop page. The
+   server takes a note whenever the booking link works; the customer's card
+   is placed as drawn. A closed page (30 days after collection, or a
+   booking that never came in) takes none.
+9. **A reply on a job whose page has closed** is saved, and no text goes
+   ("Maya Patel’s booking page has closed, so no text went."): it would
+   carry a link that doesn't work.
+10. **Before real sending is switched on:** every message with a link issues
+    the customer a new one and the old stops working (one link per job). A
+    conversation would do that on every reply. To settle before real
+    sending: keep more than one live link per job, or reuse the one they
+    have. Pretend sending issues none, so nothing breaks today.
+11. **A reply ending "?" or "!"** reads "…come in?. Replies to this
+    number…": only a full stop is taken off. Left as is.
+12. **For the customer's card:** the booking link's guess limit (30 a
+    quarter hour) counts every read, so the card mustn't re-read the thread
+    on a timer.

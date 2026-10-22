@@ -13,7 +13,7 @@ CREATE TABLE job_notes (
   body TEXT NOT NULL CONSTRAINT job_notes_body_check CHECK (char_length(body) BETWEEN 1 AND 1000),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_job_notes_job ON job_notes(workshop_job_id, id);
+CREATE INDEX idx_job_notes_job ON job_notes(shop_id, workshop_job_id, id);
 ALTER TABLE job_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_notes FORCE ROW LEVEL SECURITY;
 CREATE POLICY job_notes_shop_isolation ON job_notes

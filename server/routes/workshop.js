@@ -12,7 +12,7 @@ import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, pool } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
-import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
@@ -1351,18 +1351,24 @@ export function register(route) {
   // screens: diary
   route('POST', '/api/workshop-jobs/:id/notes', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
-    const job = await db.prepare('SELECT id, customer_id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    const job = await db.prepare(
+      `SELECT w.id, w.customer_id, w.job_date, w.custody_state, c.name AS customer_name,
+              to_char(w.collected_at AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS collected_on
+         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?`
+    ).get(Number(params.id));
     if (!job) return notFound(res, 'Job not found');
     const body = await readJsonBody(req);
-    const text = cleanNote(body.text);
+    const text = cleanNote(body?.text);
     if (!text) return badRequest(res, NOTE_WORDS);
     await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
     let message;
     try {
-      const why = job.customer_id ? await whyNotQueued('shop_reply', job.customer_id) : 'no_customer';
+      // A page that has closed (fresh review): no text with a link that doesn't work.
+      const closed = linkExpiry({ jobDate: job.job_date, custodyState: job.custody_state, collectedOn: job.collected_on }, await currentShopToday()).expired;
+      const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
       if (why) {
-        const who = why === 'no_customer' ? null : (await db.prepare('SELECT name FROM customers WHERE id = ?').get(job.customer_id))?.name;
-        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : notSent(why, 'Reply from the shop', who ?? 'The customer') };
+        const who = job.customer_name ?? 'The customer';
+        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed, so no text went.` : notSent(why, 'Reply from the shop', who) };
       } else {
         const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
         const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);

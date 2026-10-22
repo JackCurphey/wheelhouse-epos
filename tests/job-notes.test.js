@@ -4,6 +4,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
+import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -136,4 +137,57 @@ test('another shop can’t read or answer this shop’s notes', async () => {
   assert.equal((await reply(job.id, 'Hello from elsewhere', other)).status, 404);
   assert.equal((await staff('/api/job-notes/conversations?filter=all', undefined, other)).body.items.some((c) => c.lastText === 'Private to Notes Cycles'), false);
   assert.equal((await portal(`/booking-links/${code}/notes`, {}, other)).status, 404);
+});
+
+// From the fresh review.
+async function expire(jobId) {
+  // Collected well before the test clock's today (1 Sep 2026): its page has closed.
+  await runWithShop(owner.shop.id, () => prepare(
+    "UPDATE workshop_jobs SET custody_state = 'collected', collected_at = '2026-07-01T12:00:00Z' WHERE id = ?"
+  ).run(jobId));
+}
+
+test('a closed booking page takes no notes and shows none', async () => {
+  const { job, code } = await mayasJob();
+  await note(code, 'Before it closed');
+  await expire(job.id);
+  assert.equal((await portal(`/booking-links/${code}/notes`)).status, 410);
+  assert.equal((await note(code, 'After it closed')).status, 410);
+});
+
+test('a reply on a job whose page has closed is saved, and no text with a dead link goes', async () => {
+  const { job } = await mayasJob();
+  await expire(job.id);
+  const res = await reply(job.id, 'Thanks for coming in.');
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.body.message.status, 'not_sent');
+  assert.equal(res.body.message.reason, 'Maya Patel’s booking page has closed, so no text went.');
+  assert.equal((await staff(`/api/messages?jobId=${job.id}`)).body.filter((m) => m.key === 'shop_reply').length, 0);
+});
+
+test('with Reply from the shop switched off, the reply is saved and says no text went', async () => {
+  assert.equal((await staff('/api/message-templates/shop_reply', { method: 'PUT', body: { enabled: false } })).status, 200);
+  try {
+    const { job } = await mayasJob();
+    const res = await reply(job.id, 'Saved but not sent.');
+    assert.equal(res.status, 201);
+    assert.equal(res.body.message.status, 'not_sent');
+    assert.match(res.body.message.reason, /switched off/);
+  } finally {
+    await staff('/api/message-templates/shop_reply', { method: 'PUT', body: { enabled: true } });
+  }
+});
+
+test('a body that isn’t an object is refused in words, not an error page', async () => {
+  const { job, code } = await mayasJob();
+  const raw = await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/${code}/notes`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'null' });
+  assert.equal(raw.status, 400);
+  const staffRaw = await staffRequest(server.baseUrl, owner.cookie, `/api/workshop-jobs/${job.id}/notes`, { method: 'POST', body: null });
+  assert.notEqual(staffRaw.status, 500);
+});
+
+test('Settings’ preview of Reply from the shop shows a reply', async () => {
+  const preview = await staff('/api/message-templates/shop_reply/preview', { method: 'POST', body: {} });
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  assert.match(preview.body.text, /\(WH-1042\): \[Jo’s reply\]\. Replies to this number/);
 });

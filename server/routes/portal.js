@@ -1254,7 +1254,7 @@ export function register(route) {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
     const body = await readJsonBody(req);
-    const text = cleanNote(body.text);
+    const text = cleanNote(body?.text);
     if (!text) return badRequest(res, NOTE_WORDS);
     await addNote({ jobId: found.id, fromCustomer: true, text });
     sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
