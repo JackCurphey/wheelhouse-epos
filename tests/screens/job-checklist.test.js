@@ -16,6 +16,7 @@ const NOTE = 'The rear pads are worn. We recommend replacing the pads and adjust
 let JOB;
 let CHECKLIST;
 let refuse;
+let hold;
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -46,6 +47,7 @@ async function openJob({ over = {}, checklist = drawn() } = {}) {
   });
   CHECKLIST = checklist;
   refuse = null;
+  hold = null;
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -62,6 +64,7 @@ async function openJob({ over = {}, checklist = drawn() } = {}) {
     if (u.pathname === '/api/workshop-jobs/1/checklist') return reply(200, CHECKLIST);
     const item = u.pathname.match(/^\/api\/workshop-jobs\/1\/checklist\/items\/(\d+)$/);
     if (item && method === 'PUT') {
+      if (hold && hold.index === Number(item[1])) { const h = hold; hold = null; await h.wait; return reply(h.status, h.body); }
       if (refuse) return reply(refuse.status, refuse.body);
       const i = Number(item[1]);
       CHECKLIST = counted({ ...CHECKLIST, items: CHECKLIST.items.map((it, n) => (n === i ? { ...it, ...body } : it)) });
@@ -156,4 +159,39 @@ test('finished work’s checklist can be read, not changed', async () => {
   assert.equal(box.getByLabelText('Cables & housing').disabled, true);
   assert.ok(box.queryByRole('button', { name: 'Add a note for Headset' }) === null);
   assert.ok(box.queryByText('Reopen the work to change its checklist.') !== null);
+});
+
+// ---------- Fresh review, 22 Oct ----------
+
+test('a failed tick is put back without undoing a later tick that saved', async () => {
+  const { box, fireEvent, waitFor } = await openChecklist();
+  let release;
+  hold = { index: 8, wait: new Promise((r) => { release = r; }), status: 500, body: { error: 'Internal error' } };
+  fireEvent.click(box.getByLabelText('Cables & housing'));
+  fireEvent.click(box.getByLabelText('Bolts torqued'));
+  await waitFor(() => assert.equal(box.getByLabelText('Bolts torqued').checked, true));
+  release();
+  await box.findByRole('alert');
+  await waitFor(() => assert.equal(box.getByLabelText('Cables & housing').checked, false));
+  assert.equal(box.getByLabelText('Bolts torqued').checked, true);
+});
+
+test('a refused note keeps what was typed', async () => {
+  const { box, fireEvent } = await openChecklist();
+  refuse = { status: 500, body: { error: 'Internal error' } };
+  fireEvent.click(box.getByRole('button', { name: 'Add a note for Headset' }));
+  const note = box.getByLabelText('Note for Headset');
+  fireEvent.change(note, { target: { value: 'Slight play, adjusted.' } });
+  fireEvent.blur(note);
+  await box.findByRole('alert');
+  assert.equal(box.getByLabelText('Note for Headset').value, 'Slight play, adjusted.');
+});
+
+test('closing while a note is being typed still saves it', async () => {
+  const { ui, box, fireEvent, waitFor } = await openChecklist();
+  fireEvent.click(box.getByRole('button', { name: 'Add a note for Headset' }));
+  fireEvent.change(box.getByLabelText('Note for Headset'), { target: { value: 'Slight play, adjusted.' } });
+  fireEvent.click(box.getByRole('button', { name: 'Close, back to the job' }));
+  await waitFor(() => assert.deepEqual(puts(), ['7 {"note":"Slight play, adjusted."}']));
+  assert.ok(ui.queryByRole('dialog', { name: 'Full service checklist' }) === null);
 });

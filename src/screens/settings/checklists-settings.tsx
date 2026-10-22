@@ -13,12 +13,12 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
  * service's checklist on the job page.
  */
 type Checklist = { id: number; name: string; items: string[]; serviceIds: number[] };
-type Service = { id: number; name: string; active?: number };
+type Service = { id: number; name: string; active: boolean };
 type Editing = { id: number | null; name: string; items: string[]; serviceIds: number[] };
 
 const KEY = ['workshop-checklists'];
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
-const words = (err: unknown) => (err instanceof ApiError && err.status === 400 ? err.message : SAVE_FAILED);
+const words = (err: unknown) => (err instanceof ApiError && (err.status === 400 || err.status === 404) ? err.message : SAVE_FAILED);
 
 /** The fold's summary: "None yet", one checklist's name and items, or the names. */
 export function useChecklistsSummary(): string {
@@ -41,6 +41,7 @@ export function ChecklistsSettings() {
 
   const serviceName = (id: number) => services.data?.find((s) => s.id === id)?.name;
   const usedFor = (c: Checklist) => {
+    if (c.serviceIds.length && !services.data) return `used for ${c.serviceIds.length} service${c.serviceIds.length === 1 ? '' : 's'}`;
     const names = c.serviceIds.map(serviceName).filter(Boolean);
     return names.length ? `used for ${names.join(', ')}` : 'not used for a service yet';
   };
@@ -109,7 +110,7 @@ export function ChecklistsSettings() {
       {editing ? (
         <EditChecklist
           start={editing}
-          services={(services.data ?? []).filter((s) => s.active !== 0)}
+          services={(services.data ?? []).filter((s) => s.active)}
           busy={busy}
           error={error}
           onSave={(e) => void save(e)}
@@ -180,7 +181,7 @@ function EditChecklist({ start, services, busy, error, onSave, onClose }: {
                     type="button" data-move draggable
                     aria-label={`Move ${label} — drag, or use the arrow keys`}
                     onKeyDown={onKey(i)}
-                    onDragStart={() => { dragging.current = i; }}
+                    onDragStart={(e) => { dragging.current = i; e.dataTransfer.setData('text/plain', it.text); }}
                     className="inline-flex size-11 shrink-0 cursor-grab items-center justify-center text-[var(--wh-muted)]"
                   >⋮⋮</button>
                   <input
@@ -188,7 +189,7 @@ function EditChecklist({ start, services, busy, error, onSave, onClose }: {
                     onChange={(e) => setItems(items.map((x) => (x.key === it.key ? { ...x, text: e.target.value } : x)))}
                     className="min-h-11 min-w-0 grow rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm"
                   />
-                  <button type="button" aria-label={`Remove ${label}`} onClick={() => setItems(items.filter((x) => x.key !== it.key))} className="inline-flex size-11 shrink-0 items-center justify-center text-[var(--wh-muted)]">
+                  <button type="button" aria-label={`Remove ${label}`} onClick={() => { setItems(items.filter((x) => x.key !== it.key)); setTimeout(() => list.current?.querySelectorAll<HTMLButtonElement>('[data-move]')[Math.min(i, items.length - 2)]?.focus(), 0); }} className="inline-flex size-11 shrink-0 items-center justify-center text-[var(--wh-muted)]">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                   </button>
                 </div>

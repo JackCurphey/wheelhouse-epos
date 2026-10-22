@@ -11,9 +11,11 @@ const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: t
 const TEMPLATE = ['Frame & fork', 'Wheels & tyres', 'Tyre pressure', 'Brakes bled & adjusted', 'Gears indexed',
   'Chain & drivetrain', 'Bottom bracket', 'Headset', 'Cables & housing', 'Bolts torqued'];
 const SERVICES = [
-  { id: 3, name: 'Standard service', minutes: 60, price: 65, active: 1 },
-  { id: 4, name: 'Safety check', minutes: 60, price: 30, active: 1 },
-  { id: 5, name: 'Gear adjustment', minutes: 60, price: 20, active: 1 },
+  { id: 3, name: 'Standard service', minutes: 60, price: 65, active: true },
+  { id: 4, name: 'Safety check', minutes: 60, price: 30, active: true },
+  { id: 5, name: 'Gear adjustment', minutes: 60, price: 20, active: true },
+  // As the server sends a removed service (fresh review, 22 Oct).
+  { id: 6, name: 'Old removed service', minutes: 30, price: 10, active: false },
 ];
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -111,6 +113,7 @@ test('Edit opens the checklist: its name, items and Used for; Save sends the who
   assert.equal(within(used).getByLabelText('Standard service').checked, true);
   assert.equal(within(used).getByLabelText('Safety check').checked, false);
   assert.ok(box.queryByText('A service has one checklist at most. Jobs already started keep the checklist they began with.') !== null);
+  assert.ok(within(used).queryByLabelText('Old removed service') === null, 'a removed service isn’t offered');
 
   fireEvent.change(box.getByLabelText('Name'), { target: { value: 'Service checklist' } });
   fireEvent.click(box.getByRole('button', { name: 'Remove Bolts torqued' }));

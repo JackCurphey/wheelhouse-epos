@@ -1132,3 +1132,10 @@ pattern is the No time chip's "bike · mark".
 5. **Finished work.** *Decided:* the checklist opens to read, its ticks
    greyed, with "Reopen the work to change its checklist.", as the notes say
    "Reopen the job to change its notes."
+6. **After the fresh review.** *Decided:* on a computer or tablet the
+   checklist is a pop-up over the job, not the drawing's full-screen page; on
+   a phone it fills the screen with Done pinned below, as drawn, but closes
+   with the cross on the right (the job's Messages pattern) rather than a back
+   arrow on the left. Words the drawings didn't give: a new checklist's box
+   is titled "New checklist", and one not yet used reads "not used for a
+   service yet". "+ Add note" is in the text colour, not the accent.
