@@ -18,6 +18,7 @@ import {
 } from '../capacity.js';
 import { isKnownTimeZone, shopToday } from '../clock.js';
 import { readServiceQuestions } from '../service-questions.js';
+import { ChecklistError, listChecklists, createChecklist, updateChecklist, deleteChecklist } from '../workshop/checklists.js';
 import {
   TIME_RE, LIVE_STATES_SQL, currentShopToday, parseWorkingDays, toCapacitySettings, toBlock, toCapacityJob, loadCapacity,
 } from '../workshop/jobs.js';
@@ -543,6 +544,43 @@ export function register(route) {
         };
       }),
     });
+  });
+
+  // ---------- Service checklists (Jack, 22 Oct, docs/decisions/2026-10-22-service-checklists.md) ----------
+  // The shop's own checklists and the services that have each (drawn as
+  // set-workshop-checklists and set-workshop-checklist-edit). Everyone signed
+  // in reads them; only the Owner changes them, as all Settings until roles.
+  // `{ template: true }` makes the full service checklist, used for no service yet.
+  route('GET', '/api/workshop-checklists', async (req, res) => {
+    sendJson(res, 200, await listChecklists());
+  });
+
+  const checklistReply = async (res, fn, status = 200) => {
+    try {
+      const out = await fn();
+      if (out === undefined) res.writeHead(204).end();
+      else sendJson(res, status, out);
+    } catch (err) {
+      if (!(err instanceof ChecklistError)) throw err;
+      sendJson(res, err.status, { error: err.message });
+    }
+  };
+
+  route('POST', '/api/workshop-checklists', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    await checklistReply(res, () => createChecklist(body), 201);
+  });
+
+  route('PUT', '/api/workshop-checklists/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    await checklistReply(res, () => updateChecklist(Number(params.id), body));
+  });
+
+  route('DELETE', '/api/workshop-checklists/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    await checklistReply(res, () => deleteChecklist(Number(params.id)));
   });
 
   // screens: services, service-edit
