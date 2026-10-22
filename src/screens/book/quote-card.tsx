@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 
 /**
@@ -15,7 +17,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 type QuoteLine = {
   id: number; description: string; lineTotal: number; decision: 'pending' | 'approved' | 'declined';
   need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedAt?: string | null; decidedByName: string | null;
-  goesWithLineId?: number | null; without?: string | null;
+  goesWithLineId?: number | null; without?: string | null; photoId?: number | null;
 };
 // mechanicName and each line's decidedByName come only with the shop's "Show
 // who signed off to customers" switch on; without them the card says "we"
@@ -61,6 +63,9 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
   const [message, setMessage] = React.useState<string | null>(null);
   // Said to screen readers when a tick also changed the line's partner.
   const [pairNote, setPairNote] = React.useState('');
+  // The line whose photo is open larger (dq-quote-photo).
+  const [enlarged, setEnlarged] = React.useState<QuoteLine | null>(null);
+  const photoUrl = (l: QuoteLine) => `/api/portal/${shopSlug}/booking-links/${code}/quote/lines/${l.id}/photo`;
   // Nothing to show without a quote (a 404 means the booking has none).
   if (!q || !Array.isArray(q.lines)) return null;
 
@@ -174,7 +179,8 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
       <ul className="m-0 list-none p-0" aria-labelledby="quote-heading">
         {q.lines.map((l) => (
           <li key={l.id} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] py-3">
-            <label className="flex min-h-11 cursor-pointer items-start gap-3">
+            <div className="flex items-start gap-3">
+            <label className="flex min-h-11 min-w-0 grow cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
                 className="mt-0.5 size-[22px] shrink-0 accent-[var(--wh-ink)]"
@@ -193,6 +199,23 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
                 {l.reason ? <span className="text-sm">{l.reason}</span> : null}
               </span>
             </label>
+            {l.photoId ? (
+              <span className="flex shrink-0 flex-col items-center gap-0.5">
+                <button
+                  type="button"
+                  aria-label={`Photo of ${l.description}${l.reason ? `: ${l.reason}` : ''} — open larger photo`}
+                  onClick={() => setEnlarged(l)}
+                  className="relative h-[72px] w-24 overflow-hidden rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-surface-muted)] p-0"
+                >
+                  <img src={photoUrl(l)} alt="" className="size-full object-cover" />
+                  <span aria-hidden="true" className="absolute right-1 bottom-1 inline-flex rounded-md bg-[var(--wh-ink)] p-[3px] text-white">
+                    <Search size={12} />
+                  </span>
+                </button>
+                <span className="text-xs text-[var(--wh-muted)]">Tap to enlarge</span>
+              </span>
+            ) : null}
+            </div>
             {/* Drawn only when the mechanic wrote what happens without it (dq-quote-decline). */}
             {l.need === 'needed' && !tick[l.id] && l.without ? (
               <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
@@ -215,6 +238,18 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
       <p className="m-0 text-sm text-[var(--wh-muted)]">Prices include VAT. Nothing to pay today.</p>
       {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
       <Button variant="accent" className="self-end" disabled={sending} onClick={() => void send()}>{label}</Button>
+      {enlarged ? (
+        <Dialog open onOpenChange={(o) => { if (!o) setEnlarged(null); }} aria-labelledby="photo-title" className="md:max-w-[720px]">
+          <DialogHeader>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <DialogTitle id="photo-title">{enlarged.description}</DialogTitle>
+              {enlarged.reason ? <span className="text-[13px] text-[var(--wh-muted)]">{enlarged.reason}</span> : null}
+            </div>
+          </DialogHeader>
+          <DialogBody><img src={photoUrl(enlarged)} alt={enlarged.description} className="max-h-[70vh] w-full object-contain" /></DialogBody>
+          <DialogFooter className="flex justify-end"><Button onClick={() => setEnlarged(null)}>Close</Button></DialogFooter>
+        </Dialog>
+      ) : null}
       <p className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm">Not sure? Call <Phone phone={shopPhone} />.</p>
     </section>
   );

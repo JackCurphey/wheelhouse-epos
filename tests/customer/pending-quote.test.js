@@ -23,7 +23,7 @@ const LINK = {
   answers: [], bike: null, stage: 'in_workshop', photoCount: 0, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
   shop: { address: null, phone: '[shop phone]' },
 };
-const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, ...over });
+const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over });
 const LINES = [
   qline({ without: 'The rear brake stays worn.' }),
   qline({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 18, lineTotal: 18, reason: 'Needed with the new pads.' }),
@@ -242,4 +242,22 @@ test('a refused split answer shows the shop’s words and keeps the ticks', asyn
   assert.ok(has(await ui.findByText('Lines that go together need the same answer: Fit and adjust brakes goes with Shimano brake pads.')));
   assert.equal(has(ui.queryByText('The quote has changed since you opened it. Please look at it again.')), false);
   assert.equal(ui.getByRole('checkbox', { name: /Replace gear cable/ }).checked, true);
+});
+
+// A photo on a quote line (Jack, 1 Oct; dq-quote, dq-quote-photo).
+test('a line with a photo shows it beside the reason, and tapping opens it larger', async () => {
+  const lines = LINES.map((l) => (l.id === 1 ? { ...l, photoId: 30 } : l));
+  const { ui } = await open(QUOTE('sent', lines));
+  const { fireEvent, within } = await rtl();
+  const thumb = await ui.findByRole('button', { name: 'Photo of Shimano brake pads: Rear pads are worn down to 1mm. — open larger photo' });
+  const src = `/api/portal/north/booking-links/${CODE}/quote/lines/1/photo`;
+  assert.equal(thumb.querySelector('img').getAttribute('src'), src);
+  assert.ok(has(ui.queryByText('Tap to enlarge')));
+  assert.equal(ui.queryAllByRole('button', { name: /^Photo of/ }).length, 1, 'only the line with a photo');
+  fireEvent.click(thumb);
+  const big = within(await ui.findByRole('dialog', { name: 'Shimano brake pads' }));
+  assert.ok(has(big.queryByText('Rear pads are worn down to 1mm.')));
+  assert.equal(big.getByRole('img', { name: 'Shimano brake pads' }).getAttribute('src'), src);
+  fireEvent.click(big.getByRole('button', { name: 'Close' }));
+  assert.ok(ui.queryByRole('dialog', { name: 'Shimano brake pads' }) === null);
 });
