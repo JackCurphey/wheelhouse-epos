@@ -30,13 +30,16 @@ const TONE = {
   red: 'bg-[var(--wh-danger-bg)] text-[var(--wh-danger-hover)]',
 };
 
+const londonDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+// "goes at 10:15" today; a message waiting longer (the quote reminder) says its day.
+const goesAt = (iso: string) => (londonDay(iso) === londonDay(new Date().toISOString()) ? `goes at ${clock(iso)}` : `goes ${signedOffWhen(iso)}`);
 const clock = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
 
 // The state's word and colour, and what follows "By text to …".
 function describe(m: JobMessage): { word: string; tone: keyof typeof TONE; when: string } {
   switch (m.state) {
     // Past its time and not yet claimed by the sender's next round.
-    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? `goes at ${clock(m.sendAfter)}` : 'going now' };
+    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? goesAt(m.sendAfter) : 'going now' };
     case 'sending': return { word: 'Sending', tone: 'amber', when: 'going now' };
     case 'delivered': return { word: m.pretend ? 'Pretend' : 'Sent', tone: m.pretend ? 'grey' : 'green', when: signedOffWhen(m.sentAt ?? m.createdAt) };
     case 'undone': return { word: 'Undone', tone: 'grey', when: 'stopped with Undo' };
@@ -76,11 +79,14 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
     queryKey: jobMessagesKey(jobId),
     queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
     // While one waits its minute, look again so it shows when it's gone.
-    refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'intended' || m.state === 'sending') ? 5000 : false),
+    // Checked again while one is about to go; a reminder a day away isn't.
+    refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'sending' || (m.state === 'intended' && (!m.sendAfter || Date.parse(m.sendAfter) - Date.now() < 120_000))) ? 5000 : false),
   });
   const first = customerName.trim().split(/\s+/)[0] || 'the customer';
   // The server lists newest first; a conversation reads oldest first.
-  const thread = [...(messages.data ?? [])].reverse();
+  // A quote reminder stopped because the quote was answered, withdrawn or
+  // replaced (or the job moved on) isn't news, so it isn't listed.
+  const thread = [...(messages.data ?? [])].filter((m) => !(m.key === 'quote_reminder' && m.state === 'undone')).reverse();
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="job-msgs-title"
       // Full screen on a phone, as drawn (job-messages-phone).

@@ -103,7 +103,7 @@ test('Settings › Workshop › Mechanics has the switch, off, with its note', a
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   assert.equal(sw.getAttribute('aria-checked'), 'false');
   assert.ok(sw.textContent.includes('Off'));
-  assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.')));
+  assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link, and the mechanic’s name to quotes. Off: only staff see who signed a job off, and quotes say “we”.')));
 });
 
 test('switching it on saves at once, and it reads On', async () => {

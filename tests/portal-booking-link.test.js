@@ -101,6 +101,7 @@ test('a booking returns a booking link, and the link reads the booking back', as
     bookedInAt: null,
     collectedAt: null,
     expectedReady: null, // a request still waiting: no ready day yet
+    checklist: null, // the work isn't finished
     shop: { address: null, phone: null, openingHours: res.body.shop?.openingHours },
     // Nothing done or paid yet (booking page stages answer 4).
     work: [],

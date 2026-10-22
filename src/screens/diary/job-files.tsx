@@ -15,12 +15,12 @@ import { refusalText } from './refusal-words.ts';
  */
 type Attachment = { id: number; originalName: string; contentType: string; sizeBytes: number; uploadedAt: string; fromCustomer: boolean };
 
-const MAX_BYTES = 15 * 1024 * 1024;
-const TOO_LARGE = 'That file is too large (max 15MB).';
+export const MAX_BYTES = 15 * 1024 * 1024;
+export const TOO_LARGE = 'That file is too large (max 15MB).';
 const sizeText = (n: number) => (n >= 1024 * 1024 ? `${(n / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const isPhoto = (a: Attachment) => a.contentType.startsWith('image/');
 
-async function readBase64(file: File): Promise<string> {
+export async function readBase64(file: File): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let text = '';
   // In slices, so a large photo doesn't overflow the call stack.
@@ -63,7 +63,9 @@ export function JobFiles({ jobId }: { jobId: number }) {
     setError(null);
     try {
       await apiMutate(url(a), undefined, { method: 'DELETE' });
-      await queryClient.invalidateQueries({ queryKey: key });
+      // A quote line's photo is one of these files: removing it takes it off
+      // the line, so the quote is read again too (fresh review).
+      await Promise.all([queryClient.invalidateQueries({ queryKey: key }), queryClient.invalidateQueries({ queryKey: ['quote'] })]);
     } catch (err) {
       setError(refusalText(err));
     }
