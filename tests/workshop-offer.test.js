@@ -219,12 +219,13 @@ test('an Accept for a time the shop has since changed is refused, and nothing is
   assert.equal((await acceptOffer(booked.code, booked.id)).status, 200);
 });
 
-test('an Accept must say which time it’s for', async () => {
+test('an Accept that doesn’t say its time (a page from before) is sent back to show the time', async () => {
   const booked = await book();
   await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
   for (const body of [{}, { jobDate: 'Friday', startTime: '14:00' }]) {
     const res = await acceptBody(booked.code, body);
-    assert.equal(res.status, 400, JSON.stringify([body, res.body]));
+    assert.equal(res.status, 409, JSON.stringify([body, res.body]));
+    assert.equal(res.body.code, 'stale');
   }
   assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'offered');
 });
@@ -244,4 +245,12 @@ test('an offered booking can’t be moved by an edit; staff offer again instead'
   assert.deepEqual([row.job_date, row.start_time, row.mechanic_id], [day, '14:00', alex]);
   // Notes can still change.
   assert.equal((await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { version: job.version, notes: 'Bring the lock key' } })).status, 200);
+});
+
+test('the booking page’s own values for the time are what Accept compares', async () => {
+  const booked = await book();
+  await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
+  const view = (await link.read(booked.code)).body;
+  const res = await acceptBody(booked.code, { jobDate: view.jobDate, startTime: view.startTime });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
 });

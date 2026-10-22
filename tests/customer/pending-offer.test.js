@@ -109,4 +109,6 @@ test('when the shop has changed the time, the page says so and shows the new one
   await click(await ui.findByRole('button', { name: 'Accept this time' }));
   assert.ok(await ui.findByText('The shop has changed the time it’s offering. Here’s the new one.'));
   assert.ok(await ui.findByText('Monday 21 September, 09:00'));
+  // The words stay once the new time has loaded.
+  assert.ok(ui.queryByText('The shop has changed the time it’s offering. Here’s the new one.') !== null);
 });

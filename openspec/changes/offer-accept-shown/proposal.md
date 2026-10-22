@@ -15,7 +15,8 @@ still could move one.
 - `POST …/booking-links/:code/accept-offer` takes `{ jobDate, startTime }`,
   the time the page shows; a different time on the job now is refused (409
   `stale`, "The shop has changed the time it’s offering. Here’s the new one.");
-  none given is 400. The page sends it, and on the refusal shows the server's
+  none given (a page loaded before this change) gets the same answer, so it
+  reloads and shows the time on offer. The page sends it, and on the refusal shows the server's
   words and reloads with the new time.
 - `PUT /api/workshop-jobs/:id` refuses moving an offered booking's day, times
   or mechanic (409 `illegal`, "This time is on offer to the customer. To change

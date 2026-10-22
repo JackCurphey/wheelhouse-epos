@@ -1207,17 +1207,17 @@ export function register(route) {
     // The Accept says which time the customer was shown, so a time the shop
     // has changed since is never confirmed unseen (Jack, 22 Oct, Mark's audit P2 2).
     const body = await readJsonBody(req);
-    const shownDate = String(body.jobDate ?? '').trim();
-    if (!isRealDate(shownDate)) return badRequest(res, 'Say which time you’re accepting');
-    const shownTime = body.startTime ? String(body.startTime).trim() : '';
+    const shownDate = String(body?.jobDate ?? '').trim();
+    const shownTime = body?.startTime ? String(body.startTime).trim() : '';
+    // A page that doesn't say its time (one loaded before this check) is
+    // answered as out of date, so it reloads and shows the time on offer.
+    const STALE = { status: 409, body: { error: 'The shop has changed the time it’s offering. Here’s the new one.', code: 'stale' } };
     const out = await withJobBookingLock(found.id, [], async (job) => {
       if (job.booking_state !== 'offered') {
         if (job.booking_state === 'scheduled' && job.offer_accepted_at) return undefined;
         return { status: 409, body: { error: "There's no time offered to accept", code: 'illegal' } };
       }
-      if (job.job_date !== shownDate || (job.start_time || '') !== shownTime) {
-        return { status: 409, body: { error: 'The shop has changed the time it’s offering. Here’s the new one.', code: 'stale' } };
-      }
+      if (!isRealDate(shownDate) || job.job_date !== shownDate || (job.start_time || '') !== shownTime) return STALE;
       if (customerTooLate(job, await currentShopToday())) {
         return { status: 409, body: { error: CUSTOMER_REFUSALS.change.inShop, code: 'in_shop' } };
       }
