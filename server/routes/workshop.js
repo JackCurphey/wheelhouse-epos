@@ -658,6 +658,18 @@ export function register(route) {
       return badRequest(res, "A job's status can't be changed by saving it. Use the job's own actions instead: book in, start, hold, finish, reopen or cancel.");
     }
 
+    // A time on offer to the customer stays where it is until they answer, so
+    // they can never accept a time they weren't shown; staff offer again
+    // instead (Jack, 22 Oct, Mark's audit P2 2).
+    if (existing.booking_state === 'offered' && (
+      jobDate !== existing.job_date
+      || (times.startTime || '') !== (existing.start_time || '')
+      || (times.endTime || '') !== (existing.end_time || '')
+      || mechResolved.mechanicId !== existing.mechanic_id
+    )) {
+      return sendJson(res, 409, { error: 'This time is on offer to the customer. To change it, use Offer another time.', code: 'illegal' });
+    }
+
     // A complete job is a record of work already done, so its details are
     // frozen - the browser disables every field on the form. Changing status
     // is the one edit that stays open, because that is how a job is reopened.
