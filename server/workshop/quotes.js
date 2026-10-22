@@ -146,10 +146,8 @@ async function createRevisionInTransaction({ jobId, lines }) {
   }
 
   if (current && !quoteMachine.can(current.state, 'revise')) {
-    // declined, superseded and expired are rest states with no way out. What a
-    // shop does when a customer declines and then changes their mind is a real
-    // question, and the machines do not answer it - so this refuses rather than
-    // inventing a transition. Raised for Phase 4.
+    // superseded and expired are rest states with no way out. A declined
+    // quote can be revised (Jack, 22 Oct: the customer changed their mind).
     return { ok: false, code: 'illegal', message: `a quote that is ${current.state} cannot be revised` };
   }
 
@@ -238,6 +236,21 @@ export async function answerAll({ quoteId, jobId = null, decisions, via, loginId
   const event = approved === lines.length ? 'approve_all' : approved === 0 ? 'decline_all' : 'approve_some';
   await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?').run(quoteMachine.next(row.state, event), quoteId);
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
+}
+
+// What the customer answered on the job's earlier quotes, for the new one's
+// "Already agreed" and "You said no thanks" (dq-quote-newer; Jack, 22 Oct).
+export async function earlierAnswers(quote) {
+  const rows = await prepare(
+    `SELECT l.description, l.decision FROM workshop_quote_lines l
+       JOIN workshop_quotes q ON q.id = l.workshop_quote_id
+      WHERE q.workshop_job_id = ? AND q.revision < ? AND l.decision IN ('approved', 'declined')
+      ORDER BY q.revision, l.id`
+  ).all(quote.workshop_job_id, quote.revision);
+  return {
+    agreed: rows.filter((r) => r.decision === 'approved').map((r) => r.description),
+    declined: rows.filter((r) => r.decision === 'declined').map((r) => r.description),
+  };
 }
 
 // The job's quote a customer may see on their booking link: its latest

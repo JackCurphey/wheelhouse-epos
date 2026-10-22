@@ -34,7 +34,7 @@ import {
   checkJobSlot, loadCapacity,
 } from '../workshop/jobs.js';
 import {
-  approve as approveQuote, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
+  approve as approveQuote, earlierAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
@@ -425,6 +425,7 @@ async function customerQuote(result, jobId) {
     ...q,
     lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
     mechanicName: shows ? who?.mechanic_name ?? null : null,
+    earlier: await earlierAnswers(result.quote),
     customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
   };
 }
