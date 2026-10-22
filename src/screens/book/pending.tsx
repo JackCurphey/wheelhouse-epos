@@ -210,7 +210,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         {changing ? <ChangeDate link={link} shopSlug={shopSlug} code={code} request={request} onClose={() => setChanging(false)} /> : (
           <div className="mb-4 flex flex-wrap gap-2.5">
             {waiting && <WithdrawChange shopSlug={shopSlug} code={code} />}
-            {offered && link.canAccept && <AcceptOffer shopSlug={shopSlug} code={code} />}
+            {offered && link.canAccept && <AcceptOffer shopSlug={shopSlug} code={code} shown={{ jobDate: link.jobDate, startTime: link.startTime ?? null }} />}
             {!waiting && link.canChange && <Button onClick={() => setChanging(true)}>Change the date</Button>}
             {link.canCancel && <CancelBooking link={link} shopSlug={shopSlug} code={code} request={request} label={offered ? 'Cancel my request' : undefined} />}
           </div>
@@ -539,7 +539,9 @@ function WithdrawChange({ shopSlug, code }: { shopSlug: string; code: string }) 
 }
 
 /** Accept this time (bk-offered): the booking is confirmed at the time the shop suggested. */
-function AcceptOffer({ shopSlug, code }: { shopSlug: string; code: string }) {
+// It says which time it was shown, so a time the shop has changed since is
+// refused and the page shows the new one (Jack, 22 Oct, Mark's audit P2 2).
+function AcceptOffer({ shopSlug, code, shown }: { shopSlug: string; code: string; shown: { jobDate: string; startTime: string | null } }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -547,7 +549,7 @@ function AcceptOffer({ shopSlug, code }: { shopSlug: string; code: string }) {
     setBusy(true);
     setError(null);
     try {
-      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/accept-offer`, {}, { method: 'POST' });
+      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/accept-offer`, shown, { method: 'POST' });
       queryClient.setQueryData(['portal', shopSlug, 'booking-link', code], reply);
     } catch (err) {
       setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');

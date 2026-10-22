@@ -46,7 +46,13 @@ const book = (jobDate = nextDay(), startTime = '10:00') => bookOnline(server.bas
 });
 const version = async (id) => (await staff(`/api/workshop-jobs/${id}`)).body.version;
 const offer = async (id, body) => staff(`/api/workshop-jobs/${id}/offer`, { method: 'POST', body: { version: await version(id), ...body } });
-const acceptOffer = (code) => jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${code}/accept-offer`, { method: 'POST', body: {} });
+// Accept says which time it was shown (Jack, 22 Oct, Mark's audit P2 2): by
+// default the time on the job now, as the customer's page shows it.
+const acceptBody = (code, body) => jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${code}/accept-offer`, { method: 'POST', body });
+async function acceptOffer(code, id) {
+  const row = await jobRow(shopId(), id);
+  return acceptBody(code, { jobDate: row.job_date, startTime: row.start_time || null });
+}
 const shopId = () => owner.shop.id;
 
 test('offering moves the request to the suggested time and its hold with it, and keeps where it was asked', async () => {
@@ -116,7 +122,7 @@ test('the customer’s link shows the offer, and the customer can accept it or c
   const change = await link.change(booked.code, { jobDate: nextDay(), mechanicId: sam, startTime: '10:00' });
   assert.equal(change.status, 409);
   assert.deepEqual(change.body, { error: "This booking can't be changed online", code: 'illegal' });
-  const accepted = await acceptOffer(booked.code);
+  const accepted = await acceptOffer(booked.code, booked.id);
   assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
   assert.equal(accepted.body.stage, 'confirmed');
   assert.equal(accepted.body.offer, null);
@@ -125,14 +131,14 @@ test('the customer’s link shows the offer, and the customer can accept it or c
   assert.equal(row.booking_state, 'scheduled');
   assert.equal(row.job_date, to);
   assert.equal(row.offered_from_date, null);
-  const again = await acceptOffer(booked.code);
+  const again = await acceptOffer(booked.code, booked.id);
   assert.equal(again.status, 200, 'a second press returns the same');
   assert.equal(again.body.stage, 'confirmed');
 });
 
 test('accepting is refused when nothing is offered, and cancelling an offer cancels it', async () => {
   const booked = await book();
-  const none = await acceptOffer(booked.code);
+  const none = await acceptOffer(booked.code, booked.id);
   assert.equal(none.status, 409);
   assert.deepEqual(none.body, { error: "There's no time offered to accept", code: 'illegal' });
   await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
@@ -163,7 +169,7 @@ test('a link that is too late can’t accept', async () => {
   const booked = await book();
   await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
   await setJob(shopId(), booked.id, "custody_state = 'in_shop'");
-  const res = await acceptOffer(booked.code);
+  const res = await acceptOffer(booked.code, booked.id);
   assert.equal(res.status, 409);
   assert.equal(res.body.code, 'in_shop');
 });
@@ -194,4 +200,48 @@ test('staff see the offer while it waits: the day first asked for and the messag
   assert.deepEqual(seen.offer, { fromDate: booked.jobDate, fromTime: booked.startTime, message: 'Would 14:00 work?' });
   await staff(`/api/workshop-jobs/${booked.id}/decline`, { method: 'POST', body: { version: await version(booked.id) } });
   assert.equal((await staff(`/api/workshop-jobs/${booked.id}`)).body.offer, null);
+});
+
+// ---------- Accepting the time shown (Jack, 22 Oct, Mark's audit P2 2) ----------
+
+test('an Accept for a time the shop has since changed is refused, and nothing is confirmed', async () => {
+  const booked = await book();
+  const friday = nextDay();
+  await offer(booked.id, { jobDate: friday, startTime: '12:00', mechanicId: alex });
+  // The customer's page shows Friday 12:00; the shop offers again meanwhile.
+  await offer(booked.id, { jobDate: nextDay(), startTime: '09:00', mechanicId: alex });
+  const stale = await acceptBody(booked.code, { jobDate: friday, startTime: '12:00' });
+  assert.equal(stale.status, 409, JSON.stringify(stale.body));
+  assert.equal(stale.body.code, 'stale');
+  assert.equal(stale.body.error, 'The shop has changed the time it’s offering. Here’s the new one.');
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'offered');
+  // Accepting the new time works.
+  assert.equal((await acceptOffer(booked.code, booked.id)).status, 200);
+});
+
+test('an Accept must say which time it’s for', async () => {
+  const booked = await book();
+  await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });
+  for (const body of [{}, { jobDate: 'Friday', startTime: '14:00' }]) {
+    const res = await acceptBody(booked.code, body);
+    assert.equal(res.status, 400, JSON.stringify([body, res.body]));
+  }
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'offered');
+});
+
+test('an offered booking can’t be moved by an edit; staff offer again instead', async () => {
+  const booked = await book();
+  const day = nextDay();
+  await offer(booked.id, { jobDate: day, startTime: '14:00', mechanicId: alex });
+  const job = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
+  for (const change of [{ jobDate: nextDay() }, { startTime: '15:00', endTime: '16:00' }, { mechanicId: sam }]) {
+    const res = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { version: job.version, ...change } });
+    assert.equal(res.status, 409, JSON.stringify([change, res.body]));
+    assert.equal(res.body.code, 'illegal');
+    assert.equal(res.body.error, 'This time is on offer to the customer. To change it, use Offer another time.');
+  }
+  const row = await jobRow(shopId(), booked.id);
+  assert.deepEqual([row.job_date, row.start_time, row.mechanic_id], [day, '14:00', alex]);
+  // Notes can still change.
+  assert.equal((await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { version: job.version, notes: 'Bring the lock key' } })).status, 200);
 });

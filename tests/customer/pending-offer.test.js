@@ -60,6 +60,8 @@ test('Accept this time confirms the booking at the suggested time', async () => 
   await click(await ui.findByRole('button', { name: 'Accept this time' }));
   assert.ok(await ui.findByText('Booking confirmed'));
   assert.equal(posts('/accept-offer').length, 1);
+  // It says which time the customer was shown (Jack, 22 Oct, Mark's audit P2 2).
+  assert.deepEqual(posts('/accept-offer')[0].body, { jobDate: '2026-09-19', startTime: '10:00' });
   assert.ok(ui.queryByRole('button', { name: 'Accept this time' }) === null);
 });
 
@@ -89,4 +91,22 @@ test('a drop-off day’s offer names the day alone', async () => {
   const { ui } = await open({ ...MAYA, startTime: '', offer: { fromDate: '2026-09-17', fromTime: '', message: null } });
   assert.ok(await ui.findByText('North Street Cycles can’t do Thursday 17 September. They suggest:'));
   assert.ok(ui.queryByText('Thursday 17 September — not available') !== null);
+});
+
+test('when the shop has changed the time, the page says so and shows the new one', async () => {
+  let reads = 0;
+  const moved = { ...MAYA, jobDate: '2026-09-21', startTime: '09:00' };
+  current = await renderBookScreen({
+    file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
+    url: `/book/north/booking/${CODE}`, services: SERVICES,
+    bookingLink: (address, init) => {
+      if ((init?.method ?? 'GET') === 'POST') return { status: 409, body: { error: 'The shop has changed the time it’s offering. Here’s the new one.', code: 'stale' } };
+      reads += 1;
+      return { status: 200, body: reads === 1 ? MAYA : moved };
+    },
+  });
+  const { ui } = current;
+  await click(await ui.findByRole('button', { name: 'Accept this time' }));
+  assert.ok(await ui.findByText('The shop has changed the time it’s offering. Here’s the new one.'));
+  assert.ok(await ui.findByText('Monday 21 September, 09:00'));
 });
