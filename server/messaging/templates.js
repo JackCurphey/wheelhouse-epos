@@ -35,6 +35,16 @@ export const TEMPLATES = {
     subject: 'Work added to your repair — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Spending limit', 'Work added', 'Amount added', 'Link to the job', 'Shop phone', 'Job number', 'Shop name'],
   },
+  // After staff record the customer's answer from a call (dq-record-answer);
+  // wording approved by Jack, 22 Oct. [What was agreed] is built from the
+  // quote: "Going ahead: …, £46.00. No thanks: …".
+  your_answers: {
+    name: 'Your answers',
+    when: 'When staff record the customer’s answer from a call',
+    wording: 'Hi [Customer’s first name], thanks for your answers about your [Bike]. [What was agreed] See it here: [Link to the job] — no app or sign-in needed. Your repair · [Job number].',
+    subject: 'Your answers — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'What was agreed', 'Link to the job', 'Job number', 'Shop name'],
+  },
   bike_ready: {
     name: 'Bike ready',
     when: 'When a job is marked ready',
@@ -95,7 +105,7 @@ export const TEMPLATES = {
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
