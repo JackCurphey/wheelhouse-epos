@@ -346,6 +346,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             </>
           ));
         })() : null}
+        {/* And once it's ready or collected, where a reply's link brings them back
+            (collect-and-pay review; drop-off review decision 7, H4; fresh review). */}
+        {!inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {/* Who checked it, if the shop shows it (Jack, 18 Oct; drawn as cp-summary-checked). */}
           {link.stage === 'ready_to_collect' && link.checkedBy && <p className="m-0 flex items-center gap-2 text-sm" data-checked-by="true"><Check aria-hidden="true" className="size-4 text-[var(--wh-status-complete-ink)]" /><span>Checked by <strong>{link.checkedBy}</strong></span></p>}

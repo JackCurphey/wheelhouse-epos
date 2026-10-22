@@ -8,12 +8,13 @@ ac-job-note-answered, on the in-the-shop booking page. The server is
 `notes-with-the-shop` (#421).
 
 ## What changes
-- The booking page, while the bike is in the shop, shows "Notes with the
+- The booking page, while the bike is in the shop and once it's ready or
+  collected (fresh review), shows "Notes with the
   shop": the thread (yours on the right, the shop's on the left, who and
   when), "Add a note for the shop" with Send note until there's a note, then
-  "Reply" with Send; "Sent. [Shop] will reply here, and we’ll text you when
-  they do." while waiting; "We’ll reply here and text you when we do." under
-  the box.
+  "Reply" with Send; "Sent. [Shop] will reply here, and we’ll let you know
+  when they do." while waiting; "We’ll reply here and let you know when we
+  do." under the box ("let you know": the customer may not have chosen text).
 
 ## Risky areas
 A public page's use of a public route. Reviewed.
