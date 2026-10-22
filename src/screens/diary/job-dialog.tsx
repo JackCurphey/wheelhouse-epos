@@ -403,7 +403,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               <p role="status" className="m-0 shrink-0 border-b border-[var(--wh-border)] px-5 py-2 text-sm">{ready.reason}</p>
             ) : null}
             <div className="min-h-0 grow overflow-y-auto px-5 py-4">
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+              <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
                 <div className="flex min-w-0 flex-col gap-4">
                   <section aria-labelledby="job-details" className="flex flex-col gap-1.5 text-sm">
                     <h3 id="job-details" className="m-0 text-sm font-bold">Job details</h3>
@@ -446,6 +446,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                       );
                     })()}
                   </section>
+                </div>
+                <div className="flex min-w-0 flex-col gap-4">
                   <section aria-labelledby="job-notes" className="flex flex-col gap-1.5">
                     <h3 id="job-notes" className="m-0 text-sm font-bold">Notes</h3>
                     <div className="flex flex-col gap-2 rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 py-2.5 text-sm leading-normal">
@@ -479,11 +481,14 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                   </section>
                   <JobFiles jobId={job.id} />
                 </div>
-                <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
+              </div>
+              {/* As drawn (job-page.mjs jobPopupContent): the job's details beside Notes in
+                  the wider column, then Work and parts across the full width (Jack, 22 Oct:
+                  "so that the notes have more space on the page"). */}
+                <section aria-labelledby="job-work" className="mt-6 flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>
                   {job.orderId ? <WorkParts orderId={job.orderId} job={job} /> : <p className="m-0 text-sm text-[var(--wh-muted)]">This job has no order to add work and parts to.</p>}
                 </section>
-              </div>
             </div>
 
             {message ? <p role="alert" className="mx-5 mb-2 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
