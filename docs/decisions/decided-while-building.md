@@ -1370,3 +1370,17 @@ The drawings show where slots appear but not these rules. *Decided:*
    Otherwise it's stopped, and the job's Messages don't list it.
 9. **Staff Messages say the day** a message waiting past today goes ("goes
    Fri 23 Oct, 10:15").
+
+### 22 Oct 2026: the "Your answers" text (`openspec/changes/your-answers-message`)
+
+1. **Only for answers from a call.** The drawn Settings row says "from a
+   call"; recorded "in the shop", the customer was there, so none is sent.
+2. **At once**, as booking answers send at once (22 Oct): the answer is
+   final and was given on the call.
+3. **What it lists:** "Going ahead: …, £46.00. No thanks: …", the cost of
+   what's going ahead from the database; with nothing agreed, "Going ahead:
+   just the booked work."
+4. **Jack approved the wording before reading it** (22 Oct, by the box); it
+   was shown to him straight after, and it's a one-line change.
+5. **No word on the job page** that it went: not drawn; the job's Messages
+   show it.
