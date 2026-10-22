@@ -26,13 +26,22 @@ export const LEGEND_LABEL: Record<DiaryState, string> = { ...STATE_LABEL, schedu
 /** The legend's order, as drawn (diaryLegend). */
 export const LEGEND: DiaryState[] = ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled'];
 
+/**
+ * A quote still waiting after its one reminder: "No answer yet" where the
+ * diary would say Quoting (Jack, 1 Oct, drop-off and quote decision 4).
+ */
+export const noAnswer = (job: { quote?: { state: string; reminderSentAt?: string | null } | null }) =>
+  job.quote?.state === 'sent' && Boolean(job.quote.reminderSentAt);
+export const stateWord = (job: { state: DiaryState; quote?: { state: string; reminderSentAt?: string | null } | null }) =>
+  job.state === 'answer' && noAnswer(job) ? 'No answer yet' : STATE_LABEL[job.state];
+
 type JobStates = {
   bookingState: string;
   workState: string;
   requested?: unknown;
   cancelledBy?: string | null;
   cancellationSeenAt?: string | null;
-  quote?: { state: string } | null;
+  quote?: { state: string; reminderSentAt?: string | null } | null;
 };
 
 /**
