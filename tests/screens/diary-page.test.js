@@ -126,6 +126,19 @@ test('a block shows what the shop chose first and second', async () => {
   }
 });
 
+test('on a phone a block shows the shop’s chosen lines too', async () => {
+  Object.assign(SETTINGS, { blockFirst: 'customer', blockSecond: 'reference' });
+  try {
+    const phone = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} });
+    const { ui } = await openDiary('?date=2026-10-06', 'WH-1001', phone);
+    assert.ok(has(ui.queryByText('Maya Patel')));
+    assert.ok(!has(ui.queryByText('Brake service')));
+  } finally {
+    delete SETTINGS.blockFirst;
+    delete SETTINGS.blockSecond;
+  }
+});
+
 test('the week runs Monday to Sunday and is named in the toolbar', async () => {
   const { ui } = await openDiary();
   assert.ok(has(ui.queryByText('5–11 October 2026')));

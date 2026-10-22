@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
+import type { BlockField } from '@/screens/diary/diary-context.ts';
 
 /**
  * Settings › Workshop › Diary blocks (Workshop day 17 and 29, 27 Sep; drawn as
@@ -8,7 +9,7 @@ import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
  * second, from bike, job title, customer and job number; bike, then job title,
  * by default. Saved as soon as it's chosen. The status always shows too.
  */
-export type BlockField = 'bike' | 'jobTitle' | 'customer' | 'reference';
+export type { BlockField };
 type Settings = { blockFirst?: BlockField; blockSecond?: BlockField };
 
 export const BLOCK_FIELDS: { value: BlockField; label: string }[] = [
@@ -48,7 +49,7 @@ export function DiaryBlocksSettings() {
       const saved = await apiMutate<Settings>('/api/workshop-settings', next, { method: 'PUT' });
       queryClient.setQueryData(['workshop-settings'], saved);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 400 ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
     } finally {
       setBusy(false);
     }

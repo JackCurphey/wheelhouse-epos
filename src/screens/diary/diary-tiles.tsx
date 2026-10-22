@@ -56,13 +56,14 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
     <>
       <span className={SR}>{describe(job, chosen)}</span>
       {/* Confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm),
-          placed as the drawing does (diary.mjs blockMark): one line, "bike · mark";
-          two lines, the bike then the mark; three or more, bike, job, mark. */}
+          placed as the drawing does (diary.mjs blockMark): one line, "first line · mark";
+          two lines, the first line then the mark; three or more, first, second, mark.
+          The two lines are the shop's choice (Settings › Workshop › Diary blocks). */}
       <span aria-hidden="true" className={`flex items-center gap-1 truncate text-xs leading-[14px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
         <span className="truncate">{blockLine(job, lines.first)}</span>
         {mark && height < TWO_LINES ? <>{' · '}<NewOnlineMark short={shortMark} /></> : null}
       </span>
-      {/* A block too short for two 12px lines shows the bike only (drawn, walk 1 M3);
+      {/* A block too short for two 12px lines shows its first line only (drawn, walk 1 M3);
           the job stays in its description and summary. */}
       {height >= TWO_LINES && !(mark && height < THREE_LINES) ? (
         <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">

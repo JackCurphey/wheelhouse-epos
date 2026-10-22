@@ -1149,3 +1149,6 @@ pattern is the No time chip's "bike · mark".
    have room for one word.
 3. **Where the fold sits.** *Decided:* after Mechanics, as drawn; Services
    and Storage slots come later.
+4. **The stack's chooser and the month's day list.** *Decided:* they keep
+   "bike · job": they list every job's details in full, not a block's two
+   lines.

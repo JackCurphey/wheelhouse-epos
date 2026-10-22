@@ -378,6 +378,8 @@ export function DiaryPage() {
   const chosenBar = chosenItem ? <ChosenBar item={chosenItem} onOpen={() => setOpenItem(chosenItem)} /> : null;
   const waitingSheet = <WaitingSheet open={sheetOpen} onOpenChange={setSheetOpen} count={waiting.data?.count ?? items.length} items={items} chosen={chosen} onChoose={chooseItem} />;
 
+  // What a block shows first and second, the shop's choice (Settings › Workshop › Diary blocks).
+  const blockLines = { first: settings.data?.blockFirst ?? 'bike', second: settings.data?.blockSecond ?? 'jobTitle' } as const;
   if (isPhone) {
     const week = weekOf(date);
     const showing = shared ? 'Shared queue' : whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';
@@ -386,6 +388,7 @@ export function DiaryPage() {
     const noTime = columns.length === 1 ? shown.filter((j) => j.jobDate === date && !j.startTime) : [];
     const pickPeople = (value: string | null) => { set({ who: value }); setPeopleOpen(false); };
     return (
+      <BlockLinesContext.Provider value={blockLines}>
       <div className="-m-3.5 flex flex-col">
         {headerSlot ? createPortal(
           <button
@@ -561,11 +564,12 @@ export function DiaryPage() {
         {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
         {extrasUi}
       </div>
+      </BlockLinesContext.Provider>
     );
   }
 
   return (
-    <BlockLinesContext.Provider value={{ first: settings.data?.blockFirst ?? 'bike', second: settings.data?.blockSecond ?? 'jobTitle' }}>
+    <BlockLinesContext.Provider value={blockLines}>
     <div className="flex flex-col gap-3">
       {/* Toolbar (decision 60): view and dates together · people and New job.
           From 1280px, spaced as the desktop Shared queue drawing (Jack, 18 Oct)

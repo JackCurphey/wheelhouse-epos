@@ -1,12 +1,12 @@
-import type { BlockLines } from './diary-context.ts';
+import type { BlockField } from './diary-context.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { STATE_LABEL, weekOf, type DiaryState, type WaitingItem } from './rules.ts';
 
 export type Mechanic = { id: number; name: string; active: boolean; workingDays?: number[] };
-export type Settings = { openingHours?: { weekday: number; open: string; close: string }[]; showSignOffToCustomers?: boolean; blockFirst?: BlockLines['first']; blockSecond?: BlockLines['second'] };
+export type Settings = { openingHours?: { weekday: number; open: string; close: string }[]; showSignOffToCustomers?: boolean; blockFirst?: BlockField; blockSecond?: BlockField };
 
 /** A block's line for the shop's choice of bike, job title, customer or job number. */
-export function blockLine(j: Shown, field: BlockLines['first']): string {
+export function blockLine(j: Shown, field: BlockField): string {
   if (field === 'jobTitle') return j.title;
   if (field === 'customer') return j.customerName || 'Customer';
   if (field === 'reference') return j.reference ?? '';
