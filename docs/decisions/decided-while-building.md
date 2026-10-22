@@ -1363,3 +1363,10 @@ The drawings show where slots appear but not these rules. *Decided:*
 6. **A job with no bike** reads "on your is still waiting", as Quote to
    approve already reads "on your ." Left for a messages fix.
 7. **Migration 060.**
+8. **Checked again when due** (fresh review). The reminder waits up to a
+   week, so when it's due it goes only if the job is still there, the bike
+   hasn't been collected, the booking hasn't ended, the job's newest quote is
+   still waiting, and Quote to approve and the reminder are still on.
+   Otherwise it's stopped, and the job's Messages don't list it.
+9. **Staff Messages say the day** a message waiting past today goes ("goes
+   Fri 23 Oct, 10:15").

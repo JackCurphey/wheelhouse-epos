@@ -25,7 +25,8 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 export function useMessagesSummary(): string {
   const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
   if (!templates.data) return '';
-  return `${templates.data.filter((t) => t.live && t.enabled).length} on`;
+  // The reminder sits under Quote to approve, so it isn't counted on its own.
+  return `${templates.data.filter((t) => t.live && t.enabled && t.key !== 'quote_reminder').length} on`;
 }
 
 /** Front desk › Messages › Automatic messages, inside its fold. */
@@ -113,11 +114,11 @@ export function AutomaticMessages() {
 function ReminderRow({ onEdit }: { onEdit: () => void }) {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ quoteReminderHours?: number }>('/api/workshop-settings') });
-  const saved = settings.data?.quoteReminderHours ?? 24;
+  const saved = settings.data?.quoteReminderHours;
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   async function save() {
-    if (text === null || text.trim() === String(saved)) { setText(null); setError(null); return; }
+    if (text === null || saved === undefined || text.trim() === String(saved)) { setText(null); setError(null); return; }
     const hours = /^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
     if (!(hours >= 1 && hours <= 168)) { setError('Choose from 1 to 168 hours.'); return; }
     setError(null);
@@ -128,6 +129,10 @@ function ReminderRow({ onEdit }: { onEdit: () => void }) {
     } catch {
       setError(SAVE_FAILED);
     }
+  }
+  // Nothing until the shop's hours are known, so the box never shows a guess (fresh review).
+  if (saved === undefined) {
+    return settings.isError ? <p className="m-0 ml-6 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t load the reminder’s hours. Try again in a moment.</p> : null;
   }
   return (
     <div className="ml-6 flex flex-col gap-1">

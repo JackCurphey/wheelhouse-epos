@@ -113,6 +113,23 @@ export async function sendDue() {
   }
 }
 
+/**
+ * A quote reminder waits up to a week, so it's checked when it's due: its
+ * job still there, the bike not collected, the booking not ended, the job's
+ * newest quote still waiting for an answer, and Quote to approve and the
+ * reminder both still on (Jack, 22 Oct; fresh review).
+ */
+async function reminderStillNeeded(jobId) {
+  if (!jobId) return false;
+  const job = await prepare(
+    `SELECT 1 FROM workshop_jobs j
+      WHERE j.id = ? AND j.custody_state <> 'collected' AND j.booking_state NOT IN ('cancelled', 'declined', 'expired')
+        AND (SELECT q.state FROM workshop_quotes q WHERE q.workshop_job_id = j.id ORDER BY q.revision DESC LIMIT 1) = 'sent'`
+  ).get(jobId);
+  if (!job) return false;
+  return (await templateFor('quote_to_approve')).enabled && (await templateFor('quote_reminder')).enabled;
+}
+
 async function sendDueForShop(shopId) {
   const now = new Date();
   const due = await runWithShop(shopId, async () => {
@@ -120,11 +137,18 @@ async function sendDueForShop(shopId) {
       `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
        WHERE intent_state = 'sending' AND claimed_at < ?`
     ).run(new Date(now.getTime() - STUCK_MS).toISOString());
-    return prepare(
+    const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
-       RETURNING id, channel, to_address, subject, body`
+       RETURNING id, channel, to_address, subject, body, template_key, job_id`
     ).all(now.toISOString(), now.toISOString());
+    const sendable = [];
+    for (const m of claimed) {
+      if (m.template_key === 'quote_reminder' && !(await reminderStillNeeded(m.job_id))) {
+        await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
+      } else sendable.push(m);
+    }
+    return sendable;
   });
   for (const m of due) {
     try {

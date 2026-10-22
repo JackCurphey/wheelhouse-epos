@@ -107,3 +107,52 @@ test('once the reminder has gone, the customer’s quote says when', async () =>
   }
   assert.ok(sentAt, 'reminderSentAt once the reminder went');
 });
+
+// From the fresh review: the reminder goes only for a quote still waiting on
+// a job that still needs it. Checked when it's due, so every way a job moves
+// on is covered.
+async function bringForward(jobId) {
+  await runWithShop(owner.shop.id, () => prepare(
+    "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE (job_id = ? OR job_id IS NULL) AND template_key = 'quote_reminder' AND intent_state = 'intended'"
+  ).run(jobId));
+}
+const settle = () => new Promise((r) => setTimeout(r, 800));
+
+test('a deleted job’s reminder never goes', async () => {
+  const { job } = await sentQuote();
+  const del = await staff(`/api/workshop-jobs/${job.id}`, { method: 'DELETE' });
+  assert.equal(del.status, 200, JSON.stringify(del.body));
+  await bringForward(job.id);
+  await settle();
+  const rows = await runWithShop(owner.shop.id, () => prepare(
+    "SELECT intent_state, sent_at FROM customer_messages WHERE template_key = 'quote_reminder' AND job_id IS NULL AND sent_at IS NOT NULL"
+  ).all());
+  assert.equal(rows.length, 0, 'none sent');
+});
+
+test('a reminder due after the bike was collected doesn’t go', async () => {
+  const { job } = await sentQuote();
+  const now = (await staff(`/api/workshop-jobs/${job.id}`)).body;
+  assert.equal((await staff(`/api/workshop-jobs/${job.id}/book-in`, { method: 'POST', body: { version: now.version } })).status, 200);
+  const inShop = (await staff(`/api/workshop-jobs/${job.id}`)).body;
+  const collected = await staff(`/api/workshop-jobs/${job.id}/collect`, { method: 'POST', body: { version: inShop.version } });
+  assert.equal(collected.status, 200, JSON.stringify(collected.body));
+  await bringForward(job.id);
+  await settle();
+  const [r] = await reminders(job.id);
+  assert.equal(r.sentAt, null, 'not sent');
+  assert.notEqual(r.state, 'intended');
+});
+
+test('a reminder due after Quote to approve was switched off doesn’t go', async () => {
+  const { job } = await sentQuote();
+  assert.equal((await staff('/api/message-templates/quote_to_approve', { method: 'PUT', body: { enabled: false } })).status, 200);
+  try {
+    await bringForward(job.id);
+    await settle();
+    const [r] = await reminders(job.id);
+    assert.equal(r.sentAt, null, 'not sent');
+  } finally {
+    await staff('/api/message-templates/quote_to_approve', { method: 'PUT', body: { enabled: true } });
+  }
+});

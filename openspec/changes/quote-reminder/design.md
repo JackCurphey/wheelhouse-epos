@@ -19,3 +19,16 @@ and its wording can be edited.
 
 `reminderSentAt` on the customer's quote reply: the latest `quote_reminder`
 for the job sent since the quote was sent, or null.
+
+## From the fresh review
+- When a reminder falls due, the engine's sweep checks it's still needed
+  (`reminderStillNeeded`): the job still there, the bike not collected, the
+  booking not ended, the newest quote still `sent`, and Quote to approve and
+  the reminder on. Otherwise it's marked undone, so deleting, collecting,
+  cancelling or switching messages off all stop it.
+- Queueing the reminder has its own error handling: a fault there is logged,
+  never reported as the quote's message not going.
+- Staff Messages hide reminders stopped this way, say the day of one waiting
+  past today, and don't re-check every few seconds for one a day away.
+- Settings: the "N on" count leaves the reminder out; the hours box waits for
+  the shop's settings.

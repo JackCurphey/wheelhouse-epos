@@ -40,7 +40,7 @@ afterEach(async () => {
 // The preview the server fills in: the drawings' example.
 const fill = (words) => words.replace('[Customer’s first name]', 'Maya').replace('[Bike]', 'Trek Domane AL 3').replace('[Shop name]', 'North Street Cycles');
 
-async function openSettings() {
+async function openSettings({ slowSettings = false } = {}) {
   calls = [];
   templates = TEMPLATES();
   failPut = false;
@@ -52,7 +52,7 @@ async function openSettings() {
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') return reply(200, { ...SETTINGS, ...body });
-    if (u.pathname === '/api/workshop-settings') return reply(200, SETTINGS);
+    if (u.pathname === '/api/workshop-settings') return slowSettings ? new Promise(() => {}) : reply(200, SETTINGS);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/message-templates') return reply(200, templates);
     const put = u.pathname.match(/^\/api\/message-templates\/(\w+)$/);
@@ -227,4 +227,16 @@ test('hours that aren’t 1 to 168 say so and save nothing', async () => {
   fireEvent.blur(box);
   assert.ok(Boolean(await ui.findByText('Choose from 1 to 168 hours.')));
   assert.equal(calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings').length, 0);
+});
+
+test('the fold’s count is of the messages listed, not the reminder under Quote to approve', async () => {
+  const { ui } = await openSettings();
+  // Quote to approve, Bike ready and Booking confirmed are on; Booking cancelled isn't listed.
+  assert.ok(Boolean(await ui.findByRole('button', { name: /^Automatic messages.*3 on/ })));
+});
+
+test('until the settings load, the hours box waits rather than showing 24', async () => {
+  const { ui } = await openSettings({ slowSettings: true });
+  await ui.findByText('Quote to approve');
+  assert.ok(ui.queryByRole('textbox', { name: 'Reminder if there’s no answer, after' }) === null);
 });
