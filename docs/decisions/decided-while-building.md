@@ -1209,3 +1209,8 @@ The drawings show where slots appear but not these rules. *Decided:*
    pages, where it's drawn); not while it's under way.
 2. **Its title.** Drawn as "Full service checklist". *Decided:* the
    checklist's own name, as on the job page (the template's is that).
+3. **A checklist nobody ticked** (fresh review). *Decided:* the customer sees
+   the checklist only once a mechanic ticked or noted something on it, and
+   then the job's own copy, so it's fixed and never says "0 of 10 checks done"
+   for a service done without the ticks. A note on a check not done isn't
+   shown, as drawn.

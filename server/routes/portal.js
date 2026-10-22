@@ -15,7 +15,7 @@ import { currentCustomerSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
-import { jobChecklist } from '../workshop/checklists.js';
+import { jobChecklistCopy } from '../workshop/checklists.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
@@ -391,8 +391,10 @@ async function bookingLinkView(jobId, shop) {
     shop: await shopLines(),
     // The job's checklist once the work is finished (cp-summary's "Full service
     // checklist"; Jack, 22 Oct): every item, ticked or not, and what the
-    // mechanic found. None while the work is under way, or for a job without one.
-    checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklist(row.id)) : null,
+    // mechanic found. Only one a mechanic used (its own copy, fixed), so
+    // never "0 of 10" for a service done without the ticks; none while the
+    // work is under way, or for a job without one.
+    checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklistCopy(row.id)) : null,
     ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
   };

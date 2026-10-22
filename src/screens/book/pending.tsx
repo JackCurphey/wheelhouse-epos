@@ -332,7 +332,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
                 {done.map((i, n) => (
                   <li key={n} className="flex items-start justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px] first:border-t-0">
                     <span className="flex min-w-0 flex-col gap-1">
-                      <span>{i.name}</span>
+                      <span className="font-semibold">{i.name}</span>
                       {i.note ? <span className="text-sm leading-[1.45]"><span className="font-semibold">What the mechanic found:</span> {i.note}</span> : null}
                     </span>
                     {i.note ? null : <span className="inline-flex shrink-0 items-center gap-1.5 text-sm text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-3.5" />All working well</span>}

@@ -265,6 +265,35 @@ test('a finished job with no checklist has none on its link', async () => {
   await act(booked.id, 'book-in');
   await act(booked.id, 'start');
   const v = (await staff(`/api/workshop-jobs/${booked.id}`)).body.version;
-  await staff(`/api/workshop-jobs/${booked.id}/finish`, { method: 'POST', body: { version: v, signedOffBy: sam } });
+  assert.equal((await staff(`/api/workshop-jobs/${booked.id}/finish`, { method: 'POST', body: { version: v, signedOffBy: sam } })).status, 200);
   assert.equal((await link.read(booked.code)).body.checklist, null);
+});
+
+// Fresh review, 22 Oct: a checklist nobody ticked would tell the customer
+// "0 of 10 checks done" for a service that was done. Only one a mechanic
+// ticked or noted shows, and then it's the job's own copy, fixed.
+test('a finished job whose checklist nobody ticked shows none; a later Settings change doesn’t alter one that was', async () => {
+  const made = (await staff('/api/workshop-checklists', { method: 'POST', body: { template: true } })).body;
+  try {
+    await staff(`/api/workshop-checklists/${made.id}`, { method: 'PUT', body: { serviceIds: [types.service] } });
+    const finish = async (id) => {
+      const v = (await staff(`/api/workshop-jobs/${id}`)).body.version;
+      assert.equal((await staff(`/api/workshop-jobs/${id}/finish`, { method: 'POST', body: { version: v, signedOffBy: sam } })).status, 200);
+    };
+    const untouched = await book();
+    await act(untouched.id, 'book-in');
+    await act(untouched.id, 'start');
+    await finish(untouched.id);
+    assert.equal((await link.read(untouched.code)).body.checklist, null);
+    const ticked = await book();
+    await act(ticked.id, 'book-in');
+    await act(ticked.id, 'start');
+    await staff(`/api/workshop-jobs/${ticked.id}/checklist/items/0`, { method: 'PUT', body: { done: true } });
+    await finish(ticked.id);
+    await staff(`/api/workshop-checklists/${made.id}`, { method: 'PUT', body: { name: 'Renamed', items: ['Brakes'] } });
+    const shown = (await link.read(ticked.code)).body.checklist;
+    assert.deepEqual([shown.name, shown.items.length], ['Full service checklist', 10]);
+  } finally {
+    await staff(`/api/workshop-checklists/${made.id}`, { method: 'DELETE' });
+  }
 });
