@@ -19,8 +19,13 @@ itself is `spend-limit-booking`. Only the customer sets it (Jack, 22 Oct).
   it is refused: send a quote instead.
 - **Messages**: the "Work added within your limit" message (drafted wording,
   for Jack to read), live in Settings › Messages.
-- **Job page and customer page**: in this change or the next, once Jack has
-  read the wording.
+- **Job page** (dq-job-within): within the limit, the drawn hint and "Save
+  and tell Maya" (a minute to Undo) in place of Send quote; over it, the
+  drawn hint and Send quote as before. The staff quote read carries the
+  limit and the whole bill.
+- **Customer's page** (dq-within-limit): "Work added", "Alex added some work,
+  within your limit" (or "We added…"), what was added and what it cost, and
+  "Not what you wanted? Call [shop phone]".
 
 ## Risky areas
 A migration, money (the whole bill and the order), and the messaging core.

@@ -1321,3 +1321,22 @@ The drawings show where slots appear but not these rules. *Decided:*
    customer sets it, when booking online; staff can't change it"
    (`docs/decisions/2026-10-22-spend-limit-who-sets.md`).
 7. **Migration 058.**
+
+### 22 Oct 2026: work within the spending limit (`openspec/changes/spend-limit-within`)
+
+1. **Through Add to quote.** The drawing (dq-job-within) adds the work with
+   Add item and shows it Approved. *Decided:* staff add extra work the usual
+   way (Add to quote); when the whole bill stays within the limit, the panel
+   says so and offers "Save and tell Maya" in place of Send quote. The
+   quote's lines are the record of what was added and what the customer was
+   told.
+2. **The whole bill** is the job's order, plus any booked service not on it
+   yet, plus the new work: a booked service counts once.
+3. **"Maya will be told what was added."** The drawing says "She’ll"; the
+   app doesn't know anyone's pronouns, so it uses the name.
+4. **A minute to Undo**, as Send quote, since a message goes.
+5. **Over the limit**, the drawn hint "Quotes are sent when the customer
+   asked to be called first, or the total is over their limit." shows under
+   the quote, and Send quote is as before.
+6. **The message wording** is drafted, for Jack to read (asked 22 Oct).
+7. **Migration 059.**

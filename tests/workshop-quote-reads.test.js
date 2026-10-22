@@ -280,12 +280,16 @@ test('the owning customer reads their quote with the same totals staff see', asy
   assert.equal(res.status, 200, JSON.stringify(res.body));
   // The customer's copy adds who it's for and, with the shop's switch on, the
   // mechanic (Jack, 22 Oct); everything else is what staff see.
-  const { customerFirstName, mechanicName, earlier, agreedTotal, ...rest } = res.body;
+  const { customerFirstName, mechanicName, earlier, agreedTotal, spendLimit, ...rest } = res.body;
+  assert.equal(spendLimit, null);
   assert.equal(agreedTotal, null, 'nothing booked or agreed before');
   assert.equal(customerFirstName, 'Portal');
   assert.equal(mechanicName, null);
   assert.deepEqual(earlier, { agreed: [], declined: [] }, 'a first quote has no earlier answers');
-  assert.deepEqual(rest, staffRes.body);
+  // Staff alone see the limit and the whole bill (the job page’s Save and tell).
+  const { limit: _staffOnly, ...staffView } = staffRes.body;
+  assert.equal(_staffOnly.spendLimit, null);
+  assert.deepEqual(rest, staffView);
 });
 
 // The signed-in quote read hides staff names too, unless the shop's "Show

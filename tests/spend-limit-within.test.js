@@ -69,6 +69,11 @@ test('work that keeps the whole bill within the limit is agreed, joins the job, 
   assert.ok(told, 'a Work added within your limit message');
   assert.match(told.body, /Shimano brake pads, Fit and adjust brakes, £46\.00/);
   assert.match(told.body, /£200 limit/);
+  // The customer's page shows what was added, within their limit (dq-within-limit).
+  const code = (await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} })).body.privateLink.split('/booking/')[1];
+  const theirs = await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/${code}/quote`).then((r) => r.json());
+  assert.equal(theirs.spendLimit, 200);
+  assert.ok(theirs.lines.every((l) => l.decidedVia === 'limit'));
 });
 
 test('work that would take the whole bill over the limit is refused, and nothing changes', async () => {
@@ -116,4 +121,13 @@ test('a booked service counts once in the whole bill, on the order or not', asyn
   assert.equal(order.items[0].serviceId, svc.id);
   const q = await draft(job.id, [PADS, FIT]);
   assert.equal((await within(q.id)).status, 200, '£65 + £46 = £111, exactly the limit');
+});
+
+test('the staff quote read gives the limit and the whole bill, so the job page knows which to offer', async () => {
+  const job = await bookedJob(200);
+  const q = await draft(job.id, [PADS, FIT]);
+  assert.deepEqual((await staff(`/api/quotes/${q.id}`)).body.limit, { spendLimit: 200, wholeBill: 111 });
+  const none = await bookedJob(null);
+  const q2 = await draft(none.id, [PADS]);
+  assert.deepEqual((await staff(`/api/quotes/${q2.id}`)).body.limit, { spendLimit: null, wholeBill: 93 });
 });

@@ -25,7 +25,11 @@ type QuoteLine = {
   decidedVia: string | null; decidedAt: string | null; decidedByName: string | null; addedToOrderAt: string | null;
   goesWithLineId?: number | null; without?: string | null; photoId?: number | null;
 };
-type Quote = { id: number; revision: number; state: string; lines: QuoteLine[]; totals: { all: number; approved: number; pending: number; declined: number } };
+type Quote = {
+  id: number; revision: number; state: string; lines: QuoteLine[]; totals: { all: number; approved: number; pending: number; declined: number };
+  // The customer's spending limit and the whole bill with this quote (Workshop day 41-43).
+  limit?: { spendLimit: number | null; wholeBill: number };
+};
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
@@ -83,6 +87,9 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<SendResult | null>(null);
   const [recording, setRecording] = useState(false);
+  // Save and tell (within the customer's limit): the same minute's Undo as Send quote.
+  const [telling, setTelling] = useState(false);
+  const [told, setTold] = useState<SendResult['message'] | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [withouts, setWithouts] = useState<Record<number, string>>({});
@@ -159,6 +166,22 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       await act(async () => setSent(await apiMutate<SendResult>(`/api/quotes/${q.id}/send`, {})));
     }, sendDelay());
   }
+  function startTell() {
+    if (!q) return;
+    setTelling(true);
+    setTold(null);
+    setError(null);
+    timer.current = setTimeout(async () => {
+      timer.current = null;
+      setTelling(false);
+      await act(async () => setTold((await apiMutate<{ message: SendResult['message'] }>(`/api/quotes/${q.id}/within-limit`, {})).message));
+    }, sendDelay());
+  }
+  function undoTell() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    setTelling(false);
+  }
   function undoSend() {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
@@ -166,6 +189,9 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   }
 
   const inShop = job.custodyState === 'in_shop' && job.workState !== 'complete';
+  // Within the customer's limit, no quote goes (dq-job-within).
+  const limit = q?.state === 'draft' && q.lines.length ? q.limit : undefined;
+  const within = Boolean(limit && limit.spendLimit !== null && limit.wholeBill <= limit.spendLimit);
   const canAdd = inShop && (!q || q.state !== 'sent');
   const answered = q ? ANSWERED.has(q.state) : false;
   const shownLines = !q ? [] : answered ? q.lines.filter((l) => l.decision === 'declined') : q.state === 'draft' || q.state === 'sent' ? q.lines : [];
@@ -311,6 +337,23 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
       {q?.state === 'withdrawn' ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">The quote was withdrawn. Only the booked work stays agreed.</p> : null}
 
+      {limit && limit.spendLimit !== null ? (
+        <p className="m-0 text-right text-[13px] text-[var(--wh-muted)]">
+          {within ? `Within ${first}’s £${limit.spendLimit.toLocaleString('en-GB')} limit — no quote needed. ${first} will be told what was added.`
+            : 'Quotes are sent when the customer asked to be called first, or the total is over their limit.'}
+        </p>
+      ) : null}
+      {telling ? (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-md bg-[var(--wh-ink)] px-3 py-2 text-sm text-[var(--wh-bg)]">
+          <span className="grow">{`Adding the work and telling ${first} by text in 1 minute.`}</span>
+          <button type="button" onClick={undoTell} className="min-h-11 rounded-md px-3 font-semibold underline">Undo</button>
+        </div>
+      ) : null}
+      {told ? (
+        <p role="status" className="m-0 text-sm">
+          {told.status === 'sent' ? `Added, and ${first} was told by ${channelWord(told.channel)}.` : `Added, but no message went: ${told.reason ?? ''}`}
+        </p>
+      ) : null}
       {sending ? (
         <div role="status" className="flex flex-wrap items-center gap-3 rounded-md bg-[var(--wh-ink)] px-3 py-2 text-sm text-[var(--wh-bg)]">
           <span className="grow">{`Sending the quote to ${customer} by text in 1 minute.`}</span>
@@ -331,8 +374,10 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
 
       <div className="flex flex-wrap justify-end gap-2">
-        {q?.state === 'draft' && q.lines.length && !sending ? (
-          <Button variant="accent" size="sm" disabled={busy} onClick={startSend}>Send quote</Button>
+        {q?.state === 'draft' && q.lines.length && !sending && !telling ? (
+          within
+            ? <Button variant="accent" size="sm" disabled={busy} onClick={startTell}>{`Save and tell ${first}`}</Button>
+            : <Button variant="accent" size="sm" disabled={busy} onClick={startSend}>Send quote</Button>
         ) : null}
         {q?.state === 'sent' ? (
           <>

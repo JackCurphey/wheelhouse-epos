@@ -30,7 +30,7 @@ import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
-  sendQuoteResult, answerAndAddToOrder, agreeWithinLimit,
+  sendQuoteResult, answerAndAddToOrder, agreeWithinLimit, wholeBill,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -1169,7 +1169,11 @@ export function register(route) {
   route('GET', '/api/quotes/:id', async (req, res, params) => {
     const result = await readQuote({ quoteId: Number(params.id) });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    // The customer's limit and the whole bill with this quote, so the job page
+    // offers Save and tell within it (Workshop day 41-43).
+    const bill = await wholeBill(result.quote.id, result.quote.workshop_job_id);
+    sendJson(res, 200, { ...serializeQuoteWithLines(result.quote, result.lines, result.totals),
+      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null });
   });
 
   // screens: quote-editor, approved, job
