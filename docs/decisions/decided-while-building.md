@@ -1139,3 +1139,16 @@ pattern is the No time chip's "bike · mark".
    arrow on the left. Words the drawings didn't give: a new checklist's box
    is titled "New checklist", and one not yet used reads "not used for a
    service yet". "+ Add note" is in the text colour, not the accent.
+
+### 22 Oct 2026: what a diary block shows (diary-block-lines)
+
+1. **The same thing on both lines.** Not drawn. *Decided:* never; choosing
+   the other line's choice swaps the two, so one choice is always one tap.
+2. **Where it applies.** *Decided:* diary blocks, a stack's front card and a
+   fanned stack's tiles. A month chip and a No time chip keep the bike: they
+   have room for one word.
+3. **Where the fold sits.** *Decided:* after Mechanics, as drawn; Services
+   and Storage slots come later.
+4. **The stack's chooser and the month's day list.** *Decided:* they keep
+   "bike · job": they list every job's details in full, not a block's two
+   lines.

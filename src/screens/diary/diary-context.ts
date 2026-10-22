@@ -62,3 +62,9 @@ export function useExtrasHandlers(job: Shown) {
     onPress: (e: PointerEvent<HTMLElement>) => extras.press(job, e),
   };
 }
+
+// What a diary block shows first and second, the shop's choice in Settings ›
+// Workshop › Diary blocks (Workshop day 17, 29): bike, then job title, by default.
+export type BlockField = 'bike' | 'jobTitle' | 'customer' | 'reference';
+export type BlockLines = { first: BlockField; second: BlockField };
+export const BlockLinesContext = createContext<BlockLines>({ first: 'bike', second: 'jobTitle' });

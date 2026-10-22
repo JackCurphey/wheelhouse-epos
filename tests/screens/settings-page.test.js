@@ -35,7 +35,7 @@ const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'O
 // settings these tests are about are opened, not found open.
 async function openSettings({ me = OWNER, room = 'workshop', open = room === 'workshop' && me.isOwner ? 'Online booking' : null } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null, blockFirst: 'bike', blockSecond: 'jobTitle' };
   refuseHours = null;
   termsFail = false;
   putFails = false;
@@ -739,4 +739,30 @@ test('a refused Confirm bookings automatically says why and stays as it was', as
   fireEvent.click(sw);
   assert.ok(has(await ui.findByText("Only the shop's owner can change settings")));
   assert.equal(sw.getAttribute('aria-checked'), 'false');
+});
+
+// Diary blocks (Workshop day 17, 29; drawn as set-workshop-diary): what a
+// block shows first and second, saved as soon as it's chosen, with a preview.
+test('Diary blocks: the two lines, a preview and the note; its summary says the choice', async () => {
+  const { ui, within } = await openSettings({ open: 'Diary blocks' });
+  const fold = ui.getByRole('button', { name: /^Diary blocks/ });
+  assert.match(fold.textContent, /Bike, then job title/);
+  assert.equal(ui.getByLabelText('First line').value, 'bike');
+  assert.equal(ui.getByLabelText('Second line').value, 'jobTitle');
+  assert.deepEqual([...ui.getByLabelText('First line').options].map((o) => o.textContent), ['Bike', 'Job title', 'Customer', 'Job number']);
+  const preview = within(ui.getByRole('figure', { name: 'Preview' }));
+  assert.ok(has(preview.queryByText('Trek Domane AL 3')));
+  assert.ok(has(preview.queryByText('Standard service')));
+  assert.ok(has(preview.queryByText('Expected')));
+  assert.ok(has(ui.queryByText('The status always shows too, whatever the two lines above are set to.')));
+});
+
+test('choosing a line saves at once; choosing the other line’s choice swaps them', async () => {
+  const { ui, fireEvent, waitFor, within } = await openSettings({ open: 'Diary blocks' });
+  fireEvent.change(ui.getByLabelText('First line'), { target: { value: 'customer' } });
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body).at(-1), { blockFirst: 'customer', blockSecond: 'jobTitle' }));
+  await waitFor(() => assert.ok(has(within(ui.getByRole('figure', { name: 'Preview' })).queryByText('Maya Patel'))));
+  fireEvent.change(ui.getByLabelText('Second line'), { target: { value: 'customer' } });
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body).at(-1), { blockFirst: 'jobTitle', blockSecond: 'customer' }));
+  await waitFor(() => assert.match(ui.getByRole('button', { name: /^Diary blocks/ }).textContent, /Job title, then customer/));
 });
