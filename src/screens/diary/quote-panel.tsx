@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera } from 'lucide-react';
+import { Camera, TriangleAlert } from 'lucide-react';
 import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
@@ -33,6 +33,9 @@ type Quote = {
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
+// "Mon 5 Oct, 10:15" in London's time, as the customer's page says it.
+const part = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', ...o }).format(new Date(iso));
+const when = (iso: string) => `${part(iso, { weekday: 'short' })} ${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' })}, ${part(iso, { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 const ANSWERED = new Set(['approved', 'partly_approved', 'declined']);
 
 const CHIP: Record<QuoteLine['decision'], [string, string]> = {
@@ -78,6 +81,12 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
     enabled: Boolean(current),
   });
   const q = current && quoteQuery.data ? quoteQuery.data : null;
+  // The job page's customer strip has already read the customer (job-dialog.tsx).
+  const contact = useQuery({
+    queryKey: ['customer', job.customerId],
+    queryFn: () => apiGet<{ phone: string | null }>(`/api/customers/${job.customerId}`),
+    enabled: Boolean(job.customerId),
+  });
   const customer = job.customerName || 'the customer';
   // The dialogs call the customer by first name, as drawn ("Record Maya’s answer").
   const first = job.customerName?.trim().split(/\s+/)[0] || 'the customer';
@@ -379,6 +388,19 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
       {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
 
+      {/* Still nothing after the one reminder: the Today line (dq-today-no-answer), on the job's page too. */}
+      {q?.state === 'sent' && job.quote?.reminderSentAt ? (
+        <div role="note" className="flex gap-2.5 rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
+          <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span className="flex flex-col gap-0.5">
+            <strong>No answer to the quote yet</strong>
+            <span>
+              {[job.quote.sentAt ? `Sent ${when(job.quote.sentAt)}` : null, `reminder sent ${when(job.quote.reminderSentAt)}`].filter(Boolean).join(' · ')}
+              {contact.data?.phone ? <>{' · '}<a href={`tel:${contact.data.phone.replace(/\s+/g, '')}`} className="font-semibold whitespace-nowrap text-inherit">{contact.data.phone}</a></> : null}
+            </span>
+          </span>
+        </div>
+      ) : null}
       <div className="flex flex-wrap justify-end gap-2">
         {q?.state === 'draft' && q.lines.length && !sending && !telling ? (
           within

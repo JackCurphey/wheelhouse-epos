@@ -1462,3 +1462,27 @@ The drawings show where slots appear but not these rules. *Decided:*
 8. **A conversation that won't load**, or a job that's gone, says
    "Wheelhouse couldn’t load this conversation." with Try again, and offers
    no reply box.
+
+### 22 Oct 2026: "No answer yet" after the quote reminder (`openspec/changes/quote-no-answer`)
+
+1. **Today isn't built yet, so its line waits for it.** When Today (WP-1.10)
+   is built, its list carries the drawn dq-today-no-answer line: "WH-1042 ·
+   Maya Patel — no answer to the quote yet", "Sent [time] · reminder sent
+   [time] · [phone]", and Record their answer. The job read already carries
+   what it needs (`quote.sentAt`, `quote.reminderSentAt`; the phone from the
+   customer).
+2. **In the diary, "No answer yet" is the job's word in place of "Quoting"**
+   (decision 4 names no other place). It shows where the diary already
+   shows the word: a wide block's line, the month view's day list, and what
+   a screen reader hears for every block and chip. The colour stays
+   Quoting's teal; a narrow week block, with no room for the word, looks as
+   before. Pattern: the New online mark's words (new-online-on-stacks).
+3. **The customer's number is on the job's page**, in the Today line's words
+   above Withdraw quote and Record their answer: "No answer to the quote
+   yet", "Sent Mon 5 Oct, 10:15 · reminder sent Tue 6 Oct, 10:15 ·
+   07700 900142" (a phone link). The job page's own stage still reads
+   Quoting.
+4. **Only the current quote's own reminder counts**, sent at or after that
+   quote was sent, and only while it waits: answering, withdrawing or a new
+   quote ends it. The same rule as the customer's "we sent a reminder"
+   (quote-reminder).
