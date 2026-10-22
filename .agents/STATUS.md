@@ -5,7 +5,26 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
+**Mark is on:** 22 Oct, an overnight run (Mark's lane, server work only; none
+of it merged until reviewed): draft pull requests #369 (hosted copy 2.3–2.5:
+Shopify refused, the commit in `/healthz`), #373 (auto-confirm server half,
+migration 050), #375–#377 (sales in pence: totals check, migration 051,
+sale-documents routes; 051 must not deploy before #377), #378 (a cancelled,
+declined or expired booking can't be booked in or started; the guard is in
+`server/workshop/transitions.js`, spec change `guard-ended-booking`), #379
+(the bike on "Waiting for you" items; edits Jack's `workshop.js`, 4 lines, so
+**needs Jack's approval**). An audit of the "Check #…" merges below is in
+`docs/reviews/2026-10-22-flagged-merges-audit.md`: no P1; three P2s (website
+and Shopify settings routes open to any staff; accept-offer doesn't say which
+time is accepted; the messages spec's Undo line contradicts #336).
+**Jack, questions for you:** (1) hold and reopen refused on an ended booking,
+and resuming held work (#378); (2) should an automatically confirmed booking
+send "Booking confirmed" (#373); (3) how till sales on "check these" and
+fractional-penny lines count in the totals check, and whether quotes approved
+before your step A′ writing pounds only is acceptable (#375, #376); (4) the
+audit's three questions: website settings Owner-only now, booking messages
+at once or with Undo, moving a booking with a time on offer.
+Earlier: away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
 #208 were Jack's #151 follow-ups). WP-0.5: the host is DigitalOcean in
 London, about £20 a month with VAT (#215; Jack's UK answer in
