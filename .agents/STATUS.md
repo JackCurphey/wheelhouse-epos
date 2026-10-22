@@ -7,22 +7,21 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** the rest of the reply-shape work: about 25 screen tests still
-  fake a workshop job by hand; they move to `tests/helpers/fake-job.js`
-  (working-agreement task 3.13). Then the offer dialog's planned length:
-  `src/screens/diary/offer-dialog.tsx` reads `plannedMinutes`, which the
-  server never sends, so a request with no times is offered as an hour
-  (found in #363's review; already wrong before it).
+- **Jack:** the job checklist (WP-4.1, `job-checklist` and the
+  `job-mechanic` situation; built ahead of stage 4 on Jack's word, 22 Oct):
+  Done ticks and a note per line of work, and the full service checklist,
+  server and screens.
 - **Mark:** the agreement's other checks: the Owner-only list (2.1), the
   convert and last-unit race tests (2.2), the STATUS tidy (1.5); then the
-  online test copy's safety checks and sales in pence step A. #348, #351 and
-  #350 are merged.
-- **Waiting on Jack:** (1) how an existing in-shop customer who signs up
-  online is joined to their record (#348 makes every sign-up a new customer;
-  no merge tool exists yet); (2) whether a quote shows its prices when Show
-  prices is off (proposed: always, since the customer is approving an
-  amount); (3) when to delete the old app, once its last screens are replaced
-  (`docs/decisions/2026-10-21-old-app-placeholder.md`).
+  online test copy's safety checks (his drafts #369) and sales in pence step
+  A. His overnight draft #373 repeats the auto-confirm server half already
+  merged in #357 (commented 22 Oct); his overnight queue may hold other
+  pieces built on 21 Oct (#359, #361, #362).
+- **Waiting on Jack:** when to delete the old app, once its last screens are
+  replaced (`docs/decisions/2026-10-21-old-app-placeholder.md`). Answered
+  22 Oct: quotes always show their prices (#370); an in-shop customer's
+  online sign-up is joined by staff with the drawn Merge, built with the
+  Customers package WP-3.2 (#371, #372).
 
 **Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
@@ -160,7 +159,13 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 21 Oct, late: browser tests for the Workshop Overview and
+**Jack is on:** 22 Oct: a job's planned length reaches the screens, so the
+diary offers a whole-day request for its real length (#365); every screen
+test's fake jobs and orders are checked against the server's real replies
+(#366, #367, #368); quotes always show their prices (#370); the customer
+merge decision (#371, #372); the New online mark on stacks and in the month
+view (#374). Next: the job checklist.
+21 Oct, late: browser tests for the Workshop Overview and
 Settings › Messages (#353); the old app's job orders open the new till and it
 never takes a job's payment (#355); the spec for what ended bookings can't do
 (#356); confirming online bookings automatically, server and screens (#357,
