@@ -35,6 +35,7 @@ async function setup(endedBy, extra = '') {
   if (endedBy === 'staff-cancel') {
     const res = await act(cookie, jobId, 'cancel', 1);
     assert.equal(res.status, 200, JSON.stringify(res.body));
+    if (extra) await runWithShop(shop.id, () => prepare(`UPDATE workshop_jobs SET ${extra.replace(/^,\s*/, '')} WHERE id = ?`).run(jobId));
   } else {
     const sql = {
       'customer-cancel': "booking_state = 'cancelled', cancelled_by = 'customer', cancelled_at = now()",
@@ -92,6 +93,48 @@ test('a booking request (pending) can still be booked in, as before', async () =
     const { jobId } = await seedWorkshopJob({ shopId: shop.id, customerId: null, legacyStatus: 'pending' });
     const res = await act(cookie, jobId, 'book-in', 1);
     assert.equal(res.status, 200, JSON.stringify(res.body));
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Held work can't be resumed once the booking ended: resume starts the work
+// again, as start does, and the server keeps no record of whether held work
+// had ever started (Jack, 22 Oct, docs/decisions/2026-10-22-marks-overnight-questions.md
+// answer 1: "block both"; the gap was left for Mark to close).
+for (const endedBy of ['customer-cancel', 'staff-cancel', 'declined', 'expired']) {
+  test(`held work cannot be resumed on a booking that ended (${endedBy})`, async () => {
+    const { cookie, shop, jobId, version } = await setup(endedBy, ", work_state = 'on_hold'");
+    try {
+      const res = await act(cookie, jobId, 'resume', version);
+      assert.equal(res.status, 409, JSON.stringify(res.body));
+      assert.equal(res.body.code, 'illegal');
+      assert.match(res.body.error, /can't be resumed/);
+      const after = await runWithShop(shop.id, () => prepare('SELECT work_state FROM workshop_jobs WHERE id = ?').get(jobId));
+      assert.equal(after.work_state, 'on_hold');
+    } finally {
+      await deleteTestShop(shop.id);
+    }
+  });
+}
+
+test('held work on a live booking can still be resumed', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    const { jobId } = await seedWorkshopJob({ shopId: shop.id, customerId: null, legacyStatus: 'on_hold' });
+    const res = await act(cookie, jobId, 'resume', 1);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.workState, 'in_progress');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('an expired booking says it expired, not that it "was expired"', async () => {
+  const { cookie, shop, jobId, version } = await setup('expired');
+  try {
+    const res = await act(cookie, jobId, 'start', version);
+    assert.equal(res.body.error, "This booking expired, so the job can't be started.");
   } finally {
     await deleteTestShop(shop.id);
   }
