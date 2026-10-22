@@ -208,7 +208,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
                   className="relative h-[72px] w-24 overflow-hidden rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-surface-muted)] p-0"
                 >
                   <img src={photoUrl(l)} alt="" className="size-full object-cover" />
-                  <span aria-hidden="true" className="absolute right-1 bottom-1 inline-flex rounded-md bg-[var(--wh-ink)] p-[3px] text-white">
+                  <span aria-hidden="true" className="absolute right-1 bottom-1 inline-flex rounded-md bg-[var(--wh-ink)] p-[3px] text-[var(--wh-panel)]">
                     <Search size={12} />
                   </span>
                 </button>
