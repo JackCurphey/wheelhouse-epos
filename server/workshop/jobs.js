@@ -12,6 +12,7 @@ import {
 import { shopToday } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import { serializeQuote, answerAll as answerQuote } from './quotes.js';
+import { quote as quoteMachine } from './state-machines.js';
 import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
 import { allocateReference } from './references.js';
@@ -593,6 +594,50 @@ export async function addApprovedLinesToOrder(quoteId) {
 }
 
 // An answer and its lines joining the order happen together, or not at all.
+// Work within the customer's spending limit (Workshop day 41-43): a draft
+// quote whose whole bill stays within the limit is agreed without going to
+// the customer, and joins the job. The whole bill is the order, any booked
+// service not on it yet, and this quote, summed by the database. In one
+// transaction, the quote locked, so two presses agree it once.
+export async function agreeWithinLimit({ quoteId, loginId = null }) {
+  await db.exec('BEGIN');
+  try {
+    const quote = await db.prepare('SELECT * FROM workshop_quotes WHERE id = ? FOR UPDATE').get(quoteId);
+    if (!quote) { await db.exec('ROLLBACK'); return { ok: false, code: 'not_found', message: 'Quote not found' }; }
+    const refuse = async (message) => { await db.exec('ROLLBACK'); return { ok: false, code: 'illegal', message }; };
+    if (!quoteMachine.can(quote.state, 'within_limit')) return refuse(`A quote that is ${quote.state} can’t be saved within the limit.`);
+    const bill = await db.prepare(
+      `SELECT j.spend_limit,
+              COALESCE(d.total, 0)
+              + COALESCE((SELECT sum(js.booked_price) FROM workshop_job_services js
+                           WHERE js.workshop_job_id = j.id
+                             AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
+              + COALESCE((SELECT sum(l.quantity * l.unit_amount) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?), 0) AS whole_bill,
+              (SELECT count(*) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?) AS lines
+         FROM workshop_jobs j
+         LEFT JOIN sale_documents d ON d.workshop_job_id = j.id AND d.kind = 'order' AND d.status <> 'cancelled'
+        WHERE j.id = ?
+        ORDER BY d.id DESC LIMIT 1`
+    ).get(quoteId, quoteId, quote.workshop_job_id);
+    if (!bill || Number(bill.lines) === 0) return refuse('Add the extra work first.');
+    if (bill.spend_limit === null) return refuse('This customer asked to be asked before any extra work. Send a quote instead.');
+    if (Number(bill.whole_bill) > bill.spend_limit) {
+      return refuse(`That takes the whole bill to £${Number(bill.whole_bill).toFixed(2)}, over the £${bill.spend_limit} limit. Send a quote instead.`);
+    }
+    await db.prepare(
+      `UPDATE workshop_quote_lines SET decision = 'approved', decided_via = 'limit', decided_by_login_id = ?, decided_at = now()
+        WHERE workshop_quote_id = ? AND decision = 'pending'`
+    ).run(loginId, quoteId);
+    await db.prepare('UPDATE workshop_quotes SET state = ?, sent_at = now() WHERE id = ?').run(quoteMachine.next(quote.state, 'within_limit'), quoteId);
+    await addApprovedLinesToOrder(quoteId);
+    await db.exec('COMMIT');
+    return { ok: true, quote: await db.prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId), spendLimit: bill.spend_limit };
+  } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
 export async function answerAndAddToOrder(args) {
   await db.exec('BEGIN');
   try {

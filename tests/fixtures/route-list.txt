@@ -66,6 +66,7 @@ GET /api/quotes/:id
 GET /api/workshop-jobs/:id/quotes
 POST /api/workshop-jobs/:id/quotes
 POST /api/quotes/:id/send
+POST /api/quotes/:id/within-limit
 POST /api/quotes/:id/withdraw
 POST /api/quotes/:id/answer
 GET /api/portal/:shopSlug/quotes/:id
