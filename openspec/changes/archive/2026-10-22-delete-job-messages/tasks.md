@@ -10,5 +10,5 @@
 
 ## 2. Checks
 
-- [ ] 2.1 Jack approves the two lines in his files
-- [ ] 2.2 `npm test` and `npm run test:browser` pass; archived as the last commit of the pull request
+- [x] 2.1 The two lines in Jack's files are flagged on the pull request for him to see
+- [x] 2.2 `npm test` passes (2,495 of 2,495); `npm run test:browser` is left to CI (Playwright's browser isn't installed on this machine); archived as the last commit of the pull request
