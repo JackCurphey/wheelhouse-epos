@@ -160,6 +160,22 @@ test('the customer answers on their link; approved lines join the job\'s work an
   assert.deepEqual(await orderNames(job.id), ['Brake pads (pair)']);
 });
 
+test('approved quote lines are written to the order in pence too, and the order total moves with them', async () => {
+  const { job, quote } = await jobWithQuote();
+  assert.equal((await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const q0 = await readQuote(quote.id);
+  const decisions = q0.lines.map((l) => ({ lineId: l.id, decision: 'approved' }));
+  const answered = await staff(`/api/quotes/${quote.id}/answer`, { method: 'POST', body: { via: 'in_shop', decisions } });
+  assert.equal(answered.status, 200, JSON.stringify(answered.body));
+  const orderId = (await staff(`/api/workshop-jobs/${job.id}`)).body.orderId;
+  const order = (await staff(`/api/sale-documents/${orderId}`)).body;
+  assert.deepEqual(order.items.map((i) => [i.name, i.unitPricePence, i.lineTotalPence]), [['Brake pads (pair)', 1800, 1800], ['Fit new gear cable', 1200, 1200]]);
+  assert.equal(order.subtotalPence, 3000);
+  assert.equal(order.totalPence, 3000);
+  assert.equal(order.subtotal, 30);
+  assert.equal(order.total, 30);
+});
+
 test('a draft is not shown on the link', async () => {
   const { job } = await jobWithQuote();
   const link = await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} });

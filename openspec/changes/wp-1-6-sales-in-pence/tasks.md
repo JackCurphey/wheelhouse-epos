@@ -24,7 +24,7 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
 
 ## 2. Step A′: workshop amounts in pence (Jack, workshop, after group 1 merges)
 
-- [ ] 2.1 Jack's part of #134: move `workshop_services.price`, `workshop_quote_lines.unit_amount` and `.quantity`, and `workshop_job_services.booked_price` to pence under the money contract, and have quote approval (`answerAndAddToOrder`) write pence. Extend the totals check to them. Tests first
+- [ ] 2.1 Jack's part of #134: move `workshop_services.price`, `workshop_quote_lines.unit_amount` and `.quantity`, and `workshop_job_services.booked_price` to pence under the money contract, and have quote approval (`answerAndAddToOrder`) write pence (done early in group 1, 22 Oct: `addApprovedLinesToOrder` writes pence and pounds together, so no order row is written without its pence between steps A and A′; a fresh review found the gap). Extend the totals check to them. Tests first
 - [ ] 2.2 Replace the three JavaScript money sums (the quote approval total, `quote-panel.tsx`'s "Proposed total", `quote-card.tsx`'s customer total) with totals worked out on the server. Tests first
 - [ ] 2.3 Update `openspec/specs/workshop-jobs/spec.md` where it describes amounts. Verify that `npm test`, `npm run test:browser` and the totals check pass, then get a fresh review. Mark approves the server changes
 
