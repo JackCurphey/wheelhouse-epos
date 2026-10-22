@@ -161,7 +161,7 @@ test('a reply on a job whose page has closed is saved, and no text with a dead l
   const res = await reply(job.id, 'Thanks for coming in.');
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.equal(res.body.message.status, 'not_sent');
-  assert.equal(res.body.message.reason, 'Maya Patel’s booking page has closed, so no text went.');
+  assert.equal(res.body.message.reason, 'Maya Patel’s booking page has closed.');
   assert.equal((await staff(`/api/messages?jobId=${job.id}`)).body.filter((m) => m.key === 'shop_reply').length, 0);
 });
 
@@ -190,4 +190,15 @@ test('Settings’ preview of Reply from the shop shows a reply', async () => {
   const preview = await staff('/api/message-templates/shop_reply/preview', { method: 'POST', body: {} });
   assert.equal(preview.status, 200, JSON.stringify(preview.body));
   assert.match(preview.body.text, /\(WH-1042\): \[Jo’s reply\]\. Replies to this number/);
+});
+
+test('All lists conversations needing a reply first, then the newest', async () => {
+  const waiting = await mayasJob();
+  await note(waiting.code, 'Older, still waiting');
+  const answered = await mayasJob();
+  await note(answered.code, 'Newer');
+  await reply(answered.job.id, 'Answered just now');
+  const items = (await conversations('all')).items;
+  const at = (id) => items.findIndex((c) => c.jobId === id);
+  assert.ok(at(waiting.job.id) < at(answered.job.id), 'waiting before the newer answered one');
 });
