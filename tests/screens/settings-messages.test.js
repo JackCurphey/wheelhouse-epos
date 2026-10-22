@@ -17,10 +17,12 @@ const template = (over) => ({
 });
 const TEMPLATES = () => [
   template({ key: 'quote_to_approve', name: 'Quote to approve', when: 'When a job needs the customer’s OK', wording: 'Hi [Customer’s first name], a quote. [Link to the quote]', tapIns: ['Customer’s first name', 'Link to the quote'] }),
+  template({ key: 'quote_reminder', name: 'Quote reminder', when: 'Once, when a quote has had no answer for the hours the shop sets', wording: 'Hi [Customer’s first name], a reminder. [Link to the quote]', tapIns: ['Customer’s first name', 'Link to the quote'] }),
   template({}),
   template({ key: 'booking_confirmed', name: 'Booking confirmed', when: 'When a booking is accepted, or confirmed straight away', group: 'booking' }),
   template({ key: 'booking_cancelled', name: 'Booking cancelled', when: 'When a booking is cancelled', group: 'booking', live: false }),
 ];
+const SETTINGS = { openingHours: [], bookingMode: 'day', showPricesOnline: true, confirmationNote: null, bookingTerms: null, fullDayThresholdMinutes: 0, minNoticeMinutes: 0, minNoticeDays: null, quoteReminderHours: 24 };
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -49,7 +51,8 @@ async function openSettings() {
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
-    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], bookingMode: 'day', showPricesOnline: true, confirmationNote: null, bookingTerms: null, fullDayThresholdMinutes: 0, minNoticeMinutes: 0, minNoticeDays: null });
+    if (u.pathname === '/api/workshop-settings' && method === 'PUT') return reply(200, { ...SETTINGS, ...body });
+    if (u.pathname === '/api/workshop-settings') return reply(200, SETTINGS);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/message-templates') return reply(200, templates);
     const put = u.pathname.match(/^\/api\/message-templates\/(\w+)$/);
@@ -193,4 +196,35 @@ test('the edit box says how [Shop name] fills in, as drawn, and keeps the wordin
   assert.ok(has(dlg.queryByText('Sent when a job is marked ready')));
   assert.ok(has(dlg.queryByText('With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.')));
   assert.equal(dlg.getByLabelText('Wording').getAttribute('maxlength'), '2000');
+});
+
+// The quote reminder (Jack, 22 Oct; setup.mjs msgRowChoice reminder): under
+// Quote to approve, the hours and Edit, not a row of its own.
+test('under Quote to approve, the reminder’s hours and its Edit', async () => {
+  const { ui, within } = await openSettings();
+  const list = await ui.findByText('Quote to approve');
+  const box = ui.getByRole('textbox', { name: 'Reminder if there’s no answer, after' });
+  assert.equal(box.value, '24');
+  assert.ok(Boolean(ui.getByRole('button', { name: 'Edit the wording of Quote reminder' })));
+  // Not listed as a message of its own.
+  assert.ok(ui.queryByText('Once, when a quote has had no answer for the hours the shop sets') === null);
+  assert.ok(Boolean(list));
+  void within;
+});
+
+test('changing the hours saves them when you leave the box', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByRole('textbox', { name: 'Reminder if there’s no answer, after' });
+  fireEvent.change(box, { target: { value: '48' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.ok(calls.some((c) => c.method === 'PUT' && c.url === '/api/workshop-settings' && c.body.quoteReminderHours === 48)));
+});
+
+test('hours that aren’t 1 to 168 say so and save nothing', async () => {
+  const { ui, fireEvent } = await openSettings();
+  const box = await ui.findByRole('textbox', { name: 'Reminder if there’s no answer, after' });
+  fireEvent.change(box, { target: { value: '0' } });
+  fireEvent.blur(box);
+  assert.ok(Boolean(await ui.findByText('Choose from 1 to 168 hours.')));
+  assert.equal(calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings').length, 0);
 });

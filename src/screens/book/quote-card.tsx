@@ -31,6 +31,8 @@ type Quote = {
   agreedTotal?: number | null;
   // The limit the customer set when booking (Workshop day 41-43).
   spendLimit?: number | null;
+  // When the quote's one reminder went (dq-quote-reminded).
+  reminderSentAt?: string | null;
   totals?: { all: number; approved: number; pending: number; declined: number };
 };
 
@@ -205,7 +207,11 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
       <h2 id="quote-heading" className="m-0 text-xl font-bold">
         {newer ? (mechanic ? `${mechanic} has added to the quote` : 'We’ve added to the quote') : mechanic ? `${mechanic} recommends more work` : 'We recommend more work'}
       </h2>
-      {sentLine(q.sentAt) ? <p className="m-0 text-sm text-[var(--wh-muted)]">{sentLine(q.sentAt)}</p> : null}
+      {sentLine(q.sentAt) ? (
+        <p className="m-0 text-sm text-[var(--wh-muted)]">
+          {`${sentLine(q.sentAt)}${q.reminderSentAt ? ` · we sent a reminder at ${hhmm(new Date(q.reminderSentAt))}` : ''}`}
+        </p>
+      ) : null}
       {newer ? (
         <>
           <p className="m-0">{`Your earlier answers are kept. Please answer the new ${q.lines.length === 1 ? 'line' : 'lines'} below.`}</p>

@@ -322,3 +322,17 @@ test('with the switch on, the mechanic added the work', async () => {
   const { ui } = await open(WITHIN({ mechanicName: 'Alex Morgan' }));
   assert.ok(has(await ui.findByRole('heading', { name: 'Alex added some work, within your limit' })));
 });
+
+// The quote reminder (dq-quote-reminded): once it has gone, the sent line says when.
+test('after the reminder, the sent line says when it went', async () => {
+  const { ui } = await open({ ...QUOTE('sent'), reminderSentAt: '2026-10-06T10:15:00Z' });
+  const at = new Date('2026-10-06T10:15:00Z');
+  const hhmm = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+  assert.ok(has(await ui.findByText(new RegExp(`^Sent .+ · we sent a reminder at ${hhmm}$`))));
+});
+
+test('before any reminder, the sent line is as it was', async () => {
+  const { ui } = await open({ ...QUOTE('sent'), reminderSentAt: null });
+  await ui.findByText('Waiting for your answer');
+  assert.equal(has(ui.queryByText(/we sent a reminder/)), false);
+});
