@@ -32,11 +32,15 @@ Each automatic message SHALL have Wheelhouse's wording, which the shop can rewor
 - **THEN** they see it filled in with the drawings' example (Maya, Trek Domane AL 3, WH-1042) and the shop's own name, as a text and as an email with its subject
 
 ### Requirement: Staff can undo a message for a minute
-A message staff trigger SHALL wait a minute before it goes, and Undo in that minute SHALL stop it (drop-off and quote decision 5; UX walk-through H2).
+Quote to approve and Bike ready SHALL wait a minute before they go, and Undo in that minute SHALL stop them (drop-off and quote decision 5; UX walk-through H2). The booking answers (Booking confirmed, New time offered, Request declined, Date change answered, Booking cancelled) SHALL go at once, with no Undo: undoing the message wouldn't undo the answer (Jack, 22 Oct).
 
 #### Scenario: Undo
 - **WHEN** staff send a quote and press Undo within the minute
 - **THEN** Quote to approve isn't sent
+
+#### Scenario: A booking answer
+- **WHEN** staff accept a booking request
+- **THEN** Booking confirmed is queued to go at once, with no Undo
 
 ### Requirement: Staff see a job's messages as a conversation
 The job page's "Message [customer]" button SHALL open "Messages": the job's messages oldest first, the shop's on the right with each message's name, state, how and when, the customer's on the left, and a line saying messages are pretend (Jack, 20 Oct, `docs/decisions/2026-10-20-messages-engine.md` answer 2; drawn as job-messages).
