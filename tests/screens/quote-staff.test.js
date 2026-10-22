@@ -319,6 +319,16 @@ test('a photo saved after a slow upload keeps a reason saved meanwhile', async (
   assert.match(posts()[1], /"photoId":9/);
 });
 
+// Jack, 22 Oct (docs/decisions/2026-10-22-quote-after-declined.md): after a
+// customer says no to everything, staff can quote again.
+test('after a quote is declined, Add to quote starts a new quote with just the new line', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ q: quote('declined', [line({ decision: 'declined', decidedVia: 'online' })]) });
+  fireEvent.click(await dlg.findByRole('button', { name: 'Add to quote' }));
+  fireEvent.change(dlg.getByLabelText('Search products or services, or scan a barcode'), { target: { value: 'brake' } });
+  fireEvent.click(await dlg.findByRole('button', { name: /Brake pads \(pair\)/ }));
+  await waitFor(() => assert.deepEqual(posts(), ['/api/workshop-jobs/1/quotes {"lines":[{"kind":"part","description":"Brake pads (pair)","productId":40,"quantity":1,"unitAmount":18,"need":"needed","reason":""}]}']));
+});
+
 // The customer's spending limit, as a tag on the job (Workshop day 42; job-page.mjs SPEND_LIMIT).
 test('the job shows the customer’s spending limit, or that they want asking first', async () => {
   const { dlg } = await openJob({ jobOver: { spendLimit: 200 } });

@@ -146,10 +146,8 @@ async function createRevisionInTransaction({ jobId, lines }) {
   }
 
   if (current && !quoteMachine.can(current.state, 'revise')) {
-    // declined, superseded and expired are rest states with no way out. What a
-    // shop does when a customer declines and then changes their mind is a real
-    // question, and the machines do not answer it - so this refuses rather than
-    // inventing a transition. Raised for Phase 4.
+    // superseded and expired are rest states with no way out. A declined
+    // quote can be revised (Jack, 22 Oct: the customer changed their mind).
     return { ok: false, code: 'illegal', message: `a quote that is ${current.state} cannot be revised` };
   }
 
@@ -238,6 +236,52 @@ export async function answerAll({ quoteId, jobId = null, decisions, via, loginId
   const event = approved === lines.length ? 'approve_all' : approved === 0 ? 'decline_all' : 'approve_some';
   await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?').run(quoteMachine.next(row.state, event), quoteId);
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
+}
+
+// What the customer answered on the job's quotes below a revision: only
+// quotes answered in full (one changed before it was answered left no
+// answers), and each line's latest answer, by its words, so pads said no to
+// and then yes to are agreed (Jack, 22 Oct; fresh review). Oldest first.
+const LATEST_ANSWERS = `
+  WITH answered AS (
+    SELECT DISTINCT ON (l.description) l.description, l.decision, (l.unit_amount * l.quantity) AS line_total, q.revision, l.id
+      FROM workshop_quote_lines l JOIN workshop_quotes q ON q.id = l.workshop_quote_id
+     WHERE q.workshop_job_id = ? AND q.revision < ? AND q.state <> 'draft' AND l.decision IN ('approved', 'declined')
+       AND NOT EXISTS (SELECT 1 FROM workshop_quote_lines p WHERE p.workshop_quote_id = q.id AND p.decision = 'pending')
+     ORDER BY l.description, q.revision DESC, l.id DESC
+  )`;
+
+export async function latestAnswers(jobId, belowRevision = 2147483647) {
+  return prepare(`${LATEST_ANSWERS} SELECT description, decision, line_total FROM answered ORDER BY revision, id`).all(jobId, belowRevision);
+}
+
+// The new quote's "Already agreed" and "You said no thanks" (dq-quote-newer).
+export async function earlierAnswers(quote) {
+  const rows = await latestAnswers(quote.workshop_job_id, quote.revision);
+  return {
+    agreed: rows.filter((r) => r.decision === 'approved').map((r) => r.description),
+    declined: rows.filter((r) => r.decision === 'declined').map((r) => r.description),
+  };
+}
+
+// What the customer has agreed before this quote: the booked services (when
+// their prices show online, as the booking page's total) and the earlier yeses,
+// summed by the database. Null when nothing is agreed, or a booked price is
+// unknown or hidden.
+export async function agreedBefore(quote, showPrices) {
+  const row = await prepare(
+    `${LATEST_ANSWERS}
+     SELECT (SELECT count(*) FROM workshop_job_services WHERE workshop_job_id = ?) AS services,
+            (SELECT CASE WHEN count(*) = count(booked_price) THEN COALESCE(sum(booked_price), 0) END FROM workshop_job_services WHERE workshop_job_id = ?) AS booked,
+            (SELECT count(*) FROM answered WHERE decision = 'approved') AS yeses,
+            (SELECT COALESCE(sum(line_total), 0) FROM answered WHERE decision = 'approved') AS approved,
+            ((SELECT CASE WHEN count(*) = count(booked_price) THEN COALESCE(sum(booked_price), 0) END FROM workshop_job_services WHERE workshop_job_id = ?)
+              + (SELECT COALESCE(sum(line_total), 0) FROM answered WHERE decision = 'approved')) AS total`
+  ).get(quote.workshop_job_id, quote.revision, quote.workshop_job_id, quote.workshop_job_id, quote.workshop_job_id);
+  const services = Number(row.services);
+  if (services === 0 && Number(row.yeses) === 0) return null;
+  if (services > 0 && (!showPrices || row.booked === null)) return null;
+  return services > 0 ? Number(row.total) : Number(row.approved);
 }
 
 // The job's quote a customer may see on their booking link: its latest
