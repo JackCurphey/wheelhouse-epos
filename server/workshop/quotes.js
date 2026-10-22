@@ -11,7 +11,7 @@
 // transition the machine does not declare.
 import { open } from 'node:fs/promises';
 import path from 'node:path';
-import { prepare } from '../db.js';
+import { prepare, dbExec } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { sniffImage } from '../booking-photos.js';
 import { quote as quoteMachine, canApprove } from './state-machines.js';
@@ -57,7 +57,7 @@ async function fileHead(storageKey) {
 async function photoProblem(jobId, lines) {
   for (const line of lines) {
     if (line.photoId === undefined || line.photoId === null) continue;
-    const file = Number.isInteger(line.photoId)
+    const file = Number.isInteger(line.photoId) && line.photoId > 0 && line.photoId <= 2147483647
       ? await prepare('SELECT storage_key FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?').get(line.photoId, jobId)
       : null;
     if (!file || !sniffImage(await fileHead(file.storage_key))) return 'a quote line’s photo is a JPEG, PNG or WebP picture of this job';
@@ -89,7 +89,21 @@ function pairProblem(lines) {
 // Creates the next revision for a job, superseding the current one. A quote
 // still in draft has not been seen by anyone, so its lines are replaced in
 // place rather than spending a revision number on a proposal nobody read.
-export async function createRevision({ jobId, lines }) {
+// In one transaction, so a refusal part-way (a file removed at the same
+// moment, say) can't leave a draft with its lines half replaced (fresh review).
+export async function createRevision(args) {
+  await dbExec('BEGIN');
+  try {
+    const result = await createRevisionInTransaction(args);
+    await dbExec('COMMIT');
+    return result;
+  } catch (err) {
+    await dbExec('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
+async function createRevisionInTransaction({ jobId, lines }) {
   if (!lines?.length) return { ok: false, code: 'illegal', message: 'a quote needs at least one line' };
   for (const line of lines) {
     if (!['labour', 'part'].includes(line.kind)) {

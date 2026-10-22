@@ -40,6 +40,7 @@ let uninstall;
 let shell;
 let calls;
 let sendAnswer;
+let FILES = [];
 let refuse = null; // a quote refusal the next POST gets, in the shop's words
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
@@ -58,6 +59,8 @@ function stubServer() {
     const u = new URL(url, 'http://localhost');
     if (method === 'POST' && u.pathname === '/api/quotes/9/send') return reply(200, sendAnswer ?? { quote: { ...QUOTE, state: 'sent' }, message: { status: 'sent' }, link: 'http://localhost/book/north-street/booking/abc' });
     if (method === 'POST' && refuse) return reply(409, { error: refuse, code: 'illegal' });
+    if (method === 'DELETE') return reply(200, { ok: true });
+    if (method === 'GET' && u.pathname === '/api/workshop-jobs/1/attachments') return reply(200, FILES);
     if (method === 'POST') return reply(u.pathname.endsWith('/quotes') ? 201 : 200, { ...(QUOTE ?? quote('draft', [])), id: 9 });
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
@@ -292,4 +295,26 @@ test('a sent quote has no Add photo, as drawn', async () => {
   const { dlg } = await openJob({ q: quote('sent', [line({})]) });
   await dlg.findByText('Quoting');
   assert.ok(dlg.queryByLabelText('Add photo for Brake pads (pair)') === null);
+});
+
+test('removing a line’s photo from Files and photos fetches the quote again', async () => {
+  FILES = [{ id: 30, workshopJobId: 1, originalName: 'pads.png', contentType: 'image/png', sizeBytes: 4, uploadedAt: '2026-10-05T10:00:00Z', fromCustomer: false }];
+  try {
+    const { dlg, fireEvent, waitFor, within, ui } = await openJob({ q: quote('draft', [line({ photoId: 30 })]) });
+    const files = within(await dlg.findByRole('region', { name: 'Files and photos' }));
+    const before = calls.filter((c) => c.method === 'GET' && c.url === '/api/quotes/9').length;
+    fireEvent.click(await files.findByRole('button', { name: 'Remove pads.png' }));
+    fireEvent.click(within(await ui.findByRole('dialog', { name: 'Remove pads.png?' })).getByRole('button', { name: 'Remove' }));
+    await waitFor(() => assert.ok(calls.filter((c) => c.method === 'GET' && c.url === '/api/quotes/9').length > before, 'the quote is read again'));
+  } finally { FILES = []; }
+});
+
+test('a photo saved after a slow upload keeps a reason saved meanwhile', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({}), FIT({})]) });
+  // The server's draft has moved on since the page loaded (a reason saved meanwhile).
+  QUOTE = quote('draft', [line({ id: 11 }), FIT({ id: 12, reason: 'Saved while uploading' })]);
+  fireEvent.change(await dlg.findByLabelText('Add photo for Brake pads (pair)'), { target: { files: [PNG_FILE()] } });
+  await waitFor(() => assert.equal(posts().length, 2));
+  assert.match(posts()[1], /"Saved while uploading"/);
+  assert.match(posts()[1], /"photoId":9/);
 });

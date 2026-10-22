@@ -63,7 +63,9 @@ export function JobFiles({ jobId }: { jobId: number }) {
     setError(null);
     try {
       await apiMutate(url(a), undefined, { method: 'DELETE' });
-      await queryClient.invalidateQueries({ queryKey: key });
+      // A quote line's photo is one of these files: removing it takes it off
+      // the line, so the quote is read again too (fresh review).
+      await Promise.all([queryClient.invalidateQueries({ queryKey: key }), queryClient.invalidateQueries({ queryKey: ['quote'] })]);
     } catch (err) {
       setError(refusalText(err));
     }

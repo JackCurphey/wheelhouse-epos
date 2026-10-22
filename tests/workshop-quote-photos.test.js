@@ -108,3 +108,48 @@ test('removing the file from the job takes it off the line', async () => {
   assert.equal((await staff(`/api/workshop-jobs/${job.id}/attachments/${photoId}`, { method: 'DELETE' })).status, 200);
   assert.equal((await readQuote(saved.body.id)).lines[0].photoId, null);
 });
+
+// From the fresh review.
+test('a photo on an older revision isn’t served once the quote is revised', async () => {
+  const job = await newJob();
+  const photoId = await upload(job.id, PNG);
+  const first = await saveLines(job.id, [PADS({ photoId })]);
+  assert.equal((await staff(`/api/quotes/${first.body.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const oldLine = (await readQuote(first.body.id)).lines[0].id;
+  const code = await codeFor(job.id);
+  assert.equal((await raw(`/booking-links/${code}/quote/lines/${oldLine}/photo`)).status, 200);
+  const second = await saveLines(job.id, [PADS({ photoId })]);
+  assert.equal(second.status, 201, JSON.stringify(second.body));
+  assert.notEqual(second.body.id, first.body.id);
+  assert.equal((await staff(`/api/quotes/${second.body.id}/send`, { method: 'POST', body: {} })).status, 200);
+  assert.equal((await raw(`/booking-links/${code}/quote/lines/${oldLine}/photo`)).status, 404, 'revision 1’s line');
+});
+
+test('another shop’s file can’t go on a line, and a link can’t be read under another shop', async () => {
+  const theirJob = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Their job', jobDate: '2026-10-20' } }, other)).body;
+  const theirs = await upload(theirJob.id, PNG, 'image/png', other);
+  const job = await newJob();
+  assert.equal((await saveLines(job.id, [PADS({ photoId: theirs })])).status, 409);
+  const photoId = await upload(job.id, PNG);
+  const saved = await saveLines(job.id, [PADS({ photoId })]);
+  assert.equal((await staff(`/api/quotes/${saved.body.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const lineId = (await readQuote(saved.body.id)).lines[0].id;
+  const code = await codeFor(job.id);
+  const res = await fetch(`${server.baseUrl}/api/portal/${other.shop.slug}/booking-links/${code}/quote/lines/${lineId}/photo`);
+  assert.equal(res.status, 404);
+});
+
+test('a photo id too big for the database is refused, not a crash', async () => {
+  const job = await newJob();
+  assert.equal((await saveLines(job.id, [PADS({ photoId: 3e9 })])).status, 409);
+});
+
+test('the customer’s photo may be kept by their browser for five minutes, so it isn’t fetched again on every view', async () => {
+  const job = await newJob();
+  const photoId = await upload(job.id, PNG);
+  const saved = await saveLines(job.id, [PADS({ photoId })]);
+  assert.equal((await staff(`/api/quotes/${saved.body.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const lineId = (await readQuote(saved.body.id)).lines[0].id;
+  const res = await raw(`/booking-links/${await codeFor(job.id)}/quote/lines/${lineId}/photo`);
+  assert.equal(res.headers.get('cache-control'), 'private, max-age=300');
+});

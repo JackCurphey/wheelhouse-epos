@@ -86,8 +86,9 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   const [withdrawing, setWithdrawing] = useState(false);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [withouts, setWithouts] = useState<Record<number, string>>({});
-  // The draft line whose photo is open larger.
-  const [viewing, setViewing] = useState<QuoteLine | null>(null);
+  // The draft line whose photo is open larger, by its place in the draft:
+  // a save gives every line a new id (fresh review).
+  const [viewingAt, setViewingAt] = useState<number | null>(null);
   const fileUrl = (id: number) => `/api/workshop-jobs/${job.id}/attachments/${id}`;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -119,6 +120,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   const draftLines = q && q.state === 'draft' ? q.lines : [];
   const saveDraft = (lines: DraftLine[]) => act(() => apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines: asInputs(lines) }));
   const parts = draftLines.filter((x) => x.kind === 'part');
+  const viewing = viewingAt === null ? null : draftLines[viewingAt] ?? null;
 
   // A line's photo (Jack, 1 Oct; one per line, as drawn) is one of the job's
   // files: it goes to Files and photos first, then onto the line.
@@ -129,7 +131,12 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       const dataBase64 = await readBase64(file);
       const added = await apiMutate<{ id: number }>(`/api/workshop-jobs/${job.id}/attachments`,
         { filename: file.name, contentType: file.type || 'application/octet-stream', dataBase64 }, { method: 'POST' });
-      await apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines: asInputs(draftLines.map((x) => (x.id === l.id ? { ...x, photoId: added.id } : x))) });
+      // The draft as it is now, not as it was when the upload began: a reason
+      // saved meanwhile stays (fresh review). Lines are matched by place, as a
+      // save gives them new ids.
+      const at = draftLines.findIndex((x) => x.id === l.id);
+      const latest = q ? (await apiGet<Quote>(`/api/quotes/${q.id}`)).lines : draftLines;
+      await apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines: asInputs(latest.map((x, i) => (i === at ? { ...x, photoId: added.id } : x))) });
       await queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] });
     });
   }
@@ -212,7 +219,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
                         )}
                         {/* The drawn photo button (dq-job-quote): only while the quote is a draft. */}
                         {draft && l.photoId ? (
-                          <button type="button" disabled={busy} onClick={() => setViewing(l)}
+                          <button type="button" disabled={busy} onClick={() => setViewingAt(draftLines.findIndex((x) => x.id === l.id))}
                             className="inline-flex min-h-11 self-start items-center gap-1 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 text-xs font-semibold no-underline">
                             <Camera size={13} aria-hidden="true" />
                             <span className="sr-only">{`1 photo — view or add for ${l.description}`}</span>
@@ -348,7 +355,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
         />
       ) : null}
       {viewing && viewing.photoId ? (
-        <Dialog open onOpenChange={(o) => { if (!o) setViewing(null); }} aria-labelledby="line-photo-title" className="md:max-w-[720px]">
+        <Dialog open onOpenChange={(o) => { if (!o) setViewingAt(null); }} aria-labelledby="line-photo-title" className="md:max-w-[720px]">
           <DialogHeader>
             <div className="flex min-w-0 flex-col gap-0.5">
               <DialogTitle id="line-photo-title">{viewing.description}</DialogTitle>
@@ -358,14 +365,14 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
           <DialogBody><img src={fileUrl(viewing.photoId)} alt={viewing.description} className="max-h-[70vh] w-full object-contain" /></DialogBody>
           <DialogFooter className="flex flex-wrap justify-end gap-2.5">
             <Button disabled={busy} onClick={async () => {
-              if (await saveDraft(draftLines.map((x) => (x.id === viewing.id ? { ...x, photoId: null } : x)))) setViewing(null);
+              if (await saveDraft(draftLines.map((x) => (x.id === viewing.id ? { ...x, photoId: null } : x)))) setViewingAt(null);
             }}>Remove from line</Button>
             <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]">
               Replace photo
               <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} aria-label="Replace photo"
-                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (await setPhoto(viewing, f)) setViewing(null); }} />
+                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (await setPhoto(viewing, f)) setViewingAt(null); }} />
             </label>
-            <Button variant="accent" onClick={() => setViewing(null)}>Close</Button>
+            <Button variant="accent" onClick={() => setViewingAt(null)}>Close</Button>
           </DialogFooter>
         </Dialog>
       ) : null}

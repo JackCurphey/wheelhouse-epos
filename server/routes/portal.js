@@ -1221,7 +1221,9 @@ export function register(route) {
       'Content-Length': bytes.length,
       'Content-Disposition': 'inline',
       'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'private, no-store',
+      // Kept a few minutes by the customer's browser, so each view doesn't
+      // spend the link's guessing limit again (fresh review).
+      'Cache-Control': 'private, max-age=300',
     });
     res.end(bytes);
   });
