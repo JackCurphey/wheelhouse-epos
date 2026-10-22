@@ -93,9 +93,6 @@ function ShopDetailsBox() {
   );
 }
 
-// The settings pages' own switch (settings-frame.mjs rowSwitch): the label,
-// On or Off in words, and the track; the whole row is the control.
-
 /**
  * Settings › Till › Receipts, first piece (Jack, 19 Oct, docs/decisions/2026-10-19-receipt-words.md;
  * drawn as set-till-receipts): the words printed at the bottom of every

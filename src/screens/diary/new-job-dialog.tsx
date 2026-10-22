@@ -159,7 +159,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   const [bikeHere, setBikeHere] = useState(false);
   // Where the bike is kept, when the shop's storage slots are on and the bike
   // is here (Workshop day 27; drawn on new-job): none chosen to start.
-  const slots = useStorageSlots();
+  const { slots } = useStorageSlots();
   const [slot, setSlot] = useState<number | null>(null);
   const keptOn = bikeHere && slots.length ? slot : null;
   const [error, setError] = useState<string | null>(null);

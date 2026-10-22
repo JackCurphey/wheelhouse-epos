@@ -15,12 +15,16 @@ import { Pill } from './change-details-dialog.tsx';
  */
 export type StorageSlot = { id: number; name: string };
 
-/** The shop's slots when they're switched on and it has some; otherwise none. */
-export function useStorageSlots(): StorageSlot[] {
+/**
+ * Whether the shop's slots are on, and its slots (undefined while they load).
+ * `ask` is whether Book in should ask where the bike is kept: slots on, and
+ * not known to be none, so a quick tap before the list arrives still asks.
+ */
+export function useStorageSlots(): { on: boolean; slots: StorageSlot[]; ask: boolean } {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ storageSlotsOn?: boolean }>('/api/workshop-settings') });
   const on = Boolean(settings.data?.storageSlotsOn);
   const slots = useQuery({ queryKey: ['storage-slots'], queryFn: () => apiGet<StorageSlot[]>('/api/storage-slots'), enabled: on });
-  return on ? slots.data ?? [] : [];
+  return { on, slots: on ? slots.data ?? [] : [], ask: on && (slots.data === undefined || slots.data.length > 0) };
 }
 
 export function SlotPills({ slots, value, onChange, id }: { slots: StorageSlot[]; value: number | null; onChange: (id: number | null) => void; id: string }) {

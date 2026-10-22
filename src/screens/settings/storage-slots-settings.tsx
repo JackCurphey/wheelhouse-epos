@@ -38,7 +38,11 @@ export function StorageSlotsSettings() {
     try {
       await fn();
       after?.();
-      await queryClient.invalidateQueries({ queryKey: ['storage-slots'] });
+      // A removed slot leaves the bikes on it, so the job lists are read again too.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['storage-slots'] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+      ]);
     } catch (err) {
       setError(words(err));
     } finally {
@@ -56,20 +60,28 @@ export function StorageSlotsSettings() {
       <p className="m-0 text-sm text-[var(--wh-muted)]">
         {on ? 'On for this shop. Staff can note where a bike is kept, and the diary block shows the slot where there’s room.' : 'Off for this shop. Switch it on to note where each bike is kept.'}
       </p>
-      <ul aria-label="Storage slots" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-        {(slots.data ?? []).map((s) => (
+      <ul aria-label="Slots" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+        {(slots.data ?? []).map((s, i, all) => (
           <li key={s.id} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-[var(--wh-border)] bg-[var(--wh-panel)] pl-3.5 text-[13px] font-semibold">
             {s.name}
-            <button type="button" aria-label={`Remove ${s.name}`} disabled={busy} onClick={() => void run(() => apiMutate(`/api/storage-slots/${s.id}`, {}, { method: 'DELETE' }))} className="inline-flex size-11 items-center justify-center rounded-full text-[var(--wh-muted)] hover:bg-[var(--wh-hover)]">
+            <button type="button" aria-label={`Remove ${s.name}`} disabled={busy} onClick={() => void run(() => apiMutate(`/api/storage-slots/${s.id}`, {}, { method: 'DELETE' }), () => {
+              // The focus goes to the next chip's Remove (or the one before, or + Add a slot).
+              const next = all[i + 1] ?? all[i - 1];
+              setTimeout(() => document.querySelector<HTMLButtonElement>(next ? `[aria-label="Remove ${next.name}"]` : '[data-add-slot]')?.focus(), 0);
+            })} className="inline-flex size-11 items-center justify-center rounded-full text-[var(--wh-muted)] hover:bg-[var(--wh-hover)]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </li>
         ))}
       </ul>
       {adding === null ? (
-        <div><Button variant="default" onClick={() => { setAdding(''); setTimeout(() => document.getElementById('new-slot')?.focus(), 0); }}>+ Add a slot</Button></div>
+        <div><Button variant="default" data-add-slot onClick={() => { setAdding(''); setTimeout(() => document.getElementById('new-slot')?.focus(), 0); }}>+ Add a slot</Button></div>
       ) : (
-        <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); void run(() => apiMutate('/api/storage-slots', { name: adding }), () => setAdding(null)); }}>
+        <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); void run(() => apiMutate('/api/storage-slots', { name: adding }), () => {
+          // The box stays open and empty for the next slot (fewest clicks).
+          setAdding('');
+          setTimeout(() => document.getElementById('new-slot')?.focus(), 0);
+        }); }}>
           <input id="new-slot" aria-label="New slot" value={adding} maxLength={40} placeholder="Hook 7" onChange={(e) => setAdding(e.target.value)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm" />
           <Button type="submit" variant="primary" disabled={busy}>Add</Button>
           <Button variant="ghost" onClick={() => setAdding(null)}>Cancel</Button>

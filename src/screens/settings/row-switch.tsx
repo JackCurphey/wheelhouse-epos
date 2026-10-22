@@ -1,4 +1,5 @@
-/** A settings row's On/Off switch: its label on the left, the words and the track on the right. */
+// The settings pages' own switch (settings-frame.mjs rowSwitch): the label,
+// On or Off in words, and the track; the whole row is the control.
 export function RowSwitch({ label, on, disabled, onChange }: { label: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
   return (
     <button

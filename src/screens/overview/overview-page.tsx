@@ -96,7 +96,7 @@ export function OverviewPage() {
   const [refused, setRefused] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   // Storage slots (Workshop day 27): the shop's, when they're on.
-  const slots = useStorageSlots();
+  const { on: slotsOn, slots, ask: askSlot } = useStorageSlots();
   const [slotFor, setSlotFor] = useState<WorkshopJob | null>(null);
   // Today's jobs, and every bike in the shop whatever its days (a ready bike
   // from an earlier day has none today). Under 'workshop-jobs', so the
@@ -129,7 +129,7 @@ export function OverviewPage() {
 
   // With slots on, Book in asks where the bike is kept first (till-book-in).
   function startBookIn(j: WorkshopJob) {
-    if (slots.length) setSlotFor(j);
+    if (askSlot) setSlotFor(j);
     else void bookIn(j);
   }
 
@@ -216,7 +216,7 @@ export function OverviewPage() {
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-[15px]">{name(j)}</span>
                     <span className="text-[13px] text-[var(--wh-muted)]">{`${j.bikeLabel ?? 'No bike'} · ${work(j)}`}</span>
-                    <span><Custody job={j} slotsOn={slots.length > 0} /></span>
+                    <span><Custody job={j} slotsOn={slotsOn} /></span>
                   </div>
                   <div className="shrink-0">{action(j)}</div>
                 </li>
@@ -239,7 +239,7 @@ export function OverviewPage() {
                     <td className="px-4 py-2.5">{name(j)}</td>
                     <td className="px-4 py-2.5">{j.bikeLabel ?? '—'}</td>
                     <td className="px-4 py-2.5">{work(j)}</td>
-                    <td className="px-4 py-2.5"><Custody job={j} slotsOn={slots.length > 0} /></td>
+                    <td className="px-4 py-2.5"><Custody job={j} slotsOn={slotsOn} /></td>
                     <td className="px-4 py-2.5 text-right">{action(j)}</td>
                   </tr>
                 ))}
@@ -249,7 +249,7 @@ export function OverviewPage() {
       </div>
       {slotFor ? (
         <SlotDialog
-          job={slotFor} slots={slots} busy={busy === slotFor.id} title={`Book in · job ${slotFor.reference ?? ''}`}
+          job={slotFor} slots={slots} busy={busy === slotFor.id} title={slotFor.reference ? `Book in · job ${slotFor.reference}` : 'Book in'}
           onClose={() => setSlotFor(null)}
           onDone={(slot) => { const j = slotFor; setSlotFor(null); void bookIn(j, slot); }}
         />

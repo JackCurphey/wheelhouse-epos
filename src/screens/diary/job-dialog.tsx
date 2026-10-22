@@ -135,7 +135,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const [changing, setChanging] = useState(false);
   // Storage slots (Workshop day 27): Book in asks where the bike is kept, and
   // "Kept on [slot]" moves it, when the shop's slots are on.
-  const slots = useStorageSlots();
+  const { on: slotsOn, slots, ask: askSlot } = useStorageSlots();
   const [slotBox, setSlotBox] = useState<'book-in' | 'move' | null>(null);
   // Deleting a job (Jack, 18 Oct, docs/decisions/2026-10-18-attachments-and-delete.md):
   // asks first, or says "Settle up first" while money has been paid on its
@@ -201,7 +201,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   }
 
   function bookIn() {
-    if (slots.length) setSlotBox('book-in');
+    if (askSlot) setSlotBox('book-in');
     else void run('book-in');
   }
 
@@ -216,7 +216,9 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
       ]);
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+      // Refused (say the bike was collected meanwhile): show the job as it is now.
+      setMessage(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+      void jobQuery.refetch();
     } finally {
       setSending(false);
     }
@@ -373,7 +375,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 {job.bikeLabel ? <span>{job.bikeLabel}</span> : null}
                 {/* Where a bike in the shop is kept (job-book-in's "Kept on Hook 3"); a button to move it. */}
-                {slots.length && job.custodyState === 'in_shop' ? (
+                {slotsOn && job.custodyState === 'in_shop' ? (
                   <button type="button" disabled={sending} onClick={() => setSlotBox('move')} className="min-h-11 text-[var(--wh-muted)] underline-offset-2 hover:underline">
                     {job.storageSlotName ? `Kept on ${job.storageSlotName}` : 'Choose where it’s kept'}
                   </button>
@@ -502,7 +504,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
       {slotBox && job ? (
         <SlotDialog
           job={job} slots={slots} busy={sending}
-          title={slotBox === 'book-in' ? `Book in · job ${job.reference ?? ''}` : 'Where the bike is kept'}
+          title={slotBox === 'book-in' ? (job.reference ? `Book in · job ${job.reference}` : 'Book in') : 'Where the bike is kept'}
           onClose={() => setSlotBox(null)}
           onDone={(slot) => {
             const was = slotBox;

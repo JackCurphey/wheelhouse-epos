@@ -131,9 +131,49 @@ test('Kept on [slot] opens Where the bike is kept to move it', async () => {
   await dlg.findByRole('button', { name: 'Kept on Front window' });
 });
 
-test('a bike in with no slot can be put on one; with slots off nothing shows', async () => {
+test('a bike in with no slot can be put on one', async () => {
   const { dlg } = await openJob({ over: { custodyState: 'in_shop' } });
   assert.ok(await dlg.findByRole('button', { name: 'Choose where it’s kept' }));
+});
+
+test('with slots off, a bike’s old slot shows nowhere: not on the job page, not on the Overview', async () => {
+  const kept = { custodyState: 'in_shop', storageSlotId: 3, storageSlotName: 'Hook 3' };
+  const r = await openJob({ on: false, over: kept });
+  await r.dlg.findByText('Mechanic: Alex Morgan');
+  assert.ok(r.dlg.queryByRole('button', { name: /Kept on|Choose where/ }) === null);
+  r.cleanup();
+  shell.queryClient.clear();
+  uninstall();
+  const { ui, fireEvent } = await open('/workshop/overview', { on: false, over: { ...kept, workState: 'in_progress', jobDate: '2026-09-01', mechanicId: null, mechanicName: null } });
+  fireEvent.click(await ui.findByRole('button', { name: /^Shared queue · 1/ }));
+  assert.ok((await ui.findAllByText('In the shop')).length > 0);
+  assert.ok(ui.queryByText('Kept on Hook 3') === null);
+});
+
+test('tapping the chosen slot again takes the bike off it', async () => {
+  const { ui, dlg, fireEvent, waitFor, within } = await openJob({ over: { custodyState: 'in_shop', storageSlotId: 3, storageSlotName: 'Hook 3' } });
+  fireEvent.click(await dlg.findByRole('button', { name: 'Kept on Hook 3' }));
+  const box = within(await ui.findByRole('dialog', { name: 'Where the bike is kept' }));
+  fireEvent.click(box.getByRole('radio', { name: 'Hook 3' }));
+  fireEvent.click(box.getByRole('button', { name: 'Done' }));
+  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/workshop-jobs/1/storage-slot {"storageSlotId":null}']));
+});
+
+test('the Bike is here switch asks where it’s kept too', async () => {
+  const { ui, dlg, fireEvent } = await openJob();
+  fireEvent.click(dlg.getByRole('switch', { name: 'Bike is here' }));
+  assert.ok(await ui.findByRole('dialog', { name: 'Book in · job WH-1042' }));
+});
+
+test('the Overview’s Book in asks where the bike is kept, then books it in on that slot', async () => {
+  // Expected today, so it's in Arrivals (the Overview reads the shop's today).
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { ui, fireEvent, waitFor, within } = await open('/workshop/overview', { over: { jobDate: today } });
+  fireEvent.click(await ui.findByRole('button', { name: 'Book in WH-1042' }));
+  const box = within(await ui.findByRole('dialog', { name: 'Book in · job WH-1042' }));
+  fireEvent.click(box.getByRole('radio', { name: 'Hook 5' }));
+  fireEvent.click(box.getByRole('button', { name: 'Done' }));
+  await waitFor(() => assert.deepEqual(writes(), ['POST /api/workshop-jobs/1/book-in {"storageSlotId":5,"version":3}']));
 });
 
 // ---------- The Overview ----------
@@ -155,15 +195,20 @@ test('Settings › Storage slots: the switch, the slots, Remove and + Add a slot
   const sw = await ui.findByRole('switch', { name: 'Storage slots' });
   assert.equal(sw.getAttribute('aria-checked'), 'true');
   assert.ok(ui.queryByText('On for this shop. Staff can note where a bike is kept, and the diary block shows the slot where there’s room.') !== null);
-  const list = within(ui.getByRole('list', { name: 'Storage slots' }));
+  const list = within(ui.getByRole('list', { name: 'Slots' }));
   assert.deepEqual(list.getAllByRole('listitem').map((li) => li.textContent.replace(/Remove.*/, '').trim()), SLOTS.map((s) => s.name));
   fireEvent.click(list.getByRole('button', { name: 'Remove Hook 6' }));
   await waitFor(() => assert.deepEqual(writes(), ['DELETE /api/storage-slots/6 {}']));
+  // The focus goes to the next chip's Remove, not off the page.
+  await waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Remove Workshop floor'));
   fireEvent.click(ui.getByRole('button', { name: '+ Add a slot' }));
   fireEvent.change(ui.getByLabelText('New slot'), { target: { value: 'Hook 7' } });
   fireEvent.click(ui.getByRole('button', { name: 'Add' }));
   await waitFor(() => assert.deepEqual(writes().at(-1), 'POST /api/storage-slots {"name":"Hook 7"}'));
   await ui.findByRole('button', { name: 'Remove Hook 7' });
+  // The box stays open and empty for the next one (fewest clicks).
+  await waitFor(() => assert.equal(ui.getByLabelText('New slot').value, ''));
+  assert.equal(document.activeElement, ui.getByLabelText('New slot'));
   fireEvent.click(sw);
   await waitFor(() => assert.deepEqual(writes().at(-1), 'PUT /api/workshop-settings {"storageSlotsOn":false}'));
 });
