@@ -24,11 +24,12 @@ import {
 } from '../workshop/quotes.js';
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
+import { shopNow } from '../clock.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
-  currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
+  currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
   sendQuoteResult, answerAndAddToOrder,
 } from '../workshop/jobs.js';
@@ -1030,7 +1031,9 @@ export function register(route) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
     const mech = await resolveJobMechanicId(body.mechanicId, null);
     if (!mech.ok || mech.mechanicId === null) return badRequest(res, 'Please choose a mechanic');
-    const message = body.message === undefined || body.message === null ? '' : String(body.message).trim();
+    // Text only, as decline's message is: an object would be stored as "[object Object]".
+    if (body.message !== undefined && body.message !== null && typeof body.message !== 'string') return badRequest(res, 'The message must be text');
+    const message = body.message === undefined || body.message === null ? '' : body.message.trim();
     if (message.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
     const startTime = String(body.startTime ?? '').trim();
     const taken = { status: 409, body: { error: 'That time is no longer free', code: 'capacity' } };
@@ -1041,12 +1044,26 @@ export function register(route) {
         if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
           return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
         }
+        // The customer's link can't act once the bike is in the shop or the work
+        // has started (customerTooLate in portal.js), so an offer would wait
+        // with nobody able to answer it (audit item 15, #315).
+        if (job.custody_state !== 'expected') {
+          return { status: 409, body: { error: 'The bike is already in the shop, so this can’t be offered another time.', code: 'illegal' } };
+        }
+        if (job.work_state !== 'not_started') {
+          return { status: 409, body: { error: 'The work has already started, so this can’t be offered another time.', code: 'illegal' } };
+        }
         // The customer couldn't accept a day gone by (fresh review).
-        if (jobDate < await currentShopToday()) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
+        const now = shopNow(await currentShopTimeZone());
+        if (jobDate < now.date) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
         const minutes = job.planned_minutes
           || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
         const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
         if (times.error) return { status: 400, body: { error: times.error } };
+        // Nor a time already gone today (audit item 16, #315).
+        if (jobDate === now.date && times.startTime && timeToMinutes(times.startTime) < now.minutes) {
+          return { status: 400, body: { error: 'That time has passed - please choose a later time.' } };
+        }
         const slotError = await checkJobSlot({
           jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId: mech.mechanicId, ignoreJobId: id,
         });
