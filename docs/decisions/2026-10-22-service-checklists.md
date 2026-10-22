@@ -20,3 +20,9 @@ chooses which services have one, or who writes the items.
    pressure, Brakes bled & adjusted, Gears indexed, Chain & drivetrain,
    Bottom bracket, Headset, Cables & housing, Bolts torqued. The Settings
    page isn't drawn yet; it is drawn for Jack's approval before it is built.
+
+2. **The Settings drawings are approved as drawn.** Jack, 22 Oct: "Approve
+   the Checklists settings drawings; build the checklist: Settings and the job
+   page's full service checklist." Drawn as `set-workshop-checklists` (with
+   `set-workshop-checklists-empty`) and `set-workshop-checklist-edit` in
+   Settings › Workshop, under Services; built in WP-4.1.

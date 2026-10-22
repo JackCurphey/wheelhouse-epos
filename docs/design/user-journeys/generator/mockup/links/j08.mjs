@@ -123,6 +123,14 @@ export default {
     '+ Add a service': notDrawn('Adding a workshop service: the service box, empty'),
   },
   'set-workshop-mechanics': { 'Change in Staff and roles': go('set-staff') },
+  // Service checklists (Jack, 22 Oct): Edit opens the checklist; the template fills one in.
+  'set-workshop-checklists': { Edit: go('set-workshop-checklist-edit'), '+ New checklist': go('set-workshop-checklist-edit') },
+  'set-workshop-checklists-empty': { 'Use the full service template': go('set-workshop-checklist-edit'), '+ Write your own': notDrawn('A new checklist: the same box, with no items yet') },
+  'set-workshop-checklist-edit': {
+    'Move Frame & fork — drag, or use the arrow keys': STAY, 'Remove Frame & fork': STAY, 'Move Wheels & tyres — drag, or use the arrow keys': STAY, 'Remove Wheels & tyres': STAY, 'Move Tyre pressure — drag, or use the arrow keys': STAY, 'Remove Tyre pressure': STAY, 'Move Brakes bled & adjusted — drag, or use the arrow keys': STAY, 'Remove Brakes bled & adjusted': STAY, 'Move Gears indexed — drag, or use the arrow keys': STAY, 'Remove Gears indexed': STAY, 'Move Chain & drivetrain — drag, or use the arrow keys': STAY, 'Remove Chain & drivetrain': STAY, 'Move Bottom bracket — drag, or use the arrow keys': STAY, 'Remove Bottom bracket': STAY, 'Move Headset — drag, or use the arrow keys': STAY, 'Remove Headset': STAY, 'Move Cables & housing — drag, or use the arrow keys': STAY, 'Remove Cables & housing': STAY, 'Move Bolts torqued — drag, or use the arrow keys': STAY, 'Remove Bolts torqued': STAY,
+    '+ Add an item': STAY, 'Save checklist': go('set-workshop-checklists'),
+    Edit: go('set-workshop-checklist-edit'), '+ New checklist': go('set-workshop-checklist-edit'),
+  },
   'set-workshop-sign-off': { 'Change in Staff and roles': go('set-staff') },
   'set-workshop-diary': {
     'Remove Hook 1': STAY, 'Remove Hook 2': STAY, 'Remove Hook 3': STAY, 'Remove Hook 4': STAY,
