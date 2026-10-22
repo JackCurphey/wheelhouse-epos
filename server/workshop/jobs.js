@@ -662,6 +662,12 @@ export async function agreeWithinLimit({ quoteId, loginId = null }) {
 export async function answerAndAddToOrder(args) {
   await db.exec('BEGIN');
   try {
+    // The job's orders are locked first, as deleting a job and taking a payment
+    // lock them (order first). Locking the quote lines first and the order after
+    // deadlocked with a delete (audit item 14).
+    await db.prepare(
+      'SELECT id FROM sale_documents WHERE workshop_job_id = (SELECT workshop_job_id FROM workshop_quotes WHERE id = ?) ORDER BY id FOR UPDATE'
+    ).all(args.quoteId);
     const result = await answerQuote(args);
     if (result.ok) await addApprovedLinesToOrder(result.quote.id);
     await db.exec('COMMIT');
