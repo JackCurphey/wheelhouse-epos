@@ -395,12 +395,15 @@ export function register(route) {
       }
     }
 
-    const showPricesOnline = body.showPricesOnline === undefined
-      ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
-    const showSignOff = body.showSignOffToCustomers === undefined
-      ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
-    const confirmAutomatically = body.confirmBookingsAutomatically === undefined
-      ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
+    // The on/off settings take a real true or false only, so a stray "false"
+    // can't turn one on (audit, 22 Oct, item 22); left out, each stays as it is.
+    for (const key of ['showPricesOnline', 'showSignOffToCustomers', 'confirmBookingsAutomatically']) {
+      if (body[key] !== undefined && typeof body[key] !== 'boolean') return badRequest(res, `${key} must be true or false`);
+    }
+    const onOff = (key, column) => (body[key] === undefined ? existing[column] : (body[key] ? 1 : 0));
+    const showPricesOnline = onOff('showPricesOnline', 'show_prices_online');
+    const showSignOff = onOff('showSignOffToCustomers', 'show_sign_off_to_customers');
+    const confirmAutomatically = onOff('confirmBookingsAutomatically', 'confirm_bookings_automatically');
 
     // The additional note on the confirmation: trimmed, up to 300 characters;
     // empty shows none (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).

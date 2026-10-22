@@ -88,6 +88,25 @@ reopening either.
    waiting "Bike ready" (`undoWaiting`): nothing is sent about work that no
    longer stands.
 
+### 22 Oct 2026: input checks (`openspec/changes/input-checks`, audit items 19, 21, 22)
+
+No screen: server only. Touches `docs/decisions/2026-10-16-mechanic-sign-off.md`
+(an active mechanic signs off; the till never refuses over it), without
+reopening it.
+
+1. **A job's mechanic is sent as a whole number.** Text, a fraction or
+   `true` is refused with "Mechanic not found or inactive". *Pattern:* the
+   sign-off's `signedOffBy`, which already takes whole numbers only.
+2. **A mechanic deleted or switched off while a job is being finished** gets
+   "Choose who is signing this off", as if they had gone a moment earlier,
+   and nothing moves. At the till the payment stands and the reply warns
+   "that mechanic isn’t active any more". *Pattern:* the same refusal and
+   warning when the earlier check finds them gone.
+3. **The three on/off workshop settings** (Show prices on the booking page,
+   Show who signed off to customers, Confirm bookings automatically) take
+   only true or false; anything else is refused and nothing is saved.
+   *Pattern:* the messages page's `enabled` ("must be true or false").
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
