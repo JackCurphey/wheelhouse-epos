@@ -1368,7 +1368,7 @@ export function register(route) {
       const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
       if (why) {
         const who = job.customer_name ?? 'The customer';
-        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed, so no text went.` : notSent(why, 'Reply from the shop', who) };
+        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed.` : notSent(why, 'Reply from the shop', who) };
       } else {
         const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
         const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
@@ -1381,7 +1381,7 @@ export function register(route) {
       }
     } catch (err) {
       console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
-      message = { status: 'not_sent', reason: 'The reply is saved, but the message could not be queued.' };
+      message = { status: 'not_sent', reason: 'The message could not be queued.' };
     }
     sendJson(res, 201, { notes: await jobNotes(job.id), message });
   });
