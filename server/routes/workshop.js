@@ -755,6 +755,15 @@ export function register(route) {
         declineMessage = body.message.trim();
         if (declineMessage.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
       }
+      // Book-in may say where the bike is kept (storage slots, Workshop day 27;
+      // drawn as till-book-in), checked before anything moves.
+      let bookInSlot;
+      if (machine === custody && event === 'book_in' && body.storageSlotId !== undefined && body.storageSlotId !== null) {
+        if (!Number.isInteger(body.storageSlotId) || !(await db.prepare('SELECT 1 FROM storage_slots WHERE id = ?').get(body.storageSlotId))) {
+          return badRequest(res, 'That slot doesn’t exist');
+        }
+        bookInSlot = body.storageSlotId;
+      }
       const answeringRequest = machine === bookingRequest && (event === 'accept' || event === 'decline');
       // Finishing the work needs a mechanic to sign it off, and reopening it
       // clears the sign-off (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -864,6 +873,17 @@ export function register(route) {
         }
         if (result.gone) return notFound(res, 'Job not found');
         if (result.refused) return sendJson(res, result.refused.status, result.refused.body);
+      } else if (bookInSlot !== undefined) {
+        // The bike comes in and goes on its slot together, or neither.
+        await db.exec('BEGIN');
+        try {
+          result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+          if (result.ok) await db.prepare('UPDATE workshop_jobs SET storage_slot_id = ? WHERE id = ?').run(bookInSlot, id);
+          await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
+        } catch (err) {
+          await db.exec('ROLLBACK');
+          throw err;
+        }
       } else {
         result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
       }
@@ -916,6 +936,26 @@ export function register(route) {
       if (!(err instanceof ChecklistError)) throw err;
       sendJson(res, err.status, err.code ? { error: err.message, code: err.code } : { error: err.message });
     }
+  });
+
+  // Where a bike in the shop is kept, changed or cleared (storage slots; the
+  // job page's "Kept on [slot]"). Only while the bike is in: book-in sets it,
+  // collecting clears it. Not a versioned move: the last choice wins.
+  // screens: job-page
+  route('PUT', '/api/workshop-jobs/:id/storage-slot', async (req, res, params) => {
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    const slotId = body.storageSlotId;
+    if (slotId !== null && (!Number.isInteger(slotId) || !(await db.prepare('SELECT 1 FROM storage_slots WHERE id = ?').get(slotId)))) {
+      return badRequest(res, 'That slot doesn’t exist');
+    }
+    if (!(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(id))) return notFound(res, 'Job not found');
+    const { changes } = await db.prepare(
+      "UPDATE workshop_jobs SET storage_slot_id = ?, updated_at = now() WHERE id = ? AND custody_state = 'in_shop'"
+    ).run(slotId, id);
+    if (!changes) return sendJson(res, 409, { error: 'Only a bike in the shop can be put on a slot.', code: 'illegal' });
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
   });
 
   // screens: requests, review

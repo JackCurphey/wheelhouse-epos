@@ -68,7 +68,8 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
   // set by the custody moves themselves, so every way a bike moves records it.
   const custodyTime = machine.name !== 'custody' ? ''
     : event === 'book_in' ? ', booked_in_at = now()'
-    : event === 'collect' ? ', collected_at = now()'
+    // A collected bike leaves its storage slot (storage slots, 22 Oct).
+    : event === 'collect' ? ', collected_at = now(), storage_slot_id = NULL'
     : event === 'reopen' ? ', collected_at = NULL'
     : '';
   const { changes } = await prepare(

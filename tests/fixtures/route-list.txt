@@ -92,6 +92,7 @@ POST /api/workshop-jobs/:id/resume
 POST /api/workshop-jobs/:id/finish
 POST /api/workshop-jobs/:id/reopen-work
 POST /api/workshop-jobs/:id/seen
+PUT /api/workshop-jobs/:id/storage-slot
 GET /api/workshop-jobs/:id/checklist
 PUT /api/workshop-jobs/:id/checklist/items/:index
 DELETE /api/workshop-jobs/:id
@@ -125,6 +126,9 @@ GET /api/till-attention
 POST /api/till-attention/:id/resolve
 GET /api/workshop-settings
 PUT /api/workshop-settings
+GET /api/storage-slots
+POST /api/storage-slots
+DELETE /api/storage-slots/:id
 GET /api/workshop-checklists
 POST /api/workshop-checklists
 PUT /api/workshop-checklists/:id

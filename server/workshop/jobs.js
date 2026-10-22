@@ -50,6 +50,9 @@ export function serializeWorkshopJob(row) {
     // The job's planned length in minutes (given, its times', or an online
     // booking's services' total); null when it has none. The diary's offer reads it.
     plannedMinutes: row.planned_minutes ?? null,
+    // Where a bike in the shop is kept (storage slots, Workshop day 27; migration 054).
+    storageSlotId: row.storage_slot_id ?? null,
+    storageSlotName: row.storage_slot_name ?? null,
     status: row.status,
     // The states the screens actually drive from. `status` above is the derived
     // legacy field, kept only for public/app.js and the online booking pages until
@@ -98,8 +101,9 @@ export function serializeWorkshopJob(row) {
   };
 }
 
-export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
+export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total, ss.name AS storage_slot_name
   FROM workshop_jobs w
+  LEFT JOIN storage_slots ss ON ss.id = w.storage_slot_id
   LEFT JOIN customers c ON c.id = w.customer_id
   LEFT JOIN customer_bikes b ON b.id = w.bike_id
   LEFT JOIN employees mech ON mech.id = w.mechanic_id

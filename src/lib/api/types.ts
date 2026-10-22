@@ -42,6 +42,9 @@ export type WorkshopJob = {
   /** The job's planned length in minutes: given when made (an online booking's
    * services' total), else its times'; null when it has neither. */
   plannedMinutes: number | null;
+  /** Where a bike in the shop is kept (storage slots); null when none. */
+  storageSlotId: number | null;
+  storageSlotName: string | null;
   custodyState: string;
   workState: string;
   /** Echoed on every action; see jobAction in client.ts. */

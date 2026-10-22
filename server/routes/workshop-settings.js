@@ -61,6 +61,8 @@ function serializeWorkshopSettings(row) {
     // What a diary block shows first and second (Workshop day 17, 29; migration 053).
     blockFirst: row.block_first,
     blockSecond: row.block_second,
+    // Storage slots on for this shop (Workshop day 27; migration 054), off to start.
+    storageSlotsOn: row.storage_slots_on === 1,
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -404,6 +406,8 @@ export function register(route) {
       ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
     const showSignOff = body.showSignOffToCustomers === undefined
       ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
+    const storageSlotsOn = body.storageSlotsOn === undefined
+      ? existing.storage_slots_on : (body.storageSlotsOn ? 1 : 0);
     const confirmAutomatically = body.confirmBookingsAutomatically === undefined
       ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
 
@@ -446,13 +450,13 @@ export function register(route) {
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
          show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
-         block_first = ?, block_second = ?, updated_at = ? WHERE id = ?`
+         block_first = ?, block_second = ?, storage_slots_on = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
           showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
-          blockFirst, blockSecond, nowIso(), existing.id);
+          blockFirst, blockSecond, storageSlotsOn, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });
@@ -558,6 +562,43 @@ export function register(route) {
         };
       }),
     });
+  });
+
+  // ---------- Storage slots (Workshop day 27; drawn as set-workshop-diary's Storage slots) ----------
+  // The shop's own hooks and spaces, in the order added. Everyone signed in
+  // reads them; only the Owner adds or removes one. Removing one clears it
+  // from the bikes on it (ON DELETE SET NULL).
+  // screens: services
+  route('GET', '/api/storage-slots', async (req, res) => {
+    sendJson(res, 200, await db.prepare('SELECT id, name FROM storage_slots ORDER BY position, id').all());
+  });
+
+  // screens: services
+  route('POST', '/api/storage-slots', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name) return badRequest(res, 'Give the slot a name');
+    if (name.length > 40) return badRequest(res, 'A slot’s name can be up to 40 letters');
+    if (await db.prepare('SELECT 1 FROM storage_slots WHERE lower(name) = lower(?)').get(name)) return badRequest(res, 'There’s already a slot called that');
+    try {
+      const made = await db.prepare(
+        'INSERT INTO storage_slots (name, position) VALUES (?, (SELECT COALESCE(MAX(position), 0) + 1 FROM storage_slots)) RETURNING id, name'
+      ).get(name);
+      sendJson(res, 201, made);
+    } catch (err) {
+      // Two adds of one name at once: the second meets the unique index.
+      if (err.code === '23505') return badRequest(res, 'There’s already a slot called that');
+      throw err;
+    }
+  });
+
+  // screens: services
+  route('DELETE', '/api/storage-slots/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    const gone = await db.prepare('DELETE FROM storage_slots WHERE id = ?').run(Number(params.id));
+    if (!gone.changes) return notFound(res, 'That slot no longer exists');
+    res.writeHead(204).end();
   });
 
   // ---------- Service checklists (Jack, 22 Oct, docs/decisions/2026-10-22-service-checklists.md) ----------
