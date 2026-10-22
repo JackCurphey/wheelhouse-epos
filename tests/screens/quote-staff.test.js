@@ -31,7 +31,7 @@ function job(over) {
     ...over,
   });
 }
-const line = (over) => ({ id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'pending', lineTotal: 18, need: 'needed', reason: 'Worn down to 1mm', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, ...over });
+const line = (over) => ({ id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'pending', lineTotal: 18, need: 'needed', reason: 'Worn down to 1mm', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over });
 const quote = (state, lines) => ({ id: 9, workshopJobId: 1, revision: 1, state, createdAt: '2026-10-05T09:00:00Z', sentAt: null, lines,
   totals: { all: lines.reduce((s, l) => s + l.lineTotal, 0), approved: lines.filter((l) => l.decision === 'approved').reduce((s, l) => s + l.lineTotal, 0), pending: lines.filter((l) => l.decision === 'pending').reduce((s, l) => s + l.lineTotal, 0), declined: lines.filter((l) => l.decision === 'declined').reduce((s, l) => s + l.lineTotal, 0) } });
 
@@ -256,4 +256,40 @@ test('Record their answer starts a mixed Needed and Optional pair ticked togethe
   fireEvent.click(await dlg.findByRole('button', { name: 'Record their answer' }));
   const rec = within(await ui.findByRole('dialog', { name: 'Record Maya’s answer' }));
   assert.equal(rec.getByRole('checkbox', { name: 'Yes to Fit and adjust brakes' }).checked, true);
+});
+
+// A photo on a quote line (Jack, 1 Oct; dq-job-quote): one per line, one of the job's files.
+const PNG_FILE = () => new window.File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'pads.png', { type: 'image/png' });
+
+test('Add photo uploads the picture to the job’s files, then puts it on the line', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({})]) });
+  fireEvent.change(await dlg.findByLabelText('Add photo for Brake pads (pair)'), { target: { files: [PNG_FILE()] } });
+  await waitFor(() => assert.equal(posts().length, 2));
+  assert.equal(posts()[0], '/api/workshop-jobs/1/attachments {"filename":"pads.png","contentType":"image/png","dataBase64":"iVBORw=="}');
+  assert.match(posts()[1], /^\/api\/workshop-jobs\/1\/quotes .*"photoId":9/);
+});
+
+test('a line’s photo opens larger, and can be replaced or taken off the line', async () => {
+  const { dlg, fireEvent, waitFor, within, ui } = await openJob({ q: quote('draft', [line({ photoId: 30 })]) });
+  fireEvent.click(await dlg.findByRole('button', { name: '1 photo — view or add for Brake pads (pair)' }));
+  const big = within(await ui.findByRole('dialog', { name: 'Brake pads (pair)' }));
+  assert.equal(big.getByRole('img', { name: 'Brake pads (pair)' }).getAttribute('src'), '/api/workshop-jobs/1/attachments/30');
+  fireEvent.click(big.getByRole('button', { name: 'Remove from line' }));
+  await waitFor(() => assert.equal(posts().length, 1));
+  assert.ok(posts()[0].startsWith('/api/workshop-jobs/1/quotes') && !posts()[0].includes('photoId'));
+});
+
+test('Replace photo swaps the line’s picture', async () => {
+  const { dlg, fireEvent, waitFor, within, ui } = await openJob({ q: quote('draft', [line({ photoId: 30 })]) });
+  fireEvent.click(await dlg.findByRole('button', { name: '1 photo — view or add for Brake pads (pair)' }));
+  const big = within(await ui.findByRole('dialog', { name: 'Brake pads (pair)' }));
+  fireEvent.change(big.getByLabelText('Replace photo'), { target: { files: [PNG_FILE()] } });
+  await waitFor(() => assert.equal(posts().length, 2));
+  assert.match(posts()[1], /"photoId":9/);
+});
+
+test('a sent quote has no Add photo, as drawn', async () => {
+  const { dlg } = await openJob({ q: quote('sent', [line({})]) });
+  await dlg.findByText('Quoting');
+  assert.ok(dlg.queryByLabelText('Add photo for Brake pads (pair)') === null);
 });

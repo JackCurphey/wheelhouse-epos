@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Camera } from 'lucide-react';
 import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
@@ -7,6 +8,7 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
 import { ItemSearch, type Picked } from './item-search.tsx';
 import { refusalText } from './refusal-words.ts';
 import { channelWord } from './channel-word.ts';
+import { MAX_BYTES, TOO_LARGE, readBase64 } from './job-files.tsx';
 
 /**
  * The quote, in the job's work and parts (journey 4; quoteJobBoards in
@@ -21,7 +23,7 @@ type QuoteLine = {
   id: number; kind: 'labour' | 'part'; description: string; productId: number | null; quantity: number; unitAmount: number;
   decision: 'pending' | 'approved' | 'declined'; lineTotal: number; need: 'needed' | 'optional'; reason: string | null;
   decidedVia: string | null; decidedAt: string | null; decidedByName: string | null; addedToOrderAt: string | null;
-  goesWithLineId?: number | null; without?: string | null;
+  goesWithLineId?: number | null; without?: string | null; photoId?: number | null;
 };
 type Quote = { id: number; revision: number; state: string; lines: QuoteLine[]; totals: { all: number; approved: number; pending: number; declined: number } };
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
@@ -36,7 +38,7 @@ const CHIP: Record<QuoteLine['decision'], [string, string]> = {
 };
 
 type DraftLine = Pick<QuoteLine, 'kind' | 'description' | 'productId' | 'quantity' | 'unitAmount' | 'need' | 'reason'>
-  & Partial<Pick<QuoteLine, 'id' | 'goesWithLineId' | 'without'>>;
+  & Partial<Pick<QuoteLine, 'id' | 'goesWithLineId' | 'without' | 'photoId'>>;
 
 /**
  * The lines as the server takes them back (POST /api/workshop-jobs/:id/quotes).
@@ -49,6 +51,7 @@ const asInputs = (lines: DraftLine[]) => lines.map((l) => {
     kind: l.kind, description: l.description, productId: l.productId, quantity: l.quantity, unitAmount: l.unitAmount, need: l.need, reason: l.reason ?? '',
     ...(partner >= 0 ? { goesWith: partner } : {}),
     ...(l.without ? { without: l.without } : {}),
+    ...(l.photoId ? { photoId: l.photoId } : {}),
   };
 });
 
@@ -83,6 +86,9 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   const [withdrawing, setWithdrawing] = useState(false);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [withouts, setWithouts] = useState<Record<number, string>>({});
+  // The draft line whose photo is open larger.
+  const [viewing, setViewing] = useState<QuoteLine | null>(null);
+  const fileUrl = (id: number) => `/api/workshop-jobs/${job.id}/attachments/${id}`;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -113,6 +119,20 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   const draftLines = q && q.state === 'draft' ? q.lines : [];
   const saveDraft = (lines: DraftLine[]) => act(() => apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines: asInputs(lines) }));
   const parts = draftLines.filter((x) => x.kind === 'part');
+
+  // A line's photo (Jack, 1 Oct; one per line, as drawn) is one of the job's
+  // files: it goes to Files and photos first, then onto the line.
+  async function setPhoto(l: QuoteLine, file: File | undefined) {
+    if (!file) return false;
+    if (file.size > MAX_BYTES) { setError(TOO_LARGE); return false; }
+    return act(async () => {
+      const dataBase64 = await readBase64(file);
+      const added = await apiMutate<{ id: number }>(`/api/workshop-jobs/${job.id}/attachments`,
+        { filename: file.name, contentType: file.type || 'application/octet-stream', dataBase64 }, { method: 'POST' });
+      await apiMutate(`/api/workshop-jobs/${job.id}/quotes`, { lines: asInputs(draftLines.map((x) => (x.id === l.id ? { ...x, photoId: added.id } : x))) });
+      await queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] });
+    });
+  }
 
   async function addLine(p: Picked) {
     const line = p.type === 'service'
@@ -190,6 +210,22 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
                         ) : (
                           <span className="text-xs text-[var(--wh-muted)] no-underline">{l.need === 'needed' ? 'Needed' : 'Optional'}</span>
                         )}
+                        {/* The drawn photo button (dq-job-quote): only while the quote is a draft. */}
+                        {draft && l.photoId ? (
+                          <button type="button" disabled={busy} onClick={() => setViewing(l)}
+                            className="inline-flex min-h-11 self-start items-center gap-1 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 text-xs font-semibold no-underline">
+                            <Camera size={13} aria-hidden="true" />
+                            <span className="sr-only">{`1 photo — view or add for ${l.description}`}</span>
+                            <span aria-hidden="true">1 photo</span>
+                          </button>
+                        ) : draft ? (
+                          <label className="inline-flex min-h-11 cursor-pointer self-start items-center gap-1 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 text-xs font-semibold no-underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]">
+                            <Camera size={13} aria-hidden="true" />
+                            <span aria-hidden="true">Add photo</span>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy}
+                              aria-label={`Add photo for ${l.description}`} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; void setPhoto(l, f); }} />
+                          </label>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-3 py-2">
@@ -310,6 +346,28 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
             if (await act(() => apiMutate(`/api/quotes/${q.id}/answer`, { via, decisions }))) setRecording(false);
           }}
         />
+      ) : null}
+      {viewing && viewing.photoId ? (
+        <Dialog open onOpenChange={(o) => { if (!o) setViewing(null); }} aria-labelledby="line-photo-title" className="md:max-w-[720px]">
+          <DialogHeader>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <DialogTitle id="line-photo-title">{viewing.description}</DialogTitle>
+              {viewing.reason ? <span className="text-[13px] text-[var(--wh-muted)]">{viewing.reason}</span> : null}
+            </div>
+          </DialogHeader>
+          <DialogBody><img src={fileUrl(viewing.photoId)} alt={viewing.description} className="max-h-[70vh] w-full object-contain" /></DialogBody>
+          <DialogFooter className="flex flex-wrap justify-end gap-2.5">
+            <Button disabled={busy} onClick={async () => {
+              if (await saveDraft(draftLines.map((x) => (x.id === viewing.id ? { ...x, photoId: null } : x)))) setViewing(null);
+            }}>Remove from line</Button>
+            <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]">
+              Replace photo
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} aria-label="Replace photo"
+                onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (await setPhoto(viewing, f)) setViewing(null); }} />
+            </label>
+            <Button variant="accent" onClick={() => setViewing(null)}>Close</Button>
+          </DialogFooter>
+        </Dialog>
       ) : null}
       {withdrawing && q ? (
         <Dialog open onOpenChange={(o) => { if (!o) setWithdrawing(false); }} aria-labelledby="withdraw-title">

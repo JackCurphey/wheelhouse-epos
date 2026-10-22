@@ -1264,3 +1264,22 @@ The drawings show where slots appear but not these rules. *Decided:*
 5. **The older one-line answer refuses a line in a pair** ("This line goes
    with another; answer the whole quote."), so it can't split one either.
 6. **Migration 056**, as Mark's sales in pence (#404) has 055.
+
+### 22 Oct 2026: a photo on a quote line (`openspec/changes/quote-line-photos`)
+
+1. **One photo per line.** The decision says "photos"; every drawing shows
+   one ("1 photo"). *Decided:* one, as drawn; Replace photo swaps it.
+2. **What "view or add" opens.** Not drawn (not-drawn pages, row 83).
+   *Decided:* the photo larger in a pop-up, as Files and photos and the
+   customer's dq-quote-photo do, with Replace photo, Remove from line and
+   Close.
+3. **The photo is one of the job's files.** It shows in Files and photos too;
+   removing it there takes it off the line. Remove from line leaves the file.
+4. **Only while the quote is a draft**, as drawn: the sent boards drop the
+   photo button.
+5. **JPEG, PNG or WebP only**, checked by the file's bytes, as the booking
+   photos are; the customer's photo route sends it as the picture it is.
+6. **Left for later:** "Use my phone" (walk-through 8), removing location
+   data (CX-2; booking photos don't yet either) and the photo on Ready to
+   collect.
+7. **Migration 057**, after the goes-with piece's 056.
