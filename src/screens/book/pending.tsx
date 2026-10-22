@@ -7,6 +7,7 @@ import { ApiError, apiMutate } from '@/lib/api/client.ts';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BookFrame } from './frame.tsx';
 import { QuoteCard } from './quote-card.tsx';
+import { NotesCard } from './notes-card.tsx';
 import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
@@ -305,6 +306,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         ))}
         {/* The quote, while there's one to answer: only before the work is done. */}
         {inShop && <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} hideAnswered={work.length > 0} />}
+        {/* Notes with the shop while the bike is in, as drawn (ac-job-note). */}
+        {inShop && <NotesCard shopSlug={shopSlug} code={code} shopName={link.shopName} />}
         {/* The work: "Work agreed" while it's being done (dq-in-shop), "What we did" once it's done (cp-summary). */}
         {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
           <>
