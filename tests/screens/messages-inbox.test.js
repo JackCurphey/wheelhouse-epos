@@ -9,7 +9,7 @@ import { fakeJob } from '../helpers/fake-job.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jo Taylor', email: 'jo@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const MAYA_ROW = { jobId: 1, customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3', reference: 'WH-1042', lastText: 'Can you check the back light too?', lastAt: '2026-10-05T10:15:00Z', needsReply: true };
-const OLIVER_ROW = { jobId: 2, customerName: 'Oliver Chen', bikeLabel: 'Brompton C Line', reference: 'WH-1068', lastText: 'Ready Thursday.', lastAt: '2026-10-04T09:00:00Z', needsReply: false };
+const OLIVER_ROW = { jobId: 2, customerName: 'Oliver Chen', bikeLabel: 'Brompton C Line', reference: 'WH-1068', lastText: 'Ready Thursday.', lastAt: '2026-10-06T09:00:00Z', needsReply: false };
 const MAYA_NOTE = { id: 1, fromCustomer: true, from: null, text: 'Can you check the back light too?', at: '2026-10-05T10:15:00Z' };
 const JOB = fakeJob({ id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane AL 3', jobDate: '2026-10-05' });
 
@@ -28,7 +28,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function openInbox({ url = 'http://localhost/workshop/messages', list = [MAYA_ROW, OLIVER_ROW], thread = [MAYA_NOTE], answer } = {}) {
+async function openInbox({ url = 'http://localhost/workshop/messages', list = [MAYA_ROW, OLIVER_ROW], thread = [MAYA_NOTE], answer, threadStatus = 200, jobStatus = 200 } = {}) {
   calls = [];
   rows = list;
   notes = thread;
@@ -50,8 +50,8 @@ async function openInbox({ url = 'http://localhost/workshop/messages', list = [M
       rows = rows.map((r) => (r.jobId === 1 ? { ...r, needsReply: false, lastText: body.text.trim() } : r));
       return reply(201, { notes, message: { status: 'sent', channel: 'sms', to: '07700 900142', pretend: true } });
     }
-    if (p.pathname === '/api/workshop-jobs/1/notes') return reply(200, notes);
-    if (p.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
+    if (p.pathname === '/api/workshop-jobs/1/notes') return threadStatus === 200 ? reply(200, notes) : reply(threadStatus, { error: 'Internal error' });
+    if (p.pathname === '/api/workshop-jobs/1') return jobStatus === 200 ? reply(200, JOB) : reply(jobStatus, { error: 'Job not found' });
     if (p.pathname === '/api/customers/5') return reply(200, { id: 5, name: 'Maya Patel', phone: '07700 900142', email: null });
     if (p.pathname === '/api/messages') return reply(200, [{ id: 3, key: 'shop_reply', name: 'Reply from the shop', body: 'North Street Cycles replied about your Trek Domane AL 3 (WH-1042): Yes, we’ll check it. Replies to this number aren’t read — reply on your page: [link]', direction: 'outbound', state: 'delivered' }]);
     return reply(404, { error: 'Not found' });
@@ -142,4 +142,60 @@ test('an empty reply sends nothing', async () => {
   const conv = within(await ui.findByRole('region', { name: 'Maya Patel' }));
   fireEvent.click(await conv.findByRole('button', { name: 'Send reply' }));
   assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+});
+
+// From the fresh review.
+test('All puts those needing a reply first, and an answered row says who wrote last', async () => {
+  const { ui, within, fireEvent } = await openInbox();
+  fireEvent.click(await ui.findByRole('button', { name: 'All' }));
+  const list = within(ui.getByRole('navigation', { name: 'Conversations' }));
+  await list.findByRole('link', { name: 'Oliver Chen' });
+  const links = list.getAllByRole('link');
+  assert.equal(links[0].getAttribute('aria-label'), 'Needs a reply: Maya Patel', 'waiting first, though Oliver’s is newer');
+  assert.ok(links[1].textContent.includes('You: Ready Thursday.'));
+});
+
+test('a conversation that won’t load says so, with Try again, and offers no reply box', async () => {
+  const { ui, within } = await openInbox({ url: 'http://localhost/workshop/messages?job=1', threadStatus: 500 });
+  const conv = within(await ui.findByRole('region', { name: 'Conversation' }));
+  assert.ok(Boolean(await conv.findByText('Wheelhouse couldn’t load this conversation.')));
+  assert.ok(Boolean(conv.getByRole('button', { name: 'Try again' })));
+  assert.ok(conv.queryByRole('textbox') === null);
+});
+
+test('a job that no longer exists says so, and offers no reply box', async () => {
+  const { ui, within } = await openInbox({ url: 'http://localhost/workshop/messages?job=1', jobStatus: 404 });
+  const conv = within(await ui.findByRole('region', { name: 'Conversation' }));
+  assert.ok(Boolean(await conv.findByText('Wheelhouse couldn’t load this conversation.')));
+  assert.ok(conv.queryByRole('textbox') === null);
+});
+
+test('a reply that couldn’t be texted gives the server’s reason once', async () => {
+  const { ui, within, fireEvent } = await openInbox({
+    url: 'http://localhost/workshop/messages?job=1',
+    answer: { status: 201, body: { notes: [MAYA_NOTE], message: { status: 'not_sent', reason: 'Maya Patel’s booking page has closed.' } } },
+  });
+  const conv = within(await ui.findByRole('region', { name: 'Maya Patel' }));
+  fireEvent.change(await conv.findByRole('textbox', { name: 'Reply' }), { target: { value: 'Hello' } });
+  fireEvent.click(conv.getByRole('button', { name: 'Send reply' }));
+  assert.ok(Boolean(await conv.findByText('Saved on the job, but no text went: Maya Patel’s booking page has closed.')));
+});
+
+test('a reply half typed is still there after looking at another conversation', async () => {
+  const { ui, within, fireEvent } = await openInbox({ url: 'http://localhost/workshop/messages?job=1' });
+  const conv = within(await ui.findByRole('region', { name: 'Maya Patel' }));
+  fireEvent.change(await conv.findByRole('textbox', { name: 'Reply' }), { target: { value: 'Half a reply' } });
+  fireEvent.click(ui.getByRole('button', { name: 'All' }));
+  fireEvent.click(await ui.findByRole('link', { name: 'Oliver Chen' }));
+  fireEvent.click(await ui.findByRole('link', { name: 'Needs a reply: Maya Patel' }));
+  const again = within(await ui.findByRole('region', { name: 'Maya Patel' }));
+  assert.equal((await again.findByRole('textbox', { name: 'Reply' })).value, 'Half a reply');
+});
+
+test('the count waits for the list rather than saying 0', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const { ui } = await openInbox();
+  void gate; release();
+  assert.ok(ui.queryByRole('button', { name: 'Needs a reply · 0' }) === null);
 });

@@ -74,8 +74,11 @@ test('on a phone, the list, then the conversation with a way back', async ({ pag
   await page.getByRole('link', { name: 'Needs a reply: Oliver Chen' }).click();
   await expect(page.getByRole('navigation', { name: 'Conversations' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Oliver Chen' }).getByText('Is my Brompton ready?')).toBeVisible();
-  await page.getByRole('button', { name: /^← Messages · needs a reply/ }).click();
+  await page.getByRole('button', { name: /^Messages · needs a reply/ }).click();
   await expect(page.getByRole('navigation', { name: 'Conversations' })).toBeVisible();
+  // The phone's own Back then leaves Messages, rather than reopening Oliver's conversation (fresh review).
+  await page.goBack();
+  await expect(page.getByRole('region', { name: 'Oliver Chen' })).toHaveCount(0);
   // Nothing wider than the phone.
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(wide).toBe(false);

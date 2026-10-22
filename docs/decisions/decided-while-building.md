@@ -1454,3 +1454,11 @@ The drawings show where slots appear but not these rules. *Decided:*
    a link can open one.
 5. **"You (Jo Taylor)"** for your own replies, as drawn; another member of
    staff's by their name.
+6. **A reply half typed is kept** per conversation while Messages is open
+   (fresh review), so checking another one doesn't lose it.
+7. **After sending, the drawn bar**: green with a tick when the text went;
+   amber, "Saved on the job, but no text went: [why]", when it didn't (the
+   drawing has only the green one).
+8. **A conversation that won't load**, or a job that's gone, says
+   "Wheelhouse couldn’t load this conversation." with Try again, and offers
+   no reply box.

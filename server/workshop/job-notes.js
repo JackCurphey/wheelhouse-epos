@@ -68,7 +68,7 @@ export async function conversations(filter) {
       lastAt: new Date(r.created_at).toISOString(),
       needsReply: r.from_customer,
     }))
-    .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+    .sort((a, b) => Number(b.needsReply) - Number(a.needsReply) || b.lastAt.localeCompare(a.lastAt)); // waiting first (decision 7), then newest
   const needing = items.filter((i) => i.needsReply);
   return { items: filter === 'needs-reply' ? needing : items, count: needing.length };
 }
