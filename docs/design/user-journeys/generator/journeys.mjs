@@ -616,6 +616,9 @@ export const journeys = [
       ] },
       { label: "Workshop settings", screens: [
         sd8("set-workshop-services", "Workshop › Services, by group", "Manager"),
+        sd8("set-workshop-checklists", "Workshop › Checklists: the shop’s own, and which services have each", "Manager"),
+        sd8("set-workshop-checklists-empty", "Workshop › Checklists: none yet, start from the full service template", "Manager"),
+        sd8("set-workshop-checklist-edit", "Workshop › Checklists: editing one, its items and the services it’s used for", "Manager"),
         sd8("set-workshop-mechanics", "Workshop › Mechanics", "Manager"),
         sd8("set-workshop-sign-off", "Workshop › Mechanics: show customers who signed off", "Manager"),
         sd8("set-workshop-diary", "Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)", "Manager"),

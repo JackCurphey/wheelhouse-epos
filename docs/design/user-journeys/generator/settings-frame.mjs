@@ -185,6 +185,9 @@ export function overlay(base, d) {
 // list; decision 12 brings journey 12's diary block and storage settings).
 export const workshopFolds = (open = {}) =>
   fold('Services', 'Full service, Individual service', open.services || '')
+  // Service checklists (Jack, 22 Oct, docs/decisions/2026-10-22-service-checklists.md):
+  // each shop writes its own and picks the services that have each one.
+  + fold('Checklists', open.checklistsSummary || 'Full service checklist · 10 items', open.checklists || '')
   // Book a repair decision 11: every rule for booking online, in one place.
   + fold('Online booking', lightspeedShop() ? 'Set times · 2 hours’ notice · no deposit · each booking a request' : 'Set times · 2 hours’ notice · deposit [n]% · each booking a request', open.online || '')
   + fold('Mechanics', 'Alex Morgan, Jo Taylor, Shared queue', open.mechanics || '')

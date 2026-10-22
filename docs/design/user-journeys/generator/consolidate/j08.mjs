@@ -38,6 +38,9 @@ export default {
   'set-workshop-services': keep(1),
   'set-workshop-sign-off': into('set-workshop-services', 'Mechanic sign-off 3 (Jack, 18 Oct)', "Mechanics open, with 'Show who signed off to customers' Off and its note"),
   'set-workshop-mechanics': into('set-workshop-services', '', "Mechanics page: who customers can book online; a column for 'Jobs for whoever’s free'"),
+  'set-workshop-checklists': keep(1), // service checklists (Jack, 22 Oct, docs/decisions/2026-10-22-service-checklists.md)
+  'set-workshop-checklists-empty': into('set-workshop-checklists', 'Service checklists (Jack, 22 Oct)', "No checklists yet: 'Use the full service template' (Frame & fork to Bolts torqued) or '+ Write your own'"),
+  'set-workshop-checklist-edit': keep(9),
   'set-workshop-diary': keep(1), // owner of Settings › Workshop diary (journey 12's diary-settings goes into it)
   'set-msg-list': keep(1),
   'set-msg-edit': keep(9), // inferred: a box with its own form

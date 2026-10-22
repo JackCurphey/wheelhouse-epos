@@ -331,6 +331,30 @@ const mechanicsOpen = () => `${mechRow('Alex Morgan', 'Mechanic', true)}${mechRo
 const workshopPage = (open) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds(open));
 def('set-workshop-services', () => workshopPage({ services: servicesOpen() }));
 def('set-workshop-mechanics', () => workshopPage({ mechanics: mechanicsOpen() }));
+
+// ---------- Service checklists (Jack, 22 Oct, docs/decisions/2026-10-22-service-checklists.md) ----------
+// Each shop writes its own checklists and picks which services have each one
+// (the job page's Full service checklist, job-checklist, shows for those
+// services only: Workshop day 39). A ready-made full service template, the
+// ten items drawn on job-checklist, saves writing one out.
+const CHECKLIST_TEMPLATE = ['Frame & fork', 'Wheels & tyres', 'Tyre pressure', 'Brakes bled & adjusted', 'Gears indexed', 'Chain & drivetrain', 'Bottom bracket', 'Headset', 'Cables & housing', 'Bolts torqued'];
+const CHECKLIST_SERVICES = ['Standard service', 'Safety check', 'Gear adjustment', 'Brake service'];
+const checklistRow = (name, count, usedFor) => `<div style="display: flex; ${isPhone() ? 'flex-wrap: wrap; padding: 8px 8px 8px 12px' : 'padding: 0 8px 0 12px'}; align-items: center; gap: ${isPhone() ? '4px 12px' : '12px'}; min-height: 56px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 13px; color: ${C.muted}">${count} items · ${usedFor}</span></span><span style="display: inline-flex; align-items: center; gap: 8px${isPhone() ? '; width: 100%; justify-content: flex-end' : ''}"><button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}</span></div>`;
+const checklistsOpen = () => `<div style="display: flex; flex-direction: column; gap: 8px">${checklistRow('Full service checklist', 10, 'used for Standard service')}</div>
+<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ New checklist', { variant: 'default' })}${note('A job shows its service’s checklist on the job page, for the mechanic to tick.')}</div>`;
+// No checklists yet: one tap gives the full service template.
+const checklistsEmpty = () => `${note('No checklists yet. A checklist shows on the job page for the services you choose, for the mechanic to tick item by item.')}
+<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'stretch' : 'center'}; gap: 8px">${button('Use the full service template')}${button('+ Write your own', { variant: 'default' })}</div>
+${note('The template has 10 items, from Frame & fork to Bolts torqued. You can change any of them after.')}`;
+const itemRow = (text, i) => `<div style="display: flex; align-items: center; gap: 8px; min-height: 52px; border-top: ${i ? `1px solid ${C.border}` : '0'}"><button type="button" aria-label="Move ${esc(text)} — drag, or use the arrow keys" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><input aria-label="Item ${i + 1}" value="${esc(text)}" style="flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"><button type="button" aria-label="Remove ${esc(text)}" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; color: ${C.muted}">${icon('close', 16)}</button></div>`;
+const checklistDialog = () => popup('checklist-title', 'Full service checklist', 'Its items, in the order the mechanic ticks them', `
+${field('Name', { value: 'Full service checklist', id: 'checklist-name' })}
+<div style="display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700; padding-bottom: 4px">Items</span>${CHECKLIST_TEMPLATE.map(itemRow).join('')}</div>
+<div>${button('+ Add an item', { variant: 'default' })}</div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Used for</span><div role="group" aria-label="Services that have this checklist" style="display: flex; flex-wrap: wrap; gap: 8px">${CHECKLIST_SERVICES.map((n) => pill(n, n === 'Standard service')).join('')}</div>${note('A service has one checklist at most. Jobs already started keep the checklist they began with.')}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Save checklist')}`, 640);
+def('set-workshop-checklists', () => workshopPage({ checklists: checklistsOpen() }));
+def('set-workshop-checklists-empty', () => workshopPage({ checklists: checklistsEmpty(), checklistsSummary: 'None yet' }));
+def('set-workshop-checklist-edit', () => overlay(workshopPage({ checklists: checklistsOpen() }), checklistDialog()));
 // The mechanic sign-off, piece 3 (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
 // answer 3): the switch that shows customers who signed their job off sits
 // with the mechanics, off to start. Worded as the approved row (diary.mjs
@@ -581,6 +605,9 @@ Object.assign(TITLES, {
   'set-shop-details': 'Shop and sites › Shop details',
   'set-shop-hours': 'Shop and sites › Opening hours',
   'set-workshop-services': 'Workshop › Services, by group',
+  'set-workshop-checklists': 'Workshop › Checklists: the shop’s own, and which services have each',
+  'set-workshop-checklists-empty': 'Workshop › Checklists: none yet, start from the full service template',
+  'set-workshop-checklist-edit': 'Workshop › Checklists: editing one, its items and the services it’s used for',
   'set-msg-list': 'Messages › Automatic messages — text, email or both',
   'set-msg-edit': 'Change a message’s wording, with a preview',
   'set-msg-new': 'Add your own automatic message',
@@ -605,7 +632,7 @@ export const ROWS = [
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-eod-close', 'set-save-failed', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles', 'set-staff-invite', 'set-staff-invited', 'set-staff-invite-expired', 'set-staff-invite-till-only'] }, // UX walk-through 4 M2, M3
   { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },
-  { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-sign-off', 'set-workshop-diary'] },
+  { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-checklists', 'set-workshop-checklists-empty', 'set-workshop-checklist-edit', 'set-workshop-mechanics', 'set-workshop-sign-off', 'set-workshop-diary'] },
   { label: 'Messages', screens: ['set-msg-list', 'set-msg-edit', 'set-msg-new', 'set-msg-alongside'] }, // UX walk-through 4 H3
   { label: 'Your data', screens: ['set-data-export', 'set-data-history'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },

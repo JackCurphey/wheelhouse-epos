@@ -570,16 +570,18 @@ later packages.
 - **WP-4.1 Workshop day, the rest** (journey 12; walk-through 8): Overview
   page; request pop-up (mechanic pills, offer another time, decline with a
   message); new job extras; storage slots; bike tag at book-in; full service
-  checklist; done ticks and notes per line; diary settings; "I'll do this";
+  checklist, with each shop's own checklists in Settings (Jack, 22 Oct); done ticks and notes per line; diary settings; "I'll do this";
   "Who did what"; mechanic sign-off (Q3); "Use my phone" photo.
 
 <!-- screens 4.1 -->
 *Building blocks built here:* 15 The job page, reused as it is; 23 Diary; 25 Quick-look box.
 *Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 7 Step-by-step checklist (WP-3.4); 9 Form box (WP-1.3).
 
-*Screens it builds (9) and the situations it covers:*
+*Screens it builds (11) and the situations it covers:*
 
 - **`set-workshop-diary`** (block 1, Settings page) — 1 situation: `diary-settings`.
+- **`set-workshop-checklists`** (block 1, Settings page) — 1 situation: `set-workshop-checklists-empty`. The shop's own checklists and the services that have each, with a full service template (Jack, 22 Oct, decision file 2026-10-22-service-checklists).
+- **`set-workshop-checklist-edit`** (block 9, Form box) — no other situations.
 - **`diary`** (block 23, Diary) — 10 of its 15 situations here: `desk`, `diary-mechanic`, `waiting-open`, `change-selected`, `diary-context-menu`, `diary-stack-hover`, `diary-stack-open`, `new-job-pick`, `request-offer-pick`, `rs-diary-arrived`; plus 6 written lines.
 - **`diary-day`** (block 23, Diary) — no other situations.
 - **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
