@@ -1346,3 +1346,27 @@ The drawings show where slots appear but not these rules. *Decided:*
 6. **The message wording**: drafted, then approved (Jack, 22 Oct: "1: use
    the drafted wording for Work added within your limit").
 7. **Migration 059.**
+
+### 22 Oct 2026: the quote reminder (`openspec/changes/quote-reminder`)
+
+1. **No switch of its own.** The drawn reminder row has the hours and Edit,
+   no On/Off: it goes when Quote to approve goes (and a quote message that
+   doesn't go, for no contact or Quote to approve off, queues no reminder).
+2. **Hours from 1 to 168** (a week), whole hours, saved when you leave the
+   box; otherwise "Choose from 1 to 168 hours."
+3. **A newer quote sent brings its own reminder**; replacing, withdrawing or
+   answering a quote stops one still waiting.
+4. **The customer's sent line** adds "· we sent a reminder at 10:15" once it
+   has gone, as drawn.
+5. **Jack approved the wording before reading it** (22 Oct, by the box);
+   shown to him straight after, and it's a one-line change.
+6. **A job with no bike** reads "on your is still waiting", as Quote to
+   approve already reads "on your ." Left for a messages fix.
+7. **Migration 060.**
+8. **Checked again when due** (fresh review). The reminder waits up to a
+   week, so when it's due it goes only if the job is still there, the bike
+   hasn't been collected, the booking hasn't ended, the job's newest quote is
+   still waiting, and Quote to approve and the reminder are still on.
+   Otherwise it's stopped, and the job's Messages don't list it.
+9. **Staff Messages say the day** a message waiting past today goes ("goes
+   Fri 23 Oct, 10:15").

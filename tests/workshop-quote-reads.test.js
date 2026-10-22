@@ -280,7 +280,8 @@ test('the owning customer reads their quote with the same totals staff see', asy
   assert.equal(res.status, 200, JSON.stringify(res.body));
   // The customer's copy adds who it's for and, with the shop's switch on, the
   // mechanic (Jack, 22 Oct); everything else is what staff see.
-  const { customerFirstName, mechanicName, earlier, agreedTotal, spendLimit, ...rest } = res.body;
+  const { customerFirstName, mechanicName, earlier, agreedTotal, spendLimit, reminderSentAt, ...rest } = res.body;
+  assert.equal(reminderSentAt, null);
   assert.equal(spendLimit, null);
   assert.equal(agreedTotal, null, 'nothing booked or agreed before');
   assert.equal(customerFirstName, 'Portal');

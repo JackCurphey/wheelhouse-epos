@@ -254,3 +254,10 @@ The booking's bike step SHALL ask "If the mechanic finds more to do", with "Ask 
 #### Scenario: Not a whole amount
 - **WHEN** Maya chooses Go ahead and enters "150.50"
 - **THEN** Continue is refused with "Enter the most the whole bill can come to, in whole pounds."
+
+### Requirement: The customer's quote says when a reminder was sent
+Once the reminder has gone, the customer's quote SHALL say so beside when it was sent: "Sent Thu 17 Sep, 10:15 · we sent a reminder at 10:15" (dq-quote-reminded).
+
+#### Scenario: After the reminder
+- **WHEN** Maya opens her quote after the reminder went at 10:15
+- **THEN** the sent line ends "· we sent a reminder at 10:15"
