@@ -58,6 +58,8 @@ test('the time kept free each day saves in hours', async ({ page, context }) => 
   // Start from two hours (a test shop is made with none kept free).
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { fullDayThresholdMinutes: 120 } })).status).toBe(200);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   const box = page.getByLabel('Time kept free each day');
   await expect(box).toHaveValue('2');
   await box.fill('3');
@@ -71,6 +73,8 @@ test('notice switches to whole days and saves', async ({ page, context }) => {
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { minNoticeMinutes: 120, minNoticeDays: null } })).status).toBe(200);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   const box = page.getByLabel('Notice', { exact: true });
   await expect(box).toHaveValue('2');
   await box.fill('1');
@@ -90,6 +94,8 @@ test('a change to the whole day is scheduled and cancelled', async ({ page, cont
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'timed', nextBookingMode: null, nextBookingModeFrom: null } })).status).toBe(200);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   await page.getByRole('radio', { name: 'The whole day' }).click();
   const dlg = page.getByRole('dialog', { name: 'Book bikes in for the whole day?' });
   // Two weeks from whenever this runs, never a fixed date (a fixed one goes stale).
@@ -109,6 +115,8 @@ test('switching prices off on the booking page reaches the server', async ({ pag
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: true } })).status).toBe(200);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   const sw = page.getByRole('switch', { name: 'Show prices on the booking page' });
   await expect(sw).toHaveAttribute('aria-checked', 'true');
   await sw.click();

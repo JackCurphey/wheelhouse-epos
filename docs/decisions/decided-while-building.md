@@ -1114,3 +1114,28 @@ pattern is the No time chip's "bike · mark".
 4. **Finished work.** *Decided:* ticks and notes are refused once the work is
    finished, until it is reopened, as the job's other details are (workshop-jobs
    spec, "Finished work is frozen against edits").
+
+### 22 Oct 2026: service checklists, the screens (service-checklists)
+
+1. **Where Checklists sits.** Drawn under Services; Services isn't in the new
+   Settings yet. *Decided:* first in Settings › Workshop, so it opens first
+   there until Services is built above it.
+2. **Remove.** Drawn with no "Are you sure?". *Decided:* as drawn: it goes at
+   once. Jobs already begun keep their copy, and the template brings the ten
+   items back in one tap.
+3. **The bar's words.** Drawn as "Full service checklist". *Decided:* the
+   checklist's own name, since each shop names its own (the template's is
+   "Full service checklist").
+4. **Saving.** *Decided:* a tick saves at once and shows straight away (put
+   back if the server refuses); a note saves when its box is left, as Settings'
+   boxes do.
+5. **Finished work.** *Decided:* the checklist opens to read, its ticks
+   greyed, with "Reopen the work to change its checklist.", as the notes say
+   "Reopen the job to change its notes."
+6. **After the fresh review.** *Decided:* on a computer or tablet the
+   checklist is a pop-up over the job, not the drawing's full-screen page; on
+   a phone it fills the screen with Done pinned below, as drawn, but closes
+   with the cross on the right (the job's Messages pattern) rather than a back
+   arrow on the left. Words the drawings didn't give: a new checklist's box
+   is titled "New checklist", and one not yet used reads "not used for a
+   service yet". "+ Add note" is in the text colour, not the accent.

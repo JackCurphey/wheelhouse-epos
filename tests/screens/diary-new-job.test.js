@@ -150,7 +150,7 @@ test('a customer is found by name and their bike chosen; saving creates the job'
   r.fireEvent.click(form.getByRole('radio', { name: 'Standard service · 90 min' }));
   r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
   await r.waitFor(() => assert.equal(has(r.ui.queryByRole('dialog')), false));
-  assert.deepEqual(posts(), ['/api/workshop-jobs {"title":"Standard service","jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30","customerId":5,"bikeId":7,"mechanicId":12,"status":"scheduled","notes":"","customerDescription":"","plannedMinutes":90}']);
+  assert.deepEqual(posts(), ['/api/workshop-jobs {"title":"Standard service","jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30","customerId":5,"bikeId":7,"mechanicId":12,"status":"scheduled","notes":"","customerDescription":"","plannedMinutes":90,"serviceIds":[1]}']);
 });
 
 test('"The bike is here now" books it in straight after saving', async () => {

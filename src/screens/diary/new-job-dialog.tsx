@@ -316,6 +316,8 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
       customerDescription: customerWords.trim(),
     };
     if (service) body.plannedMinutes = service.minutes;
+    // The service chosen, so the job has its checklist (Jack, 22 Oct, service checklists).
+    if (service) body.serviceIds = [service.id];
     let job: WorkshopJob;
     try {
       job = await apiMutate<WorkshopJob>('/api/workshop-jobs', body);

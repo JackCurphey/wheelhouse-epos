@@ -6,11 +6,11 @@
 - [x] 1.3 Migration 052 and `server/workshop/checklists.js`
 - [x] 1.4 Routes, the route list and screen trace
 - [x] 1.5 `POST /api/workshop-jobs` takes `serviceIds`
-- [ ] 1.6 `/review`, `npm test`, pull request
+- [x] 1.6 `/review`, `npm test`, pull request
 
 ## 2. Screens (Jack)
-- [ ] 2.1 Settings › Workshop › Checklists, to `set-workshop-checklists`, `-empty` and `set-workshop-checklist-edit`
-- [ ] 2.2 The job page's bar and the checklist pop-up, to `job-mechanic` and `job-checklist`
-- [ ] 2.3 New job sends its service
-- [ ] 2.4 Screen tests first, a browser spec, the real-browser check
-- [ ] 2.5 Archive into `openspec/specs/settings` and `openspec/specs/workshop-jobs`
+- [x] 2.1 Settings › Workshop › Checklists, to `set-workshop-checklists`, `-empty` and `set-workshop-checklist-edit`
+- [x] 2.2 The job page's bar and the checklist pop-up, to `job-mechanic` and `job-checklist`
+- [x] 2.3 New job sends its service
+- [x] 2.4 Screen tests first, a browser spec, the real-browser check
+- [x] 2.5 Archive into `openspec/specs/settings` and `openspec/specs/workshop-jobs`

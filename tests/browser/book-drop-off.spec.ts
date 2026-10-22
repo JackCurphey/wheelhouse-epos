@@ -62,6 +62,8 @@ test('the note written in Settings follows the drop-off time on the booking page
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   const box = page.getByLabel('Additional note on the confirmation');
   await expect(box).toHaveValue('Please bring the lock key, and tell us about any accessories.');
   await box.fill('Park round the back and ring the bell.');
@@ -78,6 +80,8 @@ test('Preview in Settings shows the example booking with the shop’s saved note
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { confirmationNote: 'Use the side door.', timedLeadMinutes: 30 } })).status).toBe(200);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   await page.getByRole('button', { name: 'Preview' }).click();
   const dialog = page.getByRole('dialog', { name: 'What the customer sees' });
   await expect(dialog.getByText('Drop your Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30. Use the side door.', { exact: true })).toBeVisible();
@@ -91,6 +95,8 @@ test('own booking terms saved in Settings are the terms customers get', async ({
   const [name, value] = owner.cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  // Checklists comes first in Settings › Workshop (22 Oct), so Online booking is opened.
+  await page.getByRole('button', { name: /^Online booking/ }).click();
   await page.getByRole('button', { name: 'Use your own' }).click();
   const box = page.getByLabel('Your booking terms');
   await expect(box).toHaveValue(/^1\. Your booking is a request/);
