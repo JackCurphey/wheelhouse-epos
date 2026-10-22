@@ -261,3 +261,33 @@ test('a line with a photo shows it beside the reason, and tapping opens it large
   fireEvent.click(big.getByRole('button', { name: 'Close' }));
   assert.ok(ui.queryByRole('dialog', { name: 'Shimano brake pads' }) === null);
 });
+
+// A newer quote (Jack, 22 Oct, docs/decisions/2026-10-22-quote-after-declined.md;
+// dq-quote-newer): the earlier answers stay, shown as history.
+const NEWER = (over = {}) => ({ ...QUOTE('sent', [qline({ id: 7, description: 'Shimano brake pads', reason: 'You asked us to fit them after all.' })]), revision: 2,
+  earlier: { agreed: ['Fit and adjust brakes'], declined: ['Replace gear cable'] }, ...over });
+
+test('a newer quote says it has changed, keeps the earlier answers, and asks only about the new line', async () => {
+  const { ui } = await open(NEWER());
+  assert.ok(has(await ui.findByText('The quote has changed')));
+  assert.equal(has(ui.queryByText('Waiting for your answer')), false);
+  assert.ok(has(ui.queryByRole('heading', { name: 'We’ve added to the quote' })));
+  assert.ok(has(ui.queryByText('Your earlier answers are kept. Please answer the new line below.')));
+  assert.ok(has(ui.queryByText('Standard service, Fit and adjust brakes · £65.00')));
+  assert.ok(has(ui.queryByText('You said no thanks')));
+  assert.ok(has(ui.queryByText('Replace gear cable')));
+  assert.equal(ui.getAllByRole('checkbox').length, 1);
+});
+
+test('a newer quote names the mechanic with the switch on, and says lines when there are several', async () => {
+  const lines = [qline({ id: 7 }), qline({ id: 8, description: 'Bleed rear brake', productId: null })];
+  const { ui } = await open(NEWER({ lines, mechanicName: 'Alex Morgan' }));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Alex has added to the quote' })));
+  assert.ok(has(ui.queryByText('Your earlier answers are kept. Please answer the new lines below.')));
+});
+
+test('a second quote with no earlier answers (the first was withdrawn) reads as a first quote', async () => {
+  const { ui } = await open(NEWER({ earlier: { agreed: [], declined: [] } }));
+  assert.ok(has(await ui.findByText('Waiting for your answer')));
+  assert.equal(has(ui.queryByText('The quote has changed')), false);
+});

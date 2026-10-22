@@ -1283,3 +1283,13 @@ The drawings show where slots appear but not these rules. *Decided:*
    data (CX-2; booking photos don't yet either) and the photo on Ready to
    collect.
 7. **Migration 057**, after the goes-with piece's 056.
+
+### 22 Oct 2026: a new quote after the customer says no to everything (`openspec/changes/quote-after-declined`)
+
+1. **"Already agreed" on the newer quote** lists the booking's services, then
+   the earlier yeses, with the booking's agreed total, as drawn
+   (dq-quote-newer: "Standard service, brake pads, fitting · £111.00").
+2. **A second quote after a withdrawn one** has no earlier answers, so it
+   reads as a first quote ("Waiting for your answer").
+3. **"line" or "lines"**: "Please answer the new line below." follows how
+   many new lines there are.

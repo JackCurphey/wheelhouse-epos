@@ -25,6 +25,8 @@ type QuoteLine = {
 type Quote = {
   id: number; revision: number; state: string; sentAt: string | null; lines: QuoteLine[];
   mechanicName?: string | null; customerFirstName?: string | null;
+  // What the customer answered on the job's earlier quotes (dq-quote-newer).
+  earlier?: { agreed: string[]; declined: string[] };
 };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
@@ -47,8 +49,8 @@ function Phone({ phone }: { phone: string | null }) {
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
-export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done = false, hideAnswered = false }: {
-  shopSlug: string; code: string; agreedTotal: number | null; shopPhone?: string | null; done?: boolean; hideAnswered?: boolean;
+export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booked = [], done = false, hideAnswered = false }: {
+  shopSlug: string; code: string; agreedTotal: number | null; shopPhone?: string | null; booked?: string[]; done?: boolean; hideAnswered?: boolean;
 }) {
   const queryClient = useQueryClient();
   const key = ['booking-quote', shopSlug, code];
@@ -131,6 +133,8 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
   }
 
   if (q.state !== 'sent') return null;
+  // A later quote after earlier answers (Jack, 22 Oct; dq-quote-newer).
+  const newer = Boolean(q.earlier && (q.earlier.agreed.length || q.earlier.declined.length));
   const ticked = q.lines.filter((l) => tick[l.id]);
   const partners = (l: QuoteLine) => groupOf(l).filter((o) => o.id !== l.id);
   function setTick(l: QuoteLine, on: boolean) {
@@ -172,9 +176,27 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
 
   return (
     <section className={CARD} aria-labelledby="quote-heading">
-      <span className={`${BADGE} bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]`}>Waiting for your answer</span>
-      <h2 id="quote-heading" className="m-0 text-xl font-bold">{mechanic ? `${mechanic} recommends more work` : 'We recommend more work'}</h2>
+      <span className={`${BADGE} bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]`}>{newer ? 'The quote has changed' : 'Waiting for your answer'}</span>
+      <h2 id="quote-heading" className="m-0 text-xl font-bold">
+        {newer ? (mechanic ? `${mechanic} has added to the quote` : 'We’ve added to the quote') : mechanic ? `${mechanic} recommends more work` : 'We recommend more work'}
+      </h2>
       {sentLine(q.sentAt) ? <p className="m-0 text-sm text-[var(--wh-muted)]">{sentLine(q.sentAt)}</p> : null}
+      {newer ? (
+        <>
+          <p className="m-0">{`Your earlier answers are kept. Please answer the new ${q.lines.length === 1 ? 'line' : 'lines'} below.`}</p>
+          <div className="text-sm">
+            <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
+              <span className="text-[var(--wh-muted)]">Already agreed</span>
+              <span className="text-right">{[[...booked, ...(q.earlier?.agreed ?? [])].join(', '), agreedTotal !== null ? money(agreedTotal) : null].filter(Boolean).join(' · ')}</span>
+            </p>
+            {q.earlier?.declined.length ? (
+              <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
+                <span className="text-[var(--wh-muted)]">You said no thanks</span><span className="text-right">{q.earlier.declined.join(', ')}</span>
+              </p>
+            ) : null}
+          </div>
+        </>
+      ) : null}
       <p className="m-0 font-semibold">Untick anything you don&apos;t want.</p>
       <ul className="m-0 list-none p-0" aria-labelledby="quote-heading">
         {q.lines.map((l) => (
@@ -225,7 +247,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, done 
           </li>
         ))}
       </ul>
-      {agreedTotal !== null ? (
+      {agreedTotal !== null && !newer ? (
         <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2 text-sm">
           <span className="text-[var(--wh-muted)]">Already agreed</span><span>{money(agreedTotal)}</span>
         </p>
