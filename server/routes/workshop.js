@@ -1306,6 +1306,10 @@ export function register(route) {
     if (result.ok && body.via === 'phone') {
       try {
         const jobId = result.quote.workshop_job_id;
+        // A customer who gets nothing keeps the link they have (fresh review),
+        // as Bike ready does: checked before a link is issued.
+        const owner = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(jobId);
+        if (!owner?.customer_id || (await whyNotQueued('your_answers', owner.customer_id))) return sendQuoteResult(res, result);
         const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
         const { customerId, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
         const lines = await db.prepare('SELECT description, decision FROM workshop_quote_lines WHERE workshop_quote_id = ? ORDER BY id').all(result.quote.id);

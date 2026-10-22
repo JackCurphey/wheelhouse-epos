@@ -71,3 +71,43 @@ test('an answer recorded in the shop sends none', async () => {
   assert.equal((await record(quoteId, 'in_shop', lines, () => 'approved')).status, 200);
   assert.equal((await told(job.id)).length, 0);
 });
+
+// From the fresh review.
+test('switched off: the answer is saved, and nothing is sent', async () => {
+  assert.equal((await staff('/api/message-templates/your_answers', { method: 'PUT', body: { enabled: false } })).status, 200);
+  try {
+    const { job, lines, quoteId } = await sentQuote();
+    const res = await record(quoteId, 'phone', lines, () => 'approved');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.state, 'approved');
+    assert.equal((await told(job.id)).length, 0);
+  } finally {
+    await staff('/api/message-templates/your_answers', { method: 'PUT', body: { enabled: true } });
+  }
+});
+
+test('a job with no customer saves the answer and sends nothing', async () => {
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Walk-in', jobDate: '2026-10-20' } })).body;
+  const q = (await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [PADS] } })).body;
+  assert.equal((await staff(`/api/quotes/${q.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const lines = (await staff(`/api/quotes/${q.id}`)).body.lines;
+  assert.equal((await record(q.id, 'phone', lines, () => 'approved')).status, 200);
+  assert.equal((await told(job.id)).length, 0);
+});
+
+test('the cost going ahead counts each line’s quantity', async () => {
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: `2026-10-${String(jobDay++).padStart(2, '0')}`, customerId: maya.id } })).body;
+  const q = (await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ ...PADS, quantity: 2 }] } })).body;
+  assert.equal((await staff(`/api/quotes/${q.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const lines = (await staff(`/api/quotes/${q.id}`)).body.lines;
+  assert.equal((await record(q.id, 'phone', lines, () => 'approved')).status, 200);
+  assert.match((await told(job.id))[0].body, /Going ahead: Shimano brake pads, £56\.00\./);
+});
+
+test('Settings lists it after Work added within your limit, as drawn, and its preview shows what was agreed', async () => {
+  const keys = (await staff('/api/message-templates')).body.filter((t) => t.live).map((t) => t.key);
+  assert.ok(keys.indexOf('work_within_limit') < keys.indexOf('your_answers'), keys.join(', '));
+  const preview = await staff('/api/message-templates/your_answers/preview', { method: 'POST', body: {} });
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  assert.match(preview.body.text, /Going ahead: Shimano brake pads and Fit and adjust brakes, £46\.00\. No thanks: Replace gear cable\./);
+});

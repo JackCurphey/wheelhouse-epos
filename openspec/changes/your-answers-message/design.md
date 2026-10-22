@@ -13,3 +13,11 @@ booked work. No thanks: …". With nothing declined, only "Going ahead: …".
 
 Answers recorded "in the shop" send nothing: the drawn Settings row is "from
 a call", and the customer was there.
+
+## From the fresh review
+- Before a link is issued, the route checks the message will go (a
+  customer, contact details, the message on), as Bike ready does, so a
+  customer who gets nothing keeps the link they have. Not testable while
+  sending is pretend (no link is issued then).
+- Settings lists it after "Work added within your limit", as drawn, and its
+  preview fills [What was agreed] (and the within-limit message's tap-ins).

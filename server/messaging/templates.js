@@ -26,6 +26,15 @@ export const TEMPLATES = {
     subject: 'A reminder: your quote is waiting — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
   },
+  // Work within the customer's spending limit (Workshop day 41-43); wording
+  // approved by Jack, 22 Oct ("1: use the drafted wording").
+  work_within_limit: {
+    name: 'Work added within your limit',
+    when: 'When extra work fits the limit the customer set',
+    wording: 'Hi [Customer’s first name], we found a bit more to do on your [Bike] and went ahead, as it keeps your whole bill within the [Spending limit] limit you set. Added: [Work added], [Amount added]. See it here: [Link to the job] — no app or sign-in needed. Not what you wanted? Call [Shop phone]. Your repair · [Job number].',
+    subject: 'Work added to your repair — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Spending limit', 'Work added', 'Amount added', 'Link to the job', 'Shop phone', 'Job number', 'Shop name'],
+  },
   // After staff record the customer's answer from a call (dq-record-answer);
   // wording approved by Jack, 22 Oct. [What was agreed] is built from the
   // quote: "Going ahead: …, £46.00. No thanks: …".
@@ -35,15 +44,6 @@ export const TEMPLATES = {
     wording: 'Hi [Customer’s first name], thanks for your answers about your [Bike]. [What was agreed] See it here: [Link to the job] — no app or sign-in needed. Your repair · [Job number].',
     subject: 'Your answers — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'What was agreed', 'Link to the job', 'Job number', 'Shop name'],
-  },
-  // Work within the customer's spending limit (Workshop day 41-43); wording
-  // approved by Jack, 22 Oct ("1: use the drafted wording").
-  work_within_limit: {
-    name: 'Work added within your limit',
-    when: 'When extra work fits the limit the customer set',
-    wording: 'Hi [Customer’s first name], we found a bit more to do on your [Bike] and went ahead, as it keeps your whole bill within the [Spending limit] limit you set. Added: [Work added], [Amount added]. See it here: [Link to the job] — no app or sign-in needed. Not what you wanted? Call [Shop phone]. Your repair · [Job number].',
-    subject: 'Work added to your repair — [Shop name]',
-    tapIns: ['Customer’s first name', 'Bike', 'Spending limit', 'Work added', 'Amount added', 'Link to the job', 'Shop phone', 'Job number', 'Shop name'],
   },
   bike_ready: {
     name: 'Bike ready',
@@ -105,7 +105,7 @@ export const TEMPLATES = {
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'your_answers', 'work_within_limit', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
