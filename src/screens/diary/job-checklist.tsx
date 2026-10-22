@@ -92,10 +92,10 @@ function ChecklistDialog({ job, checklist, onClose }: { job: WorkshopJob; checkl
   async function leaveNote(index: number, draft = drafts[index]) {
     if (draft === undefined) return;
     if (draft.trim() === (checklist.items[index].note ?? '')) {
-      setDrafts(({ [index]: _gone, ...rest }) => rest);
+      setDrafts((d) => { const next = { ...d }; delete next[index]; return next; });
       return;
     }
-    if (await change(index, { note: draft })) setDrafts(({ [index]: _gone, ...rest }) => rest);
+    if (await change(index, { note: draft })) setDrafts((d) => { const next = { ...d }; delete next[index]; return next; });
   }
 
   // Closing (Done, the close button, Escape) saves a note still being typed:
