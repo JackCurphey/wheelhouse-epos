@@ -10,7 +10,7 @@ left for later in the quote stage (`2026-10-03-quote-stage-design.md`) and
 are the next WP-4.2 piece.
 
 ## What changes
-- **Migration 055**: `workshop_quote_lines.goes_with_line_id` (the part a
+- **Migration 056** (055 is Mark’s sales in pence, #404): `workshop_quote_lines.goes_with_line_id` (the part a
   labour line goes with; `ON DELETE SET NULL`) and `without_text` (up to 300
   letters).
 - **Server** (`server/workshop/quotes.js`): a line can carry `goesWith` (the
