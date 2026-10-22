@@ -448,11 +448,12 @@ const server = createServer(async (req, res) => {
   if (pathname === '/healthz') {
     const health = await checkDatabaseHealth();
     // The commit it runs, passed in by the deploy (add-hosted-copy design,
-    // "The commit it runs"); left out when unset.
+    // "The commit it runs"), on the 200 and the 503 alike; left out when unset.
     const commit = process.env.WHEELHOUSE_COMMIT;
-    if (health.ok) return sendJson(res, 200, commit ? { status: 'ok', commit } : { status: 'ok' });
+    const withCommit = (body) => (commit ? { ...body, commit } : body);
+    if (health.ok) return sendJson(res, 200, withCommit({ status: 'ok' }));
     console.error('Health check failed: database unreachable', health.error);
-    return sendJson(res, 503, { status: 'error', error: 'Database unreachable' });
+    return sendJson(res, 503, withCommit({ status: 'error', error: 'Database unreachable' }));
   }
 
   if (parseStorefrontSlugCandidate(req, url)) {
