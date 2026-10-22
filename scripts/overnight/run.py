@@ -205,9 +205,10 @@ def main():
         if changed:
             try:
                 sh('npm run pretest', cwd=WORKTREE, check=False, timeout=900, env=env)
+                sh('npm run build', cwd=WORKTREE, check=False, timeout=900, env=env)  # page tests need the built screens
                 t = sh('npm test', cwd=WORKTREE, check=False, timeout=2400, env=env)
                 (run / f"{item['id']}.npm-test.txt").write_text(t.stdout[-20000:] + t.stderr[-5000:])
-                pm = re.findall(r'^# (pass|fail) (\d+)', t.stdout, re.M)
+                pm = re.findall(r'^(?:# |ℹ )(pass|fail) (\d+)', t.stdout, re.M)
                 tests = ('GREEN' if t.returncode == 0 else 'RED') + ' ' + ' '.join(f'{k}={v}' for k, v in pm)
                 green = t.returncode == 0
             except subprocess.TimeoutExpired:
