@@ -23,8 +23,9 @@ pieces: this one stores and shows the limit.
 
 ## Not in this change
 Skipping the quote within the limit, the "Work added within your limit"
-message and the customer's within-limit page (the next pieces); staff
-setting or changing a limit (not drawn; for Jack).
+message and the customer's within-limit page (the next pieces). Staff
+don't set or change a limit (Jack, 22 Oct,
+`docs/decisions/2026-10-22-spend-limit-who-sets.md`).
 
 ## Risky areas
 A migration and a public route (`POST /api/portal/:shopSlug/bookings`). Reviewed.

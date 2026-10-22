@@ -1298,6 +1298,7 @@ The drawings show where slots appear but not these rules. *Decided:*
 4. **Shown on every booking**, Not sure included, after the photos as drawn.
 5. **The job's tag shows on every job**, "Ask before any extra work" when
    there's no limit (staff-made jobs included), as drawn.
-6. **Staff can't set or change a limit yet**: not drawn; a question for Jack
-   when the within-limit piece is built.
+6. **Staff can't set or change a limit**: Jack, 22 Oct, "1: only the
+   customer sets it, when booking online; staff can't change it"
+   (`docs/decisions/2026-10-22-spend-limit-who-sets.md`).
 7. **Migration 058.**
