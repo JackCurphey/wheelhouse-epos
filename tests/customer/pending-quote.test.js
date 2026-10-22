@@ -31,14 +31,14 @@ const LINES = [
 ];
 const QUOTE = (state, lines = LINES) => ({ id: 9, workshopJobId: 1, revision: 2, state, createdAt: '2026-10-05T09:00:00Z', sentAt: '2026-10-05T10:15:00Z', lines, totals: { all: 58, approved: 0, pending: 58, declined: 0 } });
 
-const open = async (quote, answer = null) => {
+const open = async (quote, answer = null, linkOver = {}) => {
   current = await renderBookScreen({
     file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
     url: `/book/north/booking/${CODE}`, services: SERVICES,
     bookingLink: (url, init) => {
       if (url.endsWith('/quote/answer')) return answer ?? { status: 200, body: { ...quote, state: 'partly_approved' } };
       if (url.endsWith('/quote')) return quote ? { status: 200, body: quote } : { status: 404, body: { error: 'There is no quote for this booking' } };
-      return { status: 200, body: LINK };
+      return { status: 200, body: { ...LINK, ...linkOver } };
     },
   });
   return current;
@@ -260,4 +260,46 @@ test('a line with a photo shows it beside the reason, and tapping opens it large
   assert.equal(big.getByRole('img', { name: 'Shimano brake pads' }).getAttribute('src'), src);
   fireEvent.click(big.getByRole('button', { name: 'Close' }));
   assert.ok(ui.queryByRole('dialog', { name: 'Shimano brake pads' }) === null);
+});
+
+// A newer quote (Jack, 22 Oct, docs/decisions/2026-10-22-quote-after-declined.md;
+// dq-quote-newer): the earlier answers stay, shown as history.
+const NEWER = (over = {}) => ({ ...QUOTE('sent', [qline({ id: 7, description: 'Shimano brake pads', reason: 'You asked us to fit them after all.' })]), revision: 2,
+  earlier: { agreed: ['Fit and adjust brakes'], declined: ['Replace gear cable'] }, ...over });
+
+test('a newer quote says it has changed, keeps the earlier answers, and asks only about the new line', async () => {
+  const { ui } = await open(NEWER());
+  assert.ok(has(await ui.findByText('The quote has changed')));
+  assert.equal(has(ui.queryByText('Waiting for your answer')), false);
+  assert.ok(has(ui.queryByRole('heading', { name: 'We’ve added to the quote' })));
+  assert.ok(has(ui.queryByText('Your earlier answers are kept. Please answer the new line below.')));
+  assert.ok(has(ui.queryByText('Standard service, Fit and adjust brakes · £65.00')));
+  assert.ok(has(ui.queryByText('You said no thanks')));
+  assert.ok(has(ui.queryByText('Replace gear cable')));
+  assert.equal(ui.getAllByRole('checkbox').length, 1);
+});
+
+test('a newer quote names the mechanic with the switch on, and says lines when there are several', async () => {
+  const lines = [qline({ id: 7 }), qline({ id: 8, description: 'Bleed rear brake', productId: null })];
+  const { ui } = await open(NEWER({ lines, mechanicName: 'Alex Morgan' }));
+  assert.ok(has(await ui.findByRole('heading', { name: 'Alex has added to the quote' })));
+  assert.ok(has(ui.queryByText('Your earlier answers are kept. Please answer the new lines below.')));
+});
+
+test('a second quote with no earlier answers (the first was withdrawn) reads as a first quote', async () => {
+  const { ui } = await open(NEWER({ earlier: { agreed: [], declined: [] } }));
+  assert.ok(has(await ui.findByText('Waiting for your answer')));
+  assert.equal(has(ui.queryByText('The quote has changed')), false);
+});
+
+test('a newer quote’s totals use the agreed total the server sends, earlier yeses included', async () => {
+  const { ui } = await open(NEWER({ agreedTotal: 111 }));
+  assert.ok(has(await ui.findByText('Standard service, Fit and adjust brakes · £111.00')));
+  assert.ok(has(ui.queryByRole('button', { name: 'Approve £139.00' })));
+});
+
+test('a newer quote with nothing booked and no total has no empty Already agreed row', async () => {
+  const { ui } = await open(NEWER({ earlier: { agreed: [], declined: ['Replace gear cable'] }, agreedTotal: null }), null, { services: [], totalPrice: null });
+  await ui.findByText('The quote has changed');
+  assert.equal(has(ui.queryByText('Already agreed')), false);
 });

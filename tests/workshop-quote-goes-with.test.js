@@ -153,3 +153,19 @@ test('one line at a time is refused for a line in a pair', async () => {
   assert.equal((await decide(lines['Replace gear cable'].id)).status, 200);
   assert.ok((await readQuote(quote.id)).lines.filter((l) => l.description !== 'Replace gear cable').every((l) => l.decision === 'pending'));
 });
+
+// docs/decisions/2026-10-22-quote-after-declined.md, fresh review: a quote
+// changed before it was answered in full leaves no earlier answers, even when
+// one line was answered on its own.
+test('a line answered alone on a quote changed before it was finished isn’t an earlier answer', async () => {
+  const { job, quote } = await sentQuote([CABLE, { ...CABLE, description: 'Bleed rear brake' }], portalCustomerId);
+  const cable = byName(quote)['Replace gear cable'];
+  const one = await portalRequest(server.baseUrl, portalCustomer.cookie,
+    `/api/portal/${owner.shop.slug}/quotes/${quote.id}/lines/${cable.id}/decision`, { method: 'POST', body: { decision: 'declined' } });
+  assert.equal(one.status, 200, JSON.stringify(one.body));
+  const again = (await saveLines(job.id, [PADS])).body;
+  assert.equal((await staff(`/api/quotes/${again.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const shown = await portalRequest(server.baseUrl, portalCustomer.cookie, `/api/portal/${owner.shop.slug}/quotes/${again.id}`);
+  assert.equal(shown.status, 200, JSON.stringify(shown.body));
+  assert.deepEqual(shown.body.earlier, { agreed: [], declined: [] });
+});

@@ -65,7 +65,7 @@ Starts at `not_started`. Rests at `complete`.
 
 ## quote
 
-Starts at `draft`. Rests at `declined`, `superseded`, `expired`, `withdrawn`.
+Starts at `draft`. Rests at `superseded`, `expired`, `withdrawn`.
 
 | From | Event | To |
 |---|---|---|
@@ -78,6 +78,7 @@ Starts at `draft`. Rests at `declined`, `superseded`, `expired`, `withdrawn`.
 | `sent` | `withdraw` | `withdrawn` |
 | `partly_approved` | `revise` | `superseded` |
 | `approved` | `revise` | `superseded` |
+| `declined` | `revise` | `superseded` |
 
 ## capacityHold
 
