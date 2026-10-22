@@ -13,4 +13,4 @@
 - [x] 2.2 The job page's bar and the checklist pop-up, to `job-mechanic` and `job-checklist`
 - [x] 2.3 New job sends its service
 - [x] 2.4 Screen tests first, a browser spec, the real-browser check
-- [ ] 2.5 Archive into `openspec/specs/settings` and `openspec/specs/workshop-jobs`
+- [x] 2.5 Archive into `openspec/specs/settings` and `openspec/specs/workshop-jobs`
