@@ -9,7 +9,11 @@
 // the machine allows, since 'partly_approved' has no further decision events.
 // Recording a line and moving the quote in the same call would need a
 // transition the machine does not declare.
-import { prepare } from '../db.js';
+import { open } from 'node:fs/promises';
+import path from 'node:path';
+import { prepare, dbExec } from '../db.js';
+import { UPLOADS_DIR } from '../lib/uploads.js';
+import { sniffImage } from '../booking-photos.js';
 import { quote as quoteMachine, canApprove } from './state-machines.js';
 
 const WITHOUT_MAX = 300;
@@ -22,10 +26,11 @@ async function insertLines(quoteId, lines) {
   const ids = [];
   for (const line of lines) {
     const { lastInsertRowid } = await prepare(
-      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, need, reason, without_text)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, need, reason, without_text, photo_attachment_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(quoteId, line.kind, line.description, line.productId ?? null, line.quantity ?? 1, line.unitAmount,
-      line.need === 'optional' ? 'optional' : 'needed', line.reason ? String(line.reason).trim() || null : null, withoutText(line.without));
+      line.need === 'optional' ? 'optional' : 'needed', line.reason ? String(line.reason).trim() || null : null, withoutText(line.without),
+      line.photoId ?? null);
     ids.push(lastInsertRowid);
   }
   for (const [i, line] of lines.entries()) {
@@ -33,6 +38,31 @@ async function insertLines(quoteId, lines) {
       await prepare('UPDATE workshop_quote_lines SET goes_with_line_id = ? WHERE id = ?').run(ids[line.goesWith], ids[i]);
     }
   }
+}
+
+// The first bytes of a stored file, enough to tell a picture.
+async function fileHead(storageKey) {
+  const file = await open(path.join(UPLOADS_DIR, storageKey)).catch(() => null);
+  if (!file) return Buffer.alloc(0);
+  try {
+    const { buffer, bytesRead } = await file.read(Buffer.alloc(16), 0, 16, 0);
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    await file.close();
+  }
+}
+
+// A line's photo (Jack, 1 Oct; one per line, as drawn): one of this job's
+// files, and a JPEG, PNG or WebP picture by its bytes.
+async function photoProblem(jobId, lines) {
+  for (const line of lines) {
+    if (line.photoId === undefined || line.photoId === null) continue;
+    const file = Number.isInteger(line.photoId) && line.photoId > 0 && line.photoId <= 2147483647
+      ? await prepare('SELECT storage_key FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?').get(line.photoId, jobId)
+      : null;
+    if (!file || !sniffImage(await fileHead(file.storage_key))) return 'a quote line’s photo is a JPEG, PNG or WebP picture of this job';
+  }
+  return null;
 }
 
 // Goes with (decision 7, M2): only a labour line, and only with a part in the
@@ -59,7 +89,21 @@ function pairProblem(lines) {
 // Creates the next revision for a job, superseding the current one. A quote
 // still in draft has not been seen by anyone, so its lines are replaced in
 // place rather than spending a revision number on a proposal nobody read.
-export async function createRevision({ jobId, lines }) {
+// In one transaction, so a refusal part-way (a file removed at the same
+// moment, say) can't leave a draft with its lines half replaced (fresh review).
+export async function createRevision(args) {
+  await dbExec('BEGIN');
+  try {
+    const result = await createRevisionInTransaction(args);
+    await dbExec('COMMIT');
+    return result;
+  } catch (err) {
+    await dbExec('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
+async function createRevisionInTransaction({ jobId, lines }) {
   if (!lines?.length) return { ok: false, code: 'illegal', message: 'a quote needs at least one line' };
   for (const line of lines) {
     if (!['labour', 'part'].includes(line.kind)) {
@@ -78,6 +122,8 @@ export async function createRevision({ jobId, lines }) {
 
   const job = await prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
   if (!job) return { ok: false, code: 'not_found', message: 'Job not found' };
+  const photo = await photoProblem(jobId, lines);
+  if (photo) return { ok: false, code: 'illegal', message: photo };
 
   const current = await prepare(
     'SELECT * FROM workshop_quotes WHERE workshop_job_id = ? ORDER BY revision DESC LIMIT 1'
@@ -320,7 +366,7 @@ const LINE_TOTALS = `
   SELECT
     l.id, l.kind, l.description, l.product_id, l.quantity, l.unit_amount, l.decision,
     l.need, l.reason, l.decided_via, l.decided_at, l.added_to_order_at, who.name AS decided_by_name,
-    l.goes_with_line_id, l.without_text,
+    l.goes_with_line_id, l.without_text, l.photo_attachment_id,
     (l.quantity * l.unit_amount) AS line_total
   FROM workshop_quote_lines l
   LEFT JOIN logins who ON who.id = l.decided_by_login_id
@@ -413,6 +459,7 @@ export function serializeQuoteWithLines(quote, lines, totals) {
       addedToOrderAt: l.added_to_order_at ?? null,
       goesWithLineId: l.goes_with_line_id ?? null,
       without: l.without_text ?? null,
+      photoId: l.photo_attachment_id ?? null,
     })),
     totals: {
       all: Number(totals.all_total),

@@ -177,6 +177,7 @@ GET /api/portal/:shopSlug/booking-links/:code
 GET /api/portal/:shopSlug/booking-links/:code/availability
 GET /api/portal/:shopSlug/booking-links/:code/quote
 POST /api/portal/:shopSlug/booking-links/:code/quote/answer
+GET /api/portal/:shopSlug/booking-links/:code/quote/lines/:lineId/photo
 POST /api/portal/:shopSlug/booking-links/:code/cancel
 POST /api/portal/:shopSlug/booking-links/:code/accept-offer
 POST /api/portal/:shopSlug/booking-links/:code/change
