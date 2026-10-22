@@ -1420,3 +1420,21 @@ The drawings show where slots appear but not these rules. *Decided:*
 12. **For the customer's card:** the booking link's guess limit (30 a
     quarter hour) counts every read, so the card mustn't re-read the thread
     on a timer.
+
+### 22 Oct 2026: the Notes with the shop card (`openspec/changes/notes-card`)
+
+1. **On the in-the-shop, ready and collected pages** (fresh review). Drawn on
+   the in-the-shop page; the recorded decisions (collect-and-pay review;
+   drop-off review decision 7, H4) put "Add a note for the shop" on the ready
+   page too, and a staff reply's text links the customer back to their page.
+   On ready and collected it sits after What we did and the checklist.
+2. **"Let you know", not "text you".** The drawing's "we’ll text you" is
+   Maya's choice; a customer may have chosen email or WhatsApp, and nothing
+   is really sent yet. Pattern: nothing said that isn't true (cancel, item 2).
+   "We’ll reply here and let you know when we do." / "Sent. [Shop] will reply
+   here, and we’ll let you know when they do."
+3. **Read once.** No re-reading on a timer or on focus: every read counts
+   against the booking link's guess limit. A read that fails says
+   "Wheelhouse couldn’t load your notes." with Try again.
+4. **Bubbles as drawn:** yours light with a border on the right, the shop's
+   on the panel on the left.
