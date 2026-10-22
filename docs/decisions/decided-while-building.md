@@ -1343,5 +1343,6 @@ The drawings show where slots appear but not these rules. *Decided:*
    work included, so the two never disagree (fresh review).
 9. **No shop phone:** the message says "Call the shop", as the customer's
    page does.
-6. **The message wording** is drafted, for Jack to read (asked 22 Oct).
+6. **The message wording**: drafted, then approved (Jack, 22 Oct: "1: use
+   the drafted wording for Work added within your limit").
 7. **Migration 059.**

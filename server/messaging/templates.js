@@ -17,8 +17,8 @@ export const TEMPLATES = {
     subject: 'A quote to approve — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
   },
-  // Work within the customer's spending limit (Workshop day 41-43; drafted
-  // 22 Oct, for Jack to read).
+  // Work within the customer's spending limit (Workshop day 41-43); wording
+  // approved by Jack, 22 Oct ("1: use the drafted wording").
   work_within_limit: {
     name: 'Work added within your limit',
     when: 'When extra work fits the limit the customer set',

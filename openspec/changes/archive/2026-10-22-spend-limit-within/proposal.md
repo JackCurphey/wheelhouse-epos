@@ -17,8 +17,8 @@ itself is `spend-limit-booking`. Only the customer sets it (Jack, 22 Oct).
   stays within the job's limit, adds its lines to the job, and queues "Work
   added within your limit" to the customer. Over the limit, or with no limit,
   it is refused: send a quote instead.
-- **Messages**: the "Work added within your limit" message (drafted wording,
-  for Jack to read), live in Settings › Messages.
+- **Messages**: the "Work added within your limit" message (wording approved
+  by Jack, 22 Oct), live in Settings › Messages.
 - **Job page** (dq-job-within): within the limit, the drawn hint and "Save
   and tell Maya" (a minute to Undo) in place of Send quote; over it, the
   drawn hint and Send quote as before. The staff quote read carries the
