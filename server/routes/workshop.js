@@ -25,6 +25,7 @@ import {
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
+import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -451,6 +452,15 @@ export function register(route) {
     const planned = resolvePlannedMinutes(body.plannedMinutes, null);
     if (planned.error) return badRequest(res, planned.error);
 
+    // The services New job chose, kept as an online booking's are, so the job
+    // has its service's checklist (Jack, 22 Oct, service checklists).
+    if (body.serviceIds !== undefined && !Array.isArray(body.serviceIds)) return badRequest(res, 'serviceIds must be a list');
+    if (!(body.serviceIds ?? []).every(Number.isInteger)) return badRequest(res, 'Service not found');
+    const serviceIds = [...new Set(body.serviceIds ?? [])];
+    for (const serviceId of serviceIds) {
+      if (!(await db.prepare('SELECT 1 FROM workshop_services WHERE id = ?').get(serviceId))) return badRequest(res, 'Service not found');
+    }
+
     const status = resolveJobStatus(body.status, null);
     if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
     // The staff diary still sends a legacy status and will until Phase 4 replaces
@@ -487,6 +497,7 @@ export function register(route) {
           customerDescription: customerDescription || null,
           skipAutoOrder: !!body.skipAutoOrder,
           plannedMinutes: planned.value,
+          serviceIds,
         });
         const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
         return { status: 201, body: serializeWorkshopJob(row) };
@@ -884,6 +895,27 @@ export function register(route) {
     const { changes } = await db.prepare('UPDATE workshop_jobs SET online_unseen = 0 WHERE id = ?').run(Number(params.id));
     if (!changes) return notFound(res, 'Job not found');
     res.writeHead(204).end();
+  });
+
+  // The job's checklist (Jack, 22 Oct, service checklists; drawn as job-checklist
+  // and job-mechanic's bar): its service's, or the copy its first tick made.
+  // Null when the job has none. Any signed-in staff member ticks and notes.
+  // screens: job-page
+  route('GET', '/api/workshop-jobs/:id/checklist', async (req, res, params) => {
+    const id = Number(params.id);
+    if (!(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(id))) return notFound(res, 'Job not found');
+    sendJson(res, 200, await jobChecklist(id));
+  });
+
+  // screens: job-page
+  route('PUT', '/api/workshop-jobs/:id/checklist/items/:index', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    try {
+      sendJson(res, 200, await setJobChecklistItem(Number(params.id), Number(params.index), body));
+    } catch (err) {
+      if (!(err instanceof ChecklistError)) throw err;
+      sendJson(res, err.status, err.code ? { error: err.message, code: err.code } : { error: err.message });
+    }
   });
 
   // screens: requests, review

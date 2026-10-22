@@ -1097,3 +1097,20 @@ pattern is the No time chip's "bike · mark".
 3. **The month view.** *Decided:* the chip shows the globe alone after the
    bike, since a month chip has no room for words; its name and the day's
    list say "new, booked online" / "New online".
+
+### 22 Oct 2026: service checklists, the server (service-checklists)
+
+1. **Unticked items and Mark ready for collection.** Not drawn or decided.
+   *Decided:* they don't stop it. The checklist shows what's done; the
+   sign-off stays as it is, as the till never refuses a payment over the
+   sign-off.
+2. **Who may tick.** The drawings tag the checklist "Mechanic". *Decided:*
+   anyone signed in, until roles are built (WP-1.1); a later tick or note on
+   the same item wins. The drawn "Keep mine or Keep Alex's" for two people
+   changing one line is for a later piece.
+3. **A job with more than one service.** *Decided:* the first service that
+   has a checklist, in the order booked (an online booking's services, then
+   the service lines on its order).
+4. **Finished work.** *Decided:* ticks and notes are refused once the work is
+   finished, until it is reopened, as the job's other details are (workshop-jobs
+   spec, "Finished work is frozen against edits").
