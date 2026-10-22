@@ -7,6 +7,8 @@
 // themselves with currentCustomerSession(). Mark's file. Moved out of
 // server.js unchanged (split plan §4.1, WP-0.4); bookings and booking links
 // follow in the next move.
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
@@ -35,7 +37,7 @@ import {
   approve as approveQuote, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
-import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from '../booking-photos.js';
+import { MAX_BOOKING_BODY_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
@@ -1197,6 +1199,31 @@ export function register(route) {
     const result = await currentQuoteForJob(found.id);
     if (!result.ok) return notFound(res, 'There is no quote for this booking');
     sendJson(res, 200, await customerQuote(result, found.id));
+  });
+
+  // A quote line's photo (Jack, 1 Oct; dq-quote-photo), for the customer's
+  // card: only a line of the booking's current customer-readable quote, sent
+  // as the picture its bytes show. Anything else is not found.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/quote/lines/:lineId/photo', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const result = await currentQuoteForJob(found.id);
+    const line = result.ok ? result.lines.find((l) => l.id === Number(params.lineId)) : null;
+    const file = line?.photo_attachment_id
+      ? await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?').get(line.photo_attachment_id, found.id)
+      : null;
+    const bytes = file ? await readFile(path.join(UPLOADS_DIR, file.storage_key)).catch(() => null) : null;
+    const kind = bytes ? sniffImage(bytes) : null;
+    if (!kind) return notFound(res, 'There is no photo for that line');
+    res.writeHead(200, {
+      'Content-Type': kind.contentType,
+      'Content-Length': bytes.length,
+      'Content-Disposition': 'inline',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-store',
+    });
+    res.end(bytes);
   });
 
   // The customer cancels through their booking link (piece 12, decision 1):
