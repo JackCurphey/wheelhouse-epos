@@ -220,8 +220,8 @@ const BOARD = {
         { what: 'Then hosting and sales in pence', detail: 'The online test copy\'s safety checks and automatic updates, then sales in pence step A (#203)' },
       ],
       Jack: [
-        { what: 'The job checklist', detail: 'Done ticks and a note per line of work, and the full service checklist (WP-4.1), built ahead of stage 4 on your word' },
-        { what: 'Then the diary settings and storage slots', detail: 'What a diary block shows, and where each bike is kept (WP-4.1)' },
+        { what: 'Next in the workshop, to choose', detail: 'The rest of the workshop day (I\'ll do this, Who did what) or the rest of quotes (WP-4.2), ahead of stage 4 on your word' },
+        { what: 'Then the checklist\'s Done ticks per line', detail: 'After Mark\'s sales in pence, which rewrites the same order lines' },
       ],
     },
     waiting: [
@@ -233,9 +233,9 @@ const BOARD = {
       { what: 'Still his from before', detail: 'The bike on Waiting cards, and when the front page switches to the new app.' },
     ],
   },
-  updated: '22 October 2026',
+  updated: '22 October 2026 (evening)',
   lead: 'Stage 0 is still under way. The customer\'s booking page now has every stage, and the messages engine is built, pretend for now. From 21 Oct either person builds a whole piece, server and screens, under Mark\'s working agreement (#349).',
-  sub: 'Merged 19 Oct: the words at the bottom of receipts (#279), opening hours in Settings (#281), Settings for the Owner only until roles (#283), the time kept free with the old Edit workshop retired (#285), when to drop the bike off (#287), notice in hours or days (#289), switching between a set time and the whole day (#291), Show prices (#293), the note on the booking confirmation (#295), confirming online bookings automatically drawn with its contract for Mark (#297), Preview what the customer sees (#299) and the confirmed booking page (#301). On 20 Oct: Cancel booking (#303), Change the date (#305, #306), the waiting-for-the-shop page (#308), the six booking messages\' wording (#310), a shop\'s own booking terms (#312), Offer another time (#314 to #317), declining with a message (#319), and the messages engine (#321 to #323, #325 to #327, #329, #330); the board fixed (#324) and its stage progress (#328), staff answering offered times (#332, #333), + Add a bike (#334), the customer\'s note on a new job (#335), the booking messages staff answers send (#336, #340, #341), choosing the mechanic on accept (#337), pills from the keyboard (#338), the Settings frame (#339) and an order\'s workshop job in the new diary (#342). On 21 Oct: the booking page\'s later stages (#344), the old job form removed (#343), the Workshop Overview (#346), the bike tag (#347), the working agreement (#349), Mark\'s review fixes (#348, #351) and the diary page split (#350), browser tests for the Overview and Settings › Messages (#353), the old app never taking a job\'s payment (#355), what ended bookings can\'t do (#356), confirming online bookings automatically (#357, #358), the booking page\'s progress and money (#359, #360), Planned effort and the bike\'s colour on its tag (#361), Request received and Booking cancelled (#362) and the reply-shape file (#363). On 22 Oct: a job\'s planned length on the screens (#365), every screen test\'s fake jobs and orders checked against the server (#366 to #368), quotes always showing their prices (#370), the customer merge decided (#371, #372) and the New online mark on stacks and the month view (#374). Earlier merges are in the list below.',
+  sub: 'Merged 19 Oct: the words at the bottom of receipts (#279), opening hours in Settings (#281), Settings for the Owner only until roles (#283), the time kept free with the old Edit workshop retired (#285), when to drop the bike off (#287), notice in hours or days (#289), switching between a set time and the whole day (#291), Show prices (#293), the note on the booking confirmation (#295), confirming online bookings automatically drawn with its contract for Mark (#297), Preview what the customer sees (#299) and the confirmed booking page (#301). On 20 Oct: Cancel booking (#303), Change the date (#305, #306), the waiting-for-the-shop page (#308), the six booking messages\' wording (#310), a shop\'s own booking terms (#312), Offer another time (#314 to #317), declining with a message (#319), and the messages engine (#321 to #323, #325 to #327, #329, #330); the board fixed (#324) and its stage progress (#328), staff answering offered times (#332, #333), + Add a bike (#334), the customer\'s note on a new job (#335), the booking messages staff answers send (#336, #340, #341), choosing the mechanic on accept (#337), pills from the keyboard (#338), the Settings frame (#339) and an order\'s workshop job in the new diary (#342). On 21 Oct: the booking page\'s later stages (#344), the old job form removed (#343), the Workshop Overview (#346), the bike tag (#347), the working agreement (#349), Mark\'s review fixes (#348, #351) and the diary page split (#350), browser tests for the Overview and Settings › Messages (#353), the old app never taking a job\'s payment (#355), what ended bookings can\'t do (#356), confirming online bookings automatically (#357, #358), the booking page\'s progress and money (#359, #360), Planned effort and the bike\'s colour on its tag (#361), Request received and Booking cancelled (#362) and the reply-shape file (#363). On 22 Oct: a job\'s planned length on the screens (#365), every screen test\'s fake jobs and orders checked against the server (#366 to #368), quotes always showing their prices (#370), the customer merge decided (#371, #372) and the New online mark on stacks and the month view (#374); later the job checklist (#381 to #383), Diary blocks (#384), storage slots (#389, #390), the job page as drawn (#391) and your answers to Mark\'s questions (#392, #393, #395, #396). Earlier merges are in the list below.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -396,7 +396,12 @@ const BOARD = {
     { status: 'done', what: 'Quotes always show their prices', detail: 'Even with Show prices off: the customer is approving an amount', pr: 370 },
     { status: 'done', what: 'Joining an in-shop customer\'s online account', detail: 'Staff merge the two records with the drawn Merge, built with the Customers package (#371, #372)', pr: 372 },
     { status: 'done', what: 'New online on stacks and in the month view', detail: 'A stack\'s front card, its fanned-out tile and the month chip', pr: 374 },
-    { status: 'build', what: 'The job checklist', detail: 'Done ticks, a note per line, the full service checklist (WP-4.1)' },
+    { status: 'done', what: 'Checklists drawn', detail: 'Settings › Workshop › Checklists, approved', pr: 381 },
+    { status: 'done', what: 'The job checklist', detail: 'Each shop\'s own checklists with a full service template; ticks and notes on the job page (#382 server, #383 screens)', pr: 383 },
+    { status: 'done', what: 'Diary blocks', detail: 'What a diary block shows first and second', pr: 384 },
+    { status: 'done', what: 'Storage slots', detail: 'The shop\'s own hooks, chosen at book-in, Kept on, cleared at collection (#389 server, #390 screens)', pr: 390 },
+    { status: 'done', what: 'The job page as drawn', detail: 'Notes in the wider column, Work and parts across the page', pr: 391 },
+    { status: 'done', what: 'Mark\'s questions answered', detail: 'Ended bookings, website settings Owner-only, Accept only the time shown, booking answers at once (#392, #393, #395, #396)', pr: 396 },
     { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'Live since 16 Oct with your shop account. Next Mark adds the safety checks and automatic updates, and loads North Street Cycles' },
     { status: 'next', what: 'Stage 0 check', detail: 'You walk booking, the till and the diary in the real app. Waits for everything above' },
   ],
@@ -419,14 +424,14 @@ const BOARD = {
         ['Diary', 'built', 'Week, day and phone views; Waiting for you; drag jobs; New job; jobs over several days'],
         ['Job window', 'part', 'Move a job through its stages, or put it on hold; notes; work and parts; barcode scan; refusals in plain words. Not yet: the Done tick, a note per line'],
         ['Quotes', 'built', 'Build, send by text, the customer approves, Quoting in teal'],
-        ['Overview', 'built', 'Today\'s bikes expected and in the workshop, four tabs of jobs, Book in, Planned effort'],
+        ['Overview', 'built', 'Today\'s bikes expected and in the workshop, four tabs of jobs, Book in, Planned effort, where each bike is kept'],
       ] },
       { room: 'Stockroom', pages: [
         ['Stock', 'old'], ['Deliveries and orders', 'old', 'The old app has Suppliers and Purchase orders'], ['Stock take', 'none'],
       ] },
       { room: 'Office', pages: [
         ['Today', 'old', 'The old app has a Dashboard'], ['Reports', 'old', 'The old app has Sales history'],
-        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending'],
+        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending; Checklists, Diary blocks, Storage slots'],
       ] },
     ] },
     { area: 'Customer side', note: 'What a shop\'s customers see. Booking a repair works end to end in the new app. The old shop website is still running; the new one, and the customer account, are drawn but not built.', rooms: [

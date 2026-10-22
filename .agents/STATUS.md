@@ -7,21 +7,23 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** the job checklist (WP-4.1, `job-checklist` and the
-  `job-mechanic` situation; built ahead of stage 4 on Jack's word, 22 Oct):
-  Done ticks and a note per line of work, and the full service checklist,
-  server and screens.
-- **Mark:** the agreement's other checks: the Owner-only list (2.1), the
-  convert and last-unit race tests (2.2), the STATUS tidy (1.5); then the
-  online test copy's safety checks (his drafts #369) and sales in pence step
-  A. His overnight draft #373 repeats the auto-confirm server half already
-  merged in #357 (commented 22 Oct); his overnight queue may hold other
-  pieces built on 21 Oct (#359, #361, #362).
+- **Jack:** next in WP-4.1, ahead of stage 4 on his word: the rest of the
+  workshop day ("I'll do this", "Who did what"), or the rest of quotes
+  (WP-4.2) – to choose. The checklist's per-line Done ticks wait for Mark's
+  sales in pence (#376, #377), which rewrites the same order lines.
+- **Mark:** his overnight drafts. Jack answered all their questions on 22
+  Oct (`docs/decisions/2026-10-22-marks-overnight-questions.md`): ended
+  bookings refuse hold and reopen too (#378, his to finish); "Booking
+  confirmed" on automatic confirmation is already on main (#357, #362), so
+  #373 isn't needed and its migration 050 would clash; the money check's two
+  questions are his, fixing the rounding where order lines are written rather
+  than accepting 1p; and the audit's three: website settings Owner-only (#393,
+  merged), Accept only at the time shown (#396), booking answers at once with
+  the spec corrected (#395). His drafts #376/#377 number their migrations 051,
+  which main already has (main is at 054). #379 no longer needs Jack's
+  approval under the working agreement.
 - **Waiting on Jack:** when to delete the old app, once its last screens are
-  replaced (`docs/decisions/2026-10-21-old-app-placeholder.md`). Answered
-  22 Oct: quotes always show their prices (#370); an in-shop customer's
-  online sign-up is joined by staff with the drawn Merge, built with the
-  Customers package WP-3.2 (#371, #372).
+  replaced (`docs/decisions/2026-10-21-old-app-placeholder.md`).
 
 **Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
@@ -159,7 +161,14 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 22 Oct: a job's planned length reaches the screens, so the
+**Jack is on:** 22 Oct, later: the job checklist (#381 drawn and approved,
+#382 server, #383 screens): each shop's own checklists in Settings with a
+full service template, ticks and notes on the job page; Diary blocks, what a
+block shows first and second (#384); storage slots (#389 server, #390
+screens): the shop's own hooks, chosen at book-in, Kept on, cleared at
+collection; the job page laid out as drawn, Notes in the wider column (#391);
+Jack's answers to Mark's questions (#392, #393, #395, #396).
+22 Oct: a job's planned length reaches the screens, so the
 diary offers a whole-day request for its real length (#365); every screen
 test's fake jobs and orders are checked against the server's real replies
 (#366, #367, #368); quotes always show their prices (#370); the customer
