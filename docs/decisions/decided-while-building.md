@@ -1152,3 +1152,20 @@ pattern is the No time chip's "bike · mark".
 4. **The stack's chooser and the month's day list.** *Decided:* they keep
    "bike · job": they list every job's details in full, not a block's two
    lines.
+
+### 22 Oct 2026: storage slots, the server (storage-slots)
+
+The drawings show where slots appear but not these rules. *Decided:*
+1. **When.** A slot is chosen at book-in only ("no hook until the bike is
+   booked in", 3 Oct walk-through answer 11), or as a job is made with the
+   bike already here; not required.
+2. **Sharing.** Two bikes may share a slot; nothing stops it.
+3. **Changing.** While the bike is in the shop it can be moved or taken off a
+   slot; the last choice wins (no version check, as nothing else on the job
+   changes). Collecting the bike clears its slot; bringing it back in leaves
+   it on none until one is chosen.
+4. **Removing and switching off.** Removing a slot takes every bike off it.
+   Switching slots off hides them everywhere, keeps the list, and refuses new
+   ones until they're switched on.
+5. **Sites.** Per shop for now; the plan's per-site slots wait for sites in
+   the workshop (WP-1.4).

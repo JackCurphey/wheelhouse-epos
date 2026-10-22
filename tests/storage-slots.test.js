@@ -162,3 +162,49 @@ test('two bikes may share a slot; removing the slot clears both', async () => {
   await staff(`/api/storage-slots/${hook.id}`, { method: 'DELETE' });
   for (const j of [a, b]) assert.equal((await staff(`/api/workshop-jobs/${j.id}`)).body.storageSlotId, null);
 });
+
+// ---------- Fresh review, 22 Oct ----------
+
+test('a job made with the bike already in goes on its slot as it’s made', async () => {
+  const hook = await addSlot('Hook 11');
+  try {
+    const made = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Wheel build', jobDate: nextDay(), startTime: '12:00', endTime: '13:00', mechanicId: sam, status: 'waiting_parts', storageSlotId: hook.id } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    assert.deepEqual([made.body.custodyState, made.body.storageSlotName], ['in_shop', 'Hook 11']);
+    // A bike that isn't in yet has no slot to go on.
+    const expected = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Wheel build', jobDate: nextDay(), startTime: '12:00', endTime: '13:00', mechanicId: sam, storageSlotId: hook.id } });
+    assert.equal(expected.status, 400, JSON.stringify(expected.body));
+  } finally {
+    await staff(`/api/storage-slots/${hook.id}`, { method: 'DELETE' });
+  }
+});
+
+test('a refused book-in leaves no slot; another shop can’t put this shop’s bike on a slot', async () => {
+  const hook = await addSlot('Hook 12');
+  try {
+    const job = await newJob();
+    const stale = await staff(`/api/workshop-jobs/${job.id}/book-in`, { method: 'POST', body: { version: job.version + 5, storageSlotId: hook.id } });
+    assert.equal(stale.status, 409, JSON.stringify(stale.body));
+    assert.equal((await staff(`/api/workshop-jobs/${job.id}`)).body.storageSlotId, null);
+    const inShop = (await act(job, 'book-in')).body;
+    assert.equal((await staffRequest(server.baseUrl, other.cookie, `/api/workshop-jobs/${inShop.id}/storage-slot`, { method: 'PUT', body: { storageSlotId: null } })).status, 404);
+  } finally {
+    await staff(`/api/storage-slots/${hook.id}`, { method: 'DELETE' });
+  }
+});
+
+test('with slots switched off, a bike can’t be put on one', async () => {
+  const hook = await addSlot('Hook 13');
+  try {
+    await staff('/api/workshop-settings', { method: 'PUT', body: { storageSlotsOn: false } });
+    const job = await newJob();
+    const res = await act(job, 'book-in', { storageSlotId: hook.id });
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.equal((await staff(`/api/workshop-jobs/${job.id}`)).body.custodyState, 'expected');
+    const inShop = (await act(job, 'book-in')).body;
+    assert.equal((await putSlot(inShop, hook.id)).status, 400);
+  } finally {
+    await staff('/api/workshop-settings', { method: 'PUT', body: { storageSlotsOn: true } });
+    await staff(`/api/storage-slots/${hook.id}`, { method: 'DELETE' });
+  }
+});

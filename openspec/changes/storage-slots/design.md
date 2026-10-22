@@ -22,6 +22,10 @@
 - Every job reply carries `storageSlotId` and `storageSlotName` (null when none).
 - `POST /api/workshop-jobs/:id/book-in` takes an optional `storageSlotId`
   (400 "That slot doesn't exist" for one that isn't the shop's).
+- `POST /api/workshop-jobs` takes an optional `storageSlotId` for a job made
+  with the bike in the shop (New job's Waiting for parts); 400 for one that
+  isn't in yet.
+- A slot is refused (400) while the shop's slots are switched off.
 - `PUT /api/workshop-jobs/:id/storage-slot` `{ storageSlotId: number | null }`
   → the job (changed reply); 409 `illegal` unless the bike is in the shop.
 

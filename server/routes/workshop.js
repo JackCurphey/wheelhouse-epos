@@ -364,6 +364,15 @@ function serializeAttachment(row) {
   };
 }
 
+// Why a storage slot can't be used, or null: slots switched off for the shop,
+// or no such slot here (storage slots, Workshop day 27).
+async function slotRefusal(slotId) {
+  const on = await db.prepare('SELECT storage_slots_on FROM workshop_settings LIMIT 1').get();
+  if (on?.storage_slots_on !== 1) return 'Storage slots are off for this shop';
+  if (!Number.isInteger(slotId) || !(await db.prepare('SELECT 1 FROM storage_slots WHERE id = ?').get(slotId))) return 'That slot doesn’t exist';
+  return null;
+}
+
 export function register(route) {
   route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
     const start = query.get('start');
@@ -468,6 +477,15 @@ export function register(route) {
     // keeps public/app.js working untouched through this phase.
     const created = readLegacyStatus(status);
 
+    // A bike made in the shop (New job's Waiting for parts) may go on its slot
+    // as it's made; one not here yet has no slot (storage slots, 22 Oct).
+    const madeSlot = body.storageSlotId ?? null;
+    if (madeSlot !== null) {
+      if (created.custody !== 'in_shop') return badRequest(res, 'Only a bike that’s here can go on a slot');
+      const why = await slotRefusal(madeSlot);
+      if (why) return badRequest(res, why);
+    }
+
     // Staff are held to the shop's rules, never to capacity: no calculator here.
     // The only capacity answer is the 024 index firing on a stale pre-2b hold,
     // which rolls the whole write back.
@@ -499,11 +517,14 @@ export function register(route) {
           plannedMinutes: planned.value,
           serviceIds,
         });
+        if (madeSlot !== null) await db.prepare('UPDATE workshop_jobs SET storage_slot_id = ? WHERE id = ?').run(madeSlot, jobId);
         const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
         return { status: 201, body: serializeWorkshopJob(row) };
       });
     } catch (err) {
       if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+      // The storage slot was removed just now (fresh review).
+      else if (err.code === '23503' && madeSlot !== null) out = { status: 400, body: { error: 'That slot doesn’t exist' } };
       else throw err;
     }
     if (out.status === 201) out.body = (await attachParts([out.body]))[0];
@@ -759,9 +780,8 @@ export function register(route) {
       // drawn as till-book-in), checked before anything moves.
       let bookInSlot;
       if (machine === custody && event === 'book_in' && body.storageSlotId !== undefined && body.storageSlotId !== null) {
-        if (!Number.isInteger(body.storageSlotId) || !(await db.prepare('SELECT 1 FROM storage_slots WHERE id = ?').get(body.storageSlotId))) {
-          return badRequest(res, 'That slot doesn’t exist');
-        }
+        const why = await slotRefusal(body.storageSlotId);
+        if (why) return badRequest(res, why);
         bookInSlot = body.storageSlotId;
       }
       const answeringRequest = machine === bookingRequest && (event === 'accept' || event === 'decline');
@@ -882,6 +902,8 @@ export function register(route) {
           await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
         } catch (err) {
           await db.exec('ROLLBACK');
+          // The slot was removed just now (fresh review).
+          if (err.code === '23503') return badRequest(res, 'That slot doesn’t exist');
           throw err;
         }
       } else {
@@ -946,13 +968,20 @@ export function register(route) {
     const id = Number(params.id);
     const body = await readJsonBody(req);
     const slotId = body.storageSlotId;
-    if (slotId !== null && (!Number.isInteger(slotId) || !(await db.prepare('SELECT 1 FROM storage_slots WHERE id = ?').get(slotId)))) {
-      return badRequest(res, 'That slot doesn’t exist');
+    if (slotId !== null) {
+      const why = await slotRefusal(slotId);
+      if (why) return badRequest(res, why);
     }
     if (!(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(id))) return notFound(res, 'Job not found');
-    const { changes } = await db.prepare(
-      "UPDATE workshop_jobs SET storage_slot_id = ?, updated_at = now() WHERE id = ? AND custody_state = 'in_shop'"
-    ).run(slotId, id);
+    let changes;
+    try {
+      ({ changes } = await db.prepare(
+        "UPDATE workshop_jobs SET storage_slot_id = ?, updated_at = now() WHERE id = ? AND custody_state = 'in_shop'"
+      ).run(slotId, id));
+    } catch (err) {
+      if (err.code === '23503') return badRequest(res, 'That slot doesn’t exist');
+      throw err;
+    }
     if (!changes) return sendJson(res, 409, { error: 'Only a bike in the shop can be put on a slot.', code: 'illegal' });
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
     sendJson(res, 200, serializeWorkshopJob(row));
