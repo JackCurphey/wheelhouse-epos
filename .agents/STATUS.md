@@ -28,9 +28,8 @@ here before starting it, so two people never build the same one):
   tests weren't run on Mark's machine (Playwright's browser isn't installed
   there): wait for CI before merging. #378/#379/#373 and the other old drafts
   are replaced. Still open from the audit: items 12, 15–18, 20, 23 and 24
-  (`docs/reviews/2026-10-22-flagged-merges-audit.md`). #404's migration is numbered 055,
-  which `main` has taken (it is at 061 now): it must be renumbered before it
-  merges. When sales in pence moves `unit_amount` and `booked_price` to pence
+  (`docs/reviews/2026-10-22-flagged-merges-audit.md`). #404's migration stays 055: Jack left
+  that number free for it (`main` is at 061, with 055 skipped). When sales in pence moves `unit_amount` and `booked_price` to pence
   (#404 step 2.1), the spending limit's whole bill (`wholeBill`,
   `agreeWithinLimit`) and the messages' "Amount added" and "What was agreed"
   sums move with it. Next: step B of sales in pence (reports read both
