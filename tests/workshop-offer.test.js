@@ -195,6 +195,23 @@ test('a time already gone today can’t be offered, and a later one today can', 
   assert.equal(later.status, 200, JSON.stringify(later.body));
 });
 
+// The case the pinned 07:00 can't show: a time inside opening hours that has
+// already gone. A second server's clock reads 10:00 UTC, 11:00 in the shop.
+test('a time gone today inside opening hours can’t be offered', async () => {
+  const late = await startLiveServer({ env: { WHEELHOUSE_TEST_CLOCK: '2026-09-01T10:00:00.000Z' } });
+  try {
+    const booked = await book();
+    const at = (path, options) => staffRequest(late.baseUrl, owner.cookie, path, options);
+    const v = (await at(`/api/workshop-jobs/${booked.id}`)).body.version;
+    const gone = await at(`/api/workshop-jobs/${booked.id}/offer`, { method: 'POST', body: { version: v, jobDate: '2026-09-01', startTime: '10:00', mechanicId: sam } });
+    assert.equal(gone.status, 400, JSON.stringify(gone.body));
+    assert.equal(gone.body.error, 'That time has passed - please choose a later time.');
+    assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'pending');
+  } finally {
+    await late.stop();
+  }
+});
+
 test('a request whose bike is already in the shop, or whose work has started, can’t be offered another time', async () => {
   const inShop = await book();
   await setJob(shopId(), inShop.id, "custody_state = 'in_shop'");

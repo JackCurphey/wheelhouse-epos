@@ -802,7 +802,7 @@ A booking request SHALL be able to move to a time the shop suggests, as an "offe
 
 #### Scenario: A bike already in the shop
 - **WHEN** staff offer another time to a request whose bike is already in the shop
-- **THEN** it is refused with "The bike is already in the shop, so this can't be offered another time." and the request stays as it was
+- **THEN** it is refused with "The bike is already in the shop, so this can’t be offered another time." and the request stays as it was
 
 #### Scenario: A time gone today
 - **WHEN** staff offer today at a time the shop's clock has already passed

@@ -74,8 +74,8 @@ day's capacity check) is left: the offer design makes it a staff choice.
 
 1. **A request whose bike is in the shop, or whose work has started, can't
    be offered another time**, in the words "The bike is already in the shop,
-   so this can't be offered another time." and "The work has already
-   started, so this can't be offered another time." *Pattern:* the customer
+   so this can’t be offered another time." and "The work has already
+   started, so this can’t be offered another time." *Pattern:* the customer
    link's own "too late" test (`customerTooLate`), so no offer is made that
    nobody can answer.
 2. **A time already gone today can't be offered**: "That time has passed -
