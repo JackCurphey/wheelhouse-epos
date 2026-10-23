@@ -86,13 +86,18 @@ test('jobs that overlap share the column side by side; others keep it to themsel
 test('a waiting card says what it is, who, what and when', () => {
   assert.deepEqual(
     waitingCard({ kind: 'new_booking', customerName: 'Sam Reed', serviceNames: ['Brake service'], jobDate: '2026-10-09', startTime: '10:00', endTime: '10:45' }),
-    { tone: 'pending', label: 'New booking request', customer: 'Sam Reed', detail: 'Brake service · Fri 9 Oct, 10:00–10:45' },
+    { tone: 'pending', label: 'New booking request', customer: 'Sam Reed', bike: null, detail: 'Brake service · Fri 9 Oct, 10:00–10:45' },
   );
   assert.deepEqual(
     waitingCard({ kind: 'change_request', customerName: 'Oliver Chen', serviceNames: [], from: { jobDate: '2026-10-05', startTime: '10:00' }, to: { jobDate: '2026-10-05', startTime: '14:00' } }),
-    { tone: 'hold', label: 'Change request', customer: 'Oliver Chen', detail: 'Mon 5 Oct 10:00 → Mon 5 Oct 14:00' },
+    { tone: 'hold', label: 'Change request', customer: 'Oliver Chen', bike: null, detail: 'Mon 5 Oct 10:00 → Mon 5 Oct 14:00' },
   );
   assert.equal(waitingCard({ kind: 'customer_cancelled', customerName: 'Aisha Khan', serviceNames: ['Safety check'], jobDate: '2026-10-07' }).label, 'Cancelled by customer');
+});
+
+test('a waiting card carries the bike, as the diary drawing\'s cards do (waiting-bike)', () => {
+  assert.equal(waitingCard({ kind: 'new_booking', customerName: 'Sam Reed', bikeLabel: 'Specialized Sirrus', serviceNames: [], jobDate: '2026-10-09' }).bike, 'Specialized Sirrus');
+  assert.equal(waitingCard({ kind: 'new_booking', customerName: 'Sam Reed', bikeLabel: null, serviceNames: [], jobDate: '2026-10-09' }).bike, null);
 });
 
 // Piece 3: where a dragged job lands. The pointer's height in the column is

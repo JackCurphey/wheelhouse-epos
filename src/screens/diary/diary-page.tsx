@@ -676,6 +676,7 @@ export function DiaryPage() {
                   {/* Larger on a touch screen, as drawn for the tablet (layout review 238, item 4). */}
                   <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
                   <span className="text-[13px] font-bold pointer-coarse:text-[15px]">{card.customer}</span>
+                  {card.bike ? <span className="text-xs text-[var(--wh-muted)] pointer-coarse:text-[13px]">{card.bike}</span> : null}
                   <span className="text-xs pointer-coarse:text-[13px]">{card.detail}</span>
                 </button>
                 {on ? (
