@@ -6,14 +6,16 @@ import '../server/load-env.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { tinyPng } from './helpers/pictures.js';
 
 let server;
 let owner;
 let other;
 let maya;
 
-// The first bytes of a PNG are all the check reads; the rest is filler.
-const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('pads photo')]);
+// A well-formed PNG (uploads now have their hidden details removed, which
+// needs a picture whose blocks add up).
+const PNG = tinyPng('pads photo');
 const TEXT = Buffer.from('<html><script>alert(1)</script></html>');
 
 before(async () => {

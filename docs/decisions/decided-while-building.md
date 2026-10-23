@@ -1598,3 +1598,30 @@ The drawings show where slots appear but not these rules. *Decided:*
    (`data-book-pinned` in `frame.tsx`).
 6. **The room kept under the bar is the bar's measured height**, so a
    longer message never covers the end of the page.
+
+### 23 Oct 2026: photos lose their location when uploaded (`openspec/changes/photo-location-data`, CX-2)
+
+No screen: server only.
+
+1. **Every hidden detail goes, not only the location**: the time taken, the
+   camera or phone (make, model, serial number) and any embedded text too.
+   Nothing in Wheelhouse reads them, and they say as much about a customer as
+   the place does. *Pattern:* CX-2's purpose, privacy.
+2. **What a photo needs to look right stays**: which way up it goes (a phone
+   saves an upright photo turned and says so) and its colour profile. The
+   picture itself is copied byte for byte, never recompressed.
+3. **Nothing after the picture's end is kept**, such as the short video some
+   phones add to a photo ("motion photos"), which can carry its own location.
+4. **A picture too damaged to clean is refused** rather than saved with its
+   details: a booking photo gets "A photo could not be read — please try
+   adding it again" (the existing words); a staff attachment gets "That
+   picture couldn’t be read. Try adding it again." A file that isn't a JPEG,
+   PNG or WebP picture is saved as it was sent, as before.
+5. **iPhone HEIC pictures aren't cleaned yet.** Customers can't send them (the
+   booking page takes JPEG, PNG and WebP, and iPhones convert to JPEG for
+   it), nor can quote lines; only the job page's "Add file or photo" can
+   save one, usually a photo taken in the shop. **Jack, 23 Oct: leave HEIC
+   out**: "if iPhone converts photos automatically then it's fine, as long as
+   iPhone users can upload photos." Safari converts a picked photo to the
+   first type the button accepts (JPEG for both photo buttons), per WebKit's
+   bug tracker; not yet tried on a real iPhone.
