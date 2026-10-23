@@ -10,7 +10,8 @@ export type Accessibility = { statusSymbols: boolean; reduceMotion: boolean; noA
 const KEY = ['your-settings'];
 
 export function useYourSettings(enabled = true) {
-  return useQuery({ queryKey: KEY, queryFn: () => apiGet<{ accessibility: Accessibility }>('/api/your-settings'), enabled });
+  // Changed only here, so it's read once, not each time a diary block appears (review).
+  return useQuery({ queryKey: KEY, queryFn: () => apiGet<{ accessibility: Accessibility }>('/api/your-settings'), enabled, staleTime: Infinity });
 }
 
 /** Saves one switch; the page follows once it's saved. */
