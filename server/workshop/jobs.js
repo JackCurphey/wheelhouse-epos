@@ -15,6 +15,7 @@ import { serializeQuote, answerAll as answerQuote } from './quotes.js';
 import { quote as quoteMachine } from './state-machines.js';
 import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
+import { isEmployeeId } from './sign-off.js';
 import { allocateReference } from './references.js';
 
 const db = { prepare, exec: dbExec };
@@ -123,7 +124,10 @@ export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 export async function resolveJobMechanicId(rawId, existingId) {
   if (rawId === undefined) return { ok: true, mechanicId: existingId };
   if (rawId === null || rawId === '') return { ok: true, mechanicId: null };
-  const mechanicId = Number(rawId);
+  // A whole number only: Number() would read "abc" as NaN (a server error) and
+  // true as employee 1 (audit, 22 Oct, item 19).
+  if (!isEmployeeId(rawId)) return { ok: false };
+  const mechanicId = rawId;
   const mechanic = await db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1').get(mechanicId);
   if (!mechanic) return { ok: false };
   return { ok: true, mechanicId };

@@ -404,18 +404,20 @@ export function register(route) {
       }
     }
 
-    const showPricesOnline = body.showPricesOnline === undefined
-      ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
-    const showSignOff = body.showSignOffToCustomers === undefined
-      ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
-    const storageSlotsOn = body.storageSlotsOn === undefined
-      ? existing.storage_slots_on : (body.storageSlotsOn ? 1 : 0);
+    // The on/off settings take a real true or false only, so a stray "false"
+    // can't turn one on (audit, 22 Oct, item 22); left out, each stays as it is.
+    for (const key of ['showPricesOnline', 'showSignOffToCustomers', 'storageSlotsOn', 'confirmBookingsAutomatically']) {
+      if (body[key] !== undefined && typeof body[key] !== 'boolean') return badRequest(res, `${key} must be true or false`);
+    }
+    const onOff = (key, column) => (body[key] === undefined ? existing[column] : (body[key] ? 1 : 0));
+    const showPricesOnline = onOff('showPricesOnline', 'show_prices_online');
+    const showSignOff = onOff('showSignOffToCustomers', 'show_sign_off_to_customers');
+    const storageSlotsOn = onOff('storageSlotsOn', 'storage_slots_on');
+    const confirmAutomatically = onOff('confirmBookingsAutomatically', 'confirm_bookings_automatically');
     const quoteReminderHours = body.quoteReminderHours === undefined ? existing.quote_reminder_hours : body.quoteReminderHours;
     if (!Number.isInteger(quoteReminderHours) || quoteReminderHours < 1 || quoteReminderHours > 168) {
       return badRequest(res, 'Choose from 1 to 168 hours.');
     }
-    const confirmAutomatically = body.confirmBookingsAutomatically === undefined
-      ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
 
     // What a diary block shows first and second: two different things from
     // bike, job title, customer and job number (Workshop day 17, 29).

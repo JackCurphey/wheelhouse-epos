@@ -272,6 +272,7 @@ function waitingItem(row) {
     reference: row.reference,
     ...current,
     customerName: row.customer_name ?? null,
+    bikeLabel: row.bike_label ?? null, // the tablet cards' bike line (#241)
     serviceNames: row.service_names,
     services: row.services,
     arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
@@ -828,7 +829,11 @@ export function register(route) {
         try {
           result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
           if (result.ok && signing) {
-            await recordSignOff(id, signer);
+            // The mechanic deleted or switched off since the check above.
+            if (!(await recordSignOff(id, signer))) {
+              await db.exec('ROLLBACK');
+              return sendJson(res, 400, SIGN_OFF_REQUIRED);
+            }
             // Marking it ready sends "Bike ready", with a minute to Undo (UX
             // walk-through 1 H2; the messages engine, pretend for now), in the
             // same transaction: if it can't be queued, nothing is finished.
@@ -1110,7 +1115,7 @@ export function register(route) {
   // screens: requests, diary
   route('GET', '/api/workshop-waiting', async (req, res) => {
     const rows = await db.prepare(
-      `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
+      `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
             (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
                FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
               WHERE js.workshop_job_id = w.id) AS service_names,
@@ -1119,6 +1124,7 @@ export function register(route) {
               WHERE js.workshop_job_id = w.id) AS services
      FROM workshop_jobs w
      LEFT JOIN customers c ON c.id = w.customer_id
+     LEFT JOIN customer_bikes b ON b.id = w.bike_id
      LEFT JOIN employees m ON m.id = w.mechanic_id
      LEFT JOIN employees rm ON rm.id = w.requested_mechanic_id
      WHERE (w.booking_state = 'pending' AND w.terms_accepted_at IS NOT NULL)
