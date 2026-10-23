@@ -10,6 +10,8 @@ import { refusalText } from './refusal-words.ts';
 import { channelWord } from './channel-word.ts';
 import { MAX_BYTES, TOO_LARGE, readBase64 } from './job-files.tsx';
 import { AddLinePhoto, PhotoFromPhoneDialog } from './photo-from-phone.tsx';
+// "Mon 5 Oct, 10:15" in London's time, as the customer's page says it.
+import { when } from './when.ts';
 
 /**
  * The quote, in the job's work and parts (journey 4; quoteJobBoards in
@@ -34,9 +36,6 @@ type Quote = {
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
-// "Mon 5 Oct, 10:15" in London's time, as the customer's page says it.
-const part = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', ...o }).format(new Date(iso));
-const when = (iso: string) => `${part(iso, { weekday: 'short' })} ${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' })}, ${part(iso, { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 const ANSWERED = new Set(['approved', 'partly_approved', 'declined']);
 
 const CHIP: Record<QuoteLine['decision'], [string, string]> = {

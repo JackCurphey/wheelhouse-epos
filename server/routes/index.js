@@ -19,5 +19,6 @@ import * as portal from './portal.js';
 import * as customers from './customers.js';
 import * as salesRoutes from './sales.js';
 import * as dashboard from './dashboard.js';
+import * as today from './today.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today];
