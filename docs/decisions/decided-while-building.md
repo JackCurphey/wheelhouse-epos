@@ -1596,4 +1596,8 @@ No screen: server only.
 5. **iPhone HEIC pictures aren't cleaned yet.** Customers can't send them (the
    booking page takes JPEG, PNG and WebP, and iPhones convert to JPEG for
    it), nor can quote lines; only the job page's "Add file or photo" can
-   save one, usually a photo taken in the shop. Raised with Jack on 23 Oct.
+   save one, usually a photo taken in the shop. **Jack, 23 Oct: leave HEIC
+   out**: "if iPhone converts photos automatically then it's fine, as long as
+   iPhone users can upload photos." Safari converts a picked photo to the
+   first type the button accepts (JPEG for both photo buttons), per WebKit's
+   bug tracker; not yet tried on a real iPhone.

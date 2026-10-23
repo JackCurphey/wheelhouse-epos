@@ -113,9 +113,9 @@ const PNG_COLOUR = b(chunk('iCCP', b('icc\0', [0], 'profile')), chunk('gAMA', u3
 const png = () => b(PNG_SIG, IHDR, PNG_COLOUR, chunk('eXIf', exifBlock().subarray(6)), chunk('tEXt', b('Location\0', 'Bolton')),
   chunk('zTXt', b('Comment\0', [0], zlib.deflateSync(Buffer.from('home')))), chunk('iTXt', b('XML:com.adobe.xmp\0', [0, 0], '\0\0', 'GPSLatitude')), IDAT, IEND);
 
-test('a PNG loses its Exif and text, and keeps its colour and picture chunks', () => {
-  const out = removePhotoDetails(png()).buffer;
-  assert.ok(out.equals(b(PNG_SIG, IHDR, PNG_COLOUR, IDAT, IEND)));
+test('a PNG loses its text, and keeps its colour and picture chunks', () => {
+  const upright = b(PNG_SIG, IHDR, PNG_COLOUR, chunk('eXIf', exifBlock({ orientation: 1 }).subarray(6)), chunk('tEXt', b('Location\0', 'Bolton')), IDAT, IEND);
+  assert.ok(removePhotoDetails(upright).buffer.equals(b(PNG_SIG, IHDR, PNG_COLOUR, IDAT, IEND)));
 });
 
 // ---------- WebP ----------
@@ -149,7 +149,12 @@ test('a picture cut short anywhere before its data is refused, never thrown', ()
   // picture (shorter, it's "not a picture" and kept as it is).
   for (const [name, whole, from, upTo] of [['JPEG', jpeg(), 3, jpeg().indexOf(SCAN)], ['PNG', png(), 8, png().length - 1], ['WebP', riff(vp8x(0x0c), VP8, riffChunk('EXIF', Buffer.from('x'))), 12, null]]) {
     const last = upTo ?? whole.length - 1;
+    // A PNG cut exactly between whole chunks, after its header, is a picture
+    // that ends early: cleaned and kept, not refused.
+    const boundaries = new Set();
+    if (name === 'PNG') for (let i = 8 + IHDR.length; i < whole.length; i += 12 + whole.readUInt32BE(i)) boundaries.add(i);
     for (let cut = from; cut < last; cut++) {
+      if (boundaries.has(cut)) continue;
       let r;
       assert.doesNotThrow(() => { r = removePhotoDetails(whole.subarray(0, cut)); }, `${name} cut at ${cut} threw`);
       assert.ok(r.error, `${name} cut at ${cut} was accepted`);
@@ -188,6 +193,45 @@ test('a JPEG whose picture data is cut short is kept as far as it goes', () => {
 });
 
 test('anything after a PNG\'s end is dropped', () => {
-  const out = removePhotoDetails(b(png(), 'GPSLatitude after the end')).buffer;
-  assert.ok(out.equals(b(PNG_SIG, IHDR, PNG_COLOUR, IDAT, IEND)));
+  const out = removePhotoDetails(b(PNG_SIG, IHDR, IDAT, IEND, 'GPSLatitude after the end')).buffer;
+  assert.ok(out.equals(b(PNG_SIG, IHDR, IDAT, IEND)));
+});
+
+// ---------- From the code review ----------
+
+test('padding bytes before a table between scans don\'t cut the picture short', () => {
+  // The padding sits after the table, before the next scan's marker.
+  const second = b(segment(0xc4, Buffer.from([0, 1, 2])), [0xff, 0xff], [0xff, 0xda], u16(8), [1, 1, 0, 0, 0x3f, 0], [0x9a, 0xbc]);
+  const pic = b([0xff, 0xd8], BEFORE_SCAN, [0xff, 0xda], u16(8), [1, 1, 0, 0, 0x3f, 0], [0x11], second, [0xff, 0xd9]);
+  assert.ok(removePhotoDetails(b(pic, 'TRAILER')).buffer.equals(pic));
+});
+
+test('bytes that aren\'t a marker where one should be keep the rest rather than cut it short', () => {
+  const pic = b([0xff, 0xd8], BEFORE_SCAN, [0xff, 0xda], u16(8), [1, 1, 0, 0, 0x3f, 0], [0x11, 0xff, 0xc4], u16(5), [0, 1, 2], [0x41, 0xd9, 0x55], [0xff, 0xd9]);
+  const out = removePhotoDetails(pic).buffer;
+  assert.ok(out.equals(pic), 'a picture that doesn\'t walk cleanly must be kept whole');
+});
+
+test('a WebP with extra bytes after it is cleaned and loses them, not refused', () => {
+  const out = removePhotoDetails(b(riff(vp8x(0x08), VP8, riffChunk('EXIF', Buffer.from('GPS'))), [0, 0, 0, 0])).buffer;
+  assert.ok(out, 'refused');
+  assert.ok(out.equals(riff(vp8x(0), VP8)));
+});
+
+test('a PNG that ends without IEND, but whose chunks are whole, is cleaned, not refused', () => {
+  const noEnd = b(PNG_SIG, IHDR, chunk('tEXt', b('Location\0', 'Bolton')), IDAT);
+  const out = removePhotoDetails(noEnd).buffer;
+  assert.ok(out, 'refused');
+  assert.ok(out.equals(b(PNG_SIG, IHDR, IDAT)));
+});
+
+test('a PNG keeps which way up it goes, in an Exif chunk holding only that', () => {
+  const out = removePhotoDetails(png()).buffer;
+  const ex = out.indexOf(Buffer.from('eXIf', 'latin1'));
+  assert.ok(ex > 0, 'the orientation was lost');
+  const data = out.subarray(ex + 4, ex + 4 + out.readUInt32BE(ex - 4));
+  assert.ok(!has(data, 'TESTMAKE') && !has(data, '2026:09:01'));
+  assert.ok(out.equals(b(PNG_SIG, IHDR, PNG_COLOUR, out.subarray(ex - 4, ex + 8 + data.length), IDAT, IEND)), 'the Exif chunk must sit before the picture data');
+  assert.equal(out.readUInt32BE(ex + 4 + data.length), zlib.crc32(b('eXIf', data)), 'bad CRC');
+  assert.equal(data.readUInt16LE(8 + 2 + 8), 6);
 });

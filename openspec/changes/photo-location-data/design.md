@@ -30,8 +30,10 @@ already saved (see the proposal).
    block) and its colour profile (JPEG's ICC segment). For a JPEG the Exif
    block is replaced by a new one holding only the Orientation, when there
    was one. PNG and WebP keep their colour chunks (`iCCP`, `sRGB`, `gAMA`,
-   `cHRM`; WebP's `ICCP`) and lose `eXIf`, the text chunks and WebP's `EXIF`
-   and `XMP ` chunks.
+   `cHRM`; WebP's `ICCP`) and lose their text chunks and WebP's `EXIF` and
+   `XMP ` chunks; a PNG's `eXIf` is replaced by one holding only the
+   Orientation, as for a JPEG. (Browsers don't turn a WebP by its Exif, so a
+   WebP's goes entirely.)
 3. **Rewrite the file's wrapper, never the picture.** Each format is a list of
    blocks; the module copies the blocks it keeps byte for byte and leaves out
    the rest, so the picture is never decoded or recompressed. *Alternative:* a
@@ -47,7 +49,9 @@ already saved (see the proposal).
    module finds the JPEG's end marker by stepping over each scan and the
    tables between scans, never by searching, and keeps nothing after it. A
    PNG keeps nothing after its IEND chunk. A JPEG cut short inside its picture
-   data is kept as far as it goes.
+   data is kept as far as it goes, and one that doesn't step cleanly from
+   marker to marker is kept whole rather than cut at a guess. A WebP keeps
+   nothing past its RIFF size; a PNG with whole chunks but no IEND is kept.
 6. **A picture it can't make sense of is refused, not saved with its details.**
    A JPEG, PNG or WebP whose blocks don't add up (cut short, a length running
    past the end) can't be safely cleaned. A booking photo then gets the

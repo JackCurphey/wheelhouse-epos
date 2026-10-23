@@ -9,9 +9,17 @@
 // removePhotoDetails(buffer) returns { buffer } with the cleaned bytes (the
 // same bytes for a file that isn't a JPEG, PNG or WebP), or { error } for a
 // picture whose blocks don't add up, which can't be cleaned safely.
-import { sniffImage } from './booking-photos.js';
+import zlib from 'node:zlib';
 
 const DAMAGED = { error: 'damaged' };
+
+// The picture a file is, by its first bytes (not what it says it is), or null.
+export function sniffImage(b) {
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { contentType: 'image/jpeg', extension: 'jpg' };
+  if (b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return { contentType: 'image/png', extension: 'png' };
+  if (b.length >= 12 && b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return { contentType: 'image/webp', extension: 'webp' };
+  return null;
+}
 
 export function removePhotoDetails(buffer) {
   const kind = sniffImage(buffer);
@@ -83,11 +91,18 @@ function cleanJpeg(buf) {
 // Where the picture ends: just after its EOI marker, found by stepping over
 // each scan's data and the tables between scans (a progressive JPEG has
 // several), never by searching, since a table can hold any bytes. A picture
-// cut short inside its data is kept as far as it goes.
+// cut short inside its data is kept as far as it goes, and one that doesn't
+// step cleanly (no marker where one should be) is kept whole rather than
+// guessed at.
 function endOfPicture(buf, start) {
   let pos = start;
   for (;;) {
-    if (pos + 1 >= buf.length) return buf.length;
+    if (pos + 1 >= buf.length || buf[pos] !== 0xff) return buf.length;
+    // Fill bytes: any number of 0xFF before a marker.
+    while (buf[pos + 1] === 0xff) {
+      pos += 1;
+      if (pos + 1 >= buf.length) return buf.length;
+    }
     const marker = buf[pos + 1];
     if (marker === 0xd9) return pos + 2;
     if (pos + 4 > buf.length) return buf.length;
@@ -130,8 +145,8 @@ function readOrientation(tiff) {
   return null;
 }
 
-// An APP1 Exif block with one entry: Orientation.
-function orientationSegment(orientation) {
+// A TIFF block with one entry: Orientation.
+function orientationTiff(orientation) {
   const tiff = Buffer.alloc(26);
   tiff.write('II', 0, 'latin1');
   tiff.writeUInt16LE(42, 2);
@@ -142,52 +157,75 @@ function orientationSegment(orientation) {
   tiff.writeUInt32LE(1, 14);
   tiff.writeUInt16LE(orientation, 18);
   tiff.writeUInt32LE(0, 22);
-  const payload = Buffer.concat([EXIF_ID, tiff]);
+  return tiff;
+}
+
+// An APP1 Exif block with one entry: Orientation.
+function orientationSegment(orientation) {
+  const payload = Buffer.concat([EXIF_ID, orientationTiff(orientation)]);
   const head = Buffer.from([0xff, 0xe1, 0, 0]);
   head.writeUInt16BE(payload.length + 2, 2);
   return Buffer.concat([head, payload]);
 }
 
 // ---------- PNG ----------
-// Chunks are copied whole (length, type, data, CRC), except Exif and the text
-// chunks, which can hold anything (XMP among them). The file must end with
-// IEND; anything after it goes.
-const PNG_DROP = new Set(['eXIf', 'tEXt', 'zTXt', 'iTXt']);
+// Chunks are copied whole (length, type, data, CRC), except the text chunks,
+// which can hold anything (XMP among them), and Exif, which is replaced by
+// one holding only the Orientation when the photo is turned. The file ends
+// at IEND (anything after it goes), or at its last whole chunk.
+const PNG_TEXT = new Set(['tEXt', 'zTXt', 'iTXt']);
 
 function cleanPng(buf) {
   const kept = [buf.subarray(0, 8)];
   let i = 8;
-  for (;;) {
+  while (i < buf.length) {
     if (i + 12 > buf.length) return DAMAGED;
     const length = buf.readUInt32BE(i);
     const end = i + 12 + length;
     if (end > buf.length) return DAMAGED;
     const type = buf.toString('latin1', i + 4, i + 8);
-    if (!PNG_DROP.has(type)) kept.push(buf.subarray(i, end));
+    if (type === 'eXIf') {
+      const orientation = readOrientation(buf.subarray(i + 8, i + 8 + length));
+      if (orientation && orientation !== 1) kept.push(pngChunk('eXIf', orientationTiff(orientation)));
+    } else if (!PNG_TEXT.has(type)) {
+      kept.push(buf.subarray(i, end));
+    }
     i = end;
     if (type === 'IEND') break;
   }
+  // A PNG starts with its header chunk; without it there's no picture.
+  if (kept.length < 2 || kept[1].toString('latin1', 4, 8) !== 'IHDR') return DAMAGED;
   return { buffer: Buffer.concat(kept) };
+}
+
+function pngChunk(type, data) {
+  const head = Buffer.alloc(8);
+  head.writeUInt32BE(data.length, 0);
+  head.write(type, 4, 'latin1');
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(zlib.crc32(Buffer.concat([head.subarray(4), data])), 0);
+  return Buffer.concat([head, data, crc]);
 }
 
 // ---------- WebP ----------
 // A RIFF file of chunks. EXIF and XMP chunks go, their flags in VP8X are
 // cleared, and the RIFF size is set for what's left. A chunk of odd length has
-// one padding byte after it.
+// one padding byte after it. Anything after the RIFF's own size goes.
 const VP8X_EXIF = 0x08;
 const VP8X_XMP = 0x04;
 
 function cleanWebp(buf) {
   const size = buf.readUInt32LE(4);
-  if (size + 8 !== buf.length || size < 4) return DAMAGED;
+  if (size + 8 > buf.length || size < 4) return DAMAGED;
+  const fileEnd = size + 8;
   const kept = [];
   let i = 12;
-  while (i < buf.length) {
-    if (i + 8 > buf.length) return DAMAGED;
+  while (i < fileEnd) {
+    if (i + 8 > fileEnd) return DAMAGED;
     const type = buf.toString('latin1', i, i + 4);
     const length = buf.readUInt32LE(i + 4);
     const end = i + 8 + length + (length % 2);
-    if (end > buf.length) return DAMAGED;
+    if (end > fileEnd) return DAMAGED;
     if (type === 'VP8X') {
       if (length < 10) return DAMAGED;
       const chunk = Buffer.from(buf.subarray(i, end));
