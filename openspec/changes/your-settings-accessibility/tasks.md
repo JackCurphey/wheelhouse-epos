@@ -10,4 +10,4 @@
 
 - [x] 2.1 Tests first (`tests/screens/your-settings.test.js`): your name opens Your settings as drawn; Reduce motion switches, saved at once, and the page's class follows; Close goes back. Watch each fail
 - [x] 2.2 Build `src/screens/your-settings/`, the classes on `<html>`, the CSS, and `prefersReducedMotion()`. Verify 2.1; a browser test at phone and computer widths (it fits a phone)
-- [ ] 2.3 Log what's decided while building; `/review`; lint, tests; archive as the last commit
+- [x] 2.3 Log what's decided while building; `/review`; lint, tests; archive as the last commit
