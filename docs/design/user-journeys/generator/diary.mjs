@@ -2736,6 +2736,71 @@ export const quoteJobBoards = (stage = 'build') => {
   });
 };
 
+// ---------- "Use my phone" for a line's photo, for Jack to approve ----------
+// Walk-through 8, decision 6 (docs/decisions/2026-10-03-ux-walkthrough-8.md):
+// on a desktop, a quote line's Add photo offers "Choose a file" and "Use my
+// phone"; Use my phone shows a code to scan that opens that one line's photo
+// step on the phone, with no sign-in. Drawn 23 Oct on the quote being built
+// (dq-job-quote), before the pads' photo was added: Add photo for Shimano
+// brake pads, which then reads "1 photo" as dq-job-quote draws it. Staff
+// side at desktop only (tablet and phone go straight to the camera or file
+// picker, as today); the page the code opens at phone size only.
+const LINES_PHOTO_NONE = LINES_QUOTE_BUILD.map((l) => (l.work === WORK_LINE_PADS.work ? { ...l, photos: 0 } : l));
+const photoJobDesktop = (lines) => buildJobPageDesktop({
+  status: 'Quoting', tone: 'purple',
+  customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: 0, notedCount: 0,
+  leftStatus: 'Quoting', bikeHere: true,
+  lines, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: true,
+  totalBadge: badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
+  footer: button('Send quote', { variant: 'primary', block: true }),
+});
+// The code: a placeholder box, as the drawings' other unknowns.
+const QR_BOX = `<div role="img" aria-label="A code to scan with your phone’s camera" style="align-self: center; width: 208px; height: 208px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 2px dashed ${C.input}; background: ${C.mutedBg}; font-family: ${MONO}; font-size: 15px; color: ${C.muted}">[QR code]</div>`;
+const PHOTO_PHONE_TITLE = 'Add a photo from your phone';
+const PHOTO_PHONE_SUB = 'Shimano brake pads · WH-1042';
+function photoPhoneDialog(added) {
+  // Done goes back to the job page, the pads now with their photo; Cancel and
+  // Close while waiting go back to the page the choice was made on.
+  const head = dialogHeader(PHOTO_PHONE_TITLE, added ? 'dq-job-quote-desktop.dc.html' : '#', PHOTO_PHONE_SUB, 'photo-phone-title');
+  const body = added
+    ? `<div role="status" style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 20)}Photo added</div>
+<div style="align-self: center; width: 208px; height: 156px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; font-size: 13px; color: ${C.muted}; text-align: center">[Photo from your phone]</div>
+${note('It’s on Shimano brake pads now, and the code no longer works.', 14)}`
+    : `${txt('Scan this code with your phone’s camera. It opens the photo step for Shimano brake pads on WH-1042.', 15)}
+${QR_BOX}
+${note('Works for 15 minutes, for this photo only. No sign-in needed.', 14)}
+<div role="status" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: ${C.muted}">${icon('phone', 16)}Waiting for the photo…</div>
+${note(`No camera app? Open ${mono('[link]')} on your phone.`, 13)}`;
+  const foot = added
+    ? button('Done', { variant: 'primary', href: 'dq-job-quote-desktop.dc.html' })
+    : button('Cancel', { variant: 'default' });
+  return `${head}${dialogBody(body, 20, 14)}<div style="flex-shrink: 0; padding: 14px 20px; border-top: 1px solid ${C.border}; display: flex; justify-content: flex-end">${foot}</div>`;
+}
+screens['job-photo-choice'] = { desktop: photoJobDesktop(LINES_PHOTO_NONE.map((l) => (l.work === WORK_LINE_PADS.work ? { ...l, photoMenu: 'job-photo-phone-desktop.dc.html' } : l))) };
+screens['job-photo-phone'] = { desktop: dialogOverlay(photoJobDesktop(LINES_PHOTO_NONE), DW, DH, photoPhoneDialog(false), { maxWidth: 460, labelledby: 'photo-phone-title' }) };
+// The same pop-up once the photo arrives, by itself (every device updating,
+// walk-through 8 decision 2); behind it the line already reads "1 photo".
+screens['job-photo-phone-added'] = { desktop: dialogOverlay(photoJobDesktop(LINES_QUOTE_BUILD), DW, DH, photoPhoneDialog(true), { maxWidth: 460, labelledby: 'photo-phone-title' }) };
+
+// The page the code opens, on the mechanic's phone: no sign-in, so nothing
+// about the customer beyond the job number, the bike and the line (no name,
+// no phone number). Laid out as Wheelhouse's own full-page messages on a
+// phone (signin.mjs centred()), with the shop's name at the top and no logo.
+const photoStepPage = (inner) => `<div style="position: relative; width: ${PW}px; height: ${PH}px; box-sizing: border-box; padding: 28px 20px; display: flex; flex-direction: column; gap: 28px; background: ${C.panel}; overflow: hidden">
+<div style="font-size: 18px; font-weight: 700">${SHOP}</div>
+<main style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; gap: 18px">${inner}</main>
+</div>`;
+const roundIcon = (name, bg, ink) => `<span style="display: inline-flex; width: 48px; height: 48px; border-radius: 999px; align-items: center; justify-content: center; background: ${bg}; color: ${ink}">${icon(name, 24)}</span>`;
+const PHOTO_STEP_LINE = `<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 600">${mono('WH-1042')} · Trek Domane AL 3</span><span style="font-size: 14px; color: ${C.muted}">Rear pads worn — replacing</span></div>`;
+screens['phone-photo-ready'] = { phone: photoStepPage(`${h1('Add a photo for Shimano brake pads', 24)}${PHOTO_STEP_LINE}
+<div style="flex-grow: 1"></div>
+<div style="display: flex; flex-direction: column; gap: 10px">${button('Take a photo', { variant: 'primary', block: true, iconName: 'camera', href: 'phone-photo-check-phone.dc.html' })}${button('Choose from your photos', { variant: 'default', block: true })}</div>`) };
+screens['phone-photo-check'] = { phone: photoStepPage(`${h1('Check the photo', 24)}${p('For Shimano brake pads on WH-1042.')}
+<div role="img" aria-label="The photo you just took" style="flex-grow: 1; min-height: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; font-size: 14px; color: ${C.muted}; text-align: center">[The photo you just took]</div>
+<div style="display: flex; flex-direction: column; gap: 10px">${button('Use this photo', { variant: 'primary', block: true, href: 'phone-photo-done-phone.dc.html' })}${button('Take another', { variant: 'default', block: true })}</div>`) };
+screens['phone-photo-done'] = { phone: photoStepPage(`${roundIcon('check', C.okBg, C.successInk)}<div role="status" style="display: flex; flex-direction: column; gap: 10px">${h1('Photo added to WH-1042', 24)}${p('It’s on the computer now, under Shimano brake pads. You can close this page.')}</div>`) };
+screens['phone-photo-expired'] = { phone: photoStepPage(`${roundIcon('alert', C.warnBg, C.warnInk)}${h1('This code has expired or has already been used', 24)}${p('Make a new one on the computer.')}`) };
+
 
 // 12. job-mechanic — "Job · in the workshop (mechanic)"; the worked example
 // (decision 40's base board, job-final-2 itself) — close → diary-mechanic;
@@ -3068,7 +3133,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -3087,7 +3152,7 @@ export const ROWS = [
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
-  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
+  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired'] }, // Use my phone (walk-through 8, decision 6) appended, so no board moves
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },
 ];

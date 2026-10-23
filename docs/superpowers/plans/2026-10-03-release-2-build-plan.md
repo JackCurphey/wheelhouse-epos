@@ -571,13 +571,15 @@ later packages.
   page; request pop-up (mechanic pills, offer another time, decline with a
   message); new job extras; storage slots; bike tag at book-in; full service
   checklist, with each shop's own checklists in Settings (Jack, 22 Oct); done ticks and notes per line; diary settings; "I'll do this";
-  "Who did what"; mechanic sign-off (Q3); "Use my phone" photo.
+  "Who did what"; mechanic sign-off (Q3); "Use my phone" photo (drawn 23 Oct
+  for Jack's approval: the choice, the code to scan, and the phone's photo
+  step with no sign-in).
 
 <!-- screens 4.1 -->
 *Building blocks built here:* 15 The job page, reused as it is; 23 Diary; 25 Quick-look box.
-*Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 7 Step-by-step checklist (WP-3.4); 9 Form box (WP-1.3).
+*Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 7 Step-by-step checklist (WP-3.4); 9 Form box (WP-1.3); 40 Message or outcome page (WP-1.7).
 
-*Screens it builds (11) and the situations it covers:*
+*Screens it builds (13) and the situations it covers:*
 
 - **`set-workshop-diary`** (block 1, Settings page) — 1 situation: `diary-settings`.
 - **`set-workshop-checklists`** (block 1, Settings page) — 1 situation: `set-workshop-checklists-empty`. The shop's own checklists and the services that have each, with a full service template (Jack, 22 Oct, decision file 2026-10-22-service-checklists).
@@ -587,8 +589,10 @@ later packages.
 - **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
 - **`request-new`** (block 9, Form box) — 6 of its 7 situations here: `request-decline`, `request-offer`, `request-offered`, `request-offered-decline`, `request-change`, `request-cancel`.
 - **`new-job`** (block 9, Form box) — 2 of its 3 situations here: `new-job-day`, `new-job-entered`; plus 1 written line.
-- **`job-overview`** (block 15, The job page, reused as it is) — 13 of its 24 situations here: `job-book-in`, `job-book-in-print`, `job-bike-tag`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 10 of its 11 written lines.
+- **`job-overview`** (block 15, The job page, reused as it is) — 14 of its 25 situations here: `job-book-in`, `job-book-in-print`, `job-bike-tag`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `job-photo-choice`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 9 of its 11 written lines.
 - **`job-checklist`** (block 7, Step-by-step checklist) — no other situations.
+- **`job-photo-phone`** (block 9, Form box) — 1 situation: `job-photo-phone-added`. "Use my phone": a code to scan that opens one line's photo step on the phone (walk-through 8, decision 6).
+- **`phone-photo-ready`** (block 40, Message or outcome page) — 3 situations: `phone-photo-check`, `phone-photo-done`, `phone-photo-expired`. The page the code opens on the phone, no sign-in; no customer name or number on it.
 - **`overview`** (block 3, Table with search and filters) — 1 situation: `rs-overview-arrived`.
 <!-- /screens -->
 
