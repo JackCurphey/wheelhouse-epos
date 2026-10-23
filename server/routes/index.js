@@ -20,6 +20,12 @@ import * as customers from './customers.js';
 import * as salesRoutes from './sales.js';
 import * as dashboard from './dashboard.js';
 import * as today from './today.js';
+<<<<<<< HEAD
 import * as receiptEmail from './receipt-email.js';
 
 export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, receiptEmail];
+=======
+import * as yourSettings from './your-settings.js';
+
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings];
+>>>>>>> origin/main

@@ -291,3 +291,12 @@
   #wh-print { display: block; }
   @page { margin: 4mm; }
 }
+
+/* Your settings › Accessibility (workshop day 57; openspec/changes/your-settings-accessibility).
+   Reduce motion: as the computer's own setting does. */
+html.wh-reduce-motion *, html.wh-reduce-motion *::before, html.wh-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

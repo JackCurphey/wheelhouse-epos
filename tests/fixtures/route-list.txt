@@ -195,4 +195,9 @@ GET /api/workshop-jobs/:id/notes
 POST /api/workshop-jobs/:id/notes
 GET /api/needs-attention
 POST /api/workshop-jobs/:id/contacted
+<<<<<<< HEAD
 POST /api/sales/:id/email-receipt
+=======
+GET /api/your-settings
+PUT /api/your-settings
+>>>>>>> origin/main
