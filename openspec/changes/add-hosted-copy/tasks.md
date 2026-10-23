@@ -56,7 +56,7 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
   Verify that a merge deploys and `/healthz` shows its commit, and that a branch push or pull request deploys nothing
 
-  Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Not ticked: the two checks above need it merged and set up on the real copy first
+  Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. Not ticked until the other check is seen: a branch push or pull request deploys nothing
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
 - [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
