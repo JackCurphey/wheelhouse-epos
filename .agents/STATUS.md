@@ -7,10 +7,12 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** next, in his order (23 Oct): draw "I'll do this" and "Who did
-  what" (WP-4.1) for his approval, then the rest of quotes: the pinned bar
+- **Jack:** next, in his order (23 Oct): the rest of quotes: the pinned bar
   on a phone, "Use my phone" for line photos, removing location data from
-  photos. "No answer yet" on Today waits for Today (WP-1.10). The
+  photos. "I'll do this" and "Who did what" (WP-4.1) wait for who's at the
+  device (WP-1.7), the activity record (WP-1.2) and every device updating
+  (WP-1.9) (Jack, 22 Oct, `docs/decisions/2026-10-22-ill-do-this-waits.md`).
+  "No answer yet" on Today waits for Today (WP-1.10). The
   checklist's per-line Done ticks wait for Mark's sales in pence (#404),
   which rewrites the same order lines. The repository stays public until
   money comes in (Jack, 23 Oct): private would end free CI, about 20,000
