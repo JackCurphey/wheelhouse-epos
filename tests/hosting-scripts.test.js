@@ -13,13 +13,13 @@ const DIR = path.join(ROOT, 'scripts', 'hosting');
 const read = (f) => readFileSync(path.join(DIR, f), 'utf8');
 
 test('the setup files exist', () => {
-  for (const f of ['setup.sh', 'remote-install.sh', 'cloud-init.yaml', 'compose.yml', 'Caddyfile']) {
+  for (const f of ['setup.sh', 'remote-install.sh', 'deploy.sh', 'cloud-init.yaml', 'compose.yml', 'Caddyfile']) {
     assert.ok(existsSync(path.join(DIR, f)), `scripts/hosting/${f} is missing`);
   }
 });
 
 test('the shell scripts are valid bash and stop on the first error', () => {
-  for (const f of ['setup.sh', 'remote-install.sh']) {
+  for (const f of ['setup.sh', 'remote-install.sh', 'deploy.sh']) {
     const check = spawnSync('bash', ['-n', path.join(DIR, f)], { encoding: 'utf8' });
     assert.equal(check.status, 0, `${f}: ${check.stderr}`);
     assert.match(read(f), /^set -euo pipefail$/m, `${f} must stop on the first error`);
@@ -97,6 +97,7 @@ process.exit(0);
   tool('ssh', `#!/usr/bin/env bash
 last="\${@: -1}"
 if [ "$last" = "bash -s" ]; then cat > "${caught}/remote-input"; exit 0; fi
+case "$last" in *ssh_host_ed25519_key.pub*) echo "ssh-ed25519 THE-HOST-KEY root@wheelhouse-test" ;; esac
 case "$last" in *SIGNUP_CODE*) echo test-code ;; esac
 exit 0
 `);
@@ -108,18 +109,156 @@ exit 0
 case " $* " in *" -l "*) echo "256 MD5:aa:bb test (ED25519)" ;; esac
 exit 0
 `);
+  // gh writes down what it was asked, and what it was given on stdin.
+  tool('gh', `#!/usr/bin/env bash
+case "$1 $2" in
+  "auth status") exit 0 ;;
+  "secret set") echo "$*" >> "${caught}/gh-calls"; cat > "${caught}/gh-secret-$3" ;;
+  "variable set") echo "$*" >> "${caught}/gh-calls" ;;
+esac
+exit 0
+`);
   writeFileSync(path.join(dir, 'id_ed25519.pub'), 'ssh-ed25519 AAAA test\n');
+  writeFileSync(path.join(dir, 'deploy-key'), 'THE-PRIVATE-DEPLOY-KEY\n');
+  writeFileSync(path.join(dir, 'deploy-key.pub'), 'ssh-ed25519 DEPLOYPUB wheelhouse-deploy\n');
 
   const run = spawnSync('bash', [path.join(DIR, 'setup.sh')], {
     input: 'yes\n', encoding: 'utf8',
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SSH_KEY_FILE: path.join(dir, 'id_ed25519') },
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SSH_KEY_FILE: path.join(dir, 'id_ed25519'), DEPLOY_KEY_FILE: path.join(dir, 'deploy-key') },
   });
   assert.equal(run.status, 0, `setup.sh stopped:\n${run.stdout}\n${run.stderr}`);
   const sent = readFileSync(path.join(caught, 'remote-input'), 'utf8');
   assert.match(sent, /DB_ADMIN_PASSWORD=admin-secret /);
   assert.match(sent, /APP_DB_PASSWORD=app-secret /);
   assert.match(sent, /DB_HOST=db\.example\.test DB_PORT=25060 /);
-  const ca = readdirSync(caught).find((f) => f.startsWith('scp-tmp') || (f.startsWith('scp-') && !f.endsWith('.yml') && f !== 'scp-Caddyfile'));
+  const ca = readdirSync(caught).find((f) => f.startsWith('scp-tmp') || (f.startsWith('scp-') && !f.endsWith('.yml') && f !== 'scp-Caddyfile' && f !== 'scp-deploy.sh'));
   assert.ok(ca, 'the certificate was not copied to the server');
   assert.equal(readFileSync(path.join(caught, ca), 'utf8'), 'THE-CA');
 });
+
+// Task 3.4: setup.sh also sets up automatic updates. Run end to end against
+// the same pretend tools as above, it must put deploy.sh on the server, give
+// the server the deploy key's public half, and give GitHub the private half,
+// the address and the host key the server itself reported.
+test('setup.sh sets up automatic updates: deploy.sh and the deploy key on the server, the rest on GitHub', async (t) => {
+  const { mkdtempSync, writeFileSync, chmodSync, rmSync, mkdirSync } = await import('node:fs');
+  const os = await import('node:os');
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'setup-deploy-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const bin = path.join(dir, 'bin');
+  const caught = path.join(dir, 'caught');
+  mkdirSync(bin); mkdirSync(caught);
+  const tool = (name, body) => { writeFileSync(path.join(bin, name), body); chmodSync(path.join(bin, name), 0o755); };
+  tool('doctl', `#!/usr/bin/env node
+const a = process.argv.slice(2);
+const json = a.includes('-o') && a[a.indexOf('-o') + 1] === 'json';
+const out = (text, obj) => { process.stdout.write(json ? JSON.stringify(obj) : text + '\\n'); process.exit(0); };
+const cmd = a.filter((x) => !x.startsWith('-')).slice(0, 3).join(' ');
+if (cmd.startsWith('account get')) out('jack@example.test', [{ email: 'jack@example.test' }]);
+if (cmd.startsWith('compute ssh-key list')) out('aa:bb', []);
+if (cmd.startsWith('compute droplet list')) out('123 wheelhouse-test', []);
+if (cmd.startsWith('compute droplet get')) out('203.0.113.5', []);
+if (cmd.startsWith('compute firewall list')) out('wheelhouse-test', []);
+if (cmd.startsWith('databases list')) out('', [{ id: 'db-1', name: 'wheelhouse-test-db' }]);
+if (cmd.startsWith('databases db list')) out('', [{ name: 'epos' }]);
+if (cmd.startsWith('databases user list')) out('', [{ name: 'epos_app' }]);
+if (cmd.startsWith('databases firewalls list')) out('', [{ value: '123' }]);
+if (cmd.startsWith('databases connection')) out('', [{ host: 'db.example.test', port: 25060, password: 'admin-secret' }]);
+if (cmd.startsWith('databases user get')) out('', [{ password: 'app-secret' }]);
+if (cmd.startsWith('databases get-ca')) out('', [{ certificate: Buffer.from('THE-CA').toString('base64') }]);
+process.exit(0);
+`);
+  tool('ssh', `#!/usr/bin/env bash
+last="\${@: -1}"
+if [ "$last" = "bash -s" ]; then cat > "${caught}/remote-input"; exit 0; fi
+case "$last" in *ssh_host_ed25519_key.pub*) echo "ssh-ed25519 THE-HOST-KEY root@wheelhouse-test" ;; *SIGNUP_CODE*) echo test-code ;; esac
+exit 0
+`);
+  tool('scp', `#!/usr/bin/env bash
+for f in "$@"; do [ -f "$f" ] && cp "$f" "${caught}/scp-$(basename "$f")"; done
+exit 0
+`);
+  tool('ssh-keygen', `#!/usr/bin/env bash
+case " $* " in *" -l "*) echo "256 MD5:aa:bb test (ED25519)" ;; esac
+exit 0
+`);
+  tool('gh', `#!/usr/bin/env bash
+case "$1 $2" in
+  "auth status") exit 0 ;;
+  "secret set") echo "$*" >> "${caught}/gh-calls"; cat > "${caught}/gh-secret-$3" ;;
+  "variable set") echo "$*" >> "${caught}/gh-calls" ;;
+esac
+exit 0
+`);
+  writeFileSync(path.join(dir, 'id_ed25519.pub'), 'ssh-ed25519 AAAA test\n');
+  writeFileSync(path.join(dir, 'deploy-key'), 'THE-PRIVATE-DEPLOY-KEY\n');
+  writeFileSync(path.join(dir, 'deploy-key.pub'), 'ssh-ed25519 DEPLOYPUB wheelhouse-deploy\n');
+
+  const run = spawnSync('bash', [path.join(DIR, 'setup.sh')], {
+    input: 'yes\n', encoding: 'utf8',
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SSH_KEY_FILE: path.join(dir, 'id_ed25519'), DEPLOY_KEY_FILE: path.join(dir, 'deploy-key') },
+  });
+  assert.equal(run.status, 0, `setup.sh stopped:\n${run.stdout}\n${run.stderr}`);
+  assert.ok(existsSync(path.join(caught, 'scp-deploy.sh')), 'deploy.sh was not copied to the server');
+  assert.match(readFileSync(path.join(caught, 'remote-input'), 'utf8'), /DEPLOY_PUBLIC_KEY=ssh-ed25519\\ DEPLOYPUB\\ wheelhouse-deploy/);
+  assert.equal(readFileSync(path.join(caught, 'gh-secret-HOSTED_COPY_SSH_KEY'), 'utf8'), 'THE-PRIVATE-DEPLOY-KEY\n');
+  const calls = readFileSync(path.join(caught, 'gh-calls'), 'utf8');
+  assert.match(calls, /variable set HOSTED_COPY_HOST --body 203\.0\.113\.5/);
+  assert.match(calls, /variable set HOSTED_COPY_URL --body https:\/\/203-0-113-5\.sslip\.io/);
+  assert.match(calls, /variable set HOSTED_COPY_KNOWN_HOSTS --body 203\.0\.113\.5 ssh-ed25519 THE-HOST-KEY/);
+  assert.match(calls, /--repo JackCurphey\/wheelhouse-epos/);
+});
+
+// The server half of the above, run against pretend tools in a scratch
+// folder: the settings name the image and commit running, and the deploy key
+// may run deploy.sh and nothing else.
+test('remote-install.sh records the commit it built, and ties the deploy key to deploy.sh only', async (t) => {
+  const { mkdtempSync, writeFileSync, chmodSync, rmSync, mkdirSync } = await import('node:fs');
+  const os = await import('node:os');
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'remote-install-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const bin = path.join(dir, 'bin');
+  const opt = path.join(dir, 'opt');
+  mkdirSync(bin); mkdirSync(opt); mkdirSync(path.join(opt, 'app', '.git'), { recursive: true });
+  const tool = (name, body) => { writeFileSync(path.join(bin, name), body); chmodSync(path.join(bin, name), 0o755); };
+  tool('cloud-init', '#!/usr/bin/env bash\nexit 0\n');
+  tool('psql', '#!/usr/bin/env bash\ncase "$*" in *has_schema_privilege*) echo t ;; esac\nexit 0\n');
+  tool('git', `#!/usr/bin/env bash\ncase "$*" in *"rev-parse HEAD"*) echo ${'c'.repeat(40)} ;; esac\nexit 0\n`);
+  tool('docker', '#!/usr/bin/env bash\nexit 0\n');
+  tool('curl', '#!/usr/bin/env bash\nexit 0\n');
+  const keys = path.join(dir, 'authorized_keys');
+  writeFileSync(keys, 'ssh-ed25519 JACKS-OWN jack@mac\nrestrict,command="/opt/wheelhouse/deploy.sh" ssh-ed25519 OLDDEPLOY wheelhouse-deploy\n');
+  writeFileSync(path.join(opt, '.env'), 'SIGNUP_CODE=keep-me\nSHOPIFY_TOKEN_ENCRYPTION_KEY=keep-this-too\n');
+  const vars = "export DB_HOST=db.example.test DB_PORT=25060 DB_ADMIN_PASSWORD=x APP_DB_PASSWORD=y SITE_ADDRESS=203-0-113-5.sslip.io DEPLOY_PUBLIC_KEY='ssh-ed25519 NEWDEPLOY wheelhouse-deploy'\n";
+  const install = () => spawnSync('bash', ['-s'], {
+    input: vars + read('remote-install.sh'), encoding: 'utf8',
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, WHEELHOUSE_DIR: opt, AUTHORIZED_KEYS: keys },
+  });
+  for (let i = 0; i < 2; i++) {
+    const run = install();
+    assert.equal(run.status, 0, `remote-install.sh stopped:\n${run.stdout}\n${run.stderr}`);
+  }
+  const env = readFileSync(path.join(opt, '.env'), 'utf8');
+  assert.match(env, /^WHEELHOUSE_IMAGE=wheelhouse-app:current$/m);
+  assert.match(env, new RegExp(`^WHEELHOUSE_COMMIT=${'c'.repeat(40)}$`, 'm'));
+  assert.match(env, /^SIGNUP_CODE=keep-me$/m);
+  assert.equal(readFileSync(keys, 'utf8'),
+    'ssh-ed25519 JACKS-OWN jack@mac\nrestrict,command="/opt/wheelhouse/deploy.sh" ssh-ed25519 NEWDEPLOY wheelhouse-deploy\n',
+    'the deploy key must replace the old one, once, and leave the other keys alone');
+  // A key with options or a second line tucked in would get more than deploy.sh.
+  for (const bad of ['command="bash" ssh-ed25519 AAAA x', 'ssh-ed25519 AAAA x\nssh-ed25519 BBBB evil', 'ssh-rsa AAAA x']) {
+    const run = spawnSync('bash', ['-s'], {
+      input: vars.replace(/DEPLOY_PUBLIC_KEY='[^']*'/, `DEPLOY_PUBLIC_KEY=${JSON.stringify(bad)}`) + read('remote-install.sh'), encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, WHEELHOUSE_DIR: opt, AUTHORIZED_KEYS: keys },
+    });
+    assert.notEqual(run.status, 0, `accepted ${JSON.stringify(bad)}`);
+    assert.doesNotMatch(readFileSync(keys, 'utf8'), /evil|command="bash"|ssh-rsa/);
+  }
+});
+
+test('compose.yml starts the image the settings name, or the one built on the server', () => {
+  const compose = read('compose.yml');
+  const app = compose.slice(compose.indexOf('\n  app:'), compose.indexOf('\n  caddy:'));
+  assert.match(app, /\n    image: \$\{WHEELHOUSE_IMAGE:-wheelhouse-app:current\}\n/);
+});
+

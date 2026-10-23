@@ -1533,3 +1533,28 @@ The drawings show where slots appear but not these rules. *Decided:*
    quote was sent, and only while it waits: answering, withdrawing or a new
    quote ends it. The same rule as the customer's "we sent a reminder"
    (quote-reminder).
+
+### 23 Oct 2026: automatic updates of the hosted copy (`openspec/changes/add-hosted-copy` task 3.4, Mark's design Decision 3)
+
+1. **The health check gets 5 minutes** to show the new commit before the
+   update counts as failed and the version before is started again (the
+   design's `[n]`). Starting the app and running a migration take well under
+   that on the test copy; task 3.5 measures the real time.
+2. **The deploy key can only run the update script.** Root's
+   `authorized_keys` ties it to `/opt/wheelhouse/deploy.sh` with
+   `restrict,command=…`, so it can't open a shell, and the script accepts
+   only `deploy <full commit>` or `rollback` and starts only this
+   repository's images. The design says the key "is used for nothing else";
+   this makes the server enforce it.
+3. **The setup script hands GitHub its settings** (with `gh`): the deploy
+   key as a secret, and the server's address, web address and host key as
+   repository variables, so Jack doesn't copy keys by hand. The host key is
+   read from the server over the setup script's own login.
+4. **The version before is put back only when the new one went on.** A
+   failed download changes nothing on the server, so the workflow doesn't
+   roll back after it (it would replace a working version with an older
+   one). A new version that won't start is swapped back by the script
+   itself.
+5. **The first automatic update fails once, by design**, until Jack has run
+   the setup script and made the package public: the package only exists
+   after the first push. The runbook's "Automatic updates" says so.
