@@ -48,7 +48,7 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   - the app started from `main`, built on the server, behind Caddy.
 
   Verify point-in-time restore is available on the cluster, that migrations and row-level security work under the app's login, and that `/healthz` answers `ok` over HTTPS. Record the database address and port used, and why, in `docs/runbooks/hosted-copy.md`
-- [ ] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
+- [x] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
   - it starts on `workflow_run` and only deploys when `Tests` succeeded on a `push` to this repository's `main`;
   - it builds the image, pushes it to GitHub's container registry (package public) tagged with `head_sha`, and starts it on the server over SSH with a deploy-only key checked against a stored `known_hosts` entry, in one concurrency group, skipping an older commit;
   - it records the time before each deploy;
@@ -56,7 +56,7 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
   Verify that a merge deploys and `/healthz` shows its commit, and that a branch push or pull request deploys nothing
 
-  Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. Not ticked until the other check is seen: a branch push or pull request deploys nothing
+  Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. and #428's pull request deployed nothing (its run skipped, no steps ran, the copy stayed on `f2b70dc`)
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
 - [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 

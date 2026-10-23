@@ -107,6 +107,20 @@ test('with a pinned action, scroll-padding-bottom is set on the document and res
   assert.equal(document.documentElement.style.scrollPaddingBottom, '');
 });
 
+// The room kept under the pinned action: 7rem, or 9rem with a note above the
+// button (the old pb-28 and pb-36), on the page and as scroll padding.
+test('the room under the pinned action is 7rem, or 9rem with a note', async () => {
+  const plain = await renderFrame({ step: 2, title: 'T', action: { label: 'Choose a day', onClick: () => {} } });
+  await plain.findByText('North Street Cycles');
+  assert.equal(document.querySelector('main').style.paddingBottom, '7rem');
+  assert.equal(document.documentElement.style.scrollPaddingBottom, '7rem');
+  plain.unmount();
+  const noted = await renderFrame({ step: 2, title: 'T', action: { label: 'Choose a day', onClick: () => {} }, actionNote: '1 service' });
+  await noted.findByText('North Street Cycles');
+  assert.equal(document.querySelector('main').style.paddingBottom, '9rem');
+  assert.equal(document.documentElement.style.scrollPaddingBottom, '9rem');
+});
+
 test('without a pinned action, scroll-padding-bottom is left alone', async () => {
   const ui = await renderFrame({ step: 2, title: 'T' });
   await ui.findByText('North Street Cycles');
