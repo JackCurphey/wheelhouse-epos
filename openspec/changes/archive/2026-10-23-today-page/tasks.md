@@ -15,7 +15,7 @@
 
 ## 3. Checks
 
-- [ ] 3.1 `npm run lint`, `npm test` and `npm run test:browser` pass, then a fresh review
+- [x] 3.1 `npm run lint`, `npm test` and `npm run test:browser` pass, then a fresh review
 
 ## Workflow follow-up
 
