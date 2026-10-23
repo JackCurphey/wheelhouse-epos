@@ -79,6 +79,20 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
 }
 
 /**
+ * An email to the address given, for one sale's receipt (openspec/changes/receipt-email
+ * design 1): not the customer's chosen way, and with no customer when the sale
+ * has none. Due at once; the timer sends it through the email sender, pretend
+ * for now. Inside the shop's runWithShop. Returns the message's id.
+ */
+export async function sendEmailTo({ to, subject, body, saleId, customerId = null, loginId = null }) {
+  const { id } = await prepare(
+    `INSERT INTO customer_messages (customer_id, sale_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
+     VALUES (?, ?, ?, 'queued', 'intended', 'email', 'receipt', ?, ?, ?, ?) RETURNING id`
+  ).get(customerId, saleId, body, subject, to, new Date().toISOString(), loginId);
+  return id;
+}
+
+/**
  * Sends a one-off text now (the old app's customer texts), through the
  * channel's sender — pretend for now — and records it like any other.
  * Inside the shop's runWithShop. Returns the message's id.
@@ -250,7 +264,8 @@ export function serializeMessage(row) {
     // The shop's (outbound) or the customer's (inbound), for the conversation.
     direction: row.direction ?? 'outbound',
     key: row.template_key ?? null,
-    name: TEMPLATES[row.template_key]?.name ?? 'Message',
+    // A receipt isn't one of the automatic messages (openspec/changes/receipt-email).
+    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : 'Message'),
     channel: row.channel ?? 'sms',
     to: row.to_address ?? null,
     subject: row.subject ?? null,

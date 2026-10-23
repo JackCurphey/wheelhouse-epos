@@ -1762,3 +1762,20 @@ No screen: server only.
    (touchJobBlock) have none: its week columns are as narrow as a computer's,
    and the switch is there for anyone who can't tell the colours apart.
    A phone's job blocks don't (review), as drawn; its requests do.
+
+### 23 Oct 2026: emailing a receipt, the email side (`openspec/changes/receipt-email`, `cp-receipt-email`, `cp-receipt-address`)
+
+1. **The subject is "Your receipt — [Shop name]"** (not drawn). *Pattern:*
+   "Your bike is ready — [Shop name]".
+2. **As the printed receipt**: "Sale [n]", no VAT line and no "(includes
+   VAT)" until the sale records VAT; "Paid by card" and "Paid by cash", the
+   printed receipt's words, for the drawing's payment line; the shop's own
+   words at the bottom when it has them.
+3. **The footer says "give the sale number"** for the drawing's "receipt
+   number", until receipts have numbers of their own; "Questions? Call
+   [shop phone]." only when the shop has a phone.
+4. **A receipt goes to the address typed, the customer's way aside**, and is
+   kept with the sale's customer when it has one, so it shows in their
+   history later; with no customer it goes all the same.
+5. **Nothing is saved to the customer from here** (review answer 3: "for
+   this receipt only"); Save to a customer record comes with the till's pop-up.
