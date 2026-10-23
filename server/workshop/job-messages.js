@@ -42,6 +42,10 @@ export async function jobMessageVars(jobId, shopId, link) {
     })).total;
   }
   const owed = due > 0 ? money(due) : 'Nothing';
+  // Bike still waiting's sentence (drawn on cp-setting's pop-up): what's owed,
+  // "Paid" once the order is paid, Bike ready's words with nothing on it.
+  const leftToPay = job.order_status === 'converted' ? 'Paid — nothing more to pay'
+    : due > 0 ? `${money(due)} to pay on collection` : 'Nothing to pay on collection';
   return {
     customerId: job.customer_id,
     customerName: job.customer_name,
@@ -53,6 +57,7 @@ export async function jobMessageVars(jobId, shopId, link) {
       'Link to the quote': link,
       'Link to the job': link,
       'Amount to pay': owed,
+      'What’s left to pay': leftToPay,
       'Opening hours': settings ? formatOpeningHours(openingHoursFor(toCapacitySettings(settings))) : null,
     },
   };

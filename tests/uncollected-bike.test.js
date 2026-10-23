@@ -57,10 +57,14 @@ const stillWaiting = async (jobId) => (await staff(`/api/messages?jobId=${jobId}
 const readyDaysAgo = (jobId, days) => inShop(() => prepare(`UPDATE workshop_jobs SET signed_off_at = now() - interval '${days} days' WHERE id = ?`).run(jobId));
 const uncollected = async (who = owner) => (await staff('/api/needs-attention', {}, who)).body.items.filter((i) => i.kind === 'uncollected');
 
+// Bike ready goes first, then its reminder: each brought forward and sent in turn.
 async function bringForward(jobId) {
-  await inShop(() => prepare(
-    "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE job_id = ? AND template_key IN ('bike_still_waiting', 'bike_ready') AND intent_state = 'intended'"
-  ).run(jobId));
+  for (const key of ['bike_ready', 'bike_still_waiting']) {
+    await inShop(() => prepare(
+      "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE job_id = ? AND template_key = ? AND intent_state = 'intended'"
+    ).run(jobId, key));
+    await settle(jobId);
+  }
 }
 // Until the sender's tick has dealt with the job's due messages, up to 10 seconds.
 async function settle(jobId) {
@@ -108,12 +112,12 @@ test('marking the work ready queues one Bike still waiting, in the drawn words, 
   assert.equal(r.state, 'intended');
   const wait = Date.parse(r.sendAfter) - before;
   assert.ok(wait > 2.99 * 86400_000 && wait < 3.01 * 86400_000, `about 3 days, was ${wait} ms`);
-  assert.match(r.body, /^Hi Aisha, just a reminder that your Cannondale Quick is ready to collect from Collection Cycles\. £111\.00 to pay on collection\. See what we did: http\S+\. Job WH-\d+\./);
+  assert.match(r.body, /^Hi Aisha, just a reminder that your Cannondale Quick is ready to collect from Collection Cycles[^.]*\. £111\.00 to pay on collection\. See what we did: \S+\. Job WH-\d+\. We’re open /);
 });
 
 test('reopening the work stops the reminder', async () => {
   const { job } = await finished();
-  const res = await staff(`/api/workshop-jobs/${job.id}/reopen`, { method: 'POST', body: { version: job.version } });
+  const res = await staff(`/api/workshop-jobs/${job.id}/reopen-work`, { method: 'POST', body: { version: job.version } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal((await stillWaiting(job.id))[0].state, 'undone');
 });
@@ -121,26 +125,49 @@ test('reopening the work stops the reminder', async () => {
 test('when it’s due, it goes for a bike still waiting', async () => {
   const { job } = await finished();
   await bringForward(job.id);
-  await settle(job.id);
   const [r] = await stillWaiting(job.id);
   assert.ok(r.sentAt, `sent, was ${r.state}`);
 });
 
-test('when it’s due, it doesn’t go once the bike is collected, the order paid, or the message switched off', async () => {
-  const collected = await finished();
-  assert.equal((await staff(`/api/workshop-jobs/${collected.job.id}/collect`, { method: 'POST', body: { version: collected.job.version } })).status, 200);
-  const paid = await finished();
-  await inShop(() => prepare("UPDATE sale_documents SET status = 'converted' WHERE id = ?").run(paid.job.orderId));
-  const off = await finished();
+test('when it’s due, it doesn’t go if Bike ready was undone in its minute', async () => {
+  const { job } = await finished();
+  const [ready] = (await staff(`/api/messages?jobId=${job.id}`)).body.filter((m) => m.key === 'bike_ready');
+  assert.equal((await staff(`/api/messages/${ready.id}/undo`, { method: 'POST', body: {} })).status, 200);
+  await bringForward(job.id);
+  const [r] = await stillWaiting(job.id);
+  assert.equal(r.sentAt, null, 'sent after Bike ready was undone');
+  assert.notEqual(r.state, 'intended');
+});
+
+async function notSent(job) {
+  await bringForward(job.id);
+  const [r] = await stillWaiting(job.id);
+  assert.equal(r.sentAt, null, `job ${job.reference} was sent`);
+  assert.notEqual(r.state, 'intended');
+}
+
+test('when it’s due, it doesn’t go once the bike is collected', async () => {
+  const { job } = await finished();
+  assert.equal((await staff(`/api/workshop-jobs/${job.id}/collect`, { method: 'POST', body: { version: job.version } })).status, 200);
+  await notSent(job);
+});
+
+test('when it’s due, it doesn’t go once the order is paid', async () => {
+  const { job } = await finished();
+  await inShop(() => prepare("UPDATE sale_documents SET status = 'converted' WHERE id = ?").run(job.orderId));
+  await notSent(job);
+});
+
+test('when it’s due, it doesn’t go once the message is switched off', async () => {
+  const { job } = await finished();
+  // Bike ready has gone; then the shop switches the reminder off.
+  await inShop(() => prepare(
+    "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE job_id = ? AND template_key = 'bike_ready'"
+  ).run(job.id));
+  await settle(job.id);
   assert.equal((await staff('/api/message-templates/bike_still_waiting', { method: 'PUT', body: { enabled: false } })).status, 200);
   try {
-    for (const { job } of [collected, paid, off]) {
-      await bringForward(job.id);
-      await settle(job.id);
-      const [r] = await stillWaiting(job.id);
-      assert.equal(r.sentAt, null, `job ${job.reference} was sent`);
-      assert.notEqual(r.state, 'intended');
-    }
+    await notSent(job);
   } finally {
     await staff('/api/message-templates/bike_still_waiting', { method: 'PUT', body: { enabled: true } });
   }
@@ -154,7 +181,6 @@ test('Needs attention lists a bike ready longer than the Today count, oldest fir
   await readyDaysAgo(newer.job.id, 8);
   await readyDaysAgo(recent.job.id, 6);
   await bringForward(older.job.id);
-  await settle(older.job.id);
   const items = await uncollected();
   const ids = items.map((i) => i.jobId);
   assert.ok(!ids.includes(recent.job.id), 'six days isn’t past seven');
@@ -183,12 +209,12 @@ test('Contacted records who and when and takes the bike off; finished again, it 
   const res = await staff(`/api/workshop-jobs/${job.id}/contacted`, { method: 'POST', body: {} });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.ok(!(await uncollected()).some((i) => i.jobId === job.id));
-  const row = await inShop(() => prepare('SELECT uncollected_contacted_at, uncollected_contacted_by FROM workshop_jobs WHERE id = ?').get(job.id));
+  const row = await inShop(() => prepare('SELECT uncollected_contacted_at, uncollected_contacted_by_login_id FROM workshop_jobs WHERE id = ?').get(job.id));
   assert.ok(row.uncollected_contacted_at, 'when');
-  assert.ok(row.uncollected_contacted_by, 'who');
+  assert.ok(row.uncollected_contacted_by_login_id, 'who');
   // Reopened and marked ready again: the new ready time counts, and Contacted before it doesn't.
   let now = (await staff(`/api/workshop-jobs/${job.id}`)).body;
-  now = (await staff(`/api/workshop-jobs/${job.id}/reopen`, { method: 'POST', body: { version: now.version } })).body;
+  now = (await staff(`/api/workshop-jobs/${job.id}/reopen-work`, { method: 'POST', body: { version: now.version } })).body;
   assert.equal((await staff(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: now.version, signedOffBy: alex } })).status, 200);
   await inShop(() => prepare("UPDATE workshop_jobs SET signed_off_at = now() - interval '8 days', uncollected_contacted_at = now() - interval '9 days' WHERE id = ?").run(job.id));
   assert.ok((await uncollected()).some((i) => i.jobId === job.id));

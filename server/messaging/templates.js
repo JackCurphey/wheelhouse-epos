@@ -60,6 +60,16 @@ export const TEMPLATES = {
     subject: 'Your bike is ready — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Job number', 'Amount to pay', 'Link to the job', 'Shop name', 'Opening hours'],
   },
+  // One reminder when a ready bike isn't collected (collect and pay review
+  // item 4; WP-4.3), the wording drawn on cp-setting's pop-up. Queued at
+  // ready for the shop's days, and checked when it's due (engine.js).
+  bike_still_waiting: {
+    name: 'Bike still waiting',
+    when: 'When a ready bike isn’t collected after the days the shop sets',
+    wording: 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [What’s left to pay]. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
+    subject: 'Your bike is still waiting — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'What’s left to pay', 'Link to the job', 'Job number', 'Opening hours'],
+  },
   request_received: {
     group: 'booking',
     name: 'Request received',
@@ -113,7 +123,7 @@ export const TEMPLATES = {
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

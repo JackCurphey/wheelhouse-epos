@@ -36,12 +36,52 @@ async function replies() {
   return [{ kind: 'replies', count, oldestName: oldest.customerName, oldestAt: oldest.lastAt }];
 }
 
+// Bikes ready and still in the shop for longer than the shop's Today days,
+// not contacted since they were marked ready (WP-4.3, cp-today-uncollected;
+// collect and pay review item 4, H4, M5). Waiting longest first; each with
+// when its Bike still waiting went, if it has.
+async function uncollectedBikes() {
+  const rows = await prepare(
+    `SELECT w.id, w.reference, w.signed_off_at, c.name AS customer_name, c.phone,
+            NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') AS bike_label,
+            (SELECT max(m.sent_at) FROM customer_messages m
+              WHERE m.job_id = w.id AND m.template_key = 'bike_still_waiting' AND m.sent_at >= w.signed_off_at) AS reminder_sent_at
+       FROM workshop_jobs w
+       LEFT JOIN customers c ON c.id = w.customer_id
+       LEFT JOIN customer_bikes b ON b.id = w.bike_id
+      WHERE w.custody_state = 'in_shop' AND w.work_state = 'complete' AND w.signed_off_at IS NOT NULL
+        AND w.signed_off_at <= now() - make_interval(days => COALESCE((SELECT collection_today_days FROM workshop_settings LIMIT 1), 7))
+        AND (w.uncollected_contacted_at IS NULL OR w.uncollected_contacted_at < w.signed_off_at)
+      ORDER BY w.signed_off_at, w.id`
+  ).all();
+  return rows.map((r) => ({
+    kind: 'uncollected', jobId: r.id, reference: r.reference, customerName: r.customer_name ?? null, bikeLabel: r.bike_label ?? null,
+    phone: r.phone || null, readySince: iso(r.signed_off_at), reminderSentAt: iso(r.reminder_sent_at),
+  }));
+}
+
 export function register(route) {
   // Owner only until roles (decision 4: Tills and Needs attention are for
   // owners, managers and anyone who can close the day; WP-1.1 opens it to them).
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await quotesWithNoAnswer()), ...(await replies())] });
+    sendJson(res, 200, { items: [...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies())] });
+  });
+
+  // Contacted on an uncollected bike's line (cp-today-uncollected; H4): who and
+  // when, which takes it off Today until it's marked ready again. Owner only,
+  // as the list; refused for a bike that isn't on it.
+  // screens: collection
+  route('POST', '/api/workshop-jobs/:id/contacted', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
+    const id = Number(params.id);
+    if (!Number.isInteger(id)) return sendJson(res, 404, { error: 'Job not found' });
+    if (!(await uncollectedBikes()).some((b) => b.jobId === id)) {
+      return sendJson(res, 409, { error: 'That bike isn’t waiting to be collected any more.', code: 'not_uncollected' });
+    }
+    await prepare('UPDATE workshop_jobs SET uncollected_contacted_at = now(), uncollected_contacted_by_login_id = ? WHERE id = ?').run(ctx.login.id, id);
+    sendJson(res, 200, { ok: true });
   });
 }

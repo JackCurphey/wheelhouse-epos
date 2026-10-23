@@ -142,6 +142,26 @@ async function reminderStillNeeded(jobId) {
   return (await templateFor('quote_to_approve')).enabled && (await templateFor('quote_reminder')).enabled;
 }
 
+/**
+ * Bike still waiting waits days, so it's checked when it's due (WP-4.3,
+ * openspec/changes/uncollected-bike design 2): the bike still in the shop, the
+ * work still finished and signed off, its order not paid, its Bike ready sent
+ * since it was marked ready (not switched off or undone), and the message on.
+ */
+async function stillWaitingNeeded(jobId) {
+  if (!jobId) return false;
+  const job = await prepare(
+    `SELECT 1 FROM workshop_jobs j
+      WHERE j.id = ? AND j.custody_state = 'in_shop' AND j.work_state = 'complete' AND j.signed_off_at IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM sale_documents d WHERE d.workshop_job_id = j.id AND d.kind = 'order' AND d.status = 'converted')
+        AND EXISTS (SELECT 1 FROM customer_messages r WHERE r.job_id = j.id AND r.template_key = 'bike_ready'
+                     AND r.sent_at IS NOT NULL AND r.sent_at >= j.signed_off_at)`
+  ).get(jobId);
+  return Boolean(job) && (await templateFor('bike_still_waiting')).enabled;
+}
+
+const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded };
+
 async function sendDueForShop(shopId) {
   const now = new Date();
   const due = await runWithShop(shopId, async () => {
@@ -156,7 +176,8 @@ async function sendDueForShop(shopId) {
     ).all(now.toISOString(), now.toISOString());
     const sendable = [];
     for (const m of claimed) {
-      if (m.template_key === 'quote_reminder' && !(await reminderStillNeeded(m.job_id))) {
+      const stillNeeded = DUE_CHECKS[m.template_key];
+      if (stillNeeded && !(await stillNeeded(m.job_id))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
       } else sendable.push(m);
     }

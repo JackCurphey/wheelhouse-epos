@@ -34,7 +34,7 @@ its setting on `workshop_settings`.
    `bikeLabel`, `phone`, `readySince`, `reminderSentAt`.
 5. **Contacted** is `POST /api/workshop-jobs/:id/contacted`, Owner only like
    the list; it records `uncollected_contacted_at` and
-   `uncollected_contacted_by` (the login) and refuses a bike that isn't on
+   `uncollected_contacted_by_login_id` and refuses a bike that isn't on
    the list (409). Contacted before the latest ready time doesn't count.
 6. **Defaults 3 and 7 days** (the drawing shows `[n]`). 7 follows the build
    plan's flag for uncollected online orders (Q8,
