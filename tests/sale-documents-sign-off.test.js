@@ -174,3 +174,40 @@ test('a sign-off whose history row cannot be saved leaves no half sign-off, and 
     await deleteTestShop(shop.id);
   }
 });
+
+// Audit item 21 (22 Oct), at the till: the signer is deleted or switched off
+// between the till's check and the sign-off being written. The payment stands,
+// the work finishes unsigned, and the reply says the mechanic isn't active.
+// A trigger on the job's finishing update stands in for the Owner making the
+// change at that moment.
+for (const what of ['deleted', 'switched off']) {
+  test(`a signer ${what} while the till pays: the payment stands, the work is finished unsigned, and the reply says so`, async () => {
+    const { shop, req, job, pay } = await jobInProgress();
+    // Not the job's own mechanic, who can't be deleted while the job names them.
+    const signer = await seedMechanic(shop.id, { name: 'Sam Lee' });
+    const adminUrl = new URL(adminUrlFrom(process.env));
+    adminUrl.pathname = new URL(process.env.DATABASE_URL).pathname;
+    const admin = new pg.Client({ connectionString: adminUrl.href });
+    await admin.connect();
+    const fn = `till_signer_goes_${job.id}_${shop.id}`;
+    const change = what === 'deleted' ? `DELETE FROM employees WHERE id = ${signer}` : `UPDATE employees SET active = 0 WHERE id = ${signer}`;
+    await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN ${change}; RETURN NEW; END $$`);
+    await admin.query(`CREATE TRIGGER ${fn} BEFORE UPDATE OF work_state ON workshop_jobs FOR EACH ROW WHEN (NEW.id = ${job.id} AND NEW.work_state = 'complete') EXECUTE FUNCTION ${fn}()`);
+    try {
+      const paid = await pay({ signedOffBy: signer });
+      assert.equal(paid.status, 201, JSON.stringify(paid.body));
+      assert.equal(paid.body.jobWarning, 'Paid and finished, but not signed off: that mechanic isn’t active any more.');
+      const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
+      assert.equal(now.workState, 'complete');
+      assert.ok(now.signedOffBy === null);
+      assert.deepEqual(await history(shop.id, job.id), [], 'no sign-off history written');
+      const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
+      assert.equal(order.status, 'converted', 'the payment stands');
+    } finally {
+      await admin.query(`DROP TRIGGER ${fn} ON workshop_jobs`);
+      await admin.query(`DROP FUNCTION ${fn}()`);
+      await admin.end();
+      await deleteTestShop(shop.id);
+    }
+  });
+}

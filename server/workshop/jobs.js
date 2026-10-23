@@ -15,6 +15,7 @@ import { serializeQuote, answerAll as answerQuote } from './quotes.js';
 import { quote as quoteMachine } from './state-machines.js';
 import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
+import { isEmployeeId } from './sign-off.js';
 import { allocateReference } from './references.js';
 
 const db = { prepare, exec: dbExec };
@@ -93,7 +94,9 @@ export function serializeWorkshopJob(row) {
     orderStatus: row.order_status,
     orderTotal: row.order_total,
     // The job's current quote (its latest revision), or null (journey 4).
-    quote: row.quote_id ? { id: row.quote_id, state: row.quote_state, revision: row.quote_revision } : null,
+    // When it was sent, and when its one reminder went while it still waits
+    // ("No answer yet", Jack, 1 Oct, drop-off and quote decision 4).
+    quote: row.quote_id ? { id: row.quote_id, state: row.quote_state, revision: row.quote_revision, sentAt: row.quote_sent_at ?? null, reminderSentAt: row.quote_reminder_sent_at ?? null } : null,
     // Who signed the finished work off, and when (migration 040); null until
     // it's finished and again once reopened.
     signedOffBy: row.signed_off_by ?? null,
@@ -104,21 +107,27 @@ export function serializeWorkshopJob(row) {
   };
 }
 
-export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total, ss.name AS storage_slot_name
+export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, lq.sent_at AS quote_sent_at, qr.at AS quote_reminder_sent_at, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total, ss.name AS storage_slot_name
   FROM workshop_jobs w
   LEFT JOIN storage_slots ss ON ss.id = w.storage_slot_id
   LEFT JOIN customers c ON c.id = w.customer_id
   LEFT JOIN customer_bikes b ON b.id = w.bike_id
   LEFT JOIN employees mech ON mech.id = w.mechanic_id
   LEFT JOIN sale_documents d ON d.workshop_job_id = w.id
-  LEFT JOIN LATERAL (SELECT id, state, revision FROM workshop_quotes q
-                     WHERE q.workshop_job_id = w.id ORDER BY revision DESC LIMIT 1) lq ON true`;
+  LEFT JOIN LATERAL (SELECT id, state, revision, sent_at FROM workshop_quotes q
+                     WHERE q.workshop_job_id = w.id ORDER BY revision DESC LIMIT 1) lq ON true
+  LEFT JOIN LATERAL (SELECT max(m.sent_at) AS at FROM customer_messages m
+                     WHERE lq.state = 'sent' AND m.job_id = w.id AND m.template_key = 'quote_reminder'
+                       AND m.sent_at IS NOT NULL AND m.sent_at >= lq.sent_at) qr ON true`;
 export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function resolveJobMechanicId(rawId, existingId) {
   if (rawId === undefined) return { ok: true, mechanicId: existingId };
   if (rawId === null || rawId === '') return { ok: true, mechanicId: null };
-  const mechanicId = Number(rawId);
+  // A whole number only: Number() would read "abc" as NaN (a server error) and
+  // true as employee 1 (audit, 22 Oct, item 19).
+  if (!isEmployeeId(rawId)) return { ok: false };
+  const mechanicId = rawId;
   const mechanic = await db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1').get(mechanicId);
   if (!mechanic) return { ok: false };
   return { ok: true, mechanicId };
@@ -657,6 +666,12 @@ export async function agreeWithinLimit({ quoteId, loginId = null }) {
 export async function answerAndAddToOrder(args) {
   await db.exec('BEGIN');
   try {
+    // The job's orders are locked first, as deleting a job and taking a payment
+    // lock them (order first). Locking the quote lines first and the order after
+    // deadlocked with a delete (audit item 14).
+    await db.prepare(
+      'SELECT id FROM sale_documents WHERE workshop_job_id = (SELECT workshop_job_id FROM workshop_quotes WHERE id = ?) ORDER BY id FOR UPDATE'
+    ).all(args.quoteId);
     const result = await answerQuote(args);
     if (result.ok) await addApprovedLinesToOrder(result.quote.id);
     await db.exec('COMMIT');

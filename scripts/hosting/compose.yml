@@ -5,7 +5,9 @@
 services:
   app:
     build: ./app
-    image: wheelhouse-app:current
+    # The image deploy.sh last started (from GitHub's container registry), or
+    # the one remote-install.sh builds here; both are named in .env.
+    image: ${WHEELHOUSE_IMAGE:-wheelhouse-app:current}
     restart: unless-stopped
     env_file: .env
     environment:

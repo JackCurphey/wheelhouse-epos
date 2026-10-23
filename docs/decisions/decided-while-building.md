@@ -34,6 +34,39 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    API. No website is live and hosting isn't chosen, so this is left for
    WP-0.5 or the website stage.
 
+### 22 Oct 2026: input checks (`openspec/changes/input-checks`, audit items 19, 21, 22)
+
+No screen: server only. Touches `docs/decisions/2026-10-16-mechanic-sign-off.md`
+(an active mechanic signs off; the till never refuses over it), without
+reopening it.
+
+1. **A job's mechanic is sent as a whole number.** Text, a fraction or
+   `true` is refused with "Mechanic not found or inactive". *Pattern:* the
+   sign-off's `signedOffBy`, which already takes whole numbers only.
+2. **A mechanic deleted or switched off while a job is being finished** gets
+   "Choose who is signing this off", as if they had gone a moment earlier,
+   and nothing moves. At the till the payment stands and the reply warns
+   "that mechanic isn’t active any more". *Pattern:* the same refusal and
+   warning when the earlier check finds them gone.
+3. **The four on/off workshop settings** (Show prices on the booking page,
+   Show who signed off to customers, Use storage slots, Confirm bookings
+   automatically) take
+   only true or false; anything else is refused and nothing is saved.
+   *Pattern:* the messages page's `enabled` ("must be true or false").
+
+### 22 Oct 2026: a deleted job's waiting messages (`openspec/changes/delete-job-messages`, audit item 11 on #265)
+
+No screen: server only. Touches `docs/decisions/2026-10-18-attachments-and-delete.md`
+(deleting a job) and `2026-10-20-messages-engine.md` (Undo), without
+reopening either.
+
+1. **Deleting a job stops its messages that haven't gone yet**, marked
+   undone as Undo marks them, even one whose minute is up but which the
+   timer hasn't picked up. One already being sent, or sent, is left as it
+   is. A refused delete stops nothing. *Pattern:* reopening the work stops a
+   waiting "Bike ready" (`undoWaiting`): nothing is sent about work that no
+   longer stands.
+
 ### 22 Oct 2026: offer another time, three missed checks (`openspec/changes/offer-checks`, audit items 15–17 on #315)
 
 No screen: server only. Item 18 (untimed offers in drop-off mode skip the
@@ -1478,3 +1511,66 @@ The drawings show where slots appear but not these rules. *Decided:*
 8. **A conversation that won't load**, or a job that's gone, says
    "Wheelhouse couldn’t load this conversation." with Try again, and offers
    no reply box.
+
+### 22 Oct 2026: "Add a note for the shop" from the quote (`openspec/changes/quote-note-button`)
+
+1. **The button goes to the Notes with the shop box on the same page, cursor
+   in it** (dq-quote, dq-in-shop). The mock-up sends it to the job's page
+   with its note box (ac-job-note); since #422 that box is a card on the
+   booking page itself, so the button moves to it rather than opening
+   anything new. With notes already there, the box is "Reply".
+2. **No button where the page has no notes card.** Before the bike is in,
+   the quote card says "Not sure? Call [shop phone]." as before: a button
+   that went nowhere would be a dead end. Pattern: the notes card's own
+   stages (notes-card, item 1).
+3. **The Ready to collect card's button (collect.mjs) isn't in this piece**;
+   the notes card is already under it on that page.
+
+### 22 Oct 2026: "No answer yet" after the quote reminder (`openspec/changes/quote-no-answer`)
+
+1. **Today isn't built yet, so its line waits for it.** When Today (WP-1.10)
+   is built, its list carries the drawn dq-today-no-answer line: "WH-1042 ·
+   Maya Patel — no answer to the quote yet", "Sent [time] · reminder sent
+   [time] · [phone]", and Record their answer. The job read already carries
+   what it needs (`quote.sentAt`, `quote.reminderSentAt`; the phone from the
+   customer).
+2. **In the diary, "No answer yet" is the job's word in place of "Quoting"**
+   (decision 4 names no other place). It shows where the diary already
+   shows the word: a wide block's line, the month view's day list, and what
+   a screen reader hears for every block and chip. The colour stays
+   Quoting's teal; a narrow week block, with no room for the word, looks as
+   before. Pattern: the New online mark's words (new-online-on-stacks).
+3. **The customer's number is on the job's page**, in the Today line's words
+   above Withdraw quote and Record their answer: "No answer to the quote
+   yet", "Sent Mon 5 Oct, 10:15 · reminder sent Tue 6 Oct, 10:15 ·
+   07700 900142" (a phone link). The job page's own stage still reads
+   Quoting.
+4. **Only the current quote's own reminder counts**, sent at or after that
+   quote was sent, and only while it waits: answering, withdrawing or a new
+   quote ends it. The same rule as the customer's "we sent a reminder"
+   (quote-reminder).
+
+### 23 Oct 2026: automatic updates of the hosted copy (`openspec/changes/add-hosted-copy` task 3.4, Mark's design Decision 3)
+
+1. **The health check gets 5 minutes** to show the new commit before the
+   update counts as failed and the version before is started again (the
+   design's `[n]`). Starting the app and running a migration take well under
+   that on the test copy; task 3.5 measures the real time.
+2. **The deploy key can only run the update script.** Root's
+   `authorized_keys` ties it to `/opt/wheelhouse/deploy.sh` with
+   `restrict,command=…`, so it can't open a shell, and the script accepts
+   only `deploy <full commit>` or `rollback` and starts only this
+   repository's images. The design says the key "is used for nothing else";
+   this makes the server enforce it.
+3. **The setup script hands GitHub its settings** (with `gh`): the deploy
+   key as a secret, and the server's address, web address and host key as
+   repository variables, so Jack doesn't copy keys by hand. The host key is
+   read from the server over the setup script's own login.
+4. **The version before is put back only when the new one went on.** A
+   failed download changes nothing on the server, so the workflow doesn't
+   roll back after it (it would replace a working version with an older
+   one). A new version that won't start is swapped back by the script
+   itself.
+5. **The first automatic update fails once, by design**, until Jack has run
+   the setup script and made the package public: the package only exists
+   after the first push. The runbook's "Automatic updates" says so.
