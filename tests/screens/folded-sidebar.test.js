@@ -60,7 +60,8 @@ test('the Till is folded to the rail; Unfold opens the full sidebar over the pag
   fireEvent.click(unfold);
   await waitFor(() => assert.equal(panel.getAttribute('data-unfolded'), 'true'));
   assert.equal(unfold.getAttribute('aria-expanded'), 'true');
-  assert.ok(document.activeElement === within(panel).getByRole('button', { name: 'Fold the menu' }), 'focus goes into it');
+  // A frame later, once the panel shows.
+  await waitFor(() => assert.ok(document.activeElement === within(panel).getByRole('button', { name: 'Fold the menu' }), 'focus goes into it'));
   fireEvent.click(within(panel).getByRole('button', { name: 'Fold the menu' }));
   await waitFor(() => assert.equal(panel.getAttribute('data-unfolded'), 'false'));
   assert.ok(document.activeElement === unfold, 'and back to Unfold');
