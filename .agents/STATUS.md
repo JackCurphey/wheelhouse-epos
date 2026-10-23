@@ -7,21 +7,34 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** next in WP-4.1, ahead of stage 4 on his word: the rest of the
-  workshop day ("I'll do this", "Who did what"), or the rest of quotes
-  (WP-4.2) – to choose. The checklist's per-line Done ticks wait for Mark's
-  sales in pence (#376, #377), which rewrites the same order lines.
-- **Mark:** his overnight drafts. Jack answered all their questions on 22
-  Oct (`docs/decisions/2026-10-22-marks-overnight-questions.md`): ended
-  bookings refuse hold and reopen too (#378, his to finish); "Booking
-  confirmed" on automatic confirmation is already on main (#357, #362), so
-  #373 isn't needed and its migration 050 would clash; the money check's two
-  questions are his, fixing the rounding where order lines are written rather
-  than accepting 1p; and the audit's three: website settings Owner-only (#393,
-  merged), Accept only at the time shown (#396), booking answers at once with
-  the spec corrected (#395). His drafts #376/#377 number their migrations 051,
-  which main already has (main is at 054). #379 no longer needs Jack's
-  approval under the working agreement.
+- **Jack:** next, in his order (23 Oct): the rest of quotes: the pinned bar
+  on a phone, "Use my phone" for line photos, removing location data from
+  photos. "I'll do this" and "Who did what" (WP-4.1) wait for who's at the
+  device (WP-1.7), the activity record (WP-1.2) and every device updating
+  (WP-1.9) (Jack, 22 Oct, `docs/decisions/2026-10-22-ill-do-this-waits.md`).
+  "No answer yet" on Today waits for Today (WP-1.10). The
+  checklist's per-line Done ticks wait for Mark's sales in pence (#404),
+  which rewrites the same order lines. The repository stays public until
+  money comes in (Jack, 23 Oct): private would end free CI, about 20,000
+  minutes a month at today's pace.
+- **Mark:** merged 23 Oct: #401, #406, #407, #408, #410, #414 and #415;
+  #416 merged by Jack at his request, after a fresh review, with `main`
+  merged in, the spec quoting the server's apostrophes and a test for a
+  time gone inside opening hours. Jack answered both open questions on 23
+  Oct: #402 answer 1 (leave it as it is; ready to merge) and #404 answer 1
+  (merge with the three small changes in Jack's files; needs updating from
+  `main` first). #404's migration stays 055 (`main` is at 061, with 055
+  left free for it). When sales in pence moves `unit_amount` and
+  `booked_price` to pence (#404 step 2.1), the spending limit's whole bill
+  (`wholeBill`, `agreeWithinLimit`) and the messages' "Amount added" and
+  "What was agreed" sums move with it. Next: step B of sales in pence
+  (reports read both records), after #404 merges. The hosted copy's
+  automatic updates are built and seen working (Jack, #427, #428, at
+  Mark's request); WP-0.5 left: the failed-update drill (3.5), the test
+  shop and its login (3.6), timing the rollbacks (4.1b), the restore
+  rehearsal (group 5) and 2.6's fresh review. Still open from the audit:
+  items 12, 20, 23 and 24; 18 is left as a staff choice by design
+  (`docs/reviews/2026-10-22-flagged-merges-audit.md`).
 - **Waiting on Jack:** when to delete the old app, once its last screens are
   replaced (`docs/decisions/2026-10-21-old-app-placeholder.md`).
 
@@ -161,7 +174,34 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 22 Oct, later: the job checklist (#381 drawn and approved,
+**Jack is on:** 23 Oct: the Overview's Book in test, which failed before
+09:00 on CI's clock and so failed every pull request each morning (#426);
+the hosted copy's automatic updates (WP-0.5 task 3.4, at Mark's request,
+#427, #428): every merge to `main` that passes Tests is built, pushed to
+GitHub's container registry and started on the server by
+`scripts/hosting/deploy.sh` over a key tied to that script, rolled back if
+`/healthz` doesn't show its commit within 5 minutes. Seen: the merge of #427
+deployed itself at 12:04, and #428's pull request deployed nothing. Merged
+Mark's #416 for him and answered his #402 and #404.
+22 Oct, evening: Notes with the shop: the customer's notes on their
+booking link and the staff's replies (#421 server, migration 061; #422 the
+booking page's card), the staff Messages inbox with Needs a reply first
+(#423), Add a note for the shop from the quote and Work agreed (#424), and
+"No answer yet" after the quote reminder, in the diary and on the job
+(#425).
+22 Oct, afternoon: the customer's finished checklist on the
+booking page (#403); quotes (WP-4.2): the drawn words, staff names only with
+the sign-off switch on (#405), lines that go together and what happens
+without a Needed line (#409, migration 056), a photo on a quote line (#411,
+migration 057), a new quote after the customer says no to everything
+(#412, Jack's answer in `docs/decisions/2026-10-22-quote-after-declined.md`),
+the spending limit chosen at booking (#413, migration 058; only the customer
+sets it, `2026-10-22-spend-limit-who-sets.md`) and work within it going ahead
+without a quote, the customer told (#417, migration 059), one reminder when a
+quote has no answer (#418, migration 060) and the Your answers text after a
+call (#419). The four messages' wording is Jack's approved. Each piece had a
+fresh review, its findings fixed test-first.
+22 Oct, later: the job checklist (#381 drawn and approved,
 #382 server, #383 screens): each shop's own checklists in Settings with a
 full service template, ticks and notes on the job page; Diary blocks, what a
 block shows first and second (#384); storage slots (#389 server, #390

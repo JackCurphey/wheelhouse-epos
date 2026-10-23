@@ -50,6 +50,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          # The newest Node 22, not whichever one GitHub's machines have
+          # cached, so a security release reaches CI the day it lands (it had
+          # 22.23.3 after the 21 Oct 2026 fixes in 22.23.4).
+          check-latest: true
           cache: npm
 
       # Runs the real bootstrap script rather than a copy of its SQL, so CI

@@ -34,6 +34,7 @@ const JOB_FIELDS: Shape = {
   jobDate: S, startTime: SN, endTime: SN,
   // The job's planned length: given, its times', or an online booking's services'; null when none.
   plannedMinutes: NN,
+  spendLimit: NN,
   // Where a bike in the shop is kept (storage slots); null when none.
   storageSlotId: NN, storageSlotName: SN,
   status: S, bookingState: S, custodyState: S, workState: S, newOnline: ['boolean'],

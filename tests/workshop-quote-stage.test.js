@@ -10,7 +10,7 @@ import http from 'node:http';
 import '../server/load-env.js';
 import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest } from './helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -104,7 +104,8 @@ test('a quote line carries Needed or Optional and a reason for the customer', as
 test("every read of a job carries its current quote's state", async () => {
   const { job, quote } = await jobWithQuote();
   const read = (await staff(`/api/workshop-jobs/${job.id}`)).body;
-  assert.deepEqual(read.quote, { id: quote.id, state: 'draft', revision: 1 });
+  // A draft hasn't been sent, so it has no sent or reminder time (quote-no-answer).
+  assert.deepEqual(read.quote, { id: quote.id, state: 'draft', revision: 1, sentAt: null, reminderSentAt: null });
   const list = (await staff(`/api/workshop-jobs?start=${job.jobDate}&end=${job.jobDate}`)).body;
   assert.equal(list.find((j) => j.id === job.id).quote.state, 'draft');
 });
@@ -250,4 +251,33 @@ test('with Show prices off the customer still sees the quote’s prices and tota
   assert.equal(shown.status, 200, JSON.stringify(shown.body));
   assert.deepEqual(shown.body.lines.map((l) => [l.description, l.unitAmount, l.lineTotal]), [['Brake pads (pair)', 18, 18], ['Fit new gear cable', 12, 12]]);
   assert.equal(shown.body.totals.all, 30);
+});
+
+// Staff names on the customer's quote (Jack, 22 Oct): only when the shop's
+// "Show who signed off to customers" switch is on (mechanic sign-off answer 3:
+// staff names reach customers only once a shop chooses); the customer's own
+// first name always, for "Thanks, Maya".
+test('the customer’s quote names staff only with the shop’s switch on', async () => {
+  const sam = await seedMechanic(owner.shop.id, { name: 'Sam Reed' });
+  const job = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: `2026-10-${String(jobDay++).padStart(2, '0')}`, customerId: maya.id, bikeId: mayaBike.id, mechanicId: sam } });
+  assert.equal(job.status, 201, JSON.stringify(job.body));
+  const quote = (await staff(`/api/workshop-jobs/${job.body.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Fit new gear cable', unitAmount: 12, need: 'optional', reason: 'Shifting is stiff' }] } })).body;
+  assert.equal((await staff(`/api/quotes/${quote.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const q0 = await readQuote(quote.id);
+  assert.equal((await staff(`/api/quotes/${quote.id}/answer`, { method: 'POST', body: { via: 'phone', decisions: q0.lines.map((l) => ({ lineId: l.id, decision: 'approved' })) } })).status, 200);
+  const code = await customerCode(job.body.id);
+  const setNames = async (on) => assert.equal((await staff('/api/workshop-settings', { method: 'PUT', body: { showSignOffToCustomers: on } })).status, 200);
+  try {
+    await setNames(false);
+    const hidden = (await portal(`/booking-links/${code}/quote`)).body;
+    assert.equal(hidden.mechanicName, null);
+    assert.equal(hidden.lines[0].decidedByName, null, 'who took the call isn’t named');
+    assert.equal(hidden.customerFirstName, 'Maya');
+    await setNames(true);
+    const shown = (await portal(`/booking-links/${code}/quote`)).body;
+    assert.equal(shown.mechanicName, 'Sam Reed');
+    assert.ok(shown.lines[0].decidedByName, 'named once the shop chooses');
+  } finally {
+    await setNames(false);
+  }
 });

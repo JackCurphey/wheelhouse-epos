@@ -12,10 +12,10 @@ import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, pool } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
-import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry, photoCodePath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
@@ -24,13 +24,17 @@ import {
 } from '../workshop/quotes.js';
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
+import { shopNow } from '../clock.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
+import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
+import { removePhotoDetails } from '../photo-metadata.js';
+import { cancelPhotoCode, makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
-  currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
+  currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
-  sendQuoteResult, answerAndAddToOrder,
+  sendQuoteResult, answerAndAddToOrder, agreeWithinLimit, wholeBill,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -271,6 +275,7 @@ function waitingItem(row) {
     reference: row.reference,
     ...current,
     customerName: row.customer_name ?? null,
+    bikeLabel: row.bike_label ?? null, // the tablet cards' bike line (#241)
     serviceNames: row.service_names,
     services: row.services,
     arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
@@ -427,6 +432,45 @@ export function register(route) {
       .run(hashLinkCode(code), nowIso(), job.id);
     const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
     sendJson(res, 201, { privateLink: linkPath(shop.slug, code) });
+  });
+
+  // Use my phone (docs/decisions/2026-10-23-use-my-phone.md; openspec/changes/use-my-phone):
+  // a code for one line of the job's draft quote, which a phone opens with no
+  // sign-in. Only its hash is kept; the code leaves the server once, here.
+  // screens: quote-editor
+  route('POST', '/api/workshop-jobs/:id/quote-photo-codes', async (req, res, params, query, afterRelease, shopId) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch {
+      return badRequest(res, 'Invalid request body');
+    }
+    const result = await makePhotoCode({ jobId: job.id, quoteId: body.quoteId, linePosition: body.linePosition });
+    if (!result.ok) {
+      if (result.code === 'not_found') return notFound(res, result.message);
+      if (result.code === 'illegal') return sendJson(res, 409, { error: result.message, code: 'illegal' });
+      return badRequest(res, result.message);
+    }
+    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const path = photoCodePath(shop.slug, result.code);
+    sendJson(res, 201, { codeId: result.codeId, path, url: `${publicBase(req)}${path}`, expiresAt: result.expiresAt });
+  });
+
+  // What the pop-up asks every few seconds: waiting, added or expired.
+  // screens: quote-editor
+  route('GET', '/api/workshop-jobs/:id/quote-photo-codes/:codeId', async (req, res, params) => {
+    const status = await photoCodeStatus({ jobId: Number(params.id), codeId: Number(params.codeId) });
+    if (!status) return notFound(res, 'Code not found');
+    sendJson(res, 200, status);
+  });
+
+  // Cancel in the pop-up: the code stops working at once.
+  // screens: quote-editor
+  route('DELETE', '/api/workshop-jobs/:id/quote-photo-codes/:codeId', async (req, res, params) => {
+    if (!(await cancelPhotoCode({ jobId: Number(params.id), codeId: Number(params.codeId) }))) return notFound(res, 'Code not found');
+    sendJson(res, 200, { ok: true });
   });
 
   route('POST', '/api/workshop-jobs', async (req, res) => {
@@ -827,7 +871,11 @@ export function register(route) {
         try {
           result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
           if (result.ok && signing) {
-            await recordSignOff(id, signer);
+            // The mechanic deleted or switched off since the check above.
+            if (!(await recordSignOff(id, signer))) {
+              await db.exec('ROLLBACK');
+              return sendJson(res, 400, SIGN_OFF_REQUIRED);
+            }
             // Marking it ready sends "Bike ready", with a minute to Undo (UX
             // walk-through 1 H2; the messages engine, pretend for now), in the
             // same transaction: if it can't be queued, nothing is finished.
@@ -1030,7 +1078,9 @@ export function register(route) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
     const mech = await resolveJobMechanicId(body.mechanicId, null);
     if (!mech.ok || mech.mechanicId === null) return badRequest(res, 'Please choose a mechanic');
-    const message = body.message === undefined || body.message === null ? '' : String(body.message).trim();
+    // Text only, as decline's message is: an object would be stored as "[object Object]".
+    if (body.message !== undefined && body.message !== null && typeof body.message !== 'string') return badRequest(res, 'The message must be text');
+    const message = body.message === undefined || body.message === null ? '' : body.message.trim();
     if (message.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
     const startTime = String(body.startTime ?? '').trim();
     const taken = { status: 409, body: { error: 'That time is no longer free', code: 'capacity' } };
@@ -1041,12 +1091,26 @@ export function register(route) {
         if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
           return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
         }
+        // The customer's link can't act once the bike is in the shop or the work
+        // has started (customerTooLate in portal.js), so an offer would wait
+        // with nobody able to answer it (audit item 15, #315).
+        if (job.custody_state !== 'expected') {
+          return { status: 409, body: { error: 'The bike is already in the shop, so this can’t be offered another time.', code: 'illegal' } };
+        }
+        if (job.work_state !== 'not_started') {
+          return { status: 409, body: { error: 'The work has already started, so this can’t be offered another time.', code: 'illegal' } };
+        }
         // The customer couldn't accept a day gone by (fresh review).
-        if (jobDate < await currentShopToday()) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
+        const now = shopNow(await currentShopTimeZone());
+        if (jobDate < now.date) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
         const minutes = job.planned_minutes
           || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
         const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
         if (times.error) return { status: 400, body: { error: times.error } };
+        // Nor a time already gone today (audit item 16, #315).
+        if (jobDate === now.date && times.startTime && timeToMinutes(times.startTime) < now.minutes) {
+          return { status: 400, body: { error: 'That time has passed - please choose a later time.' } };
+        }
         const slotError = await checkJobSlot({
           jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId: mech.mechanicId, ignoreJobId: id,
         });
@@ -1109,7 +1173,7 @@ export function register(route) {
   // screens: requests, diary
   route('GET', '/api/workshop-waiting', async (req, res) => {
     const rows = await db.prepare(
-      `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
+      `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
             (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
                FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
               WHERE js.workshop_job_id = w.id) AS service_names,
@@ -1118,6 +1182,7 @@ export function register(route) {
               WHERE js.workshop_job_id = w.id) AS services
      FROM workshop_jobs w
      LEFT JOIN customers c ON c.id = w.customer_id
+     LEFT JOIN customer_bikes b ON b.id = w.bike_id
      LEFT JOIN employees m ON m.id = w.mechanic_id
      LEFT JOIN employees rm ON rm.id = w.requested_mechanic_id
      WHERE (w.booking_state = 'pending' AND w.terms_accepted_at IS NOT NULL)
@@ -1169,7 +1234,11 @@ export function register(route) {
   route('GET', '/api/quotes/:id', async (req, res, params) => {
     const result = await readQuote({ quoteId: Number(params.id) });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    // The customer's limit and the whole bill with this quote, so the job page
+    // offers Save and tell within it (Workshop day 41-43).
+    const bill = await wholeBill(result.quote.id, result.quote.workshop_job_id);
+    sendJson(res, 200, { ...serializeQuoteWithLines(result.quote, result.lines, result.totals),
+      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null });
   });
 
   // screens: quote-editor, approved, job
@@ -1214,6 +1283,18 @@ export function register(route) {
       if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
       else {
         const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+        // One reminder, the shop's hours later, unless the quote is answered,
+        // withdrawn or replaced first (Jack, 22 Oct). It goes only with the quote.
+        // Its own fault is only logged: the quote's message has gone (fresh review).
+        if (!queued.skipped) {
+          try {
+            await undoWaiting(jobId, 'quote_reminder');
+            const settings = await db.prepare('SELECT quote_reminder_hours FROM workshop_settings LIMIT 1').get();
+            await queueMessage({ customerId, jobId, key: 'quote_reminder', vars, delayMs: (settings?.quote_reminder_hours ?? 24) * 3600_000, loginId: ctx?.login?.id ?? null });
+          } catch (err) {
+            console.error(`Quote ${result.quote.id}'s reminder couldn't be queued`, err);
+          }
+        }
         message = queued.skipped
           ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
           : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
@@ -1230,6 +1311,45 @@ export function register(route) {
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
   });
 
+  // Work within the customer's spending limit (Workshop day 41-43; dq-job-within):
+  // agreed without a quote, and the customer is told what was added. The
+  // panel had its minute's Undo before calling this, as for Send quote.
+  // screens: quote-send
+  route('POST', '/api/quotes/:id/within-limit', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const result = await agreeWithinLimit({ quoteId: Number(params.id), loginId: ctx?.login?.id ?? null });
+    if (!result.ok) return sendQuoteResult(res, result);
+    const jobId = result.quote.workshop_job_id;
+    let message;
+    try {
+      const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+      const added = await db.prepare(
+        `SELECT string_agg(description, ', ' ORDER BY id) AS names, sum(quantity * unit_amount) AS total
+           FROM workshop_quote_lines WHERE workshop_quote_id = ?`
+      ).get(result.quote.id);
+      const shop = await db.prepare('SELECT phone FROM shops WHERE id = ?').get(shopId);
+      Object.assign(vars, {
+        'Work added': added.names,
+        'Amount added': `£${Number(added.total).toFixed(2)}`,
+        'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
+        // With no phone in Shop details, "Call the shop", as the customer's page says.
+        'Shop phone': shop?.phone || 'the shop',
+      });
+      if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
+      else {
+        const queued = await queueMessage({ customerId, jobId, key: 'work_within_limit', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Work added within your limit', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`Quote ${result.quote.id} was agreed within the limit but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The work is added, but the message could not be queued. Let the customer know another way.' };
+    }
+    sendJson(res, 200, { quote: serializeQuote(result.quote), message });
+  });
+
   // screens: quote-send
   route('POST', '/api/quotes/:id/withdraw', async (req, res, params) => {
     sendQuoteResult(res, await withdrawQuote({ quoteId: Number(params.id) }));
@@ -1238,13 +1358,96 @@ export function register(route) {
   // Record their answer (journey 4 decision 4): staff, after a phone call or a
   // chat in the shop. Who took it and when are recorded with each line.
   // screens: approved
-  route('POST', '/api/quotes/:id/answer', async (req, res, params) => {
+  route('POST', '/api/quotes/:id/answer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     const body = await readJsonBody(req);
     if (!['phone', 'in_shop'].includes(body.via)) return badRequest(res, "via must be 'phone' or 'in_shop'");
-    sendQuoteResult(res, await answerAndAddToOrder({
+    const result = await answerAndAddToOrder({
       quoteId: Number(params.id), decisions: body.decisions, via: body.via, loginId: ctx?.login?.id ?? null,
-    }));
+    });
+    // An answer from a call: the customer is sent what was agreed, at once
+    // (dq-record-answer; Jack, 22 Oct). In the shop they were there. A fault
+    // here is logged; the answer is saved either way.
+    if (result.ok && body.via === 'phone') {
+      try {
+        const jobId = result.quote.workshop_job_id;
+        // A customer who gets nothing keeps the link they have (fresh review),
+        // as Bike ready does: checked before a link is issued.
+        const owner = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(jobId);
+        if (!owner?.customer_id || (await whyNotQueued('your_answers', owner.customer_id))) return sendQuoteResult(res, result);
+        const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+        const { customerId, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+        const lines = await db.prepare('SELECT description, decision FROM workshop_quote_lines WHERE workshop_quote_id = ? ORDER BY id').all(result.quote.id);
+        const { total } = await db.prepare(
+          "SELECT sum(quantity * unit_amount) AS total FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved'"
+        ).get(result.quote.id);
+        const list = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]);
+        const yes = lines.filter((l) => l.decision === 'approved').map((l) => l.description);
+        const no = lines.filter((l) => l.decision === 'declined').map((l) => l.description);
+        vars['What was agreed'] = [
+          yes.length ? `Going ahead: ${list(yes)}, £${Number(total).toFixed(2)}.` : 'Going ahead: just the booked work.',
+          no.length ? `No thanks: ${list(no)}.` : null,
+        ].filter(Boolean).join(' ');
+        if (customerId) await queueMessage({ customerId, jobId, key: 'your_answers', vars, loginId: ctx?.login?.id ?? null });
+      } catch (err) {
+        console.error(`Quote ${result.quote.id}'s Your answers message couldn't be queued`, err);
+      }
+    }
+    sendQuoteResult(res, result);
+  });
+
+  // ---------- Notes with the shop (decisions 3 and 7; ac-inbox) ----------
+  // screens: diary
+  route('GET', '/api/job-notes/conversations', async (req, res, params, query) => {
+    sendJson(res, 200, await noteConversations(query.get('filter') === 'needs-reply' ? 'needs-reply' : 'all'));
+  });
+
+  // screens: diary
+  route('GET', '/api/workshop-jobs/:id/notes', async (req, res, params) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    sendJson(res, 200, await jobNotes(job.id));
+  });
+
+  // A staff reply, saved on the job; the customer is told with Reply from the
+  // shop, the way they chose (pretend for now). A customer who gets nothing
+  // keeps the link they have, as Bike ready.
+  // screens: diary
+  route('POST', '/api/workshop-jobs/:id/notes', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const job = await db.prepare(
+      `SELECT w.id, w.customer_id, w.job_date, w.custody_state, c.name AS customer_name,
+              to_char(w.collected_at AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS collected_on
+         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?`
+    ).get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    const body = await readJsonBody(req);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
+    let message;
+    try {
+      // A page that has closed (fresh review): no text with a link that doesn't work.
+      const closed = linkExpiry({ jobDate: job.job_date, custodyState: job.custody_state, collectedOn: job.collected_on }, await currentShopToday()).expired;
+      const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
+      if (why) {
+        const who = job.customer_name ?? 'The customer';
+        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed.` : notSent(why, 'Reply from the shop', who) };
+      } else {
+        const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
+        const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
+        // The drawn text puts its own full stop after the reply, so the reply's own goes.
+        vars['The shop’s reply'] = text.replace(/\.+$/, '');
+        const queued = await queueMessage({ customerId, jobId: job.id, key: 'shop_reply', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply from the shop', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The message could not be queued.' };
+    }
+    sendJson(res, 201, { notes: await jobNotes(job.id), message });
   });
 
   // ---------- Deleting a job, and its attachments ----------
@@ -1267,7 +1470,7 @@ export function register(route) {
     let out;
     await db.exec('BEGIN');
     try {
-      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').all(id);
+      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? ORDER BY id FOR UPDATE').all(id);
       out = await withJobBookingLock(id, [], async (job) => {
         // Any paid order linked to the job counts (a job can have more than one).
         const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
@@ -1296,6 +1499,7 @@ export function register(route) {
         await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
         await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
         await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
+        await undoJobMessages(id);
         await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
         return undefined;
       });
@@ -1343,6 +1547,11 @@ export function register(route) {
     }
     if (!buffer.length) return badRequest(res, 'That file is empty');
     if (buffer.length > MAX_ATTACHMENT_BYTES) return badRequest(res, 'That file is too large (max 15MB).');
+    // A JPEG, PNG or WebP loses where it was taken, when and on what (CX-2,
+    // photo-metadata.js); any other file is saved as it was sent.
+    const cleaned = removePhotoDetails(buffer);
+    if (cleaned.error) return badRequest(res, 'That picture couldn’t be read. Try adding it again.');
+    buffer = cleaned.buffer;
 
     const storageKey = randomBytes(24).toString('hex');
     await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);

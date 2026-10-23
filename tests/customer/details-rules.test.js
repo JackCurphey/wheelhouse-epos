@@ -262,3 +262,24 @@ test('bookingBody carries the draft\'s request key, and none when the draft has 
   assert.equal(r.bookingBody(SERVICES, { ...draft, requestKey: 'k'.repeat(40) }, []).requestKey, 'k'.repeat(40));
   assert.equal('requestKey' in r.bookingBody(SERVICES, draft, []), false);
 });
+
+// The spending limit (Workshop day 41; openspec/changes/spend-limit-booking).
+test('a spending limit goes with the booking in whole pounds, £200 when the box wasn’t touched', () => {
+  const base = { serviceIds: [12], date: '2026-10-05', mechanicId: 1, startTime: '09:30', ...CONTACT };
+  assert.equal(r.bookingBody(SERVICES, { ...base, limitOn: true, limitText: ' 150 ' }, []).spendLimit, 150);
+  assert.equal(r.bookingBody(SERVICES, { ...base, limitOn: true }, []).spendLimit, 200);
+  assert.equal('spendLimit' in r.bookingBody(SERVICES, { ...base, limitText: '150' }, []), false, 'asking first sends none');
+});
+
+test('the summary says the limit when one is set', () => {
+  const WHEN2 = 'Monday 5 October, 09:30 with Alex';
+  assert.deepEqual(r.summaryLines(SERVICES, { serviceIds: [11], limitOn: true, limitText: '200' }, WHEN2),
+    ['Brake service, from £20', WHEN2, 'Extra work: go ahead if the whole bill is no more than £200']);
+  assert.deepEqual(r.summaryLines(SERVICES, { serviceIds: [11] }, WHEN2), ['Brake service, from £20', WHEN2]);
+});
+
+test('a limit is whole pounds from 1 to 100,000', () => {
+  for (const ok of ['1', '200', ' 150 ', '100000', undefined]) assert.equal(r.limitError({ limitOn: true, limitText: ok }), null, String(ok));
+  for (const bad of ['0', '150.50', '', 'abc', '100001', '-5', '1e3']) assert.equal(r.limitError({ limitOn: true, limitText: bad }), 'Enter the most the whole bill can come to, in whole pounds.', bad);
+  assert.equal(r.limitError({ limitText: 'abc' }), null, 'asking first');
+});

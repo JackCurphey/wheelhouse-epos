@@ -1,6 +1,6 @@
 import type { BlockField } from './diary-context.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
-import { STATE_LABEL, weekOf, type DiaryState, type WaitingItem } from './rules.ts';
+import { stateWord, weekOf, type DiaryState, type WaitingItem } from './rules.ts';
 
 export type Mechanic = { id: number; name: string; active: boolean; workingDays?: number[] };
 export type Settings = { openingHours?: { weekday: number; open: string; close: string }[]; showSignOffToCustomers?: boolean; blockFirst?: BlockField; blockSecond?: BlockField; storageSlotsOn?: boolean };
@@ -67,7 +67,7 @@ export const dayOf = (j: Shown) => (j.partCount > 1 ? `day ${j.partPos} of ${j.p
 
 export function describe(j: Shown, chosen: boolean) {
   const bike = j.bikeLabel || 'Bike';
-  return [bike, j.title, j.customerName || 'Customer', j.reference, STATE_LABEL[j.state], timeText(j), dayOf(j)]
+  return [bike, j.title, j.customerName || 'Customer', j.reference, stateWord(j), timeText(j), dayOf(j)]
     .filter(Boolean).join(', ') + (chosen ? ', chosen from Waiting for you' : '')
     // A booking confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm).
     + (j.newOnline ? ', new, booked online' : '');

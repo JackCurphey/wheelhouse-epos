@@ -1,0 +1,160 @@
+name: Deploy the hosted copy
+
+# Every merge to main goes onto the hosted test copy once Tests has passed on
+# that commit (WP-0.5 task 3.4; openspec/changes/add-hosted-copy/design.md,
+# Decision 3). The image is built here, pushed to GitHub's container registry
+# tagged with the commit, and started on the server by scripts/hosting/deploy.sh
+# over SSH. Setting it up, and undoing a bad update: docs/runbooks/hosted-copy.md.
+#
+# Repository settings it needs, written by scripts/hosting/setup.sh:
+#   variables HOSTED_COPY_HOST (the server's address), HOSTED_COPY_URL
+#   (https://...sslip.io) and HOSTED_COPY_KNOWN_HOSTS (the server's host key);
+#   secret HOSTED_COPY_SSH_KEY (the deploy-only key, which can run deploy.sh
+#   and nothing else on the server).
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+
+# One deploy at a time, and a deploy under way is never cut off half done.
+concurrency:
+  group: hosted-copy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only a push to this repository's main whose tests passed. A fork's branch
+    # called main would otherwise match.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # The commit that was tested; the latest main may have moved on since.
+      COMMIT: ${{ github.event.workflow_run.head_sha }}
+      SITE: ${{ vars.HOSTED_COPY_URL }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Two quick merges can finish their tests out of order; the older one
+      # must not go on top of the newer.
+      - name: Skip a commit older than the one running
+        id: newer
+        run: |
+          running=$(curl -fsS -m 10 "$SITE/healthz" | jq -r '.commit // empty' || true)
+          echo "Running now: ${running:-unknown}"
+          if [ -n "$running" ] && [ "$running" != "$COMMIT" ] && git merge-base --is-ancestor "$COMMIT" "$running" 2>/dev/null; then
+            echo "::notice::$COMMIT is older than $running, which is already running, so it isn't deployed."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.newer.outputs.skip == 'false'
+        uses: docker/setup-buildx-action@v4
+
+      - if: steps.newer.outputs.skip == 'false'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # context: . builds the checkout above; the action's default would build
+      # the latest main instead. NODE_ENV is a run-time setting only (the
+      # server's .env): in the build, npm ci would skip the build tools.
+      - name: Build the image and push it
+        if: steps.newer.outputs.skip == 'false'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/jackcurphey/wheelhouse-epos:${{ github.event.workflow_run.head_sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Check automatic updates are set up
+        if: steps.newer.outputs.skip == 'false'
+        env:
+          HOST: ${{ vars.HOSTED_COPY_HOST }}
+          KNOWN_HOSTS: ${{ vars.HOSTED_COPY_KNOWN_HOSTS }}
+          HAS_KEY: ${{ secrets.HOSTED_COPY_SSH_KEY != '' }}
+        run: |
+          missing=""
+          [ -n "$HOST" ] || missing="$missing HOSTED_COPY_HOST"
+          [ -n "$SITE" ] || missing="$missing HOSTED_COPY_URL"
+          [ -n "$KNOWN_HOSTS" ] || missing="$missing HOSTED_COPY_KNOWN_HOSTS"
+          [ "$HAS_KEY" = true ] || missing="$missing HOSTED_COPY_SSH_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Automatic updates aren't set up yet (missing:$missing). Run scripts/hosting/setup.sh once (docs/runbooks/hosted-copy.md, \"Automatic updates\"), then re-run this."
+            exit 1
+          fi
+
+      # The host key was read from the server by setup.sh over its own SSH
+      # login, so a server answering with any other key is refused.
+      - name: Set up the SSH login
+        if: steps.newer.outputs.skip == 'false'
+        env:
+          HOST: ${{ vars.HOSTED_COPY_HOST }}
+          KNOWN_HOSTS: ${{ vars.HOSTED_COPY_KNOWN_HOSTS }}
+          SSH_KEY: ${{ secrets.HOSTED_COPY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/hosted-copy-known-hosts
+          cat > ~/.ssh/config <<CONFIG
+          Host hosted-copy
+            HostName $HOST
+            User root
+            IdentityFile ~/.ssh/deploy
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/hosted-copy-known-hosts
+            ConnectTimeout 20
+          CONFIG
+
+      # deploy.sh writes the time down on the server before it changes
+      # anything (deploys.log), for a restore; it's printed here too.
+      - name: Start it on the server
+        id: deploy
+        if: steps.newer.outputs.skip == 'false'
+        run: |
+          echo "Deploying $COMMIT at $(date -u +%Y-%m-%dT%H:%M:%SZ) (UTC: the moment a restore would go back to)."
+          ssh hosted-copy "deploy $COMMIT"
+
+      # Migrations run before the app answers, so a failed one never shows ok.
+      - name: Wait for the health check to show the new commit
+        if: steps.newer.outputs.skip == 'false'
+        run: |
+          body=""
+          for _ in $(seq 1 30); do
+            body=$(curl -fsS -m 10 "$SITE/healthz" || true)
+            if [ "$(jq -r '.status' <<<"$body" 2>/dev/null)" = ok ] && [ "$(jq -r '.commit' <<<"$body" 2>/dev/null)" = "$COMMIT" ]; then
+              echo "Deployed: $body"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The hosted copy didn't answer ok with $COMMIT within 5 minutes. Last answer: ${body:-none}"
+          exit 1
+
+      # Only once the new version went on: after a failed download, the version
+      # before is still running, and rolling back would replace a good one.
+      - name: Start the previous version again
+        if: failure() && steps.deploy.outcome == 'success'
+        run: |
+          ssh hosted-copy rollback
+          echo "::error::$COMMIT was rolled back. If it changed the database, follow docs/runbooks/hosted-copy.md section D."

@@ -15,6 +15,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { seedWorkshopJob, purgeAttachmentFiles, UPLOADS_DIR } from './helpers/workshopFixtures.js';
+import { tinyJpeg, LOCATION_SIGNS } from './helpers/pictures.js';
 
 let server;
 
@@ -211,3 +212,50 @@ test('deleting an attachment removes the row and the file on disk', async () => 
     await cleanup(shop.id);
   }
 });
+
+// CX-2 (openspec/changes/photo-location-data): a picture staff attach, a quote
+// line's photo among them, is saved without where, when or which phone.
+test('a photo attached to a job is saved without its location, and its size is the size saved', async () => {
+  const { cookie, shop, jobId } = await shopWithJob();
+  try {
+    const created = await upload(cookie, jobId, {
+      filename: 'pads.jpg', contentType: 'image/jpeg', dataBase64: tinyJpeg('worn pads', 16, { withLocation: true }).toString('base64'),
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const download = await fetch(`${server.baseUrl}/api/workshop-jobs/${jobId}/attachments/${created.body.id}`, { headers: { cookie } });
+    const got = Buffer.from(await download.arrayBuffer());
+    for (const sign of LOCATION_SIGNS) assert.ok(!got.includes(Buffer.from(sign, 'latin1')), `"${sign}" was saved`);
+    assert.ok(got.equals(tinyJpeg('worn pads', 16)), 'the picture itself changed');
+    assert.equal(created.body.sizeBytes, got.length);
+  } finally {
+    await cleanup(shop.id);
+  }
+});
+
+test('a picture whose blocks don\'t add up is refused in plain words, and nothing is saved', async () => {
+  const { cookie, shop, jobId } = await shopWithJob();
+  try {
+    const damaged = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe1, 0x40, 0x00]), Buffer.from('Exif\0\0 cut short')]);
+    const res = await upload(cookie, jobId, { filename: 'pads.jpg', contentType: 'image/jpeg', dataBase64: damaged.toString('base64') });
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.equal(res.body.error, 'That picture couldn’t be read. Try adding it again.');
+    const listed = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${jobId}/attachments`);
+    assert.equal(listed.body.length, 0);
+  } finally {
+    await cleanup(shop.id);
+  }
+});
+
+test('a file that says it\'s a photo but isn\'t one is saved as it was sent', async () => {
+  const { cookie, shop, jobId } = await shopWithJob();
+  try {
+    const contents = Buffer.from('not really a photo');
+    const created = await upload(cookie, jobId, { filename: 'fake.jpg', contentType: 'image/jpeg', dataBase64: contents.toString('base64') });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const download = await fetch(`${server.baseUrl}/api/workshop-jobs/${jobId}/attachments/${created.body.id}`, { headers: { cookie } });
+    assert.ok(Buffer.from(await download.arrayBuffer()).equals(contents));
+  } finally {
+    await cleanup(shop.id);
+  }
+});
+

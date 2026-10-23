@@ -63,6 +63,8 @@ export type BookingLink = {
   shop?: { address: string | null; phone: string | null; openingHours: string | null };
   work?: { name: string; price: number | null }[];
   declined?: { name: string; price: number | null }[];
+  /** The job's checklist once the work is finished (cp-summary; Jack, 22 Oct): every item and what the mechanic found. */
+  checklist?: { name: string; items: { name: string; done: boolean; note: string | null }[] } | null;
   toPay?: number | null;
   nothingToPay?: boolean;
   paid?: { at: string; amount: number | null } | null;
