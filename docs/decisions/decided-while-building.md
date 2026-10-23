@@ -1651,3 +1651,12 @@ No screen: server only.
    the photo has come is the same as Done.
 8. **If the code can't be made**, the pop-up offers Try again. *Pattern:*
    the screens' failed loads.
+
+### 23 Oct 2026: the bike on Waiting cards (`openspec/changes/waiting-bike`, `diary`)
+
+1. **A request with no bike has no bike line**, rather than "No bike" or
+   "Bike"; the card is its label, the customer and the detail, as before.
+   *Pattern:* the bike tag, which leaves the line out.
+2. **The computer's Waiting column shows the bike too**, not only the tablet
+   and phone cards: the drawing's desktop card has the same line
+   (`waitingCard` in `diary.mjs`).

@@ -35,7 +35,7 @@ const JOBS = [
 const NEXT_WEEK = [job({ id: 9, reference: 'WH-1009', title: 'Wheel true', bikeLabel: 'Cube Attain', customerName: 'Lena Fox', jobDate: '2026-10-13' })];
 const WAITING = {
   count: 1,
-  items: [{ kind: 'new_booking', jobId: 7, reference: 'WH-1007', jobDate: '2026-10-08', startTime: '10:00', endTime: '11:00', mechanicId: null, customerName: 'Sam Reed', serviceNames: ['Puncture repair'], services: [], arrivedAt: '2026-10-03T08:15:00Z' }],
+  items: [{ kind: 'new_booking', jobId: 7, reference: 'WH-1007', jobDate: '2026-10-08', startTime: '10:00', endTime: '11:00', mechanicId: null, customerName: 'Sam Reed', bikeLabel: 'Orbea Vector 20', serviceNames: ['Puncture repair'], services: [], arrivedAt: '2026-10-03T08:15:00Z' }],
 };
 
 const realFetch = globalThis.fetch;
@@ -166,6 +166,8 @@ test('Waiting in the top bar opens the list; a card goes to its day and shows th
   const { ui, fireEvent, within } = await openPhone();
   fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
   const sheet = within(await ui.findByRole('dialog', { name: 'Waiting for you (1)' }));
+  // The bike under the customer, as the drawing's phone card (waiting-bike).
+  assert.ok(sheet.getByRole('button', { name: /Sam Reed/ }).textContent.includes('Sam ReedOrbea Vector 20'));
   fireEvent.click(sheet.getByRole('button', { name: /Sam Reed/ }));
   assert.equal((await ui.findByRole('tab', { name: /^Thursday 8 October/ })).getAttribute('aria-selected'), 'true');
   const bar = within(await ui.findByRole('status', { name: 'Chosen from Waiting for you' }));
