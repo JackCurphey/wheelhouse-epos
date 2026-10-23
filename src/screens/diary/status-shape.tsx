@@ -23,7 +23,7 @@ export const hasShape = (state: DiaryState) => Boolean(SHAPES[state]);
 
 /** The person's Show status symbols switch, off until they turn it on. */
 export function useStatusSymbols(): boolean {
-  return Boolean(useYourSettings().data?.accessibility.statusSymbols);
+  return Boolean(useYourSettings().data?.accessibility?.statusSymbols);
 }
 
 /** The status's shape, in the top-right corner of its block or swatch. */

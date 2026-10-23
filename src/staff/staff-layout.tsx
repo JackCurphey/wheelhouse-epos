@@ -142,6 +142,7 @@ function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; s
   // A frame later, once the panel is showing: a hidden one can't take the focus.
   useEffect(() => {
     if (!open) return undefined;
+    if (typeof requestAnimationFrame !== 'function') { foldRef.current?.focus(); return undefined; }
     const frame = requestAnimationFrame(() => foldRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [open]);
@@ -285,7 +286,7 @@ export function StaffLayout() {
   const { user, shop } = session;
   const { role, roleName } = roleOf(user);
   // The Till always folds to the rail (app map review 4); every page does with Folded sidebar on (7).
-  const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility.foldedSidebar);
+  const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility?.foldedSidebar);
   const title = pageLabel(pageKey(pathname)) ?? '';
   const closeMenu = (returnFocus: boolean) => {
     setMenuOpen(false);
