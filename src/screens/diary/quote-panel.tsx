@@ -9,6 +9,7 @@ import { ItemSearch, type Picked } from './item-search.tsx';
 import { refusalText } from './refusal-words.ts';
 import { channelWord } from './channel-word.ts';
 import { MAX_BYTES, TOO_LARGE, readBase64 } from './job-files.tsx';
+import { AddLinePhoto, PhotoFromPhoneDialog } from './photo-from-phone.tsx';
 
 /**
  * The quote, in the job's work and parts (journey 4; quoteJobBoards in
@@ -105,6 +106,8 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
   // The draft line whose photo is open larger, by its place in the draft:
   // a save gives every line a new id (fresh review).
   const [viewingAt, setViewingAt] = useState<number | null>(null);
+  // The draft line Use my phone is adding a photo to, by its place (as viewingAt).
+  const [phoneAt, setPhoneAt] = useState<number | null>(null);
   const fileUrl = (id: number) => `/api/workshop-jobs/${job.id}/attachments/${id}`;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -264,12 +267,10 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
                             <span aria-hidden="true">1 photo</span>
                           </button>
                         ) : draft ? (
-                          <label className="inline-flex min-h-11 cursor-pointer self-start items-center gap-1 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 text-xs font-semibold no-underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]">
-                            <Camera size={13} aria-hidden="true" />
-                            <span aria-hidden="true">Add photo</span>
-                            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy}
-                              aria-label={`Add photo for ${l.description}`} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; void setPhoto(l, f); }} />
-                          </label>
+                          // On a computer, Choose a file or Use my phone (job-photo-choice).
+                          <AddLinePhoto description={l.description} disabled={busy}
+                            onFile={(f) => { void setPhoto(l, f); }}
+                            onPhone={() => setPhoneAt(draftLines.findIndex((x) => x.id === l.id))} />
                         ) : null}
                       </div>
                     </td>
@@ -448,6 +449,14 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
             <Button variant="accent" onClick={() => setViewingAt(null)}>Close</Button>
           </DialogFooter>
         </Dialog>
+      ) : null}
+      {phoneAt !== null && q && draftLines[phoneAt] ? (
+        <PhotoFromPhoneDialog jobId={job.id} quoteId={q.id} linePosition={phoneAt} description={draftLines[phoneAt].description}
+          reference={job.reference ?? ''}
+          // However it closes, the quote and files are read again, so a later
+          // save can't send a copy of the line without its new photo.
+          onClose={() => { setPhoneAt(null); void refresh(); void queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] }); }}
+          onAdded={() => { setPhoneAt(null); void refresh(); void queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] }); }} />
       ) : null}
       {withdrawing && q ? (
         <Dialog open onOpenChange={(o) => { if (!o) setWithdrawing(false); }} aria-labelledby="withdraw-title">

@@ -59,6 +59,7 @@ GET /api/workshop-jobs/:id
 POST /api/workshop-jobs/:id/private-link
 POST /api/workshop-jobs/:id/quote-photo-codes
 GET /api/workshop-jobs/:id/quote-photo-codes/:codeId
+DELETE /api/workshop-jobs/:id/quote-photo-codes/:codeId
 POST /api/workshop-jobs
 POST /api/workshop-jobs/:id/parts
 PUT /api/workshop-jobs/:id/parts/:partId

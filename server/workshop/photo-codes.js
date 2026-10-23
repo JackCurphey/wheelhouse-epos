@@ -142,3 +142,15 @@ export async function photoCodeStatus({ jobId, codeId }) {
   if (new Date(row.expires_at) <= currentMoment() || !(await lineFor(row))) return { state: 'expired' };
   return { state: 'waiting' };
 }
+
+// Cancel on the computer: an unused code stops working at once, so a photo
+// can't arrive after the pop-up has gone. A used code is left as it is.
+export async function cancelPhotoCode({ jobId, codeId }) {
+  if (!(Number.isInteger(codeId) && codeId > 0 && codeId <= 2147483647)) return false;
+  const row = await prepare('SELECT id FROM quote_photo_codes WHERE id = ? AND workshop_job_id = ?').get(codeId, jobId);
+  if (!row) return false;
+  await prepare('UPDATE quote_photo_codes SET expires_at = ? WHERE id = ? AND used_at IS NULL')
+    .run(currentMoment().toISOString(), codeId);
+  return true;
+}
+

@@ -45,6 +45,8 @@ customer on the phone. **Non-Goals:** see the proposal.
    - `POST /api/workshop-jobs/:id/quote-photo-codes` (staff) with
      `{ quoteId, linePosition }` makes a code and returns its path
      `/book/:shopSlug/photo/:code` and `expiresAt`.
+   - `DELETE /api/workshop-jobs/:id/quote-photo-codes/:codeId` (staff), sent
+     by Cancel, Close or Escape, switches an unused code off at once.
    - `GET /api/workshop-jobs/:id/quote-photo-codes/:codeId` (staff) says
      `waiting`, `added` (with the attachment id) or `expired`, for the pop-up
      to ask every 3 seconds while it's open.
@@ -59,11 +61,13 @@ customer on the phone. **Non-Goals:** see the proposal.
    and answer the same 410 for unknown, used and run-out codes, so a code
    can't be probed.
 4. **The phone page lives in the customer app**, at `/book/:shopSlug/photo/:code`,
-   in `BookFrame`, so the shop's name and look come for free. The customer
-   routes test is changed to allow this one page outside the booking steps.
+   in `BookFrame`, so the shop's name and look come for free. It is a route
+   of its own (`PHOTO_STEP_ROUTE`) beside the six booking steps, whose table
+   is tied to the Release 1 screen list; a test checks it matches the server's
+   address.
    Its four states are the four drawings.
-5. **The QR code is drawn in the browser** with the `qrcode` package (small,
-   well-known, no native parts), from the full address. The link under it is
+5. **The QR code is drawn in the browser** with the `qrcode-generator` package (small,
+   well-known, nothing else of its own), from the full address. The link under it is
    the same address. *Alternative:* draw it on the server. Rejected: adds a
    dependency to the server, which keeps to `pg` on purpose.
 6. **The choice shows on a computer only**: a fine pointer and wide window
