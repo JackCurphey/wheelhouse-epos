@@ -1739,3 +1739,7 @@ No screen: server only.
    and the legend's swatches; not day view or a phone, which spell the
    status out.
 2. **An offered time has no shape**: the drawing gives it none.
+3. **A tablet's week shows them too**, though the drawing's tablet blocks
+   (touchJobBlock) have none: its week columns are as narrow as a computer's,
+   and the switch is there for anyone who can't tell the colours apart.
+   A phone's job blocks don't (review), as drawn; its requests do.

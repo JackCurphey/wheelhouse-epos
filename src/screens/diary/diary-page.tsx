@@ -709,7 +709,7 @@ export function DiaryPage() {
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
             {LEGEND.map((s) => (
               <li key={s} className="inline-flex items-center gap-1.5 text-xs">
-                <span aria-hidden="true" className={`relative inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`}>{statusSymbols ? <StatusShape state={s} size={11} inset={0.5} /> : null}</span>
+                <span aria-hidden="true" className={`relative inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`}>{statusSymbols ? <StatusShape state={s} size={11} inset={1.5} /> : null}</span>
                 {LEGEND_LABEL[s]}
               </li>
             ))}

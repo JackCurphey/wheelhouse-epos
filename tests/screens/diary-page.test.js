@@ -494,7 +494,9 @@ test('with Show status symbols on, each week block and the legend carry the stat
 });
 
 test('with Show status symbols off, the diary is colour alone, as before', async () => {
-  const { ui } = await openDiary();
+  const { ui, waitFor } = await openDiary();
+  // Once the person's settings have come, so "off" isn't "not loaded yet".
+  await waitFor(() => assert.ok(calls.some((c) => c.includes('/api/your-settings'))));
   await new Promise((r) => setTimeout(r, 20));
   assert.ok(blockOf(ui, 'Trek Domane'), 'the block is there');
   assert.equal(document.querySelectorAll('[data-status-shape]').length, 0);

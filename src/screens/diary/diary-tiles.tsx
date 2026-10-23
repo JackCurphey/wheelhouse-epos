@@ -2,7 +2,7 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState, type CSSPrope
 import { tileClass } from './job-extras.tsx';
 import { Chevron } from './diary-bits.tsx';
 import { BlockLinesContext, ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
-import { StatusShape, useStatusSymbols } from './status-shape.tsx';
+import { StatusShape, hasShape, useStatusSymbols } from './status-shape.tsx';
 import { BLOCK, CHIP, SR, blockLine, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { stateWord, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
@@ -34,8 +34,9 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const mark = Boolean(job.newOnline);
   // The full words on a phone and in a wide column; short in a narrow week column (design).
   const shortMark = !wide && !fullMark;
-  // Show status symbols: in a narrow week column, where the word doesn't fit, and on every request, as drawn (diary.mjs jobBlock, pendingBlock).
-  const symbol = useStatusSymbols() && (!wide || job.state === 'pending');
+  // Show status symbols: in a narrow week column, where the word doesn't fit, and on every request, as drawn
+  // (diary.mjs jobBlock, pendingBlock); not a phone's job blocks (touchJobBlock, review), nor a state with no shape.
+  const symbol = useStatusSymbols() && hasShape(job.state) && ((!wide && !fullMark) || job.state === 'pending');
   const style: CSSProperties = { top, height };
   if (moving) {
     // Shifted across by whole columns (each column is 100% of this one's width).

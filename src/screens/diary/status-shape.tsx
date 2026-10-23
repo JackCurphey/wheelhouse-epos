@@ -18,6 +18,9 @@ const SHAPES: Partial<Record<DiaryState, ReactElement>> = {
   answer: <path d="M1 2.2H9V7H4L1.6 9V7H1Z" fill="currentColor" />,
 };
 
+/** Whether the drawing gives this status a shape (an offered time has none). */
+export const hasShape = (state: DiaryState) => Boolean(SHAPES[state]);
+
 /** The person's Show status symbols switch, off until they turn it on. */
 export function useStatusSymbols(): boolean {
   return Boolean(useYourSettings().data?.accessibility.statusSymbols);
