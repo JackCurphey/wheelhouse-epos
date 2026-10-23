@@ -102,6 +102,15 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
 .stage li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; font-size: 14px; }
 .stage li span.d { grid-column: 2; font-size: 13px; color: var(--muted); }
 .stage .how { margin: 0; font-size: 13px; color: var(--muted); }
+.packages summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.packages > ol { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.packages > ol > li { display: block; }
+.packages > ol > li > strong { font-size: 14px; }
+.packages > ol > li > span.d { display: inline; margin-left: 6px; font-size: 13px; color: var(--muted); }
+.packages > ol ol { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.packages > ol ol li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 2px 10px; align-items: start; font-size: 14px; }
+.packages > ol ol li .pill { justify-self: start; }
+.packages > ol ol li span.d { grid-column: 2; font-size: 13px; color: var(--muted); }
 .more button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
 @media (max-width: 560px) {
   ol.pieces li { grid-template-columns: minmax(0, 1fr) auto; }
@@ -127,6 +136,16 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
       <h2 id="ov-now-h">Where we're at</h2>
       <p class="lead" id="ov-now"></p>
       <div class="tally" id="ov-tally"></div>
+    </section>
+    <section class="stage" aria-labelledby="ov-project-h">
+      <h2 id="ov-project-h">How far through Release 2</h2>
+      <p class="sum" id="ov-project-sum"></p>
+      <div class="bar" id="ov-project-bar" role="progressbar" aria-labelledby="ov-project-sum" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+      <p class="how" id="ov-project-how"></p>
+      <details class="packages">
+        <summary>Every work package, by stage</summary>
+        <ol id="ov-project-packages"></ol>
+      </details>
     </section>
     <section class="stage" aria-labelledby="ov-stage-h">
       <h2 id="ov-stage-h">How far through the stage</h2>
@@ -198,6 +217,71 @@ const BOARD = {
   // Jack (from Mark, or a decision), with a link where there is one, and the
   // next few pieces for each person. Keep it short; the rest is on Detail.
   overview: {
+    // How far through the whole of Release 2 (Jack, 23 Oct): every work
+    // package in the build plan's stages 0 to 8, marked done, part or todo
+    // from what is merged; a partly done one counts half. Marked by Claude on
+    // 23 Oct for Jack and Mark to correct; kept up in the day's status update.
+    project: {
+      how: "Counted from the build plan's work packages, stages 0 to 8: done counts 1, partly done counts half. It's a judgement of each package against what's merged, not of how much work is left inside it. The walk-throughs (stage W) were planning, so they aren't counted; running alongside and the switch-over moved after Release 2 on 18 Oct.",
+      stages: [
+        { name: "Stage 0 — Close what's open", packages: [
+          { id: "WP-0.1", what: "Merge the open pull requests", status: "done", detail: "#110, #111, #112, #114" },
+          { id: "WP-0.2", what: "Fix the recorded booking bugs", status: "done", detail: "Server half #148, screens half #164" },
+          { id: "WP-0.3", what: "Trim STATUS.md", status: "done", detail: "#149" },
+          { id: "WP-0.4", what: "Split the server into files", status: "part", detail: "The route files and the workshop split are in; one booking route is still in server.js" },
+          { id: "WP-0.5", what: "Online test copy", status: "part", detail: "Live, safety checks in (#401), updates itself on every merge (#427, #428). Left: the failed-update drill, the test shop, the restore rehearsal" },
+        ] },
+        { name: "Stage 1 — Foundations", packages: [
+          { id: "WP-1.1", what: "Roles and switches", status: "part", detail: "App frame and where each person lands (#97), Settings for the Owner only (#283); the roles and switches aren't on the server yet" },
+          { id: "WP-1.2", what: "Settings store, change record, activity log", status: "todo", detail: "Not built; I'll do this and Who did what wait for it" },
+          { id: "WP-1.3", what: "The Settings frame", status: "part", detail: "The frame with rooms and folds (#339); the till's quick buttons aren't in Settings yet" },
+          { id: "WP-1.4", what: "Shops and sites everywhere", status: "todo", detail: "Written down (#154), not built" },
+          { id: "WP-1.5", what: "Products, stock, sizes and colours", status: "todo", detail: "Only the old app's products" },
+          { id: "WP-1.6", what: "One sales record in pence", status: "todo", detail: "Planned (#203); step A is #404, not merged yet" },
+          { id: "WP-1.7", what: "Sign-in and PINs", status: "todo", detail: "Not built" },
+          { id: "WP-1.8", what: "Messages engine and email", status: "part", detail: "The engine, wording, Undo, Settings › Messages and the reminder, pretend sending (#321 to #330, #418)" },
+          { id: "WP-1.9", what: "Live updates", status: "todo", detail: "Not built" },
+          { id: "WP-1.10", what: "Needs attention and Today", status: "todo", detail: "Today is still the old app's dashboard" },
+          { id: "WP-1.11", what: "Small shared parts", status: "part", detail: "Receipt and bike-tag printing (#269, #347); no spreadsheet download or header search yet" },
+        ] },
+        { name: "Stage 2 — Products and stock", packages: [
+          { id: "WP-2.1", what: "Stock control", status: "todo", detail: "Old app only" },
+          { id: "WP-2.2", what: "Stock take", status: "todo", detail: "Not built" },
+          { id: "WP-2.3", what: "Deliveries and purchase orders", status: "todo", detail: "Old app only" },
+          { id: "WP-2.4", what: "Citrus Lime import, first half", status: "todo", detail: "The export list is written down (#170); no importer yet" },
+        ] },
+        { name: "Stage 3 — The till and the shop day", packages: [
+          { id: "WP-3.1", what: "The till, complete", status: "part", detail: "Sale and payment (#111), paying a job (#267), receipts (#269), sign-off at the till (#273); no discounts, refunds or card machine yet" },
+          { id: "WP-3.2", what: "Customers", status: "todo", detail: "Old app only; the merge is decided (#371, #372)" },
+          { id: "WP-3.3", what: "Opening the shop", status: "todo", detail: "Not built" },
+          { id: "WP-3.4", what: "End-of-day cash-up", status: "todo", detail: "Not built" },
+        ] },
+        { name: "Stage 4 — The workshop and the customer's repair", packages: [
+          { id: "WP-4.1", what: "Workshop day, the rest", status: "part", detail: "Overview, offers, storage slots, checklists, sign-off, Use my phone and more; not yet: Done ticks per line, I'll do this, Who did what" },
+          { id: "WP-4.2", what: "Quotes, the rest", status: "part", detail: "Photos, lines that go together, the reminder, the spending limit, notes, the pinned bar (#405 to #435); not yet: deposits, No answer yet on Today" },
+          { id: "WP-4.3", what: "Collect and pay", status: "part", detail: "Bike ready (#326) and the page's ready and collected stages (#344, #360); not yet: paying online, emailed receipts" },
+          { id: "WP-4.4", what: "Book a repair, rebuilt", status: "part", detail: "Change, cancel, offered times, confirming automatically, booking settings and messages; not yet: deposits, a saved draft" },
+          { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); not yet: the customer's account, service reminders" },
+        ] },
+        { name: "Stage 5 — The office", packages: [
+          { id: "WP-5.1", what: "Owner setup, the rooms", status: "part", detail: "Shop details, hours, receipt words, the sign-off switch (#275 to #281); not yet: staff and roles, payments, end of day" },
+          { id: "WP-5.2", what: "Multiple sites, the screens", status: "todo", detail: "Not built" },
+          { id: "WP-5.3", what: "Reports and accounts", status: "todo", detail: "Old app's sales history only" },
+          { id: "WP-5.4", what: "Management oversight", status: "todo", detail: "Not built" },
+        ] },
+        { name: "Stage 6 — The website", packages: [
+          { id: "WP-6.1", what: "Website management", status: "todo", detail: "Old app only" },
+          { id: "WP-6.2", what: "Find the shop and browse", status: "todo", detail: "The old shop website only" },
+          { id: "WP-6.3", what: "Buy online, click and collect", status: "todo", detail: "The old shop website only" },
+        ] },
+        { name: "Stage 7 — Cycle to Work", packages: [
+          { id: "WP-7.1", what: "Cycle to Work", status: "todo", detail: "Not built" },
+        ] },
+        { name: "Stage 8 — The move", packages: [
+          { id: "WP-8.1", what: "Citrus Lime import, second half", status: "todo", detail: "Not built. Running alongside and the switch-over moved after Release 2 (your 18 Oct answer, #256), so they aren't counted" },
+        ] },
+      ],
+    },
     // The current stage's steps, as the split plan's §9 lists them; the
     // percentage on the board is worked out from these, never typed in.
     stage: {
@@ -513,6 +597,38 @@ for (const s of ['done', 'review', 'build', 'next']) {
 }
 
 const ov = BOARD.overview;
+// How far through the whole of Release 2: every work package in the build
+// plan, done, partly done (counting half) or to do. Worked out, never typed in.
+{
+  const { how, stages } = ov.project;
+  const all = stages.flatMap((st) => st.packages);
+  const count = (status) => all.filter((p) => p.status === status).length;
+  const [done, part, todo] = [count('done'), count('part'), count('todo')];
+  const pct = Math.round(((done + part / 2) / all.length) * 100);
+  document.getElementById('ov-project-sum').textContent = `Release 2: ${done} done, ${part} partly done, ${todo} to do of ${all.length} work packages · about ${pct}%`;
+  const bar = document.getElementById('ov-project-bar');
+  bar.setAttribute('aria-valuenow', String(pct));
+  bar.firstElementChild.style.width = `${pct}%`;
+  document.getElementById('ov-project-how').textContent = how;
+  const PACKAGE = { done: ['s-done', 'Done'], part: ['s-build', 'Partly done'], todo: ['s-next', 'To do'] };
+  const list = document.getElementById('ov-project-packages');
+  for (const st of stages) {
+    const li = el('li');
+    const finished = st.packages.filter((p) => p.status === 'done').length;
+    li.append(el('strong', null, st.name), el('span', 'd', `${finished} of ${st.packages.length} done`));
+    const ol = el('ol');
+    for (const p of st.packages) {
+      const row = el('li');
+      row.dataset.status = p.status;
+      const [cls, label] = PACKAGE[p.status];
+      row.append(el('span', `pill ${cls}`, label), el('strong', null, `${p.id} ${p.what}`));
+      if (p.detail) row.append(el('span', 'd', p.detail));
+      ol.append(row);
+    }
+    li.append(ol);
+    list.append(li);
+  }
+}
 // How far through the stage: done steps out of all of them.
 {
   const { name, steps, how } = ov.stage;
