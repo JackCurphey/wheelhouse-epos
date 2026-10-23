@@ -32,7 +32,7 @@ export function StatusShape({ state, size = 13, inset = 4 }: { state: DiaryState
   if (!shape) return null;
   return (
     <svg data-status-shape={state} aria-hidden="true" width={size} height={size} viewBox="0 0 10 10"
-      className="absolute shrink-0 drop-shadow-[0_0_1px_rgba(255,255,255,0.9)]" style={{ top: inset, right: inset }}>
+      className="absolute shrink-0 drop-shadow-[0_0_1px_var(--wh-panel)]" style={{ top: inset, right: inset }}>
       {shape}
     </svg>
   );
