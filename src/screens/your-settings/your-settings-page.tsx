@@ -6,6 +6,8 @@ import { useChangeAccessibility, useYourSettings, type Accessibility } from '@/l
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
+import { BLOCK } from '@/screens/diary/diary-model.ts';
+import { StatusShape } from '@/screens/diary/status-shape.tsx';
 
 /**
  * Your settings (drawn as your-settings, app-map.mjs yourSettingsDialog;
@@ -16,7 +18,8 @@ import { ROUTES } from '@/staff/routes.ts';
  */
 // Larger text waits: zooming the app put the diary's drops and pop-ups off
 // their marks (review), so it's a question for Jack.
-const ROWS: { key: keyof Accessibility; label: string; hint: string }[] = [
+const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: 'symbols' }[] = [
+  { key: 'statusSymbols', label: 'Show status symbols', hint: 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', preview: 'symbols' },
   { key: 'reduceMotion', label: 'Reduce motion', hint: 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.' },
 ];
 
@@ -28,6 +31,25 @@ function Switch({ label, on, disabled, onChange }: { label: string; on: boolean;
         <span className={`absolute top-0.5 size-5 rounded-full bg-[var(--wh-panel)] shadow ${on ? 'left-[18px]' : 'left-0.5'}`} />
       </span>
     </button>
+  );
+}
+
+// The drawing's preview of Show status symbols: two week blocks with their shapes (diary.mjs symbolsPreview).
+const SAMPLE: [('scheduled' | 'waiting'), string, string][] = [['scheduled', 'Trek Domane AL 3', 'Standard service'], ['waiting', 'Cannondale Quick', 'Gear adjustment']];
+function SymbolsPreview() {
+  return (
+    <div className="border-t border-[var(--wh-border)] pt-2.5">
+      <span className="text-xs font-bold tracking-[0.8px] text-[var(--wh-muted)] uppercase">Preview</span>
+      <div className="flex gap-2 pt-1.5">
+        {SAMPLE.map(([state, bike, title]) => (
+          <div key={state} aria-hidden="true" className={`relative w-[122px] rounded-[5px] border-[1.75px] py-[3px] pr-4 pl-1.5 ${BLOCK[state]}`}>
+            <StatusShape state={state} />
+            <div className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{bike}</div>
+            <div className="truncate text-[10px] font-bold">{title}</div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -81,6 +103,7 @@ export function YourSettingsPage() {
               </div>
               <Switch label={r.label} on={Boolean(a11y?.[r.key])} disabled={!a11y || busy.has(r.key)} onChange={() => void flip(r.key, !a11y?.[r.key])} />
             </div>
+            {r.preview === 'symbols' ? <SymbolsPreview /> : null}
           </div>
         ))}
         {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t save that. Try again in a moment.</p> : null}

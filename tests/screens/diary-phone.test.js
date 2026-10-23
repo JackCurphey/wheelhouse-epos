@@ -62,6 +62,7 @@ function stubServer() {
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname === '/api/workshop-waiting') return reply(200, WAITING);
+    if (u.pathname === '/api/your-settings') return reply(200, { accessibility: { statusSymbols: symbolsOn, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false } });
     if (u.pathname === '/api/workshop-jobs') return reply(200, u.searchParams.get('start') === '2026-10-12' ? NEXT_WEEK : JOBS);
     const one = u.pathname.match(/^\/api\/workshop-jobs\/(\d+)$/);
     if (one) return reply(200, JOBS.find((j) => j.id === Number(one[1])));
@@ -84,6 +85,26 @@ async function openPhone(query = '?date=2026-10-06') {
 }
 
 const has = (q) => Boolean(q);
+
+// Show status symbols on a phone (Your settings; diary.mjs touchJobBlock has
+// none; pendingBlock('phone') has one): a request carries its shape, a job
+// doesn't, as the phone's day spells nothing out on the block.
+let symbolsOn = false;
+test('on a phone with Show status symbols on, a request carries its shape and a job doesn’t', async () => {
+  symbolsOn = true;
+  try {
+    const { ui, fireEvent, waitFor } = await openPhone();
+    const block = (bike) => ui.getAllByText(bike).map((t) => t.closest('[title]')).find(Boolean);
+    // Wait for the settings, so "no shape" isn't "not loaded yet".
+    await waitFor(() => assert.ok(calls.some((c) => String(c.url ?? c).includes('/api/your-settings'))));
+    await new Promise((r) => setTimeout(r, 20));
+    assert.ok(block('Trek Domane').querySelector('[data-status-shape]') === null, 'a phone job block has no shape');
+    fireEvent.click(ui.getByRole('tab', { name: /^Thursday 8 October/ }));
+    await waitFor(() => assert.equal(block('Specialized Sirrus')?.querySelector('[data-status-shape]')?.getAttribute('data-status-shape'), 'pending'));
+  } finally {
+    symbolsOn = false;
+  }
+});
 
 test('a phone shows one day, chosen in a strip of the week', async () => {
   const { ui } = await openPhone();

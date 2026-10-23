@@ -57,6 +57,19 @@ test.describe('on a computer', () => {
     expect(await fade()).toBeLessThan(0.001);
   });
 
+  test('Show status symbols puts the status’s shape in a week block’s top-right corner', async ({ page, context }) => {
+    const made = await staffRequest(server!.baseUrl, owner.cookie, '/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-09-02', startTime: '10:00', endTime: '11:00' } });
+    expect(made.status, JSON.stringify(made.body)).toBe(201);
+    await settings({ accessibility: { statusSymbols: true, reduceMotion: false } });
+    await signIn(page, context, '/workshop/diary?date=2026-09-02');
+    const shape = page.locator('[title*="Standard service"] [data-status-shape]').first();
+    await expect(shape).toBeVisible();
+    const [s, b] = [await shape.boundingBox(), await page.locator('[title*="Standard service"]').first().boundingBox()];
+    expect(s!.x + s!.width).toBeLessThanOrEqual(b!.x + b!.width);
+    expect(s!.x).toBeGreaterThan(b!.x + b!.width / 2);
+    expect(s!.y - b!.y).toBeLessThan(8);
+    await settings({ accessibility: { statusSymbols: false } });
+  });
 });
 
 test.describe('on a phone', () => {

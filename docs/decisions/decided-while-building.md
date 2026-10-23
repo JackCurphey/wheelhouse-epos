@@ -1751,3 +1751,14 @@ No screen: server only.
 5. **Reduce motion stops every animation and transition**, as the
    computer's own setting does, and the diary's hover card opens at once
    with either.
+
+### 23 Oct 2026: Show status symbols (`openspec/changes/status-symbols`, `your-settings`, the diary's blocks)
+
+1. **Where the drawing puts them**: narrow week blocks and every request,
+   and the legend's swatches; not day view or a phone, which spell the
+   status out.
+2. **An offered time has no shape**: the drawing gives it none.
+3. **A tablet's week shows them too**, though the drawing's tablet blocks
+   (touchJobBlock) have none: its week columns are as narrow as a computer's,
+   and the switch is there for anyone who can't tell the colours apart.
+   A phone's job blocks don't (review), as drawn; its requests do.
