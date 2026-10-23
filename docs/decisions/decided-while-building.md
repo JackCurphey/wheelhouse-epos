@@ -1779,3 +1779,17 @@ No screen: server only.
    history later; with no customer it goes all the same.
 5. **Nothing is saved to the customer from here** (review answer 3: "for
    this receipt only"); Save to a customer record comes with the till's pop-up.
+
+### 23 Oct 2026: Folded sidebar (`openspec/changes/folded-sidebar`, `foldedRail`, `your-settings`)
+
+1. **The keyboard opens it with Unfold, not by moving into the rail** (the
+   drawing opens on focus): opening on focus put it straight back open after
+   Escape, so a keyboard user couldn't close it.
+2. **After Fold or Escape, resting the pointer doesn't reopen it** until the
+   pointer has left the rail, so Escape works with the mouse over it.
+3. **A tablet's rail has Unfold too**, as its drawn hint says ("tap Unfold
+   to open it").
+4. **The panel over the page has the rooms, the shop and your name, without
+   the drawn shop switcher**, which comes with more than one shop.
+5. **Tapping or clicking the page beside it folds it** (not drawn; review),
+   as the phone menu's dimmed page does, so a tablet isn't left half covered.

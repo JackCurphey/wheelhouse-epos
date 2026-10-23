@@ -57,6 +57,7 @@ export function YourSettingsPage() {
   const session = useSession();
   const navigate = useNavigate();
   const isPhone = useMedia('(max-width: 767px)');
+  const isTablet = useMedia('(max-width: 1023px)') && !isPhone;
   const settings = useYourSettings();
   const change = useChangeAccessibility();
   const [busy, setBusy] = useState<ReadonlySet<keyof Accessibility>>(new Set());
@@ -80,6 +81,10 @@ export function YourSettingsPage() {
   }
 
   const a11y = settings.data?.accessibility;
+  // Folded sidebar, last as drawn: its hint for a tablet, where the rail is always there; not on a phone, where the menu opens the rooms.
+  const rows = isPhone ? ROWS : [...ROWS, { key: 'foldedSidebar' as const, label: 'Folded sidebar', hint: isTablet
+    ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.'
+    : 'Folds the sidebar down to icons on every page, for more room. Rest the pointer on it, or press Unfold, to open it. The Till always has it folded.' }];
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="ys-title" className="md:max-w-[560px] max-md:h-full max-md:max-h-none max-md:w-full max-md:max-w-none max-md:rounded-none">
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-3.5 pr-3.5 pl-[22px]">
@@ -94,7 +99,7 @@ export function YourSettingsPage() {
       <div className="flex flex-col gap-3 overflow-y-auto bg-[var(--wh-bg)] p-[22px] max-md:p-3.5">
         <span className="text-xs font-bold tracking-[0.8px] text-[var(--wh-muted)] uppercase">Accessibility</span>
         {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load your settings. Try again in a moment.</p> : null}
-        {ROWS.map((r) => (
+        {rows.map((r) => (
           <div key={r.key} className="flex flex-col gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 grow flex-col gap-1">

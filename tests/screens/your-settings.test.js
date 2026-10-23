@@ -66,7 +66,7 @@ test('Your settings, as drawn: whose they are, the switch built, off, and change
   assert.ok(dialog.queryByRole('switch', { name: 'Larger text' }) === null, 'Larger text isn’t built yet');
   // Show status symbols, first as drawn, with its preview of two week blocks.
   const switches = dialog.getAllByRole('switch').map((el) => el.getAttribute('aria-label'));
-  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion']);
+  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion', 'Folded sidebar']);
   assert.ok(dialog.queryByText('Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.') !== null);
   for (const words of ['Trek Domane AL 3', 'Standard service', 'Cannondale Quick', 'Gear adjustment']) assert.ok(dialog.queryByText(words) !== null, words);
   assert.deepEqual([...document.querySelectorAll('dialog [data-status-shape]')].map((el) => el.getAttribute('data-status-shape')), ['scheduled', 'waiting']);
