@@ -16,20 +16,22 @@
    already links to, over an empty frame; Close or Escape goes back to the
    page you came from (or the desk). The drawing shows a pop-up over the
    diary; the address keeps the existing links working.
-4. **Applied as classes on `<html>`** by the staff frame: `wh-larger-text`
-   and `wh-reduce-motion`, so every screen follows without changes.
-   - **Larger text** is `zoom` on the staff app's root, 17/14 of normal (the
-     drawn preview). Text is set in pixels throughout, so a root font size
-     wouldn't reach it; zoom does, as the browser's own zoom does. Checked
-     at a phone's width in a browser test.
-   - **Reduce motion** stops animations and transitions in CSS, as the
-     computer's own setting does; the diary's hover delay reads one shared
-     `prefersReducedMotion()` that answers yes for either.
-5. **Only built switches show.** The pop-up lists Larger text and Reduce
-   motion now; each later change adds its own row with what it acts on.
+4. **Applied as a class on `<html>`** by the staff frame, `wh-reduce-motion`,
+   so every screen follows without changes: CSS stops animations and
+   transitions, as the computer's own setting does, and the diary's hover
+   delay reads one shared `prefersReducedMotion()` that answers yes for
+   either.
+   - **Larger text was first built as `zoom` on the app's root and taken
+     out** (review): checked in a browser, a zoomed page's pointer positions
+     are in screen pixels while the diary's rows are measured unzoomed, so a
+     drop landed about a fifth too far down and pop-ups placed beside a block
+     drifted. Text is set in pixels throughout, so a root font size wouldn't
+     reach it either. A question for Jack: (1) scale the text sizes
+     themselves (every screen's sizes change once, the layout stays), or
+     (2) keep zoom and correct each place that measures the screen.
+5. **Only built switches show.** The pop-up lists Reduce motion now; each later change adds its own row with what it acts on.
 
 ## Risks / Trade-offs
 
-- [Zoom makes things a step larger, not just text] → It's what the browser's
-  zoom does and keeps the layout's proportions; the drawing's preview is of
-  text. Logged for Jack.
+- [Reduce motion also stops a fade that tells something happened] → The
+  change still shows at once; only the movement goes.

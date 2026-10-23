@@ -16,14 +16,15 @@ answer 1).
   switches, and "Changes apply straight away." Opened from your name, as now.
 - **Saved per signed-in login** (migration 065, `login_preferences`), read and
   changed through `GET`/`PUT /api/your-settings`.
-- **This change builds two switches that act across the app:**
-  - **Larger text**: text a step larger everywhere (the drawing's preview: 14
-    to 17).
-  - **Reduce motion**: animations and transitions off, as the computer's own
-    setting already does; on by itself when the computer asks.
-- Later changes add Show status symbols, Don't close things by themselves
-  and Folded sidebar, each with what it acts on; the server already keeps
-  all five.
+- **This change builds Reduce motion**: animations and transitions off
+  across the app, as the computer's own setting already does; on by itself
+  when the computer asks.
+- **Larger text waits for Jack**: zooming the app (the way it was first
+  built) put the diary's drops and pop-ups off their marks (review), so how
+  to make text larger is a question for him.
+- Later changes add Show status symbols, Don't close things by themselves,
+  Folded sidebar and Larger text, each with what it acts on; the server
+  already keeps all five.
 
 ## Capabilities
 
@@ -46,8 +47,8 @@ answer 1).
 
 - The Till PIN block (waits for PINs, WP-1.7) and Help (off on the drawn boards).
 - Show graphs in reports (reports aren't built).
-- Show status symbols, Don't close things by themselves, Folded sidebar: next
-  changes.
+- Larger text, Show status symbols, Don't close things by themselves, Folded
+  sidebar: next changes.
 
 ## Impact
 

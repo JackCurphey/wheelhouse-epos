@@ -9,8 +9,8 @@ import { apiGet, apiMutate } from '@/lib/api/client.ts';
 export type Accessibility = { statusSymbols: boolean; reduceMotion: boolean; noAutoClose: boolean; largerText: boolean; foldedSidebar: boolean };
 const KEY = ['your-settings'];
 
-export function useYourSettings() {
-  return useQuery({ queryKey: KEY, queryFn: () => apiGet<{ accessibility: Accessibility }>('/api/your-settings') });
+export function useYourSettings(enabled = true) {
+  return useQuery({ queryKey: KEY, queryFn: () => apiGet<{ accessibility: Accessibility }>('/api/your-settings'), enabled });
 }
 
 /** Saves one switch; the page follows once it's saved. */
@@ -18,16 +18,17 @@ export function useChangeAccessibility() {
   const queryClient = useQueryClient();
   return async (key: keyof Accessibility, on: boolean) => {
     const saved = await apiMutate<{ accessibility: Accessibility }>('/api/your-settings', { accessibility: { [key]: on } }, { method: 'PUT' });
-    queryClient.setQueryData(KEY, saved);
+    // Only this switch from the answer, so two quick saves answered out of order can't undo each other (review).
+    queryClient.setQueryData<{ accessibility: Accessibility }>(KEY, (old) => ({ accessibility: { ...(old?.accessibility ?? saved.accessibility), [key]: saved.accessibility[key] } }));
   };
 }
 
 // The classes on <html> that the switches turn on (theme.css).
-const CLASSES: [keyof Accessibility, string][] = [['largerText', 'wh-larger-text'], ['reduceMotion', 'wh-reduce-motion']];
+const CLASSES: [keyof Accessibility, string][] = [['reduceMotion', 'wh-reduce-motion']];
 
 /** Puts the signed-in person's switches on the page, for every screen; the staff frame runs it. */
 export function useAccessibilityClasses(signedIn: boolean) {
-  const settings = useQuery({ queryKey: KEY, queryFn: () => apiGet<{ accessibility: Accessibility }>('/api/your-settings'), enabled: signedIn });
+  const settings = useYourSettings(signedIn);
   const a11y = settings.data?.accessibility;
   useEffect(() => {
     const root = document.documentElement.classList;

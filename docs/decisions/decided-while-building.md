@@ -1698,14 +1698,15 @@ No screen: server only.
    linked, over an empty frame rather than over the page you were on;
    Close or Escape goes back to that page (the desk when opened directly).
    The drawing shows it over the diary.
-3. **Only the switches built show**: Reduce motion and Larger text now. Show
-   status symbols, Don't close things by themselves and Folded sidebar come
-   with what they act on; the Till PIN with PINs; Show graphs with reports.
-   With no Till column, the pop-up is one column (560px) on a computer, the
-   whole screen on a phone.
-4. **Larger text zooms the whole app by 17/14**, the drawn preview's step,
-   because text is set in pixels; things grow with the text, as with the
-   browser's own zoom. Checked not to widen the page on a phone.
+3. **Only the switches built show**: Reduce motion now. Show status
+   symbols, Don't close things by themselves, Folded sidebar and Larger
+   text come with what they act on; the Till PIN with PINs; Show graphs with
+   reports. With no Till column, the pop-up is one column (560px) on a
+   computer, the whole screen on a phone.
+4. **Larger text is held back, a question for Jack.** It was built as a zoom
+   of the whole app by 17/14 (text is set in pixels) and taken out after the
+   review: checked in a browser, a zoomed page put the diary's drops about a
+   fifth too far down and pop-ups beside a block off their marks.
 5. **Reduce motion stops every animation and transition**, as the
    computer's own setting does, and the diary's hover card opens at once
    with either.

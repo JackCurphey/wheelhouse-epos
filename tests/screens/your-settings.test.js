@@ -1,7 +1,7 @@
 // Your settings › Accessibility, the screens (openspec/changes/your-settings-accessibility;
 // drawn as your-settings in app-map.mjs; workshop day 57): the pop-up from your
-// name, Larger text and Reduce motion saved at once to your login, and the
-// page following them.
+// name, Reduce motion saved at once to your login, and the page following it.
+// Larger text waits for Jack (it put the diary's drops off their marks).
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
@@ -56,38 +56,33 @@ async function open(path, { accessibility = OFF, phone = false } = {}) {
 }
 const html = () => document.documentElement.classList;
 
-test('Your settings, as drawn: whose they are, the two switches built, off, and changes apply straight away', async () => {
+test('Your settings, as drawn: whose they are, the switch built, off, and changes apply straight away', async () => {
   const { ui, within } = await open('/workshop/your-settings');
   const dialog = within(await ui.findByRole('dialog', { name: 'Your settings' }));
   assert.ok(dialog.queryByText('Jo Taylor · Staff · just for you, they don’t change what others see') !== null);
   assert.ok(dialog.queryByText('Accessibility') !== null);
-  for (const name of ['Larger text', 'Reduce motion']) {
-    assert.equal((await dialog.findByRole('switch', { name })).getAttribute('aria-checked'), 'false', name);
-  }
-  assert.ok(dialog.queryByText('Makes text across Wheelhouse a step larger.') !== null);
+  assert.equal((await dialog.findByRole('switch', { name: 'Reduce motion' })).getAttribute('aria-checked'), 'false');
   assert.ok(dialog.queryByText('Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.') !== null);
-  assert.ok(dialog.queryByRole('switch', { name: 'Show status symbols' }) === null, 'not built yet');
+  for (const name of ['Show status symbols', 'Larger text']) assert.ok(dialog.queryByRole('switch', { name }) === null, `${name} isn’t built yet`);
   assert.ok(dialog.queryByText('Changes apply straight away.') !== null);
 });
 
-test('Larger text saves at once and the page follows; off again, it goes', async () => {
+test('Reduce motion saves at once and the page follows; off again, it goes', async () => {
   const { ui, fireEvent, waitFor } = await open('/workshop/your-settings');
-  const larger = await ui.findByRole('switch', { name: 'Larger text' });
-  await waitFor(() => assert.equal(larger.disabled, false));
-  fireEvent.click(larger);
-  await waitFor(() => assert.equal(larger.getAttribute('aria-checked'), 'true'));
-  assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ accessibility: { largerText: true } }]);
-  assert.ok(html().contains('wh-larger-text'));
-  fireEvent.click(larger);
-  await waitFor(() => assert.ok(!html().contains('wh-larger-text')));
+  const motion = await ui.findByRole('switch', { name: 'Reduce motion' });
+  await waitFor(() => assert.equal(motion.disabled, false));
+  fireEvent.click(motion);
+  await waitFor(() => assert.equal(motion.getAttribute('aria-checked'), 'true'));
+  assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ accessibility: { reduceMotion: true } }]);
+  assert.ok(html().contains('wh-reduce-motion'));
+  fireEvent.click(motion);
+  await waitFor(() => assert.ok(!html().contains('wh-reduce-motion')));
 });
 
 test('saved switches follow you to every page', async () => {
-  const { ui } = await open('/workshop/today', { accessibility: { ...OFF, reduceMotion: true, largerText: true } });
+  const { ui, waitFor } = await open('/workshop/today', { accessibility: { ...OFF, reduceMotion: true } });
   await ui.findByRole('heading', { level: 1, name: 'Today' });
-  await new Promise((r) => setTimeout(r, 20));
-  assert.ok(html().contains('wh-reduce-motion'));
-  assert.ok(html().contains('wh-larger-text'));
+  await waitFor(() => assert.ok(html().contains('wh-reduce-motion')));
 });
 
 test('a switch that can’t be saved says so and stays as it was', async () => {

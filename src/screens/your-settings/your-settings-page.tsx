@@ -14,9 +14,10 @@ import { ROUTES } from '@/staff/routes.ts';
  * Close goes back. Only the switches built show (design 5); the Till PIN
  * waits for PINs (WP-1.7).
  */
-const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: 'text' }[] = [
+// Larger text waits: zooming the app put the diary's drops and pop-ups off
+// their marks (review), so it's a question for Jack.
+const ROWS: { key: keyof Accessibility; label: string; hint: string }[] = [
   { key: 'reduceMotion', label: 'Reduce motion', hint: 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.' },
-  { key: 'largerText', label: 'Larger text', hint: 'Makes text across Wheelhouse a step larger.', preview: 'text' },
 ];
 
 function Switch({ label, on, disabled, onChange }: { label: string; on: boolean; disabled: boolean; onChange: () => void }) {
@@ -27,22 +28,6 @@ function Switch({ label, on, disabled, onChange }: { label: string; on: boolean;
         <span className={`absolute top-0.5 size-5 rounded-full bg-[var(--wh-panel)] shadow ${on ? 'left-[18px]' : 'left-0.5'}`} />
       </span>
     </button>
-  );
-}
-
-// The drawing's preview of Larger text: the same words at each size.
-function TextPreview() {
-  const col = (size: string, label: string) => (
-    <span className="flex flex-col gap-[3px]">
-      <span className="text-xs text-[var(--wh-muted)]">{label}</span>
-      <span className={`${size} font-semibold`}>Standard service</span>
-    </span>
-  );
-  return (
-    <div className="border-t border-[var(--wh-border)] pt-2.5">
-      <span className="text-xs font-bold tracking-[0.8px] text-[var(--wh-muted)] uppercase">Preview</span>
-      <div className="flex items-end gap-5 pt-1.5">{col('text-sm', 'Normal')}{col('text-[17px]', 'Larger')}</div>
-    </div>
   );
 }
 
@@ -96,7 +81,6 @@ export function YourSettingsPage() {
               </div>
               <Switch label={r.label} on={Boolean(a11y?.[r.key])} disabled={!a11y || busy.has(r.key)} onChange={() => void flip(r.key, !a11y?.[r.key])} />
             </div>
-            {r.preview === 'text' ? <TextPreview /> : null}
           </div>
         ))}
         {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t save that. Try again in a moment.</p> : null}
