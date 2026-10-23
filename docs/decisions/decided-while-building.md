@@ -1575,6 +1575,30 @@ The drawings show where slots appear but not these rules. *Decided:*
    the setup script and made the package public: the package only exists
    after the first push. The runbook's "Automatic updates" says so.
 
+### 23 Oct 2026: the quote's pinned answer bar (`openspec/changes/quote-pinned-bar`, `dq-quote`)
+
+1. **"Tablet or phone" means a touch screen, or a window narrower than a
+   computer's** (`(pointer: coarse)` or under 1024px wide). The drawings
+   tell desktop from tablet by device: the tablet board is 1180 wide and
+   still has the bar. *Pattern:* the diary reads touch screens and "narrower
+   than a computer" the same way (`diary-page.tsx`, `diary-bits.tsx`).
+2. **A failed send's message shows in the bar**, above the button, where the
+   customer tapped, and the room kept under the bar grows to fit it.
+   *Pattern:* the quote card's own message beside its button.
+3. **With the bar pinned, only the bar announces the new total** to screen
+   readers, so a tick isn't read out twice; the quote's own "New total" line
+   stays on screen, as drawn.
+4. **No deposit in the bar yet.** The drawn "· deposit £[deposit] paid"
+   (`dq-quote-deposit`) comes with deposits, which aren't built.
+5. **The bar looks like the booking page's own pinned area**: a full-width
+   strip with a top border, the total and the line above a full-width
+   button. The drawing's `quoteBar` is a rounded box with a dark border and
+   the button beside the text on a tablet. *Pattern:* decision 8's "as 'Your
+   booking' does on the booking page", which is that strip
+   (`data-book-pinned` in `frame.tsx`).
+6. **The room kept under the bar is the bar's measured height**, so a
+   longer message never covers the end of the page.
+
 ### 23 Oct 2026: photos lose their location when uploaded (`openspec/changes/photo-location-data`, CX-2)
 
 No screen: server only.

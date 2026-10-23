@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { PinnedRoom } from './frame.tsx';
 
 /**
  * The quote on the customer's booking link (journey 4; drawn by quoteCard,
@@ -53,6 +54,17 @@ function Phone({ phone }: { phone: string | null }) {
   return phone ? <a href={`tel:${phone}`} className="font-semibold text-[var(--wh-ink)]">{phone}</a> : <>the shop</>;
 }
 
+function useMedia(query: string): boolean {
+  return React.useSyncExternalStore(
+    (onChange) => {
+      const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
+      mq?.addEventListener('change', onChange);
+      return () => mq?.removeEventListener('change', onChange);
+    },
+    () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false),
+  );
+}
+
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
@@ -77,6 +89,34 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
   // The line whose photo is open larger (dq-quote-photo).
   const [enlarged, setEnlarged] = React.useState<QuoteLine | null>(null);
   const photoUrl = (l: QuoteLine) => `/api/portal/${shopSlug}/booking-links/${code}/quote/lines/${l.id}/photo`;
+  // On a tablet or phone the quote is longer than the screen, so the new
+  // total, the final-answer line and the button sit in a bar pinned along the
+  // bottom (Jack, 1 Oct, decision 8; quoteBar in quote.mjs). A touch screen or
+  // a window narrower than a computer counts, as the diary reads them.
+  const touch = useMedia('(pointer: coarse)');
+  const narrow = useMedia('(max-width: 1023px)');
+  // Only a sent quote is answered here; every other state shows no button.
+  const pinBar = Boolean(q && Array.isArray(q.lines) && q.state === 'sent') && (touch || narrow);
+  const askRoom = React.useContext(PinnedRoom);
+  const barRef = React.useRef<HTMLDivElement>(null);
+  // The room kept under the bar is the bar's own height, measured as it
+  // changes (a failed send's message makes it taller). Where it can't be
+  // measured, two lines and the button, or 13rem with a message.
+  React.useEffect(() => {
+    if (!pinBar) return undefined;
+    const el = barRef.current;
+    const guess = message ? 13 : 9;
+    if (!el || typeof ResizeObserver !== 'function') {
+      askRoom(guess);
+      return () => askRoom(0);
+    }
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const measure = () => askRoom(Math.ceil((el.getBoundingClientRect().height / rem) * 4) / 4 + 0.5);
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    return () => { watch.disconnect(); askRoom(0); };
+  }, [pinBar, message, askRoom]);
   // Nothing to show without a quote (a 404 means the booking has none).
   if (!q || !Array.isArray(q.lines)) return null;
 
@@ -287,14 +327,37 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
           <span className="text-[var(--wh-muted)]">Already agreed</span><span>{money(agreedSoFar)}</span>
         </p>
       ) : null}
-      <p aria-live="polite" className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2">
+      {/* With the bar pinned, the bar is what's announced, so the total isn't read out twice. */}
+      <p aria-live={pinBar ? undefined : 'polite'} className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2">
         <strong>New total</strong><strong>{money(total)}</strong>
-        {pairNote ? <span className="sr-only">{pairNote}</span> : null}
+        {pairNote && !pinBar ? <span className="sr-only">{pairNote}</span> : null}
       </p>
-      <p className="m-0 text-sm font-semibold">Your answers are final once sent.</p>
+      {pinBar ? null : <p className="m-0 text-sm font-semibold">Your answers are final once sent.</p>}
       <p className="m-0 text-sm text-[var(--wh-muted)]">Prices include VAT. Nothing to pay today.</p>
-      {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
-      <Button variant="accent" className="self-end" disabled={sending} onClick={() => void send()}>{label}</Button>
+      {pinBar ? null : (
+        <>
+          {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
+          <Button variant="accent" className="self-end" disabled={sending} onClick={() => void send()}>{label}</Button>
+        </>
+      )}
+      {pinBar ? (
+        // The frame's pinned style (data-book-pinned), holding what quoteBar draws.
+        // The total is announced as it changes; a failed send's message is an
+        // alert of its own, outside that, so it's read once.
+        <div ref={barRef} data-book-pinned className="fixed inset-x-0 bottom-0 z-10 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-3">
+          <div className="mx-auto flex max-w-md flex-col gap-1.5">
+            <div aria-live="polite" className="flex flex-col gap-1.5">
+              <p className="m-0 flex items-baseline justify-between gap-3">
+                <span>New total</span><strong className="text-lg">{money(total)}</strong>
+                {pairNote ? <span className="sr-only">{pairNote}</span> : null}
+              </p>
+              <p className="m-0 font-semibold">Your answers are final once sent.</p>
+            </div>
+            {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
+            <Button variant="accent" block className="min-h-12" disabled={sending} onClick={() => void send()}>{label}</Button>
+          </div>
+        </div>
+      ) : null}
       {enlarged ? (
         <Dialog open onOpenChange={(o) => { if (!o) setEnlarged(null); }} aria-labelledby="photo-title" className="md:max-w-[720px]">
           <DialogHeader>
