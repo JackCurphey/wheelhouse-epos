@@ -828,7 +828,11 @@ export function register(route) {
         try {
           result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
           if (result.ok && signing) {
-            await recordSignOff(id, signer);
+            // The mechanic deleted or switched off since the check above.
+            if (!(await recordSignOff(id, signer))) {
+              await db.exec('ROLLBACK');
+              return sendJson(res, 400, SIGN_OFF_REQUIRED);
+            }
             // Marking it ready sends "Bike ready", with a minute to Undo (UX
             // walk-through 1 H2; the messages engine, pretend for now), in the
             // same transaction: if it can't be queued, nothing is finished.
