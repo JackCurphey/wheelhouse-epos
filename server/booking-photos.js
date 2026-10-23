@@ -1,6 +1,9 @@
-// Customer photos on a booking request: count, size and real file type checked
-// before anything is written. Pure: no database, no disk.
+// Customer photos on a booking request: count, size and real file type checked,
+// and each photo's hidden details removed (photo-metadata.js), before anything
+// is written. Pure: no database, no disk.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md
+import { removePhotoDetails } from './photo-metadata.js';
+
 export const MAX_PHOTOS = 5;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 // Base64 inflates bytes by ~1.37x; same headroom rule as MAX_ATTACHMENT_BODY_BYTES.
@@ -31,7 +34,11 @@ export function readBookingPhotos(input) {
     if (buffer.length > MAX_PHOTO_BYTES) return { error: 'Each photo can be up to 10 MB' };
     const type = sniffImage(buffer);
     if (!type) return { error: 'Only photos can be added (JPEG, PNG or WebP)' };
-    value.push({ buffer, ...type });
+    // Where it was taken, when and on what go (CX-2); a photo too damaged to
+    // clean is refused rather than saved with them.
+    const cleaned = removePhotoDetails(buffer);
+    if (cleaned.error) return { error: UNREADABLE };
+    value.push({ buffer: cleaned.buffer, ...type });
   }
   return { value };
 }

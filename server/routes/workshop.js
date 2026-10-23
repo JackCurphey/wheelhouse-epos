@@ -28,6 +28,7 @@ import { shopNow } from '../clock.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
 import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
+import { removePhotoDetails } from '../photo-metadata.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -1506,6 +1507,11 @@ export function register(route) {
     }
     if (!buffer.length) return badRequest(res, 'That file is empty');
     if (buffer.length > MAX_ATTACHMENT_BYTES) return badRequest(res, 'That file is too large (max 15MB).');
+    // A JPEG, PNG or WebP loses where it was taken, when and on what (CX-2,
+    // photo-metadata.js); any other file is saved as it was sent.
+    const cleaned = removePhotoDetails(buffer);
+    if (cleaned.error) return badRequest(res, 'That picture couldn’t be read. Try adding it again.');
+    buffer = cleaned.buffer;
 
     const storageKey = randomBytes(24).toString('hex');
     await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
