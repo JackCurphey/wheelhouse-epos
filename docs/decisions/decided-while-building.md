@@ -1690,6 +1690,28 @@ No screen: server only.
    and phone cards: the drawing's desktop card has the same line
    (`waitingCard` in `diary.mjs`).
 
+### 23 Oct 2026: a bike left uncollected, the server (`openspec/changes/uncollected-bike`, `cp-setting`, `cp-today-uncollected`)
+
+1. **New shops start at 3 days for the reminder and 7 for Today** (the
+   drawing shows `[n]`). 7 follows the build plan's flag for uncollected
+   online orders (Q8, `2026-10-03-build-plan-questions.md`); 3 comes before
+   it. The reminder can be 1–60 days, Today 2–90, and longer than the
+   reminder.
+2. **One reminder**, as buy online decision 7 says of uncollected bikes.
+3. **It follows Bike ready**: switched off, undone in its minute, or with no
+   way to reach the customer, no Bike still waiting either. *Pattern:* the
+   quote reminder, which only follows a quote that went.
+4. **What's left to pay is worked out again when it goes**, so a payment or
+   a changed bill in the days between is right; a paid bike is reminded with
+   "Paid — nothing more to pay", as drawn.
+5. **Contacted records who and when and takes the line off Today**; marked
+   ready again (after reopening), it counts afresh. The decision says what
+   the line shows and that it goes at hand-over, not what Contacted does.
+6. **The email subject is "Your bike is still waiting — [Shop name]"** (not
+   drawn). *Pattern:* Bike ready's "Your bike is ready — [Shop name]".
+7. **Owner only, until roles**, as the rest of Needs attention (the hint
+   says "for owners and managers").
+
 ### 23 Oct 2026: Your settings › Accessibility, first part (`openspec/changes/your-settings-accessibility`, `your-settings`)
 
 1. **Saved in a table of its own, per login** (`login_preferences`), as Jack

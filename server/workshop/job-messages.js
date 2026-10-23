@@ -21,6 +21,31 @@ export async function messageLink(issue) {
 const money = (amount) => `£${Number(amount).toFixed(2)}`;
 
 /** The job's customer, and its tap-ins, given the link issued for it. */
+// Bike still waiting's [What’s left to pay] (drawn on cp-setting's pop-up):
+// what's owed, "Paid" once the order is paid, Bike ready's words with nothing
+// on it. LEFT_TO_PAY finds the sentence in a queued message, so it can be
+// brought up to date when the message goes (whatsLeftToPay).
+const leftToPaySentence = (orderStatus, due) => (orderStatus === 'converted' ? 'Paid — nothing more to pay'
+  : due > 0 ? `${money(due)} to pay on collection` : 'Nothing to pay on collection');
+export const LEFT_TO_PAY = /£[\d,]+\.\d\d to pay on collection|Paid — nothing more to pay|Nothing to pay on collection/;
+
+/** The job's [What’s left to pay] now, as the till would charge it. Inside runWithShop. */
+export async function whatsLeftToPay(jobId) {
+  const order = await prepare(
+    `SELECT d.id, d.discount, d.status, w.customer_id FROM workshop_jobs w
+       LEFT JOIN sale_documents d ON d.workshop_job_id = w.id AND d.kind = 'order' AND d.status <> 'cancelled'
+      WHERE w.id = ? ORDER BY d.id DESC LIMIT 1`
+  ).get(jobId);
+  let due = 0;
+  if (order?.id && order.status !== 'converted') {
+    const lines = await prepare('SELECT unit_price, qty FROM sale_document_items WHERE document_id = ?').all(order.id);
+    due = (await computeOrderTotals({
+      items: lines.map((l) => ({ unitPrice: l.unit_price, qty: l.qty })), discount: order.discount, customerId: order.customer_id,
+    })).total;
+  }
+  return leftToPaySentence(order?.status, due);
+}
+
 export async function jobMessageVars(jobId, shopId, link) {
   const job = await prepare(
     `SELECT w.reference, w.customer_id, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label,
@@ -42,6 +67,7 @@ export async function jobMessageVars(jobId, shopId, link) {
     })).total;
   }
   const owed = due > 0 ? money(due) : 'Nothing';
+  const leftToPay = leftToPaySentence(job.order_status, due);
   return {
     customerId: job.customer_id,
     customerName: job.customer_name,
@@ -53,6 +79,7 @@ export async function jobMessageVars(jobId, shopId, link) {
       'Link to the quote': link,
       'Link to the job': link,
       'Amount to pay': owed,
+      'What’s left to pay': leftToPay,
       'Opening hours': settings ? formatOpeningHours(openingHoursFor(toCapacitySettings(settings))) : null,
     },
   };
