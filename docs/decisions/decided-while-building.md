@@ -1689,3 +1689,23 @@ No screen: server only.
 2. **The computer's Waiting column shows the bike too**, not only the tablet
    and phone cards: the drawing's desktop card has the same line
    (`waitingCard` in `diary.mjs`).
+
+### 23 Oct 2026: Your settings › Accessibility, first part (`openspec/changes/your-settings-accessibility`, `your-settings`)
+
+1. **Saved in a table of its own, per login** (`login_preferences`), as Jack
+   decided (23 Oct, answer 1); every switch is off until turned on.
+2. **The pop-up opens at `/workshop/your-settings`**, where your name already
+   linked, over an empty frame rather than over the page you were on;
+   Close or Escape goes back to that page (the desk when opened directly).
+   The drawing shows it over the diary.
+3. **Only the switches built show**: Reduce motion and Larger text now. Show
+   status symbols, Don't close things by themselves and Folded sidebar come
+   with what they act on; the Till PIN with PINs; Show graphs with reports.
+   With no Till column, the pop-up is one column (560px) on a computer, the
+   whole screen on a phone.
+4. **Larger text zooms the whole app by 17/14**, the drawn preview's step,
+   because text is set in pixels; things grow with the text, as with the
+   browser's own zoom. Checked not to widen the page on a phone.
+5. **Reduce motion stops every animation and transition**, as the
+   computer's own setting does, and the diary's hover card opens at once
+   with either.

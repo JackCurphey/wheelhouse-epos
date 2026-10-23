@@ -291,3 +291,15 @@
   #wh-print { display: block; }
   @page { margin: 4mm; }
 }
+
+/* Your settings › Accessibility (workshop day 57; openspec/changes/your-settings-accessibility).
+   Larger text: a step larger, 17/14 as drawn. Text is set in pixels, so the
+   staff app is zoomed, as the browser's own zoom would (design 4). */
+html.wh-larger-text #wh-root { zoom: 1.2143; }
+/* Reduce motion: as the computer's own setting does. */
+html.wh-reduce-motion *, html.wh-reduce-motion *::before, html.wh-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

@@ -6,6 +6,7 @@ import { HoverSummary, JobMenu, OverviewDialog, StackChooser, type ChooserAt, ty
 import type { ExtrasApi } from './diary-context.ts';
 import { movable, type Shown } from './diary-model.ts';
 import type { WaitingItem } from './rules.ts';
+import { prefersReducedMotion } from '@/lib/your-settings.ts';
 
 /**
  * Piece 5b: the hover summary, the right-click menu (and holding the right
@@ -58,7 +59,7 @@ export function useDiaryExtras({ isPhone, otherBusy, picking, waitingItems, open
       if (busy) return;
       if (hoverTimer.current) clearTimeout(hoverTimer.current);
       // Decision 65: about 0.6s, or at once when motion is reduced.
-      const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const reduced = prefersReducedMotion();
       hoverTimer.current = setTimeout(() => setHovered({ job, rect: el.getBoundingClientRect() }), reduced ? 0 : 600);
     },
     leave: stopHover,

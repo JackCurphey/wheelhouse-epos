@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router';
 import { apiMutate } from '@/lib/api/client.ts';
 import { useSession, type SessionUser } from '@/lib/auth/use-session.ts';
+import { useAccessibilityClasses } from '@/lib/your-settings.ts';
 import { NAV_ROUTES, pageLabel, roomsFor, type NavItem, type Role } from './nav.ts';
 import { NavIcon } from './nav-icon.tsx';
 import { HeaderSlotContext } from './header-slot.ts';
@@ -189,6 +190,8 @@ export function StaffLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  // The signed-in person's accessibility switches, on every page (Your settings).
+  useAccessibilityClasses(session.status === 'signed-in');
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
   if (session.status === 'signed-out') return <SignedOut />;
