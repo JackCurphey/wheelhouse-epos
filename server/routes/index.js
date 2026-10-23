@@ -20,5 +20,6 @@ import * as customers from './customers.js';
 import * as salesRoutes from './sales.js';
 import * as dashboard from './dashboard.js';
 import * as today from './today.js';
+import * as yourSettings from './your-settings.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings];
