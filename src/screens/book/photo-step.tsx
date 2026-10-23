@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Camera } from 'lucide-react';
+import { Camera, Check, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { PHOTO_TYPES } from '@/components/ui/photo-picker';
@@ -54,7 +54,9 @@ export function PhotoStepScreen() {
       setOutcome('added');
     } catch (err) {
       if (isGone(err)) setOutcome('gone');
-      else setRefused(err instanceof ApiError ? err.message : 'The photo couldn’t be sent. Check your connection and try again.');
+      // The server's own words for a photo it refused (400); anything else,
+      // a server or network failure, in plain words.
+      else setRefused(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'The photo couldn’t be sent. Check your connection and try again.');
     } finally {
       setSending(false);
     }
@@ -64,6 +66,7 @@ export function PhotoStepScreen() {
   if (outcome === 'gone' || (view.isError && isGone(view.error))) {
     return (
       <BookFrame title={GONE_TITLE}>
+        <RoundIcon tone="warn"><TriangleAlert size={24} aria-hidden="true" /></RoundIcon>
         <p className="m-0">Make a new one on the computer.</p>
       </BookFrame>
     );
@@ -81,6 +84,7 @@ export function PhotoStepScreen() {
   if (outcome === 'added') {
     return (
       <BookFrame title={`Photo added to ${v.reference}`}>
+        <RoundIcon tone="ok"><Check size={24} aria-hidden="true" /></RoundIcon>
         <p role="status" className="m-0">{`It’s on the computer now, under ${v.line}. You can close this page.`}</p>
       </BookFrame>
     );
@@ -147,3 +151,10 @@ function PinnedChoices({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/** The drawn round icon on the done and expired pages (roundIcon in diary.mjs). */
+function RoundIcon({ tone, children }: { tone: 'ok' | 'warn'; children: React.ReactNode }) {
+  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]';
+  return <span className={`mb-3 inline-flex size-12 items-center justify-center rounded-full ${look}`}>{children}</span>;
+}
+

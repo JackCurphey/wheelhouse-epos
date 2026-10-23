@@ -32,6 +32,7 @@ let uninstall;
 let shell;
 let calls;
 let codeState;
+let makeFails = false;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -47,6 +48,8 @@ function stubServer() {
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
+    if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/quote-photo-codes' && makeFails) { makeFails = false; return reply(500, {}); }
+    if (method === 'DELETE' && u.pathname === '/api/workshop-jobs/1/quote-photo-codes/3') return reply(200, { ok: true });
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/quote-photo-codes') return reply(201, { codeId: 3, path: new URL(URL_TO_SCAN).pathname, url: URL_TO_SCAN, expiresAt: '2026-09-01T06:15:00.000Z' });
     if (u.pathname === '/api/workshop-jobs/1/quote-photo-codes/3') return reply(200, codeState);
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/attachments') return reply(201, { id: 77 });
@@ -59,7 +62,8 @@ function stubServer() {
     if (u.pathname === '/api/workshop-jobs') return reply(200, [JOB]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
     if (u.pathname === '/api/sale-documents/80') return reply(200, ORDER);
-    if (u.pathname === '/api/quotes/9') return reply(200, QUOTE);
+    // Once the phone's photo is in, the server's quote has it on the pads line.
+    if (u.pathname === '/api/quotes/9') return reply(200, codeState.state === 'added' ? { ...QUOTE, lines: [LINES[0], { ...LINES[1], photoId: 77 }] } : QUOTE);
     return reply(404, { error: 'Not found' });
   };
 }
@@ -67,6 +71,7 @@ function stubServer() {
 // A computer unless told otherwise: no media query matches.
 async function openJob({ media } = {}) {
   codeState = { state: 'waiting' };
+  makeFails = false;
   uninstall = installDom('http://localhost/workshop/diary?date=2026-10-05');
   window.WH_PHOTO_CODE_POLL_MS = 20;
   if (media) window.matchMedia = (q) => ({ matches: media(q), media: q, addEventListener() {}, removeEventListener() {} });
@@ -157,3 +162,86 @@ test('a code that runs out says so, and offers a new one', async () => {
   const { waitFor } = await import('@testing-library/react');
   await waitFor(() => assert.equal(posts().filter((p) => p.includes('quote-photo-codes')).length, 2));
 });
+
+// ---------- From the fresh review ----------
+
+const openPopUp = async ({ dlg, ui, fireEvent, within }) => {
+  fireEvent.click(await dlg.findByRole('button', { name: 'Add photo for Shimano brake pads' }));
+  fireEvent.click(dlg.getByRole('menuitem', { name: 'Use my phone' }));
+  return within(await ui.findByRole('dialog', { name: 'Add a photo from your phone' }));
+};
+const statusAsks = () => calls.filter((c) => c.url.endsWith('/quote-photo-codes/3') && c.method === 'GET').length;
+
+test('Cancel switches the code off and reads the quote again', async () => {
+  const r = await openJob();
+  const pop = await openPopUp(r);
+  await pop.findByText('Waiting for the photo…');
+  const before = calls.filter((c) => c.url.endsWith('/api/quotes/9')).length;
+  r.fireEvent.click(pop.getByRole('button', { name: 'Cancel' }));
+  await r.waitFor(() => assert.ok(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/quote-photo-codes/3')), 'the code wasn\'t switched off'));
+  await r.waitFor(() => assert.ok(calls.filter((c) => c.url.endsWith('/api/quotes/9')).length > before, 'the quote wasn\'t read again'));
+});
+
+test('after Done the line reads 1 photo, and the pop-up stops asking', async () => {
+  const r = await openJob();
+  const pop = await openPopUp(r);
+  await pop.findByText('Waiting for the photo…');
+  codeState = { state: 'added', attachmentId: 77 };
+  await pop.findByText('Photo added');
+  const asked = statusAsks();
+  await new Promise((done) => setTimeout(done, 120));
+  assert.equal(statusAsks(), asked, 'it kept asking after the photo came');
+  r.fireEvent.click(pop.getByRole('button', { name: 'Done' }));
+  assert.ok((await r.dlg.findByRole('button', { name: '1 photo — view or add for Shimano brake pads' })) !== null);
+});
+
+test('one status line is read out as it changes: waiting, then Photo added', async () => {
+  const r = await openJob();
+  const pop = await openPopUp(r);
+  const live = await pop.findByRole('status');
+  assert.equal(pop.getAllByRole('status').length, 1);
+  await r.waitFor(() => assert.equal(live.textContent, 'Waiting for the photo…'));
+  codeState = { state: 'added', attachmentId: 77 };
+  await r.waitFor(() => assert.equal(live.textContent, 'Photo added'));
+  assert.ok(live.isConnected, 'the status line was replaced, so it may not be read out');
+});
+
+test('Make a new code shows a new code to scan', async () => {
+  const r = await openJob();
+  const pop = await openPopUp(r);
+  await pop.findByText('Waiting for the photo…');
+  codeState = { state: 'expired' };
+  r.fireEvent.click(await pop.findByRole('button', { name: 'Make a new code' }));
+  codeState = { state: 'waiting' };
+  assert.ok((await pop.findByRole('img', { name: 'A code to scan with your phone’s camera' })) !== null);
+});
+
+test('if the code can\'t be made, Try again makes it', async () => {
+  const r = await openJob();
+  makeFails = true;
+  const pop = await openPopUp(r);
+  r.fireEvent.click(await pop.findByRole('button', { name: 'Try again' }));
+  assert.ok((await pop.findByRole('img', { name: 'A code to scan with your phone’s camera' })) !== null);
+});
+
+test('the menu works from the keyboard: focus moves in, the arrows move, Escape closes only the menu and returns focus', async () => {
+  const r = await openJob();
+  const add = await r.dlg.findByRole('button', { name: 'Add photo for Shimano brake pads' });
+  r.fireEvent.click(add);
+  const items = r.dlg.getAllByRole('menuitem');
+  await r.waitFor(() => assert.ok(document.activeElement === items[0], 'focus didn\'t move into the menu'));
+  r.fireEvent.keyDown(items[0], { key: 'ArrowDown' });
+  assert.ok(document.activeElement === items[1]);
+  const esc = new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  items[1].dispatchEvent(esc);
+  assert.equal(esc.defaultPrevented, true, 'Escape would also close the job page');
+  await r.waitFor(() => assert.ok(r.dlg.queryByRole('menu') === null));
+  assert.ok(document.activeElement === add, 'focus didn\'t go back to Add photo');
+  assert.ok(r.ui.queryByRole('dialog', { name: /Standard service/ }) !== null, 'the job page closed');
+});
+
+test('the hidden file input isn\'t a stop of its own when tabbing', async () => {
+  const r = await openJob();
+  assert.equal((await r.dlg.findByLabelText('Choose a file for Shimano brake pads')).getAttribute('tabindex'), '-1');
+});
+

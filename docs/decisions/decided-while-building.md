@@ -1644,3 +1644,10 @@ No screen: server only.
 6. **The QR code is drawn with `qrcode-generator`**, a small library with
    nothing else of its own, rather than `qrcode`, which brings a
    command-line tool and a PNG library the app doesn't need.
+7. **Cancel, Close or Escape switch the code off** at once (a staff route,
+   `DELETE /api/workshop-jobs/:id/quote-photo-codes/:codeId`), and however
+   the pop-up closes the quote is read again, so a photo can't arrive unseen
+   and a later save can't take it off the line (fresh review). Closing once
+   the photo has come is the same as Done.
+8. **If the code can't be made**, the pop-up offers Try again. *Pattern:*
+   the screens' failed loads.

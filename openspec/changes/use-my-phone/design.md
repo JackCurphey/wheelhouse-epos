@@ -45,6 +45,8 @@ customer on the phone. **Non-Goals:** see the proposal.
    - `POST /api/workshop-jobs/:id/quote-photo-codes` (staff) with
      `{ quoteId, linePosition }` makes a code and returns its path
      `/book/:shopSlug/photo/:code` and `expiresAt`.
+   - `DELETE /api/workshop-jobs/:id/quote-photo-codes/:codeId` (staff), sent
+     by Cancel, Close or Escape, switches an unused code off at once.
    - `GET /api/workshop-jobs/:id/quote-photo-codes/:codeId` (staff) says
      `waiting`, `added` (with the attachment id) or `expired`, for the pop-up
      to ask every 3 seconds while it's open.

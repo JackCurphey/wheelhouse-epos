@@ -160,6 +160,21 @@ test('staff can only make a code for a line of the job\'s draft quote', async ()
   assert.equal((await garbled.json()).error, 'Invalid request body');
 });
 
+test('Cancel on the computer switches the code off: the phone can\'t use it after', async () => {
+  const { job, quoteId } = await draftJob();
+  const made = (await makeCode(job.id, { quoteId, linePosition: 1 })).body;
+  const off = await staff(`/api/workshop-jobs/${job.id}/quote-photo-codes/${made.codeId}`, { method: 'DELETE' });
+  assert.equal(off.status, 200, JSON.stringify(off.body));
+  assert.deepEqual((await statusOf(job.id, made.codeId)).body, { state: 'expired' });
+  assert.deepEqual(await phonePost(codeIn(made.path), tinyJpeg('after cancel')), { status: 410, body: { error: GONE } });
+  assert.equal(await linePhoto(quoteId, 1), null);
+  // A code already used stays as it was.
+  const used = (await makeCode(job.id, { quoteId, linePosition: 1 })).body;
+  assert.equal((await phonePost(codeIn(used.path), tinyJpeg('kept'))).status, 201);
+  await staff(`/api/workshop-jobs/${job.id}/quote-photo-codes/${used.codeId}`, { method: 'DELETE' });
+  assert.equal((await statusOf(job.id, used.codeId)).body.state, 'added');
+});
+
 // A server whose clock reads 06:16, a minute after a code made at 06:00 runs out.
 test('after 15 minutes the code has run out: the phone is told, and the computer too', async () => {
   const { job, quoteId } = await draftJob();

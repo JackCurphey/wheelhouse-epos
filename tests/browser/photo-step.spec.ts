@@ -26,6 +26,11 @@ test('at 320px the phone takes a photo for the line, checks it and sends it', as
   await expect(page.getByRole('heading', { name: 'Add a photo for Shimano brake pads' })).toBeVisible();
   await expect(page.getByText('WH-1042 · Trek Domane AL 3')).toBeVisible();
   await expect(page.getByText('Take a photo', { exact: true })).toBeVisible();
+  // Pinned along the bottom, as drawn.
+  const pinned = page.locator('[data-book-pinned]');
+  await expect(pinned.getByText('Choose from your photos')).toBeVisible();
+  const bar = await pinned.boundingBox();
+  expect(bar!.y + bar!.height).toBeCloseTo(568, 0);
   await page.getByLabel('Choose from your photos').setInputFiles({ name: 'pads.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.getByRole('heading', { name: 'Check the photo' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'The photo you just took' })).toBeVisible();

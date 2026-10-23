@@ -452,12 +452,11 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
       ) : null}
       {phoneAt !== null && q && draftLines[phoneAt] ? (
         <PhotoFromPhoneDialog jobId={job.id} quoteId={q.id} linePosition={phoneAt} description={draftLines[phoneAt].description}
-          reference={job.reference ?? ''} onClose={() => setPhoneAt(null)}
-          onAdded={() => {
-            setPhoneAt(null);
-            void refresh();
-            void queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] });
-          }} />
+          reference={job.reference ?? ''}
+          // However it closes, the quote and files are read again, so a later
+          // save can't send a copy of the line without its new photo.
+          onClose={() => { setPhoneAt(null); void refresh(); void queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] }); }}
+          onAdded={() => { setPhoneAt(null); void refresh(); void queryClient.invalidateQueries({ queryKey: ['workshop-job-files', job.id] }); }} />
       ) : null}
       {withdrawing && q ? (
         <Dialog open onOpenChange={(o) => { if (!o) setWithdrawing(false); }} aria-labelledby="withdraw-title">

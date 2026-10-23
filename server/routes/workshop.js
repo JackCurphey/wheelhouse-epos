@@ -29,7 +29,7 @@ import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from 
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
 import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { removePhotoDetails } from '../photo-metadata.js';
-import { makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
+import { cancelPhotoCode, makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -464,6 +464,13 @@ export function register(route) {
     const status = await photoCodeStatus({ jobId: Number(params.id), codeId: Number(params.codeId) });
     if (!status) return notFound(res, 'Code not found');
     sendJson(res, 200, status);
+  });
+
+  // Cancel in the pop-up: the code stops working at once.
+  // screens: quote-editor
+  route('DELETE', '/api/workshop-jobs/:id/quote-photo-codes/:codeId', async (req, res, params) => {
+    if (!(await cancelPhotoCode({ jobId: Number(params.id), codeId: Number(params.codeId) }))) return notFound(res, 'Code not found');
+    sendJson(res, 200, { ok: true });
   });
 
   route('POST', '/api/workshop-jobs', async (req, res) => {

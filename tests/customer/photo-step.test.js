@@ -7,6 +7,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderBookScreen } from '../helpers/book-screen.js';
 import { PHOTO_STEP_ROUTE } from '../../src/customer/routes.ts';
+import { photoCodePath } from '../../server/booking-link.js';
 
 let current;
 // The test browser can't make a preview address for its pretend files; a
@@ -39,7 +40,7 @@ const rtl = () => import('@testing-library/react');
 const photo = (type = 'image/jpeg', size = 4) => new window.File([new Uint8Array(size)], 'pads.jpg', { type });
 
 test('the page lives where the server sends the phone', () => {
-  assert.equal(PHOTO_STEP_ROUTE, '/book/:shopSlug/photo/:code');
+  assert.equal(PHOTO_STEP_ROUTE, photoCodePath(':shopSlug', ':code'));
 });
 
 test('the code opens the photo step: the line, the job and bike, the reason, and the two ways to add a photo', async () => {
@@ -103,3 +104,25 @@ test('a photo over 10 MB, or not a photo, is refused on the phone in plain words
   assert.ok((await ui.findByText('pads.jpg isn\'t a JPEG, PNG or WebP photo.')) !== null);
   assert.equal(requests.filter((r) => r.method === 'POST').length, 0);
 });
+
+// From the fresh review: a server or network failure is said in plain words,
+// never the raw error; the page's own failure offers Try again.
+test('a send that fails at the server says so in plain words', async () => {
+  const { ui } = await open((url, init) => (init?.method === 'POST' ? { status: 502, body: {} } : { status: 200, body: VIEW }));
+  const { fireEvent } = await rtl();
+  fireEvent.change(await ui.findByLabelText('Take a photo'), { target: { files: [photo()] } });
+  fireEvent.click(await ui.findByRole('button', { name: 'Use this photo' }));
+  assert.ok((await ui.findByText('The photo couldn’t be sent. Check your connection and try again.')) !== null);
+  assert.ok(ui.queryByText(/request failed/) === null);
+});
+
+test('a page that can\'t be opened offers Try again', async () => {
+  let fails = true;
+  const { ui } = await open(() => (fails ? { status: 500, body: {} } : { status: 200, body: VIEW }));
+  const { fireEvent } = await rtl();
+  assert.ok((await ui.findByRole('heading', { name: 'We couldn’t open this code' })) !== null);
+  fails = false;
+  fireEvent.click(ui.getByRole('button', { name: 'Try again' }));
+  assert.ok((await ui.findByRole('heading', { name: 'Add a photo for Shimano brake pads' })) !== null);
+});
+
