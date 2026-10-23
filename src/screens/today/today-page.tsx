@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
-import { clock, when } from '@/screens/diary/when.ts';
+import { clock, londonDay, when } from '@/screens/diary/when.ts';
 import { due, startOf, useBookIn, useNow, useWorkshopDay } from '@/screens/overview/workshop-day.tsx';
 
 /**
@@ -64,7 +64,7 @@ const warn = <span aria-hidden="true" className="inline-flex text-[var(--wh-warn
 const mono = (t: string) => <span className="font-[family-name:var(--wh-font-mono)]">{t}</span>;
 const linkButton = (touch: boolean) => `inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-sm font-semibold text-[var(--wh-ink)] hover:bg-[var(--wh-surface-muted)] ${touch ? 'min-h-11' : 'min-h-9'}`;
 
-function NeedsAttention({ touch }: { touch: boolean }) {
+function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   // Read again every minute and when the window comes back, until live updates (design 6).
   const list = useQuery({ queryKey: ['needs-attention'], queryFn: () => apiGet<{ items: Attention[] }>('/api/needs-attention'), refetchInterval: 60_000, refetchOnWindowFocus: true });
   const items = list.data?.items ?? [];
@@ -75,13 +75,13 @@ function NeedsAttention({ touch }: { touch: boolean }) {
         <Line key={`q${i.jobId}`} lead={warn}
           title={`${i.reference} · ${i.customerName ?? 'No customer'} — no answer to the quote yet`}
           sub={<>{sent}{i.phone ? <>{' · '}<a href={`tel:${i.phone.replace(/\s+/g, '')}`} className="whitespace-nowrap text-inherit">{mono(i.phone)}</a></> : null}</>}
-          right={<Link to={`${ROUTES.diary}?job=${i.jobId}`} className={linkButton(touch)}>Record their answer</Link>} />
+          right={<Link to={`${ROUTES.diary}?job=${i.jobId}`} aria-label={`Record their answer for ${i.reference}`} className={linkButton(touch)}>Record their answer</Link>} />
       );
     }
     return (
       <Line key="replies" lead={<span aria-hidden="true" className="inline-flex text-[var(--wh-ink)]"><Mail size={18} /></span>}
         title={`${i.count} ${i.count === 1 ? 'message needs' : 'messages need'} a reply`}
-        sub={`From customers · oldest from ${i.oldestName ?? 'a customer'} at ${clock(i.oldestAt)}`}
+        sub={`From customers · oldest from ${i.oldestName ?? 'a customer'} at ${londonDay(i.oldestAt) === today ? clock(i.oldestAt) : when(i.oldestAt)}`}
         right={<Link to={ROUTES.messages} className={linkButton(touch)}>Open Messages</Link>} />
     );
   });
@@ -97,7 +97,9 @@ function NeedsAttention({ touch }: { touch: boolean }) {
 
 function WorkshopToday({ today, now, touch }: { today: string; now: Date; touch: boolean }) {
   const day = useWorkshopDay(today);
-  const booking = useBookIn();
+  // The booked row leaves the list: the focus goes to the list's heading, not the top of the page.
+  const listHeading = useRef<HTMLHeadingElement>(null);
+  const booking = useBookIn(() => listHeading.current?.focus());
   const { arrivals, expectedToday, ready } = day;
   const right = (j: WorkshopJob) => {
     const start = startOf(j, today);
@@ -123,7 +125,7 @@ function WorkshopToday({ today, now, touch }: { today: string; now: Date; touch:
             <Stat label="Expected today" value={`${expectedToday.length} ${expectedToday.length === 1 ? 'bike' : 'bikes'}`} note={`${arrivals.length} still to arrive`} />
             <Stat label="Repairs ready to collect" value={String(ready.length)} note="In the workshop now" />
           </div>
-          <h3 className="mt-1.5 mb-0 text-sm font-bold">Still to arrive</h3>
+          <h3 ref={listHeading} tabIndex={-1} className="mt-1.5 mb-0 text-sm font-bold">Still to arrive</h3>
           {booking.refused ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{booking.refused}</p> : null}
           {arrivals.length ? (
             <ul className="m-0 list-none p-0">
@@ -153,7 +155,7 @@ export function TodayPage() {
   const owner = Boolean(signedIn?.user.isOwner);
   const dateLine = [dayLabel(today), signedIn?.shop.name, hours ? `open ${hours.open}–${hours.close}` : null].filter(Boolean).join(' · ');
 
-  const attention = owner ? <NeedsAttention touch={touch} /> : null;
+  const attention = owner ? <NeedsAttention today={today} touch={touch} /> : null;
   const work = <WorkshopToday today={today} now={now} touch={touch} />;
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">

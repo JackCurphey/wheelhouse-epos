@@ -106,6 +106,8 @@ test('Book in on a bike that\'s due books it in and it leaves the list', async (
   await waitFor(() => assert.ok(calls.some((c) => c.method === 'POST' && c.url.endsWith('/api/workshop-jobs/1/book-in'))));
   await waitFor(() => assert.ok(work.queryByRole('button', { name: 'Book in WH-1042' }) === null));
   assert.ok(work.queryByText('2 still to arrive') !== null);
+  // The row has gone: the focus stays in the card, on its list's heading (fresh review).
+  await waitFor(() => assert.ok(document.activeElement === work.getByRole('heading', { name: 'Still to arrive' })));
 });
 
 test('Needs attention, with its count: the quote with no answer and the messages needing a reply', async () => {
@@ -116,7 +118,7 @@ test('Needs attention, with its count: the quote with no answer and the messages
   const sent = box.getByText(/^Sent /);
   assert.match(sent.textContent, /^Sent Mon 19 Oct, \d\d:15 · reminder sent Tue 20 Oct, \d\d:15 · 07700 900142$/);
   assert.equal(box.getByRole('link', { name: '07700 900142' }).getAttribute('href'), 'tel:07700900142');
-  assert.equal(box.getByRole('link', { name: 'Record their answer' }).getAttribute('href'), '/workshop/diary?job=9');
+  assert.equal(box.getByRole('link', { name: 'Record their answer for WH-1039' }).getAttribute('href'), '/workshop/diary?job=9');
   assert.ok(box.queryByText('2 messages need a reply') !== null);
   assert.match(box.getByText(/^From customers · oldest from /).textContent, /^From customers · oldest from Maya Patel at \d\d:40$/);
   assert.equal(box.getByRole('link', { name: 'Open Messages' }).getAttribute('href'), '/workshop/messages');
@@ -126,6 +128,11 @@ test('with nothing waiting, Needs attention says so, with no count', async () =>
   const { ui } = await openToday({ items: [] });
   assert.ok((await ui.findByRole('heading', { name: 'Needs attention' })) !== null);
   assert.ok(ui.queryByText('Nothing needs you right now') !== null);
+});
+
+test('a message waiting since an earlier day says the day too', async () => {
+  const { ui } = await openToday({ items: [{ ...REPLIES, oldestAt: '2026-10-20T15:20:00Z' }] });
+  assert.ok((await ui.findByText(/^From customers · oldest from Maya Patel at Tue 20 Oct, \d\d:20$/)) !== null);
 });
 
 test('one message waiting reads in the singular', async () => {

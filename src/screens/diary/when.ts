@@ -7,3 +7,6 @@ export const clock = (iso: string) => part(iso, { hour: '2-digit', minute: '2-di
 
 /** "Mon 5 Oct, 10:15". */
 export const when = (iso: string) => `${part(iso, { weekday: 'short' })} ${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' })}, ${clock(iso)}`;
+
+/** The day in London's time, "2026-10-21", to tell today's times from earlier ones. */
+export const londonDay = (iso: string) => part(iso, { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-');

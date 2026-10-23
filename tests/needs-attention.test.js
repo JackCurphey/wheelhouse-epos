@@ -76,6 +76,18 @@ test('not listed: a quote not yet reminded, or answered, or withdrawn', async ()
   for (const j of [waiting, answered, withdrawn]) assert.ok(!ids.includes(j.job.id), `job ${j.job.reference} is listed`);
 });
 
+test('not listed: a job whose booking has ended, though its quote was reminded', async () => {
+  const ended = [];
+  for (const state of ['cancelled', 'declined', 'expired']) {
+    const { job } = await sentQuote();
+    await reminderWent(job.id);
+    await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_jobs SET booking_state = ? WHERE id = ?').run(state, job.id));
+    ended.push(job);
+  }
+  const ids = noAnswer((await attention()).body.items).map((i) => i.jobId);
+  for (const j of ended) assert.ok(!ids.includes(j.id), `job ${j.reference} is listed`);
+});
+
 test('quotes waiting longest come first', async () => {
   const older = await sentQuote(jamie);
   const newer = await sentQuote(maya);

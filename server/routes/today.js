@@ -13,18 +13,18 @@ const iso = (v) => (v ? new Date(v).toISOString() : null);
 
 // Quotes sent and reminded with no answer: the job page's own rule (the
 // reminder time is only there while the current quote is sent and
-// unanswered, server/workshop/jobs.js). Waiting longest first.
+// unanswered, server/workshop/jobs.js), on a booking that hasn't ended
+// (fresh review: a cancelled job's line could never be cleared). Waiting
+// longest first; the customer's phone in the same query.
 async function quotesWithNoAnswer() {
-  const rows = await prepare(`${WORKSHOP_JOB_SELECT} WHERE qr.at IS NOT NULL ORDER BY qr.at, w.id`).all();
-  const items = [];
-  for (const r of rows) {
-    const customer = r.customer_id ? await prepare('SELECT phone FROM customers WHERE id = ?').get(r.customer_id) : null;
-    items.push({
-      kind: 'quote_no_answer', jobId: r.id, reference: r.reference, customerName: r.customer_name ?? null,
-      phone: customer?.phone || null, sentAt: iso(r.quote_sent_at), reminderSentAt: iso(r.quote_reminder_sent_at),
-    });
-  }
-  return items;
+  const rows = await prepare(`SELECT j.*, cp.phone FROM (${WORKSHOP_JOB_SELECT}
+    WHERE qr.at IS NOT NULL AND w.booking_state NOT IN ('cancelled', 'declined', 'expired')) j
+    LEFT JOIN customers cp ON cp.id = j.customer_id
+    ORDER BY j.quote_reminder_sent_at, j.id`).all();
+  return rows.map((r) => ({
+    kind: 'quote_no_answer', jobId: r.id, reference: r.reference, customerName: r.customer_name ?? null,
+    phone: r.phone || null, sentAt: iso(r.quote_sent_at), reminderSentAt: iso(r.quote_reminder_sent_at),
+  }));
 }
 
 // Customers' messages waiting for a reply: one line, how many and the oldest

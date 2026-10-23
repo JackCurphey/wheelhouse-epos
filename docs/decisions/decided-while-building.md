@@ -1675,3 +1675,8 @@ No screen: server only.
 8. **The lines' buttons are links** (Record their answer opens the job in
    the diary, Open Messages opens Messages), drawn as buttons, so they can be
    opened in a new tab. *Pattern:* the Overview's "Open job".
+9. **A message waiting since an earlier day shows the day too** ("oldest
+   from Maya Patel at Tue 20 Oct, 16:20"); today's shows the time alone, as
+   drawn (fresh review). *Pattern:* the quote line's "Sent Mon 19 Oct, 10:15".
+10. **A quote on a cancelled, declined or expired booking isn't listed**,
+    since nothing on Today could clear it (fresh review).
