@@ -11,6 +11,7 @@ import { AutomaticMessages, useMessagesSummary } from './messages-settings.tsx';
 import { ChecklistsSettings, useChecklistsSummary } from './checklists-settings.tsx';
 import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
+import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -847,6 +848,7 @@ function OwnerSettings() {
   const checklists = useChecklistsSummary();
   const diaryBlocks = useDiaryBlocksSummary();
   const storageSlots = useStorageSlotsSummary();
+  const collection = useCollectionSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
@@ -872,6 +874,7 @@ function OwnerSettings() {
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
           { key: 'diary-blocks', title: 'Diary blocks', summary: diaryBlocks, body: <DiaryBlocksSettings /> },
           { key: 'storage-slots', title: 'Storage slots', summary: storageSlots, body: <StorageSlotsSettings /> },
+          { key: 'collection', title: 'Collection', summary: collection, body: <CollectionSettings /> },
         ] },
       ],
     },
