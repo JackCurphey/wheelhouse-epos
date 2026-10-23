@@ -2,6 +2,7 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState, type CSSPrope
 import { tileClass } from './job-extras.tsx';
 import { Chevron } from './diary-bits.tsx';
 import { BlockLinesContext, ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
+import { StatusShape, useStatusSymbols } from './status-shape.tsx';
 import { BLOCK, CHIP, SR, blockLine, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { stateWord, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
@@ -33,6 +34,8 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const mark = Boolean(job.newOnline);
   // The full words on a phone and in a wide column; short in a narrow week column (design).
   const shortMark = !wide && !fullMark;
+  // Show status symbols: in a narrow week column, where the word doesn't fit, and on every request, as drawn (diary.mjs jobBlock, pendingBlock).
+  const symbol = useStatusSymbols() && (!wide || job.state === 'pending');
   const style: CSSProperties = { top, height };
   if (moving) {
     // Shifted across by whole columns (each column is 100% of this one's width).
@@ -51,10 +54,11 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const laned = !moving && lane && lane.total > 1
     ? 'left-[var(--lane-left)] w-[var(--lane-width)] hover:left-[3px] hover:z-[3] hover:w-[calc(100%-6px)] hover:delay-300 motion-safe:transition-[left,width] motion-reduce:hover:delay-0'
     : '';
-  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving?.stretch ? 'z-[2] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
+  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] py-[3px] pl-1.5 text-left ${symbol ? 'pr-4' : 'pr-1.5'} ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving?.stretch ? 'z-[2] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
+      {symbol ? <StatusShape state={job.state} /> : null}
       {/* Confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm),
           placed as the drawing does (diary.mjs blockMark): one line, "first line · mark";
           two lines, the first line then the mark; three or more, first, second, mark.

@@ -49,6 +49,9 @@ const WAITING = {
 
 // What Waiting for you returns; a test may swap it, and puts it back.
 let waitingReply = WAITING;
+// The person's own switches (Your settings); a test may turn Show status symbols on, and puts it back.
+const A11Y_OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+let a11yReply = { accessibility: A11Y_OFF };
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -71,6 +74,7 @@ function stubServer() {
     if (u.pathname === '/api/employees') return ok(MECHANICS);
     if (u.pathname === '/api/workshop-settings') return ok(SETTINGS);
     if (u.pathname === '/api/workshop-waiting') return ok(waitingReply);
+    if (u.pathname === '/api/your-settings') return ok(a11yReply);
     if (u.pathname === '/api/workshop-jobs') {
       const [from, to] = [u.searchParams.get('start'), u.searchParams.get('end')];
       return ok([...JOBS, ...NEXT_WEEK].filter((j) => j.jobDate >= from && j.jobDate <= to));
@@ -469,4 +473,29 @@ test('on an upright tablet, a card chosen from the sheet shows the chosen bar wi
   const bar = await ui.findByRole('status', { name: 'Chosen from Waiting for you' });
   assert.ok(bar.closest('[data-tablet-foot]') !== null, 'the bar sits at the foot of the page');
   assert.ok(has(within(bar).queryByRole('button', { name: "Open Lena Fox's request" })));
+});
+
+// Show status symbols (Your settings; decision 57; diary.mjs STATUS_SHAPE): off
+// to start, colour alone; on, a week block and the legend carry the status's shape.
+const shapeIn = (el) => el?.querySelector('[data-status-shape]')?.getAttribute('data-status-shape') ?? null;
+const blockOf = (ui, bike) => ui.getAllByText(bike).map((t) => t.closest('[title]')).find(Boolean);
+
+test('with Show status symbols on, each week block and the legend carry the status’s shape', async () => {
+  a11yReply = { accessibility: { ...A11Y_OFF, statusSymbols: true } };
+  try {
+    const { ui, waitFor } = await openDiary();
+    await waitFor(() => assert.equal(shapeIn(blockOf(ui, 'Trek Domane')), 'scheduled'));
+    const legend = ui.getByRole('list', { name: 'What the colours mean' });
+    assert.deepEqual([...legend.querySelectorAll('li')].map(shapeIn), ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled']);
+    assert.ok([...document.querySelectorAll('[data-status-shape]')].every((el) => el.getAttribute('aria-hidden') === 'true'), 'the shapes are hidden from screen readers, which hear the word');
+  } finally {
+    a11yReply = { accessibility: A11Y_OFF };
+  }
+});
+
+test('with Show status symbols off, the diary is colour alone, as before', async () => {
+  const { ui } = await openDiary();
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(blockOf(ui, 'Trek Domane'), 'the block is there');
+  assert.equal(document.querySelectorAll('[data-status-shape]').length, 0);
 });

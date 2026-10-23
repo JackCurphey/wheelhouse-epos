@@ -20,6 +20,7 @@ import { ChooseDaySheet, MonthGrid } from './diary-month.tsx';
 import { Column, Grid, NewOnlineMark } from './diary-tiles.tsx';
 import { useDiaryExtras } from './use-diary-extras.tsx';
 import { useDiaryMoves } from './use-diary-moves.ts';
+import { StatusShape, useStatusSymbols } from './status-shape.tsx';
 import {
   LEGEND, LEGEND_LABEL, addDays, addMonths, dropStart, monthLabel, monthOf, dayLabel, diaryState, gridRange, hhmm, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
@@ -39,6 +40,8 @@ export function DiaryPage() {
   const [params, setParams] = useSearchParams();
   const isPhone = useIsPhone();
   const isNarrow = useIsNarrow();
+  // Show status symbols in the legend too, so it stays a key to what's drawn (Your settings).
+  const statusSymbols = useStatusSymbols();
   const today = todayIso();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
   // On a phone the diary is always one day (decision 68); the week is the strip of days.
@@ -706,7 +709,7 @@ export function DiaryPage() {
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
             {LEGEND.map((s) => (
               <li key={s} className="inline-flex items-center gap-1.5 text-xs">
-                <span aria-hidden="true" className={`inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`} />
+                <span aria-hidden="true" className={`relative inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`}>{statusSymbols ? <StatusShape state={s} size={11} inset={0.5} /> : null}</span>
                 {LEGEND_LABEL[s]}
               </li>
             ))}

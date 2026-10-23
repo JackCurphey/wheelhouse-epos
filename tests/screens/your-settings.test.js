@@ -63,7 +63,13 @@ test('Your settings, as drawn: whose they are, the switch built, off, and change
   assert.ok(dialog.queryByText('Accessibility') !== null);
   assert.equal((await dialog.findByRole('switch', { name: 'Reduce motion' })).getAttribute('aria-checked'), 'false');
   assert.ok(dialog.queryByText('Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.') !== null);
-  for (const name of ['Show status symbols', 'Larger text']) assert.ok(dialog.queryByRole('switch', { name }) === null, `${name} isn’t built yet`);
+  assert.ok(dialog.queryByRole('switch', { name: 'Larger text' }) === null, 'Larger text isn’t built yet');
+  // Show status symbols, first as drawn, with its preview of two week blocks.
+  const switches = dialog.getAllByRole('switch').map((el) => el.getAttribute('aria-label'));
+  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion']);
+  assert.ok(dialog.queryByText('Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.') !== null);
+  for (const words of ['Trek Domane AL 3', 'Standard service', 'Cannondale Quick', 'Gear adjustment']) assert.ok(dialog.queryByText(words) !== null, words);
+  assert.deepEqual([...document.querySelectorAll('dialog [data-status-shape]')].map((el) => el.getAttribute('data-status-shape')), ['scheduled', 'waiting']);
   assert.ok(dialog.queryByText('Changes apply straight away.') !== null);
 });
 
@@ -108,4 +114,13 @@ test('your name opens it, and Close goes back to the page you were on', async ()
 test('on a phone it says “just for you”', async () => {
   const { ui } = await open('/workshop/your-settings', { phone: true });
   assert.ok((await ui.findByText('Jo Taylor · Staff · just for you')) !== null);
+});
+
+test('Show status symbols saves at once', async () => {
+  const { ui, fireEvent, waitFor } = await open('/workshop/your-settings');
+  const symbols = await ui.findByRole('switch', { name: 'Show status symbols' });
+  await waitFor(() => assert.equal(symbols.disabled, false));
+  fireEvent.click(symbols);
+  await waitFor(() => assert.equal(symbols.getAttribute('aria-checked'), 'true'));
+  assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ accessibility: { statusSymbols: true } }]);
 });
