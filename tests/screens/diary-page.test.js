@@ -47,6 +47,8 @@ const WAITING = {
   ],
 };
 
+// What Waiting for you returns; a test may swap it, and puts it back.
+let waitingReply = WAITING;
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -68,7 +70,7 @@ function stubServer() {
     if (u.pathname === '/api/auth/me') return ok(OWNER);
     if (u.pathname === '/api/employees') return ok(MECHANICS);
     if (u.pathname === '/api/workshop-settings') return ok(SETTINGS);
-    if (u.pathname === '/api/workshop-waiting') return ok(WAITING);
+    if (u.pathname === '/api/workshop-waiting') return ok(waitingReply);
     if (u.pathname === '/api/workshop-jobs') {
       const [from, to] = [u.searchParams.get('start'), u.searchParams.get('end')];
       return ok([...JOBS, ...NEXT_WEEK].filter((j) => j.jobDate >= from && j.jobDate <= to));
@@ -270,6 +272,21 @@ test('the Day view\'s No time row leaves out other days\' jobs', async () => {
   fireEvent.click(ui.getByRole('tab', { name: 'Day' }));
   assert.ok(has(await ui.findByText('Wednesday 7 October')));
   assert.ok(ui.queryByText('Ribble CGR') === null);
+});
+
+test('a Waiting card shows the bike under the customer, and no line when there\'s no bike (waiting-bike)', async () => {
+  // Lena's card carries her bike; Sam's has none. Its own name, so the diary's blocks can't be mistaken for it.
+  waitingReply = { ...WAITING, items: [WAITING.items[0], { ...WAITING.items[1], bikeLabel: 'Orbea Vector 20' }] };
+  try {
+    const { ui, within } = await openDiary();
+    const col = within(await ui.findByRole('region', { name: 'Waiting for you (2)' }));
+    const lena = col.getByRole('button', { name: /Lena Fox/ });
+    assert.ok(lena.textContent.includes('Lena FoxOrbea Vector 20'), lena.textContent);
+    const sam = col.getByRole('button', { name: /Sam Reed/ });
+    assert.equal(sam.children.length, 3, 'Sam\'s card should be its label, name and detail, with no bike line');
+  } finally {
+    waitingReply = WAITING;
+  }
 });
 
 test('Waiting for you lists what needs an answer', async () => {
