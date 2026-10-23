@@ -57,6 +57,8 @@ POST /api/sale-documents/:id/convert
 GET /api/workshop-jobs
 GET /api/workshop-jobs/:id
 POST /api/workshop-jobs/:id/private-link
+POST /api/workshop-jobs/:id/quote-photo-codes
+GET /api/workshop-jobs/:id/quote-photo-codes/:codeId
 POST /api/workshop-jobs
 POST /api/workshop-jobs/:id/parts
 PUT /api/workshop-jobs/:id/parts/:partId
@@ -175,6 +177,8 @@ POST /api/portal/:shopSlug/bikes
 GET /api/portal/:shopSlug/bookings
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/booking-links/:code
+GET /api/portal/:shopSlug/photo-codes/:code
+POST /api/portal/:shopSlug/photo-codes/:code
 GET /api/portal/:shopSlug/booking-links/:code/availability
 GET /api/portal/:shopSlug/booking-links/:code/quote
 POST /api/portal/:shopSlug/booking-links/:code/quote/answer

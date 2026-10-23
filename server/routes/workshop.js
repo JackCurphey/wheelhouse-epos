@@ -12,7 +12,7 @@ import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, pool } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
-import { newLinkCode, hashLinkCode, linkPath, linkExpiry } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry, photoCodePath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
@@ -29,6 +29,7 @@ import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from 
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
 import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { removePhotoDetails } from '../photo-metadata.js';
+import { makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -431,6 +432,33 @@ export function register(route) {
       .run(hashLinkCode(code), nowIso(), job.id);
     const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
     sendJson(res, 201, { privateLink: linkPath(shop.slug, code) });
+  });
+
+  // Use my phone (docs/decisions/2026-10-23-use-my-phone.md; openspec/changes/use-my-phone):
+  // a code for one line of the job's draft quote, which a phone opens with no
+  // sign-in. Only its hash is kept; the code leaves the server once, here.
+  // screens: quote-editor
+  route('POST', '/api/workshop-jobs/:id/quote-photo-codes', async (req, res, params, query, afterRelease, shopId) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    const body = await readJsonBody(req);
+    const result = await makePhotoCode({ jobId: job.id, quoteId: body.quoteId, linePosition: body.linePosition });
+    if (!result.ok) {
+      if (result.code === 'not_found') return notFound(res, result.message);
+      if (result.code === 'illegal') return sendJson(res, 409, { error: result.message, code: 'illegal' });
+      return badRequest(res, result.message);
+    }
+    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const path = photoCodePath(shop.slug, result.code);
+    sendJson(res, 201, { codeId: result.codeId, path, url: `${publicBase(req)}${path}`, expiresAt: result.expiresAt });
+  });
+
+  // What the pop-up asks every few seconds: waiting, added or expired.
+  // screens: quote-editor
+  route('GET', '/api/workshop-jobs/:id/quote-photo-codes/:codeId', async (req, res, params) => {
+    const status = await photoCodeStatus({ jobId: Number(params.id), codeId: Number(params.codeId) });
+    if (!status) return notFound(res, 'Code not found');
+    sendJson(res, 200, status);
   });
 
   route('POST', '/api/workshop-jobs', async (req, res) => {

@@ -19,6 +19,11 @@ export function linkPath(shopSlug, code) {
   return `/book/${shopSlug}/booking/${code}`;
 }
 
+// Use my phone's page for a quote line's photo (openspec/changes/use-my-phone).
+export function photoCodePath(shopSlug, code) {
+  return `/book/${shopSlug}/photo/${code}`;
+}
+
 // Both dates are YYYY-MM-DD. Worked out from job_date at read time, so moving a
 // booking moves its link's expiry with it.
 export function isLinkExpired(jobDate, today) {
