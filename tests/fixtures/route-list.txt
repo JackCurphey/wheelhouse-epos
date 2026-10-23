@@ -194,3 +194,5 @@ GET /api/job-notes/conversations
 GET /api/workshop-jobs/:id/notes
 POST /api/workshop-jobs/:id/notes
 GET /api/needs-attention
+GET /api/your-settings
+PUT /api/your-settings
