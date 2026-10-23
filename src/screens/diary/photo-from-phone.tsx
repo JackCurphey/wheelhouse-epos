@@ -1,0 +1,186 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Camera, Check, Smartphone } from 'lucide-react';
+import qrcode from 'qrcode-generator';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { Button } from '@/components/ui/button.tsx';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { refusalText } from './refusal-words.ts';
+import { useMedia } from './diary-bits.tsx';
+
+/**
+ * Use my phone, the computer's side (openspec/changes/use-my-phone; drawn as
+ * job-photo-choice, job-photo-phone and job-photo-phone-added, approved by
+ * Jack on 23 Oct, docs/decisions/2026-10-23-use-my-phone.md).
+ */
+
+const PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
+
+/** A computer: a mouse-like pointer and a window as wide as a computer's (as the quote bar decides it). */
+function useIsComputer() {
+  const coarse = useMedia('(pointer: coarse)');
+  const narrow = useMedia('(max-width: 1023px)');
+  return !coarse && !narrow;
+}
+
+/**
+ * A draft line's Add photo. On a computer it opens a menu: "Choose a file" or
+ * "Use my phone" (job-photo-choice). On a tablet or phone it goes straight to
+ * the camera or file picker, as before.
+ */
+export function AddLinePhoto({ description, disabled, onFile, onPhone }: {
+  description: string; disabled: boolean; onFile: (file: File | undefined) => void; onPhone: () => void;
+}) {
+  const computer = useIsComputer();
+  const input = useRef<HTMLInputElement>(null);
+  const holder = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const name = `Add photo for ${description}`;
+
+  // Closes on Escape or a click elsewhere, as the diary's menus do.
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e: MouseEvent) => { if (!holder.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+
+  const fileInput = (label: string) => (
+    <input ref={input} type="file" accept={PHOTO_ACCEPT} className="sr-only" disabled={disabled} aria-label={label}
+      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; onFile(f); }} />
+  );
+  const look = 'inline-flex min-h-11 self-start items-center gap-1 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 text-xs font-semibold no-underline';
+
+  if (!computer) {
+    return (
+      <label className={`${look} cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]`}>
+        <Camera size={13} aria-hidden="true" />
+        <span aria-hidden="true">Add photo</span>
+        {fileInput(name)}
+      </label>
+    );
+  }
+  const item = 'flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm font-semibold hover:bg-[var(--wh-surface-muted)] focus-visible:bg-[var(--wh-surface-muted)]';
+  return (
+    <span ref={holder} className="relative inline-flex self-start">
+      <button type="button" className={look} disabled={disabled} aria-label={name} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <Camera size={13} aria-hidden="true" />
+        <span aria-hidden="true">Add photo</span>
+      </button>
+      {fileInput(`Choose a file for ${description}`)}
+      {open ? (
+        // Opens upwards, as drawn, so the job page's footer doesn't cut it off.
+        <div role="menu" aria-label={name} className="absolute bottom-full left-0 z-20 mb-1 flex w-64 flex-col gap-0.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1 shadow-lg">
+          <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); input.current?.click(); }}>Choose a file</button>
+          <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); onPhone(); }}>Use my phone</button>
+          <p className="m-0 px-3 pt-1 pb-2 text-xs text-[var(--wh-muted)]">Use my phone shows a code to scan with your phone’s camera.</p>
+        </div>
+      ) : null}
+    </span>
+  );
+}
+
+type Made = { codeId: number; url: string; expiresAt: string };
+type Status = { state: 'waiting' } | { state: 'added'; attachmentId: number | null } | { state: 'expired' };
+
+/** How often the pop-up asks how the photo is coming (3 seconds; the tests shorten it). */
+const pollEvery = () => (window as unknown as { WH_PHOTO_CODE_POLL_MS?: number }).WH_PHOTO_CODE_POLL_MS ?? 3000;
+
+/** The address as an SVG QR code, for an <img>. */
+function qrImage(address: string) {
+  const qr = qrcode(0, 'M');
+  qr.addData(address);
+  qr.make();
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true }))}`;
+}
+
+/**
+ * "Add a photo from your phone" (job-photo-phone, then job-photo-phone-added
+ * by itself once the photo arrives). Makes a code for the line at
+ * `linePosition` of the draft `quoteId` when it opens, and again on "Make a
+ * new code" once one has run out.
+ */
+export function PhotoFromPhoneDialog({ jobId, quoteId, linePosition, description, reference, onClose, onAdded }: {
+  jobId: number; quoteId: number; linePosition: number; description: string; reference: string; onClose: () => void; onAdded: () => void;
+}) {
+  const [made, setMade] = useState<Made | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    apiMutate<Made>(`/api/workshop-jobs/${jobId}/quote-photo-codes`, { quoteId, linePosition }, { method: 'POST' })
+      .then((m) => { if (live) setMade(m); })
+      .catch((err) => { if (live) setError(refusalText(err)); });
+    return () => { live = false; };
+  }, [jobId, quoteId, linePosition, attempt]);
+
+  const status = useQuery({
+    queryKey: ['photo-code', jobId, made?.codeId],
+    queryFn: () => apiGet<Status>(`/api/workshop-jobs/${jobId}/quote-photo-codes/${made?.codeId}`),
+    enabled: Boolean(made),
+    refetchInterval: (q) => (q.state.data && q.state.data.state !== 'waiting' ? false : pollEvery()),
+  });
+  const state = status.data?.state ?? 'waiting';
+
+  let body: ReactNode;
+  let footer: ReactNode;
+  if (state === 'added') {
+    const added = status.data as { state: 'added'; attachmentId: number | null };
+    body = (
+      <>
+        <p role="status" className="m-0 flex items-center gap-2 text-lg font-bold"><Check size={20} aria-hidden="true" />Photo added</p>
+        {added.attachmentId ? <img src={`/api/workshop-jobs/${jobId}/attachments/${added.attachmentId}`} alt="The photo from your phone" className="max-h-56 w-full rounded-md object-contain" /> : null}
+        <p className="m-0 text-sm text-[var(--wh-muted)]">{`It’s on ${description} now, and the code no longer works.`}</p>
+      </>
+    );
+    footer = <Button variant="accent" onClick={onAdded}>Done</Button>;
+  } else if (state === 'expired') {
+    // Not drawn: the code ran out (or the quote changed) before a photo came.
+    body = (
+      <>
+        <p role="status" className="m-0 font-semibold">This code has expired.</p>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Make a new one to try again.</p>
+      </>
+    );
+    footer = (
+      <>
+        <Button onClick={onClose}>Close</Button>
+        <Button variant="accent" onClick={() => { setMade(null); setError(null); setAttempt((n) => n + 1); }}>Make a new code</Button>
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <p className="m-0 text-[15px]">{`Scan this code with your phone’s camera. It opens the photo step for ${description} on ${reference}.`}</p>
+        {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
+        {made ? (
+          <img src={qrImage(made.url)} alt="A code to scan with your phone’s camera" className="mx-auto size-52 rounded-md border border-[var(--wh-border)] bg-white p-1" />
+        ) : !error ? <p role="status" className="m-0 text-sm">Making the code…</p> : null}
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Works for 15 minutes, for this photo only. No sign-in needed.</p>
+        {made ? (
+          <>
+            <p role="status" className="m-0 flex items-center gap-2 text-sm"><Smartphone size={16} aria-hidden="true" />Waiting for the photo…</p>
+            <p className="m-0 text-[13px] text-[var(--wh-muted)]">No camera app? Open <span className="font-mono break-all text-[var(--wh-ink)]">{made.url}</span> on your phone.</p>
+          </>
+        ) : null}
+      </>
+    );
+    footer = <Button onClick={onClose}>Cancel</Button>;
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="photo-phone-title" className="md:max-w-[460px]">
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="photo-phone-title">Add a photo from your phone</DialogTitle>
+          <span className="text-[13px] text-[var(--wh-muted)]">{`${description} · ${reference}`}</span>
+        </div>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-3.5">{body}</DialogBody>
+      <DialogFooter className="flex justify-end gap-2.5">{footer}</DialogFooter>
+    </Dialog>
+  );
+}

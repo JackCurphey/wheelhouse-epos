@@ -57,8 +57,9 @@ None.
   under `/api/portal/:shopSlug/photo-codes/:code`; the route list (190 → 194)
   and their screen-trace comments.
 - Screens: the quote panel's Add photo choice and pop-up; a new customer-app
-  page at `/book/:shopSlug/photo/:code`, with the customer routes test
-  updated for it.
+  page at `/book/:shopSlug/photo/:code`, a route of its own beside the six
+  booking steps (`PHOTO_STEP_ROUTE`), so their table and its test stay as
+  they are.
 - **New dependency:** a small, well-known QR code maker for the screens
-  (`qrcode`), said so in the pull request (project rule 6).
+  (`qrcode-generator`, with nothing else of its own), said so in the pull request (project rule 6).
 - Two pull requests: the server half, then the screens.

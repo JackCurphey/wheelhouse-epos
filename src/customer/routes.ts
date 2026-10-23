@@ -20,3 +20,12 @@ export const CUSTOMER_ROUTES = {
 } as const;
 
 export type CustomerScreenId = keyof typeof CUSTOMER_ROUTES;
+
+/**
+ * Use my phone's photo step (openspec/changes/use-my-phone): the page a code
+ * opens on a member of staff's phone, with no sign-in. Under /book for the
+ * shop's slug and look, but not one of the booking steps above, so it sits
+ * apart from their table. The server's photoCodePath (server/booking-link.js)
+ * gives the same address.
+ */
+export const PHOTO_STEP_ROUTE = '/book/:shopSlug/photo/:code';

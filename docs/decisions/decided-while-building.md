@@ -1625,3 +1625,22 @@ No screen: server only.
    iPhone users can upload photos." Safari converts a picked photo to the
    first type the button accepts (JPEG for both photo buttons), per WebKit's
    bug tracker; not yet tried on a real iPhone.
+
+### 23 Oct 2026: Use my phone, the screens (`openspec/changes/use-my-phone`, `job-photo-choice` to `phone-photo-expired`)
+
+1. **A code that runs out on the computer** (not drawn): the pop-up says
+   "This code has expired." and "Make a new one to try again.", with Close
+   and "Make a new code". *Pattern:* the phone's own expired page, which
+   sends you back to the computer for a new one.
+2. **"Making the code…"** shows for the moment before the code arrives.
+   *Pattern:* the screens' other "Loading…" lines.
+3. **The address under the code is the full one**, in the code font (the
+   drawing's `[link]`), so it can be typed exactly as shown.
+4. **The phone refuses a photo over 10 MB, or a file that isn't a photo,
+   before sending**, in the booking page's words ("pads.jpg is over 10 MB.").
+   *Pattern:* the booking page's photo picker, with the same limit.
+5. **If the phone can't reach the shop**, it says "We couldn’t open this
+   code" with Try again. *Pattern:* the booking page's failed loads.
+6. **The QR code is drawn with `qrcode-generator`**, a small library with
+   nothing else of its own, rather than `qrcode`, which brings a
+   command-line tool and a PNG library the app doesn't need.

@@ -4,6 +4,7 @@ import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { refusalText } from './refusal-words.ts';
+import { readBase64 } from '@/lib/read-base64.ts';
 
 /**
  * "Files and photos" on the job page (Jack, 18 Oct,
@@ -20,13 +21,8 @@ export const TOO_LARGE = 'That file is too large (max 15MB).';
 const sizeText = (n: number) => (n >= 1024 * 1024 ? `${(n / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const isPhoto = (a: Attachment) => a.contentType.startsWith('image/');
 
-export async function readBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let text = '';
-  // In slices, so a large photo doesn't overflow the call stack.
-  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(text);
-}
+// Shared with the phone's photo step (src/lib/read-base64.ts).
+export { readBase64 };
 
 const REMOVE = 'min-h-11 self-start px-0.5 text-[13px] font-semibold text-[var(--wh-danger)] underline underline-offset-2';
 

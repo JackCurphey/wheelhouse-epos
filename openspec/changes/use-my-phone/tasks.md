@@ -9,9 +9,9 @@
 
 ## 2. The screens (second pull request)
 
-- [ ] 2.1 Write screen tests first: on a computer, Add photo offers "Choose a file" and "Use my phone"; on a touch screen it goes straight to the file input; "Use my phone" shows the drawn pop-up with a QR code of the address, "Works for 15 minutes, for this photo only. No sign-in needed." and "Waiting for the photo…", then "Photo added" when the status says added, and the line reads "1 photo"; the phone page's four states as drawn, with "Use this photo" posting the photo. Watch each fail
-- [ ] 2.2 Add the `qrcode` package (noted in the pull request), build the choice and pop-up in `quote-panel.tsx`, and the phone page at `/book/:shopSlug/photo/:code`; update the customer routes test. Verify 2.1 passes
-- [ ] 2.3 A browser test: the phone page at 320px with a photo picked, then Photo added
+- [x] 2.1 Write screen tests first: on a computer, Add photo offers "Choose a file" and "Use my phone"; on a touch screen it goes straight to the file input; "Use my phone" shows the drawn pop-up with a QR code of the address, "Works for 15 minutes, for this photo only. No sign-in needed." and "Waiting for the photo…", then "Photo added" when the status says added, and the line reads "1 photo"; the phone page's four states as drawn, with "Use this photo" posting the photo. Watch each fail
+- [x] 2.2 Add the `qrcode-generator` package (noted in the pull request), build the choice and pop-up in `quote-panel.tsx`, and the phone page at `/book/:shopSlug/photo/:code` as a route of its own. Verify 2.1 passes
+- [x] 2.3 A browser test: the phone page at 320px with a photo picked, then Photo added
 - [ ] 2.4 Log anything decided while building in `decided-while-building.md`; run lint, `npm test`, `npm run test:browser` and a fresh review
 
 ## Workflow follow-up

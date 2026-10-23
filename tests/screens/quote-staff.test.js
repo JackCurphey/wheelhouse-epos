@@ -267,7 +267,7 @@ const PNG_FILE = () => new window.File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])
 
 test('Add photo uploads the picture to the job’s files, then puts it on the line', async () => {
   const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({})]) });
-  fireEvent.change(await dlg.findByLabelText('Add photo for Brake pads (pair)'), { target: { files: [PNG_FILE()] } });
+  fireEvent.change(await dlg.findByLabelText('Choose a file for Brake pads (pair)'), { target: { files: [PNG_FILE()] } });
   await waitFor(() => assert.equal(posts().length, 2));
   assert.equal(posts()[0], '/api/workshop-jobs/1/attachments {"filename":"pads.png","contentType":"image/png","dataBase64":"iVBORw=="}');
   assert.match(posts()[1], /^\/api\/workshop-jobs\/1\/quotes .*"photoId":9/);
@@ -295,7 +295,7 @@ test('Replace photo swaps the line’s picture', async () => {
 test('a sent quote has no Add photo, as drawn', async () => {
   const { dlg } = await openJob({ q: quote('sent', [line({})]) });
   await dlg.findByText('Quoting');
-  assert.ok(dlg.queryByLabelText('Add photo for Brake pads (pair)') === null);
+  assert.ok(dlg.queryByLabelText('Choose a file for Brake pads (pair)') === null);
 });
 
 test('removing a line’s photo from Files and photos fetches the quote again', async () => {
@@ -314,7 +314,7 @@ test('a photo saved after a slow upload keeps a reason saved meanwhile', async (
   const { dlg, fireEvent, waitFor } = await openJob({ q: quote('draft', [line({}), FIT({})]) });
   // The server's draft has moved on since the page loaded (a reason saved meanwhile).
   QUOTE = quote('draft', [line({ id: 11 }), FIT({ id: 12, reason: 'Saved while uploading' })]);
-  fireEvent.change(await dlg.findByLabelText('Add photo for Brake pads (pair)'), { target: { files: [PNG_FILE()] } });
+  fireEvent.change(await dlg.findByLabelText('Choose a file for Brake pads (pair)'), { target: { files: [PNG_FILE()] } });
   await waitFor(() => assert.equal(posts().length, 2));
   assert.match(posts()[1], /"Saved while uploading"/);
   assert.match(posts()[1], /"photoId":9/);

@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "jsbarcode": "3.12.3",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "qrcode-generator": "2.0.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
