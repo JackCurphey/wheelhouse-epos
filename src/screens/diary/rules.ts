@@ -206,6 +206,8 @@ export type WaitingItem = Slot & {
   jobId?: number;
   reference?: string;
   customerName?: string | null;
+  /** The job's bike, for the cards' bike line (waiting-bike); null when it has none. */
+  bikeLabel?: string | null;
   serviceNames?: string[];
   mechanicId?: number | null;
   from?: Slot & { mechanicId?: number | null; mechanicName?: string | null };
@@ -236,7 +238,7 @@ export function waitingCard(item: WaitingItem) {
   } else {
     detail = [(item.serviceNames ?? []).join(', '), when(item)].filter(Boolean).join(' · ');
   }
-  return { tone, label, customer: item.customerName || 'Customer', detail };
+  return { tone, label, customer: item.customerName || 'Customer', bike: item.bikeLabel || null, detail };
 }
 
 /** The diary's 30-minute row height, in pixels (as drawn). */

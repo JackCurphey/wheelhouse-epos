@@ -1651,3 +1651,41 @@ No screen: server only.
    the photo has come is the same as Done.
 8. **If the code can't be made**, the pop-up offers Try again. *Pattern:*
    the screens' failed loads.
+
+### 23 Oct 2026: Today (`openspec/changes/today-page`, `op-today` and `op-today-staff`)
+
+1. **A drop-off still to arrive has Book in beside "Drop-off"**, where the
+   drawing shows "Drop-off" alone. *Pattern:* the Workshop Overview, where a
+   drop-off is due all day, so the two pages agree (design decision 4).
+2. **The date line has no town** ("North Street Cycles, Bolton" in the
+   drawing): Wheelhouse doesn't record a shop's town yet, so the line is the
+   day, the shop's name and its hours.
+3. **The hours are today's opening hours from Settings**; on a day the shop
+   is closed the "open [opens]–[closes]" part is left out rather than made up.
+4. **Who's in and Tills are left out** until check-ins and the till's float
+   exist (WP-1.7; Jack, 23 Oct, "1"). Staff see Workshop today alone.
+5. **No "Seen" on the lines yet**: the two kinds built (a quote with no
+   answer, messages needing a reply) go by themselves once the quote is
+   answered or the message replied to; "Seen" comes with the kinds that need it.
+6. **Needs attention reads again every minute** and when the window comes
+   back, until live updates (WP-1.9). *Pattern:* the diary's refresh.
+7. **"Every bike booked for today is in."** when Still to arrive is empty,
+   and "Loading…" while the jobs come. *Pattern:* the Overview's empty and
+   loading lines.
+8. **The lines' buttons are links** (Record their answer opens the job in
+   the diary, Open Messages opens Messages), drawn as buttons, so they can be
+   opened in a new tab. *Pattern:* the Overview's "Open job".
+9. **A message waiting since an earlier day shows the day too** ("oldest
+   from Maya Patel at Tue 20 Oct, 16:20"); today's shows the time alone, as
+   drawn (fresh review). *Pattern:* the quote line's "Sent Mon 19 Oct, 10:15".
+10. **A quote on a cancelled, declined or expired booking isn't listed**,
+    since nothing on Today could clear it (fresh review).
+
+### 23 Oct 2026: the bike on Waiting cards (`openspec/changes/waiting-bike`, `diary`)
+
+1. **A request with no bike has no bike line**, rather than "No bike" or
+   "Bike"; the card is its label, the customer and the detail, as before.
+   *Pattern:* the bike tag, which leaves the line out.
+2. **The computer's Waiting column shows the bike too**, not only the tablet
+   and phone cards: the drawing's desktop card has the same line
+   (`waitingCard` in `diary.mjs`).

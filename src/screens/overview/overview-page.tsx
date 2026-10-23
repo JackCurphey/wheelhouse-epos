@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, ApiError, jobAction } from '@/lib/api/client.ts';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
-import { dayLabel, todayIso, toMinutes } from '@/screens/diary/rules.ts';
-import { jobRefusalText } from '@/screens/diary/refusal-words.ts';
-import { SlotDialog, useStorageSlots } from '@/screens/diary/storage-slots.tsx';
+import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
+import { useStorageSlots } from '@/screens/diary/storage-slots.tsx';
+import { bookedToday, due, inShop, live, mechanicOf, startOf, useBookIn, useNow, useWorkshopDay } from './workshop-day.tsx';
 
 /**
  * Workshop › Overview (drawn as overview in generator/diary.mjs; Jack, 21 Oct,
@@ -17,23 +17,6 @@ import { SlotDialog, useStorageSlots } from '@/screens/diary/storage-slots.tsx';
  */
 type Tab = 'arrivals' | 'shared' | 'attention' | 'ready';
 const TABS: [Tab, string][] = [['arrivals', 'Arrivals'], ['shared', 'Shared queue'], ['attention', 'Needs attention'], ['ready', 'Ready']];
-
-// A booking that stands: not a request, an offer, or one that has ended.
-const live = (j: WorkshopJob) => j.bookingState === 'scheduled' || j.bookingState === 'reschedule_requested';
-const inShop = (j: WorkshopJob) => j.custodyState === 'in_shop';
-// A job over several days is read from today's own day, as the diary draws it:
-// its time and its mechanic (fresh review, 21 Oct).
-const todayPart = (j: WorkshopJob, today: string) => j.parts?.find((p) => p.date === today);
-// A drop-off's day comes back with an empty start time: that is no time too.
-const startOf = (j: WorkshopJob, today: string) => todayPart(j, today)?.startTime || (j.jobDate === today ? j.startTime : null) || null;
-const mechanicOf = (j: WorkshopJob, today: string) => { const p = todayPart(j, today); return p ? p.mechanicId : j.mechanicId; };
-const bookedToday = (j: WorkshopJob, today: string) => j.jobDate === today || Boolean(todayPart(j, today));
-
-/** Due to be booked in: no more than an hour away, or past; a drop-off is due all day. */
-function due(start: string | null, now: Date): boolean {
-  if (!start) return true;
-  return toMinutes(start) - (now.getHours() * 60 + now.getMinutes()) <= 60;
-}
 
 /** "6h", or "6.5h" to the half hour, as drawn. */
 const hoursOf = (minutes: number) => `${Math.round(minutes / 30) / 2}h`;
@@ -47,16 +30,6 @@ function useMedia(query: string): boolean {
     },
     () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false),
   );
-}
-
-/** The time, moving on by itself each minute, so "due" and today keep up on a page left open. */
-function useNow(): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
 }
 
 function Figure({ id, label, value, note, fill }: { id: string; label: string; value: string; note: string; fill?: number }) {
@@ -85,7 +58,6 @@ function Custody({ job, slotsOn }: { job: WorkshopJob; slotsOn: boolean }) {
 }
 
 export function OverviewPage() {
-  const queryClient = useQueryClient();
   const isPhone = useMedia('(max-width: 767px)');
   // A touch screen gets 44px tabs and buttons, as the diary's (decision 68).
   const touch = useMedia('(pointer: coarse)') || isPhone;
@@ -93,16 +65,13 @@ export function OverviewPage() {
   const today = todayIso(now);
   const [tab, setTab] = useState<Tab>('arrivals');
   const tabButtons = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
-  const [refused, setRefused] = useState<string | null>(null);
-  const [busy, setBusy] = useState<number | null>(null);
   // Storage slots (Workshop day 27): the shop's, when they're on.
-  const { on: slotsOn, slots, ask: askSlot } = useStorageSlots();
-  const [slotFor, setSlotFor] = useState<WorkshopJob | null>(null);
-  // Today's jobs, and every bike in the shop whatever its days (a ready bike
-  // from an earlier day has none today). Under 'workshop-jobs', so the
-  // diary's changes refresh them too.
-  const todays = useQuery({ queryKey: ['workshop-jobs', 'overview', today], queryFn: () => apiGet<WorkshopJob[]>(`/api/workshop-jobs?start=${today}&end=${today}`) });
-  const kept = useQuery({ queryKey: ['workshop-jobs', 'in-shop'], queryFn: () => apiGet<WorkshopJob[]>('/api/workshop-jobs?custody=in_shop') });
+  const { on: slotsOn } = useStorageSlots();
+  // The day's jobs and Book in, shared with Today (workshop-day.tsx).
+  const day = useWorkshopDay(today);
+  // The row has gone from its list once booked in: the focus stays on the page, on the tab showing.
+  const booking = useBookIn(() => tabButtons.current[tab]?.focus());
+  const { busy, refused } = booking;
   // Planned effort (Jack, 21 Oct, answer 2: once the capacity figures give it).
   // Left out, not shown as zero, while they can't be read.
   const effort = useQuery({
@@ -111,45 +80,18 @@ export function OverviewPage() {
   });
   const effortDay = effort.data?.days.find((d) => d.date === today && typeof d.plannedMinutes === 'number' && typeof d.availableMinutes === 'number');
 
-  const jobs = new Map<number, WorkshopJob>();
-  for (const j of [...(todays.data ?? []), ...(kept.data ?? [])]) jobs.set(j.id, j);
-  const sortKey = (j: WorkshopJob) => `${bookedToday(j, today) ? today : j.jobDate} ${startOf(j, today) ?? j.startTime ?? '~'}`;
-  // Compared as plain text, so a job with no time ("~") comes last.
-  const all = [...jobs.values()].sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : sortKey(a) > sortKey(b) ? 1 : 0));
-  const expectedToday = all.filter((j) => live(j) && bookedToday(j, today));
-  const inWorkshop = all.filter(inShop);
+  const { all, expectedToday, inWorkshop } = day;
   const lists: Record<Tab, WorkshopJob[]> = {
-    arrivals: expectedToday.filter((j) => j.custodyState === 'expected'),
+    arrivals: day.arrivals,
     shared: all.filter((j) => live(j) && mechanicOf(j, today) === null && j.workState !== 'complete' && (inShop(j) || (j.custodyState === 'expected' && bookedToday(j, today)))),
     attention: inWorkshop.filter((j) => j.workState === 'waiting_parts' || j.workState === 'on_hold'),
-    ready: inWorkshop.filter((j) => j.workState === 'complete'),
+    ready: day.ready,
   };
   const shown = lists[tab];
   const stillToArrive = lists.arrivals.length;
 
-  // With slots on, Book in asks where the bike is kept first (till-book-in).
-  function startBookIn(j: WorkshopJob) {
-    if (askSlot) setSlotFor(j);
-    else void bookIn(j);
-  }
-
-  async function bookIn(j: WorkshopJob, storageSlotId: number | null = null) {
-    setBusy(j.id);
-    setRefused(null);
-    let done = false;
-    try {
-      await jobAction(j.id, 'book-in', j.version, storageSlotId === null ? {} : { storageSlotId });
-      done = true;
-    } catch (err) {
-      setRefused(err instanceof ApiError ? jobRefusalText(err) : 'Wheelhouse couldn’t book that in. Try again in a moment.');
-    } finally {
-      await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
-      setBusy(null);
-    }
-    // The row has gone from its list: the focus stays on the page, on the tab showing.
-    if (done) tabButtons.current[tab]?.focus();
-  }
-  const choose = (key: Tab) => { setTab(key); setRefused(null); };
+  const startBookIn = booking.start;
+  const choose = (key: Tab) => { setTab(key); booking.clearRefused(); };
 
   const work = (j: WorkshopJob) => {
     const start = startOf(j, today);
@@ -177,12 +119,12 @@ export function OverviewPage() {
 
   const dateLine = <p className="m-0 text-[15px] text-[var(--wh-muted)] max-md:text-sm">{`${dayLabel(today)} · one shop, one view of the work`}</p>;
   // Either read failing would make the figures look real when they aren't.
-  if (todays.isError || kept.isError) {
+  if (day.failed) {
     return (
       <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
         {dateLine}
         <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load the workshop’s jobs. Try again in a moment.</p>
-        <div><Button className={touch ? 'min-h-11' : undefined} onClick={() => { void todays.refetch(); void kept.refetch(); }}>Try again</Button></div>
+        <div><Button className={touch ? 'min-h-11' : undefined} onClick={day.retry}>Try again</Button></div>
       </div>
     );
   }
@@ -208,7 +150,7 @@ export function OverviewPage() {
       </div>
       {refused ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{refused}</p> : null}
       <div className="overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
-        {shown.length === 0 ? <p className="m-0 px-4 py-3.5 text-sm text-[var(--wh-muted)]">{todays.isPending || kept.isPending ? 'Loading…' : 'Nothing here.'}</p>
+        {shown.length === 0 ? <p className="m-0 px-4 py-3.5 text-sm text-[var(--wh-muted)]">{!day.loaded ? 'Loading…' : 'Nothing here.'}</p>
           : isPhone ? (
             <ul className="m-0 list-none p-0">
               {shown.map((j) => (
@@ -247,13 +189,7 @@ export function OverviewPage() {
             </table>
           )}
       </div>
-      {slotFor ? (
-        <SlotDialog
-          job={slotFor} slots={slots} busy={busy === slotFor.id} title={slotFor.reference ? `Book in · job ${slotFor.reference}` : 'Book in'}
-          onClose={() => setSlotFor(null)}
-          onDone={(slot) => { const j = slotFor; setSlotFor(null); void bookIn(j, slot); }}
-        />
-      ) : null}
+      {booking.dialog}
     </div>
   );
 }

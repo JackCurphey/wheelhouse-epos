@@ -193,3 +193,4 @@ POST /api/portal/:shopSlug/booking-links/:code/notes
 GET /api/job-notes/conversations
 GET /api/workshop-jobs/:id/notes
 POST /api/workshop-jobs/:id/notes
+GET /api/needs-attention
