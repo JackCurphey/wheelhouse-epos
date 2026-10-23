@@ -65,6 +65,9 @@ function serializeWorkshopSettings(row) {
     storageSlotsOn: row.storage_slots_on === 1,
     // Hours before a quote with no answer is reminded (Jack, 22 Oct; migration 060).
     quoteReminderHours: row.quote_reminder_hours,
+    // Days from when a bike is marked ready to Bike still waiting, and to Today (WP-4.3; migration 064).
+    collectionReminderDays: row.collection_reminder_days,
+    collectionTodayDays: row.collection_today_days,
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -418,6 +421,17 @@ export function register(route) {
     if (!Number.isInteger(quoteReminderHours) || quoteReminderHours < 1 || quoteReminderHours > 168) {
       return badRequest(res, 'Choose from 1 to 168 hours.');
     }
+    // A bike left uncollected (WP-4.3, cp-setting): the reminder's days, and
+    // Today's, which come later.
+    const collectionReminderDays = body.collectionReminderDays === undefined ? existing.collection_reminder_days : body.collectionReminderDays;
+    if (!Number.isInteger(collectionReminderDays) || collectionReminderDays < 1 || collectionReminderDays > 60) {
+      return badRequest(res, 'Choose from 1 to 60 days.');
+    }
+    const collectionTodayDays = body.collectionTodayDays === undefined ? existing.collection_today_days : body.collectionTodayDays;
+    if (!Number.isInteger(collectionTodayDays) || collectionTodayDays < 2 || collectionTodayDays > 90) {
+      return badRequest(res, 'Choose from 2 to 90 days.');
+    }
+    if (collectionTodayDays <= collectionReminderDays) return badRequest(res, 'Show it on Today after more days than the reminder.');
 
     // What a diary block shows first and second: two different things from
     // bike, job title, customer and job number (Workshop day 17, 29).
@@ -458,13 +472,15 @@ export function register(route) {
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
          show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
-         block_first = ?, block_second = ?, storage_slots_on = ?, quote_reminder_hours = ?, updated_at = ? WHERE id = ?`
+         block_first = ?, block_second = ?, storage_slots_on = ?, quote_reminder_hours = ?,
+         collection_reminder_days = ?, collection_today_days = ?, updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
           showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
-          blockFirst, blockSecond, storageSlotsOn, quoteReminderHours, nowIso(), existing.id);
+          blockFirst, blockSecond, storageSlotsOn, quoteReminderHours,
+          collectionReminderDays, collectionTodayDays, nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });
