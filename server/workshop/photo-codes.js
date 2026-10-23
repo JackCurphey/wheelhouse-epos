@@ -8,6 +8,8 @@
 // draft and the line at that place must still have those words, or the code
 // counts as spent and nothing changes. Runs inside the shop's row-level
 // security, so another shop's code is never found.
+import { unlink } from 'node:fs/promises';
+import path from 'node:path';
 import { prepare, dbExec } from '../db.js';
 import { currentMoment } from '../clock.js';
 import { newLinkCode, hashLinkCode } from '../booking-link.js';
@@ -51,11 +53,20 @@ async function liveCode(code, { lock = false } = {}) {
   if (typeof code !== 'string' || !CODE_SHAPE.test(code)) return null;
   const row = await prepare(`SELECT * FROM quote_photo_codes WHERE code_hash = ?${lock ? ' FOR UPDATE' : ''}`).get(hashLinkCode(code));
   if (!row || row.used_at || new Date(row.expires_at) <= currentMoment()) return null;
+  const line = await lineFor(row);
+  return line ? { row, line } : null;
+}
+
+// The line a code adds to, while its draft and words still match; else null.
+async function lineFor(row) {
   const draft = await draftOf(row.workshop_job_id);
   const line = draft && draft.id === row.workshop_quote_id ? draft.lines[row.line_position] : undefined;
-  if (!line || line.description !== row.line_description) return null;
-  return { row, line };
+  return line && line.description === row.line_description ? line : null;
 }
+
+// Thrown inside the transaction when the line went between the check and the
+// update (a draft saved at that moment), so everything rolls back.
+class LineGone extends Error {}
 
 // What the phone shows: the shop, the job's reference and bike, the line and
 // its reason. Nothing about the customer.
@@ -83,25 +94,39 @@ export async function addPhotoWithCode(code, photo) {
     }
     const jobId = live.row.workshop_job_id;
     let attachmentId;
+    let storedAs;
     await saveBookingPhotos({
       photos: [photo],
       uploadsDir: UPLOADS_DIR,
       name: () => `Photo from a phone.${photo.extension}`,
       insertRow: async ({ storageKey, originalName, contentType, sizeBytes }) => {
+        storedAs = storageKey;
         ({ lastInsertRowid: attachmentId } = await prepare(
           `INSERT INTO workshop_job_attachments (workshop_job_id, storage_key, original_name, content_type, size_bytes)
            VALUES (?, ?, ?, ?, ?)`
         ).run(jobId, storageKey, originalName, contentType, sizeBytes));
-        await prepare('UPDATE workshop_quote_lines SET photo_attachment_id = ? WHERE id = ?').run(attachmentId, live.line.id);
+        // A draft saved at this moment replaces its lines: if this one went,
+        // nothing is kept, rather than spending the code on no line.
+        const { changes } = await prepare(
+          'UPDATE workshop_quote_lines SET photo_attachment_id = ? WHERE id = ? AND workshop_quote_id = ? AND description = ?'
+        ).run(attachmentId, live.line.id, live.row.workshop_quote_id, live.row.line_description);
+        if (changes !== 1) throw new LineGone();
         await prepare('UPDATE quote_photo_codes SET used_at = ?, attachment_id = ? WHERE id = ?')
           .run(currentMoment().toISOString(), attachmentId, live.row.id);
       },
     });
-    await dbExec('COMMIT');
+    try {
+      await dbExec('COMMIT');
+    } catch (err) {
+      // The rows are gone with the transaction; so is the file.
+      await unlink(path.join(UPLOADS_DIR, storedAs)).catch(() => {});
+      throw err;
+    }
     const job = await prepare('SELECT reference FROM workshop_jobs WHERE id = ?').get(jobId);
     return { reference: job.reference, line: live.line.description };
   } catch (err) {
     await dbExec('ROLLBACK').catch(() => {});
+    if (err instanceof LineGone) return null;
     throw err;
   }
 }
@@ -113,6 +138,7 @@ export async function photoCodeStatus({ jobId, codeId }) {
     : null;
   if (!row) return null;
   if (row.used_at) return { state: 'added', attachmentId: row.attachment_id };
-  if (new Date(row.expires_at) <= currentMoment()) return { state: 'expired' };
+  // As the phone sees it: run out, or the quote or line changed since.
+  if (new Date(row.expires_at) <= currentMoment() || !(await lineFor(row))) return { state: 'expired' };
   return { state: 'waiting' };
 }

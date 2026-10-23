@@ -441,7 +441,12 @@ export function register(route) {
   route('POST', '/api/workshop-jobs/:id/quote-photo-codes', async (req, res, params, query, afterRelease, shopId) => {
     const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
     if (!job) return notFound(res, 'Job not found');
-    const body = await readJsonBody(req);
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch {
+      return badRequest(res, 'Invalid request body');
+    }
     const result = await makePhotoCode({ jobId: job.id, quoteId: body.quoteId, linePosition: body.linePosition });
     if (!result.ok) {
       if (result.code === 'not_found') return notFound(res, result.message);

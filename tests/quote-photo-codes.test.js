@@ -125,8 +125,11 @@ test('a file that isn\'t a photo is refused and the code still works', async () 
 
 test('a code whose quote was sent, or whose line changed or went, is spent and changes nothing', async () => {
   const sentJob = await draftJob();
-  const sentCode = codeIn((await makeCode(sentJob.job.id, { quoteId: sentJob.quoteId, linePosition: 1 })).body.path);
+  const sentMade = (await makeCode(sentJob.job.id, { quoteId: sentJob.quoteId, linePosition: 1 })).body;
+  const sentCode = codeIn(sentMade.path);
   assert.ok((await staff(`/api/quotes/${sentJob.quoteId}/send`, { method: 'POST', body: {} })).status < 300);
+  // The computer's pop-up is told too, rather than waiting for a photo that can't come.
+  assert.deepEqual((await statusOf(sentJob.job.id, sentMade.codeId)).body, { state: 'expired' });
   assert.deepEqual(await phonePost(sentCode, tinyJpeg('late')), { status: 410, body: { error: GONE } });
 
   const edited = await draftJob();
@@ -152,6 +155,9 @@ test('staff can only make a code for a line of the job\'s draft quote', async ()
   assert.equal(sent.status, 409, JSON.stringify(sent.body));
   assert.equal(sent.body.error, 'A photo can only be added while the quote is a draft');
   assert.equal((await makeCode(job.id, { quoteId, linePosition: 1 }, other)).status, 404);
+  const garbled = await fetch(`${server.baseUrl}/api/workshop-jobs/${job.id}/quote-photo-codes`, { method: 'POST', headers: { cookie: owner.cookie, 'content-type': 'application/json' }, body: '{not json' });
+  assert.equal(garbled.status, 400);
+  assert.equal((await garbled.json()).error, 'Invalid request body');
 });
 
 // A server whose clock reads 06:16, a minute after a code made at 06:00 runs out.
