@@ -384,7 +384,13 @@ test('GET /healthz returns 503 with the database actually unreachable', async ()
 
   // The messages timer (every 5 s) would keep the pool's connections busy so
   // they never reach pg's 10 s idle timeout; slow it right down here.
-  const server = await spawnServer({ DATABASE_URL: proxiedDbUrl.toString(), WH_MESSAGES_TICK_MS: '3600000' });
+  // The commit rides along on the 503 too, so a failed deploy still shows
+  // which commit is failing (add-hosted-copy design, "The commit it runs").
+  const server = await spawnServer({
+    DATABASE_URL: proxiedDbUrl.toString(),
+    WH_MESSAGES_TICK_MS: '3600000',
+    WHEELHOUSE_COMMIT: 'test-commit-0503',
+  });
   try {
     const before = await fetch(`${server.baseUrl}/healthz`);
     assert.equal(before.status, 200, 'sanity check: boot through the proxy must succeed exactly like a direct connection');
@@ -404,6 +410,7 @@ test('GET /healthz returns 503 with the database actually unreachable', async ()
     const body = await res.json();
     assert.equal(body.status, 'error');
     assert.equal(body.error, 'Database unreachable');
+    assert.equal(body.commit, 'test-commit-0503');
   } finally {
     if (server.child.exitCode === null) server.child.kill('SIGKILL');
     for (const s of openSockets) s.destroy();

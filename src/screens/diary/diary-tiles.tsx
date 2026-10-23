@@ -4,7 +4,7 @@ import { Chevron } from './diary-bits.tsx';
 import { BlockLinesContext, ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
 import { BLOCK, CHIP, SR, blockLine, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
-import { STATE_LABEL, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
+import { stateWord, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
 
 /** "New, booked online", or "New online" where a narrow week column would cut it off (diary.mjs blockMark). */
 export function NewOnlineMark({ short }: { short: boolean }) {
@@ -67,7 +67,7 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
           the job stays in its description and summary. */}
       {height >= TWO_LINES && !(mark && height < THREE_LINES) ? (
         <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">
-          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', blockLine(job, lines.second), wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
+          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', blockLine(job, lines.second), wide ? stateWord(job) : ''].filter(Boolean).join(' · ')}
         </span>
       ) : null}
       {mark && height >= TWO_LINES ? (

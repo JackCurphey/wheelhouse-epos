@@ -65,11 +65,12 @@ Starts at `not_started`. Rests at `complete`.
 
 ## quote
 
-Starts at `draft`. Rests at `declined`, `superseded`, `expired`, `withdrawn`.
+Starts at `draft`. Rests at `superseded`, `expired`, `withdrawn`.
 
 | From | Event | To |
 |---|---|---|
 | `draft` | `send` | `sent` |
+| `draft` | `within_limit` | `approved` |
 | `sent` | `approve_all` | `approved` |
 | `sent` | `approve_some` | `partly_approved` |
 | `sent` | `decline_all` | `declined` |
@@ -78,6 +79,7 @@ Starts at `draft`. Rests at `declined`, `superseded`, `expired`, `withdrawn`.
 | `sent` | `withdraw` | `withdrawn` |
 | `partly_approved` | `revise` | `superseded` |
 | `approved` | `revise` | `superseded` |
+| `declined` | `revise` | `superseded` |
 
 ## capacityHold
 

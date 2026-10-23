@@ -10,7 +10,8 @@ const UNREADABLE = 'A photo could not be read — please try adding it again';
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 
 // The type comes from the file's own first bytes, never from a name or type the browser claims.
-function sniff(b) {
+// The picture a file is, by its first bytes (not what it says it is), or null.
+export function sniffImage(b) {
   if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { contentType: 'image/jpeg', extension: 'jpg' };
   if (b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return { contentType: 'image/png', extension: 'png' };
   if (b.length >= 12 && b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return { contentType: 'image/webp', extension: 'webp' };
@@ -28,7 +29,7 @@ export function readBookingPhotos(input) {
     const buffer = Buffer.from(data, 'base64');
     if (!buffer.length) return { error: UNREADABLE };
     if (buffer.length > MAX_PHOTO_BYTES) return { error: 'Each photo can be up to 10 MB' };
-    const type = sniff(buffer);
+    const type = sniffImage(buffer);
     if (!type) return { error: 'Only photos can be added (JPEG, PNG or WebP)' };
     value.push({ buffer, ...type });
   }

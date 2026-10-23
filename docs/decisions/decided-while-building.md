@@ -54,6 +54,19 @@ reopening it.
    only true or false; anything else is refused and nothing is saved.
    *Pattern:* the messages page's `enabled` ("must be true or false").
 
+### 22 Oct 2026: a deleted job's waiting messages (`openspec/changes/delete-job-messages`, audit item 11 on #265)
+
+No screen: server only. Touches `docs/decisions/2026-10-18-attachments-and-delete.md`
+(deleting a job) and `2026-10-20-messages-engine.md` (Undo), without
+reopening either.
+
+1. **Deleting a job stops its messages that haven't gone yet**, marked
+   undone as Undo marks them, even one whose minute is up but which the
+   timer hasn't picked up. One already being sent, or sent, is left as it
+   is. A refused delete stops nothing. *Pattern:* reopening the work stops a
+   waiting "Bike ready" (`undoWaiting`): nothing is sent about work that no
+   longer stands.
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
@@ -1222,3 +1235,301 @@ The drawings show where slots appear but not these rules. *Decided:*
    beside Notes in the wider column, then Work and parts across the full
    width below. The built page had drifted from it (Work and parts in the
    right column); it now matches the drawing.
+
+### 22 Oct 2026: the quote's drawn words (`openspec/changes/quote-names-and-wording`)
+
+1. **"We" in place of the mechanic's name, with the switch off.** The
+   drawings name Alex throughout; Jack's 22 Oct answer puts names behind
+   the "Show who signed off to customers" switch. Off, each drawn line takes
+   "we": "We recommend more work", "We recommend this.", "Thanks, Maya —
+   we’re carrying on", "Thanks, Maya — we’ll carry on with the service",
+   "We’ve withdrawn this quote", "You answered by phone at [time]."
+2. **"Call the shop" with no phone.** "Not sure? Call [shop phone]" and the
+   withdrawn line read "Call the shop" when the shop has no phone in Shop
+   details.
+3. **The withdraw box keeps "Only the booked work stays agreed."** The drawing
+   names the booked Standard service; a job's title is free text, so the
+   general words stay.
+4. **The Record-answer intro follows How did they answer?** "Tick what Maya
+   agreed to on the phone" changes to "in the shop" with the choice, so it
+   sits under the choice. Its drawn note ("Maya gets a text … with what was
+   agreed") waits for that message (a later WP-4.2 piece) and isn't shown.
+5. **The switch's note says it covers quotes:** "Adds “Checked by [name]” to
+   their receipt and booking link, and the mechanic’s name to quotes. Off:
+   only staff see who signed a job off, and quotes say “we”." The drawings of
+   the switch (`set-workshop-sign-off`) keep the older note until redrawn.
+
+### 22 Oct 2026: the checklist on the customer's booking page (customer-checklist)
+
+1. **When.** *Decided:* once the work is finished (the ready and collected
+   pages, where it's drawn); not while it's under way.
+2. **Its title.** Drawn as "Full service checklist". *Decided:* the
+   checklist's own name, as on the job page (the template's is that).
+3. **A checklist nobody ticked** (fresh review). *Decided:* the customer sees
+   the checklist only once a mechanic ticked or noted something on it, and
+   then the job's own copy, so it's fixed and never says "0 of 10 checks done"
+   for a service done without the ticks. A note on a check not done isn't
+   shown, as drawn.
+
+### 22 Oct 2026: quote lines that go together (`openspec/changes/quote-goes-with`)
+
+1. **Only a labour line goes with something, and only with a part.** The
+   drawing (dq-job-quote) puts "Goes with" on the fitting line and offers the
+   pads; decision 2's example is pads and fitting. Keeping it labour-to-part
+   means a pair never chains and no line goes with itself. "Goes with" shows
+   on a draft's labour lines once the quote has a part; Nothing takes it off.
+   More than one labour line can go with the same part (fitting and a bleed
+   with the pads); the part and all of them tick together (fresh review).
+   A group starts ticked if any line in it is Needed, so a Needed part with
+   Optional fitting opens ticked together rather than split.
+2. **A pair can't be split.** Decision 2 says they "tick and untick as a
+   pair": the customer's card and Record their answer move both, and the
+   server refuses an answer that splits them. A customer bringing their own
+   pads means staff take the pads off the quote, or choose Nothing.
+3. **Where staff write what happens without it.** Not drawn; the audit (H1)
+   asks for "a new field on the job page". *Decided:* a box under the reason
+   on a draft's Needed lines, "What happens without it", saved when you
+   leave it, as the reason is. Up to 300 letters.
+4. **No words, no box.** The drawing shows "Alex recommends this. [words]"
+   only when there are words (dq-quote-decline). The card had shown "We
+   recommend this." alone on any unticked Needed line; it now follows the
+   drawing.
+5. **The older one-line answer refuses a line in a pair** ("This line goes
+   with another; answer the whole quote."), so it can't split one either.
+6. **Migration 056**, as Mark's sales in pence (#404) has 055.
+
+### 22 Oct 2026: a photo on a quote line (`openspec/changes/quote-line-photos`)
+
+1. **One photo per line.** The decision says "photos"; every drawing shows
+   one ("1 photo"). *Decided:* one, as drawn; Replace photo swaps it.
+2. **What "view or add" opens.** Not drawn (not-drawn pages, row 83).
+   *Decided:* the photo larger in a pop-up, as Files and photos and the
+   customer's dq-quote-photo do, with Replace photo, Remove from line and
+   Close.
+3. **The photo is one of the job's files.** It shows in Files and photos too;
+   removing it there takes it off the line. Remove from line leaves the file.
+4. **Only while the quote is a draft**, as drawn: the sent boards drop the
+   photo button.
+5. **JPEG, PNG or WebP only**, checked by the file's bytes, as the booking
+   photos are; the customer's photo route sends it as the picture it is.
+6. **Left for later:** "Use my phone" (walk-through 8), removing location
+   data (CX-2; booking photos don't yet either) and the photo on Ready to
+   collect.
+7. **Migration 057**, after the goes-with piece's 056.
+
+### 22 Oct 2026: a new quote after the customer says no to everything (`openspec/changes/quote-after-declined`)
+
+1. **"Already agreed" on the newer quote** lists the booking's services, then
+   the earlier yeses, with the booking's agreed total, as drawn
+   (dq-quote-newer: "Standard service, brake pads, fitting · £111.00").
+2. **A second quote after a withdrawn one** has no earlier answers, so it
+   reads as a first quote ("Waiting for your answer").
+3. **"line" or "lines"**: "Please answer the new line below." follows how
+   many new lines there are.
+4. **Each line's latest answer counts** (fresh review). Pads said no to on
+   one quote and yes to on a later one are agreed: they aren't listed as "You
+   said no thanks", on the newer quote or on the finished-work page. Lines
+   are matched by their words, as quotes don't link one revision's line to
+   the next.
+5. **A quote changed before it was answered in full leaves no earlier
+   answers**, even a line answered on its own.
+6. **The agreed total counts the earlier yeses** (fresh review): the booked
+   services plus the lines agreed before, as the drawing's £111.00 does.
+
+### 22 Oct 2026: the spending limit at booking (`openspec/changes/spend-limit-booking`)
+
+1. **The summary line.** Not drawn for a customer who sets a limit (every
+   drawn summary asks first). *Decided:* "Extra work: go ahead if the whole
+   bill is no more than £200", in the drawing's words; nothing when asking
+   first.
+2. **Typing an amount chooses Go ahead**, so the box can't hold a limit the
+   radio doesn't.
+3. **Whole pounds from £1 to £100,000.** The box is drawn numeric, "in
+   pounds". Otherwise Continue says "Enter the most the whole bill can come
+   to, in whole pounds."
+4. **Shown on every booking**, Not sure included, after the photos as drawn.
+5. **The job's tag shows on every job**, "Ask before any extra work" when
+   there's no limit (staff-made jobs included), as drawn.
+6. **Staff can't set or change a limit**: Jack, 22 Oct, "1: only the
+   customer sets it, when booking online; staff can't change it"
+   (`docs/decisions/2026-10-22-spend-limit-who-sets.md`).
+7. **Migration 058.**
+
+### 22 Oct 2026: work within the spending limit (`openspec/changes/spend-limit-within`)
+
+1. **Through Add to quote.** The drawing (dq-job-within) adds the work with
+   Add item and shows it Approved. *Decided:* staff add extra work the usual
+   way (Add to quote); when the whole bill stays within the limit, the panel
+   says so and offers "Save and tell Maya" in place of Send quote. The
+   quote's lines are the record of what was added and what the customer was
+   told.
+2. **The whole bill** is the job's order, plus any booked service not on it
+   yet, plus the new work: a booked service counts once.
+3. **"Maya will be told what was added."** The drawing says "She’ll"; the
+   app doesn't know anyone's pronouns, so it uses the name.
+4. **A minute to Undo**, as Send quote, since a message goes.
+5. **Over the limit, or with no limit**, the drawn hint "Quotes are sent
+   when the customer asked to be called first, or the total is over their
+   limit." shows under a draft quote, and Send quote is as before (fresh
+   review: the drawing shows it whether or not a limit was set).
+8. **Proposed total is the whole bill** the limit is checked against, booked
+   work included, so the two never disagree (fresh review).
+9. **No shop phone:** the message says "Call the shop", as the customer's
+   page does.
+6. **The message wording**: drafted, then approved (Jack, 22 Oct: "1: use
+   the drafted wording for Work added within your limit").
+7. **Migration 059.**
+
+### 22 Oct 2026: the quote reminder (`openspec/changes/quote-reminder`)
+
+1. **No switch of its own.** The drawn reminder row has the hours and Edit,
+   no On/Off: it goes when Quote to approve goes (and a quote message that
+   doesn't go, for no contact or Quote to approve off, queues no reminder).
+2. **Hours from 1 to 168** (a week), whole hours, saved when you leave the
+   box; otherwise "Choose from 1 to 168 hours."
+3. **A newer quote sent brings its own reminder**; replacing, withdrawing or
+   answering a quote stops one still waiting.
+4. **The customer's sent line** adds "· we sent a reminder at 10:15" once it
+   has gone, as drawn.
+5. **Jack approved the wording before reading it** (22 Oct, by the box);
+   shown to him straight after, and it's a one-line change.
+6. **A job with no bike** reads "on your is still waiting", as Quote to
+   approve already reads "on your ." Left for a messages fix.
+7. **Migration 060.**
+8. **Checked again when due** (fresh review). The reminder waits up to a
+   week, so when it's due it goes only if the job is still there, the bike
+   hasn't been collected, the booking hasn't ended, the job's newest quote is
+   still waiting, and Quote to approve and the reminder are still on.
+   Otherwise it's stopped, and the job's Messages don't list it.
+9. **Staff Messages say the day** a message waiting past today goes ("goes
+   Fri 23 Oct, 10:15").
+
+### 22 Oct 2026: the "Your answers" text (`openspec/changes/your-answers-message`)
+
+1. **Only for answers from a call.** The drawn Settings row says "from a
+   call"; recorded "in the shop", the customer was there, so none is sent.
+2. **At once**, as booking answers send at once (22 Oct): the answer is
+   final and was given on the call.
+3. **What it lists:** "Going ahead: …, £46.00. No thanks: …", the cost of
+   what's going ahead from the database; with nothing agreed, "Going ahead:
+   just the booked work."
+4. **Jack approved the wording before reading it** (22 Oct, by the box); it
+   was shown to him straight after, and it's a one-line change.
+5. **No word on the job page** that it went: not drawn; the job's Messages
+   show it.
+
+### 22 Oct 2026: notes with the shop, the server (`openspec/changes/notes-with-the-shop`)
+
+1. **Where the notes live.** A job's own conversation (`job_notes`), the
+   words themselves; the text telling the customer of a reply is a message
+   like any other. Questions from a customer's account come later.
+2. **Needs a reply** while the customer's note is the newest; a staff reply
+   clears it (the drawn "Send reply" then "Sent to Maya by text"). No
+   separate "No reply needed".
+3. **Staff names to the customer** only with "Show who signed off to
+   customers" on, as quotes (Jack, 22 Oct); otherwise the shop's name.
+4. **Up to 1,000 letters** a note; otherwise "Write a note of up to 1,000
+   letters."
+5. **The reply's own full stop** goes before the drawn ". Replies to this
+   number aren’t read…", so the text never reads "check it..".
+6. **Reply from the shop** is listed in Settings › Messages with the other
+   messages, in its drawn wording (ac-reply-text).
+7. **Migration 061.**
+8. **Notes at any stage the page is open** (fresh review). Decision 3 says
+   "a job's page"; the drawing shows the box on the in-the-shop page. The
+   server takes a note whenever the booking link works; the customer's card
+   is placed as drawn. A closed page (30 days after collection, or a
+   booking that never came in) takes none.
+9. **A reply on a job whose page has closed** is saved, and no text goes
+   ("Maya Patel’s booking page has closed, so no text went."): it would
+   carry a link that doesn't work.
+10. **Before real sending is switched on:** every message with a link issues
+    the customer a new one and the old stops working (one link per job). A
+    conversation would do that on every reply. To settle before real
+    sending: keep more than one live link per job, or reuse the one they
+    have. Pretend sending issues none, so nothing breaks today.
+11. **A reply ending "?" or "!"** reads "…come in?. Replies to this
+    number…": only a full stop is taken off. Left as is.
+12. **For the customer's card:** the booking link's guess limit (30 a
+    quarter hour) counts every read, so the card mustn't re-read the thread
+    on a timer.
+
+### 22 Oct 2026: the Notes with the shop card (`openspec/changes/notes-card`)
+
+1. **On the in-the-shop, ready and collected pages** (fresh review). Drawn on
+   the in-the-shop page; the recorded decisions (collect-and-pay review;
+   drop-off review decision 7, H4) put "Add a note for the shop" on the ready
+   page too, and a staff reply's text links the customer back to their page.
+   On ready and collected it sits after What we did and the checklist.
+2. **"Let you know", not "text you".** The drawing's "we’ll text you" is
+   Maya's choice; a customer may have chosen email or WhatsApp, and nothing
+   is really sent yet. Pattern: nothing said that isn't true (cancel, item 2).
+   "We’ll reply here and let you know when we do." / "Sent. [Shop] will reply
+   here, and we’ll let you know when they do."
+3. **Read once.** No re-reading on a timer or on focus: every read counts
+   against the booking link's guess limit. A read that fails says
+   "Wheelhouse couldn’t load your notes." with Try again.
+4. **Bubbles as drawn:** yours light with a border on the right, the shop's
+   on the panel on the left.
+
+### 22 Oct 2026: the staff Messages inbox (`openspec/changes/messages-inbox`)
+
+1. **No "Customer page" link yet.** Drawn beside Open the job; the Customers
+   page isn't built, so it would open a placeholder. Added with Customers.
+2. **The hint before sending** says "Goes to Maya the way they chose, with a
+   link to reply on the job’s page." The drawing shows "Sent to Maya by
+   text…" under the box before sending; that line is now said after
+   sending, with the way it really went (text, email or WhatsApp), or why
+   no text went ("Saved on the job, but no text went: …").
+3. **Read again every 30 seconds** while Messages is open: there are no live
+   updates between devices yet (WP-1.9).
+4. **The open conversation is in the address** (`?job=`), so Back works and
+   a link can open one.
+5. **"You (Jo Taylor)"** for your own replies, as drawn; another member of
+   staff's by their name.
+6. **A reply half typed is kept** per conversation while Messages is open
+   (fresh review), so checking another one doesn't lose it.
+7. **After sending, the drawn bar**: green with a tick when the text went;
+   amber, "Saved on the job, but no text went: [why]", when it didn't (the
+   drawing has only the green one).
+8. **A conversation that won't load**, or a job that's gone, says
+   "Wheelhouse couldn’t load this conversation." with Try again, and offers
+   no reply box.
+
+### 22 Oct 2026: "Add a note for the shop" from the quote (`openspec/changes/quote-note-button`)
+
+1. **The button goes to the Notes with the shop box on the same page, cursor
+   in it** (dq-quote, dq-in-shop). The mock-up sends it to the job's page
+   with its note box (ac-job-note); since #422 that box is a card on the
+   booking page itself, so the button moves to it rather than opening
+   anything new. With notes already there, the box is "Reply".
+2. **No button where the page has no notes card.** Before the bike is in,
+   the quote card says "Not sure? Call [shop phone]." as before: a button
+   that went nowhere would be a dead end. Pattern: the notes card's own
+   stages (notes-card, item 1).
+3. **The Ready to collect card's button (collect.mjs) isn't in this piece**;
+   the notes card is already under it on that page.
+
+### 22 Oct 2026: "No answer yet" after the quote reminder (`openspec/changes/quote-no-answer`)
+
+1. **Today isn't built yet, so its line waits for it.** When Today (WP-1.10)
+   is built, its list carries the drawn dq-today-no-answer line: "WH-1042 ·
+   Maya Patel — no answer to the quote yet", "Sent [time] · reminder sent
+   [time] · [phone]", and Record their answer. The job read already carries
+   what it needs (`quote.sentAt`, `quote.reminderSentAt`; the phone from the
+   customer).
+2. **In the diary, "No answer yet" is the job's word in place of "Quoting"**
+   (decision 4 names no other place). It shows where the diary already
+   shows the word: a wide block's line, the month view's day list, and what
+   a screen reader hears for every block and chip. The colour stays
+   Quoting's teal; a narrow week block, with no room for the word, looks as
+   before. Pattern: the New online mark's words (new-online-on-stacks).
+3. **The customer's number is on the job's page**, in the Today line's words
+   above Withdraw quote and Record their answer: "No answer to the quote
+   yet", "Sent Mon 5 Oct, 10:15 · reminder sent Tue 6 Oct, 10:15 ·
+   07700 900142" (a phone link). The job page's own stage still reads
+   Quoting.
+4. **Only the current quote's own reminder counts**, sent at or after that
+   quote was sent, and only while it waits: answering, withdrawing or a new
+   quote ends it. The same rule as the customer's "we sent a reminder"
+   (quote-reminder).
