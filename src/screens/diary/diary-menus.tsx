@@ -103,6 +103,7 @@ export function WaitingSheet({ open, onOpenChange, count, items, chosen, onChoos
               >
                 <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
                 <span className="text-[15px] font-bold">{card.customer}</span>
+                {card.bike ? <span className="text-[13px] text-[var(--wh-muted)]">{card.bike}</span> : null}
                 <span className="text-sm">{card.detail}</span>
               </button>
             );
