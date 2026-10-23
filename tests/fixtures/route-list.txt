@@ -195,3 +195,4 @@ GET /api/workshop-jobs/:id/notes
 POST /api/workshop-jobs/:id/notes
 GET /api/needs-attention
 POST /api/workshop-jobs/:id/contacted
+POST /api/sales/:id/email-receipt
