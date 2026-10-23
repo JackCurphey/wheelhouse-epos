@@ -18,7 +18,7 @@ export async function messageLink(issue) {
   return isPretend() ? '[link]' : issue();
 }
 
-const money = (amount) => `£${Number(amount).toFixed(2)}`;
+export const money = (amount) => `£${Number(amount).toFixed(2)}`;
 
 /** The job's customer, and its tap-ins, given the link issued for it. */
 // Bike still waiting's [What’s left to pay] (drawn on cp-setting's pop-up):
@@ -86,7 +86,7 @@ export async function jobMessageVars(jobId, shopId, link) {
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /** "Thu 17 Sep, 11:30", as the booking messages are drawn; the day alone with no time. */
 export function dayAndTime(date, time) {
   if (!date) return null;

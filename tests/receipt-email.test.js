@@ -94,3 +94,22 @@ test('signed out is refused', async () => {
   const res = await fetch(`${server.baseUrl}/api/sales/${sale.id}/email-receipt`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'maya@example.com' }) });
   assert.equal(res.status, 401);
 });
+
+test('in the customer’s history it is called Receipt, and the old app’s texts leave it out (review)', async () => {
+  await send(sale.id, 'maya@example.com');
+  const history = (await staff(`/api/messages?customerId=${maya.id}`)).body;
+  assert.ok(history.length > 0 && history.every((m) => m.key !== 'receipt' || m.name === 'Receipt'), JSON.stringify(history.map((m) => m.name)));
+  const texts = (await staff(`/api/customers/${maya.id}/texts`)).body;
+  assert.ok(Array.isArray(texts) && !texts.some((t) => /Your receipt/.test(t.body ?? '')), 'a receipt among the texts');
+});
+
+test('one sale’s receipt can be sent five times in an hour, not more (review)', async () => {
+  const cashier = (await staff('/api/team', { method: 'POST', body: { name: 'Sam Reed', isCashier: true, email: `sam-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
+  const tube = (await staff('/api/products', { method: 'POST', body: { name: 'Valve cap', price: 1, sku: `CAP-${randomUUID().slice(0, 6)}`, stockQty: 10 } })).body;
+  const fresh = (await staff('/api/sales', { method: 'POST', body: { cashierId: cashier.employeeId, items: [{ productId: tube.id, qty: 1 }], cashAmount: 1, cashTendered: 1 } })).body;
+  for (let i = 0; i < 5; i++) assert.equal((await send(fresh.id, `a${i}@example.com`)).status, 200);
+  const sixth = await send(fresh.id, 'a6@example.com');
+  assert.equal(sixth.status, 429, JSON.stringify(sixth.body));
+  assert.equal(sixth.body.error, 'This receipt has been sent five times in the last hour. Try again later.');
+  assert.equal((await receiptsFor(fresh.id)).length, 5);
+});

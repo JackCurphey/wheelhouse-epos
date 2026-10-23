@@ -264,7 +264,8 @@ export function serializeMessage(row) {
     // The shop's (outbound) or the customer's (inbound), for the conversation.
     direction: row.direction ?? 'outbound',
     key: row.template_key ?? null,
-    name: TEMPLATES[row.template_key]?.name ?? 'Message',
+    // A receipt isn't one of the automatic messages (openspec/changes/receipt-email).
+    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : 'Message'),
     channel: row.channel ?? 'sms',
     to: row.to_address ?? null,
     subject: row.subject ?? null,

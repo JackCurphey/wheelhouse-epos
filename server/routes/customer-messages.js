@@ -35,7 +35,7 @@ export function register(route) {
     const customerId = Number(params.id);
     const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
     if (!customer) return notFound(res, 'Customer not found');
-    const rows = await db.prepare(MESSAGE_SELECT + ' WHERE m.customer_id = ? ORDER BY m.id DESC').all(customerId);
+    const rows = await db.prepare(MESSAGE_SELECT + " WHERE m.customer_id = ? AND m.template_key IS DISTINCT FROM 'receipt' ORDER BY m.id DESC").all(customerId);
     sendJson(res, 200, rows.map(serializeCustomerMessage));
   });
 

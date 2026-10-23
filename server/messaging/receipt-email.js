@@ -4,9 +4,7 @@
 // the sale records VAT and receipt numbers; the no-account footer. Plain text,
 // as every message. Reads the sale as GET /api/sales/:id does, in pounds.
 import { prepare } from '../db.js';
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const money = (pounds) => `£${(Math.round(Number(pounds) * 100) / 100).toFixed(2)}`;
+import { MONTHS, money } from '../workshop/job-messages.js';
 const row = (left, right) => `${left}  ${right}`;
 
 // "23 Oct 2026 · 10:15" in the shop's time, as the printed receipt says it.
