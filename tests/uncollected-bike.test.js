@@ -152,10 +152,23 @@ test('when it’s due, it doesn’t go once the bike is collected', async () => 
   await notSent(job);
 });
 
-test('when it’s due, it doesn’t go once the order is paid', async () => {
+test('a bike paid for since it was ready is still reminded, saying it’s paid (cp-setting)', async () => {
   const { job } = await finished();
   await inShop(() => prepare("UPDATE sale_documents SET status = 'converted' WHERE id = ?").run(job.orderId));
-  await notSent(job);
+  await bringForward(job.id);
+  const [r] = await stillWaiting(job.id);
+  assert.ok(r.sentAt, `sent, was ${r.state}`);
+  assert.match(r.body, /Collection Cycles[^.]*\. Paid — nothing more to pay\. See what we did:/);
+});
+
+test('what’s left to pay is said as it is when the reminder goes, not when the bike was ready', async () => {
+  const { job } = await finished();
+  const items = await staff(`/api/sale-documents/${job.orderId}/items`, { method: 'PUT', body: { items: [{ lineType: 'labour', name: 'Safety check', unitPrice: 46, minutes: 30 }] } });
+  assert.equal(items.status, 200, JSON.stringify(items.body));
+  await bringForward(job.id);
+  const [r] = await stillWaiting(job.id);
+  assert.ok(r.sentAt, `sent, was ${r.state}`);
+  assert.match(r.body, /\. £46\.00 to pay on collection\. /);
 });
 
 test('when it’s due, it doesn’t go once the message is switched off', async () => {

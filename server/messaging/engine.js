@@ -10,6 +10,7 @@
 import { pool, prepare, runWithShop } from '../db.js';
 import { TEMPLATES, render, templateFor } from './templates.js';
 import { senderFor } from './senders/index.js';
+import { LEFT_TO_PAY, whatsLeftToPay } from '../workshop/job-messages.js';
 
 /** The Undo minute for messages staff trigger (drawn: "in 1 minute"); shorter in tests. */
 export const UNDO_MS = Number(process.env.WH_MESSAGES_DELAY_MS ?? 60_000);
@@ -145,15 +146,15 @@ async function reminderStillNeeded(jobId) {
 /**
  * Bike still waiting waits days, so it's checked when it's due (WP-4.3,
  * openspec/changes/uncollected-bike design 2): the bike still in the shop, the
- * work still finished and signed off, its order not paid, its Bike ready sent
- * since it was marked ready (not switched off or undone), and the message on.
+ * work still finished and signed off, its Bike ready sent since it was marked
+ * ready (not switched off or undone), and the message on. A paid bike is
+ * reminded too, "Paid — nothing more to pay" (cp-setting).
  */
 async function stillWaitingNeeded(jobId) {
   if (!jobId) return false;
   const job = await prepare(
     `SELECT 1 FROM workshop_jobs j
       WHERE j.id = ? AND j.custody_state = 'in_shop' AND j.work_state = 'complete' AND j.signed_off_at IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM sale_documents d WHERE d.workshop_job_id = j.id AND d.kind = 'order' AND d.status = 'converted')
         AND EXISTS (SELECT 1 FROM customer_messages r WHERE r.job_id = j.id AND r.template_key = 'bike_ready'
                      AND r.sent_at IS NOT NULL AND r.sent_at >= j.signed_off_at)`
   ).get(jobId);
@@ -179,7 +180,15 @@ async function sendDueForShop(shopId) {
       const stillNeeded = DUE_CHECKS[m.template_key];
       if (stillNeeded && !(await stillNeeded(m.job_id))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
-      } else sendable.push(m);
+        continue;
+      }
+      // Bike still waiting was filled in days ago: what's left to pay is said
+      // as it is now, paid or not (fresh review), and recorded as sent.
+      if (m.template_key === 'bike_still_waiting' && LEFT_TO_PAY.test(m.body)) {
+        m.body = m.body.replace(LEFT_TO_PAY, await whatsLeftToPay(m.job_id));
+        await prepare('UPDATE customer_messages SET body = ? WHERE id = ?').run(m.body, m.id);
+      }
+      sendable.push(m);
     }
     return sendable;
   });

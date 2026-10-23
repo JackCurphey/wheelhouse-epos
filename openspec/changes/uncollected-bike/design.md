@@ -14,19 +14,22 @@ its setting on `workshop_settings`.
 1. **The days count from `signed_off_at`**, the time the work was marked
    ready (M5). No new "ready at" column: every finish signs off, and reopen
    clears it, so a bike finished again counts afresh.
-2. **Queued at ready, re-checked when due**, as the quote reminder: queued in
-   the finish's transaction beside Bike ready, `delayMs` the reminder's days;
+2. **Queued at ready, re-checked when due**, as the quote reminder: queued
+   beside Bike ready with the same link, `delayMs` the reminder's days;
    when due it goes only if the bike is in the shop, the work complete and
-   signed off, the order not paid (`converted`), and the message on.
-   Reopen stops it (`undoWaiting`). *Alternative:* a daily scan that queues
-   it when due. Rejected: the message's link is issued with the request's
-   address (`publicBase(req)`), which a timer doesn't have.
-3. **The words are filled in when it's queued**, as every message is. A bike
-   paid for at the till but left in the shop isn't reminded (decision 2), so
-   "[What’s left to pay]" can't be stale: it reads "£111.00 to pay on
-   collection" while something is owed, "Paid — nothing more to pay" when the
-   order is paid, and "Nothing to pay on collection" with nothing on it (Bike
-   ready's words). A change of day count applies to bikes marked ready after.
+   signed off, Bike ready went since then (not switched off or undone: a
+   reminder of news never given reads oddly, as the quote reminder follows its
+   quote), and the message on. Reopen stops it (`undoWaiting`). *Alternative:*
+   a daily scan that queues it when due. Rejected: the message's link is
+   issued with the request's address (`publicBase(req)`), which a timer
+   doesn't have.
+3. **What's left to pay is said as it is when it goes.** The words are filled
+   in when it's queued, as every message is, but its "[What’s left to pay]"
+   sentence is brought up to date as it's sent (review): "£111.00 to pay on
+   collection" while something is owed, "Paid — nothing more to pay" once
+   the order is paid (a paid bike is reminded too, as drawn), and "Nothing to
+   pay on collection" with nothing on it (Bike ready's words). A change of day
+   count applies to bikes marked ready after.
 4. **Today's line is a kind on `GET /api/needs-attention`** (`uncollected`):
    `custody_state = 'in_shop'`, `work_state = 'complete'`, `signed_off_at`
    older than the Today count, and not contacted since that time. Oldest
@@ -45,5 +48,5 @@ its setting on `workshop_settings`.
 
 - [A shop shortens the reminder after bikes are queued] → Those keep their
   time; only bikes marked ready after use the new count. Said in the hint.
-- [The order is paid while the bike stays] → No reminder; the Today line
-  still shows it.
+- [A shop's own wording drops the tap-in] → Nothing to bring up to date; the
+  message goes as the shop wrote it.

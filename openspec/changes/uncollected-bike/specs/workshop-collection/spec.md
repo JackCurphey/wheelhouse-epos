@@ -23,8 +23,9 @@ the shop's wording (Wheelhouse's: "Hi [Customer’s first name], just a
 reminder that your [Bike] is ready to collect from [Shop name]. [What’s left
 to pay]. See what we did: [Link to the job]. Job [Job number]. We’re open
 [Opening hours]."). When it's due it SHALL go only if the bike is still in
-the shop, the work still finished, the order not paid, and the message still
-switched on; otherwise it SHALL be dropped. Reopening the work SHALL stop it.
+the shop, the work still finished, its Bike ready sent, and the message
+still switched on; otherwise it SHALL be dropped. What's left to pay SHALL
+be said as it is when it goes. Reopening the work SHALL stop it.
 
 #### Scenario: the reminder goes after the days set
 - **WHEN** a job is marked ready and the bike is still in the shop after the reminder's days

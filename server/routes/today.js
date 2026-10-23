@@ -40,6 +40,9 @@ async function replies() {
 // not contacted since they were marked ready (WP-4.3, cp-today-uncollected;
 // collect and pay review item 4, H4, M5). Waiting longest first; each with
 // when its Bike still waiting went, if it has.
+const UNCOLLECTED = `w.custody_state = 'in_shop' AND w.work_state = 'complete' AND w.signed_off_at IS NOT NULL
+        AND w.signed_off_at <= now() - make_interval(days => COALESCE((SELECT collection_today_days FROM workshop_settings LIMIT 1), 7))
+        AND (w.uncollected_contacted_at IS NULL OR w.uncollected_contacted_at < w.signed_off_at)`;
 async function uncollectedBikes() {
   const rows = await prepare(
     `SELECT w.id, w.reference, w.signed_off_at, c.name AS customer_name, c.phone,
@@ -49,9 +52,7 @@ async function uncollectedBikes() {
        FROM workshop_jobs w
        LEFT JOIN customers c ON c.id = w.customer_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
-      WHERE w.custody_state = 'in_shop' AND w.work_state = 'complete' AND w.signed_off_at IS NOT NULL
-        AND w.signed_off_at <= now() - make_interval(days => COALESCE((SELECT collection_today_days FROM workshop_settings LIMIT 1), 7))
-        AND (w.uncollected_contacted_at IS NULL OR w.uncollected_contacted_at < w.signed_off_at)
+      WHERE ${UNCOLLECTED}
       ORDER BY w.signed_off_at, w.id`
   ).all();
   return rows.map((r) => ({
@@ -75,13 +76,16 @@ export function register(route) {
   // screens: collection
   route('POST', '/api/workshop-jobs/:id/contacted', async (req, res, params) => {
     const ctx = await currentSession(req);
-    if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
+    if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner can record that a customer was contacted", code: 'owner_only' });
     const id = Number(params.id);
     if (!Number.isInteger(id)) return sendJson(res, 404, { error: 'Job not found' });
-    if (!(await uncollectedBikes()).some((b) => b.jobId === id)) {
-      return sendJson(res, 409, { error: 'That bike isn’t waiting to be collected any more.', code: 'not_uncollected' });
-    }
-    await prepare('UPDATE workshop_jobs SET uncollected_contacted_at = now(), uncollected_contacted_by_login_id = ? WHERE id = ?').run(ctx.login.id, id);
+    // The check and the record in one statement, so a bike handed over or
+    // reopened meanwhile isn't marked (review).
+    const marked = await prepare(
+      `UPDATE workshop_jobs w SET uncollected_contacted_at = now(), uncollected_contacted_by_login_id = ?
+        WHERE w.id = ? AND ${UNCOLLECTED} RETURNING w.id`
+    ).get(ctx.login.id, id);
+    if (!marked) return sendJson(res, 409, { error: 'That bike isn’t waiting to be collected any more.', code: 'not_uncollected' });
     sendJson(res, 200, { ok: true });
   });
 }
