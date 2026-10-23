@@ -37,6 +37,11 @@ export function AutomaticMessages() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Template | null>(null);
+  // Bike still waiting says the shop's days, as drawn ("after [n] days"; cp-setting).
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ collectionReminderDays?: number }>('/api/workshop-settings') });
+  const days = settings.data?.collectionReminderDays;
+  const withDays = (t: Template, where = ''): Template => (t.key === 'bike_still_waiting' && days !== undefined
+    ? { ...t, when: `When a ready bike isn’t collected after ${days} ${days === 1 ? 'day' : 'days'}${where}` } : t);
 
   async function change(key: string, body: object) {
     setBusy((b) => new Set(b).add(key));
@@ -70,7 +75,7 @@ export function AutomaticMessages() {
     <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
       <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
         <span className="text-[15px] font-bold">{t.name}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{t.when}</span>
+        <span className="text-[13px] text-[var(--wh-muted)]">{withDays(t).when}</span>
       </span>
       <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
       <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
@@ -96,7 +101,7 @@ export function AutomaticMessages() {
       </div>
       {editing ? (
         <EditMessage
-          template={templates.data?.find((t) => t.key === editing.key) ?? editing}
+          template={withDays(templates.data?.find((t) => t.key === editing.key) ?? editing, ' — set in Settings › Workshop › Collection')}
           error={error}
           onSave={(body) => change(editing.key, body)}
           onClose={closeEdit}
