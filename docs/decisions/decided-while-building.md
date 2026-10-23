@@ -1651,3 +1651,27 @@ No screen: server only.
    the photo has come is the same as Done.
 8. **If the code can't be made**, the pop-up offers Try again. *Pattern:*
    the screens' failed loads.
+
+### 23 Oct 2026: Today (`openspec/changes/today-page`, `op-today` and `op-today-staff`)
+
+1. **A drop-off still to arrive has Book in beside "Drop-off"**, where the
+   drawing shows "Drop-off" alone. *Pattern:* the Workshop Overview, where a
+   drop-off is due all day, so the two pages agree (design decision 4).
+2. **The date line has no town** ("North Street Cycles, Bolton" in the
+   drawing): Wheelhouse doesn't record a shop's town yet, so the line is the
+   day, the shop's name and its hours.
+3. **The hours are today's opening hours from Settings**; on a day the shop
+   is closed the "open [opens]–[closes]" part is left out rather than made up.
+4. **Who's in and Tills are left out** until check-ins and the till's float
+   exist (WP-1.7; Jack, 23 Oct, "1"). Staff see Workshop today alone.
+5. **No "Seen" on the lines yet**: the two kinds built (a quote with no
+   answer, messages needing a reply) go by themselves once the quote is
+   answered or the message replied to; "Seen" comes with the kinds that need it.
+6. **Needs attention reads again every minute** and when the window comes
+   back, until live updates (WP-1.9). *Pattern:* the diary's refresh.
+7. **"Every bike booked for today is in."** when Still to arrive is empty,
+   and "Loading…" while the jobs come. *Pattern:* the Overview's empty and
+   loading lines.
+8. **The lines' buttons are links** (Record their answer opens the job in
+   the diary, Open Messages opens Messages), drawn as buttons, so they can be
+   opened in a new tab. *Pattern:* the Overview's "Open job".
