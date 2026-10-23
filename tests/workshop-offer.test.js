@@ -183,6 +183,62 @@ test('a day gone by can’t be offered', async () => {
   assert.equal(res.body.error, 'That date has passed - please choose another day.');
 });
 
+// Audit items 15-17 (docs/reviews/2026-10-22-flagged-merges-audit.md, #315).
+// The server's clock is pinned to 1 Sep 2026, 06:00 UTC: 07:00 in the shop.
+test('a time already gone today can’t be offered, and a later one today can', async () => {
+  const booked = await book();
+  const gone = await offer(booked.id, { jobDate: '2026-09-01', startTime: '06:30', mechanicId: sam });
+  assert.equal(gone.status, 400, JSON.stringify(gone.body));
+  assert.equal(gone.body.error, 'That time has passed - please choose a later time.');
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'pending');
+  const later = await offer(booked.id, { jobDate: '2026-09-01', startTime: '09:00', mechanicId: sam });
+  assert.equal(later.status, 200, JSON.stringify(later.body));
+});
+
+// The case the pinned 07:00 can't show: a time inside opening hours that has
+// already gone. A second server's clock reads 10:00 UTC, 11:00 in the shop.
+test('a time gone today inside opening hours can’t be offered', async () => {
+  const late = await startLiveServer({ env: { WHEELHOUSE_TEST_CLOCK: '2026-09-01T10:00:00.000Z' } });
+  try {
+    const booked = await book();
+    const at = (path, options) => staffRequest(late.baseUrl, owner.cookie, path, options);
+    const v = (await at(`/api/workshop-jobs/${booked.id}`)).body.version;
+    const gone = await at(`/api/workshop-jobs/${booked.id}/offer`, { method: 'POST', body: { version: v, jobDate: '2026-09-01', startTime: '10:00', mechanicId: sam } });
+    assert.equal(gone.status, 400, JSON.stringify(gone.body));
+    assert.equal(gone.body.error, 'That time has passed - please choose a later time.');
+    assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'pending');
+  } finally {
+    await late.stop();
+  }
+});
+
+test('a request whose bike is already in the shop, or whose work has started, can’t be offered another time', async () => {
+  const inShop = await book();
+  await setJob(shopId(), inShop.id, "custody_state = 'in_shop'");
+  const a = await offer(inShop.id, { jobDate: nextDay(), startTime: '10:00', mechanicId: sam });
+  assert.equal(a.status, 409, JSON.stringify(a.body));
+  assert.equal(a.body.code, 'illegal');
+  assert.equal(a.body.error, 'The bike is already in the shop, so this can’t be offered another time.');
+  const started = await book();
+  await setJob(shopId(), started.id, "work_state = 'in_progress'");
+  const b = await offer(started.id, { jobDate: nextDay(), startTime: '10:00', mechanicId: sam });
+  assert.equal(b.status, 409, JSON.stringify(b.body));
+  assert.equal(b.body.error, 'The work has already started, so this can’t be offered another time.');
+  for (const id of [inShop.id, started.id]) assert.equal((await jobRow(shopId(), id)).booking_state, 'pending');
+});
+
+test('the message with an offer must be text', async () => {
+  const booked = await book();
+  for (const message of [{ a: 1 }, 5, true, ['x']]) {
+    const res = await offer(booked.id, { jobDate: nextDay(), startTime: '10:00', mechanicId: sam, message });
+    assert.equal(res.status, 400, JSON.stringify([message, res.body]));
+    assert.equal(res.body.error, 'The message must be text');
+  }
+  assert.equal((await jobRow(shopId(), booked.id)).offer_message, null);
+  const none = await offer(booked.id, { jobDate: nextDay(), startTime: '10:00', mechanicId: sam, message: null });
+  assert.equal(none.status, 200, JSON.stringify(none.body));
+});
+
 test('staff can decline an offer, and its time goes', async () => {
   const booked = await book();
   await offer(booked.id, { jobDate: nextDay(), startTime: '14:00', mechanicId: alex });

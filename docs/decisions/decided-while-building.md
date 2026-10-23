@@ -67,6 +67,22 @@ reopening either.
    waiting "Bike ready" (`undoWaiting`): nothing is sent about work that no
    longer stands.
 
+### 22 Oct 2026: offer another time, three missed checks (`openspec/changes/offer-checks`, audit items 15–17 on #315)
+
+No screen: server only. Item 18 (untimed offers in drop-off mode skip the
+day's capacity check) is left: the offer design makes it a staff choice.
+
+1. **A request whose bike is in the shop, or whose work has started, can't
+   be offered another time**, in the words "The bike is already in the shop,
+   so this can’t be offered another time." and "The work has already
+   started, so this can’t be offered another time." *Pattern:* the customer
+   link's own "too late" test (`customerTooLate`), so no offer is made that
+   nobody can answer.
+2. **A time already gone today can't be offered**: "That time has passed -
+   please choose a later time." *Pattern:* the day-gone-by refusal beside it.
+3. **The offer's message must be text**: "The message must be text".
+   *Pattern:* decline's message.
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
