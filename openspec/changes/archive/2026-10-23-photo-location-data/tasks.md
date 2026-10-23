@@ -13,7 +13,7 @@
 
 ## 3. Checks
 
-- [ ] 3.1 `npm run lint`, `npm test` and `npm run test:browser` pass, then a fresh review and `/review` (public routes)
+- [x] 3.1 `npm run lint`, `npm test` and `npm run test:browser` pass, then a fresh review and `/review` (public routes)
 
 ## Workflow follow-up
 
