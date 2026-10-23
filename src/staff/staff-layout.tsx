@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router';
 import { apiMutate } from '@/lib/api/client.ts';
 import { useSession, type SessionUser } from '@/lib/auth/use-session.ts';
-import { useAccessibilityClasses } from '@/lib/your-settings.ts';
+import { useAccessibilityClasses, useYourSettings } from '@/lib/your-settings.ts';
 import { NAV_ROUTES, pageLabel, roomsFor, type NavItem, type Role } from './nav.ts';
 import { NavIcon } from './nav-icon.tsx';
 import { HeaderSlotContext } from './header-slot.ts';
@@ -125,6 +125,75 @@ function RailItem({ item }: { item: NavItem }) {
   );
 }
 
+/**
+ * The icon rail, with Unfold (drawn as foldedRail, app-map.mjs; app map
+ * review 4 and 5): the full sidebar opens over the page when the pointer rests
+ * on the rail for about 300 ms, or with Unfold (the keyboard's way: opening
+ * on focus would trap it open); Fold or Escape closes it, and resting the
+ * pointer opens it again only once the pointer has left the rail. Reduce motion drops the slide, not the
+ * unfolding. On a tablet always; on a computer when folded.
+ */
+function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; shopName: string; role: Role; roleName: string; folded: boolean }) {
+  const [open, setOpen] = useState(false);
+  // Folded by Fold or Escape: resting the pointer doesn't open it again until it has left the rail.
+  const [dismissed, setDismissed] = useState(false);
+  const unfoldRef = useRef<HTMLButtonElement>(null);
+  const foldRef = useRef<HTMLButtonElement>(null);
+  // A frame later, once the panel is showing: a hidden one can't take the focus.
+  useEffect(() => {
+    if (!open) return undefined;
+    const frame = requestAnimationFrame(() => foldRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+  const fold = () => { setOpen(false); setDismissed(true); unfoldRef.current?.focus(); };
+  return (
+    <div onKeyDown={(e) => { if (e.key === 'Escape' && open) fold(); }} onMouseLeave={() => setDismissed(false)} className={`group/rail sticky top-0 hidden h-screen shrink-0 ${folded ? 'md:flex' : 'md:flex lg:hidden'}`}>
+      <nav aria-label="Main, folded" className="flex h-screen w-[84px] flex-col gap-1.5 overflow-y-auto bg-[var(--sidebar)] px-1.5 py-2 text-[var(--sidebar-foreground)]">
+        <button ref={unfoldRef} type="button" aria-label="Unfold the menu" aria-expanded={open} onClick={() => setOpen(true)}
+          className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg border border-[var(--wh-on-accent)]/30 text-xs font-semibold text-[var(--sidebar-foreground)]">
+          <span aria-hidden="true" className="inline-flex -rotate-90"><NavIcon name="chevron" size={16} /></span>Unfold
+        </button>
+        {roomsFor(role).map((r, i) => (
+          <div key={r.room} className={`flex flex-col gap-px ${i ? 'border-t border-[var(--wh-on-accent)]/20 pt-[3px]' : ''}`}>
+            {r.items.map((item) => (
+              <RailItem key={item.key} item={item} />
+            ))}
+          </div>
+        ))}
+        <div className="grow" />
+        <NavLink
+          to="/workshop/your-settings"
+          aria-label={`Your settings — ${user.name}, ${roleName}`}
+          className="flex min-h-11 items-center justify-center text-[var(--sidebar-foreground)] no-underline"
+        >
+          <span className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--wh-on-accent)]/20 text-xs font-bold">
+            {initials(user.name)}
+          </span>
+        </NavLink>
+      </nav>
+      <nav
+        aria-label="Main"
+        data-unfolded={open}
+        className={`absolute top-0 left-0 z-40 flex h-screen w-[248px] flex-col gap-3 overflow-y-auto bg-[var(--sidebar)] px-3 py-3.5 text-[var(--sidebar-foreground)] shadow-[8px_0_24px_var(--wh-backdrop)] ${open
+          ? 'visible translate-x-0 opacity-100'
+          : `invisible -translate-x-3 opacity-0 delay-[250ms] ${dismissed ? '' : 'group-hover/rail:visible group-hover/rail:translate-x-0 group-hover/rail:opacity-100 group-hover/rail:delay-300'}`} motion-safe:transition-[opacity,transform,visibility] motion-safe:duration-150 motion-reduce:translate-x-0`}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="grow"><Wordmark /></span>
+          <button ref={foldRef} type="button" aria-label="Fold the menu" onClick={fold}
+            className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-on-accent)]/30 text-[var(--sidebar-foreground)]">
+            <span aria-hidden="true" className="inline-flex rotate-90"><NavIcon name="chevron" size={16} /></span>
+          </button>
+        </div>
+        <ShopBlock name={shopName} />
+        <RoomList role={role} onPick={() => setOpen(false)} />
+        <div className="grow" />
+        <Footer user={user} roleName={roleName} onPick={() => setOpen(false)} />
+      </nav>
+    </div>
+  );
+}
+
 function PhoneMenu({ user, shopName, role, roleName, onClose }: {
   user: SessionUser; shopName: string; role: Role; roleName: string; onClose: (returnFocus: boolean) => void;
 }) {
@@ -192,6 +261,7 @@ export function StaffLayout() {
   const menuButton = useRef<HTMLButtonElement>(null);
   // The signed-in person's accessibility switches, on every page (Your settings).
   useAccessibilityClasses(session.status === 'signed-in');
+  const settings = useYourSettings(session.status === 'signed-in');
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
   if (session.status === 'signed-out') return <SignedOut />;
@@ -205,6 +275,8 @@ export function StaffLayout() {
 
   const { user, shop } = session;
   const { role, roleName } = roleOf(user);
+  // The Till always folds to the rail (app map review 4); every page does with Folded sidebar on (7).
+  const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility.foldedSidebar);
   const title = pageLabel(pageKey(pathname)) ?? '';
   const closeMenu = (returnFocus: boolean) => {
     setMenuOpen(false);
@@ -213,40 +285,21 @@ export function StaffLayout() {
 
   return (
     <div className="flex min-h-screen bg-[var(--wh-bg)] text-[var(--wh-ink)]">
-      {/* Computer: the rooms sidebar. */}
-      <nav
-        aria-label="Main"
-        className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col gap-3 overflow-y-auto bg-[var(--sidebar)] px-3 py-3.5 text-[var(--sidebar-foreground)] lg:flex"
-      >
-        <Wordmark />
-        <ShopBlock name={shop.name} />
-        <RoomList role={role} />
-        <div className="grow" />
-        <Footer user={user} roleName={roleName} />
-      </nav>
-      {/* Tablet: the icon rail, a label under every icon (decision 68). */}
-      <nav
-        aria-label="Main"
-        className="sticky top-0 hidden h-screen w-[84px] shrink-0 flex-col gap-1.5 overflow-y-auto bg-[var(--sidebar)] px-1.5 py-2 text-[var(--sidebar-foreground)] md:flex lg:hidden"
-      >
-        {roomsFor(role).map((r, i) => (
-          <div key={r.room} className={`flex flex-col gap-px ${i ? 'border-t border-[var(--wh-on-accent)]/20 pt-[3px]' : ''}`}>
-            {r.items.map((item) => (
-              <RailItem key={item.key} item={item} />
-            ))}
-          </div>
-        ))}
-        <div className="grow" />
-        <NavLink
-          to="/workshop/your-settings"
-          aria-label={`Your settings — ${user.name}, ${roleName}`}
-          className="flex min-h-11 items-center justify-center text-[var(--sidebar-foreground)] no-underline"
+      {/* Computer: the rooms sidebar, unless it's folded (the Till always; Folded sidebar, app map review 4 and 7). */}
+      {folded ? null : (
+        <nav
+          aria-label="Main"
+          className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col gap-3 overflow-y-auto bg-[var(--sidebar)] px-3 py-3.5 text-[var(--sidebar-foreground)] lg:flex"
         >
-          <span className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--wh-on-accent)]/20 text-xs font-bold">
-            {initials(user.name)}
-          </span>
-        </NavLink>
-      </nav>
+          <Wordmark />
+          <ShopBlock name={shop.name} />
+          <RoomList role={role} />
+          <div className="grow" />
+          <Footer user={user} roleName={roleName} />
+        </nav>
+      )}
+      {/* Tablet, and a folded computer: the icon rail, a label under every icon (decision 68). */}
+      <Rail user={user} shopName={shop.name} role={role} roleName={roleName} folded={folded} />
       <div className="flex min-w-0 grow flex-col">
         {/* One header: on a phone the charcoal top bar with the menu button;
             on a tablet or computer the page title on the panel. */}

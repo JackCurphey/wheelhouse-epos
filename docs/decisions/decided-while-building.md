@@ -1762,3 +1762,15 @@ No screen: server only.
    (touchJobBlock) have none: its week columns are as narrow as a computer's,
    and the switch is there for anyone who can't tell the colours apart.
    A phone's job blocks don't (review), as drawn; its requests do.
+
+### 23 Oct 2026: Folded sidebar (`openspec/changes/folded-sidebar`, `foldedRail`, `your-settings`)
+
+1. **The keyboard opens it with Unfold, not by moving into the rail** (the
+   drawing opens on focus): opening on focus put it straight back open after
+   Escape, so a keyboard user couldn't close it.
+2. **After Fold or Escape, resting the pointer doesn't reopen it** until the
+   pointer has left the rail, so Escape works with the mouse over it.
+3. **A tablet's rail has Unfold too**, as its drawn hint says ("tap Unfold
+   to open it").
+4. **The panel over the page has the rooms, the shop and your name, without
+   the drawn shop switcher**, which comes with more than one shop.
