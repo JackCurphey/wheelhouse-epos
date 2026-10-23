@@ -6,7 +6,9 @@ import { writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-export async function saveBookingPhotos({ photos, uploadsDir, insertRow }) {
+// `name` gives each file its name; customer photos are "Customer photo 1.jpg"
+// and so on.
+export async function saveBookingPhotos({ photos, uploadsDir, insertRow, name = (i, photo) => `Customer photo ${i + 1}.${photo.extension}` }) {
   const written = [];
   try {
     for (const [i, photo] of photos.entries()) {
@@ -15,7 +17,7 @@ export async function saveBookingPhotos({ photos, uploadsDir, insertRow }) {
       await writeFile(path.join(uploadsDir, storageKey), photo.buffer);
       await insertRow({
         storageKey,
-        originalName: `Customer photo ${i + 1}.${photo.extension}`,
+        originalName: name(i, photo),
         contentType: photo.contentType,
         sizeBytes: photo.buffer.length,
       });

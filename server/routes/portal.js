@@ -37,7 +37,8 @@ import {
   approve as approveQuote, earlierAnswers, agreedBefore, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
-import { MAX_BOOKING_BODY_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
+import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
+import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
 import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
@@ -83,6 +84,10 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// Use my phone's codes: the same attempts as booking links, counted apart.
+const photoCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// One photo, as base64 with the same headroom as booking photos.
+const MAX_PHOTO_CODE_BODY_BYTES = Math.ceil(MAX_PHOTO_BYTES * 1.4);
 
 // A customer may change or cancel through the link while the bike has not
 // reached the shop and the booking is live (piece 12) - and only while no work
@@ -1151,6 +1156,43 @@ export function register(route) {
 
   // The private booking link, read back without sign-in.
   // screens: pending, change-pending, cancelled
+  // Use my phone (docs/decisions/2026-10-23-use-my-phone.md; openspec/changes/use-my-phone):
+  // the phone's photo step for one quote line, with no sign-in. Unknown, used,
+  // run-out and malformed codes, and a line that changed, all get the same
+  // answer, so a code can't be probed.
+  const photoCodeGone = (res) => sendJson(res, 410, { error: 'This code has expired or has already been used' });
+  const photoCodeTooMany = (req, res) => {
+    if (photoCodeLimiter.check(clientIp(req))) return false;
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return true;
+  };
+
+  // screens: book
+  route('GET', '/api/portal/:shopSlug/photo-codes/:code', async (req, res, params) => {
+    if (photoCodeTooMany(req, res)) return;
+    const view = await photoCodeView(params.code);
+    if (!view) return photoCodeGone(res);
+    sendJson(res, 200, view);
+  });
+
+  // screens: book
+  route('POST', '/api/portal/:shopSlug/photo-codes/:code', async (req, res, params) => {
+    if (photoCodeTooMany(req, res)) return;
+    let body;
+    try {
+      body = await readJsonBody(req, MAX_PHOTO_CODE_BODY_BYTES);
+    } catch (err) {
+      return badRequest(res, err.message === 'Payload too large' ? 'Each photo can be up to 10 MB' : 'Invalid request body');
+    }
+    // The booking photo rules: a JPEG, PNG or WebP of at most 10 MB, its
+    // hidden details removed.
+    const checked = readBookingPhotos([{ dataBase64: body?.dataBase64 }]);
+    if (checked.error) return badRequest(res, checked.error);
+    const added = await addPhotoWithCode(params.code, checked.value[0]);
+    if (!added) return photoCodeGone(res);
+    sendJson(res, 201, added);
+  });
+
   route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
