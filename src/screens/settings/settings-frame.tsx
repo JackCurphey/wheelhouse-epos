@@ -62,9 +62,11 @@ function Fold({ fold, open, onToggle, level }: { fold: SettingsFold; open: boole
   );
 }
 
-function RoomPage({ room }: { room: SettingsRoom }) {
+function RoomPage({ room, fold }: { room: SettingsRoom; fold: string | null }) {
   const many = room.areas.length > 1;
-  const first = room.areas[0]?.folds[0]?.key;
+  // The fold a link names (?fold=, "edit it in Messages" on cp-setting), else the room's first.
+  const named = room.areas.some((a) => a.folds.some((f) => f.key === fold)) ? fold : null;
+  const first = named ?? room.areas[0]?.folds[0]?.key;
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set(first ? [first] : []));
   const toggle = (key: string) => setOpen((was) => {
     const next = new Set(was);
@@ -134,7 +136,7 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
       )}
       <div className={`min-w-0 grow flex-col gap-3 ${asked ? 'flex' : 'hidden md:flex'}`}>
         {asked ? <Link to={ROUTES.settings} className="inline-flex min-h-11 items-center self-start text-sm font-semibold md:hidden"><span aria-hidden="true">‹&nbsp;</span>Settings</Link> : null}
-        <RoomPage key={room.key} room={room} />
+        <RoomPage key={room.key} room={room} fold={params.get('fold')} />
       </div>
     </div>
   );

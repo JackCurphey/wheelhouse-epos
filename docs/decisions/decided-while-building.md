@@ -1702,3 +1702,22 @@ No screen: server only.
    drawn). *Pattern:* Bike ready's "Your bike is ready — [Shop name]".
 7. **Owner only, until roles**, as the rest of Needs attention (the hint
    says "for owners and managers").
+
+### 23 Oct 2026: a bike left uncollected, the screens (`openspec/changes/uncollected-bike`, `cp-setting`, `cp-today-uncollected`)
+
+1. **Leaving either day box saves both as they read**, so raising the
+   reminder past Today's count works by raising Today next; a refused save
+   keeps what was typed and says why (server review). *Pattern:* the other
+   number boxes, which save when left.
+2. **The fold's summary is "Reminder after 3 days"**, without the drawing's
+   "· hand-back reminders off", since that switch isn't built.
+3. **"edit it in Messages" opens Front desk with Automatic messages open**
+   (`?fold=`, new: a link can name the fold to open).
+4. **Settings › Messages says the shop's days** ("When a ready bike isn’t
+   collected after 3 days"), and its edit box adds "— set in Settings ›
+   Workshop › Collection", as drawn.
+5. **Today's line leaves out "reminder sent" until it has gone**, and the
+   bike when the job has none.
+6. **Months are three letters** ("Sep"), as drawn and as the server's
+   messages say them: the browser's British dates say "Sept", which the
+   quote's "Sent …" line also showed in September.

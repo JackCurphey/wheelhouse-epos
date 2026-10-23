@@ -1,15 +1,15 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
-import { apiGet } from '@/lib/api/client.ts';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
-import { clock, londonDay, when } from '@/screens/diary/when.ts';
+import { clock, londonDay, shortDate, when } from '@/screens/diary/when.ts';
 import { due, startOf, useBookIn, useNow, useWorkshopDay } from '@/screens/overview/workshop-day.tsx';
 
 /**
@@ -21,7 +21,8 @@ import { due, startOf, useBookIn, useNow, useWorkshopDay } from '@/screens/overv
  */
 type Attention =
   | { kind: 'quote_no_answer'; jobId: number; reference: string; customerName: string | null; phone: string | null; sentAt: string | null; reminderSentAt: string | null }
-  | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string };
+  | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string }
+  | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
 
 // The drawing's card: a labelled section, its rows a list (opening.mjs `section`).
@@ -68,7 +69,32 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   // Read again every minute and when the window comes back, until live updates (design 6).
   const list = useQuery({ queryKey: ['needs-attention'], queryFn: () => apiGet<{ items: Attention[] }>('/api/needs-attention'), refetchInterval: 60_000, refetchOnWindowFocus: true });
   const items = list.data?.items ?? [];
+  const queryClient = useQueryClient();
+  const [contacting, setContacting] = useState<number | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
+  // Contacted (cp-today-uncollected; H4): recorded, and the line goes.
+  async function contacted(jobId: number) {
+    setContacting(jobId);
+    setRefused(null);
+    try {
+      await apiMutate(`/api/workshop-jobs/${jobId}/contacted`, {}, { method: 'POST' });
+    } catch {
+      setRefused('Wheelhouse couldn’t record that. Try again in a moment.');
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      setContacting(null);
+    }
+  }
   const lines = items.map((i) => {
+    if (i.kind === 'uncollected') {
+      const sub = [i.bikeLabel, i.reminderSentAt ? `reminder sent ${shortDate(i.reminderSentAt)}` : null].filter(Boolean).join(' · ');
+      return (
+        <Line key={`u${i.jobId}`} lead={warn}
+          title={`${i.reference} · ${i.customerName ?? 'No customer'} — ready since ${shortDate(i.readySince)}`}
+          sub={<>{sub}{i.phone ? <>{sub ? ' · ' : ''}<a href={`tel:${i.phone.replace(/\s+/g, '')}`} className="whitespace-nowrap text-inherit">{mono(i.phone)}</a></> : null}</>}
+          right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={contacting === i.jobId} aria-label={`Contacted: ${i.reference}`} onClick={() => void contacted(i.jobId)}>Contacted</Button>} />
+      );
+    }
     if (i.kind === 'quote_no_answer') {
       const sent = [i.sentAt ? `Sent ${when(i.sentAt)}` : null, i.reminderSentAt ? `reminder sent ${when(i.reminderSentAt)}` : null].filter(Boolean).join(' · ');
       return (
@@ -87,6 +113,7 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   });
   return (
     <Card id="today-attention" title={lines.length ? `Needs attention · ${lines.length}` : 'Needs attention'}>
+      {refused ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{refused}</p> : null}
       {list.isError ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load what needs attention. It tries again in a minute.</p>
         : !list.isSuccess ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
         : lines.length ? <ul className="m-0 list-none p-0">{lines}</ul>

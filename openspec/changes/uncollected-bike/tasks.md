@@ -9,6 +9,6 @@
 
 ## 2. The screens (second pull request)
 
-- [ ] 2.1 Tests first: Settings › Workshop › Collection's two rows save on leaving the box and refuse Today's not longer, saying why, and raising the reminder past Today's count can be done without a dead end (server review finding); Settings › Messages lists Bike still waiting with its days; Today's line with its words, the phone link and Contacted taking it off. Watch each fail
-- [ ] 2.2 Build them to `cp-setting` and `cp-today-uncollected`. Verify 2.1; a browser test
+- [x] 2.1 Tests first: Settings › Workshop › Collection's two rows save on leaving the box and refuse Today's not longer, saying why, and raising the reminder past Today's count can be done without a dead end (server review finding); Settings › Messages lists Bike still waiting with its days; Today's line with its words, the phone link and Contacted taking it off. Watch each fail
+- [x] 2.2 Build them to `cp-setting` and `cp-today-uncollected`. Verify 2.1; a browser test
 - [ ] 2.3 Log what's decided while building; lint, tests, fresh review; archive as the last commit
