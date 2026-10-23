@@ -115,8 +115,16 @@ case "$1 $2" in
   "auth status") exit 0 ;;
   "secret set") echo "$*" >> "${caught}/gh-calls"; cat > "${caught}/gh-secret-$3" ;;
   "variable set") echo "$*" >> "${caught}/gh-calls" ;;
+  "api "*) echo '{"message":"Package not found."}'; exit 1 ;;
 esac
 exit 0
+`);
+  tool('curl', `#!/usr/bin/env bash
+case "$*" in
+  *ghcr.io/token*) echo '{"token":"anonymous"}' ;;
+  *ghcr.io/v2/jackcurphey/wheelhouse-epos/tags/list*) [ -f "${dir}/package-public" ] || exit 22; echo '{"tags":[]}' ;;
+  *) exit 7 ;;
+esac
 `);
   writeFileSync(path.join(dir, 'id_ed25519.pub'), 'ssh-ed25519 AAAA test\n');
   writeFileSync(path.join(dir, 'deploy-key'), 'THE-PRIVATE-DEPLOY-KEY\n');
@@ -187,8 +195,16 @@ case "$1 $2" in
   "auth status") exit 0 ;;
   "secret set") echo "$*" >> "${caught}/gh-calls"; cat > "${caught}/gh-secret-$3" ;;
   "variable set") echo "$*" >> "${caught}/gh-calls" ;;
+  "api "*) echo '{"message":"Package not found."}'; exit 1 ;;
 esac
 exit 0
+`);
+  tool('curl', `#!/usr/bin/env bash
+case "$*" in
+  *ghcr.io/token*) echo '{"token":"anonymous"}' ;;
+  *ghcr.io/v2/jackcurphey/wheelhouse-epos/tags/list*) [ -f "${dir}/package-public" ] || exit 22; echo '{"tags":[]}' ;;
+  *) exit 7 ;;
+esac
 `);
   writeFileSync(path.join(dir, 'id_ed25519.pub'), 'ssh-ed25519 AAAA test\n');
   writeFileSync(path.join(dir, 'deploy-key'), 'THE-PRIVATE-DEPLOY-KEY\n');
@@ -207,6 +223,17 @@ exit 0
   assert.match(calls, /variable set HOSTED_COPY_URL --body https:\/\/203-0-113-5\.sslip\.io/);
   assert.match(calls, /variable set HOSTED_COPY_KNOWN_HOSTS --body 203\.0\.113\.5 ssh-ed25519 THE-HOST-KEY/);
   assert.match(calls, /--repo JackCurphey\/wheelhouse-epos/);
+  assert.match(run.stdout, /One more thing, once/, 'a private package needs Jack to make it public');
+
+  // Once the package downloads without a password, there's nothing to ask,
+  // however gh's own package lookup answers.
+  writeFileSync(path.join(dir, 'package-public'), '');
+  const again = spawnSync('bash', [path.join(DIR, 'setup.sh')], {
+    input: 'yes\n', encoding: 'utf8',
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SSH_KEY_FILE: path.join(dir, 'id_ed25519'), DEPLOY_KEY_FILE: path.join(dir, 'deploy-key') },
+  });
+  assert.equal(again.status, 0, `setup.sh stopped:\n${again.stdout}\n${again.stderr}`);
+  assert.doesNotMatch(again.stdout, /One more thing, once/, 'it asked Jack to make a public package public');
 });
 
 // The server half of the above, run against pretend tools in a scratch

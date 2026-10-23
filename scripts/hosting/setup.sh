@@ -161,8 +161,16 @@ gh variable set HOSTED_COPY_HOST --body "$ip" --repo "$REPO" >/dev/null
 gh variable set HOSTED_COPY_URL --body "https://$site" --repo "$REPO" >/dev/null
 gh variable set HOSTED_COPY_KNOWN_HOSTS --body "$ip $host_key" --repo "$REPO" >/dev/null
 echo "GitHub can now update the test copy after every merge to main."
-visibility=$(gh api "users/${REPO%%/*}/packages/container/wheelhouse-epos" --jq .visibility 2>/dev/null || true)
-if [ "$visibility" != public ]; then
+# Public means the server can download it without a password, so ask the
+# registry exactly that, signed in as nobody. (gh's own package lookup needs
+# a permission gh usually isn't given, and answers "not found" without it.)
+package_is_public() {
+  local token
+  token=$(curl -fsS -m 10 "https://ghcr.io/token?scope=repository:jackcurphey/wheelhouse-epos:pull" | jq -r '.token // empty') || return 1
+  [ -n "$token" ] || return 1
+  curl -fsS -m 10 -o /dev/null -H "Authorization: Bearer $token" "https://ghcr.io/v2/jackcurphey/wheelhouse-epos/tags/list"
+}
+if ! package_is_public; then
   cat <<PACKAGE
 
 One more thing, once: the server downloads each update from GitHub without a
