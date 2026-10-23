@@ -65,3 +65,47 @@ test('other pages keep the full sidebar, until Folded sidebar is on', async ({ p
   await expect(page.locator('nav[aria-label="Main"]:not([data-unfolded])')).toHaveCount(0);
   await folded(false);
 });
+
+test('unfolded over the diary, the menu is on top: its links work, and tapping the page folds it', async ({ page, context }) => {
+  const made = await staffRequest(server!.baseUrl, owner.cookie, '/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-09-02', startTime: '10:00', endTime: '11:00' } });
+  expect(made.status, JSON.stringify(made.body)).toBe(201);
+  await folded(true);
+  await signIn(page, context, '/workshop/diary?date=2026-09-02');
+  await expect(page.locator('[title*="Standard service"]').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Unfold the menu' }).click();
+  await expect(panel(page)).toBeVisible();
+  // What's at a point inside the menu is the menu, not the diary under it.
+  const box = (await panel(page).boundingBox())!;
+  // Down its right-hand edge, where it lies over the diary's columns, headings and footer.
+  const under = await page.evaluate(([x, top, h]) => {
+    const missed = [];
+    for (let y = top + 10; y < top + h - 10; y += 20) if (!document.elementFromPoint(x, y)?.closest('nav[data-unfolded]')) missed.push(y);
+    return missed;
+  }, [box.x + box.width - 12, box.y, box.height]);
+  expect(under).toEqual([]);
+  // Tapping the page beside it folds it.
+  await page.mouse.click(1200, 600);
+  await expect(panel(page)).toBeHidden();
+  await page.getByRole('button', { name: 'Unfold the menu' }).click();
+  await panel(page).getByRole('link', { name: 'Today' }).click();
+  await expect(page).toHaveURL(/\/workshop\/today/);
+  await folded(false);
+});
+
+test.describe('on a tablet', () => {
+  test.use({ viewport: { width: 900, height: 1180 }, hasTouch: true });
+
+  test('the rail’s Unfold puts the menu on top of the diary', async ({ page, context }) => {
+    await signIn(page, context, '/workshop/diary?date=2026-09-02');
+    await expect(page.locator('[title*="Standard service"]').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Unfold the menu' }).click();
+    await expect(panel(page)).toBeVisible();
+    const box = (await panel(page).boundingBox())!;
+    const under = await page.evaluate(([x, top, h]) => {
+      const missed = [];
+      for (let y = top + 10; y < top + h - 10; y += 20) if (!document.elementFromPoint(x, y)?.closest('nav[data-unfolded]')) missed.push(y);
+      return missed;
+    }, [box.x + box.width - 12, box.y, box.height]);
+    expect(under).toEqual([]);
+  });
+});

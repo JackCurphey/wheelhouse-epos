@@ -1774,3 +1774,5 @@ No screen: server only.
    to open it").
 4. **The panel over the page has the rooms, the shop and your name, without
    the drawn shop switcher**, which comes with more than one shop.
+5. **Tapping or clicking the page beside it folds it** (not drawn; review),
+   as the phone menu's dimmed page does, so a tablet isn't left half covered.

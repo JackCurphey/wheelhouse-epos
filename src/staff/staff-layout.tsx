@@ -146,8 +146,17 @@ function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; s
     return () => cancelAnimationFrame(frame);
   }, [open]);
   const fold = () => { setOpen(false); setDismissed(true); unfoldRef.current?.focus(); };
+  const railRef = useRef<HTMLDivElement>(null);
+  // A tap or click on the page beside it folds it, as the phone menu's backdrop does (review).
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e: PointerEvent) => { if (!railRef.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
   return (
-    <div onKeyDown={(e) => { if (e.key === 'Escape' && open) fold(); }} onMouseLeave={() => setDismissed(false)} className={`group/rail sticky top-0 hidden h-screen shrink-0 ${folded ? 'md:flex' : 'md:flex lg:hidden'}`}>
+    <div ref={railRef} onKeyDown={(e) => { if (e.key === 'Escape' && open) fold(); }} onMouseLeave={() => setDismissed(false)} className={`group/rail sticky top-0 z-40 hidden h-screen shrink-0 ${folded ? 'md:flex' : 'md:flex lg:hidden'}`}>
+      {/* z-40 on the rail itself: a sticky box is its own layer, so the panel's own z-index alone stays under the page (review). */}
       <nav aria-label="Main, folded" className="flex h-screen w-[84px] flex-col gap-1.5 overflow-y-auto bg-[var(--sidebar)] px-1.5 py-2 text-[var(--sidebar-foreground)]">
         <button ref={unfoldRef} type="button" aria-label="Unfold the menu" aria-expanded={open} onClick={() => setOpen(true)}
           className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg border border-[var(--wh-on-accent)]/30 text-xs font-semibold text-[var(--sidebar-foreground)]">
