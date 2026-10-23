@@ -12,10 +12,10 @@ import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, pool } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
-import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
@@ -26,11 +26,12 @@ import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/sta
 import { applyEvent } from '../workshop/transitions.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
+import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
-  sendQuoteResult, answerAndAddToOrder,
+  sendQuoteResult, answerAndAddToOrder, agreeWithinLimit, wholeBill,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -828,7 +829,11 @@ export function register(route) {
         try {
           result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
           if (result.ok && signing) {
-            await recordSignOff(id, signer);
+            // The mechanic deleted or switched off since the check above.
+            if (!(await recordSignOff(id, signer))) {
+              await db.exec('ROLLBACK');
+              return sendJson(res, 400, SIGN_OFF_REQUIRED);
+            }
             // Marking it ready sends "Bike ready", with a minute to Undo (UX
             // walk-through 1 H2; the messages engine, pretend for now), in the
             // same transaction: if it can't be queued, nothing is finished.
@@ -1171,7 +1176,11 @@ export function register(route) {
   route('GET', '/api/quotes/:id', async (req, res, params) => {
     const result = await readQuote({ quoteId: Number(params.id) });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    // The customer's limit and the whole bill with this quote, so the job page
+    // offers Save and tell within it (Workshop day 41-43).
+    const bill = await wholeBill(result.quote.id, result.quote.workshop_job_id);
+    sendJson(res, 200, { ...serializeQuoteWithLines(result.quote, result.lines, result.totals),
+      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null });
   });
 
   // screens: quote-editor, approved, job
@@ -1216,6 +1225,18 @@ export function register(route) {
       if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
       else {
         const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+        // One reminder, the shop's hours later, unless the quote is answered,
+        // withdrawn or replaced first (Jack, 22 Oct). It goes only with the quote.
+        // Its own fault is only logged: the quote's message has gone (fresh review).
+        if (!queued.skipped) {
+          try {
+            await undoWaiting(jobId, 'quote_reminder');
+            const settings = await db.prepare('SELECT quote_reminder_hours FROM workshop_settings LIMIT 1').get();
+            await queueMessage({ customerId, jobId, key: 'quote_reminder', vars, delayMs: (settings?.quote_reminder_hours ?? 24) * 3600_000, loginId: ctx?.login?.id ?? null });
+          } catch (err) {
+            console.error(`Quote ${result.quote.id}'s reminder couldn't be queued`, err);
+          }
+        }
         message = queued.skipped
           ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
           : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
@@ -1232,6 +1253,45 @@ export function register(route) {
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
   });
 
+  // Work within the customer's spending limit (Workshop day 41-43; dq-job-within):
+  // agreed without a quote, and the customer is told what was added. The
+  // panel had its minute's Undo before calling this, as for Send quote.
+  // screens: quote-send
+  route('POST', '/api/quotes/:id/within-limit', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const result = await agreeWithinLimit({ quoteId: Number(params.id), loginId: ctx?.login?.id ?? null });
+    if (!result.ok) return sendQuoteResult(res, result);
+    const jobId = result.quote.workshop_job_id;
+    let message;
+    try {
+      const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+      const added = await db.prepare(
+        `SELECT string_agg(description, ', ' ORDER BY id) AS names, sum(quantity * unit_amount) AS total
+           FROM workshop_quote_lines WHERE workshop_quote_id = ?`
+      ).get(result.quote.id);
+      const shop = await db.prepare('SELECT phone FROM shops WHERE id = ?').get(shopId);
+      Object.assign(vars, {
+        'Work added': added.names,
+        'Amount added': `£${Number(added.total).toFixed(2)}`,
+        'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
+        // With no phone in Shop details, "Call the shop", as the customer's page says.
+        'Shop phone': shop?.phone || 'the shop',
+      });
+      if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
+      else {
+        const queued = await queueMessage({ customerId, jobId, key: 'work_within_limit', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Work added within your limit', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`Quote ${result.quote.id} was agreed within the limit but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The work is added, but the message could not be queued. Let the customer know another way.' };
+    }
+    sendJson(res, 200, { quote: serializeQuote(result.quote), message });
+  });
+
   // screens: quote-send
   route('POST', '/api/quotes/:id/withdraw', async (req, res, params) => {
     sendQuoteResult(res, await withdrawQuote({ quoteId: Number(params.id) }));
@@ -1240,13 +1300,96 @@ export function register(route) {
   // Record their answer (journey 4 decision 4): staff, after a phone call or a
   // chat in the shop. Who took it and when are recorded with each line.
   // screens: approved
-  route('POST', '/api/quotes/:id/answer', async (req, res, params) => {
+  route('POST', '/api/quotes/:id/answer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     const body = await readJsonBody(req);
     if (!['phone', 'in_shop'].includes(body.via)) return badRequest(res, "via must be 'phone' or 'in_shop'");
-    sendQuoteResult(res, await answerAndAddToOrder({
+    const result = await answerAndAddToOrder({
       quoteId: Number(params.id), decisions: body.decisions, via: body.via, loginId: ctx?.login?.id ?? null,
-    }));
+    });
+    // An answer from a call: the customer is sent what was agreed, at once
+    // (dq-record-answer; Jack, 22 Oct). In the shop they were there. A fault
+    // here is logged; the answer is saved either way.
+    if (result.ok && body.via === 'phone') {
+      try {
+        const jobId = result.quote.workshop_job_id;
+        // A customer who gets nothing keeps the link they have (fresh review),
+        // as Bike ready does: checked before a link is issued.
+        const owner = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(jobId);
+        if (!owner?.customer_id || (await whyNotQueued('your_answers', owner.customer_id))) return sendQuoteResult(res, result);
+        const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+        const { customerId, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+        const lines = await db.prepare('SELECT description, decision FROM workshop_quote_lines WHERE workshop_quote_id = ? ORDER BY id').all(result.quote.id);
+        const { total } = await db.prepare(
+          "SELECT sum(quantity * unit_amount) AS total FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved'"
+        ).get(result.quote.id);
+        const list = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]);
+        const yes = lines.filter((l) => l.decision === 'approved').map((l) => l.description);
+        const no = lines.filter((l) => l.decision === 'declined').map((l) => l.description);
+        vars['What was agreed'] = [
+          yes.length ? `Going ahead: ${list(yes)}, £${Number(total).toFixed(2)}.` : 'Going ahead: just the booked work.',
+          no.length ? `No thanks: ${list(no)}.` : null,
+        ].filter(Boolean).join(' ');
+        if (customerId) await queueMessage({ customerId, jobId, key: 'your_answers', vars, loginId: ctx?.login?.id ?? null });
+      } catch (err) {
+        console.error(`Quote ${result.quote.id}'s Your answers message couldn't be queued`, err);
+      }
+    }
+    sendQuoteResult(res, result);
+  });
+
+  // ---------- Notes with the shop (decisions 3 and 7; ac-inbox) ----------
+  // screens: diary
+  route('GET', '/api/job-notes/conversations', async (req, res, params, query) => {
+    sendJson(res, 200, await noteConversations(query.get('filter') === 'needs-reply' ? 'needs-reply' : 'all'));
+  });
+
+  // screens: diary
+  route('GET', '/api/workshop-jobs/:id/notes', async (req, res, params) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    sendJson(res, 200, await jobNotes(job.id));
+  });
+
+  // A staff reply, saved on the job; the customer is told with Reply from the
+  // shop, the way they chose (pretend for now). A customer who gets nothing
+  // keeps the link they have, as Bike ready.
+  // screens: diary
+  route('POST', '/api/workshop-jobs/:id/notes', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const job = await db.prepare(
+      `SELECT w.id, w.customer_id, w.job_date, w.custody_state, c.name AS customer_name,
+              to_char(w.collected_at AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS collected_on
+         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?`
+    ).get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    const body = await readJsonBody(req);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
+    let message;
+    try {
+      // A page that has closed (fresh review): no text with a link that doesn't work.
+      const closed = linkExpiry({ jobDate: job.job_date, custodyState: job.custody_state, collectedOn: job.collected_on }, await currentShopToday()).expired;
+      const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
+      if (why) {
+        const who = job.customer_name ?? 'The customer';
+        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed.` : notSent(why, 'Reply from the shop', who) };
+      } else {
+        const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
+        const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
+        // The drawn text puts its own full stop after the reply, so the reply's own goes.
+        vars['The shop’s reply'] = text.replace(/\.+$/, '');
+        const queued = await queueMessage({ customerId, jobId: job.id, key: 'shop_reply', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply from the shop', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The message could not be queued.' };
+    }
+    sendJson(res, 201, { notes: await jobNotes(job.id), message });
   });
 
   // ---------- Deleting a job, and its attachments ----------
@@ -1269,7 +1412,7 @@ export function register(route) {
     let out;
     await db.exec('BEGIN');
     try {
-      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').all(id);
+      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? ORDER BY id FOR UPDATE').all(id);
       out = await withJobBookingLock(id, [], async (job) => {
         // Any paid order linked to the job counts (a job can have more than one).
         const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
@@ -1298,6 +1441,7 @@ export function register(route) {
         await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
         await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
         await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
+        await undoJobMessages(id);
         await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
         return undefined;
       });

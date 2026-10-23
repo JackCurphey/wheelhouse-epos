@@ -570,7 +570,9 @@ export function register(route) {
         else {
           // A fault here must not turn a taken payment into an error (fresh review).
           try {
-            await recordSignOff(jobToFinish.id, signer);
+            if (!(await recordSignOff(jobToFinish.id, signer))) {
+              jobWarning = 'Paid and finished, but not signed off: that mechanic isn’t active any more.';
+            }
           } catch (err) {
             console.error('sign-off after payment failed', err);
             jobWarning = 'Paid and finished, but not signed off: the sign-off couldn’t be saved.';

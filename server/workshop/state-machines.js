@@ -139,7 +139,9 @@ export const quote = defineMachine({
   initial: 'draft',
   states: ['draft', 'sent', 'partly_approved', 'approved', 'declined', 'superseded', 'expired', 'withdrawn'],
   transitions: {
-    draft: { send: 'sent' },
+    // Within the customer's spending limit, no quote goes: the work is agreed
+    // and they are told (Workshop day 41-43).
+    draft: { send: 'sent', within_limit: 'approved' },
     sent: {
       approve_all: 'approved',
       approve_some: 'partly_approved',
@@ -154,8 +156,11 @@ export const quote = defineMachine({
     // proposal for the changed work.
     partly_approved: { revise: 'superseded' },
     approved: { revise: 'superseded' },
+    // A customer who said no to everything and changes their mind gets a new
+    // quote (Jack, 22 Oct, docs/decisions/2026-10-22-quote-after-declined.md).
+    declined: { revise: 'superseded' },
   },
-  rest: ['declined', 'superseded', 'expired', 'withdrawn'],
+  rest: ['superseded', 'expired', 'withdrawn'],
 });
 
 const APPROVABLE = new Set(['sent']);

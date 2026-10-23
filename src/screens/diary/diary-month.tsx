@@ -7,7 +7,7 @@ import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/d
 import { Chevron } from './diary-bits.tsx';
 import { NewOnlineMark } from './diary-tiles.tsx';
 import { CHIP, SR, blocksOf, type Shown } from './diary-model.ts';
-import { STATE_LABEL, addMonths, dayLabel, diaryState, monthLabel, monthOf, todayIso } from './rules.ts';
+import { stateWord, addMonths, dayLabel, diaryState, monthLabel, monthOf, todayIso } from './rules.ts';
 
 /** A day's jobs for the month: timed ones earliest first, then those with no time. */
 function dayOrder(a: Shown, b: Shown) {
@@ -40,7 +40,7 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
       {j.newOnline ? <span className="shrink-0"><NavIcon name="website" size={12} /></span> : null}
     </>
   );
-  const chipName = (j: Shown) => `${j.startTime ?? 'No time'}, ${j.bikeLabel || 'Bike'}, ${j.title}, ${j.customerName || 'Customer'}, ${STATE_LABEL[j.state]}${j.newOnline ? ', new, booked online' : ''}`;
+  const chipName = (j: Shown) => `${j.startTime ?? 'No time'}, ${j.bikeLabel || 'Bike'}, ${j.title}, ${j.customerName || 'Customer'}, ${stateWord(j)}${j.newOnline ? ', new, booked online' : ''}`;
   const chipClass = (j: Shown) => `flex min-w-0 items-center gap-1 rounded-[4px] border-l-[3px] px-1 text-left text-xs leading-[18px] ${CHIP[j.state]} ${j.state === 'cancelled' ? 'line-through' : ''}`;
   const listJobs = listDay ? jobsOn(listDay) : [];
   return (
@@ -125,7 +125,7 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
                 <span className="truncate">{j.bikeLabel || 'Bike'} · {j.title}</span>
                 {j.newOnline ? <>{' · '}<NewOnlineMark short /></> : null}
               </span>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[j.state]}`}>{STATE_LABEL[j.state]}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[j.state]}`}>{stateWord(j)}</span>
               <span />
               <span className="col-span-2 text-xs text-[var(--wh-muted)]">{j.customerName || 'Customer'} · {j.mechanicName || 'Shared queue'}</span>
             </button>

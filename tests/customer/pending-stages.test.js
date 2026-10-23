@@ -241,3 +241,33 @@ test('“until” counts 30 days on the shop’s own calendar, across the clocks
   assert.ok(await ui.findByText('Thanks for coming in — this page keeps working until Sat 21 Nov, 30 days after collection.'));
   assert.ok(ui.getByText('Collected · Thu 22 Oct'));
 });
+
+// The checklist (cp-summary's "Full service checklist"; Workshop day 21: a
+// ticked item with no note reads "All working well"; audit M1, Jack 30 Sep:
+// a note is "What the mechanic found:", and a line counts the checks done;
+// UX walk-through 1 L5: the checks not done are named).
+const CHECKLIST = { name: 'Full service checklist', items: ['Frame & fork', 'Wheels & tyres', 'Tyre pressure', 'Brakes bled & adjusted', 'Gears indexed',
+  'Chain & drivetrain', 'Bottom bracket', 'Headset', 'Cables & housing', 'Bolts torqued'].map((name, i) => ({
+  name, done: i < 8, note: i === 3 ? 'The rear pads are worn. We recommend replacing the pads and adjusting the brake.' : null })) };
+
+test('ready: the checklist lists the checks done, what the mechanic found, and names the ones not done', async () => {
+  const { ui, within } = await open({ stage: 'ready_to_collect', checklist: CHECKLIST });
+  const box = await ui.findByRole('region', { name: 'Full service checklist' });
+  const rows = within(box).getAllByRole('listitem');
+  assert.equal(rows.length, 8, 'only the checks done are listed');
+  assert.ok(rows[0].textContent.includes('Frame & fork') && rows[0].textContent.includes('All working well'));
+  assert.ok(rows[3].textContent.includes('What the mechanic found: The rear pads are worn. We recommend replacing the pads and adjusting the brake.'));
+  assert.ok(!rows[3].textContent.includes('All working well'));
+  assert.ok(within(box).getByText('8 of 10 checks done. Not done: Cables & housing, Bolts torqued.'));
+  assert.ok(ui.getByRole('region', { name: 'What we did' }).compareDocumentPosition(box) & 4, 'after What we did');
+});
+
+test('every check done: the count names none not done; no checklist, no card', async () => {
+  const all = { ...CHECKLIST, items: CHECKLIST.items.map((i) => ({ ...i, done: true })) };
+  const first = await open({ stage: 'collected', checklist: all });
+  assert.ok(await first.ui.findByText('10 of 10 checks done.'));
+  first.cleanup?.();
+  const { ui } = await open({ stage: 'ready_to_collect', checklist: null });
+  await ui.findByRole('region', { name: 'What we did' });
+  assert.ok(ui.queryByRole('region', { name: 'Full service checklist' }) === null);
+});

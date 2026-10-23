@@ -54,7 +54,7 @@ Staff SHALL be able to create a job with a title and a date, and optionally a st
 - **THEN** it is refused with "The planned length must be a whole number of minutes between 1 and 720"
 
 ### Requirement: A job links only to a real customer, that customer's bike and a working mechanic
-A job MAY be linked to a customer, a bike and a mechanic, each optional. The customer SHALL be an active customer, the mechanic an active staff member who is a mechanic, and the bike an active bike belonging to the job's customer. When a job's customer changes and no bike is given, a bike that no longer belongs to the customer SHALL be dropped from the job rather than the change being refused.
+A job MAY be linked to a customer, a bike and a mechanic, each optional. The customer SHALL be an active customer, the mechanic an active staff member who is a mechanic, sent as a whole number (never as text, a fraction, true or a number too big to be anyone's), and the bike an active bike belonging to the job's customer. When a job's customer changes and no bike is given, a bike that no longer belongs to the customer SHALL be dropped from the job rather than the change being refused.
 
 #### Scenario: A customer that does not exist or is inactive
 - **WHEN** staff create or edit a job with a customer who is not active
@@ -71,6 +71,10 @@ A job MAY be linked to a customer, a bike and a mechanic, each optional. The cus
 #### Scenario: A mechanic who is not a working mechanic
 - **WHEN** staff give a mechanic who is inactive or not a mechanic
 - **THEN** it is refused with "Mechanic not found or inactive"
+
+#### Scenario: A mechanic that is not a whole number
+- **WHEN** staff create or save a job with the mechanic sent as "abc", 1.5, true, a number written as text, or a number too big to be anyone
+- **THEN** it is refused with "Mechanic not found or inactive", not a server error, and the job keeps its mechanic
 
 #### Scenario: Changing the customer drops the old customer's bike
 - **WHEN** staff change a job's customer without saying which bike
@@ -168,7 +172,7 @@ When a job's work is finished, staff SHALL NOT be able to change its title, date
 - **THEN** it is not refused for being finished
 
 ### Requirement: Staff can delete a job
-Staff SHALL be able to delete a job without sending a version, unless money has been paid on its order or the bike is in the shop (Jack, 18 Oct, `docs/decisions/2026-10-18-attachments-and-delete.md`). Then the delete SHALL be refused with the code `settle_first`, saying which of the two applies. Its order SHALL be kept, no longer linked to any job, so nothing already added to it is lost. Its attached files SHALL be removed with it. Deleting a job that does not exist SHALL be refused as not found.
+Staff SHALL be able to delete a job without sending a version, unless money has been paid on its order or the bike is in the shop (Jack, 18 Oct, `docs/decisions/2026-10-18-attachments-and-delete.md`). Then the delete SHALL be refused with the code `settle_first`, saying which of the two applies. Its order SHALL be kept, no longer linked to any job, so nothing already added to it is lost. Its attached files SHALL be removed with it. Any message to the customer about the job still waiting to go SHALL be stopped with it, as Undo stops one, so nothing is sent about a job that no longer exists; a message already on its way or sent SHALL be left as it is. A delete and a quote answer for the same job at the same moment SHALL each go through or be refused in plain terms, one after the other, never failing with a server error. Deleting a job that does not exist SHALL be refused as not found.
 
 #### Scenario: Deleting a job keeps its order
 - **WHEN** staff delete a job that has an order
@@ -185,6 +189,18 @@ Staff SHALL be able to delete a job without sending a version, unless money has 
 #### Scenario: The order is paid
 - **WHEN** staff delete a job whose order has been paid
 - **THEN** it is refused with `settle_first` and money paid
+
+#### Scenario: A Bike ready still in its minute
+- **WHEN** staff delete a job whose "Bike ready" message is still waiting its minute
+- **THEN** the message is marked undone and is never sent
+
+#### Scenario: A refused delete stops nothing
+- **WHEN** a delete is refused with `settle_first`
+- **THEN** the job's waiting messages are still waiting
+
+#### Scenario: A quote is answered as the job is deleted
+- **WHEN** a quote on a job is being answered and staff delete the job at the same moment
+- **THEN** neither gets a server error: the answer goes in first and the job is then deleted with its order kept, or the job is deleted first and the answer is refused as not found
 
 ### Requirement: A job records three separate facts: the booking, the bike and the work
 A job SHALL keep three separate facts, each with its own fixed set of values: the booking (pending, scheduled, reschedule requested, declined, expired, cancelled), where the bike is (expected, in the shop, collected) and the work (not started, in progress, waiting for parts, on hold, finished). Moving one SHALL NOT move another. The database SHALL refuse any value not in these sets.
@@ -693,7 +709,7 @@ On finished work whose order isn't paid, the job page SHALL offer "Take payment"
 - **THEN** the page offers "Hand over"
 
 ### Requirement: Finishing the work records who signed it off
-Finishing the work ("Mark ready for collection") SHALL ask "Who’s signing this off?" with the shop's mechanics as pills, the job's own mechanic picked, or nobody on a shared-queue job (Jack, 16 Oct, answers 1, 2, 6, 7). The server SHALL refuse to finish without an active mechanic, and SHALL record who signed off and when.
+Finishing the work ("Mark ready for collection") SHALL ask "Who’s signing this off?" with the shop's mechanics as pills, the job's own mechanic picked, or nobody on a shared-queue job (Jack, 16 Oct, answers 1, 2, 6, 7). The server SHALL refuse to finish without an active mechanic, and SHALL record who signed off and when. A mechanic deleted or switched off while the job is being finished SHALL get the same refusal, never a server error, and nothing SHALL move.
 
 #### Scenario: Alex signs off WH-1042
 - **WHEN** WH-1042, Alex Morgan's job, is marked ready and Alex Morgan stays picked
@@ -706,6 +722,10 @@ Finishing the work ("Mark ready for collection") SHALL ask "Who’s signing this
 #### Scenario: No one chosen
 - **WHEN** finish is sent without a mechanic
 - **THEN** the server refuses with "Choose who is signing this off" and the work stays in progress
+
+#### Scenario: The mechanic is deleted as the job is finished
+- **WHEN** the Owner deletes or switches off the mechanic picked to sign off at the moment staff mark the job ready
+- **THEN** the server refuses with "Choose who is signing this off", the work stays in progress and no sign-off is recorded
 
 ### Requirement: Staff see who signed a job off
 The finished job page SHALL show "Signed off by [name] · [day], [time]" (answer 3, staff side).
@@ -744,11 +764,15 @@ Paying a job's order that finishes its work SHALL record the sign-off sent with 
 - **THEN** it is refused with `use_till`, nothing is sold, and the job is as it was
 
 ### Requirement: A shop chooses whether customers see who signed off
-A shop setting, "Show who signed off to customers", SHALL start off (Jack, 16 Oct, answer 3), and SHALL be changed in Settings › Workshop › Mechanics. While it is off, customers SHALL NOT see who signed a job off.
+A shop setting, "Show who signed off to customers", SHALL start off (Jack, 16 Oct, answer 3), and SHALL be changed in Settings › Workshop › Mechanics. While it is off, customers SHALL NOT see who signed a job off. It SHALL be set only by a real true or false; anything else (the text "false", 1, null) SHALL be refused and leave it as it was.
 
 #### Scenario: Off to start
 - **WHEN** a new shop's workshop settings are read
 - **THEN** "Show who signed off to customers" is off
+
+#### Scenario: A sloppy value
+- **WHEN** the setting is off and a request sends it as the text "false"
+- **THEN** it is refused with "showSignOffToCustomers must be true or false" and the setting stays off
 
 ### Requirement: The booking link says who checked the job
 With the setting on, the booking link of a signed-off job that is ready or collected SHALL say "Checked by [name]", the name kept with the sign-off.
@@ -854,3 +878,42 @@ The job page SHALL show "Kept on [slot]" for a bike in the shop with a slot, the
 #### Scenario: The Overview
 - **WHEN** a bike is in the shop on Hook 3
 - **THEN** its Custody reads "Kept on Hook 3"
+
+### Requirement: Staff say which part a quoted labour line goes with
+On the job page, a draft quote's labour line SHALL offer "Goes with" (Nothing, or one of the quote's parts), and a Needed line SHALL take "What happens without it" in the mechanic's words (Jack, 1 Oct, decision 7). Once sent, the line SHALL read "Goes with [part]". Recording an answer by phone or in the shop SHALL tick a pair together.
+
+#### Scenario: Pairing fitting with pads
+- **WHEN** staff choose Goes with Shimano brake pads on Fit and adjust brakes and send the quote
+- **THEN** the job page shows "Goes with Shimano brake pads" on that line, and the customer's card ticks them together
+
+### Requirement: Staff add a photo to a quote line
+On the job page, a draft quote's line SHALL offer "Add photo for [line]"; with a photo it SHALL read "1 photo — view or add for [line]" and open the photo larger, with Replace photo and Remove from line (Jack, 1 Oct). The photo SHALL be a JPEG, PNG or WebP picture and SHALL also be one of the job's files.
+
+#### Scenario: Adding the pads photo
+- **WHEN** staff choose Add photo for Shimano brake pads and pick a picture
+- **THEN** the line reads "1 photo — view or add for Shimano brake pads", and the picture is among the job's files
+
+### Requirement: Staff can quote again after the customer says no to everything
+After a customer declines every line of a quote, staff SHALL be able to add to the quote again, which starts a new quote with only the new lines and supersedes the declined one (Jack, 22 Oct).
+
+#### Scenario: Quoting again
+- **WHEN** Maya's quote was declined and staff use Add to quote for Shimano brake pads
+- **THEN** a new quote with just the pads is made, and the declined one is superseded
+
+### Requirement: The job page shows the customer's spending limit
+The job page SHALL show the customer's choice as a tag: "Customer OK up to £[amount]" when they set a limit, or "Ask before any extra work" (Workshop day 42).
+
+#### Scenario: A limit of £200
+- **WHEN** staff open Maya's job, booked with a £200 limit
+- **THEN** the job's details show "Customer OK up to £200"
+
+### Requirement: Work within the customer's spending limit is agreed without a quote
+When the customer set a spending limit and the whole bill with the extra work stays within it, staff SHALL be able to agree the work without sending a quote; it SHALL join the job and the customer SHALL be told (Workshop day 41–43). Over the limit, or with no limit, a quote SHALL be needed.
+
+#### Scenario: Within £200
+- **WHEN** Maya set £200, her service is £65 and staff add pads and fitting for £46
+- **THEN** the work is agreed, joins the job, and Maya is sent "Work added within your limit"
+
+#### Scenario: Over the limit
+- **WHEN** Maya set £100 and the same work takes the whole bill to £111
+- **THEN** it is refused with "That takes the whole bill to £111.00, over the £100 limit. Send a quote instead.", and nothing changes
