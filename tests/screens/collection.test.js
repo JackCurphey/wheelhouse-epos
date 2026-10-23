@@ -23,6 +23,8 @@ let shell;
 let calls;
 let settings;
 let attention;
+let holdPut = null;
+let failContacted = false;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -36,6 +38,8 @@ async function open(path, { items = [UNCOLLECTED] } = {}) {
   calls = [];
   settings = { ...SETTINGS };
   attention = items;
+  holdPut = null;
+  failContacted = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -44,6 +48,7 @@ async function open(path, { items = [UNCOLLECTED] } = {}) {
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') {
+      if (holdPut) await holdPut;
       const next = { ...settings, ...body };
       if (next.collectionTodayDays <= next.collectionReminderDays) return reply(400, { error: 'Show it on Today after more days than the reminder.' });
       settings = next;
@@ -53,6 +58,7 @@ async function open(path, { items = [UNCOLLECTED] } = {}) {
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/message-templates') return reply(200, [STILL_WAITING]);
     if (u.pathname === '/api/needs-attention') return reply(200, { items: attention });
+    if (u.pathname === '/api/workshop-jobs/50/contacted' && method === 'POST' && failContacted) return reply(500, { error: 'Internal error' });
     if (u.pathname === '/api/workshop-jobs/50/contacted' && method === 'POST') { attention = attention.filter((i) => i.jobId !== 50); return reply(200, { ok: true }); }
     if (u.pathname === '/api/workshop-jobs') return reply(200, []);
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -115,6 +121,23 @@ test('raising the reminder past Today’s count isn’t a dead end: raise Today 
   await waitFor(() => assert.equal(settings.collectionReminderDays, 10));
 });
 
+test('typing in the other box while a save is on its way keeps what’s typed, and it saves too', async () => {
+  const { ui, fireEvent, waitFor } = await openCollection();
+  let release;
+  holdPut = new Promise((r) => { release = r; });
+  const remind = ui.getByLabelText('Remind the customer after');
+  fireEvent.change(remind, { target: { value: '5' } });
+  fireEvent.blur(remind);
+  const today = ui.getByLabelText('Show it on Today after');
+  fireEvent.change(today, { target: { value: '10' } });
+  holdPut = null;
+  release();
+  await ui.findByText('Saved.');
+  assert.equal(today.value, '10', 'what was typed while the first saved');
+  fireEvent.blur(today);
+  await waitFor(() => assert.deepEqual(puts().at(-1), { collectionReminderDays: 5, collectionTodayDays: 10 }));
+});
+
 test('a count that isn’t a whole number of days says so and saves nothing', async () => {
   const { ui, fireEvent } = await openCollection();
   const box = ui.getByLabelText('Remind the customer after');
@@ -142,6 +165,18 @@ test('Today lists the uncollected bike, as drawn, and Contacted takes it off', a
   fireEvent.click(box.getByRole('button', { name: 'Contacted: WH-1050' }));
   await waitFor(() => assert.ok(calls.some((c) => c.method === 'POST' && c.url.endsWith('/api/workshop-jobs/50/contacted'))));
   assert.ok((await ui.findByText('Nothing needs you right now')) !== null);
+  // The line has gone: the focus stays in the card, on its heading (fresh review).
+  await waitFor(() => assert.ok(document.activeElement === ui.getByRole('heading', { name: 'Needs attention' })));
+});
+
+test('a Contacted that can’t be recorded says so, and the line stays', async () => {
+  mock.timers.enable({ apis: ['Date'], now: new Date(2026, 8, 24, 10, 0) });
+  const { ui, fireEvent, within } = await open('/workshop/today');
+  failContacted = true;
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  fireEvent.click(box.getByRole('button', { name: 'Contacted: WH-1050' }));
+  assert.ok((await box.findByText('Wheelhouse couldn’t record that. Try again in a moment.')) !== null);
+  assert.ok(box.queryByText('WH-1050 · Aisha Khan — ready since Mon 14 Sep') !== null);
 });
 
 test('Today’s line leaves out the reminder before it has gone', async () => {

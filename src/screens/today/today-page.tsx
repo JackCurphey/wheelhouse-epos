@@ -30,7 +30,7 @@ function Card({ id, title, action, children }: { id: string; title: string; acti
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
       <div className="flex items-center justify-between gap-3">
-        <h2 id={id} className="m-0 text-[17px] font-bold">{title}</h2>
+        <h2 id={id} tabIndex={-1} className="m-0 text-[17px] font-bold">{title}</h2>
         {action}
       </div>
       {children}
@@ -70,20 +70,24 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   const list = useQuery({ queryKey: ['needs-attention'], queryFn: () => apiGet<{ items: Attention[] }>('/api/needs-attention'), refetchInterval: 60_000, refetchOnWindowFocus: true });
   const items = list.data?.items ?? [];
   const queryClient = useQueryClient();
-  const [contacting, setContacting] = useState<number | null>(null);
+  const [contacting, setContacting] = useState<ReadonlySet<number>>(new Set());
   const [refused, setRefused] = useState<string | null>(null);
-  // Contacted (cp-today-uncollected; H4): recorded, and the line goes.
+  // Contacted (cp-today-uncollected; H4): recorded, and the line goes; the
+  // focus goes to the card's heading, not the top of the page (fresh review).
   async function contacted(jobId: number) {
-    setContacting(jobId);
+    setContacting((c) => new Set(c).add(jobId));
     setRefused(null);
+    let done = false;
     try {
       await apiMutate(`/api/workshop-jobs/${jobId}/contacted`, {}, { method: 'POST' });
+      done = true;
     } catch {
       setRefused('Wheelhouse couldn’t record that. Try again in a moment.');
     } finally {
       await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
-      setContacting(null);
+      setContacting((c) => { const next = new Set(c); next.delete(jobId); return next; });
     }
+    if (done) document.getElementById('today-attention')?.focus();
   }
   const lines = items.map((i) => {
     if (i.kind === 'uncollected') {
@@ -92,7 +96,7 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
         <Line key={`u${i.jobId}`} lead={warn}
           title={`${i.reference} · ${i.customerName ?? 'No customer'} — ready since ${shortDate(i.readySince)}`}
           sub={<>{sub}{i.phone ? <>{sub ? ' · ' : ''}<a href={`tel:${i.phone.replace(/\s+/g, '')}`} className="whitespace-nowrap text-inherit">{mono(i.phone)}</a></> : null}</>}
-          right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={contacting === i.jobId} aria-label={`Contacted: ${i.reference}`} onClick={() => void contacted(i.jobId)}>Contacted</Button>} />
+          right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={contacting.has(i.jobId)} aria-label={`Contacted: ${i.reference}`} onClick={() => void contacted(i.jobId)}>Contacted</Button>} />
       );
     }
     if (i.kind === 'quote_no_answer') {

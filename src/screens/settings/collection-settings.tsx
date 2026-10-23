@@ -48,7 +48,8 @@ export function CollectionSettings() {
     try {
       const saved = await apiMutate<Days>('/api/workshop-settings', body, { method: 'PUT' });
       queryClient.setQueryData(KEY, saved);
-      setTyped({});
+      // Only what was saved: a box typed into meanwhile keeps its words (fresh review).
+      setTyped((t) => Object.fromEntries(Object.entries(t).filter(([box, text]) => text.trim() !== String(body[FIELDS[box as Box]]))));
       setNote({ ok: true, text: 'Saved.' });
     } catch (err) {
       // What was typed stays, with the server's reason ("Show it on Today after more days than the reminder.").
