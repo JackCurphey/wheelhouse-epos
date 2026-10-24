@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
 import { PayDialog } from './pay-dialog.tsx';
-import { SignOffDialog } from '@/screens/diary/sign-off-dialog.tsx';
+import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
 import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
 
 /**
@@ -192,7 +192,11 @@ function LineDialog({ line, onClose, onSave, onRemove }: { line: TillLine; onClo
 
 type OrderItem = { id: number; productId: number | null; name: string; sku?: string | null; unitPrice: number; qty: number; lineType: string | null; serviceId: number | null; minutes: number | null };
 type Order = { id: number; status: string; items: OrderItem[] };
-type Due = { subtotal: number; discount: number; groupDiscount: number; groupName: string; total: number; stock: Record<string, number> };
+type Due = {
+  subtotal: number; discount: number; groupDiscount: number; groupName: string; total: number; stock: Record<string, number>;
+  // A deposit paid online, and what's left once it comes off (till-online-deposit).
+  depositPence?: number; depositUsedPence?: number; depositPaidAt?: string | null; leftToPay?: number;
+};
 // The work can be paid for once it's under way or finished; paying work in
 // progress finishes it (2026-10-08-paying-for-finished-work.md).
 const PAYABLE = new Set(['in_progress', 'complete']);
@@ -203,7 +207,9 @@ const PAYABLE = new Set(['in_progress', 'complete']);
  * when paid", on by default (Workshop day decision 63). Paying converts the
  * order, then records the bike as collected unless the pill is off. Work
  * still in progress asks who is signing it off first (mechanic sign-off
- * answer 5). Deposits and the job-changed warning come later; extras are
+ * answer 5). A deposit paid online comes off as a "Deposit paid" line, and
+ * only the rest is taken (selling at the till decision 11; till-job-balance;
+ * openspec/changes/till-online-deposit). The job-changed warning comes later; extras are
  * added on the job's Work and parts, since paying the order charges its lines.
  */
 function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
@@ -247,7 +253,10 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
     sku: it.sku ?? null,
     stockQty: it.productId != null && due ? due.stock[String(it.productId)] : undefined,
   }));
-  const total = due ? due.total : saleTotal(lines);
+  // What's taken here: the bill less a deposit paid online.
+  const total = due ? (due.leftToPay ?? due.total) : saleTotal(lines);
+  const depositUsed = (due?.depositUsedPence ?? 0) / 100;
+  const depositOver = ((due?.depositPence ?? 0) - (due?.depositUsedPence ?? 0)) / 100;
   const inShop = job?.custodyState === 'in_shop';
   const paid = order?.status === 'converted';
   const cancelled = order?.status === 'cancelled';
@@ -312,8 +321,19 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
             {due && due.groupDiscount > 0 ? (
               <li className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5 text-sm"><span>{due.groupName}</span><span className="font-mono">{`−${money(due.groupDiscount)}`}</span></li>
             ) : null}
+            {/* As drawn (till-job-balance): a fixed line, paid when booking. */}
+            {due && depositUsed > 0 ? (
+              <li className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5">
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-size-15 font-semibold">Deposit paid</span>
+                  <span className="text-size-13 text-[var(--wh-muted)]">{`${due.depositPaidAt ? signedOffWhen(due.depositPaidAt).split(', ')[0] : '[date]'} · online`}</span>
+                </span>
+                <span className="font-mono text-base">{`−${money(depositUsed)}`}</span>
+              </li>
+            ) : null}
           </ul>
         ) : null}
+        {due && depositOver > 0 ? <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-size-13 font-semibold text-[var(--wh-warn-ink)]">{`The deposit is more than the bill: ${money(depositOver)} isn’t paid back here yet.`}</p> : null}
         {paid ? <p className="m-0 text-sm font-semibold">This job’s order is already paid.</p> : null}
         {cancelled ? <p className="m-0 text-sm font-semibold">This job’s order was cancelled, so there’s nothing to pay here.</p> : null}
         {order && order.status === 'open' && dueQuery.isError ? (
