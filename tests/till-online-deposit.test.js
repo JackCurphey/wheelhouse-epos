@@ -51,8 +51,10 @@ async function jobWithDeposit({ price = 65, deposit = 1300, status = 'taken', no
   if (deposit) {
     await inShop(async () => {
       await prepare('UPDATE workshop_jobs SET deposit_pence = ? WHERE id = ?').run(deposit, job.id);
+      // The pretend provider's own record too, as a real booking makes it.
+      await prepare('INSERT INTO pretend_payments (ref, idempotency_key, amount_pence, status) VALUES (?, ?, ?, ?) RETURNING ref').get(`ref-${++key}`, `key-${key}`, deposit, status);
       await prepare("INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, job_id) VALUES ('pretend', ?, ?, ?, ?, ?)")
-        .run(`ref-${++key}`, deposit, status, `key-${key}`, job.id);
+        .run(`ref-${key}`, deposit, status, `key-${key}`, job.id);
       if (noShow) await prepare('UPDATE workshop_jobs SET no_show_at = now() WHERE id = ?').run(job.id);
     });
   }
@@ -121,6 +123,14 @@ test('a deposit only held when the job is paid in full is let go, so it’s neve
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const pay = await inShop(() => prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ?').get(job.id));
   assert.equal(pay.refund_due_reason, 'Paid in full at the till');
+  // And let go straight away, not only marked: nothing else would until the
+  // shop's next online booking (seen in the full run's log: no database in scope).
+  let status;
+  for (let i = 0; i < 20 && status !== 'released'; i += 1) {
+    await new Promise((done) => setTimeout(done, 100));
+    status = (await inShop(() => prepare('SELECT status FROM online_payments WHERE job_id = ?').get(job.id))).status;
+  }
+  assert.equal(status, 'released');
 });
 
 test('a refund and a till payment at the same moment: never both (review)', async () => {

@@ -6,7 +6,7 @@
 // in server/lib/sales.js; the Shopify webhooks stay in server.js, where the
 // dispatcher calls them. Moved out of server.js unchanged (split plan §4.1,
 // WP-0.4).
-import { prepare, dbExec } from '../db.js';
+import { prepare, dbExec, runWithShop } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
   serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
@@ -429,7 +429,8 @@ export function register(route) {
     if (!reply) return;
     afterRelease.push(() => sendJson(res, 201, reply.payload));
     // A held deposit let go above (review): made now the sale has committed.
-    if (reply.jobId) afterRelease.push(() => refundOwed(reply.jobId).catch((err) => console.error('letting a held deposit go failed', err)));
+    // In the shop's own scope: the request's database client has gone by then.
+    if (reply.jobId) afterRelease.push(() => runWithShop(shopId, () => refundOwed(reply.jobId)).catch((err) => console.error('letting a held deposit go failed', err)));
     if (reply.shopifyPushes.length) {
       afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
     }
