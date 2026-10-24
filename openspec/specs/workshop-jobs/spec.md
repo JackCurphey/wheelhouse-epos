@@ -1008,8 +1008,10 @@ While "Add a photo from your phone" is open, it SHALL show "Waiting for the phot
 
 A job that took a deposit SHALL show it: the amount, when it was paid, and
 whether it is paid, refunded or kept. Staff SHALL be able to refund it, the
-whole amount, with a reason, at any stage, once; it goes back to the card the
-customer paid with, and the job then shows when, why and who.
+whole amount, with a reason, once, at any stage until the job's order is
+paid; it goes back to the card the customer paid with, and the job then
+shows when, why and who. Once the order is paid, the deposit is part of the
+sale and SHALL NOT be refunded from the job (Jack, 24 Oct).
 
 #### Scenario: Refunded by hand
 - **WHEN** Jo refunds Maya's £13.00 deposit with the reason "Bike wasn't ready in time"
@@ -1018,6 +1020,10 @@ customer paid with, and the job then shows when, why and who.
 #### Scenario: No reason
 - **WHEN** staff refund a deposit without a reason
 - **THEN** it is refused, saying a reason is needed
+
+#### Scenario: After the job is paid
+- **WHEN** Maya's job was paid at the till with her deposit counted, and Jo tries to refund the deposit
+- **THEN** it is refused: "This deposit paid part of the bill at the till, so it can't be refunded from the job."
 
 ### Requirement: Staff mark a booking that didn't come, keeping the deposit
 
@@ -1033,3 +1039,33 @@ the mark off.
 #### Scenario: Too soon
 - **WHEN** the booking is today or later, or the bike came in
 - **THEN** Didn't come is refused
+
+### Requirement: Each line of a job's work and parts has a Done tick and a staff note
+
+Staff SHALL be able to tick each line of a job's work and parts as done, and
+untick it, and give it a note. The note SHALL be for staff only: it SHALL NOT
+appear on anything the customer sees (Jack, 24 Oct). A line added from an
+approved quote SHALL start with the quote line's reason as its note. Anyone
+signed in MAY tick or write a note, and the latest change SHALL win. Neither
+SHALL change once the work is finished or the order is paid; they SHALL be
+kept when the job's lines are saved again.
+
+#### Scenario: Ticking a line done
+- **WHEN** Alex ticks "Shimano brake pads" on Maya's job
+- **THEN** the line shows ticked when the job is opened again
+
+#### Scenario: A note on a line
+- **WHEN** Alex writes "Rear pads worn — replacing" on the pads line
+- **THEN** the note shows on the line for staff, and nowhere the customer sees
+
+#### Scenario: Changing a quantity keeps them
+- **WHEN** a part's quantity changes after another line was ticked and given a note
+- **THEN** the tick and note are still there
+
+#### Scenario: From an approved quote
+- **WHEN** Maya approves a quote line whose reason is "Rear pads worn"
+- **THEN** the line joins her job's work with "Rear pads worn" as its note
+
+#### Scenario: Finished work
+- **WHEN** someone ticks a line after the work is marked ready
+- **THEN** it is refused: "This work is finished, so its work and parts can’t change. Reopen the work first."
