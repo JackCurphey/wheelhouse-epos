@@ -34,6 +34,17 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    API. No website is live and hosting isn't chosen, so this is left for
    WP-0.5 or the website stage.
 
+### 22 Oct 2026: held work on an ended booking
+
+5. **Held work can't be resumed on a cancelled, declined or expired booking,
+   and hold stays refused on all of them.** Jack's "block both" (22 Oct)
+   left the resume gap to Mark. The server doesn't record whether held work
+   had started, so allowing hold on started work would trap it with no
+   resume. Work under way can still be finished or marked waiting for parts;
+   held work stays held and the bike can be collected. A "started at"
+   column would allow the finer rule (schema change, not made). Change
+   `ended-booking-resume`. *Pattern:* start's refusal.
+
 ### 22 Oct 2026: input checks (`openspec/changes/input-checks`, audit items 19, 21, 22)
 
 No screen: server only. Touches `docs/decisions/2026-10-16-mechanic-sign-off.md`
