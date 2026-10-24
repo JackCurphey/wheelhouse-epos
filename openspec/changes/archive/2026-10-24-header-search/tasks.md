@@ -4,4 +4,4 @@
 - [x] 1.2 Build `server/routes/search.js` (registered; route list). Verify 1.1
 - [x] 2.1 Screen tests first (`tests/screens/header-search.test.js`): the box on every page; typing finds, grouped and linked; nothing found; the phone's button and sheet with Close search and Escape. Watch each fail
 - [x] 2.2 Build `src/staff/header-search.tsx` and put it in the header; a browser test at computer and phone widths
-- [ ] 2.3 Log what's decided; fresh review; lint and tests; archive as the last commit
+- [x] 2.3 Log what's decided; fresh review; lint and tests; archive as the last commit
