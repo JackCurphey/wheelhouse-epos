@@ -29,6 +29,7 @@ import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from 
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
 import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { removePhotoDetails } from '../photo-metadata.js';
+import { oweRefund, refundOwed } from '../payments/refund.js';
 import { cancelPhotoCode, makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
@@ -953,6 +954,11 @@ export function register(route) {
             // its hold. syncJobHold decides from the job's current state, not from
             // which event fired, so it releases only when the job is no longer live
             // and otherwise keeps (or realigns) the one hold a live job holds.
+            // The shop declining, letting a request expire, or cancelling: the
+            // deposit comes back (deposit-refunds design 4), owed here, made below.
+            const ended = await db.prepare('SELECT booking_state FROM workshop_jobs WHERE id = ?').get(id);
+            const owed = { declined: 'Declined', expired: 'The request expired', cancelled: 'Cancelled by the shop' }[ended.booking_state];
+            if (owed) await oweRefund(id, owed);
             await syncJobHold(id);
             return { ...applied, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
           });
@@ -985,8 +991,10 @@ export function register(route) {
         // help. The message is for people and may be reworded; the code may not.
         return sendJson(res, 409, { error: result.message, code: result.code });
       }
-      // After the commit: a message that can't be queued is logged, not an error
-      // (the answer it follows has been made and stands).
+      // After the commit: a refund owed is made (deposit-refunds design 2), and a
+      // message that can't be queued is logged, not an error (the answer it
+      // follows has been made and stands).
+      if (event === 'decline' || event === 'expire' || event === 'cancel') await refundOwed(id);
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');
