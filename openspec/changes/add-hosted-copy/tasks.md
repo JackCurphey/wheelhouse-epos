@@ -68,7 +68,7 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
 ## 5. The restore rehearsal (PL-3: Jack's hands, Mark's eyes)
 
-- [ ] 5.1 Mark writes the restore steps for Jack in plain English, in `docs/runbooks/hosted-copy.md`. Jack reads them and says they're clear. Written 24 Oct (Jack took WP-0.5 over): D step 2 now has the real `doctl` restore command, and the new section E is the rehearsal, step by step. Point-in-time restore over the last 7 days was checked against DigitalOcean's documentation and the cluster's daily backups (read-only, with Jack's yes). This task waits for Jack to read them and say they're clear
+- [x] 5.1 Mark writes the restore steps for Jack in plain English, in `docs/runbooks/hosted-copy.md`. Jack reads them and says they're clear. Written 24 Oct (Jack took WP-0.5 over): D step 2 now has the real `doctl` restore command, and the new section E is the rehearsal, step by step. Point-in-time restore over the last 7 days was checked against DigitalOcean's documentation and the cluster's daily backups (read-only, with Jack's yes). Jack read sections D and E on 24 Oct: "I've read runbook sections D and E: the restore steps are clear"
 - [ ] 5.2 Jack, with Mark watching, restores the database to a chosen moment into a new cluster, points a fresh copy at it, and opens a job. Record it in `docs/runbooks/<date>-restore-drill.md` with each step and its time. This task stays open ("blocked") until it is actually done
 - [ ] 5.3 Fill in the spec's `[n]` values from what was measured and agreed, then get a fresh review of the whole change against the spec
 
