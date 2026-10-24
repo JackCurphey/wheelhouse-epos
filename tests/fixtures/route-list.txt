@@ -53,6 +53,7 @@ GET /api/customers/:id/texts
 POST /api/customers/:id/texts
 GET /api/messages
 POST /api/messages/:id/undo
+POST /api/messages/:id/send-now
 GET /api/message-templates
 PUT /api/message-templates/:key
 POST /api/message-templates/:key/preview

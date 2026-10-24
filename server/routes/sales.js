@@ -10,6 +10,7 @@ import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
   serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
+  poundsToPence, documentTotalsPence,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
 import { work } from '../workshop/state-machines.js';
@@ -41,6 +42,10 @@ function serializeSaleDocument(row, items) {
     subtotal: row.subtotal,
     discount: row.discount,
     total: row.total,
+    subtotalPence: row.subtotal_pence,
+    discountPence: row.discount_pence,
+    totalPence: row.total_pence,
+    paidPence: row.paid_pence,
     note: row.note,
     convertedSaleId: row.converted_sale_id,
     workshopJobId: row.workshop_job_id,
@@ -53,6 +58,9 @@ function serializeSaleDocument(row, items) {
           unitPrice: it.unit_price,
           qty: it.qty,
           lineTotal: it.line_total,
+          unitPricePence: it.unit_price_pence,
+          lineTotalPence: it.line_total_pence,
+          vatRateBp: it.vat_rate_bp,
           lineType: it.line_type,
           serviceId: it.service_id,
           minutes: it.minutes,
@@ -63,6 +71,31 @@ function serializeSaleDocument(row, items) {
 
 const DOC_SELECT = `SELECT d.*, c.name AS customer_name, ca.name AS cashier_name FROM sale_documents d LEFT JOIN customers c ON c.id = d.customer_id LEFT JOIN employees ca ON ca.id = d.cashier_id`;
 const DOC_KINDS = ['quote', 'order'];
+
+// Writes one loaded line in pence and, worked out from it, in pounds, in the
+// same statement (sales in pence, step A; design.md Decision 2: pence is the
+// authority, the pounds stay for the old app).
+async function insertDocumentLine(docId, line) {
+  await db.prepare(
+    `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes,
+                                      unit_price_pence, line_total_pence, vat_rate_bp)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    docId,
+    line.product ? line.product.id : null,
+    line.name,
+    line.sku,
+    line.unitPricePence / 100,
+    line.qty,
+    line.lineTotalPence / 100,
+    line.lineType,
+    line.serviceId,
+    line.minutes,
+    line.unitPricePence,
+    line.lineTotalPence,
+    line.vatRateBp
+  );
+}
 
 export function register(route) {
   // ---------- Sales ----------
@@ -207,35 +240,20 @@ export function register(route) {
       }
     }
 
-    const subtotal = loaded.reduce((sum, line) => sum + line.lineTotal, 0);
-    const total = Math.max(0, subtotal - discount);
+    const { subtotalPence, discountPence, totalPence } = documentTotalsPence(loaded, discount);
 
     await db.exec('BEGIN');
     try {
       const info = await db
         .prepare(
-          `INSERT INTO sale_documents (kind, customer_id, cashier_id, subtotal, discount, total, note, title, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO sale_documents (kind, customer_id, cashier_id, subtotal, discount, total, note, title, updated_at,
+                                       subtotal_pence, discount_pence, total_pence)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(kind, customerId, cashierResolved.cashierId, subtotal, discount, total, note, title, nowIso());
+        .run(kind, customerId, cashierResolved.cashierId, subtotalPence / 100, discountPence / 100, totalPence / 100, note, title, nowIso(),
+          subtotalPence, discountPence, totalPence);
       const docId = info.lastInsertRowid;
-      for (const line of loaded) {
-        await db.prepare(
-          `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(
-          docId,
-          line.product ? line.product.id : null,
-          line.name,
-          line.sku,
-          line.unitPrice,
-          line.qty,
-          line.lineTotal,
-          line.lineType,
-          line.serviceId,
-          line.minutes
-        );
-      }
+      for (const line of loaded) await insertDocumentLine(docId, line);
       await db.exec('COMMIT');
       const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(docId);
       const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(docId);
@@ -312,36 +330,16 @@ export function register(route) {
       }
     }
 
-    const subtotal = loaded.reduce((sum, line) => sum + line.lineTotal, 0);
-    const total = Math.max(0, subtotal - discount);
+    const { subtotalPence, discountPence, totalPence } = documentTotalsPence(loaded, discount);
 
     await db.exec('BEGIN');
     try {
       await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
-      for (const line of loaded) {
-        await db.prepare(
-          `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(
-          id,
-          line.product ? line.product.id : null,
-          line.name,
-          line.sku,
-          line.unitPrice,
-          line.qty,
-          line.lineTotal,
-          line.lineType,
-          line.serviceId,
-          line.minutes
-        );
-      }
-      await db.prepare('UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, updated_at = ? WHERE id = ?').run(
-        subtotal,
-        discount,
-        total,
-        nowIso(),
-        id
-      );
+      for (const line of loaded) await insertDocumentLine(id, line);
+      await db.prepare(
+        `UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, subtotal_pence = ?, discount_pence = ?, total_pence = ?, updated_at = ?
+         WHERE id = ?`
+      ).run(subtotalPence / 100, discountPence / 100, totalPence / 100, subtotalPence, discountPence, totalPence, nowIso(), id);
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK');
@@ -387,7 +385,13 @@ export function register(route) {
       const product = await db.prepare('SELECT stock_qty FROM products WHERE id = ?').get(it.product_id);
       if (product) stock[it.product_id] = product.stock_qty;
     }
-    sendJson(res, 200, { subtotal, discount, groupDiscount: group.amount, groupName: group.name, total, stock });
+    sendJson(res, 200, {
+      subtotal, discount, groupDiscount: group.amount, groupName: group.name, total, stock,
+      subtotalPence: poundsToPence(subtotal),
+      discountPence: poundsToPence(discount),
+      groupDiscountPence: poundsToPence(group.amount),
+      totalPence: poundsToPence(total),
+    });
   });
 
   // Paying an order. The order's row is locked first and held until the sale and
@@ -530,12 +534,13 @@ export function register(route) {
       throw err;
     }
 
-    await db.prepare('UPDATE sale_documents SET status = ?, converted_sale_id = ?, updated_at = ? WHERE id = ?').run(
-      'converted',
-      saleId,
-      nowIso(),
-      id
-    );
+    // What was paid is the sale's total, in pence, as the 063 backfill has it
+    // (design.md Decisions 1 and 8: from step A, convert sets paid_pence).
+    await db.prepare(
+      `UPDATE sale_documents SET status = ?, converted_sale_id = ?, updated_at = ?,
+              paid_pence = (SELECT ROUND(s.total * 100)::int FROM sales s WHERE s.id = ?)
+       WHERE id = ?`
+    ).run('converted', saleId, nowIso(), saleId, id);
     // An order tied to a workshop job (the "Show in workshop diary" link) is
     // the customer paying for and collecting that job - being tendered off is
     // the real-world signal the job itself is done, so it auto-completes here

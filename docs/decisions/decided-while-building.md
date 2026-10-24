@@ -34,6 +34,37 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    API. No website is live and hosting isn't chosen, so this is left for
    WP-0.5 or the website stage.
 
+### 21 Oct 2026: sales in pence, step A (`openspec/changes/wp-1-6-sales-in-pence` task 1.4)
+
+No screen: server only.
+
+1. **A typed price finer than a penny is rounded to the penny once, per
+   unit, and the line is that times the quantity.** The pounds written
+   beside it come from the pence, so the old app now sees £0.33 and £0.99
+   for 3 at £0.333 where it used to store £0.333 and £0.999. Prices typed
+   to the penny are unchanged. *Pattern:* design.md Decision 2 (pence is the
+   authority, pounds worked out from it) and the money contract's
+   `ROUND(x * 100)`.
+2. **An order's `total_pence` has no group discount on it; `paid_pence` is
+   what the sale took.** So a group customer's converted order reads paid
+   less than its total. *Pattern:* the order's pounds total already left the
+   group discount to `createSale`; the totals check holds `paid_pence` to
+   the converted sale's total (design.md Decision 7).
+3. **The amount due (`GET /api/sale-documents/:id/due`) also gains `…Pence`
+   fields** beside its pounds. *Pattern:* the money contract (Decision 6):
+   an endpoint that returns pounds adds the pence beside them.
+
+### 22 Oct 2026: held work on an ended booking
+
+5. **Held work can't be resumed on a cancelled, declined or expired booking,
+   and hold stays refused on all of them.** Jack's "block both" (22 Oct)
+   left the resume gap to Mark. The server doesn't record whether held work
+   had started, so allowing hold on started work would trap it with no
+   resume. Work under way can still be finished or marked waiting for parts;
+   held work stays held and the bike can be collected. A "started at"
+   column would allow the finer rule (schema change, not made). Change
+   `ended-booking-resume`. *Pattern:* start's refusal.
+
 ### 22 Oct 2026: input checks (`openspec/changes/input-checks`, audit items 19, 21, 22)
 
 No screen: server only. Touches `docs/decisions/2026-10-16-mechanic-sign-off.md`
@@ -2044,3 +2075,18 @@ No screen: server only.
    little lower on the page; nothing inside it moves.
 4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
    shows the difference.
+
+### 24 Oct 2026: Don't close things by themselves, the screens (`openspec/changes/dont-close-screens`, `ys-wait`, `job-finished-wait`, `job-finished-sent`, `till-receipt-wait`)
+
+1. **A held Bike ready shows again when the job is opened again.** The
+   drawings show the strip just after marking the job ready. Without this,
+   closing the pop-up first would leave Bike ready waiting with no Send now
+   anywhere. The strip comes from the job's messages, and anyone who opens the
+   job can press Send now or Undo.
+2. **The sent line lasts while the pop-up is open**, as the minute's strip
+   does; when the job is opened again, Messages still shows that it went.
+3. **The job's Messages says a held Bike ready "waits until you press Send
+   now"**, beside its Waiting label (pattern: "goes at 10:15"). It isn't
+   checked every few seconds the way a message in its minute is.
+4. **The till's switch is the signed-in person's**, as all of Your settings
+   is until PINs; the cashier picked on the till doesn't change it.

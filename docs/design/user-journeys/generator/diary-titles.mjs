@@ -32,6 +32,9 @@ export const TITLE_OVERRIDE = {
   'phone-photo-check': 'Phone · check the photo before it’s added',
   'phone-photo-done': 'Phone · photo added',
   'phone-photo-expired': 'Phone · the code has expired or was used',
+  // Don't close things by themselves (24 Oct, morning questions answer 9).
+  'job-finished-wait': 'Job · finished, Don’t close things by themselves on: Bike ready waits for Send now or Undo',
+  'job-finished-sent': 'Job · finished, Bike ready sent with Send now',
   'idea-s2-before': 'S2 before · one-line customer strip',
   'idea-s2-after': 'S2 after · two-row customer strip',
   'idea-s3-before': 'S3 before · a note box under every checklist item',

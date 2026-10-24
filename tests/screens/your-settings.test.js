@@ -66,7 +66,9 @@ test('Your settings, as drawn: whose they are, the switch built, off, and change
   // Show status symbols, first as drawn, with its preview of two week blocks;
   // Larger text after Reduce motion (larger-text design 3).
   const switches = dialog.getAllByRole('switch').map((el) => el.getAttribute('aria-label'));
-  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion', 'Larger text', 'Folded sidebar']);
+  // Don't close things by themselves between them (app-map.mjs ys-wait; dont-close-screens).
+  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion', 'Don’t close things by themselves', 'Larger text', 'Folded sidebar']);
+  assert.ok(dialog.queryByText('Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.') !== null);
   assert.ok(dialog.queryByText('Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.') !== null);
   // Standard service is in Larger text's preview too.
   for (const words of ['Trek Domane AL 3', 'Standard service', 'Cannondale Quick', 'Gear adjustment']) assert.ok(dialog.queryAllByText(words).length > 0, words);
