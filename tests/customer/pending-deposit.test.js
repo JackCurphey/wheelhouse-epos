@@ -115,3 +115,28 @@ test('no deposit: the pop-up and the cancelled page are as before', async () => 
   const dialog = await openCancel(ui);
   assert.ok(dialog.getByText('There’s nothing to pay or refund.'));
 });
+
+// The review's findings.
+test('the cut-off passes with the pop-up open: refused, the link read again, and the pop-up turns late (review)', async () => {
+  let reads = 0;
+  current = await renderBookScreen({
+    file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
+    url: `/book/north/booking/${CODE}`, services: SERVICES,
+    bookingLink: (url, init) => {
+      if (init?.method === 'POST') return { status: 409, body: { error: 'It’s past the time you could cancel for free, so the deposit would be kept.', code: 'deposit_kept' } };
+      reads += 1;
+      return { status: 200, body: { ...MAYA, deposit: { ...DEP, refundable: reads === 1 } } };
+    },
+  });
+  const { ui } = current;
+  const dialog = await openCancel(ui);
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.click(dialog.getByRole('button', { name: 'Cancel booking' }));
+  assert.ok(await dialog.findByText('It’s past the time you could cancel for free, so the deposit would be kept.'));
+  assert.ok(await dialog.findByRole('button', { name: 'Cancel and lose the deposit' }));
+});
+
+test('a kept deposit with no cut-off stored still reads cleanly (review)', async () => {
+  const { ui } = await withLink({ ...MAYA, stage: 'cancelled', deposit: { ...DEP, state: 'kept', cancelUntil: null } }, () => ({ status: 500, body: {} }));
+  assert.ok(await ui.findByText(/Your £13\.00 deposit was kept\.$/));
+});

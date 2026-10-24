@@ -1,6 +1,7 @@
 import type { BookingLink, BookingStage } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
 import { formatFrom, formatMoney } from './service-selection.ts';
+import { pounds } from './money.ts';
 
 /**
  * The pending screen's rules: the words for each stage, and the summary lines
@@ -118,11 +119,9 @@ export function cancelSubline(link: BookingLink): string {
 /** "Sunday 4 October, 11:30": when the deposit was free to cancel until (deposit-booking-page). */
 export const cutOffText = (link: BookingLink) => (link.deposit?.cancelUntil ? `${dayLabel(link.deposit.cancelUntil.date)}, ${link.deposit.cancelUntil.time}` : '');
 
-/** "£13.00". */
-const money = (pence: number) => `£${(pence / 100).toFixed(2)}`;
 
 /** The deposit coming back (bk-cancelled, bk-declined; Jack, 24 Oct answer 5). */
-export const depositBack = (link: BookingLink) => (link.deposit ? `Your ${money(link.deposit.pence)} deposit comes back to your card within 5 to 10 working days.` : '');
+export const depositBack = (link: BookingLink) => (link.deposit ? `Your ${pounds(link.deposit.pence)} deposit comes back to your card within 5 to 10 working days.` : '');
 
 /**
  * "Thursday 17 September, Standard service for your Trek Domane AL 3. There’s
@@ -133,7 +132,8 @@ export function cancelledLine(link: BookingLink): string {
   const names = link.services.map((sv) => sv.name);
   const work = names.length === 0 ? 'your repair' : names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   const deposit = !link.deposit ? 'There’s nothing to pay or refund.'
-    : link.deposit.state === 'kept' ? `Your ${money(link.deposit.pence)} deposit was kept, because it was after ${cutOffText(link)}.`
+    : link.deposit.state === 'kept'
+      ? `Your ${pounds(link.deposit.pence)} deposit was kept${link.deposit.cancelUntil ? `, because it was after ${cutOffText(link)}` : ''}.`
     : depositBack(link);
   return `${dayLabel(link.jobDate)}, ${work} for your ${bikeName(link) || 'bike'}. ${deposit}`;
 }
