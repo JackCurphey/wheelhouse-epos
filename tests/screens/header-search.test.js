@@ -16,6 +16,7 @@ const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
 let searches;
+let calls;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -26,7 +27,9 @@ afterEach(async () => {
 
 async function open(path = '/workshop/today', { phone = false } = {}) {
   searches = [];
+  calls = [];
   globalThis.fetch = async (url) => {
+    calls.push(String(url));
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
@@ -119,4 +122,20 @@ test('on a phone, the search button opens the box over the page; Close search an
   fireEvent.click(button);
   fireEvent.keyDown(await ui.findByRole('dialog', { name: 'Search' }), { key: 'Escape' });
   await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Search' }) === null));
+});
+
+test('picking a job while already on the diary opens it there (review)', async () => {
+  const { ui, fireEvent, waitFor } = await open('/workshop/diary');
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs and customers' }), { target: { value: 'maya' } });
+  fireEvent.click(await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' }));
+  await waitFor(() => assert.ok(calls.some((c) => c.endsWith('/api/workshop-jobs/42')), 'the diary didn’t open the job'));
+});
+
+test('the count is said in one place that’s always there, so a screen reader hears it change (review)', async () => {
+  const { ui, fireEvent, waitFor } = await open();
+  const status = document.querySelector('[data-search-status]');
+  assert.ok(status, 'a status line before anything is typed');
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs and customers' }), { target: { value: 'maya' } });
+  await waitFor(() => assert.equal(status.textContent, '2 results'));
+  assert.ok(status.isConnected, 'the same line, not a new one');
 });

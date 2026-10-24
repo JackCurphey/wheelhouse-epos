@@ -54,6 +54,22 @@ test.describe('on a computer', () => {
   });
 });
 
+test.describe('on the diary', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('picking a job while on the diary opens it, and the same one again after closing it', async ({ page, context }) => {
+    await signIn(page, context, '/workshop/diary?date=2026-09-17');
+    const dialog = page.getByRole('dialog', { name: /Standard service/ });
+    for (let round = 0; round < 2; round++) {
+      await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs and customers' }).fill('maya');
+      await page.getByRole('region', { name: 'Search results' }).getByRole('link', { name: `${job.reference} · Maya Patel` }).click();
+      await expect(dialog).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+    }
+  });
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 

@@ -33,7 +33,7 @@ function useSettled(value: string, ms = 250) {
 function useSearch(typed: string) {
   const q = useSettled(typed.trim());
   const found = useQuery({ queryKey: ['search', q], queryFn: () => apiGet<Found>(`/api/search?q=${encodeURIComponent(q)}`), enabled: q.length >= 2 });
-  return { q, found: q.length >= 2 ? found.data ?? null : null };
+  return { q, found: q.length >= 2 ? found.data ?? null : null, failed: q.length >= 2 && found.isError };
 }
 
 // "Trek Domane AL 3 · Standard service · Expected · Thu 17 Sep": the bike, the job, its stage and day (walk-through 9 H1).
@@ -60,6 +60,14 @@ function Row({ to, main, sub, onPick }: { to: string; main: React.ReactNode; sub
   );
 }
 
+// What the search found, in words: said by the one status line that's always there (review).
+function said(q: string, found: Found | null, failed: boolean) {
+  if (failed) return 'Wheelhouse couldn’t search just now. Try again in a moment.';
+  if (!found) return '';
+  const count = found.jobs.length + found.customers.length;
+  return count ? `${count} result${count === 1 ? '' : 's'}` : `Nothing matches “${q}”`;
+}
+
 function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => void }) {
   const count = found.jobs.length + found.customers.length;
   const none = `Nothing matches “${q}”`;
@@ -82,7 +90,6 @@ function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => 
           </Group>
         ) : null}
       </section>
-      <span role="status" className="sr-only">{count ? `${count} result${count === 1 ? '' : 's'}` : none}</span>
     </>
   );
 }
@@ -99,7 +106,7 @@ function SearchBox({ value, onChange, onEscape, inputRef, big = false }: { value
         value={value}
         autoComplete="off"
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); onEscape(); } }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onEscape(); } }}
         className={`min-w-0 grow border-0 bg-transparent text-[var(--wh-ink)] outline-none ${big ? 'text-base' : 'text-sm'}`}
       />
     </label>
@@ -111,10 +118,22 @@ export function HeaderSearch() {
   const isPhone = useMedia('(max-width: 767px)');
   const [typed, setTyped] = useState('');
   const [open, setOpen] = useState(false);
-  const { q, found } = useSearch(typed);
+  const { q, found, failed } = useSearch(typed);
+  const status = <span role="status" data-search-status="" className="sr-only">{said(q, found, failed)}</span>;
+  const failedLine = failed ? <p role="alert" className="m-0 bg-[var(--wh-panel)] px-5 py-3 text-sm">Wheelhouse couldn’t search just now. Try again in a moment.</p> : null;
   const wrap = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const sheetInput = useRef<HTMLInputElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
+  // Over the page it holds the keyboard: Tab goes round its own box, links and Close (review); Escape shuts it.
+  const keepFocusIn = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Tab' || !sheet.current) return;
+    const stops = [...sheet.current.querySelectorAll<HTMLElement>('input, a[href], button')];
+    const [first, last] = [stops[0], stops[stops.length - 1]];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
   const clear = () => setTyped('');
   const close = () => { setOpen(false); setTyped(''); button.current?.focus(); };
   useEffect(() => { if (open) sheetInput.current?.focus(); }, [open]);
@@ -130,6 +149,8 @@ export function HeaderSearch() {
     return (
       <div ref={wrap} className="relative hidden shrink-0 md:block">
         <SearchBox value={typed} onChange={setTyped} onEscape={clear} />
+        {status}
+        {failed ? <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[460px] overflow-hidden rounded-[10px] border border-[var(--wh-border)]">{failedLine}</div> : null}
         {found ? (
           <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[460px] overflow-hidden rounded-[10px] border border-[var(--wh-border)] shadow-[0_12px_32px_var(--wh-backdrop)]">
             <Results q={q} found={found} onPick={clear} />
@@ -140,19 +161,22 @@ export function HeaderSearch() {
   }
   return (
     <>
+      {status}
       <button ref={button} type="button" aria-label={LABEL} aria-expanded={open} onClick={() => setOpen(true)}
         className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] md:text-[var(--wh-ink)] md:hover:bg-[var(--wh-hover)]">
         <NavIcon name="search" size={20} />
       </button>
       {open ? (
         <>
-          {isPhone ? <div aria-hidden="true" onClick={close} className="fixed inset-0 z-40 bg-[var(--wh-backdrop)]" /> : null}
-          <div role="dialog" aria-label="Search" onKeyDown={(e) => { if (e.key === 'Escape') close(); }}
+          {/* Tapping the page shuts it: dimmed on a phone, clear on a tablet (review). */}
+          <div aria-hidden="true" onClick={close} className={`fixed inset-0 z-40 ${isPhone ? 'bg-[var(--wh-backdrop)]' : ''}`} />
+          <div ref={sheet} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={keepFocusIn}
             className={`fixed z-50 flex flex-col bg-[var(--wh-panel)] text-[var(--wh-ink)] shadow-[0_12px_32px_var(--wh-backdrop)] ${isPhone ? 'inset-x-0 top-0 rounded-b-[14px] pb-1.5' : 'top-14 right-[22px] w-[480px] rounded-[10px] border border-[var(--wh-border)]'}`}>
             <div className="flex items-center gap-2 px-2.5 pt-2.5">
               <SearchBox big value={typed} onChange={setTyped} onEscape={close} inputRef={sheetInput} />
               <button type="button" onClick={close} className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm font-semibold">Close search</button>
             </div>
+            {failedLine}
             {found ? <Results q={q} found={found} onPick={close} /> : null}
           </div>
         </>

@@ -1813,3 +1813,7 @@ No screen: server only.
    out rather than drawn empty.
 6. **Escape clears the box on a computer**; on a tablet or phone it shuts the
    search, as Close search does, and the focus goes back to the search button.
+7. **The sheet over the page holds the keyboard** (Tab goes round it) and
+   tapping the page shuts it, on a tablet as on a phone (review).
+8. **"Wheelhouse couldn’t search just now. Try again in a moment."** when a
+   search fails (not drawn), as the screens' other failed loads say.

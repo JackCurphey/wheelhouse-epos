@@ -53,7 +53,7 @@ test('a job number, a phone number, a bike and an email each find it', async () 
   for (const q of [mayasJob.reference, mayasJob.reference.toLowerCase(), '900142', 'domane']) {
     assert.ok((await search(q)).body.jobs.some((j) => j.id === mayasJob.id), q);
   }
-  for (const q of ['07700 900142', 'maya@example']) {
+  for (const q of ['07700 900142', '07700900142', 'maya@example']) {
     assert.ok((await search(q)).body.customers.some((c) => c.id === maya.id), q);
   }
 });
@@ -82,4 +82,11 @@ test('what’s typed is a plain search, never a pattern', async () => {
   const res = await search('%_%');
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, { jobs: [], customers: [] }, 'a % or _ matched everything');
+});
+
+test('the numbers in a job number don’t find customers by phone (review)', async () => {
+  const sam = (await staff('/api/customers', { method: 'POST', body: { name: 'Sam Reed', phone: `07700 9${mayasJob.reference.replace(/\D/g, '')}` } })).body;
+  const res = await search(mayasJob.reference);
+  assert.ok(!res.body.customers.some((c) => c.id === sam.id), 'a phone number matched the job number');
+  assert.ok(res.body.jobs.some((j) => j.id === mayasJob.id));
 });
