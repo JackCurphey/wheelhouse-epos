@@ -16,9 +16,12 @@
    is taken and the fold says "no deposit". Switching on with no provider
    connected is refused with `code: 'payments_not_connected'`.
 3. **The provider** (`server/payments/provider.js`): `PAYMENTS_PROVIDER` is
-   `pretend` or `none`; left out, it is `pretend` except when
-   `NODE_ENV=production`, where it is `none`, so a real shop never takes a
-   pretend deposit. Stripe is added here later.
+   `pretend` or `none`; left out (or anything else), it is `none`, so a shop
+   running Wheelhouse for real, on its own computer or hosted, never takes a
+   pretend deposit (review: the shop's own Docker run sets no `NODE_ENV`).
+   The tests ask for `pretend`, as a developer's `.env` and the hosted test
+   copy can. Stripe is added here later, its keys joining the hosted copy's
+   guard (`REAL_KEY_PREFIXES`).
 4. **The amount** (`server/workshop/deposit.js`, `depositPence(settings,
    prices)`): pure. `prices` are each service's shown price in pence, or
    null when not known. Off, or no provider: null. Any price not known: the

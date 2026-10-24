@@ -36,6 +36,11 @@ test('a price not known takes the shop’s amount for that, or none', () => {
   assert.equal(depositPence({ ...PERCENT, depositUnknownPence: 1000 }, []), 1000, 'no service at all is a price not known');
 });
 
+test('switched on before How much is filled in: nothing', () => {
+  assert.equal(depositPence({ ...PERCENT, depositPercent: null }, [6500]), null);
+  assert.equal(depositPence({ ...PERCENT, depositKind: 'fixed', depositFixedPence: null }, [6500]), null);
+});
+
 test('a free booking takes nothing', () => {
   assert.equal(depositPence(PERCENT, [0]), null);
   assert.equal(depositPence({ ...PERCENT, depositKind: 'fixed', depositFixedPence: 2000 }, [0]), null);
@@ -48,19 +53,18 @@ test('today’s prices are pounds: turned into pence exactly', () => {
   assert.equal(poundsToPence(null), null);
 });
 
-test('the provider: pretend unless set, and never pretend in production unless asked for', () => {
+test('the provider: none unless the pretend one is asked for, whatever NODE_ENV is', () => {
   const was = { p: process.env.PAYMENTS_PROVIDER, n: process.env.NODE_ENV };
   try {
-    delete process.env.PAYMENTS_PROVIDER;
-    process.env.NODE_ENV = 'development';
-    assert.equal(paymentsProvider(), 'pretend');
-    process.env.NODE_ENV = 'production';
-    assert.equal(paymentsProvider(), 'none');
-    process.env.PAYMENTS_PROVIDER = 'pretend';
-    assert.equal(paymentsProvider(), 'pretend');
-    process.env.PAYMENTS_PROVIDER = 'stripe-not-yet';
-    process.env.NODE_ENV = 'development';
-    assert.equal(paymentsProvider(), 'pretend', 'an unknown one is ignored');
+    for (const n of ['development', 'production', undefined]) {
+      if (n === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = n;
+      delete process.env.PAYMENTS_PROVIDER;
+      assert.equal(paymentsProvider(), 'none', `left out, with NODE_ENV ${n}`);
+      process.env.PAYMENTS_PROVIDER = 'stripe-not-yet';
+      assert.equal(paymentsProvider(), 'none', 'an unknown one is none');
+      process.env.PAYMENTS_PROVIDER = 'pretend';
+      assert.equal(paymentsProvider(), 'pretend');
+    }
   } finally {
     if (was.p === undefined) delete process.env.PAYMENTS_PROVIDER; else process.env.PAYMENTS_PROVIDER = was.p;
     if (was.n === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = was.n;

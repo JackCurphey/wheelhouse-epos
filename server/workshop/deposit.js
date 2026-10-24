@@ -22,8 +22,9 @@ export function depositPence(settings, prices) {
   const total = prices.reduce((sum, p) => sum + p, 0);
   if (total <= 0) return null;
   // Whole pence times a whole percentage: exact in integers, then half up.
+  // An amount not filled in yet takes nothing (decided-while-building, deposits 2).
   const wanted = settings.depositKind === 'fixed'
     ? settings.depositFixedPence
-    : Math.floor((total * settings.depositPercent + 50) / 100);
+    : settings.depositPercent ? Math.floor((total * settings.depositPercent + 50) / 100) : null;
   return wanted ? Math.min(wanted, total) : null;
 }

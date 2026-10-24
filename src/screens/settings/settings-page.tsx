@@ -848,7 +848,8 @@ function ConfirmationNoteSetting() {
  * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
  * bk-settings-reserve): how long before a set-time booking bikes come in
  * (answers 3 and 7), shown while bikes are booked in for a set time, and the
- * time kept free each day (answers 1 and 6). The rest of the section comes later.
+ * time kept free each day (answers 1 and 6); then the confirmation note,
+ * notice, prices, confirming, Deposits (deposit-settings) and Terms.
  */
 function OnlineBookingBox() {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });

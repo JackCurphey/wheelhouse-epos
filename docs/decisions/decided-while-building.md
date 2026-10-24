@@ -1873,8 +1873,10 @@ No screen: server only.
    pounds and pence, from £0.01 to £10,000.
 5. **Deposits only switch on while a payment provider is connected** (the
    website settings' "booking deposits are off, until you connect [payment
-   provider]"); until a real account exists that is the pretend one, never
-   used by a shop running for real.
+   provider]"); until a real account exists that is the pretend one, and
+   only where it's asked for (`PAYMENTS_PROVIDER=pretend`: the tests, a
+   developer's computer, the hosted test copy), never by a shop running for
+   real (review).
 6. **"For: Every booking / Chosen services" waits for the service editor**,
    which the new app doesn't have yet; until then every booking takes it.
 7. **The note about declining shows only while automatic confirming is off**,
