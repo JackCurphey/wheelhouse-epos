@@ -3,8 +3,8 @@
 ## Decisions
 
 1. **Recent** is the latest of a customer's own change, their newest job and
-   their newest sale (`GET /api/customers/recent`, 25 of them, active only).
-2. **The match** (`GET /api/customers/matches?phone=&email=`): the same phone
+   their newest sale (`GET /api/recent-customers`, 25 of them, active only).
+2. **The match** (`GET /api/customer-matches?phone=&email=`): the same phone
    digits (however spaced, at least 7) or the same email, active customers,
    five at most. The pop-up asks once typing pauses; "Use [name]" opens that
    customer's page. Names alone don't match: too many people share one, and

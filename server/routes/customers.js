@@ -200,7 +200,7 @@ export function register(route) {
   // Recent customers (cs-list; customer service review 12): the latest of
   // their own change, newest job and newest sale, with their newest bike.
   // screens: customers
-  route('GET', '/api/customers/recent', async (req, res) => {
+  route('GET', '/api/recent-customers', async (req, res) => {
     const rows = await db.prepare(
       `SELECT c.*, (SELECT NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') FROM customer_bikes b
                      WHERE b.customer_id = c.id ORDER BY b.created_at DESC, b.id DESC LIMIT 1) AS bike_label,
@@ -216,7 +216,7 @@ export function register(route) {
   // A possible match while adding (cs-add-match; customer service review 5):
   // the same phone number, whatever its spaces, or the same email, active only.
   // screens: customers
-  route('GET', '/api/customers/matches', async (req, res, params, query) => {
+  route('GET', '/api/customer-matches', async (req, res, params, query) => {
     const digits = (query.get('phone') ?? '').replace(/\D/g, '');
     const email = (query.get('email') ?? '').trim().toLowerCase();
     const byPhone = digits || null;

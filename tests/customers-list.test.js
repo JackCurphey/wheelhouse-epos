@@ -49,7 +49,7 @@ test('recent customers: the newest job or change first', async () => {
   await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET updated_at = now() - interval '2 days' WHERE id IN (?, ?)").run(older.id, newer.id));
   await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET updated_at = now() - interval '1 day' WHERE id = ?").run(newer.id));
   await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Gear tune', jobDate: '2026-09-20', customerId: older.id } });
-  const ids = (await staff('/api/customers/recent')).body.map((c) => c.id);
+  const ids = (await staff('/api/recent-customers')).body.map((c) => c.id);
   assert.ok(ids.indexOf(older.id) >= 0 && ids.indexOf(older.id) < ids.indexOf(newer.id), JSON.stringify(ids));
 });
 
@@ -59,14 +59,14 @@ test('a recent customer carries their newest bike', async () => {
     await prepare("INSERT INTO customer_bikes (customer_id, make, model, created_at) VALUES (?, 'Giant', 'Escape 2', now() - interval '1 year')").run(lena.id);
     await prepare("INSERT INTO customer_bikes (customer_id, make, model) VALUES (?, 'Cube', 'Attain')").run(lena.id);
   });
-  const row = (await staff('/api/customers/recent')).body.find((c) => c.id === lena.id);
+  const row = (await staff('/api/recent-customers')).body.find((c) => c.id === lena.id);
   assert.equal(row.bikeLabel, 'Cube Attain');
   assert.equal(row.phone, '07700 900800');
 });
 
 test('a match by phone however it’s spaced, or by email; not a removed one or another shop’s', async () => {
   const jamie = await add({ name: 'Jamie Brooks', phone: '07700 900300', email: 'jamie@example.com' });
-  const match = async (q, who) => (await staff(`/api/customers/matches?${new URLSearchParams(q)}`, {}, who)).body;
+  const match = async (q, who) => (await staff(`/api/customer-matches?${new URLSearchParams(q)}`, {}, who)).body;
   assert.deepEqual((await match({ phone: '07700900300' })).map((c) => c.id), [jamie.id]);
   assert.deepEqual((await match({ phone: '07700 900 300' })).map((c) => c.id), [jamie.id]);
   assert.deepEqual((await match({ email: 'JAMIE@example.com' })).map((c) => c.id), [jamie.id]);
