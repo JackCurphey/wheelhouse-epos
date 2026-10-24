@@ -5,4 +5,4 @@
 - [x] 1.3 Build `server/routes/customer-merge.js`. Verify 1.2
 - [x] 2.1 Screen tests first: the notice and Check; the pop-up as drawn, only what differs, the choices; Merge, the page after; They're different people; the Undo line and Undo. Watch each fail
 - [x] 2.2 Build them; a browser test
-- [ ] 2.3 Log what's decided; `/review`; fresh review; lint and tests; archive as the last commit
+- [x] 2.3 Log what's decided; `/review`; fresh review; lint and tests; archive as the last commit
