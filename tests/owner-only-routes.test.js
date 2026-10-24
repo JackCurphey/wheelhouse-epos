@@ -88,6 +88,7 @@ for (const [method, path, body] of ROUTES) {
 // approved by name.
 const NOT_OWNER_ONLY = new Map([
   ['POST /api/messages/:id/undo', 'day-to-day: Undo a message in its minute, from the diary'],
+  ['POST /api/messages/:id/send-now', 'day-to-day: Send now for a held Bike ready, from the diary'],
   ['POST /api/message-templates/:key/preview', 'changes nothing: fills in the wording being typed'],
   ['POST /api/till/:shopSlug/sync', "a till's own sync, signed in with its token, not a staff session"],
   ['POST /api/till-attention/:id/resolve', 'day-to-day: clearing a till sale that needs attention'],
