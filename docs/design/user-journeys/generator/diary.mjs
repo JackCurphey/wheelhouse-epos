@@ -3204,8 +3204,81 @@ screens['job-collection-ticks'] = jobVariant('Collecting', 'green', collectionSt
 function collectedStripCompact() {
   return jpPanel(`${jpRow(`${badge('Collected', 'grey')}<span style="font-size: 13px; font-weight: 700">[time] · handed over by Jo Taylor</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Paid online · [date]</span>`, 8)}`, '', 6, 3);
 }
-const undoFooter = (size) => `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-grow: 1; min-height: 48px; padding: 4px 6px 4px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}Collected · the job is closed</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>`;
+const undoBar = (said) => `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-grow: 1; min-height: 48px; padding: 4px 6px 4px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}${said}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>`;
+const undoFooter = () => undoBar('Collected · the job is closed');
 screens['job-collected'] = jobVariant('Collected', 'grey', collectedStripCompact, () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Collected', 'grey')}<span style="font-size: 15px; font-weight: 700">[time]</span></div><span style="font-size: 13px; color: ${C.muted}">Handed over by Jo Taylor</span>`), undoFooter);
+
+// Deposits on the job (Jack, 24 Oct, docs/decisions/2026-10-24-morning-questions.md,
+// Deposits answers 2, 3 and 5). Drawn for Jack's approval, for journey 3's
+// canvas (bk-staff-deposit…); not rows of journey 12's.
+//   2: "the job page shows 'Deposit paid £[deposit]' with 'Refund the
+//      deposit' and a reason, at any stage": a strip at the top of the job,
+//      as the payment strips are, with the refund pop-up over it.
+//   3: a no-show keeps the deposit, marked by staff with "Didn't come" on
+//      the job; staff can still refund it by hand.
+//   5: the refund wording is "within 5 to 10 working days".
+// WH-1042 is drawn Expected (job-overview's page), the stage a booking's
+// deposit is paid at. Built without moving the counters that name the hover
+// styles, so every board after it keeps its class names (as job-book-in-print).
+const DEPOSIT_REFUND_NOTE = 'It goes back to the card they paid with, within 5 to 10 working days.';
+const depositRefundButton = (size) => button('Refund the deposit', { variant: 'default', size: size === 'desktop' ? 'sm' : 'default' });
+// paid: Refund offered. refunded: no button. kept (a no-show): Refund still offered.
+const DEPOSIT_LINE = {
+  paid: ['Deposit paid', 'green', '[date]'],
+  refunded: ['Deposit refunded', 'grey', '[date] · [reason]'],
+  kept: ['Deposit kept', 'grey', 'Didn’t come · marked by Jo Taylor · [date]'],
+};
+function depositStrip(kind, size = 'desktop', lead = '') {
+  const [head, tone, side] = DEPOSIT_LINE[kind];
+  const action = kind === 'refunded' ? '' : depositRefundButton(size);
+  return jpPanel(`${lead}${jpRow(`${badge(head, tone)}<span style="font-size: 13px; font-weight: 700">${jpMono('£[deposit]')}</span><span style="font-size: 12px; color: ${C.muted}">· ${side}</span><span style="flex-grow: 1"></span>${action}`, 8)}`, '', 6, 3);
+}
+function depositPhoneTop(kind, lead = '') {
+  const [head, tone, side] = DEPOSIT_LINE[kind];
+  return phoneStagePanel(`${lead}<div style="display: flex; align-items: center; gap: 8px">${badge(head, tone)}<span style="font-size: 15px; font-weight: 700">${jpMono('£[deposit]')}</span></div><span style="font-size: 13px; color: ${C.muted}">${side}</span>${kind === 'refunded' ? '' : `<div>${depositRefundButton('phone')}</div>`}`);
+}
+// Answer 3: the booked day has gone and the bike never came in. One tap on
+// "Didn't come" marks it, with Undo for a few minutes, as Collected has.
+const notComeLead = (size) => size === 'phone'
+  ? `<div style="display: flex; align-items: center; gap: 8px">${badge('Not come in', 'amber')}</div><span style="font-size: 14px">Booked for ${jpMono('Thu 17 Sep · 11:30')} · the bike hasn’t come in</span>`
+  : jpRow(`${badge('Not come in', 'amber')}<span style="font-size: 13px; font-weight: 600">Booked for ${jpMono('Thu 17 Sep · 11:30')} · the bike hasn’t come in</span>`, 8);
+const bookInFooter = (size) => button('Book in', { variant: 'primary', block: true, href: `job-book-in-${size}.dc.html` });
+const notComeFooter = (size) => `${button('Didn’t come', { variant: 'default', block: true })}${bookInFooter(size)}`;
+const didntComeFooter = () => undoBar('Marked Didn’t come · the deposit is kept');
+const expectedWithDeposit = ({ status = 'Expected', tone = 'blue', strip, phoneTop, footer }) => withJobExpected('WH-1042', () => buildJobPage({
+  status, tone,
+  touch: { footer, stageTop: strip, phoneTop },
+  desktop: {
+    stageTop: strip('desktop'),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_NONE,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: status, bikeHere: false,
+    lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
+    footer: footer('desktop'),
+  },
+}));
+// The refund pop-up: the whole deposit, a reason (needed), where it goes.
+function depositRefundDialog(size, back) {
+  const fact = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; min-height: 40px; align-items: center; border-top: 1px solid ${C.border}; font-size: 14px"><span>${esc(k)}</span><span style="font-weight: 600">${v}</span></div>`;
+  const reason = field('Reason (needed)', { id: `deposit-reason-${size}`, value: '[reason]' }).replace('<input ', '<input required aria-required="true" ');
+  return `${dialogHeader('Refund the deposit', back, 'Maya Patel · Standard service · WH-1042', 'deposit-refund-title', size)}
+${dialogBody(`<div style="display: flex; flex-direction: column; border-bottom: 1px solid ${C.border}">${fact('The whole deposit, paid [date]', jpMono('£[deposit]'))}</div>${reason}${note(DEPOSIT_REFUND_NOTE, 14)}`)}
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: back })}${button('Refund £[deposit]', { variant: 'primary' })}</div>`;
+}
+{
+  const seqs = [hoverSeq, devSeq, requestConnectorSeq];
+  screens['job-deposit'] = expectedWithDeposit({ strip: (size) => depositStrip('paid', size), phoneTop: () => depositPhoneTop('paid'), footer: bookInFooter });
+  screens['job-deposit-refunded'] = expectedWithDeposit({ strip: (size) => depositStrip('refunded', size), phoneTop: () => depositPhoneTop('refunded'), footer: bookInFooter });
+  screens['job-not-come'] = expectedWithDeposit({ strip: (size) => depositStrip('paid', size, notComeLead(size)), phoneTop: () => depositPhoneTop('paid', notComeLead('phone')), footer: notComeFooter });
+  screens['job-didnt-come'] = expectedWithDeposit({ status: 'Didn’t come', tone: 'grey', strip: (size) => depositStrip('kept', size), phoneTop: () => depositPhoneTop('kept'), footer: didntComeFooter });
+  [hoverSeq, devSeq, requestConnectorSeq] = seqs;
+  const back = (size) => `job-deposit-${size}.dc.html`;
+  screens['job-deposit-refund'] = {
+    desktop: dialogOverlay(screens['job-deposit'].desktop, DW, DH, depositRefundDialog('desktop', back('desktop')), { maxWidth: 520, labelledby: 'deposit-refund-title' }),
+    tablet: dialogOverlay(screens['job-deposit'].tablet, TW, TH, depositRefundDialog('tablet', back('tablet')), { maxWidth: 520, labelledby: 'deposit-refund-title' }),
+    phone: dialogOverlay(screens['job-deposit'].phone, PW, PH, depositRefundDialog('phone', back('phone')), { pad: 16, maxWidth: 360, labelledby: 'deposit-refund-title' }),
+  };
+}
 
 // Journey 13 decision 2 (30 Sep): a part a job is waiting for gets flagged
 // when it's booked in. The job stays "Waiting for parts" until someone

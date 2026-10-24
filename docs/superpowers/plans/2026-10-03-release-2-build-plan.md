@@ -661,6 +661,7 @@ later packages.
 - **`pending`** (block 40, Message or outcome page) — 1 situation: `expired`.
 - Added to the `bk-page` board (built in WP-4.2) — 11 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-request-expired`, `bk-expired`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 3 situations: `bk-staff-request`, `bk-staff-confirmed`, `bk-staff-decline`.
+- Added to the `job-overview` board (built in WP-4.1) — 5 situations: `bk-staff-deposit`, `bk-staff-deposit-refund`, `bk-staff-deposit-refunded`, `bk-staff-no-show`, `bk-staff-no-show-kept` (deposits on the job, drawn 24 Oct for Jack's approval).
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `bk-messages`.
 - Added to the `set-msg-edit` board (built in WP-1.8) — 6 situations: `bk-msg-request`, `bk-msg-confirmed`, `bk-msg-offered`, `bk-msg-declined`, `bk-msg-change`, `bk-msg-cancelled`.
 <!-- /screens -->
