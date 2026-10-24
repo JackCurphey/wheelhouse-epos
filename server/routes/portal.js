@@ -448,13 +448,15 @@ async function customerQuote(result, jobId) {
   ).get(jobId);
   const showPrices = (await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get())?.show_prices_online === 1;
   const q = serializeQuoteWithLines(result.quote, result.lines, result.totals);
+  const agreedPence = await agreedBeforePence(result.quote, showPrices);
   return {
     ...q,
     lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
     mechanicName: shows ? who?.mechanic_name ?? null : null,
     earlier: await earlierAnswers(result.quote),
-    // In pence, so the card adds the ticked lines' pence to it (sales in pence, step A′).
-    ...(await agreedBeforePence(result.quote, showPrices).then((p) => ({ agreedTotal: p === null ? null : p / 100, agreedTotalPence: p }))),
+    // In pence too, so the card adds the ticked lines' pence to it (sales in pence, step A′).
+    agreedTotal: agreedPence === null ? null : agreedPence / 100,
+    agreedTotalPence: agreedPence,
     spendLimit: who?.spend_limit ?? null,
     // When the quote's reminder went, if it has (dq-quote-reminded).
     reminderSentAt: (await db.prepare(
@@ -480,7 +482,7 @@ async function jobMoney(jobId) {
       ORDER BY d.id DESC LIMIT 1`
   ).get(jobId);
   const items = order
-    ? await db.prepare('SELECT name, unit_price, qty, line_total, line_total_pence FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
+    ? await db.prepare('SELECT name, unit_price, qty, line_total_pence FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
     : [];
   // Every revision the customer saw, not only the newest: a newer quote keeps
   // the earlier answers (fresh review). Priced in the database, as the quote is.
@@ -498,7 +500,7 @@ async function jobMoney(jobId) {
   // (sales in pence, step A′); null with prices hidden, as each line's is.
   const workTotalPence = showPrices && items.length ? items.reduce((n, l) => n + l.line_total_pence, 0) : null;
   return {
-    work: items.map((l) => ({ name: l.name, price: figure(l.line_total) })),
+    work: items.map((l) => ({ name: l.name, price: figure(l.line_total_pence / 100) })),
     workTotalPence,
     workTotal: workTotalPence === null ? null : workTotalPence / 100,
     declined: declined.map((l) => ({ name: l.description, price: figure(l.line_total) })),

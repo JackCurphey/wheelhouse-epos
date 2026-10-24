@@ -653,27 +653,32 @@ export async function addApprovedLinesToOrder(quoteId) {
 // plus each booked service's price not already on it (matched by service),
 // plus the quote's lines, summed by the database.
 export async function wholeBill(quoteId, jobId) {
+  // The order and the booked services not on it, worked out once; the whole
+  // bill adds every line, the proposed total only those still to join the
+  // order: waiting for an answer, or said yes to one at a time (the customer's
+  // line decisions) before the whole answer adds them.
   const row = await db.prepare(
-    `SELECT j.spend_limit,
-            (COALESCE(d.total_pence, 0)
-            + COALESCE((SELECT sum(js.booked_price_pence) FROM workshop_job_services js
-                         WHERE js.workshop_job_id = j.id
-                           AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
-            + COALESCE((SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?), 0))::int AS whole_bill_pence,
-            (COALESCE(d.total_pence, 0)
-            + COALESCE((SELECT sum(js.booked_price_pence) FROM workshop_job_services js
-                         WHERE js.workshop_job_id = j.id
-                           AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
-            + COALESCE((SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ? AND l.decision = 'pending'), 0))::int AS proposed_pence,
-            (SELECT count(*) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?) AS lines
-       FROM workshop_jobs j
-       LEFT JOIN sale_documents d ON d.workshop_job_id = j.id AND d.kind = 'order' AND d.status <> 'cancelled'
-      WHERE j.id = ?
-      ORDER BY d.id DESC LIMIT 1`
-  ).get(quoteId, quoteId, quoteId, jobId);
-  // In pence (sales in pence, step A′), and the same in pounds as before. The
-  // proposed total is the same bill with only the lines still waiting for an
-  // answer: answered yeses are on the order already (the job page's Proposed total).
+    `WITH base AS (
+       SELECT j.spend_limit,
+              COALESCE(d.total_pence, 0)
+              + COALESCE((SELECT sum(js.booked_price_pence) FROM workshop_job_services js
+                           WHERE js.workshop_job_id = j.id
+                             AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0) AS pence
+         FROM workshop_jobs j
+         LEFT JOIN sale_documents d ON d.workshop_job_id = j.id AND d.kind = 'order' AND d.status <> 'cancelled'
+        WHERE j.id = ?
+        ORDER BY d.id DESC LIMIT 1
+     ), lines AS (
+       SELECT COALESCE(sum(${linePence('l.')}), 0) AS all_pence,
+              COALESCE(sum(${linePence('l.')}) FILTER (WHERE l.decision = 'pending' OR (l.decision = 'approved' AND l.added_to_order_at IS NULL)), 0) AS to_join_pence,
+              count(*) AS n
+         FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?
+     )
+     SELECT base.spend_limit, (base.pence + lines.all_pence)::int AS whole_bill_pence,
+            (base.pence + lines.to_join_pence)::int AS proposed_pence, lines.n AS lines
+       FROM base, lines`
+  ).get(jobId, quoteId);
+  // In pence (sales in pence, step A′), and the same in pounds as before.
   return row ? {
     spendLimit: row.spend_limit ?? null, wholeBillPence: row.whole_bill_pence, wholeBill: row.whole_bill_pence / 100, lines: Number(row.lines),
     proposedPence: row.proposed_pence,

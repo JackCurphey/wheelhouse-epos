@@ -85,6 +85,21 @@ test('a sent quote’s proposed total is the booked work and the lines still wai
   assert.equal(read.proposedTotal, 95);
 });
 
+// Fresh review: a line the customer has said yes to one at a time isn't on
+// the order until the whole answer goes, so it is still proposed.
+test('a sent quote’s proposed total keeps a line said yes to that hasn’t joined the order', async () => {
+  const job = await bookedJob(null);
+  const q = await draft(job.id, [PADS, FIT]);
+  assert.equal((await staff(`/api/quotes/${q.id}/send`, { method: 'POST', body: {} })).status, 200);
+  const pads = (await staff(`/api/quotes/${q.id}`)).body.lines.find((l) => l.description === PADS.description);
+  const yes = await portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/quotes/${q.id}/lines/${pads.id}/decision`, { method: 'POST', body: { decision: 'approved' } });
+  assert.equal(yes.status, 200, JSON.stringify(yes.body));
+  const read = (await staff(`/api/quotes/${q.id}`)).body;
+  assert.equal(read.state, 'sent');
+  assert.equal((await staff(`/api/sale-documents/${job.orderId}`)).body.items.length, 0, 'the pads aren’t on the order yet');
+  assert.equal(read.proposedTotalPence, 6500 + 2800 + 1800);
+});
+
 test('the customer’s quote says what was agreed before in pence, for the Approve total', async () => {
   const job = await bookedJob(null);
   const q = await draft(job.id, [PADS, FIT]);
@@ -100,11 +115,15 @@ test('the booking page’s Work agreed total is the order’s lines summed by th
   const job = await bookedJob(200);
   const q = await draft(job.id, [PADS, FIT]);
   assert.equal((await staff(`/api/quotes/${q.id}/within-limit`, { method: 'POST', body: {} })).status, 200);
-  await inShop("UPDATE sale_document_items SET line_total_pence = 3000 WHERE document_id = ? AND name = 'Shimano brake pads'", job.orderId);
+  // Lines on the order count once, in the order: the booked service and the order.
+  assert.equal((await staff(`/api/quotes/${q.id}`)).body.proposedTotalPence, 6500 + 2800 + 1800);
+  await inShop("UPDATE sale_document_items SET line_total_pence = 3050 WHERE document_id = ? AND name = 'Shimano brake pads'", job.orderId);
   const code = await linkCode(job.id);
   const link = await portal(code);
-  assert.equal(link.workTotalPence, 3000 + 1800);
-  assert.equal(link.workTotal, 48);
+  assert.equal(link.workTotalPence, 3050 + 1800);
+  assert.equal(link.workTotal, 48.5);
+  // Each line's price is from its pence too, so the lines add up to the total.
+  assert.deepEqual(link.work.map((l) => l.price), [30.5, 18]);
   // With prices hidden online, no total either, as every line's price is hidden.
   await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: false } });
   try {

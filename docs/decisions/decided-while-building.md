@@ -2148,7 +2148,8 @@ follows the job checklist, the closest pattern built.
 
 1. **The job page's Proposed total comes from the server**, worked out from
    the pence: the order, any booked service not on it yet, and the quote's
-   lines still waiting for an answer. For a draft that is the whole bill the
+   lines not on the order yet (waiting for an answer, or said yes to one at a
+   time before the whole answer adds them). For a draft that is the whole bill the
    limit is checked against, as before. For a sent quote the screen used to
    add only the order and the waiting lines, so a quote sent before the
    booked service joined the order showed less than its draft had; it now
