@@ -1983,7 +1983,7 @@ No screen: server only.
 4. **The cut-off is judged by the server's clock**, as every other time rule.
 5. **A moved booking's "Free to cancel until" moves with it**: the same hours
    before its new start, in the shop's time, however it was moved (review).
-6. **A request the shop hasn't confirmed yet, cancelled after the cut-off,
-   keeps the deposit**, as the words on step 4 say ("After that, or if you
-   don't come, the shop keeps it"). For Jack: a request for tomorrow is past
-   its cut-off at once (review).
+6. ~~A request the shop hasn't confirmed yet, cancelled after the cut-off,
+   keeps the deposit.~~ **Overruled by Jack, 24 Oct**: a request the shop
+   hasn't confirmed always gets its deposit back
+   (`docs/decisions/2026-10-24-request-deposit-refund.md`).

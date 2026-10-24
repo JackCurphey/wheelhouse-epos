@@ -43,12 +43,14 @@ const paymentOf = (jobId) => inShop(() => prepare('SELECT * FROM online_payments
 const version = async (id) => (await staff(`/api/workshop-jobs/${id}`)).body.version;
 
 /** A paid booking: its job id, link code and the provider's ref. */
-async function booked() {
+async function booked({ confirm = true } = {}) {
   const requestKey = randomBytes(32).toString('base64url');
   const hold = await post('/deposit-holds', { serviceIds: [service], requestKey });
   await post(`/pretend-payments/${hold.body.ref}/card`, { cardNumber: '4242424242424242' });
   const res = await tryBooking(server.baseUrl, customer.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds: [service], requestKey, paymentId: hold.body.paymentId });
   assert.equal(res.status, 201, JSON.stringify(res.body));
+  // Confirmed by the shop unless asked not to: only a confirmed booking can keep a deposit (Jack, 24 Oct).
+  if (confirm) assert.equal((await staff(`/api/workshop-jobs/${res.body.id}/accept`, { method: 'POST', body: { version: await version(res.body.id) } })).status, 200);
   return { id: res.body.id, code: res.body.privateLink.split('/').pop(), ref: hold.body.ref };
 }
 const link = async (code) => (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/${code}`)).json();
@@ -96,18 +98,17 @@ test('late, choosing to lose it: cancelled, and the deposit kept', async () => {
 });
 
 test('the shop declining, letting it expire, or cancelling refunds it', async () => {
-  const declined = await booked();
+  const declined = await booked({ confirm: false });
   assert.equal((await staff(`/api/workshop-jobs/${declined.id}/decline`, { method: 'POST', body: { version: await version(declined.id), message: 'Sorry, we are full' } })).status, 200);
   assert.equal((await pretendStatus(declined.ref)).status, 'refunded');
   assert.equal((await paymentOf(declined.id)).refund_reason, 'Declined');
 
-  const expired = await booked();
+  const expired = await booked({ confirm: false });
   assert.equal((await staff(`/api/workshop-jobs/${expired.id}/expire`, { method: 'POST', body: { version: await version(expired.id) } })).status, 200);
   assert.equal((await pretendStatus(expired.ref)).status, 'refunded');
   assert.equal((await link(expired.code)).deposit.state, 'refunded');
 
   const cancelled = await booked();
-  assert.equal((await staff(`/api/workshop-jobs/${cancelled.id}/accept`, { method: 'POST', body: { version: await version(cancelled.id) } })).status, 200);
   assert.equal((await staff(`/api/workshop-jobs/${cancelled.id}/cancel`, { method: 'POST', body: { version: await version(cancelled.id) } })).status, 200);
   assert.equal((await pretendStatus(cancelled.ref)).status, 'refunded');
   assert.equal((await paymentOf(cancelled.id)).refund_reason, 'Cancelled by the shop');
@@ -158,4 +159,20 @@ test('a deposit only held when a refund is owed is let go (review)', async () =>
   assert.equal((await post(`/booking-links/${b.code}/cancel`, {})).status, 200);
   assert.equal((await pretendStatus(b.ref)).status, 'released');
   assert.deepEqual([(await paymentOf(b.id)).status, (await link(b.code)).deposit.state], ['released', 'refunded']);
+});
+
+// Jack, 24 Oct: a shop can't keep a deposit for a booking it hasn't confirmed
+// (docs/decisions/2026-10-24-request-deposit-refund.md).
+test('a request not yet confirmed, cancelled after its cut-off, is refunded (Jack, 24 Oct)', async () => {
+  const requestKey = randomBytes(32).toString('base64url');
+  const hold = await post('/deposit-holds', { serviceIds: [service], requestKey });
+  await post(`/pretend-payments/${hold.body.ref}/card`, { cardNumber: '4242424242424242' });
+  const res = await tryBooking(server.baseUrl, customer.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds: [service], requestKey, paymentId: hold.body.paymentId });
+  const code = res.body.privateLink.split('/').pop();
+  await pastCutOff(res.body.id);
+  assert.equal((await link(code)).deposit.refundable, true, 'the link says it would be refunded');
+  const cancelled = await post(`/booking-links/${code}/cancel`, {});
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+  assert.equal((await pretendStatus(hold.body.ref)).status, 'refunded');
+  assert.equal(cancelled.body.deposit.state, 'refunded');
 });
