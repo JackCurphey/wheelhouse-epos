@@ -13,7 +13,7 @@ import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } f
 import { dayLabel } from './date-rules.ts';
 import { pounds } from './deposit.tsx';
 import {
-  COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
+  COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, cutOffText, depositBack, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
 /**
@@ -98,9 +98,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   // Changing and cancelling online come later, so the link and contact lines stay.
   // A cancelled booking (drawn as bk-cancelled). No texts are sent yet, so
   // the drawing's "We've sent you a text to confirm." is left out.
-  // A declined booking (drawn as bk-declined), with the shop's message. No
-  // deposits yet, and the booking flow doesn't keep the details, so the
-  // drawing's deposit line and "— we've kept your details" are left off.
+  // A declined booking (drawn as bk-declined), with the shop's message and
+  // the deposit coming back (deposit-refund-pages). The booking flow doesn't
+  // keep the details, so the drawing's "— we've kept your details" is left off.
   if (link.stage === 'declined') {
     return (
       <BookFrame title="Sorry, we can’t fit this booking in" eyebrow="Not booked">
@@ -111,7 +111,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
               <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-[15px] leading-normal">{`“${link.declineMessage}”`}</blockquote>
             </>
           )}
-          <p className="m-0 text-[15px] leading-normal">Nothing is booked.</p>
+          <p className="m-0 text-[15px] leading-normal">{link.deposit ? `Nothing is booked. ${depositBack(link)}` : 'Nothing is booked.'}</p>
           <div>
             <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Choose another date</Link>
           </div>
@@ -123,13 +123,13 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
 
   // A request the shop never answered, once expired (Jack, 21 Oct, booking
   // page stages answer 2; drawn as bk-request-expired). As the declined page
-  // is built: no deposits yet, so no deposit line.
+  // is built, with the deposit coming back (deposit-refund-pages).
   if (link.stage === 'request_expired') {
     return (
       <BookFrame title="Sorry, we couldn’t get back to you in time" eyebrow="Not booked">
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           <p className="m-0 text-[15px] leading-normal">{`${link.shopName} couldn’t answer your request for ${whenLine(link)} in time, so it has expired.`}</p>
-          <p className="m-0 text-[15px] leading-normal">Nothing is booked.</p>
+          <p className="m-0 text-[15px] leading-normal">{link.deposit ? `Nothing is booked. ${depositBack(link)}` : 'Nothing is booked.'}</p>
           <div>
             <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Choose another date</Link>
           </div>
@@ -201,7 +201,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             {row('When', offered && link.offer ? `${dayLabel(link.offer.fromDate)}${link.offer.fromTime ? `, ${link.offer.fromTime}` : ''} — not available` : whenLine(link))}
             {/* The deposit (bookingLines in book.mjs; deposit-booking-page design 2). */}
             {link.deposit && row('Deposit paid', <span className="font-[family-name:var(--wh-font-mono)]">{pounds(link.deposit.pence)}</span>)}
-            {link.deposit?.cancelUntil && row('Free to cancel until', `${dayLabel(link.deposit.cancelUntil.date)}, ${link.deposit.cancelUntil.time}`)}
+            {link.deposit?.cancelUntil && link.deposit.refundable !== false && row('Free to cancel until', `${dayLabel(link.deposit.cancelUntil.date)}, ${link.deposit.cancelUntil.time}`)}
             {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
           </div>
           {(link.description || answerList) && (
@@ -496,8 +496,8 @@ function ExpiredPage({ details, shopSlug }: { details: ExpiredLink | null; shopS
 }
 
 /**
- * Cancel booking (Jack, 1 Oct, decision 10; 19 Oct; drawn as bk-cancel, with
- * bk-cancel-ls's words since no shop takes deposits yet): asked once; the
+ * Cancel booking (Jack, 1 Oct, decision 10; 19 Oct; drawn as bk-cancel and
+ * bk-cancel-late, or bk-cancel-ls's words with no deposit): asked once; the
  * reply replaces the cached link, so the page becomes the cancelled page.
  */
 function CancelBooking({ link, shopSlug, code, request = false, label }: { link: BookingLink; shopSlug: string; code: string; request?: boolean; label?: string }) {
@@ -506,12 +506,16 @@ function CancelBooking({ link, shopSlug, code, request = false, label }: { link:
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const close = () => { setOpen(false); setError(null); };
+  // The deposit: refunded if it's in time, kept after (bk-cancel, bk-cancel-late).
+  const deposit = link.deposit && link.deposit.state === 'paid' ? link.deposit : null;
+  const late = !!deposit && deposit.refundable === false;
 
   async function cancel() {
     setBusy(true);
     setError(null);
     try {
-      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/cancel`, {}, { method: 'POST' });
+      // Past the cut-off the customer chose to lose the deposit (deposit-refunds design 3).
+      const reply = await apiMutate<BookingLink>(`${bookingLinkPath(shopSlug, code)}/cancel`, late ? { losesDeposit: true } : {}, { method: 'POST' });
       queryClient.setQueryData(['portal', shopSlug, 'booking-link', code], reply);
       setOpen(false);
     } catch (err) {
@@ -536,12 +540,22 @@ function CancelBooking({ link, shopSlug, code, request = false, label }: { link:
           <DialogClose onClick={close} />
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
-          <p className="m-0 text-[15px] leading-normal">There’s nothing to pay or refund.</p>
+          {!deposit ? <p className="m-0 text-[15px] leading-normal">There’s nothing to pay or refund.</p>
+            : late ? (
+              <p className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]">
+                {`It’s past ${cutOffText(link)}, so `}<strong>{`your ${pounds(deposit.pence)} deposit isn’t refundable`}</strong>
+                {`. If something’s gone wrong, call the shop${link.shop?.phone ? ` on ${link.shop.phone}` : ''} — they can still refund it.`}
+              </p>
+            ) : (
+              <p className="m-0 rounded-lg bg-[var(--wh-ok-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-status-complete-ink)]">
+                <strong>{`Your ${pounds(deposit.pence)} deposit will be refunded`}</strong>{' to the card you paid with, within 5 to 10 working days.'}
+              </p>
+            )}
           {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}
         </DialogBody>
         <DialogFooter className="flex justify-between gap-2.5">
           <Button variant="ghost" onClick={close}>{request ? 'Keep my request' : 'Keep my booking'}</Button>
-          <Button variant="danger" disabled={busy} onClick={() => void cancel()}>{request ? 'Cancel request' : 'Cancel booking'}</Button>
+          <Button variant="danger" disabled={busy} onClick={() => void cancel()}>{late ? 'Cancel and lose the deposit' : request ? 'Cancel request' : 'Cancel booking'}</Button>
         </DialogFooter>
       </Dialog>
     </>
