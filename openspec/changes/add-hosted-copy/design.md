@@ -122,8 +122,8 @@ hold:
   would otherwise match.
 
 It then works like this:
-- **The commit.** It deploys `workflow_run.head_sha`, never `GITHUB_SHA`,
-  which is just the latest `main`. It builds the image in GitHub Actions,
+- **The commit.** It deploys a commit whose Tests passed (see Order), never
+  `GITHUB_SHA`, which is just the latest `main` whether tested or not. It builds the image in GitHub Actions,
   pushes it to GitHub's container registry tagged with that commit (the
   package made public, as the repo is, so the server pulls it without a
   token), then logs into the server with a deploy-only SSH key (a repository
@@ -132,13 +132,22 @@ It then works like this:
   root on that server, so it is used for nothing else. The previous image stays on the server for
   rolling back.
 - **Order.** One concurrency group (`hosted-copy`), without cancelling a
-  deploy already under way. Before deploying, it skips a commit that is an
-  ancestor of the one already running, so two quick merges finishing out of
-  order can't put the older one on top.
+  deploy already under way. GitHub keeps only one run waiting in a group, so
+  a newer run arriving cancels the one waiting (fresh review, 24 Oct). So
+  each run deploys **the newest `main` commit whose Tests passed**, not just
+  its own, and checks it out to build; its own commit is always that one or
+  an older one. It skips when that commit is already running, or is an
+  ancestor of the one running, so merges finishing out of order can't put an
+  older one on top, and a cancelled waiting run's commit still goes on with
+  the next. The choice is `scripts/hosting/pick-deploy.sh`, tested against a
+  real git history.
 - **Watching to the end.** It waits until `/healthz`, over HTTPS, answers
   `ok` with the new commit (task 2.4). If that doesn't happen
-  within [n] minutes, the workflow fails, which emails Mark through GitHub,
-  and it starts the previous image again.
+  within 5 minutes in all (`scripts/hosting/wait-healthy.sh`, counting by
+  the clock, not by tries), the workflow fails, which emails the person who
+  merged through GitHub, and it starts the previous image again. It also
+  starts the previous image if the job is cancelled or runs out of time after
+  the new one went on (fresh review, 24 Oct).
 - **Settings at build time.** `NODE_ENV` is a run-time setting only. If it
   reached the image build, `npm ci` would skip the tools the build stage
   needs.
