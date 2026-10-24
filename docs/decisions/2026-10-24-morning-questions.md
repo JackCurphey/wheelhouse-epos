@@ -20,8 +20,8 @@ and Your settings). Each answer was option 1 of the choices put to him.
    drawings as they are"):* `bk-staff-deposit`, `bk-staff-deposit-refund`,
    `bk-staff-deposit-refunded`, `bk-staff-no-show` and
    `bk-staff-no-show-kept` in `book.mjs`. Answer 2's refund is drawn there
-   too. The Undo after "Didn't come" stays until staff leave the job, as
-   answer 9 says ("Don’t close things by themselves").
+   too. The Undo after "Didn’t come" waits until staff leave the job, as answer
+   9 has Bike ready’s Undo wait (decided while building).
 4. **Online deposits now; the till's deposit (`till-job-deposit`) after Mark's
    sales in pence (#404)**, which rewrites the till's payment code.
 5. **The refund wording is "within 5 to 10 working days"**, checked against
