@@ -24,7 +24,8 @@
 // screens at other addresses ({ date: 'DateScreen' } loads
 // screens/book/date.js), so a test can see a guard on the screen a customer
 // went back to (WP-0.2); `strict` renders inside React.StrictMode, as the
-// customer app does (src/customer/main.tsx).
+// customer app does (src/customer/main.tsx). `depositHold` and `card` answer
+// /deposit-holds and the pretend card form (deposit-pay-screen).
 import { installDom, importFresh } from './dom.js';
 
 const BUILD = new URL('../../.test-build/', import.meta.url);
@@ -41,7 +42,7 @@ const BOOKED = () => ({
 export async function renderBookScreen({
   file, exportName, at, url, services, draft, mechanics = NO_MECHANICS, availability = NO_AVAILABILITY,
   terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state, real = {}, strict = false,
-  media, photoCode = NO_LINK,
+  media, photoCode = NO_LINK, depositHold = NO_LINK, card = NO_LINK,
 }) {
   const uninstall = installDom(`http://localhost${url}`);
   // A pretend screen: media(query) says which media queries match, as a phone
@@ -77,6 +78,8 @@ export async function renderBookScreen({
         : pathname.endsWith('/terms') ? terms
           : pathname.includes('/booking-links/') ? bookingLink
             : pathname.includes('/photo-codes/') ? photoCode
+            : pathname.endsWith('/deposit-holds') ? depositHold
+            : pathname.includes('/pretend-payments/') ? card
             : pathname.endsWith('/bookings') ? booking
               : services;
     const { status, body } = typeof source === 'function' ? await source(address, init) : { status: 200, body: source };

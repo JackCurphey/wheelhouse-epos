@@ -60,7 +60,7 @@ export function register(route) {
       }
       await dbExec('COMMIT');
       made = null;
-      sendJson(res, 200, { paymentId: row.id, depositPence: deposit.pence, provider: provider.name, ref });
+      sendJson(res, 200, { paymentId: row.id, depositPence: deposit.pence, depositCancelHours: deposit.cancelHours, provider: provider.name, ref });
     } catch (err) {
       await dbExec('ROLLBACK');
       if (made) await provider.release(made).catch((e) => console.error('deposit hold not recorded, and couldn’t be let go', e));

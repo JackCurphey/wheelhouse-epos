@@ -46,6 +46,7 @@ import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '.
 import { readRequestKey } from '../booking-request-key.js';
 import { bookingDeposit } from '../workshop/booking-deposit.js';
 import { payments } from '../payments/index.js';
+import { paymentsConnected } from '../payments/provider.js';
 import { settleDeposits } from '../payments/settle.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -668,7 +669,7 @@ export function register(route) {
   // screens: service, service-list
   // Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
   route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
-    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
+    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically, deposit_on FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
       `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
@@ -693,6 +694,8 @@ export function register(route) {
       showPrices,
       // Step 4 words its button by it (Jack, 19 Oct, auto-confirm; drawn as bk-details-auto).
       confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
+      // Step 4 asks for the deposit's hold only when one is taken (deposit-pay-screen design 1).
+      takesDeposit: settings?.deposit_on === 1 && paymentsConnected(),
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({

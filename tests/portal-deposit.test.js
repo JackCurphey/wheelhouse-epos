@@ -60,6 +60,7 @@ test('a hold is worked out on the stored prices: 20% of £65.00 and £12.50 is �
   assert.equal(h.status, 200, JSON.stringify(h.body));
   assert.equal(h.body.depositPence, 1550);
   assert.equal(h.body.provider, 'pretend');
+  assert.equal(h.body.depositCancelHours, 24, 'the page shows when it’s free to cancel until');
   assert.equal(await pretendStatus(h.body.ref), 'waiting');
 });
 
@@ -214,5 +215,16 @@ test('a “Not sure” booking takes the shop’s amount for a price not known (
     assert.equal((await jobRow(owner.shop.id, res.body.id)).deposit_pence, 1000);
   } finally {
     await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositUnknownPence: null } });
+  }
+});
+
+test('the services list tells the booking page whether a deposit is taken', async () => {
+  const read = async () => (await (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/services`)).json()).takesDeposit;
+  assert.equal(await read(), true);
+  await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: false } });
+  try {
+    assert.equal(await read(), false);
+  } finally {
+    await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: true } });
   }
 });

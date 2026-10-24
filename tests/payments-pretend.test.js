@@ -54,6 +54,9 @@ test('the declined test card is declined, and nothing is held', async () => {
   assert.equal(res.body.code, 'card_declined');
   assert.equal((await inShop(() => p.status(ref))).status, 'declined');
   await assert.rejects(inShop(() => p.take(ref)), PaymentError);
+  // As Stripe: another card can be tried on the same payment.
+  assert.equal((await card(ref, '4242424242424242')).status, 200);
+  assert.equal((await inShop(() => p.status(ref))).status, 'held');
 });
 
 test('any other number asks to check it, and nothing changes', async () => {

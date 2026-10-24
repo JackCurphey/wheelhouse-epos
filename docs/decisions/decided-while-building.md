@@ -1934,3 +1934,27 @@ No screen: server only.
 5. **A hold with no booking an hour later is let go**, and a deposit the
    provider couldn't take as the booking was saved is taken, the next time
    deposits are held or booked (no timer yet) (review).
+
+### 24 Oct 2026: paying the deposit on the booking page (`openspec/changes/deposit-pay-screen`, `bk-details-deposit`, `bk-card-failed`, `bk-checking-payment`)
+
+1. **The pretend card form is one "Card number" box** in the drawn card
+   form's place, saying plainly that payments are pretend while Wheelhouse is
+   being built, nothing is taken, and which test numbers pay or decline.
+2. **Pressing Pay with no card number says "Enter the card number"** and pays
+   nothing, as the other boxes say what's missing.
+3. **Once the deposit is paid, the button reads "Send request"** ("Book" when
+   the shop confirms automatically), with "Paid. It's held until your booking
+   is sent." in place of the card box, so a retry or a refresh never pays
+   twice. The drawings don't show this state.
+4. **A declined card can be tried again on the same payment**, as Stripe
+   allows: typing another number and pressing Try again pays with it.
+5. **"Free to cancel until" on step 4 is worked out in the shop's clock** from
+   the booked time less the shop's hours, as the booking shows times; the
+   booking itself keeps the exact moment.
+6. **If the deposit can't be got ready** (no connection as step 4 opens), the
+   page says "We couldn't get the deposit ready - please check your
+   connection and try again" and its button reads Try again, sending nothing
+   (review).
+7. **A hold let go meanwhile** (an hour on, or a refused booking) is asked
+   for again, saying "The deposit needs paying again — please press Pay."
+   (review).
