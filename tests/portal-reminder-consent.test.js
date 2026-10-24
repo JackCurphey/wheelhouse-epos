@@ -91,3 +91,22 @@ test('a refused booking records no yes', async () => {
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.deepEqual({ ...(await answers(theirs.id)) }, NO);
 });
+
+// Review: refused after the job is tried, not only before it, still records nothing.
+test('a booking refused because its time was just taken records no yes', async () => {
+  const when = { jobDate: nextDate(), startTime: '10:00' };
+  const first = await book(when);
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  const someone = await portalSignup(server.baseUrl, owner.shop.slug, {});
+  const theirs = await runWithShop(owner.shop.id, () => prepare('SELECT id FROM customers WHERE email = ?').get(someone.email));
+  assert.ok(theirs, 'the signed-up customer has a record');
+  const taken = await book({ ...when, remindMe: true }, someone.cookie);
+  assert.equal(taken.status, 409, JSON.stringify(taken.body));
+  assert.deepEqual({ ...(await answers(theirs.id)) }, NO);
+});
+
+// Review: a yes always says when it was given.
+test('a yes without when it was given is refused by the database', async () => {
+  const someone = await portalSignup(server.baseUrl, owner.shop.slug, {});
+  await assert.rejects(runWithShop(owner.shop.id, () => prepare('UPDATE customers SET service_reminders = true WHERE email = ?').run(someone.email)), /check constraint/);
+});

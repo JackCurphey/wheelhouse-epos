@@ -264,7 +264,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       {/* Say yes once to service reminders, unticked to start (ac-book-remind;
           account and reminders decisions 2 and 8). */}
       <Checkbox
-        className="mb-3 items-start [&>input]:mt-0.5"
+        className="mb-3 items-start gap-3 [&>input]:mt-px [&>input]:size-[22px]"
         checked={draft.remindMe === true}
         onChange={(e) => update({ remindMe: e.target.checked ? true : undefined })}
         label={(
