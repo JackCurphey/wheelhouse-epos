@@ -26,6 +26,7 @@ const MAYA = {
   workState: 'in_progress', bookedInAt: '2026-09-17T08:42:00Z', collectedAt: null, expectedReady: { date: '2026-09-17', time: null },
   shop: { address: '[Shop address]', phone: '[shop phone]', openingHours: '[opening hours]' },
   work: [{ name: 'Standard service', price: 65 }, { name: 'Shimano brake pads', price: 28 }, { name: 'Fit & adjust brakes', price: 18 }],
+  workTotal: 111,
   declined: [{ name: 'Replace gear cable', price: 12 }], toPay: 111, paid: null,
 };
 
@@ -162,7 +163,7 @@ test('ready: What we did lists the work and what was declined, after the pay car
 });
 
 test('with prices hidden, the work and the pay card show without figures', async () => {
-  const { ui, within } = await open({ stage: 'ready_to_collect', toPay: null, work: [{ name: 'Standard service', price: null }], declined: [{ name: 'Replace gear cable', price: null }] });
+  const { ui, within } = await open({ stage: 'ready_to_collect', toPay: null, work: [{ name: 'Standard service', price: null }], workTotal: null, declined: [{ name: 'Replace gear cable', price: null }] });
   const did = within(await ui.findByRole('region', { name: 'What we did' }));
   assert.ok(did.getByText('Standard service'));
   assert.ok(did.getByText('Not done — you said no thanks: Replace gear cable'));
@@ -216,6 +217,14 @@ test('the Work agreed total adds up its lines, even with a discount on what is t
   const { ui, within } = await open({ toPay: 99.9 });
   const agreed = within(await ui.findByRole('region', { name: 'Work agreed' }));
   assert.ok(agreed.getByText('£111.00'));
+});
+
+// Sales in pence, step A′ (task 2.2): the total is the server's sum of the
+// lines' pence, not the page's sum of their pounds.
+test('the Work agreed total is the figure the server worked out', async () => {
+  const { ui, within } = await open({ workTotal: 120.5 });
+  const agreed = within(await ui.findByRole('region', { name: 'Work agreed' }));
+  assert.ok(agreed.getByText('£120.50'));
 });
 
 test('nothing to pay: the card says so, not "Pay at the counter"', async () => {

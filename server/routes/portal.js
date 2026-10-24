@@ -34,7 +34,7 @@ import {
   checkJobSlot, loadCapacity, answerAndAddToOrder,
 } from '../workshop/jobs.js';
 import {
-  approve as approveQuote, earlierAnswers, agreedBefore, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
+  approve as approveQuote, earlierAnswers, agreedBeforePence, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
@@ -453,7 +453,8 @@ async function customerQuote(result, jobId) {
     lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
     mechanicName: shows ? who?.mechanic_name ?? null : null,
     earlier: await earlierAnswers(result.quote),
-    agreedTotal: await agreedBefore(result.quote, showPrices),
+    // In pence, so the card adds the ticked lines' pence to it (sales in pence, step A′).
+    ...(await agreedBeforePence(result.quote, showPrices).then((p) => ({ agreedTotal: p === null ? null : p / 100, agreedTotalPence: p }))),
     spendLimit: who?.spend_limit ?? null,
     // When the quote's reminder went, if it has (dq-quote-reminded).
     reminderSentAt: (await db.prepare(
@@ -479,7 +480,7 @@ async function jobMoney(jobId) {
       ORDER BY d.id DESC LIMIT 1`
   ).get(jobId);
   const items = order
-    ? await db.prepare('SELECT name, unit_price, qty, line_total FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
+    ? await db.prepare('SELECT name, unit_price, qty, line_total, line_total_pence FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
     : [];
   // Every revision the customer saw, not only the newest: a newer quote keeps
   // the earlier answers (fresh review). Priced in the database, as the quote is.
@@ -493,8 +494,13 @@ async function jobMoney(jobId) {
       items: items.map((l) => ({ unitPrice: l.unit_price, qty: l.qty })), discount: order.discount, customerId: order.customer_id,
     })).total;
   }
+  // Work agreed's total, the lines' pence summed here rather than on the page
+  // (sales in pence, step A′); null with prices hidden, as each line's is.
+  const workTotalPence = showPrices && items.length ? items.reduce((n, l) => n + l.line_total_pence, 0) : null;
   return {
     work: items.map((l) => ({ name: l.name, price: figure(l.line_total) })),
+    workTotalPence,
+    workTotal: workTotalPence === null ? null : workTotalPence / 100,
     declined: declined.map((l) => ({ name: l.description, price: figure(l.line_total) })),
     toPay: paid || due <= 0 ? null : figure(due),
     // Nothing owed on collection, said even with prices hidden, as Bike ready says it.

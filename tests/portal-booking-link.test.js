@@ -106,6 +106,8 @@ test('a booking returns a booking link, and the link reads the booking back', as
     shop: { address: null, phone: null, openingHours: res.body.shop?.openingHours },
     // Nothing done or paid yet (booking page stages answer 4).
     work: [],
+    workTotal: null, // no lines, so no total (sales in pence, step A′)
+    workTotalPence: null,
     declined: [],
     toPay: null,
     nothingToPay: true,

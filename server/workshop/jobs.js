@@ -660,14 +660,24 @@ export async function wholeBill(quoteId, jobId) {
                          WHERE js.workshop_job_id = j.id
                            AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
             + COALESCE((SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?), 0))::int AS whole_bill_pence,
+            (COALESCE(d.total_pence, 0)
+            + COALESCE((SELECT sum(js.booked_price_pence) FROM workshop_job_services js
+                         WHERE js.workshop_job_id = j.id
+                           AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
+            + COALESCE((SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ? AND l.decision = 'pending'), 0))::int AS proposed_pence,
             (SELECT count(*) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?) AS lines
        FROM workshop_jobs j
        LEFT JOIN sale_documents d ON d.workshop_job_id = j.id AND d.kind = 'order' AND d.status <> 'cancelled'
       WHERE j.id = ?
       ORDER BY d.id DESC LIMIT 1`
-  ).get(quoteId, quoteId, jobId);
-  // In pence (sales in pence, step A′), and the same in pounds as before.
-  return row ? { spendLimit: row.spend_limit ?? null, wholeBillPence: row.whole_bill_pence, wholeBill: row.whole_bill_pence / 100, lines: Number(row.lines) } : null;
+  ).get(quoteId, quoteId, quoteId, jobId);
+  // In pence (sales in pence, step A′), and the same in pounds as before. The
+  // proposed total is the same bill with only the lines still waiting for an
+  // answer: answered yeses are on the order already (the job page's Proposed total).
+  return row ? {
+    spendLimit: row.spend_limit ?? null, wholeBillPence: row.whole_bill_pence, wholeBill: row.whole_bill_pence / 100, lines: Number(row.lines),
+    proposedPence: row.proposed_pence,
+  } : null;
 }
 
 export async function agreeWithinLimit({ quoteId, loginId = null }) {

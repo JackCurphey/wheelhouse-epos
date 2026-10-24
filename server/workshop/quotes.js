@@ -286,9 +286,9 @@ export async function earlierAnswers(quote) {
 
 // What the customer has agreed before this quote: the booked services (when
 // their prices show online, as the booking page's total) and the earlier yeses,
-// summed by the database. Null when nothing is agreed, or a booked price is
-// unknown or hidden.
-export async function agreedBefore(quote, showPrices) {
+// summed by the database, in pence. Null when nothing is agreed, or a booked
+// price is unknown or hidden.
+export async function agreedBeforePence(quote, showPrices) {
   const row = await prepare(
     `${LATEST_ANSWERS}
      SELECT (SELECT count(*) FROM workshop_job_services WHERE workshop_job_id = ?) AS services,
@@ -301,8 +301,7 @@ export async function agreedBefore(quote, showPrices) {
   const services = Number(row.services);
   if (services === 0 && Number(row.yeses) === 0) return null;
   if (services > 0 && (!showPrices || row.booked === null)) return null;
-  // Worked out in pence; said in pounds, as before (pence over 100).
-  return (services > 0 ? Number(row.total) : Number(row.approved)) / 100;
+  return services > 0 ? Number(row.total) : Number(row.approved);
 }
 
 // The job's quote a customer may see on their booking link: its latest

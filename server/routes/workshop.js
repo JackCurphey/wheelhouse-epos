@@ -1326,7 +1326,10 @@ export function register(route) {
     // offers Save and tell within it (Workshop day 41-43).
     const bill = await wholeBill(result.quote.id, result.quote.workshop_job_id);
     sendJson(res, 200, { ...serializeQuoteWithLines(result.quote, result.lines, result.totals),
-      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null });
+      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null,
+      // The job page's Proposed total, worked out here from the pence (sales in pence, step A′).
+      proposedTotalPence: bill ? bill.proposedPence : null,
+      proposedTotal: bill ? bill.proposedPence / 100 : null });
   });
 
   // screens: quote-editor, approved, job

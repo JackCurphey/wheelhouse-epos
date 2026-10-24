@@ -316,8 +316,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         {inShop && work.length > 0 && card('Work agreed', 'agreed-title', (
           <>
             {lines(work)}
-            {/* The sum of its own lines, as drawn; only when every line has its figure. */}
-            {work.every((l) => l.price !== null) ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-size-15 font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(work.reduce((n, l) => n + (l.price ?? 0), 0))}</span></p> : null}
+            {/* The sum of its own lines, as drawn, worked out by the server; none with prices hidden. */}
+            {typeof link.workTotal === 'number' ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-size-15 font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(link.workTotal)}</span></p> : null}
             {/* As drawn (agreed() in quote.mjs): to the notes card's box. */}
             <Button className="min-h-11 self-start" onClick={goToNoteBox}>Add a note for the shop</Button>
           </>

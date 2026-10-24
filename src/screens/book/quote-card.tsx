@@ -16,7 +16,7 @@ import { PinnedRoom } from './frame.tsx';
  */
 
 type QuoteLine = {
-  id: number; description: string; lineTotal: number; decision: 'pending' | 'approved' | 'declined';
+  id: number; description: string; lineTotal: number; lineTotalPence: number; decision: 'pending' | 'approved' | 'declined';
   need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedAt?: string | null; decidedByName: string | null;
   goesWithLineId?: number | null; without?: string | null; photoId?: number | null;
 };
@@ -28,8 +28,9 @@ type Quote = {
   mechanicName?: string | null; customerFirstName?: string | null;
   // What the customer answered on the job's earlier quotes (dq-quote-newer).
   earlier?: { agreed: string[]; declined: string[] };
-  // Booked work plus earlier yeses, summed by the server (fresh review).
+  // Booked work plus earlier yeses, summed by the server (fresh review), and in pence.
   agreedTotal?: number | null;
+  agreedTotalPence?: number | null;
   // The limit the customer set when booking (Workshop day 41-43).
   spendLimit?: number | null;
   // When the quote's one reminder went (dq-quote-reminded).
@@ -211,7 +212,10 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
     setTicks({ ...tick, [l.id]: on, ...Object.fromEntries(others.map((o) => [o.id, on])) });
     setPairNote(others.map((o) => `${o.description} ${on ? 'ticked' : 'unticked'} too.`).join(' '));
   }
-  const total = agreed + ticked.reduce((s, l) => s + Number(l.lineTotal), 0);
+  // Added in whole pence, as the server worked each figure out; pounds only to
+  // show (sales in pence, step A′). The booking's total is pounds, so rounded.
+  const agreedPence = q.agreedTotalPence !== undefined ? q.agreedTotalPence ?? 0 : Math.round(agreed * 100);
+  const total = (agreedPence + ticked.reduce((s, l) => s + l.lineTotalPence, 0)) / 100;
   const label = ticked.length ? `Approve ${money(total)}` : 'Decline the extra work';
 
   async function send() {
