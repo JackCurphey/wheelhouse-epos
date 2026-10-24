@@ -6,13 +6,15 @@
 // in server/lib/sales.js; the Shopify webhooks stay in server.js, where the
 // dispatcher calls them. Moved out of server.js unchanged (split plan §4.1,
 // WP-0.4).
-import { prepare, dbExec } from '../db.js';
+import { prepare, dbExec, runWithShop } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
   serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
   poundsToPence, documentTotalsPence,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
+import { countedDeposit, depositShare, DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { refundOwed } from '../payments/refund.js';
 import { work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
 import { signOffMechanic, recordSignOff } from '../workshop/sign-off.js';
@@ -64,6 +66,10 @@ function serializeSaleDocument(row, items) {
           lineType: it.line_type,
           serviceId: it.service_id,
           minutes: it.minutes,
+          // A line's Done tick and staff note (line-done-notes): never sent
+          // to the customer, whose pages read their own columns.
+          done: it.done === true,
+          note: it.note ?? null,
         }))
       : undefined,
   };
@@ -71,6 +77,11 @@ function serializeSaleDocument(row, items) {
 
 const DOC_SELECT = `SELECT d.*, c.name AS customer_name, ca.name AS cashier_name FROM sale_documents d LEFT JOIN customers c ON c.id = d.customer_id LEFT JOIN employees ca ON ca.id = d.cashier_id`;
 const DOC_KINDS = ['quote', 'order'];
+// A line's note, at most as long as a checklist item's (line-done-notes).
+const LINE_NOTE_MAX = 500;
+const FINISHED_REFUSAL = 'This work is finished, so its work and parts can’t change. Reopen the work first.';
+// decided-while-building.md: the refusal for a paid job's work and parts.
+const PAID_REFUSAL = 'This job has been paid for, so its work and parts can’t change.';
 
 // Writes one loaded line in pence and, worked out from it, in pounds, in the
 // same statement (sales in pence, step A; design.md Decision 2: pence is the
@@ -78,8 +89,8 @@ const DOC_KINDS = ['quote', 'order'];
 async function insertDocumentLine(docId, line) {
   await db.prepare(
     `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes,
-                                      unit_price_pence, line_total_pence, vat_rate_bp)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                      unit_price_pence, line_total_pence, vat_rate_bp, done, note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     docId,
     line.product ? line.product.id : null,
@@ -93,7 +104,9 @@ async function insertDocumentLine(docId, line) {
     line.minutes,
     line.unitPricePence,
     line.lineTotalPence,
-    line.vatRateBp
+    line.vatRateBp,
+    line.done === true,
+    line.note ?? null
   );
 }
 
@@ -323,7 +336,7 @@ export function register(route) {
     const loaded = [];
     for (const it of items) {
       try {
-        loaded.push(await loadDocumentLine(it, { checkStock: false }));
+        loaded.push({ ...(await loadDocumentLine(it, { checkStock: false })), wasId: Number(it.id) });
       } catch (err) {
         if (err instanceof ValidationError) return badRequest(res, err.message);
         throw err;
@@ -334,8 +347,19 @@ export function register(route) {
 
     await db.exec('BEGIN');
     try {
+      // Each line's Done tick and note, by the id the line had: the lines are
+      // re-inserted below with new ids, so a line sent with its old id keeps
+      // them, and a new one starts without (line-done-notes design 3). Read
+      // and locked here, so a tick saved meanwhile isn't lost; each old line
+      // passes them on once, however often its id is sent (review).
+      const kept = new Map((await db.prepare('SELECT id, done, note FROM sale_document_items WHERE document_id = ? FOR UPDATE').all(id))
+        .map((r) => [r.id, { done: r.done === true, note: r.note }]));
       await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
-      for (const line of loaded) await insertDocumentLine(id, line);
+      for (const { wasId, ...line } of loaded) {
+        const was = kept.get(wasId);
+        kept.delete(wasId);
+        await insertDocumentLine(id, { ...line, ...(was ?? {}) });
+      }
       await db.prepare(
         `UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, subtotal_pence = ?, discount_pence = ?, total_pence = ?, updated_at = ?
          WHERE id = ?`
@@ -346,6 +370,52 @@ export function register(route) {
       throw err;
     }
 
+    const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
+    const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+    sendJson(res, 200, serializeSaleDocument(row, savedItems));
+  });
+
+  // One line's Done tick and staff note (Jack, 24 Oct,
+  // docs/decisions/2026-10-24-line-notes.md; openspec/changes/line-done-notes
+  // design 2): the job page's Done and Note columns. Anyone signed in; the
+  // latest change wins. No totals change. Refused on a paid order, and on a
+  // job whose work is finished, checked in the same update so a tick racing
+  // Finish is refused (as the checklist's).
+  // screens: job-page
+  route('PUT', '/api/sale-documents/:id/items/:itemId/progress', async (req, res, params) => {
+    const id = Number(params.id);
+    const itemId = Number(params.itemId);
+    const body = await readJsonBody(req);
+    const sets = [];
+    const values = [];
+    if (body.done !== undefined) {
+      if (typeof body.done !== 'boolean') return badRequest(res, 'done must be true or false');
+      sets.push('done = ?');
+      values.push(body.done);
+    }
+    if (body.note !== undefined) {
+      if (body.note !== null && typeof body.note !== 'string') return badRequest(res, 'note must be text');
+      const note = (body.note ?? '').trim();
+      if (note.length > LINE_NOTE_MAX) return badRequest(res, `A note can be at most ${LINE_NOTE_MAX} characters`);
+      sets.push('note = ?');
+      values.push(note || null);
+    }
+    if (!sets.length) return badRequest(res, 'Send done or note');
+    const doc = await db.prepare('SELECT status, workshop_job_id FROM sale_documents WHERE id = ?').get(id);
+    if (!doc || !(await db.prepare('SELECT 1 FROM sale_document_items WHERE id = ? AND document_id = ?').get(itemId, id))) {
+      return notFound(res, 'That line isn’t on this order');
+    }
+    if (doc.status !== 'open') return sendJson(res, 409, { error: PAID_REFUSAL, code: 'illegal' });
+    const { changes } = await db.prepare(
+      `UPDATE sale_document_items SET ${sets.join(', ')} WHERE id = ? AND document_id = ?
+         AND EXISTS (SELECT 1 FROM sale_documents d WHERE d.id = ? AND d.status = 'open')
+         AND NOT EXISTS (SELECT 1 FROM workshop_jobs w WHERE w.id = ? AND w.work_state = 'complete')`
+    ).run(...values, itemId, id, id, doc.workshop_job_id);
+    if (!changes) {
+      // Saved again meanwhile (the line has a new id), or paid or finished meanwhile.
+      if (!(await db.prepare('SELECT 1 FROM sale_document_items WHERE id = ?').get(itemId))) return notFound(res, 'That line isn’t on this order');
+      return sendJson(res, 409, { error: FINISHED_REFUSAL, code: 'illegal' });
+    }
     const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
     const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
     sendJson(res, 200, serializeSaleDocument(row, savedItems));
@@ -385,12 +455,20 @@ export function register(route) {
       const product = await db.prepare('SELECT stock_qty FROM products WHERE id = ?').get(it.product_id);
       if (product) stock[it.product_id] = product.stock_qty;
     }
+    // A deposit paid online comes off (till-online-deposit design 2).
+    const deposit = await countedDeposit(doc.workshop_job_id);
+    const share = depositShare(poundsToPence(total), deposit);
     sendJson(res, 200, {
       subtotal, discount, groupDiscount: group.amount, groupName: group.name, total, stock,
       subtotalPence: poundsToPence(subtotal),
       discountPence: poundsToPence(discount),
       groupDiscountPence: poundsToPence(group.amount),
       totalPence: poundsToPence(total),
+      depositPence: deposit?.pence ?? 0,
+      depositPaidAt: deposit?.paidAt ?? null,
+      depositUsedPence: share.usedPence,
+      leftToPayPence: share.leftPence,
+      leftToPay: share.leftPence / 100,
     });
   });
 
@@ -418,6 +496,9 @@ export function register(route) {
     }
     if (!reply) return;
     afterRelease.push(() => sendJson(res, 201, reply.payload));
+    // A held deposit let go above (review): made now the sale has committed.
+    // In the shop's own scope: the request's database client has gone by then.
+    if (reply.jobId) afterRelease.push(() => runWithShop(shopId, () => refundOwed(reply.jobId)).catch((err) => console.error('letting a held deposit go failed', err)));
     if (reply.shopifyPushes.length) {
       afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
     }
@@ -479,7 +560,10 @@ export function register(route) {
     }
     const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
     const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
-    const payments = Array.isArray(body.payments) ? body.payments : [];
+    // The deposit is the server's to add, never the till's to claim
+    // (till-online-deposit design 3).
+    const payments = (Array.isArray(body.payments) ? body.payments : [])
+      .filter((p) => String(p?.tenderType ?? '').trim() !== DEPOSIT_TENDER);
     const cashTendered =
       body.cashTendered !== undefined && body.cashTendered !== null && body.cashTendered !== ''
         ? Number(body.cashTendered)
@@ -508,6 +592,18 @@ export function register(route) {
       serviceId: it.service_id,
       minutes: it.minutes,
     }));
+
+    // A deposit paid online pays part of a job's bill, up to the whole bill,
+    // as its own payment (till-online-deposit design 3): the bill as /due
+    // works it out, in pence.
+    const deposit = await countedDeposit(doc.workshop_job_id);
+    if (deposit) {
+      const { total } = await computeOrderTotals({
+        items: items.map((it) => ({ unitPrice: it.unit_price, qty: it.qty })), discount: doc.discount, customerId: doc.customer_id,
+      });
+      const { usedPence } = depositShare(poundsToPence(total), deposit);
+      if (usedPence > 0) payments.push({ tenderType: DEPOSIT_TENDER, amount: usedPence / 100 });
+    }
 
     let saleId;
     const shopifyPushes = [];
@@ -541,6 +637,15 @@ export function register(route) {
               paid_pence = (SELECT ROUND(s.total * 100)::int FROM sales s WHERE s.id = ?)
        WHERE id = ?`
     ).run('converted', saleId, nowIso(), saleId, id);
+    // A deposit card only held, never charged, didn't count, so the whole bill
+    // was paid here: the hold is let go, never taken on top (review). Made
+    // after the commit, as any refund owed.
+    if (doc.workshop_job_id) {
+      await db.prepare(
+        `UPDATE online_payments SET refund_due_reason = 'Paid in full at the till', updated_at = now()
+          WHERE job_id = ? AND status = 'held' AND refund_due_reason IS NULL`
+      ).run(doc.workshop_job_id);
+    }
     // An order tied to a workshop job (the "Show in workshop diary" link) is
     // the customer paying for and collecting that job - being tendered off is
     // the real-world signal the job itself is done, so it auto-completes here
@@ -601,6 +706,6 @@ export function register(route) {
     const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
     const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
     const payload = serializeSale(sale, savedItems, savedPayments);
-    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes };
+    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes, jobId: doc.workshop_job_id };
   }
 }

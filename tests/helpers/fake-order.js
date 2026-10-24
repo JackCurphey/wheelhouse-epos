@@ -6,7 +6,7 @@ import { ORDER, ORDER_LINE, shapeProblems } from '../../.test-build/lib/api/shap
 
 export function fakeOrderLine(over = {}) {
   const line = {
-    id: 1, productId: null, name: '', sku: null, unitPrice: 0, qty: 1, lineTotal: 0, lineType: 'product', serviceId: null, minutes: null, vatRateBp: null, ...over,
+    id: 1, productId: null, name: '', sku: null, unitPrice: 0, qty: 1, lineTotal: 0, lineType: 'product', serviceId: null, minutes: null, vatRateBp: null, done: false, note: null, ...over,
   };
   // The server sends each amount in pence beside the pounds (sales in pence,
   // step A); a test that sets the pounds gets the same amount in pence.

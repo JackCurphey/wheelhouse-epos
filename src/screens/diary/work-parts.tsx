@@ -15,28 +15,35 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
  * barcode and Enter, which adds that product straight away.
  * Spec: docs/superpowers/specs/2026-10-03-staff-job-page-design.md (piece 3)
  *
- * Not here yet (the server has nowhere to keep them): the Done tick, a note
- * per line, and the customer's approval per line (the quote stage).
+ * Each line has a Done tick and a staff note (Jack, 24 Oct,
+ * docs/decisions/2026-10-24-line-notes.md; job-page.mjs's Done and Note
+ * columns; openspec/changes/line-done-notes), saved one line at a time and
+ * kept through a save of the whole list by each line's id. Like the
+ * checklist: anyone signed in, the latest change wins, "+ Add note", and
+ * neither changes once the work is finished.
+ *
+ * Not here yet: the customer's approval per line (the quote stage).
  */
 
 type Line = {
   id: number; productId: number | null; name: string; sku: string | null; unitPrice: number; qty: number;
   lineTotal: number; lineType: string | null; serviceId: number | null; minutes: number | null;
+  done?: boolean; note?: string | null;
 };
 type Order = { id: number; status: string; total: number; items: Line[] };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
 const isLabour = (l: Line) => l.lineType === 'labour';
 
-/** A line as the server takes it back. */
+/** A line as the server takes it back, with its id so its Done tick and note stay. */
 function asInput(l: Line) {
   if (isLabour(l)) {
-    const out: Record<string, unknown> = { lineType: 'labour', name: l.name, unitPrice: l.unitPrice };
+    const out: Record<string, unknown> = { id: l.id, lineType: 'labour', name: l.name, unitPrice: l.unitPrice };
     if (l.minutes) out.minutes = l.minutes;
     if (l.serviceId) out.serviceId = l.serviceId;
     return out;
   }
-  return { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice };
+  return { id: l.id, productId: l.productId, qty: l.qty, unitPrice: l.unitPrice };
 }
 
 export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob }) {
@@ -46,10 +53,19 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [qtyDraft, setQtyDraft] = useState<Record<number, string>>({});
+  // Lines whose note box "+ Add note" opened, and notes being typed.
+  const [noting, setNoting] = useState<Set<number>>(new Set());
+  const [noteDraft, setNoteDraft] = useState<Record<number, string>>({});
+  // A tick shows at once while it saves, and goes back if it's refused (seen
+  // in a real browser: without this the box snapped back until the reply).
+  const [ticking, setTicking] = useState<Record<number, boolean>>({});
 
 
   const lines = order.data?.items ?? [];
   const editable = order.data?.status === 'open';
+  // Done and notes stop with the work, until it's reopened (as the checklist).
+  const finished = job?.workState === 'complete';
+  const marking = editable && !finished;
   // Decision 46: labour first, then parts.
   const sorted = [...lines].sort((a, b) => Number(isLabour(b)) - Number(isLabour(a)));
 
@@ -71,6 +87,50 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
     } finally {
       setSaving(false);
     }
+  }
+
+  // One line's Done tick or note; no totals change.
+  async function progress(line: Line, body: { done?: boolean; note?: string }) {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiMutate(`/api/sale-documents/${orderId}/items/${line.id}/progress`, body, { method: 'PUT' });
+      await queryClient.invalidateQueries({ queryKey: ['sale-document', orderId] });
+      return true;
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 404 ? "This line changed meanwhile. Try again." : refusalText(err));
+      void queryClient.invalidateQueries({ queryKey: ['sale-document', orderId] });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function tick(line: Line, done: boolean) {
+    setTicking((t) => ({ ...t, [line.id]: done }));
+    await progress(line, { done });
+    setTicking((t) => {
+      const next = { ...t };
+      delete next[line.id];
+      return next;
+    });
+  }
+
+  // Leaving the note box saves what changed. Refused (the work was finished
+  // meanwhile, say), the box stays with what was typed, so it isn't lost (review).
+  async function leaveNote(line: Line) {
+    const draft = noteDraft[line.id];
+    if (draft !== undefined && draft.trim() !== (line.note ?? '') && !(await progress(line, { note: draft }))) return;
+    setNoteDraft((d) => {
+      const next = { ...d };
+      delete next[line.id];
+      return next;
+    });
+    setNoting((n) => {
+      const next = new Set(n);
+      next.delete(line.id);
+      return next;
+    });
   }
 
   async function add(input: Record<string, unknown>) {
@@ -113,6 +173,8 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
             <thead>
               <tr className="bg-[var(--wh-surface-muted)] text-left text-xs text-[var(--wh-muted)]">
                 <th scope="col" className="px-3 py-2 font-semibold">Work or part</th>
+                <th scope="col" className="px-1 py-2 text-center font-semibold">Done</th>
+                <th scope="col" className="px-3 py-2 font-semibold">Note</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Qty</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Price</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Total</th>
@@ -123,6 +185,42 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
               {sorted.map((l) => (
                 <tr key={l.id} className="border-t border-[var(--wh-border)]">
                   <td className="px-3 py-2">{l.name}</td>
+                  {/* A 44px-wide hit area round the box (decision 55; job-page.mjs:276). */}
+                  <td className="px-0 py-0 text-center">
+                    <label className="inline-flex min-h-9 w-11 cursor-pointer items-center justify-center">
+                      <input
+                        type="checkbox" aria-label={`${l.name} done`} checked={ticking[l.id] ?? l.done === true}
+                        disabled={!marking || saving}
+                        onChange={(e) => void tick(l, e.target.checked)}
+                        className="size-5 accent-[var(--accent-dark)]"
+                      />
+                    </label>
+                  </td>
+                  <td className="px-3 py-2">
+                    {noting.has(l.id) ? (
+                      <textarea
+                        id={`line-note-${l.id}`} aria-label={`Note for ${l.name}`} rows={2} maxLength={500}
+                        value={noteDraft[l.id] ?? l.note ?? ''}
+                        onChange={(e) => setNoteDraft((d) => ({ ...d, [l.id]: e.target.value }))}
+                        onBlur={() => void leaveNote(l)}
+                        className="w-full min-w-40 resize-y rounded-md border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm leading-normal"
+                      />
+                    ) : l.note ? (
+                      marking ? (
+                        <button
+                          type="button" aria-label={`Change the note for ${l.name}`}
+                          onClick={() => { setNoting(new Set(noting).add(l.id)); setTimeout(() => document.getElementById(`line-note-${l.id}`)?.focus(), 0); }}
+                          className="text-left text-[var(--wh-muted)] hover:underline"
+                        >{l.note}</button>
+                      ) : <span className="text-[var(--wh-muted)]">{l.note}</span>
+                    ) : marking ? (
+                      <button
+                        type="button" aria-label={`Add a note for ${l.name}`}
+                        onClick={() => { setNoting(new Set(noting).add(l.id)); setTimeout(() => document.getElementById(`line-note-${l.id}`)?.focus(), 0); }}
+                        className="min-h-9 px-0 text-sm font-semibold"
+                      >+ Add note</button>
+                    ) : <span className="text-[var(--wh-muted)]">—</span>}
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {editable && !isLabour(l) ? (
                       <input
@@ -147,12 +245,12 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
                 </tr>
               ))}
               {sorted.length === 0 ? (
-                <tr><td colSpan={editable ? 5 : 4} className="px-3 py-2 text-[var(--wh-muted)]">Nothing added yet.</td></tr>
+                <tr><td colSpan={editable ? 7 : 6} className="px-3 py-2 text-[var(--wh-muted)]">Nothing added yet.</td></tr>
               ) : null}
             </tbody>
             <tfoot>
               <tr className="border-t border-[var(--wh-border)] font-bold">
-                <td colSpan={3} className="px-3 py-2 text-right">Total</td>
+                <td colSpan={5} className="px-3 py-2 text-right">Total</td>
                 <td className="px-3 py-2 text-right tabular-nums">{money(order.data.total)}</td>
                 {editable ? <td /> : null}
               </tr>
@@ -160,6 +258,7 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
           </table>
         </div>
       ) : null}
+      {order.data && editable && finished ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">Reopen the work to change its Done ticks and notes.</p> : null}
       {order.data && !editable ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">This job&apos;s order is closed, so its work and parts can&apos;t be changed here.</p> : null}
       {job && order.data && editable ? <QuotePanel job={job} orderTotal={Number(order.data.total)} /> : null}
     </div>
