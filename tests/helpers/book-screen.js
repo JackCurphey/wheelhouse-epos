@@ -25,7 +25,8 @@
 // screens/book/date.js), so a test can see a guard on the screen a customer
 // went back to (WP-0.2); `strict` renders inside React.StrictMode, as the
 // customer app does (src/customer/main.tsx). `depositHold` and `card` answer
-// /deposit-holds and the pretend card form (deposit-pay-screen).
+// /deposit-holds and the pretend card form (deposit-pay-screen). `later` is a
+// booking kept on the device from an earlier visit (booking-draft-resume).
 import { installDom, importFresh } from './dom.js';
 
 const BUILD = new URL('../../.test-build/', import.meta.url);
@@ -42,13 +43,15 @@ const BOOKED = () => ({
 export async function renderBookScreen({
   file, exportName, at, url, services, draft, mechanics = NO_MECHANICS, availability = NO_AVAILABILITY,
   terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state, real = {}, strict = false,
-  media, photoCode = NO_LINK, depositHold = NO_LINK, card = NO_LINK,
+  media, photoCode = NO_LINK, depositHold = NO_LINK, card = NO_LINK, later,
 }) {
   const uninstall = installDom(`http://localhost${url}`);
   // A pretend screen: media(query) says which media queries match, as a phone
   // or tablet would answer them. Left out, nothing matches (a computer).
   if (media) window.matchMedia = (q) => ({ matches: media(q), media: q, addEventListener() {}, removeEventListener() {} });
   if (draft) window.sessionStorage.setItem('wh-book-draft:north', JSON.stringify(draft));
+  // A booking kept on the device from an earlier visit (booking-draft-resume).
+  if (later) window.localStorage.setItem('wh-book-draft-later:north', JSON.stringify(later));
   const scrolled = [];
   // Both the frame's scroll-to-top and a screen's own ?start scrollIntoView
   // land here in call order, so a test can prove the frame's runs first (and
