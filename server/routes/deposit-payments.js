@@ -8,6 +8,7 @@ import { clientIp } from '../proxy-trust.js';
 import { payments, PaymentError } from '../payments/index.js';
 import { readRequestKey } from '../booking-request-key.js';
 import { bookingDeposit } from '../workshop/booking-deposit.js';
+import { settleDeposits } from '../payments/settle.js';
 
 // A hold per booking request; a page asks again only when the services change.
 const holdLimiter = makeRateLimiter(30, 60 * 60 * 1000);
@@ -27,6 +28,7 @@ export function register(route) {
     }
     const key = readRequestKey({ requestKey: body.requestKey });
     if (key.error || !key.value) return badRequest(res, 'Invalid request key');
+    await settleDeposits();
     const deposit = await bookingDeposit({ serviceIds, notSure });
     if (deposit.error) return badRequest(res, deposit.error);
     const provider = payments();
@@ -34,6 +36,7 @@ export function register(route) {
     if (!holdLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many tries from this network - please try again later.' });
 
     const keyHash = key.value.keyHash;
+    let made = null; // a hold made in this transaction, let go if it doesn't commit
     await dbExec('BEGIN');
     try {
       await prepare(
@@ -51,13 +54,16 @@ export function register(route) {
         // old hold goes, so the customer is never held for two.
         if (ref && OPEN.includes(row.status)) await provider.release(ref);
         ({ ref } = await provider.hold({ amountPence: deposit.pence, key: `${keyHash}:${randomUUID()}` }));
+        made = ref;
         await prepare("UPDATE online_payments SET provider = ?, provider_ref = ?, amount_pence = ?, status = 'waiting', updated_at = now() WHERE id = ?")
           .run(provider.name, ref, deposit.pence, row.id);
       }
       await dbExec('COMMIT');
+      made = null;
       sendJson(res, 200, { paymentId: row.id, depositPence: deposit.pence, provider: provider.name, ref });
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (made) await provider.release(made).catch((e) => console.error('deposit hold not recorded, and couldn’t be let go', e));
       throw err;
     }
   });

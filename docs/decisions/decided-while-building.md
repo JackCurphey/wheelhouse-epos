@@ -1931,3 +1931,6 @@ No screen: server only.
 4. **"Free to cancel until" is worked out at booking and kept on it**: the
    booked start less the shop's hours, in the shop's time zone; for a
    whole-day booking, from the start of the day.
+5. **A hold with no booking an hour later is let go**, and a deposit the
+   provider couldn't take as the booking was saved is taken, the next time
+   deposits are held or booked (no timer yet) (review).

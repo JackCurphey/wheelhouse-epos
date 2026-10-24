@@ -175,3 +175,44 @@ test('another shop’s services and payments are never found', async () => {
   const elsewhere = await fetch(`${server.baseUrl}/api/portal/${other.shop.slug}/pretend-payments/${mine.ref}/card`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"cardNumber":"4242424242424242"}' });
   assert.equal(elsewhere.status, 404);
 });
+
+// The review's findings.
+test('a hold left with no booking for an hour is let go when holds are next made (review)', async () => {
+  const left = await paid([service]);
+  await runWithShop(owner.shop.id, () => prepare("UPDATE online_payments SET updated_at = now() - interval '61 minutes' WHERE id = ?").run(left.paymentId));
+  await hold({ serviceIds: [service], requestKey: key() });
+  assert.equal(await pretendStatus(left.ref), 'released');
+  assert.equal((await payment(left.paymentId)).status, 'released');
+  const fresh = await paid([service]);
+  await hold({ serviceIds: [service], requestKey: key() });
+  assert.equal(await pretendStatus(fresh.ref), 'held', 'a hold under an hour old stays');
+});
+
+test('a deposit the provider couldn’t take after booking is taken when payments are next touched (review)', async () => {
+  const p = await paid([service]);
+  const res = await book({ jobDate: nextDay(), serviceIds: [service], requestKey: p.requestKey, paymentId: p.paymentId });
+  assert.equal(res.status, 201);
+  // As if taking had failed: still held at the provider and in Wheelhouse.
+  await runWithShop(owner.shop.id, async () => {
+    await prepare("UPDATE pretend_payments SET status = 'held' WHERE ref = ?").run(p.ref);
+    await prepare("UPDATE online_payments SET status = 'held' WHERE id = ?").run(p.paymentId);
+  });
+  await hold({ serviceIds: [service], requestKey: key() });
+  assert.equal(await pretendStatus(p.ref), 'taken');
+  assert.equal((await payment(p.paymentId)).status, 'taken');
+});
+
+test('a “Not sure” booking takes the shop’s amount for a price not known (review)', async () => {
+  await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositUnknownPence: 1000 } });
+  try {
+    const requestKey = key();
+    const h = await hold({ notSure: true, requestKey });
+    assert.equal(h.body.depositPence, 1000);
+    assert.equal((await card(h.body.ref)).status, 200);
+    const res = await book({ jobDate: nextDay(), notSure: true, description: 'Clicking from the back', requestKey, paymentId: h.body.paymentId });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal((await jobRow(owner.shop.id, res.body.id)).deposit_pence, 1000);
+  } finally {
+    await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositUnknownPence: null } });
+  }
+});

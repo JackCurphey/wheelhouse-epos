@@ -38,8 +38,14 @@
    start for a whole-day booking, less the shop's hours), the payment gets the
    job. After the commit the money is taken (`take`); if the provider can't take
    it then, the payment stays held, the failure is logged, and the booking
-   stands (taking it again later is part 3's). A refusal after the hold lets
+   stands. A refusal after the hold lets
    it go (`release`). A replay (same key) answers the booking made, taking
    nothing again.
 6. **Money in pence** throughout, as part 1. The deposit isn't a sale yet:
    it comes off the bill at the till after #404 (answer 4).
+7. **Settling what was left part-way** (`server/payments/settle.js`, review):
+   whenever deposits are next held or booked, a hold with no booking an hour
+   on is let go, so no card stays held for a booking that never came, and a
+   booked deposit still held is taken. No timer. Twenty at a time.
+8. **Two sends of one request at once on two days**: the second, waiting on
+   the payment, answers the booking the first made (review).

@@ -46,6 +46,7 @@ import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '.
 import { readRequestKey } from '../booking-request-key.js';
 import { bookingDeposit } from '../workshop/booking-deposit.js';
 import { payments } from '../payments/index.js';
+import { settleDeposits } from '../payments/settle.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -988,6 +989,7 @@ export function register(route) {
 
     // The deposit, worked out on the stored prices (deposit-payments design 5):
     // with one due, the request must carry its key and the held payment.
+    await settleDeposits();
     const deposit = await bookingDeposit({ serviceIds: request.notSure ? [] : request.serviceIds, notSure: request.notSure });
     if (deposit.error) return badRequest(res, deposit.error);
     const DEPOSIT_NEEDED = { status: 400, body: { error: 'Pay the deposit first.', code: 'deposit_needed' } };
@@ -1036,6 +1038,12 @@ export function register(route) {
       }
       if (deposit.pence !== null) {
         const pay = await db.prepare('SELECT * FROM online_payments WHERE id = ? FOR UPDATE').get(body.paymentId);
+        // This request's twin, sent at once on another day, booked while this one
+        // waited for the payment: answer the booking made (review).
+        if (pay?.job_id && pay.request_key_hash === requestKey.keyHash) {
+          const replay = await replayBookingRequest(requestKey, params.shopSlug);
+          if (replay) return replay;
+        }
         if (!pay || pay.request_key_hash !== requestKey.keyHash || pay.job_id) return DEPOSIT_NEEDED;
         if (pay.amount_pence !== deposit.pence) return { status: 409, body: { error: 'The deposit has changed — please pay it again.', code: 'deposit_changed' } };
         const at = await payments()?.status(pay.provider_ref).catch(() => null);

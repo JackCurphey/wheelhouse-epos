@@ -10,15 +10,19 @@ export const ACCEPTED_CARD = '4242424242424242';
 export const DECLINED_CARD = '4000000000000002';
 
 async function find(ref) {
-  const row = await prepare('SELECT * FROM pretend_payments WHERE ref = ? FOR UPDATE').get(ref);
+  const row = await prepare('SELECT * FROM pretend_payments WHERE ref = ?').get(ref);
   if (!row) throw new PaymentError('not_found', 'That payment wasn’t found.');
   return row;
 }
 
-async function move(ref, from, to) {
+// One conditional update, so two calls at once can't both move it (review).
+async function move(ref, from, to, set = '', ...args) {
+  const done = await prepare(
+    `UPDATE pretend_payments SET status = ?, updated_at = now()${set} WHERE ref = ? AND status = ANY(?::text[]) RETURNING ref`
+  ).get(to, ...args, ref, from);
+  if (done) return;
   const row = await find(ref);
-  if (!from.includes(row.status)) throw new PaymentError('wrong_state', `A ${row.status} payment can’t be ${to}.`);
-  await prepare('UPDATE pretend_payments SET status = ?, updated_at = now() WHERE ref = ?').run(to, ref);
+  throw new PaymentError('wrong_state', `A ${row.status} payment can’t be ${to}.`);
 }
 
 export const pretend = {
@@ -47,17 +51,17 @@ export const pretend = {
       throw new PaymentError('too_much', 'That’s more than was taken.');
     }
     const refunded = row.refunded_pence + amountPence;
-    await prepare('UPDATE pretend_payments SET refunded_pence = ?, status = ?, updated_at = now() WHERE ref = ?')
-      .run(refunded, refunded === row.amount_pence ? 'refunded' : 'taken', ref);
+    const done = await prepare(
+      "UPDATE pretend_payments SET refunded_pence = ?, status = ?, updated_at = now() WHERE ref = ? AND status = 'taken' AND refunded_pence = ? RETURNING ref"
+    ).get(refunded, refunded === row.amount_pence ? 'refunded' : 'taken', ref, row.refunded_pence);
+    if (!done) throw new PaymentError('wrong_state', 'That payment changed meanwhile; try again.');
   },
   /** The pretend card form: Stripe's test cards. */
   async card(ref, cardNumber) {
     const digits = typeof cardNumber === 'string' ? cardNumber.replace(/[\s-]/g, '') : '';
     if (digits !== ACCEPTED_CARD && digits !== DECLINED_CARD) throw new PaymentError('bad_card', 'Check the card number.');
-    const row = await find(ref);
-    if (row.status !== 'waiting') throw new PaymentError('wrong_state', `A ${row.status} payment can’t take a card.`);
     const status = digits === ACCEPTED_CARD ? 'held' : 'declined';
-    await prepare('UPDATE pretend_payments SET status = ?, card_last4 = ?, updated_at = now() WHERE ref = ?').run(status, digits.slice(-4), ref);
+    await move(ref, ['waiting'], status, ', card_last4 = ?', digits.slice(-4));
     return { status };
   },
 };
