@@ -2165,3 +2165,14 @@ follows the job checklist, the closest pattern built.
 7. **A refund pressed while the till takes payment waits its turn**, so a
    deposit is never both counted and refunded (review).
 
+### 24 Oct 2026: Save to a customer record from the till (`openspec/changes/till-save-customer`, `cp-receipt-address`, `cp-receipt-address-save`)
+
+1. **The new customer isn't attached to the sale.** The decision doesn't say,
+   and nothing can attach a customer to a finished sale yet, so the sale stays
+   with no customer. Jack to overrule.
+2. **Closing Add a customer (Escape or outside it) counts as Not now**: the
+   receipt stays sent and no one is added.
+3. **A customer with the same email may already exist**; Add the customer
+   adds a new record anyway, as the customer form does, and Customers' Merge
+   joins them.
+
