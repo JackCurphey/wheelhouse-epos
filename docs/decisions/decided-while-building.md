@@ -2010,3 +2010,15 @@ No screen: server only.
    "refunded".
 4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
    then simply paid, as for any booking (review).
+
+### 24 Oct 2026: the diary job's deposit, the job pop-up (`openspec/changes/deposit-diary-screen`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is offered once the booked day has gone by the shop
+   computer's own date**, as the diary reads today.
+2. **The Undo bar after "Didn't come" stays until the job is closed**, as
+   answer 9 has nothing close by itself; the drawing's note said "for a few
+   minutes".
+3. **Opened again later, a job marked Didn't come offers Book in** (the bike
+   came after all, which clears the mark), not Put on hold.
+4. **"Not come in" shows on any booking whose day has gone with the bike not
+   in**, with or without a deposit; the deposit line shows only when it took one.

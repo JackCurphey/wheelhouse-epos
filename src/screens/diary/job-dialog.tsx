@@ -17,6 +17,7 @@ import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 import { JobChecklistBar } from './job-checklist.tsx';
 import { SlotDialog, useStorageSlots } from './storage-slots.tsx';
 import { channelWord } from './channel-word.ts';
+import { DepositStrip, RefundDepositDialog, canMarkNoShow } from './job-deposit.tsx';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -31,7 +32,7 @@ type Customer = { id: number; name: string; email: string | null; phone: string 
 const money = (n: number) => `£${n.toFixed(2)}`;
 
 /** The badge's word for where the job is (the drawings' stage names). */
-export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested'] }): string {
+export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested']; noShowAt?: string | null }): string {
   if (j.bookingState === 'pending') return 'Booking request';
   // A time the shop offered, waiting for the customer (Jack, 20 Oct).
   if (j.bookingState === 'offered') return 'Time offered';
@@ -50,6 +51,8 @@ export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 
   if (j.quote?.state === 'sent') return 'Quoting';
   if (j.workState === 'on_hold') return 'On hold';
   if (j.custodyState === 'in_shop') return 'In the workshop';
+  // Marked Didn't come (bk-staff-no-show-kept; deposit-diary-screen design 3).
+  if (j.noShowAt) return 'Didn’t come';
   return 'Expected';
 }
 
@@ -61,7 +64,9 @@ function stageActions(j: WorkshopJob): Action[] {
   if (j.custodyState === 'collected') return [];
   // Put on hold, beside the main button, wherever the work can be held (Jack, 15 Oct).
   const hold: Action = { label: 'Put on hold', action: 'hold', primary: false };
-  if (j.custodyState === 'expected') return [{ label: 'Book in', action: 'book-in', primary: true }, ...(j.workState === 'not_started' ? [hold] : [])];
+  // Didn't come beside Book in once the booked day has gone (bk-staff-no-show; design 2).
+  const noShow: Action[] = canMarkNoShow(j) ? [{ label: 'Didn’t come', action: 'didnt-come', primary: false }] : [];
+  if (j.custodyState === 'expected') return [...noShow, { label: 'Book in', action: 'book-in', primary: true }, ...(j.workState === 'not_started' && !j.noShowAt ? [hold] : [])];
   switch (j.workState) {
     case 'not_started': return [{ label: 'Start work', action: 'start', primary: true }, hold];
     case 'in_progress': return [
@@ -95,6 +100,7 @@ const BADGE: Record<string, string> = {
   Expired: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
   Finished: 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',
   Collected: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
+  'Didn’t come': 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
 };
 
 const Tag = ({ children }: { children: ReactNode }) => (
@@ -176,6 +182,10 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
 
   // "Mark ready for collection" asks who is signing it off first (Jack, 16 Oct).
   const [signing, setSigning] = useState(false);
+  // The deposit's refund pop-up, and Didn't come's Undo, which waits until the
+  // job is closed (Jack, 24 Oct answer 9; deposit-diary-screen design 3).
+  const [refunding, setRefunding] = useState(false);
+  const [noShowUndo, setNoShowUndo] = useState(false);
   // "Bike ready" waits a minute with Undo after marking it ready (UX
   // walk-through 1 H2; the messages engine). The strip goes when the minute does.
   const [ready, setReady] = useState<ReadyStrip | null>(null);
@@ -230,6 +240,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     setMessage(null);
     try {
       const done = await jobAction<WorkshopJob & { readyMessage?: ReadyMessage }>(job.id, action, job.version, extra);
+      if (action === 'didnt-come') setNoShowUndo(true);
+      if (action === 'didnt-come/undo') setNoShowUndo(false);
       if (action === 'finish' && done?.readyMessage) setReady(readyStrip(done, done.readyMessage));
       // Finishing, or reopening, changes what the job's Messages list holds.
       if (action === 'finish' || action === 'reopen-work') void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job.id) });
@@ -390,6 +402,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               </div>
             </div>
 
+            {/* The deposit, and Not come in (approved drawings bk-staff-deposit…, bk-staff-no-show). */}
+            <DepositStrip job={job} notCome={canMarkNoShow(job)} onRefund={() => setRefunding(true)} />
             {/* Who signed the finished work off (Jack, 16 Oct, answer 3; drawn under the finished strip). */}
             {finished && job.signedOffByName && job.signedOffAt ? (
               <p className="m-0 flex shrink-0 items-center gap-2 border-b border-[var(--wh-border)] px-5 py-1.5 text-[13px]">
@@ -498,6 +512,13 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
             {message ? <p role="alert" className="mx-5 mb-2 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
             {/* Always shown, so "Delete job" is in view without scrolling (Jack, 18 Oct). */}
             <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-[var(--wh-border)] px-5 py-3.5">
+              {noShowUndo && job.noShowAt ? (
+                // The drawn dark bar (bk-staff-no-show-kept), with Undo until the job is closed.
+                <div role="status" className="flex min-h-12 grow items-center justify-between gap-3 rounded-[10px] bg-[var(--wh-ink)] py-1 pr-1.5 pl-4 text-sm text-[var(--wh-bg)]">
+                  <span>{job.deposit ? 'Marked Didn’t come · the deposit is kept' : 'Marked Didn’t come'}</span>
+                  <button type="button" disabled={sending} onClick={() => void run('didnt-come/undo')} className="min-h-11 rounded-lg bg-white/15 px-3.5 font-semibold">Undo</button>
+                </div>
+              ) : (<>
               <Button variant="danger" className="mr-auto min-h-11" disabled={sending} onClick={askDelete}>Delete job</Button>
               {actions.filter((a) => !a.primary).map((a) => (
                 <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
@@ -505,11 +526,13 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               {actions.filter((a) => a.primary).map((a) => (
                 <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : a.action === 'finish' ? setSigning(true) : a.action === 'book-in' ? bookIn() : run(a.action))}>{a.label}</Button>
               ))}
+              </>)}
             </footer>
           </>
         ) : null}
       </div>
       {changing && job ? <ChangeDetailsDialog job={job} onClose={() => setChanging(false)} /> : null}
+      {refunding && job ? <RefundDepositDialog job={job} onClose={() => setRefunding(false)} onDone={() => { setRefunding(false); void refresh(job.id); }} /> : null}
       {slotBox && job ? (
         <SlotDialog
           job={job} slots={slots} busy={sending}

@@ -167,7 +167,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
             <textarea id="decline-msg" rows={4} maxLength={1000} value={declineWords} onChange={(e) => setDeclineWords(e.target.value)}
               className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
           </div>
-          <p className="m-0 text-[13px] text-[var(--wh-muted)]">Declining releases the request’s reservation. The customer is told not to travel for this request.</p>
+          <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request.${job?.deposit ? ` Their £${(job.deposit.pence / 100).toFixed(2)} deposit is refunded automatically.` : ''}`}</p>
         </>
       );
     }
