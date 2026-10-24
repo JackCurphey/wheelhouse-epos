@@ -1,4 +1,5 @@
-import { useNavigate, useParams } from 'react-router';
+import { Navigate, useNavigate, useParams } from 'react-router';
+import * as React from 'react';
 import { ChoiceCard } from '@/components/ui/choice-card';
 import { BookFrame } from './frame.tsx';
 import { useDraft } from './draft.tsx';
@@ -16,8 +17,11 @@ export function ServiceScreen() {
   const { shopSlug = '' } = useParams();
   const navigate = useNavigate();
   const { data } = useServices(shopSlug);
-  const { update } = useDraft();
+  const { update, takeResumeStep } = useDraft();
   const base = `/book/${shopSlug}`;
+  // Coming back to an unfinished booking: on to the step it was left on, once
+  // (book a repair decision 9; booking-draft-resume).
+  const [resumeAt] = React.useState(takeResumeStep);
   const hasFull = (data?.full.length ?? 0) > 0;
   const hasIndividual = (data?.categories.length ?? 0) > 0 || (data?.uncategorised.length ?? 0) > 0;
 
@@ -30,6 +34,7 @@ export function ServiceScreen() {
     navigate(`${base}/problem`);
   };
 
+  if (resumeAt) return <Navigate to={`${base}/${resumeAt}`} replace />;
   return (
     <BookFrame step={1} title="What do you need?">
       {!hasFull && !hasIndividual ? (

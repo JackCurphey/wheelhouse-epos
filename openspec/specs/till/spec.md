@@ -144,3 +144,39 @@ open and say it was sent.
 #### Scenario: A bad address
 - **WHEN** Jo sends to "maya@"
 - **THEN** it says "That doesn't look like an email address — check it" and nothing is sent
+
+### Requirement: A job's online deposit comes off at the till
+
+When a job's deposit was paid online and hasn't been refunded, kept or given
+back, paying the job's order at the till SHALL take the deposit off what's
+due. The till SHALL show a "Deposit paid" line and take only what's left,
+and the sale SHALL record the deposit as its own payment, "Deposit paid
+online", for the amount the server holds.
+
+#### Scenario: Collecting with a deposit paid
+- **WHEN** Maya's £65.00 job had a £13.00 deposit paid online, and Jo takes payment
+- **THEN** the till shows Deposit paid −£13.00 and asks for £52.00, and the sale records £13.00 Deposit paid online and £52.00 by card
+
+#### Scenario: A refunded deposit
+- **WHEN** the deposit was refunded before Maya collects
+- **THEN** nothing comes off, and the till asks for £65.00
+
+### Requirement: A receipt's address can be saved as a new customer
+
+With no customer on the sale, "Email the receipt" SHALL offer "Save to a
+customer record", unticked. Ticked, once the receipt is sent, a quick "Add a
+customer" SHALL open with the address filled in; "Add the customer" SHALL
+save them with what was typed, and "Happy to hear about offers" only if
+ticked; "Not now" SHALL keep the receipt sent and add no one.
+
+#### Scenario: Saved
+- **WHEN** Jo ticks Save to a customer record, sends to maya@example.test, types Maya Patel and presses Add the customer
+- **THEN** Maya Patel is added with that email and no offers, and the till carries on
+
+#### Scenario: Not now
+- **WHEN** Jo ticks it, sends, then presses Not now
+- **THEN** the receipt stays sent and no customer is added
+
+#### Scenario: Unticked
+- **WHEN** Jo sends without ticking it
+- **THEN** no Add a customer opens and no one is added

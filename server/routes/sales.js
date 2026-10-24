@@ -6,13 +6,15 @@
 // in server/lib/sales.js; the Shopify webhooks stay in server.js, where the
 // dispatcher calls them. Moved out of server.js unchanged (split plan §4.1,
 // WP-0.4).
-import { prepare, dbExec } from '../db.js';
+import { prepare, dbExec, runWithShop } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
   serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
   poundsToPence, documentTotalsPence,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
+import { countedDeposit, depositShare, DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { refundOwed } from '../payments/refund.js';
 import { work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
 import { signOffMechanic, recordSignOff } from '../workshop/sign-off.js';
@@ -453,12 +455,20 @@ export function register(route) {
       const product = await db.prepare('SELECT stock_qty FROM products WHERE id = ?').get(it.product_id);
       if (product) stock[it.product_id] = product.stock_qty;
     }
+    // A deposit paid online comes off (till-online-deposit design 2).
+    const deposit = await countedDeposit(doc.workshop_job_id);
+    const share = depositShare(poundsToPence(total), deposit);
     sendJson(res, 200, {
       subtotal, discount, groupDiscount: group.amount, groupName: group.name, total, stock,
       subtotalPence: poundsToPence(subtotal),
       discountPence: poundsToPence(discount),
       groupDiscountPence: poundsToPence(group.amount),
       totalPence: poundsToPence(total),
+      depositPence: deposit?.pence ?? 0,
+      depositPaidAt: deposit?.paidAt ?? null,
+      depositUsedPence: share.usedPence,
+      leftToPayPence: share.leftPence,
+      leftToPay: share.leftPence / 100,
     });
   });
 
@@ -486,6 +496,9 @@ export function register(route) {
     }
     if (!reply) return;
     afterRelease.push(() => sendJson(res, 201, reply.payload));
+    // A held deposit let go above (review): made now the sale has committed.
+    // In the shop's own scope: the request's database client has gone by then.
+    if (reply.jobId) afterRelease.push(() => runWithShop(shopId, () => refundOwed(reply.jobId)).catch((err) => console.error('letting a held deposit go failed', err)));
     if (reply.shopifyPushes.length) {
       afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
     }
@@ -547,7 +560,10 @@ export function register(route) {
     }
     const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
     const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
-    const payments = Array.isArray(body.payments) ? body.payments : [];
+    // The deposit is the server's to add, never the till's to claim
+    // (till-online-deposit design 3).
+    const payments = (Array.isArray(body.payments) ? body.payments : [])
+      .filter((p) => String(p?.tenderType ?? '').trim() !== DEPOSIT_TENDER);
     const cashTendered =
       body.cashTendered !== undefined && body.cashTendered !== null && body.cashTendered !== ''
         ? Number(body.cashTendered)
@@ -576,6 +592,18 @@ export function register(route) {
       serviceId: it.service_id,
       minutes: it.minutes,
     }));
+
+    // A deposit paid online pays part of a job's bill, up to the whole bill,
+    // as its own payment (till-online-deposit design 3): the bill as /due
+    // works it out, in pence.
+    const deposit = await countedDeposit(doc.workshop_job_id);
+    if (deposit) {
+      const { total } = await computeOrderTotals({
+        items: items.map((it) => ({ unitPrice: it.unit_price, qty: it.qty })), discount: doc.discount, customerId: doc.customer_id,
+      });
+      const { usedPence } = depositShare(poundsToPence(total), deposit);
+      if (usedPence > 0) payments.push({ tenderType: DEPOSIT_TENDER, amount: usedPence / 100 });
+    }
 
     let saleId;
     const shopifyPushes = [];
@@ -609,6 +637,15 @@ export function register(route) {
               paid_pence = (SELECT ROUND(s.total * 100)::int FROM sales s WHERE s.id = ?)
        WHERE id = ?`
     ).run('converted', saleId, nowIso(), saleId, id);
+    // A deposit card only held, never charged, didn't count, so the whole bill
+    // was paid here: the hold is let go, never taken on top (review). Made
+    // after the commit, as any refund owed.
+    if (doc.workshop_job_id) {
+      await db.prepare(
+        `UPDATE online_payments SET refund_due_reason = 'Paid in full at the till', updated_at = now()
+          WHERE job_id = ? AND status = 'held' AND refund_due_reason IS NULL`
+      ).run(doc.workshop_job_id);
+    }
     // An order tied to a workshop job (the "Show in workshop diary" link) is
     // the customer paying for and collecting that job - being tendered off is
     // the real-world signal the job itself is done, so it auto-completes here
@@ -669,6 +706,6 @@ export function register(route) {
     const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
     const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
     const payload = serializeSale(sale, savedItems, savedPayments);
-    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes };
+    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes, jobId: doc.workshop_job_id };
   }
 }
