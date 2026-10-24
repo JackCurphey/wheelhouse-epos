@@ -122,7 +122,9 @@ async function loadShop(shopId) {
   }
 
   // The four drawn in New job (diary.mjs:329), in their groups (:336), and
-  // the Gear service the week uses at 90 minutes (:402).
+  // the Gear service the week uses at 90 minutes (:402). The four are the ones
+  // the booking page draws (book.mjs:48, :51), so they're bookable online; no
+  // screen sets that yet (24 Oct).
   const lengths = new Map(SERVICE_OPTIONS);
   for (const j of JOBS) if (!lengths.has(j.svc)) lengths.set(j.svc, j.dur);
   const services = {};
@@ -130,7 +132,7 @@ async function loadShop(shopId) {
     const categoryId = await id('INSERT INTO workshop_service_categories (name, position) VALUES (?, ?)', group, position);
     for (const [i, name] of SERVICE_GROUPS[group].entries()) {
       services[name] = await id(
-        'INSERT INTO workshop_services (name, price, minutes, kind, category_id, position) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO workshop_services (name, price, minutes, kind, category_id, position, bookable_online) VALUES (?, ?, ?, ?, ?, ?, 1)',
         name, PRICES[name] ?? '0.00', lengths.get(name), kind, categoryId, i,
       );
     }

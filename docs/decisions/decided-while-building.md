@@ -2044,3 +2044,18 @@ No screen: server only.
    little lower on the page; nothing inside it moves.
 4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
    shows the difference.
+
+### 24 Oct 2026: the test shop on the hosted copy (`openspec/changes/add-hosted-copy`, tasks 3.6a and 5.1)
+
+1. **The test shop's four grouped services are bookable online**: Standard
+   service, Brake service, Gear adjustment and Safety check, the ones the
+   booking page draws (`book.mjs:48`, `:51`). Otherwise the online booking
+   page would offer nothing on the test copy. Gear service, which only the
+   diary's week uses, isn't. **Gap for later:** no screen lets a shop say
+   which services can be booked online. Only the settings API sets it, so a
+   shop that signs up can't take online bookings until that screen exists.
+   It needs a drawing.
+2. **The loader reads a snapshot of the drawings** (`scripts/dev/test-shop-drawings.json`),
+   kept exact by a test (pattern: the route-list snapshot), because the app's
+   image can't carry the 169 MB drawings folder.
+

@@ -275,6 +275,8 @@ the week, the pending booking, the change request and the services from
   service has a price, £65.00 (`G/diary.mjs:341`). The rest are drawn as
   "[£ price]" (`G/browse.mjs:80`); a price can't hold a placeholder, so they
   are £0.00 (Jack, 16 Oct, `docs/decisions/2026-10-16-test-shop-defaults.md`).
+  The four in the two groups are bookable online, because the booking page
+  draws exactly those (`G/book.mjs:48`, `:51`); Gear service isn't (24 Oct).
 - **Product:** Shimano brake pads, SKU B05S-RX, £28.00 (`G/diary.mjs:342`).
   No other product has a price in the drawings.
 - **Workshop jobs:** the drawings' example week, Mon 14 to Sun 20 September
