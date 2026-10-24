@@ -494,7 +494,7 @@ later packages.
 - **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
 - **`till-pay-cash`** (block 20, Payment step) — no other situations.
 - **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
-- **`till-receipt`** (block 20, Payment step) — 5 of its 7 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper`, `till-receipt-paper-checked`, `till-receipt-paper-details` (the last four built early: Jack, 18 Oct, print receipt, mechanic sign-off and shop details decisions).
+- **`till-receipt`** (block 20, Payment step) — 6 of its 8 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper`, `till-receipt-paper-checked`, `till-receipt-paper-details` (these four built early: Jack, 18 Oct, print receipt, mechanic sign-off and shop details decisions), `till-receipt-wait` (Don't close things by themselves on: Paid waits for Start next sale; drawn 24 Oct for Jack's approval, morning questions answer 9).
 - **`till-giftcard`** (block 20, Payment step) — no other situations.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
@@ -589,7 +589,7 @@ later packages.
 - **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
 - **`request-new`** (block 9, Form box) — 6 of its 7 situations here: `request-decline`, `request-offer`, `request-offered`, `request-offered-decline`, `request-change`, `request-cancel`.
 - **`new-job`** (block 9, Form box) — 2 of its 3 situations here: `new-job-day`, `new-job-entered`; plus 1 written line.
-- **`job-overview`** (block 15, The job page, reused as it is) — 14 of its 25 situations here: `job-book-in`, `job-book-in-print`, `job-bike-tag`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `job-photo-choice`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 9 of its 11 written lines.
+- **`job-overview`** (block 15, The job page, reused as it is) — 16 of its 32 situations here: `job-book-in`, `job-book-in-print`, `job-bike-tag`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-finished-wait`, `job-finished-sent` (Don't close things by themselves on: Bike ready waits for Send now or Undo, then sent; drawn 24 Oct for Jack's approval, morning questions answer 9), `job-collection`, `job-photo-choice`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 9 of its 11 written lines.
 - **`job-checklist`** (block 7, Step-by-step checklist) — no other situations.
 - **`job-photo-phone`** (block 9, Form box) — 1 situation: `job-photo-phone-added`. "Use my phone": a code to scan that opens one line's photo step on the phone (walk-through 8, decision 6).
 - **`phone-photo-ready`** (block 40, Message or outcome page) — 3 situations: `phone-photo-check`, `phone-photo-done`, `phone-photo-expired`. The page the code opens on the phone, no sign-in; no customer name or number on it.
