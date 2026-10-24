@@ -401,3 +401,25 @@ test('Email on a job’s Paid box fills in the customer’s address from their r
   assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
 });
 
+// A deposit paid online comes off (Jack, 29 Sep, selling at the till decision
+// 11; drawn as till-job-balance; openspec/changes/till-online-deposit).
+const DEPOSIT_DUE = { depositPence: 1300, depositUsedPence: 1300, depositPaidAt: '2026-09-14T10:00:00Z', leftToPayPence: 7000, leftToPay: 70 };
+
+test('a deposit paid online comes off: a Deposit paid line, and Take payment for the rest', async () => {
+  const t = await openJobTill({ dueOver: DEPOSIT_DUE });
+  assert.ok(Boolean(await t.sale.findByText('Deposit paid')));
+  assert.ok(Boolean(t.sale.queryByText('Mon 14 Sep · online')));
+  assert.ok(Boolean(t.sale.queryByText('−£13.00')));
+  const take = await t.sale.findByRole('button', { name: 'Take payment · £70.00' });
+  await t.waitFor(() => assert.equal(take.disabled, false));
+  const pay = await payByCard(t);
+  await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
+  assert.equal(posts('/api/sale-documents/40/convert')[0].cardAmount, 70);
+  assert.ok(pay);
+});
+
+test('a deposit more than the bill says what isn’t paid back here', async () => {
+  const t = await openJobTill({ dueOver: { depositPence: 9000, depositUsedPence: 8300, depositPaidAt: '2026-09-14T10:00:00Z', leftToPayPence: 0, leftToPay: 0 } });
+  assert.ok(Boolean(await t.sale.findByText('The deposit is more than the bill: £7.00 isn’t paid back here yet.')));
+});
+
