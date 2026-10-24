@@ -84,3 +84,19 @@ test('the header search finds a customer by postcode, however it’s typed', asy
     assert.ok((await staff(`/api/search?q=${encodeURIComponent(q)}`)).body.customers.some((c) => c.id === priya.id), q);
   }
 });
+
+test('a number written +44 matches the same number written 07… (review)', async () => {
+  const aisha = await add({ name: 'Aisha Khan', phone: '07700 900421' });
+  const match = async (phone) => (await staff(`/api/customer-matches?${new URLSearchParams({ phone })}`)).body.map((c) => c.id);
+  assert.deepEqual(await match('+44 7700 900421'), [aisha.id]);
+  assert.deepEqual(await match('0044 7700 900421'), [aisha.id]);
+  const abroad = await add({ name: 'Priya Shah', phone: '+44 7700 900422' });
+  assert.deepEqual(await match('07700 900422'), [abroad.id], 'stored +44, typed 07');
+});
+
+test('saving without the new fields keeps them, as the old app saves (review)', async () => {
+  const lena = await add({ name: 'Lena Fox', phone: '07700 900811', address: '1 High Street', postcode: 'BL2 3CD', marketingPermission: true });
+  const res = await staff(`/api/customers/${lena.id}`, { method: 'PUT', body: { name: 'Lena Fox', phone: '07700 900811', email: '', notes: 'Rides a Cube' } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual([res.body.address, res.body.postcode, res.body.marketingPermission, res.body.notes], ['1 High Street', 'BL2 3CD', true, 'Rides a Cube']);
+});

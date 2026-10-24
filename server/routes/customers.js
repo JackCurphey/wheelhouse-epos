@@ -81,6 +81,13 @@ async function resolveGroupIds(rawGroupIds) {
   return { ids };
 }
 
+// A UK number however it's written: +44 7700 900142, 0044 7700 900142 and
+// 07700 900142 are the same number (review), as digits from 0.
+const ukNumber = (d) => (d.startsWith('0044') ? `0${d.slice(4)}` : d.startsWith('44') && d.length === 12 ? `0${d.slice(2)}` : d);
+const UK_NUMBER_SQL = `(CASE WHEN regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') LIKE '0044%' THEN '0' || substr(regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g'), 5)
+  WHEN regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') LIKE '44%' AND length(regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g')) = 12 THEN '0' || substr(regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g'), 3)
+  ELSE regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') END)`;
+
 // The address, postcode and offers (cs-add): optional text, trimmed, blank
 // as none; offers true or false. Absent keeps what's there.
 function customerExtras(body, existing) {
@@ -217,7 +224,7 @@ export function register(route) {
   // the same phone number, whatever its spaces, or the same email, active only.
   // screens: customers
   route('GET', '/api/customer-matches', async (req, res, params, query) => {
-    const digits = (query.get('phone') ?? '').replace(/\D/g, '');
+    const digits = ukNumber((query.get('phone') ?? '').replace(/\D/g, ''));
     const email = (query.get('email') ?? '').trim().toLowerCase();
     const byPhone = digits || null;
     const byEmail = email.includes('@') ? email : null;
@@ -226,7 +233,7 @@ export function register(route) {
       `SELECT c.*, (SELECT NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') FROM customer_bikes b
                      WHERE b.customer_id = c.id ORDER BY b.created_at DESC, b.id DESC LIMIT 1) AS bike_label
          FROM customers c
-        WHERE c.active = 1 AND ((?::text IS NOT NULL AND regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') = ?::text)
+        WHERE c.active = 1 AND ((?::text IS NOT NULL AND ${UK_NUMBER_SQL} = ?::text)
                              OR (?::text IS NOT NULL AND lower(trim(coalesce(c.email, ''))) = ?::text))
         ORDER BY c.id LIMIT 5`
     ).all(byPhone, byPhone, byEmail, byEmail);
