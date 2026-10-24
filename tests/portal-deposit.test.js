@@ -60,6 +60,7 @@ test('a hold is worked out on the stored prices: 20% of £65.00 and £12.50 is �
   assert.equal(h.status, 200, JSON.stringify(h.body));
   assert.equal(h.body.depositPence, 1550);
   assert.equal(h.body.provider, 'pretend');
+  assert.equal(h.body.depositCancelHours, 24, 'the page shows when it’s free to cancel until');
   assert.equal(await pretendStatus(h.body.ref), 'waiting');
 });
 

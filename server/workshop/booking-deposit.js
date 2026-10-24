@@ -5,11 +5,13 @@ import { paymentsConnected } from '../payments/provider.js';
 import { depositPence, poundsToPence } from './deposit.js';
 
 /**
- * The deposit in pence for these services (or "not sure"), null when none is
- * taken, or { error } when a service isn't one that can be booked online.
+ * { pence, cancelHours }: the deposit in pence for these services (or "not
+ * sure"), null when none is taken, and the shop's hours before the booking
+ * it's free to cancel until; or { error } when a service isn't one that can
+ * be booked online.
  */
 export async function bookingDeposit({ serviceIds, notSure }) {
-  const s = await prepare('SELECT deposit_on, deposit_kind, deposit_percent, deposit_fixed_pence, deposit_unknown_pence FROM workshop_settings LIMIT 1').get();
+  const s = await prepare('SELECT deposit_on, deposit_kind, deposit_percent, deposit_fixed_pence, deposit_unknown_pence, deposit_cancel_hours FROM workshop_settings LIMIT 1').get();
   if (!s || s.deposit_on !== 1) return { pence: null };
   let prices = [];
   if (!notSure) {
@@ -19,6 +21,7 @@ export async function bookingDeposit({ serviceIds, notSure }) {
     prices = serviceIds.map((id) => poundsToPence(byId.get(id)));
   }
   return {
+    cancelHours: s.deposit_cancel_hours,
     pence: depositPence({
       depositOn: true, depositKind: s.deposit_kind, depositPercent: s.deposit_percent, depositFixedPence: s.deposit_fixed_pence,
       depositUnknownPence: s.deposit_unknown_pence, paymentsConnected: paymentsConnected(),
