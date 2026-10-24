@@ -516,7 +516,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 // The drawn dark bar (bk-staff-no-show-kept), with Undo until the job is closed.
                 <div role="status" className="flex min-h-12 grow items-center justify-between gap-3 rounded-[10px] bg-[var(--wh-ink)] py-1 pr-1.5 pl-4 text-sm text-[var(--wh-bg)]">
                   <span>{job.deposit ? 'Marked Didn’t come · the deposit is kept' : 'Marked Didn’t come'}</span>
-                  <button type="button" disabled={sending} onClick={() => void run('didnt-come/undo')} className="min-h-11 rounded-lg bg-white/15 px-3.5 font-semibold">Undo</button>
+                  <button type="button" disabled={sending} onClick={() => void run('didnt-come/undo')} className="min-h-11 rounded-md px-3 font-semibold underline">Undo</button>
                 </div>
               ) : (<>
               <Button variant="danger" className="mr-auto min-h-11" disabled={sending} onClick={askDelete}>Delete job</Button>

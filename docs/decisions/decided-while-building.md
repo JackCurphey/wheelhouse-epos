@@ -2022,3 +2022,6 @@ No screen: server only.
    came after all, which clears the mark), not Put on hold.
 4. **"Not come in" shows on any booking whose day has gone with the bike not
    in**, with or without a deposit; the deposit line shows only when it took one.
+5. **The Undo on the "Marked Didn't come" bar is underlined text**, as the
+   job's "Bike ready" Undo already is, rather than the drawing's lighter
+   button: the colours stay the app's own named ones.
