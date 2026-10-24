@@ -18,8 +18,9 @@ export function register(route) {
     const q = (query.get('q') ?? '').trim().slice(0, 100);
     if (q.length < 2) return sendJson(res, 200, { jobs: [], customers: [] });
     const text = like(q);
-    // A phone number however it was typed: "07700 900142" or "07700900142".
-    const digits = q.replace(/\D/g, '');
+    // A phone number however it was typed: "07700 900142" or "07700900142";
+    // not the numbers in a job number or a name (review).
+    const digits = /[a-z]/i.test(q) ? '' : q.replace(/\D/g, '');
     const phone = digits.length >= 4 ? `%${digits}%` : null;
     const jobs = await prepare(
       `SELECT w.id, w.reference, w.title, w.job_date, w.start_time, w.booking_state, w.custody_state, w.work_state,
@@ -30,9 +31,9 @@ export function register(route) {
         WHERE w.reference ILIKE ? ESCAPE '\\' OR c.name ILIKE ? ESCAPE '\\' OR c.phone ILIKE ? ESCAPE '\\'
            OR (?::text IS NOT NULL AND regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') LIKE ?::text)
            OR (coalesce(b.make, '') || ' ' || coalesce(b.model, '')) ILIKE ? ESCAPE '\\'
-        ORDER BY (w.reference ILIKE ?) DESC, w.job_date DESC NULLS LAST, w.id DESC
+        ORDER BY (w.reference ILIKE ? ESCAPE '\\') DESC, w.job_date DESC NULLS LAST, w.id DESC
         LIMIT ${LIMIT}`
-    ).all(text, text, text, phone, phone, text, q);
+    ).all(text, text, text, phone, phone, text, q.replace(/[\\%_]/g, (c) => `\\${c}`));
     const customers = await prepare(
       `SELECT id, name, phone, email FROM customers
         WHERE active = 1 AND (name ILIKE ? ESCAPE '\\' OR email ILIKE ? ESCAPE '\\' OR phone ILIKE ? ESCAPE '\\'
