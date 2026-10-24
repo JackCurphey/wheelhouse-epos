@@ -132,14 +132,14 @@ async function loadShop(shopId) {
     const categoryId = await id('INSERT INTO workshop_service_categories (name, position) VALUES (?, ?)', group, position);
     for (const [i, name] of SERVICE_GROUPS[group].entries()) {
       services[name] = await id(
-        'INSERT INTO workshop_services (name, price, minutes, kind, category_id, position, bookable_online) VALUES (?, ?, ?, ?, ?, ?, 1)',
-        name, PRICES[name] ?? '0.00', lengths.get(name), kind, categoryId, i,
+        'INSERT INTO workshop_services (name, price, price_pence, minutes, kind, category_id, position, bookable_online) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, ?, ?, ?, 1)',
+        name, PRICES[name] ?? '0.00', PRICES[name] ?? '0.00', lengths.get(name), kind, categoryId, i,
       );
     }
   }
   for (const [name, minutes] of lengths) {
     if (!services[name]) {
-      services[name] = await id('INSERT INTO workshop_services (name, price, minutes) VALUES (?, ?, ?)', name, PRICES[name] ?? '0.00', minutes);
+      services[name] = await id('INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?)', name, PRICES[name] ?? '0.00', PRICES[name] ?? '0.00', minutes);
     }
   }
   await run('INSERT INTO products (name, sku, price) VALUES (?, ?, ?)', PRODUCT.name, PRODUCT.sku, PRODUCT.price);
