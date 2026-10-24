@@ -3,7 +3,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import type { BrowserContext, Page } from '@playwright/test';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup } from '../helpers/staff.js';
+import { staffSignup, staffRequest } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 // Customers in a real browser (openspec/changes/customers-list and
@@ -78,8 +78,8 @@ test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
   test('Customers and a customer’s page fit the screen', async ({ page, context }) => {
-    await signIn(page, context, '/workshop/customers');
-    await page.getByRole('link', { name: /Maya Patel/ }).first().click();
+    const [maya] = (await staffRequest(server!.baseUrl, owner.cookie, '/api/recent-customers')).body;
+    await signIn(page, context, `/workshop/customers/${maya.id}`);
     await expect(page.getByRole('heading', { level: 2, name: 'Maya Patel' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
