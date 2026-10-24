@@ -2112,3 +2112,14 @@ No screen: server only.
 7. **The browser's own email check is off**, so the drawn "That doesn't look
    like an email address — check it" shows instead of the browser's pop-up.
 
+### 24 Oct 2026: Save to a customer record from the till (`openspec/changes/till-save-customer`, `cp-receipt-address`, `cp-receipt-address-save`)
+
+1. **The new customer isn't attached to the sale.** The decision doesn't say,
+   and nothing can attach a customer to a finished sale yet, so the sale stays
+   with no customer. Jack to overrule.
+2. **Closing Add a customer (Escape or outside it) counts as Not now**: the
+   receipt stays sent and no one is added.
+3. **A customer with the same email may already exist**; Add the customer
+   adds a new record anyway, as the customer form does, and Customers' Merge
+   joins them.
+
