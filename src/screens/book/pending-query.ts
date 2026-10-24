@@ -56,7 +56,13 @@ export type BookingLink = {
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
   /** The deposit the booking took, and when it's free to cancel until in the shop's time (deposit-booking-page). */
-  deposit?: { pence: number; cancelUntil: { date: string; time: string } | null } | null;
+  deposit?: {
+    pence: number;
+    cancelUntil: { date: string; time: string } | null;
+    /** Paid, refunded (or on its way back), or kept; and whether cancelling now would refund it (deposit-refunds). */
+    state?: 'paid' | 'refunded' | 'kept';
+    refundable?: boolean;
+  } | null;
   /** Once the bike is in (pull request 359; booking page stages): how far it is, its times, the shop, and the money (figures null with Show prices off). */
   workState?: string;
   bookedInAt?: string | null;
