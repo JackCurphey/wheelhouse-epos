@@ -2044,3 +2044,18 @@ No screen: server only.
    little lower on the page; nothing inside it moves.
 4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
    shows the difference.
+
+### 24 Oct 2026: Don't close things by themselves, the screens (`openspec/changes/dont-close-screens`, `ys-wait`, `job-finished-wait`, `job-finished-sent`, `till-receipt-wait`)
+
+1. **A held Bike ready shows again when the job is opened again.** The
+   drawings show the strip just after marking the job ready. Without this,
+   closing the pop-up first would leave Bike ready waiting with no Send now
+   anywhere. The strip comes from the job's messages, and anyone who opens the
+   job can press Send now or Undo.
+2. **The sent line lasts while the pop-up is open**, as the minute's strip
+   does; when the job is opened again, Messages still shows that it went.
+3. **The job's Messages says a held Bike ready "waits until you press Send
+   now"**, beside its Waiting label (pattern: "goes at 10:15"). It isn't
+   checked every few seconds the way a message in its minute is.
+4. **The till's switch is the signed-in person's**, as all of Your settings
+   is until PINs; the cashier picked on the till doesn't change it.

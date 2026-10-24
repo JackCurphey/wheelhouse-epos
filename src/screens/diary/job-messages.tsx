@@ -19,6 +19,8 @@ export type JobMessage = {
   state: 'intended' | 'sending' | 'delivered' | 'failed' | 'unknown' | 'undone';
   pretend: boolean; sendAfter: string | null; sentAt: string | null; error: string | null; createdAt: string;
   direction?: 'outbound' | 'inbound';
+  // Held until Send now or Undo: Don't close things by themselves (Jack, 24 Oct answer 9).
+  held?: boolean;
 };
 
 export const jobMessagesKey = (jobId: number) => ['job-messages', jobId];
@@ -38,8 +40,8 @@ const clock = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Eur
 // The state's word and colour, and what follows "By text to …".
 function describe(m: JobMessage): { word: string; tone: keyof typeof TONE; when: string } {
   switch (m.state) {
-    // Past its time and not yet claimed by the sender's next round.
-    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? goesAt(m.sendAfter) : 'going now' };
+    // Held until Send now; or past its time and not yet claimed by the sender's next round.
+    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.held ? 'waits until you press Send now' : m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? goesAt(m.sendAfter) : 'going now' };
     case 'sending': return { word: 'Sending', tone: 'amber', when: 'going now' };
     case 'delivered': return { word: m.pretend ? 'Pretend' : 'Sent', tone: m.pretend ? 'grey' : 'green', when: signedOffWhen(m.sentAt ?? m.createdAt) };
     case 'undone': return { word: 'Undone', tone: 'grey', when: 'stopped with Undo' };
@@ -80,7 +82,7 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
     queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
     // While one waits its minute, look again so it shows when it's gone.
     // Checked again while one is about to go; a reminder a day away isn't.
-    refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'sending' || (m.state === 'intended' && (!m.sendAfter || Date.parse(m.sendAfter) - Date.now() < 120_000))) ? 5000 : false),
+    refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'sending' || (m.state === 'intended' && !m.held && (!m.sendAfter || Date.parse(m.sendAfter) - Date.now() < 120_000))) ? 5000 : false),
   });
   const first = customerName.trim().split(/\s+/)[0] || 'the customer';
   // The server lists newest first; a conversation reads oldest first.

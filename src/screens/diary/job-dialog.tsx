@@ -11,7 +11,7 @@ import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
-import { JobMessagesButton, jobMessagesKey } from './job-messages.tsx';
+import { JobMessagesButton, jobMessagesKey, type JobMessage } from './job-messages.tsx';
 import { printBikeTag } from './bike-tag.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
 import { JobChecklistBar } from './job-checklist.tsx';
@@ -190,22 +190,51 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   // walk-through 1 H2; the messages engine). The strip goes when the minute does.
   const [ready, setReady] = useState<ReadyStrip | null>(null);
   useEffect(() => {
-    if (!ready || !('id' in ready)) return undefined;
+    if (!ready || !('sendAfter' in ready)) return undefined;
     const t = setTimeout(() => setReady(null), Math.max(0, Date.parse(ready.sendAfter) - Date.now()));
     return () => clearTimeout(t);
   }, [ready]);
+  // With Don't close things by themselves on, Bike ready is held until Send
+  // now or Undo (Jack, 24 Oct answer 9; job-finished-wait). Read from the
+  // job's messages too, so it still waits when the job is opened again
+  // (decided while building).
+  const [handled, setHandled] = useState<number | null>(null);
+  const messagesQuery = useQuery({
+    queryKey: jobMessagesKey(jobId),
+    queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
+    enabled: finished,
+  });
+  const heldMessage = messagesQuery.data?.find((m) => m.key === 'bike_ready' && m.state === 'intended' && m.held && m.id !== handled);
+  const strip = ready ?? (job && heldMessage ? readyStrip(job, { ...heldMessage, held: true }) : null);
   async function undoReady() {
-    if (!ready || !('id' in ready)) return;
+    if (!strip || !('id' in strip)) return;
     setSending(true);
     setMessage(null);
+    setHandled(strip.id);
     try {
-      await apiMutate(`/api/messages/${ready.id}/undo`, {});
+      await apiMutate(`/api/messages/${strip.id}/undo`, {});
       setReady(null);
       void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job?.id ?? 0) });
     } catch (err) {
       setReady(null);
       setMessage(refusalText(err));
     } finally {
+      setSending(false);
+    }
+  }
+  async function sendReadyNow() {
+    if (!strip || !('held' in strip)) return;
+    setSending(true);
+    setMessage(null);
+    setHandled(strip.id);
+    try {
+      await apiMutate(`/api/messages/${strip.id}/send-now`, {});
+      setReady({ who: strip.who, sent: `“Bike ready” sent to ${strip.first} by ${channelWord(strip.channel)} · ${clockNow()}` });
+    } catch (err) {
+      setReady(null);
+      setMessage(refusalText(err));
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job?.id ?? 0) });
       setSending(false);
     }
   }
@@ -411,14 +440,21 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <span data-sign-off="true">Signed off by <strong>{job.signedOffByName}</strong>{` · ${signedOffWhen(job.signedOffAt)}`}</span>
               </p>
             ) : null}
-            {ready && 'id' in ready ? (
+            {strip && 'id' in strip ? (
               <div role="status" className="flex shrink-0 flex-wrap items-center gap-3 bg-[var(--wh-ink)] px-5 py-2 text-sm text-[var(--wh-bg)]">
-                <span className="grow">{ready.text}</span>
+                <span className="grow">{strip.text}</span>
+                {'held' in strip ? <Button disabled={sending} className="min-h-11" onClick={() => void sendReadyNow()}>Send now</Button> : null}
                 <button type="button" disabled={sending} onClick={() => void undoReady()} className="min-h-11 rounded-md px-3 font-semibold underline">Undo</button>
               </div>
             ) : null}
-            {ready && 'reason' in ready ? (
-              <p role="status" className="m-0 shrink-0 border-b border-[var(--wh-border)] px-5 py-2 text-sm">{ready.reason}</p>
+            {/* After Send now: sent, and when; nothing left to undo (job-finished-sent). */}
+            {strip && 'sent' in strip ? (
+              <div role="status" className="flex shrink-0 flex-wrap items-center gap-3 bg-[var(--wh-ink)] px-5 py-2 text-sm text-[var(--wh-bg)]">
+                <span className="grow">{strip.who}<strong className="font-semibold">{strip.sent}</strong></span>
+              </div>
+            ) : null}
+            {strip && 'reason' in strip ? (
+              <p role="status" className="m-0 shrink-0 border-b border-[var(--wh-border)] px-5 py-2 text-sm">{strip.reason}</p>
             ) : null}
             <div className="min-h-0 grow overflow-y-auto px-5 py-4">
               <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
@@ -593,8 +629,14 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   );
 }
 
-type ReadyMessage = { id: number; channel: string; to: string; sendAfter: string } | { skipped: 'off' | 'no_contact' };
-type ReadyStrip = { id: number; sendAfter: string; text: string } | { reason: string };
+type ReadyMessage = { id: number; channel: string; to: string | null; sendAfter: string | null; held?: boolean } | { skipped: 'off' | 'no_contact' };
+type ReadyStrip =
+  | { id: number; sendAfter: string; text: string }
+  | { id: number; held: true; text: string; who: string; first: string; channel: string }
+  | { who: string; sent: string }
+  | { reason: string };
+
+const clockNow = () => signedOffWhen(new Date().toISOString()).split(', ').at(-1);
 
 // What the strip says after marking it ready: the drawn line, or why Bike
 // ready didn't go (no phone or email; switched off says nothing).
@@ -605,5 +647,8 @@ function readyStrip(job: WorkshopJob, m: ReadyMessage): ReadyStrip | null {
   const first = (job.customerName ?? '').trim().split(/\s+/)[0] || 'the customer';
   const at = job.signedOffAt ? signedOffWhen(job.signedOffAt).split(', ').at(-1) : null;
   const who = job.signedOffByName && at ? `${job.signedOffByName} marked it ready at ${at}. ` : '';
+  if (m.held || !m.sendAfter) {
+    return { id: m.id, held: true, who, first, channel: m.channel, text: `${who}“Bike ready” to ${first} by ${channelWord(m.channel)} is waiting until you press Send now.` };
+  }
   return { id: m.id, sendAfter: m.sendAfter, text: `${who}“Bike ready” goes to ${first} by ${channelWord(m.channel)} in 1 minute.` };
 }
