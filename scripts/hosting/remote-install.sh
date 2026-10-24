@@ -47,6 +47,8 @@ done
 keep() { [ -f .env ] && grep "^$1=" .env | cut -d= -f2- || true; }
 signup_code=$(keep SIGNUP_CODE); signup_code=${signup_code:-$(openssl rand -hex 6)}
 shopify_key=$(keep SHOPIFY_TOKEN_ENCRYPTION_KEY); shopify_key=${shopify_key:-$(openssl rand -hex 32)}
+# What's running now, which this run replaces (written down below).
+was_image=$(keep WHEELHOUSE_IMAGE | tail -n 1); was_commit=$(keep WHEELHOUSE_COMMIT | tail -n 1)
 echo "Fetching the latest main from GitHub..."
 if [ -d app/.git ]; then
   git -C app fetch --quiet origin main
@@ -79,6 +81,14 @@ WHEELHOUSE_COMMIT=${commit}
 SETTINGS
 # The time, for a restore (runbook section D), as deploy.sh writes it.
 printf '%s setup %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$commit" >> deploys.log
+# The version deploy.sh rollback goes back to: what this run replaced, when
+# that was a downloaded image, kept by its commit. The image built here is
+# rebuilt in place below, so it can't come back as it was: nothing to go back
+# to then, rather than an older record (fresh review, 24 Oct).
+case "$was_image" in
+  ghcr.io/*) printf 'WHEELHOUSE_IMAGE=%s\nWHEELHOUSE_COMMIT=%s\n' "$was_image" "$was_commit" > release.previous ;;
+  *) rm -f release.previous ;;
+esac
 
 # GitHub's deploy-only key may run deploy.sh and nothing else: no shell, no
 # forwarding (restrict). An older deploy key is replaced; other keys stay.
