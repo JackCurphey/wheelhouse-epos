@@ -59,9 +59,9 @@ test('another shop cannot see a shop\'s booked services', async () => {
     // A row must actually exist for the owner shop first - checking for zero
     // rows against an empty table proves nothing about the policy.
     await runWithShop(owner.shop.id, async () => {
-      const svc = (await prepare("INSERT INTO workshop_services (name, price, minutes, updated_at) VALUES ('Isolation', 10, 30, now())").run()).lastInsertRowid;
+      const svc = (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, updated_at) VALUES ('Isolation', 10, 1000, 30, now())").run()).lastInsertRowid;
       const job = (await prepare("INSERT INTO workshop_jobs (title, job_date, updated_at) VALUES ('iso', '2030-01-01', now())").run()).lastInsertRowid;
-      await prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position) VALUES (?, ?, 10, 0)').run(job, svc);
+      await prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, booked_price_pence, position) VALUES (?, ?, 10, 1000, 0)').run(job, svc);
     });
     const ownSeen = await runWithShop(owner.shop.id, () => prepare(
       'SELECT count(*)::int AS n FROM workshop_job_services WHERE shop_id = ?').get(owner.shop.id));
@@ -78,7 +78,7 @@ test('a service id that is not a real service is refused (foreign key)', async (
   await runWithShop(owner.shop.id, async () => {
     const job = (await prepare("INSERT INTO workshop_jobs (title, job_date, updated_at) VALUES ('fk', '2030-01-01', now())").run()).lastInsertRowid;
     await assert.rejects(
-      prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position) VALUES (?, ?, 10, 0)').run(job, 2147483647),
+      prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, booked_price_pence, position) VALUES (?, ?, 10, 1000, 0)').run(job, 2147483647),
       /foreign key/i
     );
   });
@@ -86,10 +86,10 @@ test('a service id that is not a real service is refused (foreign key)', async (
 
 test('a job cannot list the same service twice, and rows go with the job', async () => {
   await runWithShop(owner.shop.id, async () => {
-    const svc = (await prepare("INSERT INTO workshop_services (name, price, minutes, updated_at) VALUES ('Once', 10, 30, now())").run()).lastInsertRowid;
+    const svc = (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, updated_at) VALUES ('Once', 10, 1000, 30, now())").run()).lastInsertRowid;
     const job = (await prepare("INSERT INTO workshop_jobs (title, job_date, updated_at) VALUES ('x', '2030-01-01', now())").run()).lastInsertRowid;
-    await prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position) VALUES (?, ?, 10, 0)').run(job, svc);
-    await assert.rejects(prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position) VALUES (?, ?, 10, 1)').run(job, svc));
+    await prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, booked_price_pence, position) VALUES (?, ?, 10, 1000, 0)').run(job, svc);
+    await assert.rejects(prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, booked_price_pence, position) VALUES (?, ?, 10, 1000, 1)').run(job, svc));
     await prepare('DELETE FROM workshop_jobs WHERE id = ?').run(job);
     const left = await prepare('SELECT count(*)::int AS n FROM workshop_job_services WHERE workshop_job_id = ?').get(job);
     assert.equal(left.n, 0);

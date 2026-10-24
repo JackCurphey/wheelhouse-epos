@@ -29,7 +29,7 @@ const column = async (name) => (await pool.query(
 )).rows[0];
 
 const svc = (name, kind) => prepare(
-  'INSERT INTO workshop_services (name, price, minutes, kind, updated_at) VALUES (?, 10, 30, ?, now())'
+  'INSERT INTO workshop_services (name, price, price_pence, minutes, kind, updated_at) VALUES (?, 10, 1000, 30, ?, now())'
 ).run(name, kind).then((r) => r.lastInsertRowid);
 const link = (full, part, position = 0) => prepare(
   'INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, ?)'

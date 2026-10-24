@@ -70,3 +70,46 @@ test('a service, a booked service and the booking page read their price from the
 });
 
 function expectOk(res) { assert.ok(res.status < 300, JSON.stringify(res.body)); }
+
+// Fresh review (migration 076): a write that forgets the pence is refused,
+// rather than storing £0.00 the readers would then show and charge.
+test('a workshop amount written without its pence is refused', async () => {
+  const inShop = (sql, ...params) => runWithShop(owner.shop.id, () => prepare(sql).run(...params));
+  await assert.rejects(inShop("INSERT INTO workshop_services (name, price, updated_at) VALUES ('Pounds only', 10, now())"), /null value in column "price_pence"/);
+  const service = (await staff('/api/workshop-services', { method: 'POST', body: { name: 'Brake bleed', price: 20, minutes: 30 } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Brake bleed', jobDate: '2026-10-14', mechanicId: alex } })).body;
+  await assert.rejects(inShop('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position) VALUES (?, ?, 20, 0)', job.id, service.id), /booked_price_pence/);
+  const quote = (await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Bleed', unitAmount: 20 }] } })).body;
+  await assert.rejects(inShop("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount) VALUES (?, 'part', 'Pads', 18)", quote.id), /null value in column "unit_amount_pence"/);
+});
+
+// Fresh review: the pence are whole numbers up to £21,474,836.47, so a bigger
+// price is refused in plain words, not a server error.
+test('a price too big to keep in pence is refused in plain words', async () => {
+  const big = await staff('/api/workshop-services', { method: 'POST', body: { name: 'Too dear', price: 21474836.48, minutes: 30 } });
+  assert.equal(big.status, 400, JSON.stringify(big.body));
+  assert.equal(big.body.error, 'A service’s price must be under £1,000,000');
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Dear', jobDate: '2026-10-15', mechanicId: alex } })).body;
+  const line = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'Gold leaf', unitAmount: 21474836.48 }] } });
+  assert.equal(line.status, 409, JSON.stringify(line.body));
+  assert.equal(line.body.error, 'A line’s price must be under £1,000,000.');
+  // Its unit price is kept in pence too, whatever the quantity (review).
+  const tiny = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'labour', description: 'A moment', unitAmount: 30000000, quantity: 0.01 }] } });
+  assert.equal(tiny.status, 409, JSON.stringify(tiny.body));
+  assert.equal(tiny.body.error, 'A line’s price must be under £1,000,000.');
+  // And the quote's lines together, as its totals are summed in pence (review).
+  const many = Array.from({ length: 22 }, (_, i) => ({ kind: 'labour', description: `Line ${i + 1}`, unitAmount: 999999 }));
+  const whole = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: many } });
+  assert.equal(whole.status, 409, JSON.stringify(whole.body));
+  assert.equal(whole.body.error, 'A quote’s total must be under £1,000,000.');
+});
+
+// Fresh review: a part of 0 would be quoted at £0.00 and charged as 1.
+test('a quoted part needs a quantity of at least 1', async () => {
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Pads', jobDate: '2026-10-16', mechanicId: alex } })).body;
+  for (const quantity of [0, -2]) {
+    const res = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'part', description: 'Pads', unitAmount: 20, quantity }] } });
+    assert.equal(res.status, 409, `${quantity}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.error, 'A part’s quantity must be a whole number of 1 or more.');
+  }
+});
