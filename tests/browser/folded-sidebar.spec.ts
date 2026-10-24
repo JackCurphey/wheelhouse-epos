@@ -8,8 +8,8 @@ import { deleteTestShop } from '../helpers/testShop.js';
 
 // Folded sidebar in a real browser (openspec/changes/folded-sidebar; app map
 // review 4, 5, 7): on a computer the Till is folded to the 84px rail, the full
-// sidebar opens over the page after resting on the rail and with Unfold, and
-// the switch folds every page.
+// sidebar opens over the page with Unfold, not by resting on the rail (Jack,
+// 24 Oct), and the switch folds every page.
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
 
@@ -37,7 +37,7 @@ async function signIn(page: Page, context: BrowserContext, path: string) {
 }
 const panel = (page: Page) => page.locator('nav[data-unfolded]');
 
-test('the Till is folded to the rail; resting on it opens the full sidebar over the till, and moving away folds it', async ({ page, context }) => {
+test('the Till is folded to the rail; resting on it leaves it folded, and Unfold opens the full sidebar over the till', async ({ page, context }) => {
   await folded(false);
   await signIn(page, context, '/workshop/till');
   const rail = page.getByRole('navigation', { name: 'Main, folded' });
@@ -45,8 +45,8 @@ test('the Till is folded to the rail; resting on it opens the full sidebar over 
   expect((await rail.boundingBox())!.width).toBeCloseTo(84, 0);
   await expect(panel(page)).toBeHidden();
   await rail.getByRole('link', { name: 'Diary' }).hover();
-  await expect(panel(page)).toBeVisible();
-  await page.mouse.move(1200, 500);
+  // Well past the old 300 ms rest.
+  await page.waitForTimeout(1000);
   await expect(panel(page)).toBeHidden();
   await rail.getByRole('button', { name: 'Unfold the menu' }).click();
   await expect(panel(page)).toBeVisible();

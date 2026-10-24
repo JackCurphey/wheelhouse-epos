@@ -84,7 +84,7 @@ export function YourSettingsPage() {
   // Folded sidebar, last as drawn: its hint for a tablet, where the rail is always there; not on a phone, where the menu opens the rooms.
   const rows = isPhone ? ROWS : [...ROWS, { key: 'foldedSidebar' as const, label: 'Folded sidebar', hint: isTablet
     ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.'
-    : 'Folds the sidebar down to icons on every page, for more room. Rest the pointer on it, or press Unfold, to open it. The Till always has it folded.' }];
+    : 'Folds the sidebar down to icons on every page, for more room. Press Unfold to open it. The Till always has it folded.' }];
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="ys-title" className="md:max-w-[560px] max-md:h-full max-md:max-h-none max-md:w-full max-md:max-w-none max-md:rounded-none">
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-3.5 pr-3.5 pl-[22px]">
