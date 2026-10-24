@@ -17,8 +17,8 @@ import { ROUTES } from '@/staff/routes.ts';
  */
 type Recent = { id: number; name: string; phone: string | null; email: string | null; bikeLabel: string | null };
 type Group = { id: number; name: string };
-const customerHref = (id: number) => `${ROUTES.customers}/${id}`;
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+export const customerHref = (id: number) => `${ROUTES.customers}/${id}`;
+export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 
 function Row({ c, phone }: { c: Recent; phone: boolean }) {
@@ -36,13 +36,26 @@ function Row({ c, phone }: { c: Recent; phone: boolean }) {
   );
 }
 
-function Field({ id, label, value, onChange, type = 'text', placeholder }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
+export function Field({ id, label, value, onChange, type = 'text', placeholder }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
       <input id={id} type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)}
         className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]" />
     </div>
+  );
+}
+
+/** Happy to hear about offers' switch: On or Off in words, and the track (cs-add). */
+export function OnOff({ on, labelledBy, onChange }: { on: boolean; labelledBy: string; onChange: () => void }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-labelledby={labelledBy} onClick={onChange}
+      className="inline-flex min-h-11 items-center gap-2.5 rounded-lg px-1">
+      <span className={`text-sm font-semibold ${on ? '' : 'text-[var(--wh-muted)]'}`}>{on ? 'On' : 'Off'}</span>
+      <span aria-hidden="true" className={`relative inline-block h-[26px] w-11 rounded-full ${on ? 'bg-[var(--wh-brand)]' : 'bg-[var(--wh-input-border)]'}`}>
+        <span className={`absolute top-[3px] size-5 rounded-full bg-[var(--wh-panel)] shadow ${on ? 'left-[21px]' : 'left-[3px]'}`} />
+      </span>
+    </button>
   );
 }
 
@@ -133,13 +146,7 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
             <span id="add-offers" className="text-[15px] font-semibold">Happy to hear about offers</span>
             <span className="text-[13px] text-[var(--wh-muted)]">Only if they say yes. Job updates always go.</span>
           </span>
-          <button type="button" role="switch" aria-checked={form.offers} aria-labelledby="add-offers" onClick={() => setForm((f) => ({ ...f, offers: !f.offers }))}
-            className="inline-flex min-h-11 items-center gap-2.5 rounded-lg px-1">
-            <span className={`text-sm font-semibold ${form.offers ? '' : 'text-[var(--wh-muted)]'}`}>{form.offers ? 'On' : 'Off'}</span>
-            <span aria-hidden="true" className={`relative inline-block h-[26px] w-11 rounded-full ${form.offers ? 'bg-[var(--wh-brand)]' : 'bg-[var(--wh-input-border)]'}`}>
-              <span className={`absolute top-[3px] size-5 rounded-full bg-[var(--wh-panel)] shadow ${form.offers ? 'left-[21px]' : 'left-[3px]'}`} />
-            </span>
-          </button>
+          <OnOff on={form.offers} labelledBy="add-offers" onChange={() => setForm((f) => ({ ...f, offers: !f.offers }))} />
         </div>
         {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
       </DialogBody>

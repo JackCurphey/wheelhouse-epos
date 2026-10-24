@@ -1833,3 +1833,29 @@ No screen: server only.
 5. **Left out until built:** a company or club (its VAT invoice waits on the
    accountant), the "Owes" chip (money in pence), Privacy requests.
 6. **Adding opens the new customer's page**, as "Use [name]" opens theirs.
+
+### 24 Oct 2026: a customer's page and Edit (`openspec/changes/customer-page`, `cs-page`, `cs-page-new`, `cs-edit`)
+
+1. **History rows**: a job shows its number, the work, its day and mechanic and
+   its stage, and opens in the diary; a sale shows "Sale [n]", its day, what was
+   bought and its total; a message shows "Text" or "Email", its name and where
+   it went. Sales and messages don't open anything until their pages exist.
+2. **Eight rows, then "Show all ([n])"**; the filters show only their kind.
+3. **A cancelled job reads "Cancelled"** and a collected one "Collected" in the
+   history, beside the diary's stage words for the rest.
+4. **Offers show On or Off on the page**, changed in Edit, not with a switch
+   on the page (the drawing shows the switch): a customer's yes or no is
+   changed deliberately, with Save changes.
+5. **Bikes are listed without their own pages or "+ Add" yet** (the bike's
+   page is next), with their colour when they have one; "No bikes yet."
+6. **New job opens the diary's New job with them chosen** (`?customer=`), at a
+   time to enter, as an order does.
+7. **Left out until built**: "Owes", the account and store credit (money in
+   pence), warranty (needs "bought here"), refunds and credit changes in the
+   history.
+8. **A job never booked in, whose day has gone, isn't "Open now"** (a no-show;
+   review), though it still shows under Earlier with its stage.
+9. **Edit leaves a customer's groups as they are unless the group is changed**
+   there, so someone in two groups (the old app allows it) keeps both (review).
+10. **A UK number matches however it's written**: +44 7700 900142, 0044 … and
+    07700 900142 are the same (review).

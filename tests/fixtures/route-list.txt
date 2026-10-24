@@ -201,3 +201,4 @@ POST /api/sales/:id/email-receipt
 GET /api/search
 GET /api/customer-matches
 GET /api/recent-customers
+GET /api/customers/:id/history

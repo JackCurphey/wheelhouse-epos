@@ -193,7 +193,7 @@ export function DiaryPage() {
 
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
-  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder } | null>(null);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder; forCustomer?: ForOrder['customer'] } | null>(null);
   // ---- Offer another time (Jack, 20 Oct): the same pick mode, for a request ----
   const [offering, setOffering] = useState<WorkshopJob | null>(null);
   const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
@@ -264,17 +264,21 @@ export function DiaryPage() {
   // The order read, until the mechanics, opening hours and jobs are in, so
   // New job chooses the mechanic and the first hour as it would from the diary.
   const [orderFor, setOrderFor] = useState<ForOrder | null>(null);
+  // The customer read for New job from their page, held the same way.
+  const [customerFor, setCustomerFor] = useState<ForOrder['customer']>(null);
   useEffect(() => {
-    const asked = params.has('job') || params.has('order') ? `${params.get('job')}|${params.get('order')}` : '';
+    const asked = params.has('job') || params.has('order') || params.has('customer') ? `${params.get('job')}|${params.get('order')}|${params.get('customer')}` : '';
     // Once read and dropped, the same job can be asked for again.
     if (!asked) { fromAddress.current = ''; return; }
     if (asked === fromAddress.current) return;
     fromAddress.current = asked;
     const jobId = Number(params.get('job'));
     const orderId = Number(params.get('order'));
+    const customerId = Number(params.get('customer'));
     const kept = new URLSearchParams(params);
     kept.delete('job');
     kept.delete('order');
+    kept.delete('customer');
     setParams(kept, { replace: true });
     const words = (err: unknown) => (err instanceof ApiError ? err.message : 'the server couldn’t be reached');
     const openById = async (id: number) => {
@@ -285,6 +289,12 @@ export function DiaryPage() {
     };
     if (Number.isInteger(jobId) && jobId > 0) {
       openById(jobId).catch((err) => setNotice(`Couldn’t open that job: ${words(err)}`));
+    }
+    // New job from a customer's page, with them chosen (customer-page design 4).
+    if (Number.isInteger(customerId) && customerId > 0) {
+      apiGet<{ id: number; name: string; email: string | null; phone: string | null }>(`/api/customers/${customerId}`)
+        .then((c) => setCustomerFor(c))
+        .catch((err) => setNotice(`Couldn’t open New job for that customer: ${words(err)}`));
     }
     if (Number.isInteger(orderId) && orderId > 0) {
       (async () => {
@@ -312,6 +322,13 @@ export function DiaryPage() {
     setOrderFor(null);
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
   }
+  if (customerFor && notLoaded) {
+    setCustomerFor(null);
+    setNotice(`Couldn’t open New job for that customer: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
+  } else if (customerFor && mechanics.data && settings.data && jobs.data) {
+    setCustomerFor(null);
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, forCustomer: customerFor });
+  }
   const newJobDialog = newJob ? (
     <NewJobDialog
       key={`${newJob.date}-${newJob.startMin}`}
@@ -323,6 +340,7 @@ export function DiaryPage() {
       chooseMechanic={freest}
       people={people}
       order={newJob.order}
+      forCustomer={newJob.forCustomer}
       onSavedWithProblem={setNotice}
       onClose={() => setNewJob(null)}
     />

@@ -32,6 +32,8 @@ export const ROUTES = {
   website: '/workshop/website',
   settings: '/workshop/settings',
   'your-settings': '/workshop/your-settings',
+  // A customer's page (cs-page), from Customers and the header search.
+  'cs-page': '/workshop/customers/:id',
   reschedule: '/workshop/booking/:jobId/reschedule',
   cancel: '/workshop/booking/:jobId/cancel',
   expired: '/workshop/link-expired',
