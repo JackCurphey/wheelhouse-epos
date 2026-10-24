@@ -30,6 +30,7 @@ import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/c
 import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { removePhotoDetails } from '../photo-metadata.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
+import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
 import { cancelPhotoCode, makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
@@ -959,6 +960,8 @@ export function register(route) {
             const ended = await db.prepare('SELECT booking_state FROM workshop_jobs WHERE id = ?').get(id);
             const owed = { declined: 'Declined', expired: 'The request expired', cancelled: 'Cancelled by the shop' }[ended.booking_state];
             if (owed) await oweRefund(id, owed);
+            // A request confirmed after its cut-off: 1 hour to cancel free (Jack, 24 Oct).
+            if (event === 'accept' && (answering === 'pending' || answering === 'offered')) await graceOnConfirm(id);
             await syncJobHold(id);
             return { ...applied, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
           });

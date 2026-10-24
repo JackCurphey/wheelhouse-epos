@@ -176,3 +176,24 @@ test('a request not yet confirmed, cancelled after its cut-off, is refunded (Jac
   assert.equal((await pretendStatus(hold.body.ref)).status, 'refunded');
   assert.equal(cancelled.body.deposit.state, 'refunded');
 });
+
+// Jack, 24 Oct: a request confirmed after its cut-off gets 1 hour to cancel
+// free, never past the booking's start (docs/decisions/2026-10-24-request-deposit-refund.md).
+test('a request confirmed after its cut-off: free to cancel for 1 hour after (Jack, 24 Oct)', async () => {
+  const b = await booked({ confirm: false });
+  await pastCutOff(b.id);
+  assert.equal((await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } })).status, 200);
+  const l = await link(b.code);
+  // The server's pinned clock is 06:00 UTC on 1 Sep 2026, 07:00 in the UK: an hour on is 08:00.
+  assert.deepEqual(l.deposit.cancelUntil, { date: '2026-09-01', time: '08:00' });
+  assert.equal(l.deposit.refundable, true);
+  assert.equal((await post(`/booking-links/${b.code}/cancel`, {})).status, 200);
+  assert.equal((await pretendStatus(b.ref)).status, 'refunded');
+});
+
+test('a request confirmed before its cut-off keeps its own cut-off', async () => {
+  const b = await booked({ confirm: false });
+  const before = (await link(b.code)).deposit.cancelUntil;
+  assert.equal((await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } })).status, 200);
+  assert.deepEqual((await link(b.code)).deposit.cancelUntil, before);
+});

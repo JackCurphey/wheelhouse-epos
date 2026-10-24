@@ -1987,3 +1987,9 @@ No screen: server only.
    keeps the deposit.~~ **Overruled by Jack, 24 Oct**: a request the shop
    hasn't confirmed always gets its deposit back
    (`docs/decisions/2026-10-24-request-deposit-refund.md`).
+
+### 24 Oct 2026: requests and the cut-off (`openspec/changes/deposit-request-refund`)
+
+1. **A booking confirmed at once by automatic confirming keeps its own
+   cut-off**, without Jack's 1-hour window: it isn't a request, and the
+   customer saw "Free to cancel until" when booking.
