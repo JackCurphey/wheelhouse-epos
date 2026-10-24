@@ -258,15 +258,18 @@ export function DiaryPage() {
   // ?job= opens that job as a click on its block does; ?order= opens New job,
   // as "Enter a time instead" does, filled in from the order. Each is read
   // once, then dropped from the address so going back or reloading doesn't
-  // open it again.
-  const fromAddress = useRef(false);
+  // open it again. Read again when the address gains one while the diary is
+  // open (the header search, picking a job here).
+  const fromAddress = useRef('');
   // The order read, until the mechanics, opening hours and jobs are in, so
   // New job chooses the mechanic and the first hour as it would from the diary.
   const [orderFor, setOrderFor] = useState<ForOrder | null>(null);
   useEffect(() => {
-    if (fromAddress.current) return;
-    fromAddress.current = true;
-    if (!params.has('job') && !params.has('order')) return;
+    const asked = params.has('job') || params.has('order') ? `${params.get('job')}|${params.get('order')}` : '';
+    // Once read and dropped, the same job can be asked for again.
+    if (!asked) { fromAddress.current = ''; return; }
+    if (asked === fromAddress.current) return;
+    fromAddress.current = asked;
     const jobId = Number(params.get('job'));
     const orderId = Number(params.get('order'));
     const kept = new URLSearchParams(params);
