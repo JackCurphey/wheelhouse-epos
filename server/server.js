@@ -223,8 +223,8 @@ async function serveUploadedImage(req, res, key) {
   createReadStream(filePath).pipe(res);
 }
 
-// The route areas already moved to server/routes/ (split plan §4.1), in
-// the fixed order of server/routes/index.js.
+// Every route, from server/routes/ (split plan §4.1, WP-0.4), in the fixed
+// order of server/routes/index.js.
 for (const area of ROUTE_AREAS) area.register(route);
 
 // ---------- Static file serving ----------
