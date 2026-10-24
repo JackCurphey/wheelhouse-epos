@@ -185,10 +185,13 @@ test('conversion: every row with pounds and pence has pounds × 100 = pence; tab
   }
 });
 
-test('the converted columns are the ones design.md Decision 1 lists', () => {
+test('the converted columns are the ones design.md Decision 1 lists, and step A′’s (task 2.1)', () => {
   assert.deepEqual(CONVERTED, [
     { table: 'sale_documents', columns: ['subtotal', 'discount', 'total'] },
     { table: 'sale_document_items', columns: ['unit_price', 'line_total'] },
+    { table: 'workshop_services', columns: ['price'] },
+    { table: 'workshop_quote_lines', columns: ['unit_amount'] },
+    { table: 'workshop_job_services', columns: ['booked_price'] },
   ]);
 });
 

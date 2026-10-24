@@ -27,10 +27,14 @@ import { fileURLToPath } from 'node:url';
 
 export const KNOWN_KINDS = ['group_discount_rounding', 'payment_tolerance'];
 
-// The pounds columns that gain a _pence twin in step A (design.md Decision 1).
+// The pounds columns that gain a _pence twin in step A (design.md Decision 1),
+// and the workshop's own in step A′ (task 2.1, migration 075).
 export const CONVERTED = [
   { table: 'sale_documents', columns: ['subtotal', 'discount', 'total'] },
   { table: 'sale_document_items', columns: ['unit_price', 'line_total'] },
+  { table: 'workshop_services', columns: ['price'] },
+  { table: 'workshop_quote_lines', columns: ['unit_amount'] },
+  { table: 'workshop_job_services', columns: ['booked_price'] },
 ];
 
 // The shop's clock when it has no workshop settings row: the time_zone

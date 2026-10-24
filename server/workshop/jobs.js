@@ -442,9 +442,9 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
     // so it never passes through a JavaScript number (piece 7).
     for (const [position, serviceId] of (serviceIds ?? []).entries()) {
       await db.prepare(
-        `INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position)
-         VALUES (?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?)`
-      ).run(info.lastInsertRowid, serviceId, serviceId, position);
+        `INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, booked_price_pence, position)
+         VALUES (?, ?, (SELECT price FROM workshop_services WHERE id = ?), (SELECT price_pence FROM workshop_services WHERE id = ?), ?)`
+      ).run(info.lastInsertRowid, serviceId, serviceId, serviceId, position);
     }
 
     // Take the capacity hold in the same transaction as the job. checkJobSlot

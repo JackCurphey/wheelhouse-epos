@@ -289,6 +289,17 @@ own change says how.
 E can't be rolled back, which is why it needs Jack's yes and a clean totals
 check.
 
+## Step A′ notes (Jack's side, 24 Oct)
+
+- **A quote line's quantity isn't money**, so it isn't converted: it stays a
+  `NUMERIC` count (hours of labour can be 1.5). A line's total in pence is
+  `ROUND(quantity * unit_amount_pence)`, worked out in one place on the
+  server, never by a screen.
+- **The pounds stay**, written in the same statement as their pence (as step
+  A), until nothing reads them: migration 075 adds `price_pence`,
+  `unit_amount_pence` and `booked_price_pence` (null where the price is), and
+  every writer writes both. Readers move to pence in the next pull request.
+
 ## Open Questions
 
 - For Jack (asked on #134): what VAT rate labour lines carry. Until he

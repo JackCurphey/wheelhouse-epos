@@ -782,8 +782,9 @@ export function register(route) {
     let info;
     try {
       info = await db.prepare(
-        'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
-      ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
+        // Pence beside the pounds, from the same value (sales in pence, step A′).
+        'INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
+      ).run(fields.name, fields.price, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
       await replaceIncludes(info.lastInsertRowid, includes);
       await db.exec('COMMIT');
     } catch (err) {
@@ -830,8 +831,8 @@ export function register(route) {
     await db.exec('BEGIN');
     try {
       await db.prepare(
-        'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
-      ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
+        'UPDATE workshop_services SET name = ?, price = ?, price_pence = ROUND(CAST(? AS numeric) * 100)::int, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
+      ).run(fields.name, fields.price, fields.price, fields.minutes, active, bookableOnline,
         placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
       // Only touch the stored list when the caller actually sent one, or when
       // the demotion to individual must clear it - a save that leaves
