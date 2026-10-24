@@ -8,6 +8,6 @@
 
 ## 2. Screen
 
-- [ ] 2.1 Tests first (`tests/screens/work-parts.test.js`): the Done tick saves; "+ Add note", writing and leaving saves; a quantity change sends the ids; both disabled on finished work. Watch each fail
-- [ ] 2.2 Build it to the drawings
+- [x] 2.1 Tests first (`tests/screens/work-parts.test.js`): the Done tick saves; "+ Add note", writing and leaving saves; a quantity change sends the ids; both disabled on finished work. Watch each fail. Seven failed first, including the two changed expectations (ids now sent). Mutations caught: no ids, no finished gate, a note not saved, a tick not shown
+- [x] 2.2 Build it to the drawings
 - [ ] 2.3 `npm test`, `npm run test:browser`, lint; archive as the last commit

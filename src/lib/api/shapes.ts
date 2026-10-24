@@ -85,6 +85,8 @@ export function shapeProblems(shape: Shape, value: Record<string, unknown>): str
 export const ORDER_LINE: Shape = {
   id: N, productId: NN, name: S, sku: SN, unitPrice: N, qty: N, lineTotal: N, lineType: S, serviceId: NN, minutes: NN,
   unitPricePence: N, lineTotalPence: N, vatRateBp: NN,
+  // Its Done tick and staff note (line-done-notes).
+  done: ['boolean'], note: SN,
 };
 
 /** An order or quote with its lines (GET /api/sale-documents/:id): what the

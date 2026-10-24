@@ -2075,3 +2075,21 @@ No screen: server only.
    little lower on the page; nothing inside it moves.
 4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
    shows the difference.
+
+### 24 Oct 2026: a Done tick and a note on each line (`openspec/changes/line-done-notes`, `job-overview`, `job-mechanic`, `job-waiting-parts`, `job-finished`)
+
+The drawings show the Done and Note columns but not how they behave; each
+follows the job checklist, the closest pattern built.
+1. **Anyone signed in ticks or writes a note, and the latest change wins**;
+   who ticked isn't recorded (waits for PINs, WP-1.7).
+2. **Neither changes once the work is finished**, until it's reopened, with
+   "Reopen the work to change its Done ticks and notes." under the table.
+   The drawings show ticks on `job-finished`, as a picture of the state.
+3. **A note is added with "+ Add note"** and saved when its box is left; a
+   note already there is pressed to change it. Nothing is drawn for editing.
+4. **A line starts unticked**, even one approved on a quote. The drawings
+   draw approved lines ticked, but ticking is the mechanic saying the work is
+   done.
+5. **The phone keeps the existing table**, which scrolls sideways, rather than
+   the drawn row cards, which aren't built for any column yet.
+
