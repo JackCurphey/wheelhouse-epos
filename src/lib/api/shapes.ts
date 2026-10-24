@@ -37,6 +37,8 @@ const JOB_FIELDS: Shape = {
   spendLimit: NN,
   // Where a bike in the shop is kept (storage slots); null when none.
   storageSlotId: NN, storageSlotName: SN,
+  // The deposit and Didn't come (deposit-diary-server).
+  deposit: ON, noShowAt: SN,
   status: S, bookingState: S, custodyState: S, workState: S, newOnline: ['boolean'],
   // A list: each answer to the services' questions (an online booking's, even
   // when there were none), or null for a staff job.

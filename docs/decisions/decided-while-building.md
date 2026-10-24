@@ -1998,3 +1998,26 @@ No screen: server only.
    keeps the deposit**, as the words on step 4 say ("After that, or if you
    don't come, the shop keeps it"). For Jack: a request for tomorrow is past
    its cut-off at once (review).
+
+### 24 Oct 2026: the deposit on the customer's pages (`openspec/changes/deposit-refund-pages`, `bk-cancel`, `bk-cancel-late`, `bk-cancelled`, `bk-declined`)
+
+1. **Past the cut-off, "Free to cancel until" isn't shown** on the booking
+   page, so it never reads as still free; the cancel pop-up says it instead.
+2. **The late pop-up names the shop's number when the shop has one**, else
+   says "call the shop".
+3. **The green "will be refunded" note uses the page's "Booking confirmed"
+   colours**; there's no separate success colour.
+
+### 24 Oct 2026: the diary job's deposit, the server (`openspec/changes/deposit-diary-server`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is a mark on the job, not a new booking state**: who and
+   when; the booking otherwise stays as it was, and Undo clears the mark.
+2. **Any signed-in member of staff can refund a deposit by hand**, as other
+   job actions; the job shows who did it. The reason is needed, up to 200
+   characters, and the whole deposit goes back (the drawing has no part
+   amount).
+3. **A deposit is "kept" once taken and the booking was cancelled late or
+   marked Didn't come**; refunding it by hand afterwards makes it
+   "refunded".
+4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
+   then simply paid, as for any booking (review).
