@@ -15,6 +15,7 @@ const line = (over: Record<string, unknown>) => ({
   id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28,
   need: 'needed', reason: 'Rear pads worn — replacing', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null,
   goesWithLineId: null, without: null, photoId: null, ...over,
+  lineTotalPence: (over.lineTotalPence as number | undefined) ?? Math.round(((over.lineTotal as number | undefined) ?? 28) * 100),
 });
 const QUOTE = {
   id: 9, workshopJobId: 1, revision: 2, state: 'sent', createdAt: '2026-10-05T09:00:00Z', sentAt: '2026-10-05T10:15:00Z',

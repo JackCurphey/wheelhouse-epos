@@ -2188,3 +2188,20 @@ follows the job checklist, the closest pattern built.
 3. **Photos aren't kept**, as before; the bike step already says they need
    adding again.
 
+### 24 Oct 2026: workshop amounts in pence, the screens' totals (`openspec/changes/wp-1-6-sales-in-pence`, task 2.2; `job-quote`, `dq-quote`, `dq-in-shop`)
+
+1. **The job page's Proposed total comes from the server**, worked out from
+   the pence: the order, any booked service not on it yet, and the quote's
+   lines not on the order yet (waiting for an answer, or said yes to one at a
+   time before the whole answer adds them). For a draft that is the whole bill the
+   limit is checked against, as before. For a sent quote the screen used to
+   add only the order and the waiting lines, so a quote sent before the
+   booked service joined the order showed less than its draft had; it now
+   counts the booked service too, the same bill either way.
+2. **The customer's Approve total is added up in whole pence**: what was
+   agreed before (now sent in pence too) and each ticked line's pence, which
+   the server worked out. Their ticks change it as they go, so the server
+   can't send one figure for every choice; adding whole numbers is exact.
+3. **Work agreed's total on the booking page comes from the server**: its
+   lines' pence summed, none with prices hidden online, as each line's price
+   is hidden.

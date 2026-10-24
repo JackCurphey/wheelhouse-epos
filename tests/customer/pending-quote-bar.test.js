@@ -24,7 +24,7 @@ const LINK = {
   answers: [], bike: null, stage: 'in_workshop', photoCount: 0, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
   shop: { address: null, phone: '[shop phone]' },
 };
-const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads worn — replacing', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over });
+const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads worn — replacing', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over, lineTotalPence: over?.lineTotalPence ?? Math.round((over?.lineTotal ?? 28) * 100) });
 // The drawing's three lines (quote.mjs NEW_LINES): fitting goes with the pads.
 const LINES = [
   qline({}),

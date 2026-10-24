@@ -21,7 +21,7 @@ const LINK = {
   answers: [], bike: null, stage: 'in_workshop', photoCount: 0, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
   shop: { address: null, phone: '[shop phone]' },
 };
-const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over });
+const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over, lineTotalPence: over?.lineTotalPence ?? Math.round((over?.lineTotal ?? 28) * 100) });
 const QUOTE = { id: 9, workshopJobId: 1, revision: 1, state: 'sent', createdAt: '2026-10-05T09:00:00Z', sentAt: '2026-10-05T10:15:00Z', lines: [qline()], totals: { all: 28, approved: 0, pending: 28, declined: 0 } };
 const THEIRS = { id: 2, fromCustomer: false, from: 'Jo Taylor, North Street Cycles', text: 'Yes, we’ll check it.', at: '2026-10-05T11:00:00Z' };
 
@@ -68,7 +68,7 @@ test('with notes already there, the button goes to the Reply box', async () => {
 
 test('Work agreed ends with the note button, which goes to the box too', async () => {
   const answered = { ...QUOTE, state: 'approved', lines: [qline({ decision: 'approved', decidedVia: 'link', addedToOrderAt: '2026-10-05T11:00:00Z' })] };
-  const { ui } = await open({ quote: answered, link: { ...LINK, work: [{ name: 'Standard service', price: 65 }, { name: 'Shimano brake pads', price: 28 }] } });
+  const { ui } = await open({ quote: answered, link: { ...LINK, work: [{ name: 'Standard service', price: 65 }, { name: 'Shimano brake pads', price: 28 }], workTotal: 93 } });
   const { fireEvent, within } = await rtl();
   const box = await ui.findByRole('textbox', { name: 'Add a note for the shop' });
   const agreed = within(ui.getByRole('heading', { name: 'Work agreed' }).closest('section, div'));

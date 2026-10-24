@@ -32,6 +32,8 @@ type Quote = {
   id: number; revision: number; state: string; lines: QuoteLine[]; totals: { all: number; approved: number; pending: number; declined: number };
   // The customer's spending limit and the whole bill with this quote (Workshop day 41-43).
   limit?: { spendLimit: number | null; wholeBill: number };
+  // The order, booked work not on it yet and the lines still waiting, from the pence by the server.
+  proposedTotal?: number | null;
 };
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
 
@@ -338,8 +340,8 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
 
       {q && (q.state === 'draft' || q.state === 'sent') && q.lines.length ? (
         <p className="m-0 text-right text-sm font-bold">
-          {/* The whole bill the limit is checked against, booked work included (fresh review). */}
-          {`Proposed total ${money(q.state === 'draft' && q.limit ? q.limit.wholeBill : orderTotal + (q.state === 'draft' ? q.totals.all : q.totals.pending))}`}
+          {/* The whole bill the limit is checked against, booked work included (fresh review), worked out by the server. */}
+          {typeof q.proposedTotal === 'number' ? `Proposed total ${money(q.proposedTotal)}` : null}
         </p>
       ) : null}
       {answered ? (

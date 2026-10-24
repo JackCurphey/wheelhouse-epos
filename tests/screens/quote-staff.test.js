@@ -33,6 +33,8 @@ function job(over) {
 }
 const line = (over) => ({ id: 1, kind: 'part', description: 'Brake pads (pair)', productId: 40, quantity: 1, unitAmount: 18, decision: 'pending', lineTotal: 18, need: 'needed', reason: 'Worn down to 1mm', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over });
 const quote = (state, lines) => ({ id: 9, workshopJobId: 1, revision: 1, state, createdAt: '2026-10-05T09:00:00Z', sentAt: null, lines,
+  // The server's Proposed total: the order's £75 and the lines still waiting.
+  proposedTotal: 75 + lines.filter((l) => l.decision === 'pending').reduce((s, l) => s + l.lineTotal, 0),
   totals: { all: lines.reduce((s, l) => s + l.lineTotal, 0), approved: lines.filter((l) => l.decision === 'approved').reduce((s, l) => s + l.lineTotal, 0), pending: lines.filter((l) => l.decision === 'pending').reduce((s, l) => s + l.lineTotal, 0), declined: lines.filter((l) => l.decision === 'declined').reduce((s, l) => s + l.lineTotal, 0) } });
 
 const realFetch = globalThis.fetch;
@@ -348,7 +350,7 @@ test('a large limit reads with a thousands comma', async () => {
 });
 
 // Work within the customer's spending limit (Workshop day 41-43; dq-job-within).
-const withinQuote = (wholeBill) => ({ ...quote('draft', [line({}), line({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 28, lineTotal: 28 })]), limit: { spendLimit: 200, wholeBill } });
+const withinQuote = (wholeBill) => ({ ...quote('draft', [line({}), line({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 28, lineTotal: 28 })]), limit: { spendLimit: 200, wholeBill }, proposedTotal: wholeBill });
 
 test('within the customer’s limit, the quote isn’t sent: Save and tell them, with a minute to Undo', async () => {
   const { dlg, fireEvent, waitFor } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
@@ -392,6 +394,13 @@ test('a refused Save and tell reads the quote again, so the panel can offer Send
 test('the proposed total is the whole bill the limit is checked against', async () => {
   const { dlg } = await openJob({ jobOver: { spendLimit: 200 }, q: withinQuote(111) });
   assert.ok(has(await dlg.findByText('Proposed total £111.00')));
+});
+
+// Sales in pence, step A′ (task 2.2): the screen shows the server's figure
+// rather than adding the order and the lines up itself.
+test('the Proposed total is the figure the server worked out', async () => {
+  const { dlg } = await openJob({ q: { ...quote('sent', [line({})]), proposedTotal: 123.45 } });
+  assert.ok(has(await dlg.findByText('Proposed total £123.45')));
 });
 
 test('with no limit, the drawn hint says when quotes go', async () => {
