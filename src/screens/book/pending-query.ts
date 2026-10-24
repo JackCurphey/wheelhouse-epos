@@ -70,6 +70,8 @@ export type BookingLink = {
   expectedReady?: { date: string; time: string | null } | null;
   shop?: { address: string | null; phone: string | null; openingHours: string | null };
   work?: { name: string; price: number | null }[];
+  // Work agreed's total, the lines' pence summed by the server; null with prices hidden.
+  workTotal?: number | null;
   declined?: { name: string; price: number | null }[];
   /** The job's checklist once the work is finished (cp-summary; Jack, 22 Oct): every item and what the mechanic found. */
   checklist?: { name: string; items: { name: string; done: boolean; note: string | null }[] } | null;

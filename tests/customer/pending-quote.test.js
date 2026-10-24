@@ -23,7 +23,7 @@ const LINK = {
   answers: [], bike: null, stage: 'in_workshop', photoCount: 0, services: [{ name: 'Standard service', price: 65 }], totalPrice: 65,
   shop: { address: null, phone: '[shop phone]' },
 };
-const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over });
+const qline = (over) => ({ id: 1, kind: 'part', description: 'Shimano brake pads', productId: 40, quantity: 1, unitAmount: 28, decision: 'pending', lineTotal: 28, need: 'needed', reason: 'Rear pads are worn down to 1mm.', decidedVia: null, decidedAt: null, decidedByName: null, addedToOrderAt: null, goesWithLineId: null, without: null, photoId: null, ...over, lineTotalPence: over?.lineTotalPence ?? Math.round((over?.lineTotal ?? 28) * 100) });
 const LINES = [
   qline({ without: 'The rear brake stays worn.' }),
   qline({ id: 2, kind: 'labour', description: 'Fit and adjust brakes', productId: null, unitAmount: 18, lineTotal: 18, reason: 'Needed with the new pads.' }),
@@ -63,6 +63,14 @@ test('a sent quote asks for an answer: Needed lines ticked, Optional not, prices
   assert.ok(has(ui.queryByText('Rear pads are worn down to 1mm.')));
   assert.ok(has(ui.queryByText('£111.00')));
   assert.ok(has(ui.queryByRole('button', { name: 'Approve £111.00' })));
+});
+
+// Sales in pence, step A′ (task 2.2): the Approve total adds the server's
+// pence, not the pounds. Only the pence say £28.01 here.
+test('the Approve total adds each line’s pence and what was agreed in pence', async () => {
+  const lines = [qline({ lineTotalPence: 2801 }), ...LINES.slice(1)];
+  const { ui } = await open({ ...QUOTE('sent', lines), agreedTotal: 65, agreedTotalPence: 6502 });
+  assert.ok(has(await ui.findByRole('button', { name: 'Approve £111.03' })));
 });
 
 test('ticking and unticking changes the total and the button, and unticking a Needed line says it is recommended', async () => {

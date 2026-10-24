@@ -299,6 +299,12 @@ check.
   A), until nothing reads them: migration 075 adds `price_pence`,
   `unit_amount_pence` and `booked_price_pence` (null where the price is), and
   every writer writes both. Readers move to pence in the next pull request.
+- **The screens add no pounds** (task 2.2): the job page's Proposed total
+  and the booking page's Work agreed total come from the server
+  (`proposedTotal`/`proposedTotalPence` on a quote, `workTotal`/`workTotalPence`
+  on the booking link). The customer's Approve total changes with each tick,
+  so the card adds the server's whole pence (`lineTotalPence`,
+  `agreedTotalPence`) and divides by 100 once, to show it.
 
 ## Open Questions
 
