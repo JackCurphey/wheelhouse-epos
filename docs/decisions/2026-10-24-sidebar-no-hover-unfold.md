@@ -19,4 +19,4 @@ fold only on the button."
    "Folds the sidebar down to icons on every page, for more room. Press
    Unfold to open it. The Till always has it folded."
 
-Built in `openspec/changes/sidebar-no-hover-unfold`.
+Built in `openspec/changes/archive/2026-10-24-sidebar-no-hover-unfold`.
