@@ -23,6 +23,7 @@ let shell;
 let calls;
 let saleReply;
 let a11y;
+let emailReply;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -39,6 +40,7 @@ function stubServer(employee) {
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
     if (method === 'POST' && u.pathname === '/api/sales') return saleReply ?? reply(201, { id: 501 });
+    if (method === 'POST' && u.pathname === '/api/sales/501/email-receipt') return emailReply ?? reply(200, { id: 9, to: JSON.parse(init.body).email });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
     if (u.pathname === '/api/your-settings' && a11y) return reply(200, { accessibility: a11y });
     if (u.pathname === '/api/employees') return reply(200, CASHIERS);
@@ -50,6 +52,7 @@ function stubServer(employee) {
 
 async function openTill({ employee = JO, accessibility = null } = {}) {
   saleReply = null;
+  emailReply = null;
   a11y = accessibility;
   uninstall = installDom('http://localhost/workshop/till');
   window.WH_TILL_TICK_MS = 20;
@@ -375,3 +378,111 @@ test('Don’t close things by themselves on: Paid waits for Start next sale, and
   t.fireEvent.click(pay.getByRole('button', { name: 'Start next sale' }));
   await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
 });
+
+// Emailing the receipt (Jack, 23 Oct, docs/decisions/2026-10-23-overnight-questions.md
+// item 3; drawn as till-receipt's Email and cp-receipt-address;
+// openspec/changes/till-email-receipt). The countdown stops while the pop-up
+// is open (2 Oct, leftover screens M1).
+const SALE_501 = { id: 501, createdAt: '2026-10-06T10:45:00.000Z', items: [{ id: 1, name: 'Fit & adjust brakes', qty: 1, unitPrice: 18, lineTotal: 18 }], subtotal: 18, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 18, paymentMethod: 'Card', cashAmount: 0, cardAmount: 18, cashTendered: null, extraPayments: [] };
+const emails = () => calls.filter((c) => c.method === 'POST' && /email-receipt$/.test(c.url)).map((c) => `${c.url} ${JSON.stringify(c.body)}`);
+async function paidByCard(t) {
+  saleReply = { status: 201, ok: true, json: async () => SALE_501 };
+  await addService(t);
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  await pay.findByText('Card · £18.00 · Sale 501');
+  return pay;
+}
+async function openEmail(t, pay) {
+  t.fireEvent.click(pay.getByRole('button', { name: 'Email' }));
+  return t.within(await t.ui.findByRole('dialog', { name: 'Email the receipt' }));
+}
+
+test('Paid offers Print, Email and No receipt, in that order', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const row = t.within(pay.getByRole('group', { name: 'Receipt' })).getAllByRole('button').map((b) => b.textContent);
+  assert.deepEqual(row, ['Print', 'Email', 'No receipt']);
+});
+
+test('Email: the pop-up, the cursor in the box, and the countdown waits', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  assert.ok(has(box.queryByText('Sale 501 · no customer on this sale')));
+  const field = box.getByLabelText('Email address');
+  assert.equal(field.getAttribute('placeholder'), 'name@example.com');
+  await t.waitFor(() => assert.ok(document.activeElement === field));
+  // Five ticks of the shortened countdown, and more: still Paid.
+  await new Promise((r) => setTimeout(r, 200));
+  assert.ok(has(pay.queryByText('Next sale waits until the receipt is sent')));
+  assert.equal(has(t.sale.queryByText('Nothing in the sale yet')), false);
+});
+
+test('Enter sends the receipt to the address typed, then the next sale starts', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.submit(box.getByLabelText('Email address').closest('form'));
+  await t.waitFor(() => assert.deepEqual(emails(), ['/api/sales/501/email-receipt {"email":"maya@example.test"}']));
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
+});
+
+test('a bad address says so, and stays to be corrected', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  emailReply = { status: 400, ok: false, json: async () => ({ error: 'That doesn’t look like an email address — check it', code: 'bad_address' }) };
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  assert.ok(has(await box.findByText('That doesn’t look like an email address — check it')));
+  assert.equal(box.getByLabelText('Email address').getAttribute('aria-invalid'), 'true');
+  assert.ok(has(t.ui.queryByRole('dialog', { name: 'Email the receipt' })));
+});
+
+test('Cancel closes the pop-up and the countdown carries on', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  t.fireEvent.click(box.getByRole('button', { name: 'Cancel' }));
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
+  assert.deepEqual(emails(), []);
+});
+
+test('Don’t close things by themselves on: sent, Paid stays and says so', async () => {
+  const t = await openTill({ accessibility: { statusSymbols: false, reduceMotion: false, noAutoClose: true, largerText: false, foldedSidebar: false } });
+  const pay = await paidByCard(t);
+  const row = t.within(pay.getByRole('group', { name: 'Receipt' })).getAllByRole('button').map((b) => b.textContent);
+  assert.deepEqual(row, ['Print', 'Email', 'Start next sale']);
+  const box = await openEmail(t, pay);
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  assert.ok(has(await pay.findByText('Receipt sent to maya@example.test.')));
+  assert.equal(has(t.ui.queryByRole('dialog', { name: 'Email the receipt' })), false);
+  assert.equal(has(t.sale.queryByText('Nothing in the sale yet')), false);
+});
+
+test('a refusal (sent five times this hour) shows in the pop-up in the server’s words (review)', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  emailReply = { status: 429, ok: false, json: async () => ({ error: 'This receipt has been sent five times in the last hour. Try again later.', code: 'too_many' }) };
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  assert.ok(has(await box.findByText('This receipt has been sent five times in the last hour. Try again later.')));
+  assert.equal(box.getByLabelText('Email address').getAttribute('aria-invalid'), null);
+});
+
+test('while it sends, Cancel is off, so a late reply can’t surprise anyone (review)', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  emailReply = new Promise(() => {});
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  await t.waitFor(() => assert.equal(box.getByRole('button', { name: 'Cancel' }).disabled, true));
+  assert.ok(has(box.queryByRole('button', { name: 'Sending…' })));
+});
+
