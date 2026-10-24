@@ -1951,3 +1951,10 @@ No screen: server only.
 5. **"Free to cancel until" on step 4 is worked out in the shop's clock** from
    the booked time less the shop's hours, as the booking shows times; the
    booking itself keeps the exact moment.
+6. **If the deposit can't be got ready** (no connection as step 4 opens), the
+   page says "We couldn't get the deposit ready - please check your
+   connection and try again" and its button reads Try again, sending nothing
+   (review).
+7. **A hold let go meanwhile** (an hour on, or a refused booking) is asked
+   for again, saying "The deposit needs paying again — please press Pay."
+   (review).

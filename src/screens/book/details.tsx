@@ -17,7 +17,7 @@ import { jobMinutes } from './date-rules.ts';
 import { photosCleared } from './problem-rules.ts';
 import { useTerms } from './terms-query.ts';
 import { photosBase64, sendBooking } from './send.ts';
-import { DepositPart, payCard, pounds, serverCode, useDepositHold, type DepositHold, type PayState } from './deposit.tsx';
+import { DepositPart, HOLD_FAILED, PAY_AGAIN, payCard, pounds, serverCode, useDepositHold, type DepositHold, type PayState } from './deposit.tsx';
 import {
   CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, SEND_FAILED, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
   newRequestKey, refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
@@ -80,7 +80,8 @@ function DetailsForm({ services, back, onExit }: FormProps) {
   }, [services.takesDeposit, draft.requestKey, update]);
   const holdQuery = useDepositHold(shopSlug, services, draft);
   const hold: DepositHold | null = holdQuery.data ?? null;
-  const paid = !!hold && draft.depositHeld === hold.paymentId;
+  const paid = !!hold && draft.depositHeld === hold.ref;
+  const holdFailed = services.takesDeposit === true && holdQuery.isError;
   const [payState, setPayState] = React.useState<PayState>('ready');
   const [cardNumber, setCardNumber] = React.useState('');
   const [cardError, setCardError] = React.useState<string | null>(null);
@@ -119,13 +120,17 @@ function DetailsForm({ services, back, onExit }: FormProps) {
     if (hold && !paid) {
       try {
         await payCard(shopSlug, hold.ref, cardNumber);
-        update({ depositHeld: hold.paymentId });
+        update({ depositHeld: hold.ref });
         heldNow = true;
       } catch (err) {
         setSending(false);
         if (serverCode(err) === 'card_declined') setPayState('card-failed');
         else if (err instanceof ApiError && err.status === 400 && err.hasServerMessage) setCardError(err.message);
-        else setSendError(SEND_FAILED);
+        else if (err instanceof ApiError && err.status === 409) {
+          // The hold was let go meanwhile (an hour on, or a refusal): a new one (review).
+          void queryClient.invalidateQueries({ queryKey: ['deposit-hold', shopSlug] });
+          setSendError(PAY_AGAIN);
+        } else setSendError(SEND_FAILED);
         setAttempt((a) => a + 1);
         return;
       }
@@ -159,7 +164,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
         // and the card again (design 4).
         update({ depositHeld: undefined });
         setPayState('ready');
-        if (code === 'deposit_changed') void queryClient.invalidateQueries({ queryKey: ['deposit-hold', shopSlug] });
+        void queryClient.invalidateQueries({ queryKey: ['deposit-hold', shopSlug] });
         setSending(false);
         setSendError(err instanceof ApiError ? err.message : SEND_FAILED);
         setAttempt((a) => a + 1);
@@ -186,6 +191,11 @@ function DetailsForm({ services, back, onExit }: FormProps) {
   };
 
   const onRequest = () => {
+    // The hold couldn't be got ready: ask again, and send nothing (review).
+    if (holdFailed) {
+      void holdQuery.refetch();
+      return;
+    }
     const now = fieldErrors(draft);
     const needCard = !!hold && !paid && cardNumber.replace(/[\s-]/g, '') === '';
     setCardError(needCard ? 'Enter the card number' : null);
@@ -219,6 +229,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
   // the card-failed and checking states' own words.
   function actionLabel() {
     if (sending) return 'Sending…';
+    if (holdFailed) return 'Try again';
     if (!hold) return services.confirmsAutomatically ? 'Confirm booking' : 'Request booking';
     if (payState === 'checking') return 'Check again';
     if (payState === 'card-failed') return 'Try again';
@@ -233,7 +244,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       back={back}
       action={{ label: actionLabel(), onClick: onRequest, disabled: sending || (services.takesDeposit === true && holdQuery.isPending) }}
       actionNote={
-        note ? <p key={attempt} role="alert" className="m-0 text-[var(--wh-danger)]">{note}</p> : undefined
+        (holdFailed ? HOLD_FAILED : note) ? <p key={attempt} role="alert" className="m-0 text-[var(--wh-danger)]">{holdFailed ? HOLD_FAILED : note}</p> : undefined
       }
     >
       <Summary services={services} draft={draft} deposit={hold} />

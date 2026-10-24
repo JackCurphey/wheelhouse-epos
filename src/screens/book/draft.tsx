@@ -52,9 +52,10 @@ export type BookingDraft = {
   // booking once however many times it is sent (WP-0.2). Kept through a
   // refresh; cleared with the rest of the draft once the booking is made.
   requestKey?: string;
-  // The deposit's payment once its card was accepted (deposit-pay-screen),
-  // so a retry or a refresh sends without paying again.
-  depositHeld?: number;
+  // The deposit's hold (the provider's ref) once its card was accepted
+  // (deposit-pay-screen), so a retry or a refresh sends without paying
+  // again; a new hold has a new ref, so it's paid afresh.
+  depositHeld?: string;
 };
 
 type DraftApi = {

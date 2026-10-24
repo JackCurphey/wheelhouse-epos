@@ -103,7 +103,7 @@ test('the connection drops after paying: checking, then Check again sends the sa
   const alert = await ui.findByText('We’re checking whether your payment went through — please don’t pay again.');
   assert.ok(alert.closest('[role="alert"]').textContent.includes('Your connection dropped while sending. Nothing will be taken twice.'));
   assert.ok(ui.queryByLabelText('Card number') === null, 'no card box while checking');
-  assert.equal(readDraft().depositHeld, 7, 'kept through a refresh');
+  assert.equal(readDraft().depositHeld, 'pretend_abc', 'kept through a refresh');
   await click(ui.getByRole('button', { name: 'Check again' }));
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
   assert.equal(sent(requests, '/pretend-payments').length, 1, 'paid once');
@@ -112,7 +112,7 @@ test('the connection drops after paying: checking, then Check again sends the sa
 });
 
 test('after a refresh with the deposit already paid, the button sends without the card', async () => {
-  const { ui, requests } = await open({ draft: { ...READY, requestKey: 'k'.repeat(43), depositHeld: 7 } });
+  const { ui, requests } = await open({ draft: { ...READY, requestKey: 'k'.repeat(43), depositHeld: 'pretend_abc' } });
   await ui.findByRole('group', { name: 'Deposit · £13.00' });
   assert.ok(ui.queryByLabelText('Card number') === null);
   assert.ok(ui.getByText('Paid. It’s held until your booking is sent.'));
@@ -149,4 +149,40 @@ test('a hold that answers no deposit (no amount set): as before', async () => {
   const { waitFor } = await rtl();
   await waitFor(() => assert.ok(ui.getByRole('button', { name: 'Request booking' })));
   assert.ok(ui.queryByRole('group', { name: /^Deposit/ }) === null);
+});
+
+// The review's findings.
+test('a hold let go meanwhile: the card form’s refusal asks for a new hold, and the new one pays (review)', async () => {
+  let holds = 0;
+  const depositHold = () => { holds += 1; return { status: 200, body: { ...HOLD, ref: holds === 1 ? 'pretend_old' : 'pretend_new' } }; };
+  const card = (url) => (url.includes('pretend_old')
+    ? { status: 409, body: { error: 'A released payment can’t take a card.', code: 'wrong_state' } }
+    : { status: 200, body: { status: 'held' } });
+  const { ui, requests } = await open({ depositHold, card });
+  await type(await ui.findByLabelText('Card number'), ACCEPTED);
+  await click(ui.getByRole('button', { name: 'Pay £13.00 and send request' }));
+  assert.ok(await ui.findByText('The deposit needs paying again — please press Pay.'));
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.equal(holds, 2));
+  await click(ui.getByRole('button', { name: 'Pay £13.00 and send request' }));
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.ok(sent(requests, '/pretend-payments/pretend_new/card').length === 1);
+});
+
+test('a hold made anew for the same payment isn’t taken as paid (review)', async () => {
+  // Paid on payment 7 under an earlier hold, which a refusal let go; the new
+  // hold keeps payment 7 with a new ref (pretend_abc).
+  const { ui } = await open({ draft: { ...READY, requestKey: 'k'.repeat(43), depositHeld: 'pretend_released' }, depositHold: { ...HOLD, paymentId: 7 } });
+  assert.ok(await ui.findByLabelText('Card number'), 'the card is asked for');
+  assert.ok(ui.getByRole('button', { name: 'Pay £13.00 and send request' }));
+});
+
+test('the hold can’t be got ready: it says so, sends nothing, and Try again asks again (review)', async () => {
+  let holds = 0;
+  const depositHold = () => { holds += 1; if (holds === 1) throw new TypeError('Failed to fetch'); return { status: 200, body: HOLD }; };
+  const { ui, requests } = await open({ depositHold });
+  assert.ok(await ui.findByText('We couldn’t get the deposit ready - please check your connection and try again'));
+  await click(ui.getByRole('button', { name: 'Try again' }));
+  assert.ok(await ui.findByRole('group', { name: 'Deposit · £13.00' }));
+  assert.equal(sent(requests, '/bookings').length, 0);
 });

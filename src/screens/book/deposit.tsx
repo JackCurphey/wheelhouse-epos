@@ -18,6 +18,8 @@ const holdsPath = (shopSlug: string) => `/api/portal/${encodeURIComponent(shopSl
 const cardPath = (shopSlug: string, ref: string) => `/api/portal/${encodeURIComponent(shopSlug)}/pretend-payments/${encodeURIComponent(ref)}/card`;
 
 export const pounds = (pence: number) => `£${(pence / 100).toFixed(2)}`;
+export const HOLD_FAILED = 'We couldn’t get the deposit ready - please check your connection and try again';
+export const PAY_AGAIN = 'The deposit needs paying again — please press Pay.';
 
 /** The server's own code for a refusal (deposit_changed, card_declined, …), which ApiError doesn't sort. */
 export const serverCode = (err: unknown) => (err instanceof ApiError && err.body && typeof err.body === 'object' && 'code' in err.body ? String((err.body as { code: unknown }).code) : null);
