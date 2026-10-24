@@ -1793,3 +1793,23 @@ No screen: server only.
    the drawn shop switcher**, which comes with more than one shop.
 5. **Tapping or clicking the page beside it folds it** (not drawn; review),
    as the phone menu's dimmed page does, so a tablet isn't left half covered.
+
+### 24 Oct 2026: the header search (`openspec/changes/header-search`, `staff-search`)
+
+1. **Results are links, not a list of options** (the later `staff-search`
+   drawing, 3 Oct: "a labelled list of rows, not a listbox"); the older
+   `cs-search-c2w` drew a listbox with the first row chosen.
+2. **"Search jobs and customers"** in the box until orders and products are
+   found too (drawn: "Search jobs, customers, orders, products").
+3. **A job row reads "Trek Domane AL 3 · Standard service · Expected · Thu 17
+   Sep"**: its stage and day (walk-through 9 H1); "approved £…" waits until
+   quote totals are read here. **A customer row reads "Customer · [phone]"**.
+4. **Five of each, two characters at least, a pause of 250 ms**; a job is found
+   by its number, its customer's name or phone (however it's spaced), or its
+   bike; a customer by name, phone or email; requests not yet confirmed are
+   found, removed customers aren't. A postcode comes with Customers' address.
+5. **"Nothing matches “[what was typed]”"** when nothing is found (the till's
+   words), said on screen and to screen readers; groups with nothing are left
+   out rather than drawn empty.
+6. **Escape clears the box on a computer**; on a tablet or phone it shuts the
+   search, as Close search does, and the focus goes back to the search button.
