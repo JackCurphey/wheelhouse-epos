@@ -622,14 +622,20 @@ export async function addApprovedLinesToOrder(quoteId) {
       ? await loadDocumentLine({ productId: l.product_id, qty: Math.max(1, Math.round(Number(l.quantity))), unitPrice: Number(l.unit_amount) }, { checkStock: false })
       : await loadDocumentLine({ lineType: 'labour', name: l.description, unitPrice: Number(l.quantity) * Number(l.unit_amount) }, { checkStock: false });
     await db.prepare(
-      `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(doc.id, line.product ? line.product.id : null, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal, line.lineType, line.serviceId, line.minutes);
+      `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes,
+                                        unit_price_pence, line_total_pence, vat_rate_bp)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(doc.id, line.product ? line.product.id : null, line.name, line.sku, line.unitPricePence / 100, line.qty, line.lineTotalPence / 100, line.lineType, line.serviceId, line.minutes,
+      line.unitPricePence, line.lineTotalPence, line.vatRateBp);
     await db.prepare('UPDATE workshop_quote_lines SET added_to_order_at = now() WHERE id = ?').run(l.id);
-    added += line.lineTotal;
+    added += line.lineTotalPence;
   }
-  await db.prepare('UPDATE sale_documents SET subtotal = subtotal + ?, total = GREATEST(0, subtotal + ? - discount), updated_at = ? WHERE id = ?')
-    .run(added, added, nowIso(), doc.id);
+  // Pence and pounds move together (sales in pence, step A): the pounds are
+  // the pence over 100, so the two records can't drift apart.
+  await db.prepare(
+    `UPDATE sale_documents SET subtotal_pence = subtotal_pence + ?, total_pence = GREATEST(0, subtotal_pence + ? - discount_pence),
+            subtotal = (subtotal_pence + ?) / 100.0, total = GREATEST(0, subtotal_pence + ? - discount_pence) / 100.0, updated_at = ? WHERE id = ?`
+  ).run(added, added, added, added, nowIso(), doc.id);
 }
 
 // An answer and its lines joining the order happen together, or not at all.

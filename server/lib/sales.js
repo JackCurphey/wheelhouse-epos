@@ -274,6 +274,18 @@ export async function resolveGroupDiscount(customerId, subtotal) {
 
 const toPence = (n) => Math.round(n * 100) / 100;
 
+// A pounds amount as whole pence: the money contract's ROUND(x * 100)
+// (openspec/changes/wp-1-6-sales-in-pence/design.md Decision 6).
+export const poundsToPence = (n) => Math.round(Number(n) * 100);
+
+// An order's totals worked out in whole pence from its loaded lines: the
+// lines added up, less the discount, never below 0 (design.md Decision 1).
+export function documentTotalsPence(lines, discount) {
+  const subtotalPence = lines.reduce((sum, line) => sum + line.lineTotalPence, 0);
+  const discountPence = poundsToPence(discount);
+  return { subtotalPence, discountPence, totalPence: Math.max(0, subtotalPence - discountPence) };
+}
+
 // The one amount-due calculation: createSale charges it, GET
 // /api/sale-documents/:id/due shows it and the Bike ready message quotes it, so
 // all three always agree. Each part is rounded to pence once and the total is
@@ -334,6 +346,11 @@ export async function loadDocumentLine(it, { checkStock }) {
       unitPrice: price,
       minutes: mins,
       lineTotal: price,
+      // Pence beside pounds (sales in pence, step A). Labour's VAT rate is
+      // Jack's call (#134), so none is assumed.
+      unitPricePence: poundsToPence(price),
+      lineTotalPence: poundsToPence(price),
+      vatRateBp: null,
     };
   }
 
@@ -365,6 +382,11 @@ export async function loadDocumentLine(it, { checkStock }) {
     unitPrice,
     minutes: null,
     lineTotal: unitPrice * qty,
+    // The line's pence is its rounded unit price times the quantity, so a
+    // line never carries a fraction of a penny.
+    unitPricePence: poundsToPence(unitPrice),
+    lineTotalPence: poundsToPence(unitPrice) * qty,
+    vatRateBp: product.vat_rate_bp,
   };
 }
 
