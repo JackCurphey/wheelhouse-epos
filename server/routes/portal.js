@@ -330,7 +330,8 @@ async function bookingLinkView(jobId, shop) {
             w.booking_state, w.custody_state, w.work_state, w.signed_off_name,
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
-            w.booked_in_at, w.collected_at,
+            w.booked_in_at, w.collected_at, w.deposit_pence,
+            to_char(w.deposit_cancel_until AT TIME ZONE (SELECT time_zone FROM workshop_settings LIMIT 1), 'YYYY-MM-DD HH24:MI') AS deposit_cancel_local,
             (SELECT max(p.part_date) FROM workshop_job_parts p WHERE p.workshop_job_id = w.id) AS last_day,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
@@ -407,6 +408,12 @@ async function bookingLinkView(jobId, shop) {
     // never "0 of 10" for a service done without the ticks; none while the
     // work is under way, or for a job without one.
     checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklistCopy(row.id)) : null,
+    // The deposit the booking took, and when it's free to cancel until in the
+    // shop's time (deposit-booking-page design 1).
+    deposit: row.deposit_pence ? {
+      pence: row.deposit_pence,
+      cancelUntil: row.deposit_cancel_local ? { date: row.deposit_cancel_local.slice(0, 10), time: row.deposit_cancel_local.slice(11) } : null,
+    } : null,
     ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
   };
