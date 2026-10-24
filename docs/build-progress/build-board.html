@@ -241,8 +241,8 @@ const BOARD = {
           { id: "WP-1.7", what: "Sign-in and PINs", status: "todo", detail: "Not built" },
           { id: "WP-1.8", what: "Messages engine and email", status: "part", detail: "The engine, wording, Undo, Settings › Messages and the reminder, pretend sending (#321 to #330, #418)" },
           { id: "WP-1.9", what: "Live updates", status: "todo", detail: "Not built" },
-          { id: "WP-1.10", what: "Needs attention and Today", status: "todo", detail: "Today is still the old app's dashboard" },
-          { id: "WP-1.11", what: "Small shared parts", status: "part", detail: "Receipt and bike-tag printing (#269, #347); no spreadsheet download or header search yet" },
+          { id: "WP-1.10", what: "Needs attention and Today", status: "part", detail: "Today with Needs attention for the Owner and Workshop today (#437), the uncollected bike line (#441); not yet: Tills, Who's in (wait for PINs)" },
+          { id: "WP-1.11", what: "Small shared parts", status: "part", detail: "Receipt and bike-tag printing (#269, #347); Your settings with Reduce motion, status symbols and the folded sidebar (#442, #444, #445); not yet: Larger text, header search, spreadsheet download" },
         ] },
         { name: "Stage 2 — Products and stock", packages: [
           { id: "WP-2.1", what: "Stock control", status: "todo", detail: "Old app only" },
@@ -257,9 +257,9 @@ const BOARD = {
           { id: "WP-3.4", what: "End-of-day cash-up", status: "todo", detail: "Not built" },
         ] },
         { name: "Stage 4 — The workshop and the customer's repair", packages: [
-          { id: "WP-4.1", what: "Workshop day, the rest", status: "part", detail: "Overview, offers, storage slots, checklists, sign-off, Use my phone and more; not yet: Done ticks per line, I'll do this, Who did what" },
-          { id: "WP-4.2", what: "Quotes, the rest", status: "part", detail: "Photos, lines that go together, the reminder, the spending limit, notes, the pinned bar (#405 to #435); not yet: deposits, No answer yet on Today" },
-          { id: "WP-4.3", what: "Collect and pay", status: "part", detail: "Bike ready (#326) and the page's ready and collected stages (#344, #360); not yet: paying online, emailed receipts" },
+          { id: "WP-4.1", what: "Workshop day, the rest", status: "part", detail: "Overview, offers, storage slots, checklists, sign-off, Use my phone, the bike on Waiting cards (#439) and more; not yet: Done ticks per line, I'll do this, Who did what" },
+          { id: "WP-4.2", what: "Quotes, the rest", status: "part", detail: "Photos, lines that go together, the reminder, the spending limit, notes, the pinned bar, Use my phone, location taken off photos, No answer yet on Today (#405 to #437); not yet: deposits" },
+          { id: "WP-4.3", what: "Collect and pay", status: "part", detail: "Bike ready (#326), the page's ready and collected stages (#344, #360), a bike left uncollected (#440, #441), the email side of emailed receipts (#443); not yet: paying online, the till's Email button" },
           { id: "WP-4.4", what: "Book a repair, rebuilt", status: "part", detail: "Change, cancel, offered times, confirming automatically, booking settings and messages; not yet: deposits, a saved draft" },
           { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); not yet: the customer's account, service reminders" },
         ] },
@@ -304,11 +304,14 @@ const BOARD = {
         { what: 'Then sales in pence step B, and the test copy\'s drills', detail: 'Reports read both records; the failed-update drill, the test shop and the restore rehearsal (WP-0.5)' },
       ],
       Jack: [
-        { what: 'The rest of quotes', detail: 'The pinned bar on a phone, Use my phone for photos, location data taken off photos' },
+        { what: 'Answer the morning\'s questions', detail: 'Deposits\' money rules, Merge\'s undo, the header search for Customers, Larger text, Don\'t close things by themselves; then those pieces' },
         { what: 'Waiting on groundwork', detail: 'I\'ll do this and Who did what wait for who\'s at the device and the activity record (your answer, 22 Oct); the checklist\'s Done ticks per line wait for Mark\'s sales in pence' },
       ],
     },
     waiting: [
+      { what: 'Deposits', detail: 'How a percentage is rounded and of what price; how staff refund by hand and where; a no-show or a moved booking; whether the till takes deposits too; the refund\'s working days.' },
+      { what: 'Customers', detail: 'Merge is drawn with "can be undone for [n] days", but your 23 Oct answer removes the duplicate: an undo, and for how long? And the list needs the header search, a piece of its own: build it first?' },
+      { what: 'Two accessibility switches', detail: 'Larger text: scale the text sizes themselves, or keep the zoom and correct each place that measures the screen? Don\'t close things by themselves: Bike ready\'s Undo would need the server to hold the message until a button is pressed: build that?' },
       { what: 'Later', detail: 'Your yes to switch real sending on (texts and emails cost money per message), to open the Stripe account and buy the S700 reader, and a Google account for Wheelhouse.', links: [140] },
     ],
     waitingOnMark: [
@@ -317,9 +320,9 @@ const BOARD = {
       { what: 'Still his from before', detail: 'When the front page switches to the new app.' },
     ],
   },
-  updated: '23 October 2026',
-  lead: 'Stage 0 is still under way. The customer\'s booking page now has every stage, and the messages engine is built, pretend for now. From 21 Oct either person builds a whole piece, server and screens, under Mark\'s working agreement (#349).',
-  sub: 'Merged 19 Oct: the words at the bottom of receipts (#279), opening hours in Settings (#281), Settings for the Owner only until roles (#283), the time kept free with the old Edit workshop retired (#285), when to drop the bike off (#287), notice in hours or days (#289), switching between a set time and the whole day (#291), Show prices (#293), the note on the booking confirmation (#295), confirming online bookings automatically drawn with its contract for Mark (#297), Preview what the customer sees (#299) and the confirmed booking page (#301). On 20 Oct: Cancel booking (#303), Change the date (#305, #306), the waiting-for-the-shop page (#308), the six booking messages\' wording (#310), a shop\'s own booking terms (#312), Offer another time (#314 to #317), declining with a message (#319), and the messages engine (#321 to #323, #325 to #327, #329, #330); the board fixed (#324) and its stage progress (#328), staff answering offered times (#332, #333), + Add a bike (#334), the customer\'s note on a new job (#335), the booking messages staff answers send (#336, #340, #341), choosing the mechanic on accept (#337), pills from the keyboard (#338), the Settings frame (#339) and an order\'s workshop job in the new diary (#342). On 21 Oct: the booking page\'s later stages (#344), the old job form removed (#343), the Workshop Overview (#346), the bike tag (#347), the working agreement (#349), Mark\'s review fixes (#348, #351) and the diary page split (#350), browser tests for the Overview and Settings › Messages (#353), the old app never taking a job\'s payment (#355), what ended bookings can\'t do (#356), confirming online bookings automatically (#357, #358), the booking page\'s progress and money (#359, #360), Planned effort and the bike\'s colour on its tag (#361), Request received and Booking cancelled (#362) and the reply-shape file (#363). On 22 Oct: a job\'s planned length on the screens (#365), every screen test\'s fake jobs and orders checked against the server (#366 to #368), quotes always showing their prices (#370), the customer merge decided (#371, #372) and the New online mark on stacks and the month view (#374); later the job checklist (#381 to #383), Diary blocks (#384), storage slots (#389, #390), the job page as drawn (#391) and your answers to Mark\'s questions (#392, #393, #395, #396); then the finished checklist on the customer\'s page (#403) and the rest of quotes: the drawn words (#405), lines that go together (#409), a photo per line (#411), a new quote after a no (#412), the spending limit (#413, #417), the quote reminder (#418) and Your answers (#419); then Notes with the shop and the staff Messages inbox (#421 to #423), Add a note for the shop (#424) and No answer yet (#425). On 23 Oct: the morning Book in test fixed (#426), every merge going onto the online test copy by itself (#427, #428), and Mark\'s hosted copy checks (#401), the bike on Waiting items (#406), audit tests (#407), a deleted job\'s messages (#408), input checks (#410), the review command (#414), his status update (#415) and offer checks (#416). Earlier merges are in the list below.',
+  updated: '24 October 2026',
+  lead: 'Stage 0 is still under way. Overnight on 23 Oct Jack\'s queue was built: Today, a bike left uncollected, Your settings with three accessibility switches, and the email side of emailed receipts. Deposits, Customers and two switches wait on his answers.',
+  sub: 'Merged 23 Oct: the quote\'s pinned bar (#430), Node updates (#431), Use my phone drawn and built (#432, #434, #435), location taken off photos (#433), the whole-project figure (#436), Today (#437), six answers (#438), the bike on Waiting cards (#439), a bike left uncollected (#440, #441), Your settings with Reduce motion (#442), emailed receipts, the email side (#443), Show status symbols (#444), Folded sidebar (#445).',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -501,6 +504,17 @@ const BOARD = {
     { status: 'done', what: 'Mark\'s audit fixes', detail: 'Missing tests, a deleted job\'s messages, input checks, offer checks (#407, #408, #410, #416)', pr: 416 },
     { status: 'done', what: 'The bike on Waiting items', detail: 'Mark\'s server half for the tablet cards\' bike line', pr: 406 },
     { status: 'done', what: 'Test copy updates itself', detail: 'Every merge to main that passes its tests goes on, and goes back if it isn\'t healthy within 5 minutes (#427, #428)', pr: 427 },
+    { status: 'done', what: 'The quote\'s pinned bar', detail: 'Send, Record their answer and the total stay in reach on a phone', pr: 430 },
+    { status: 'done', what: 'Node security updates', detail: 'The Mac and CI on the patched Node', pr: 431 },
+    { status: 'done', what: 'Use my phone', detail: 'Drawn and approved (#432), the server (#434) and the screens: a code to add a line\'s photo from a phone', pr: 435 },
+    { status: 'done', what: 'Location taken off photos', detail: 'Every uploaded photo loses its location and other details, before it\'s stored', pr: 433 },
+    { status: 'done', what: 'How far through Release 2', detail: 'The board\'s whole-project figure, from the work packages', pr: 436 },
+    { status: 'done', what: 'Today', detail: 'Needs attention for the Owner (a quote with no answer, messages needing a reply) and Workshop today, as the Overview counts it', pr: 437 },
+    { status: 'done', what: 'Six answers recorded', detail: 'What unlocks deposits, receipts, line notes, Merge and the old app', pr: 438 },
+    { status: 'done', what: 'The bike on Waiting cards', detail: 'Under the customer\'s name, as drawn', pr: 439 },
+    { status: 'done', what: 'A bike left uncollected', detail: 'Settings › Workshop › Collection, one Bike still waiting, the bike on Today with Contacted (#440, #441)', pr: 441 },
+    { status: 'done', what: 'Your settings', detail: 'From your name: Reduce motion (#442), Show status symbols (#444), Folded sidebar with the Till folded (#445)', pr: 445 },
+    { status: 'done', what: 'Emailed receipts, the email side', detail: 'A sale\'s receipt to an address, pretend for now; the till\'s button after #404', pr: 443 },
     { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'Live since 16 Oct with your shop account, safety checks in (#401), updating itself (#427). Next Mark loads North Street Cycles and rehearses a failed update and a restore' },
     { status: 'next', what: 'Stage 0 check', detail: 'You walk booking, the till and the diary in the real app. Waits for everything above' },
   ],
@@ -514,7 +528,7 @@ const BOARD = {
   // Each page of the app and how far it is built: built, part (partly built),
   // old (only in the old app for now) or none (drawn, not built yet).
   screens: [
-    { area: 'Staff app', note: 'The frame is built: Soft sand look, the sidebar grouped by rooms, tablet rail and phone menu. The Owner lands on Today (not built yet), everyone else on the Till.', rooms: [
+    { area: 'Staff app', note: 'The frame is built: Soft sand look, the sidebar grouped by rooms, tablet rail and phone menu. The Owner lands on Today, everyone else on the Till. Your settings opens from your name.', rooms: [
       { room: 'Front desk', pages: [
         ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid; pays a job\'s order; prints a receipt. No discounts or card machine yet'],
         ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'old'], ['Messages', 'built', 'The staff inbox: Needs a reply first, the conversation and Send reply'],
@@ -529,7 +543,7 @@ const BOARD = {
         ['Stock', 'old'], ['Deliveries and orders', 'old', 'The old app has Suppliers and Purchase orders'], ['Stock take', 'none'],
       ] },
       { room: 'Office', pages: [
-        ['Today', 'old', 'The old app has a Dashboard'], ['Reports', 'old', 'The old app has Sales history'],
+        ['Today', 'part', 'Needs attention for the Owner and Workshop today; Tills and Who\'s in wait for PINs'], ['Reports', 'old', 'The old app has Sales history'],
         ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending; Checklists, Diary blocks, Storage slots; the quote reminder\'s hours'],
       ] },
     ] },

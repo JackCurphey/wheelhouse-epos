@@ -7,16 +7,17 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** next, in his order (23 Oct): the rest of quotes: the pinned bar
-  on a phone, "Use my phone" for line photos, removing location data from
-  photos. "I'll do this" and "Who did what" (WP-4.1) wait for who's at the
-  device (WP-1.7), the activity record (WP-1.2) and every device updating
-  (WP-1.9) (Jack, 22 Oct, `docs/decisions/2026-10-22-ill-do-this-waits.md`).
-  "No answer yet" on Today waits for Today (WP-1.10). The
-  checklist's per-line Done ticks wait for Mark's sales in pence (#404),
-  which rewrites the same order lines. The repository stays public until
-  money comes in (Jack, 23 Oct): private would end free CI, about 20,000
-  minutes a month at today's pace.
+- **Jack:** 23 Oct, overnight: his queue is built (below). Next, once he
+  answers the morning's questions (`docs/decisions/2026-10-23-overnight-questions.md`
+  has the six he answered): deposits (rounding, refunds by hand, no-shows, the
+  till, the refund wording), Customers (Merge's drawn undo against "the
+  duplicate is removed"; the header search the list needs), Larger text (two
+  ways to fix the zoom), and "Don't close things by themselves" (Bike ready's
+  Undo would need the server to hold the message). "I'll do this" and "Who
+  did what" (WP-4.1) still wait for WP-1.7, WP-1.2 and WP-1.9 (22 Oct). The
+  checklist's per-line Done ticks and line notes wait for Mark's sales in
+  pence (#404), as does the till's Email receipt button. The repository stays
+  public until money comes in (23 Oct).
 - **Mark:** merged 23 Oct: #401, #406, #407, #408, #410, #414 and #415;
   #416 merged by Jack at his request, after a fresh review, with `main`
   merged in, the spec quoting the server's apostrophes and a test for a
@@ -35,8 +36,9 @@ here before starting it, so two people never build the same one):
   rehearsal (group 5) and 2.6's fresh review. Still open from the audit:
   items 12, 20, 23 and 24; 18 is left as a staff choice by design
   (`docs/reviews/2026-10-22-flagged-merges-audit.md`).
-- **Waiting on Jack:** when to delete the old app, once its last screens are
-  replaced (`docs/decisions/2026-10-21-old-app-placeholder.md`).
+- **Waiting on Jack:** the morning's questions above. Settled 23 Oct
+  (answer 6): the old app goes piece by piece, then completely, without
+  asking again.
 
 **Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
@@ -174,7 +176,20 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 23 Oct: the Overview's Book in test, which failed before
+**Jack is on:** 23 Oct, evening and overnight: Today (#437: Needs
+attention for the Owner and Workshop today, sharing the Overview's rules);
+the bike on Waiting cards (#439); his six answers that unlock the next pieces
+(#438); a bike left uncollected (#440 server, migration 064; #441 screens:
+Settings › Workshop › Collection, Bike still waiting, the bike on Today with
+Contacted); Your settings with Reduce motion (#442, migration 065), Show
+status symbols (#444) and Folded sidebar with the Till folded (#445); the
+email side of emailing a receipt (#443, migration 066; the till's button after
+#404). Larger text was built as a zoom and taken out: it put the diary's
+drops off their marks (a question for Jack). Each piece had a fresh review,
+its findings fixed test-first. The 4 tests that need `ADMIN_DATABASE_URL`
+fail on Jack's Mac only; CI sets it. Migration 064 also ran on the Mac's
+development database by mistake (scratch databases since).
+23 Oct: the Overview's Book in test, which failed before
 09:00 on CI's clock and so failed every pull request each morning (#426);
 the hosted copy's automatic updates (WP-0.5 task 3.4, at Mark's request,
 #427, #428): every merge to `main` that passes Tests is built, pushed to
