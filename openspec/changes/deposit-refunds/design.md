@@ -21,3 +21,8 @@
 5. **The link's `deposit`** adds `state`: `paid`, `refunded` (refunded, let
    go, or owed) or `kept` (cancelled with the deposit taken and not owed),
    and `refundable`: cancelling now would refund it (before the cut-off).
+6. **The cut-off moves with the booking** (review): a database rule on
+   `workshop_jobs` keeps `deposit_cancel_until` the same hours before the
+   job's current start whenever its date or time changes, so every way of
+   moving a booking (the customer's change accepted, staff moving it, an
+   offer accepted, the job saved) keeps it right.

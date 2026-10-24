@@ -1981,3 +1981,9 @@ No screen: server only.
    refund the provider can't make at once is made later, never lost; the
    booking page counts it as on its way back.
 4. **The cut-off is judged by the server's clock**, as every other time rule.
+5. **A moved booking's "Free to cancel until" moves with it**: the same hours
+   before its new start, in the shop's time, however it was moved (review).
+6. **A request the shop hasn't confirmed yet, cancelled after the cut-off,
+   keeps the deposit**, as the words on step 4 say ("After that, or if you
+   don't come, the shop keeps it"). For Jack: a request for tomorrow is past
+   its cut-off at once (review).

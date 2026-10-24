@@ -994,7 +994,7 @@ export function register(route) {
       // After the commit: a refund owed is made (deposit-refunds design 2), and a
       // message that can't be queued is logged, not an error (the answer it
       // follows has been made and stands).
-      await refundOwed(id);
+      if (event === 'decline' || event === 'expire' || event === 'cancel') await refundOwed(id);
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');

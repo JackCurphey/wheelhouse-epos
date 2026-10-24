@@ -138,3 +138,24 @@ test('no deposit: cancelling and declining are as before', async () => {
     await staff('/api/workshop-settings', { method: 'PUT', body: { depositOn: true } });
   }
 });
+
+// The review's findings.
+test('moving a booking moves its cut-off, the same hours before (review)', async () => {
+  const b = await booked();
+  await inShop(() => prepare("UPDATE workshop_jobs SET job_date = '2026-10-14', start_time = '15:00' WHERE id = ?").run(b.id));
+  assert.deepEqual((await link(b.code)).deposit.cancelUntil, { date: '2026-10-13', time: '15:00' });
+  // Moved across the clocks going back (25 Oct): still 24 hours before, in UK time.
+  await inShop(() => prepare("UPDATE workshop_jobs SET job_date = '2026-10-26', start_time = '09:00' WHERE id = ?").run(b.id));
+  assert.deepEqual((await link(b.code)).deposit.cancelUntil, { date: '2026-10-25', time: '09:00' });
+});
+
+test('a deposit only held when a refund is owed is let go (review)', async () => {
+  const b = await booked();
+  await inShop(async () => {
+    await prepare("UPDATE pretend_payments SET status = 'held' WHERE ref = ?").run(b.ref);
+    await prepare("UPDATE online_payments SET status = 'held' WHERE job_id = ?").run(b.id);
+  });
+  assert.equal((await post(`/booking-links/${b.code}/cancel`, {})).status, 200);
+  assert.equal((await pretendStatus(b.ref)).status, 'released');
+  assert.deepEqual([(await paymentOf(b.id)).status, (await link(b.code)).deposit.state], ['released', 'refunded']);
+});
