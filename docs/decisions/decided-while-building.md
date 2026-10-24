@@ -1915,3 +1915,19 @@ No screen: server only.
    which the new app doesn't have yet; until then every booking takes it.
 7. **The note about declining shows only while automatic confirming is off**,
    as its own words say ("With automatic confirming off, …").
+
+### 24 Oct 2026: paying a booking's deposit, the server (`openspec/changes/deposit-payments`, `bk-details-deposit`, `bk-checking-payment`)
+
+1. **The card is held when the customer pays, and the money taken only once
+   the booking is saved** (Stripe's held card payments). A booking that can't
+   be saved, say the time went, lets the hold go, so nothing is taken and
+   there's nothing to refund.
+2. **The deposit is worked out by the server on the stored prices**, never
+   from the booking page, and checked again as the booking is saved: if it
+   has changed meanwhile, the customer is asked to pay it again.
+3. **The pretend provider answers as Stripe's test cards**: 4242 4242 4242
+   4242 is accepted, 4000 0000 0000 0002 is declined, anything else is "Check
+   the card number". Its card form exists only while it's the provider.
+4. **"Free to cancel until" is worked out at booking and kept on it**: the
+   booked start less the shop's hours, in the shop's time zone; for a
+   whole-day booking, from the start of the day.
