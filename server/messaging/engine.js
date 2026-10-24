@@ -219,6 +219,14 @@ async function sendDueForShop(shopId) {
       `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
        WHERE intent_state = 'sending' AND claimed_at < ?`
     ).run(new Date(now.getTime() - STUCK_MS).toISOString());
+    // A held Bike ready never comes due, so its check above never runs: one
+    // whose bike has gone (collected, or the work reopened) is stopped here,
+    // not left waiting for a Send now that can't send it (review).
+    await prepare(
+      `UPDATE customer_messages m SET intent_state = 'undone', status = 'undone'
+       WHERE m.intent_state = 'intended' AND m.template_key = 'bike_ready' AND m.send_after = 'infinity'
+         AND NOT EXISTS (SELECT 1 FROM workshop_jobs j WHERE j.id = m.job_id AND j.custody_state = 'in_shop' AND j.work_state = 'complete')`
+    ).run();
     const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
