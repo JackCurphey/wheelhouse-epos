@@ -192,6 +192,8 @@ const inAMinute = () => new Date(Date.now() + 60_000).toISOString();
 async function markReady(readyMessage) {
   const t = await askSignOff();
   answer = { status: 200, ok: true, json: async () => ({ ...JOB, ...FINISHED, version: 4, readyMessage }) };
+  // The job as the server then has it, finished, when the page reloads it (as the real one).
+  JOB = { ...JOB, ...FINISHED, version: 4 };
   t.fireEvent.click(t.pop.getByRole('radio', { name: 'Jo Taylor' }));
   t.fireEvent.click(t.pop.getByRole('button', { name: 'Sign off and mark ready' }));
   return t;
@@ -295,4 +297,22 @@ test('Messages says a held Bike ready is waiting until Send now', async () => {
   fireEvent.click(dlg.getByRole('button', { name: 'Message Maya Patel' }));
   const box = within(await ui.findByRole('dialog', { name: 'Messages' }));
   assert.ok(has(await box.findByText('By text to 07700 900142 · waits until you press Send now')));
+});
+
+test('a collected bike: no waiting strip, even with Bike ready still held (review)', async () => {
+  const { dlg } = await openJob({ ...FINISHED, custodyState: 'collected' }, 'click', [HELD_MESSAGE]);
+  await new Promise((r) => setTimeout(r, 80));
+  assert.equal(has(dlg.queryByRole('button', { name: 'Send now' })), false);
+  assert.equal(has(dlg.queryByText(stripText(WAITING))), false);
+});
+
+test('Send now that couldn’t reach Wheelhouse: the strip stays, to try again (review)', async () => {
+  const { dlg, fireEvent, waitFor } = await markReady(HELD);
+  await dlg.findByText(stripText(WAITING));
+  answer = { status: 500, ok: false, json: async () => ({ error: 'Server error' }) };
+  fireEvent.click(dlg.getByRole('button', { name: 'Send now' }));
+  await waitFor(() => assert.equal(posts().at(-1), '/api/messages/55/send-now {}'));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(has(dlg.queryByText(stripText(WAITING))));
+  assert.ok(has(dlg.queryByRole('button', { name: 'Send now' })));
 });

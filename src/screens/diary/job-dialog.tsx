@@ -198,14 +198,17 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   // now or Undo (Jack, 24 Oct answer 9; job-finished-wait). Read from the
   // job's messages too, so it still waits when the job is opened again
   // (decided while building).
+  // Only while the bike is here and finished: collected or reopened, Bike
+  // ready isn't going (review).
   const [handled, setHandled] = useState<number | null>(null);
+  const readyNow = finished && job?.custodyState === 'in_shop';
   const messagesQuery = useQuery({
     queryKey: jobMessagesKey(jobId),
     queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
-    enabled: finished,
+    enabled: readyNow,
   });
   const heldMessage = messagesQuery.data?.find((m) => m.key === 'bike_ready' && m.state === 'intended' && m.held && m.id !== handled);
-  const strip = ready ?? (job && heldMessage ? readyStrip(job, { ...heldMessage, held: true }) : null);
+  const strip = !readyNow ? null : ready ?? (job && heldMessage ? readyStrip(job, { ...heldMessage, held: true }) : null);
   async function undoReady() {
     if (!strip || !('id' in strip)) return;
     setSending(true);
@@ -231,8 +234,11 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
       await apiMutate(`/api/messages/${strip.id}/send-now`, {});
       setReady({ who: strip.who, sent: `“Bike ready” sent to ${strip.first} by ${channelWord(strip.channel)} · ${clockNow()}` });
     } catch (err) {
-      setReady(null);
       setMessage(refusalText(err));
+      // Refused (the bike has gone, or it went): the strip goes. Not reached:
+      // it stays, still held, to press again (review).
+      if (err instanceof ApiError && err.status < 500) setReady(null);
+      else setHandled(null);
     } finally {
       void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job?.id ?? 0) });
       setSending(false);
