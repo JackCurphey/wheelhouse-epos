@@ -3,6 +3,7 @@ import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, Label } from '@/components/ui/label';
 import { dayLabel } from './date-rules.ts';
+import { pounds } from './money.ts';
 import type { BookingDraft } from './draft.tsx';
 import type { ServicesResponse } from './services-query.ts';
 
@@ -17,7 +18,7 @@ export type DepositHold = { paymentId: number; depositPence: number; depositCanc
 const holdsPath = (shopSlug: string) => `/api/portal/${encodeURIComponent(shopSlug)}/deposit-holds`;
 const cardPath = (shopSlug: string, ref: string) => `/api/portal/${encodeURIComponent(shopSlug)}/pretend-payments/${encodeURIComponent(ref)}/card`;
 
-export const pounds = (pence: number) => `£${(pence / 100).toFixed(2)}`;
+export { pounds };
 export const HOLD_FAILED = 'We couldn’t get the deposit ready - please check your connection and try again';
 export const PAY_AGAIN = 'The deposit needs paying again — please press Pay.';
 
