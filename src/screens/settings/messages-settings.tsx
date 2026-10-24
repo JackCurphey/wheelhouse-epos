@@ -74,11 +74,11 @@ export function AutomaticMessages() {
   const row = (t: Template) => (
     <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
       <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
-        <span className="text-[15px] font-bold">{t.name}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{withDays(t).when}</span>
+        <span className="text-size-15 font-bold">{t.name}</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">{withDays(t).when}</span>
       </span>
       <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
-      <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
+      <span className="text-size-13 whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
       <OnOff name={t.name} on={t.enabled} disabled={busy.has(t.key)} onChange={(on) => void change(t.key, { enabled: on })} />
     </div>
   );
@@ -93,7 +93,7 @@ export function AutomaticMessages() {
         {bookingMessages.length ? (
           <>
             <h5 className="m-0 mt-2 text-sm font-bold">Booking messages</h5>
-            <p className="m-0 text-[13px] text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
           </>
         ) : null}
         {bookingMessages.map(row)}
@@ -229,32 +229,32 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="msg-title">{template.name}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
-        <p className="m-0 text-[15px]">Sent the way each customer chose: text, WhatsApp or email.</p>
+        <p className="m-0 text-size-15">Sent the way each customer chose: text, WhatsApp or email.</p>
         <div className="flex flex-col gap-2">
-          <label htmlFor="msg-words" className="text-[15px] font-semibold">Wording</label>
+          <label htmlFor="msg-words" className="text-size-15 font-semibold">Wording</label>
           <textarea
             id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)}
-            className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
+            className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal"
           />
           <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
             {template.tapIns.map((name) => (
-              <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[13px] font-semibold">{`+ ${name}`}</button>
+              <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
             ))}
           </div>
           {/* UX walk-through 7 M6, drawn under the wording (set-msg-edit). */}
           <p className="m-0 text-sm text-[var(--wh-muted)]">With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.</p>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
+          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
           {previewFailed ? <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t show the preview. Try again in a moment.</p> : null}
           <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview?.text ?? ''}</div>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-bold text-[var(--wh-muted)]">PREVIEW · EMAIL TO MAYA PATEL</span>
+          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · EMAIL TO MAYA PATEL</span>
           <div className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3 text-sm leading-normal">
             <span className="font-bold">{preview?.email.subject ?? ''}</span>
             <span className="whitespace-pre-wrap">{preview?.email.body ?? ''}</span>

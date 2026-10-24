@@ -145,7 +145,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
         </div>
         <div className="flex flex-col gap-1">
           <strong className="text-sm">{(item.serviceNames ?? []).join(', ') || job?.title}</strong>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`Requested ${when(item)}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`Requested ${when(item)}`}</span>
         </div>
         {mechanics.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the mechanics. Accept keeps the request’s own.</p> : null}
         {/* Shown once the job and the mechanics are in, so nothing looks picked that isn't. */}
@@ -168,7 +168,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
             <textarea id="decline-msg" rows={4} maxLength={1000} value={declineWords} onChange={(e) => setDeclineWords(e.target.value)}
               className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
           </div>
-          <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request.${job?.deposit ? ` Their ${pounds(job.deposit.pence)} deposit is refunded automatically.` : ''}`}</p>
+          <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request.${job?.deposit ? ` Their ${pounds(job.deposit.pence)} deposit is refunded automatically.` : ''}`}</p>
         </>
       );
     }
@@ -200,7 +200,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
           <textarea id="decline-msg" rows={4} maxLength={1000} value={declineWords} onChange={(e) => setDeclineWords(e.target.value)}
             className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request. ${job ? `${dayLabel(job.jobDate)}${job.startTime ? ` at ${job.startTime}` : ''}` : 'The offered time'} is no longer kept for ${first}.`}</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request. ${job ? `${dayLabel(job.jobDate)}${job.startTime ? ` at ${job.startTime}` : ''}` : 'The offered time'} is no longer kept for ${first}.`}</p>
       </>
     ) : (
       <>
@@ -211,7 +211,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
         <span className="text-sm text-[var(--wh-muted)]">{bike}</span>
         <div className="flex flex-col gap-1.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3">
           <span className="text-sm"><strong>{offeredAt}</strong>{` · ${job?.mechanicName ?? 'Shared queue'}`}</span>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`Waiting for ${first} to accept it or cancel. It’s kept free for them.`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`Waiting for ${first} to accept it or cancel. It’s kept free for them.`}</span>
         </div>
         <div className="flex flex-col gap-1.5">
           <h3 className="m-0 text-sm font-bold">{`Your message to ${first}`}</h3>
@@ -221,7 +221,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
         </div>
         <div className="flex flex-col gap-1">
           <strong className="text-sm">{(item.serviceNames ?? []).join(', ') || job?.title}</strong>
-          {job ? <span className="text-[13px] text-[var(--wh-muted)]">{`${requestMinutes(job)} minutes planned. Asked for ${dayLabel(job.offer?.fromDate ?? job.jobDate)}.`}</span> : null}
+          {job ? <span className="text-size-13 text-[var(--wh-muted)]">{`${requestMinutes(job)} minutes planned. Asked for ${dayLabel(job.offer?.fromDate ?? job.jobDate)}.`}</span> : null}
         </div>
       </>
     );
@@ -252,7 +252,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
           <span aria-hidden="true">→</span>
           <strong className="text-sm">{atWho(item.to)}</strong>
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">The customer asked to move this booking. Accepting keeps the same work.</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">The customer asked to move this booking. Accepting keeps the same work.</p>
       </>
     );
     footer = (
@@ -276,10 +276,10 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
         <div className="flex flex-col gap-1">
           <strong className="text-sm">{(item.serviceNames ?? []).join(', ') || job?.title}</strong>
           {job?.cancelledAt ? (
-            <span className="text-[13px] text-[var(--wh-muted)]">{`Cancelled by the customer on ${shortDay(todayIso(new Date(job.cancelledAt)))}.`}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{`Cancelled by the customer on ${shortDay(todayIso(new Date(job.cancelledAt)))}.`}</span>
           ) : null}
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">No further action is needed.</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">No further action is needed.</p>
       </>
     );
     footer = (

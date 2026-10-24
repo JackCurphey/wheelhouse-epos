@@ -95,7 +95,7 @@ export function DialogTitle({ className, ...props }: React.ComponentProps<'h2'>)
 
 /** Screen-reader description; pair with aria-describedby on <Dialog>. */
 export function DialogDescription({ className, ...props }: React.ComponentProps<'p'>) {
-  return <p className={cn('mt-1 text-[13.5px] text-[var(--wh-muted)]', className)} {...props} />;
+  return <p className={cn('mt-1 text-size-13-5 text-[var(--wh-muted)]', className)} {...props} />;
 }
 
 /** `.modal-body`. */

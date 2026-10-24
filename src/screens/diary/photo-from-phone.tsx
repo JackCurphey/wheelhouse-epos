@@ -190,13 +190,13 @@ export function PhotoFromPhoneDialog({ jobId, quoteId, linePosition, description
   } else {
     before = (
       <>
-        <p className="m-0 text-[15px]">{`Scan this code with your phone’s camera. It opens the photo step for ${description} on ${reference}.`}</p>
+        <p className="m-0 text-size-15">{`Scan this code with your phone’s camera. It opens the photo step for ${description} on ${reference}.`}</p>
         {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
         {made ? <img src={qrImage(made.url)} alt="A code to scan with your phone’s camera" className="mx-auto size-52 rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1" /> : null}
         <p className="m-0 text-sm text-[var(--wh-muted)]">Works for 15 minutes, for this photo only. No sign-in needed.</p>
       </>
     );
-    after = made ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">No camera app? Open <span className="font-mono break-all text-[var(--wh-ink)]">{made.url}</span> on your phone.</p> : null;
+    after = made ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">No camera app? Open <span className="font-mono break-all text-[var(--wh-ink)]">{made.url}</span> on your phone.</p> : null;
     footer = (
       <>
         <Button onClick={cancel}>Cancel</Button>
@@ -211,7 +211,7 @@ export function PhotoFromPhoneDialog({ jobId, quoteId, linePosition, description
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="photo-phone-title">Add a photo from your phone</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`${description} · ${reference}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`${description} · ${reference}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">{body[0]}{body[1]}{body[2]}</DialogBody>

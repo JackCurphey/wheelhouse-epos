@@ -25,7 +25,7 @@ export function useChangeAccessibility() {
 }
 
 // The classes on <html> that the switches turn on (theme.css).
-const CLASSES: [keyof Accessibility, string][] = [['reduceMotion', 'wh-reduce-motion']];
+const CLASSES: [keyof Accessibility, string][] = [['reduceMotion', 'wh-reduce-motion'], ['largerText', 'wh-larger-text']];
 
 /** Puts the signed-in person's switches on the page, for every screen; the staff frame runs it. */
 export function useAccessibilityClasses(signedIn: boolean) {
