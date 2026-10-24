@@ -140,6 +140,15 @@ test('?order= opens New job with the order’s title, customer and note, at a ti
   assert.equal(new URL(window.location.href).searchParams.get('order'), null);
 });
 
+// New job from a customer's page (openspec/changes/customer-page design 4).
+test('?customer= opens New job with that customer chosen, at a time to enter, and leaves the address', async () => {
+  const r = await openDiary('?date=2026-10-05&customer=5');
+  const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));
+  assert.ok(has(await form.findByText('Maya Patel')));
+  assert.equal(form.getByLabelText('Date').value, '2026-10-05');
+  assert.equal(new URL(window.location.href).searchParams.get('customer'), null);
+});
+
 test('saving New job for an order links the job to the order', async () => {
   const r = await openDiary('?date=2026-10-05&order=9');
   const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));

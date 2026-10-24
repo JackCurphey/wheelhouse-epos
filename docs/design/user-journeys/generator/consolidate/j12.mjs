@@ -42,6 +42,15 @@ export default {
   'job-finished': into('job-overview', 'Workshop day 20', "'Finished'; 'Alex marked it ready at 15:30' with 'Undo'; 'Take payment'"),
   'job-collection': into('job-overview', 'Workshop day 20', "'Paid' strip, 'Paid online · [date]'; footer 'Hand over'"),
   'job-checklist': keep(7),
+  // Use my phone for a line's photo (Walk-through 8, decision 6), drawn 23 Oct
+  // for Jack's approval in place of its written line on job-overview.
+  'job-photo-choice': into('job-overview', 'Walk-through 8, decision 6', "On a desktop, Add photo for Shimano brake pads opens a menu: 'Choose a file' or 'Use my phone'"),
+  'job-photo-phone': keep(9),
+  'job-photo-phone-added': into('job-photo-phone', 'Walk-through 8, decision 6', "The photo arrived by itself: 'Photo added', '[Photo from your phone]', 'Done'; the line reads '1 photo'"),
+  'phone-photo-ready': keep(40, { sizes: ['phone'] }), // the page the code opens, on the phone, no sign-in
+  'phone-photo-check': into('phone-photo-ready', 'Walk-through 8, decision 6', "'Check the photo': '[The photo you just took]', 'Use this photo' or 'Take another'"),
+  'phone-photo-done': into('phone-photo-ready', 'Walk-through 8, decision 6', "'Photo added to WH-1042': it's on the computer now; you can close this page"),
+  'phone-photo-expired': into('phone-photo-ready', 'Walk-through 8, decision 6', "'This code has expired or has already been used': make a new one on the computer; nothing else shown"),
   // Customer account
   'customer': into('cs-page', 'Customer service 11', "One-shop business: history rows without the shop name (cs-page shows '· Bolton')"),
   // Overview page
@@ -62,7 +71,6 @@ export const lines = [
   { on: 'job-overview', text: 'Open on another device: Jo Taylor has this job open', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
   { on: 'job-overview', text: "Notes: the other person's words arrive as they type", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
   { on: 'job-overview', text: "Two people change one line: Keep mine or Keep Alex's", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
-  { on: 'job-overview', text: "On a desktop, Add photo: Choose a file or Use my phone (a code to scan opens that line's photo step, no sign-in)", who: 'Mechanic', decision: 'Walk-through 8, decision 6' },
   { on: 'job-overview', text: 'Who did what, folded: name, what, time; Mark ready records Signed off by Alex Morgan · 15:30', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 7; build plan Q3' },
   // D5 — the quick look
   { on: 'job-quick-overview', text: 'After Mark ready: Signed off by Alex Morgan · 15:30 in the hover summary', who: 'Staff and Mechanic', decision: 'Build plan Q3' },

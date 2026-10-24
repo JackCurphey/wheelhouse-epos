@@ -147,9 +147,22 @@ The existing start-up order already runs migrations before listening, so a
 failed migration never gives a healthy `/healthz`. We run one copy of the
 app, so the advisory lock never has to wait on another one.
 
+**How it's built** (task 3.4, 23 Oct). The server side is
+`scripts/hosting/deploy.sh`. The deploy key is tied to it in root's
+`authorized_keys` (`restrict,command="/opt/wheelhouse/deploy.sh"`), and it
+accepts only `deploy <commit>` or `rollback`. A deploy downloads the image
+before changing anything, writes the time and both commits to
+`/opt/wheelhouse/deploys.log`, keeps the running image and commit in
+`release.previous`, and names the new ones in the server's `.env`
+(`WHEELHOUSE_IMAGE`, `WHEELHOUSE_COMMIT`), which compose reads. The
+workflow rolls back only when the deploy step itself succeeded; a version
+that won't start is swapped back by the script. `setup.sh` makes the key
+and writes GitHub's settings with `gh`. The health check gets 5 minutes.
+
 **The commit it runs.** The workflow passes the commit in as
-`WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, and
-leaves `commit` out when the setting is unset.
+`WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, on
+the 503 when the database is down as well as on the 200, and leaves `commit`
+out when the setting is unset.
 
 **Old code against a new schema.** A rollback starts the previous image
 against a database the new version may already have migrated, so the old

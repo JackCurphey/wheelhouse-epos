@@ -166,9 +166,13 @@ test('the Bike is here switch asks where it’s kept too', async () => {
 });
 
 test('the Overview’s Book in asks where the bike is kept, then books it in on that slot', async () => {
-  // Expected today, so it's in Arrivals (the Overview reads the shop's today).
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
-  const { ui, fireEvent, waitFor, within } = await open('/workshop/overview', { over: { jobDate: today } });
+  // Expected today, so it's in Arrivals. The Overview reads the device's own
+  // today (todayIso), so the test does too; London's date differs from a UTC
+  // machine's for an hour each night in summer time. A drop-off with no time is
+  // due all day, so Book in shows whatever the clock says; a timed one only
+  // shows it from an hour before its start.
+  const today = new Date().toLocaleDateString('en-CA');
+  const { ui, fireEvent, waitFor, within } = await open('/workshop/overview', { over: { jobDate: today, startTime: null, endTime: null } });
   fireEvent.click(await ui.findByRole('button', { name: 'Book in WH-1042' }));
   const box = within(await ui.findByRole('dialog', { name: 'Book in · job WH-1042' }));
   fireEvent.click(box.getByRole('radio', { name: 'Hook 5' }));

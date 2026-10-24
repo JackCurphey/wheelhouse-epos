@@ -10,7 +10,8 @@ import { ProblemScreen } from '@/screens/book/problem.tsx';
 import { DateScreen } from '@/screens/book/date.tsx';
 import { DetailsScreen } from '@/screens/book/details.tsx';
 import { PendingScreen } from '@/screens/book/pending.tsx';
-import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
+import { PhotoStepScreen } from '@/screens/book/photo-step.tsx';
+import { CUSTOMER_ROUTES, PHOTO_STEP_ROUTE, type CustomerScreenId } from './routes.ts';
 
 /**
  * The customer app's frame: query client, router, error boundary. The same
@@ -83,7 +84,7 @@ const router = createBrowserRouter([
           const rest = path.slice(BOOK_BASE.length).replace(/^\//, '');
           const Component = SCREENS[id] ?? notBuilt(id);
           return rest ? { path: rest, Component } : { index: true, Component };
-        }),
+        }).concat({ path: PHOTO_STEP_ROUTE.slice(BOOK_BASE.length + 1), Component: PhotoStepScreen }),
       },
       { path: '/book/*', Component: NoSuchScreen },
     ],

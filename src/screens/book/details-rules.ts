@@ -31,6 +31,7 @@ export type BookingBody = {
   answers?: Answer[];
   bikeNote?: string;
   description?: string;
+  spendLimit?: number;
   photos: { dataBase64: string }[];
   jobDate: string;
   mechanicId: number;
@@ -40,6 +41,8 @@ export type BookingBody = {
   email?: string;
   updateChannel: UpdateChannel;
   termsAccepted: true;
+  // The deposit's held payment (deposit-payments design 5).
+  paymentId?: number;
 } & BookingRequestKey;
 
 export const DEFAULT_CHANNEL: UpdateChannel = 'sms';
@@ -166,10 +169,30 @@ export function whenText(draft: BookingDraft, mechanics: PortalMechanic[] = [], 
   return dropoff ? `${day}, drop off ${dropoff.start}–${dropoff.end}` : day;
 }
 
+/** The amount box starts at £200, as drawn (book.mjs limit()). */
+export const LIMIT_START = '200';
+export const LIMIT_WORDS = 'Enter the most the whole bill can come to, in whole pounds.';
+
+/** The spending limit in whole pounds, or null when asking first or not whole pounds from 1 to 100,000. */
+export function spendLimit(draft: Pick<BookingDraft, 'limitOn' | 'limitText'>): number | null {
+  if (!draft.limitOn) return null;
+  const text = (draft.limitText ?? LIMIT_START).trim();
+  if (!/^\d+$/.test(text)) return null;
+  const pounds = Number(text);
+  return pounds >= 1 && pounds <= 100000 ? pounds : null;
+}
+
+/** Why Continue can't go on with this limit, or null. */
+export function limitError(draft: Pick<BookingDraft, 'limitOn' | 'limitText'>): string | null {
+  return draft.limitOn && spendLimit(draft) === null ? LIMIT_WORDS : null;
+}
+
 /** The summary at the top of the details screen: services, day and time, price when shown, bike note when given. */
 export function summaryLines(services: ServicesResponse, draft: BookingDraft, when: string): string[] {
   const bikeNote = draft.bikeNote?.trim() || null;
-  return [serviceLine(services, draft), when, priceText(services, draft), bikeNote].filter((l): l is string => !!l);
+  const limit = spendLimit(draft);
+  const limitLine = limit === null ? null : `Extra work: go ahead if the whole bill is no more than £${limit}`;
+  return [serviceLine(services, draft), when, priceText(services, draft), bikeNote, limitLine].filter((l): l is string => !!l);
 }
 
 /**
@@ -188,6 +211,7 @@ export function bookingBody(services: ServicesResponse, draft: BookingDraft, pho
       : { serviceIds: draft.serviceIds ?? [], answers: cleanAnswers(services, draft) }),
     ...(bikeNote ? { bikeNote } : {}),
     ...(description ? { description } : {}),
+    ...(spendLimit(draft) !== null ? { spendLimit: spendLimit(draft) as number } : {}),
     photos: photos.map((dataBase64) => ({ dataBase64 })),
     jobDate: draft.date as string,
     mechanicId: draft.mechanicId as number,

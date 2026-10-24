@@ -47,6 +47,11 @@ const WAITING = {
   ],
 };
 
+// What Waiting for you returns; a test may swap it, and puts it back.
+let waitingReply = WAITING;
+// The person's own switches (Your settings); a test may turn Show status symbols on, and puts it back.
+const A11Y_OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+let a11yReply = { accessibility: A11Y_OFF };
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -68,7 +73,8 @@ function stubServer() {
     if (u.pathname === '/api/auth/me') return ok(OWNER);
     if (u.pathname === '/api/employees') return ok(MECHANICS);
     if (u.pathname === '/api/workshop-settings') return ok(SETTINGS);
-    if (u.pathname === '/api/workshop-waiting') return ok(WAITING);
+    if (u.pathname === '/api/workshop-waiting') return ok(waitingReply);
+    if (u.pathname === '/api/your-settings') return ok(a11yReply);
     if (u.pathname === '/api/workshop-jobs') {
       const [from, to] = [u.searchParams.get('start'), u.searchParams.get('end')];
       return ok([...JOBS, ...NEXT_WEEK].filter((j) => j.jobDate >= from && j.jobDate <= to));
@@ -272,6 +278,21 @@ test('the Day view\'s No time row leaves out other days\' jobs', async () => {
   assert.ok(ui.queryByText('Ribble CGR') === null);
 });
 
+test('a Waiting card shows the bike under the customer, and no line when there\'s no bike (waiting-bike)', async () => {
+  // Lena's card carries her bike; Sam's has none. Its own name, so the diary's blocks can't be mistaken for it.
+  waitingReply = { ...WAITING, items: [WAITING.items[0], { ...WAITING.items[1], bikeLabel: 'Orbea Vector 20' }] };
+  try {
+    const { ui, within } = await openDiary();
+    const col = within(await ui.findByRole('region', { name: 'Waiting for you (2)' }));
+    const lena = col.getByRole('button', { name: /Lena Fox/ });
+    assert.ok(lena.textContent.includes('Lena FoxOrbea Vector 20'), lena.textContent);
+    const sam = col.getByRole('button', { name: /Sam Reed/ });
+    assert.equal(sam.children.length, 3, 'Sam\'s card should be its label, name and detail, with no bike line');
+  } finally {
+    waitingReply = WAITING;
+  }
+});
+
 test('Waiting for you lists what needs an answer', async () => {
   const { ui, within } = await openDiary();
   const col = within(ui.getByRole('region', { name: 'Waiting for you (2)' }));
@@ -452,4 +473,31 @@ test('on an upright tablet, a card chosen from the sheet shows the chosen bar wi
   const bar = await ui.findByRole('status', { name: 'Chosen from Waiting for you' });
   assert.ok(bar.closest('[data-tablet-foot]') !== null, 'the bar sits at the foot of the page');
   assert.ok(has(within(bar).queryByRole('button', { name: "Open Lena Fox's request" })));
+});
+
+// Show status symbols (Your settings; decision 57; diary.mjs STATUS_SHAPE): off
+// to start, colour alone; on, a week block and the legend carry the status's shape.
+const shapeIn = (el) => el?.querySelector('[data-status-shape]')?.getAttribute('data-status-shape') ?? null;
+const blockOf = (ui, bike) => ui.getAllByText(bike).map((t) => t.closest('[title]')).find(Boolean);
+
+test('with Show status symbols on, each week block and the legend carry the status’s shape', async () => {
+  a11yReply = { accessibility: { ...A11Y_OFF, statusSymbols: true } };
+  try {
+    const { ui, waitFor } = await openDiary();
+    await waitFor(() => assert.equal(shapeIn(blockOf(ui, 'Trek Domane')), 'scheduled'));
+    const legend = ui.getByRole('list', { name: 'What the colours mean' });
+    assert.deepEqual([...legend.querySelectorAll('li')].map(shapeIn), ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled']);
+    assert.ok([...document.querySelectorAll('[data-status-shape]')].every((el) => el.getAttribute('aria-hidden') === 'true'), 'the shapes are hidden from screen readers, which hear the word');
+  } finally {
+    a11yReply = { accessibility: A11Y_OFF };
+  }
+});
+
+test('with Show status symbols off, the diary is colour alone, as before', async () => {
+  const { ui, waitFor } = await openDiary();
+  // Once the person's settings have come, so "off" isn't "not loaded yet".
+  await waitFor(() => assert.ok(calls.some((c) => c.includes('/api/your-settings'))));
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(blockOf(ui, 'Trek Domane'), 'the block is there');
+  assert.equal(document.querySelectorAll('[data-status-shape]').length, 0);
 });

@@ -10,6 +10,7 @@
 import { pool, prepare, runWithShop } from '../db.js';
 import { TEMPLATES, render, templateFor } from './templates.js';
 import { senderFor } from './senders/index.js';
+import { LEFT_TO_PAY, whatsLeftToPay } from '../workshop/job-messages.js';
 
 /** The Undo minute for messages staff trigger (drawn: "in 1 minute"); shorter in tests. */
 export const UNDO_MS = Number(process.env.WH_MESSAGES_DELAY_MS ?? 60_000);
@@ -46,6 +47,18 @@ export async function undoWaiting(jobId, key) {
 }
 
 /**
+ * Stops every message for a job that hasn't gone yet, minute up or not: the
+ * job is being deleted, so there is nothing left for it to be about (audit
+ * item 11). Run in the delete's transaction. One already claimed is left.
+ */
+export async function undoJobMessages(jobId) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE job_id = ? AND intent_state = 'intended'`
+  ).run(jobId);
+}
+
+/**
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
@@ -63,6 +76,20 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
      VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?) RETURNING id`
   ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId);
   return { id: row.id, channel: how.channel, to: how.to, sendAfter };
+}
+
+/**
+ * An email to the address given, for one sale's receipt (openspec/changes/receipt-email
+ * design 1): not the customer's chosen way, and with no customer when the sale
+ * has none. Due at once; the timer sends it through the email sender, pretend
+ * for now. Inside the shop's runWithShop. Returns the message's id.
+ */
+export async function sendEmailTo({ to, subject, body, saleId, customerId = null, loginId = null }) {
+  const { id } = await prepare(
+    `INSERT INTO customer_messages (customer_id, sale_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
+     VALUES (?, ?, ?, 'queued', 'intended', 'email', 'receipt', ?, ?, ?, ?) RETURNING id`
+  ).get(customerId, saleId, body, subject, to, new Date().toISOString(), loginId);
+  return id;
 }
 
 /**
@@ -113,6 +140,43 @@ export async function sendDue() {
   }
 }
 
+/**
+ * A quote reminder waits up to a week, so it's checked when it's due: its
+ * job still there, the bike not collected, the booking not ended, the job's
+ * newest quote still waiting for an answer, and Quote to approve and the
+ * reminder both still on (Jack, 22 Oct; fresh review).
+ */
+async function reminderStillNeeded(jobId) {
+  if (!jobId) return false;
+  const job = await prepare(
+    `SELECT 1 FROM workshop_jobs j
+      WHERE j.id = ? AND j.custody_state <> 'collected' AND j.booking_state NOT IN ('cancelled', 'declined', 'expired')
+        AND (SELECT q.state FROM workshop_quotes q WHERE q.workshop_job_id = j.id ORDER BY q.revision DESC LIMIT 1) = 'sent'`
+  ).get(jobId);
+  if (!job) return false;
+  return (await templateFor('quote_to_approve')).enabled && (await templateFor('quote_reminder')).enabled;
+}
+
+/**
+ * Bike still waiting waits days, so it's checked when it's due (WP-4.3,
+ * openspec/changes/uncollected-bike design 2): the bike still in the shop, the
+ * work still finished and signed off, its Bike ready sent since it was marked
+ * ready (not switched off or undone), and the message on. A paid bike is
+ * reminded too, "Paid — nothing more to pay" (cp-setting).
+ */
+async function stillWaitingNeeded(jobId) {
+  if (!jobId) return false;
+  const job = await prepare(
+    `SELECT 1 FROM workshop_jobs j
+      WHERE j.id = ? AND j.custody_state = 'in_shop' AND j.work_state = 'complete' AND j.signed_off_at IS NOT NULL
+        AND EXISTS (SELECT 1 FROM customer_messages r WHERE r.job_id = j.id AND r.template_key = 'bike_ready'
+                     AND r.sent_at IS NOT NULL AND r.sent_at >= j.signed_off_at)`
+  ).get(jobId);
+  return Boolean(job) && (await templateFor('bike_still_waiting')).enabled;
+}
+
+const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded };
+
 async function sendDueForShop(shopId) {
   const now = new Date();
   const due = await runWithShop(shopId, async () => {
@@ -120,11 +184,27 @@ async function sendDueForShop(shopId) {
       `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
        WHERE intent_state = 'sending' AND claimed_at < ?`
     ).run(new Date(now.getTime() - STUCK_MS).toISOString());
-    return prepare(
+    const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
-       RETURNING id, channel, to_address, subject, body`
+       RETURNING id, channel, to_address, subject, body, template_key, job_id`
     ).all(now.toISOString(), now.toISOString());
+    const sendable = [];
+    for (const m of claimed) {
+      const stillNeeded = DUE_CHECKS[m.template_key];
+      if (stillNeeded && !(await stillNeeded(m.job_id))) {
+        await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
+        continue;
+      }
+      // Bike still waiting was filled in days ago: what's left to pay is said
+      // as it is now, paid or not (fresh review), and recorded as sent.
+      if (m.template_key === 'bike_still_waiting' && LEFT_TO_PAY.test(m.body)) {
+        m.body = m.body.replace(LEFT_TO_PAY, await whatsLeftToPay(m.job_id));
+        await prepare('UPDATE customer_messages SET body = ? WHERE id = ?').run(m.body, m.id);
+      }
+      sendable.push(m);
+    }
+    return sendable;
   });
   for (const m of due) {
     try {
@@ -184,7 +264,8 @@ export function serializeMessage(row) {
     // The shop's (outbound) or the customer's (inbound), for the conversation.
     direction: row.direction ?? 'outbound',
     key: row.template_key ?? null,
-    name: TEMPLATES[row.template_key]?.name ?? 'Message',
+    // A receipt isn't one of the automatic messages (openspec/changes/receipt-email).
+    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : 'Message'),
     channel: row.channel ?? 'sms',
     to: row.to_address ?? null,
     subject: row.subject ?? null,

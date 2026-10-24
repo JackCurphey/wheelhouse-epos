@@ -17,12 +17,58 @@ export const TEMPLATES = {
     subject: 'A quote to approve — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
   },
+  // One reminder when a quote has no answer, facts only (decision 7); wording
+  // approved by Jack, 22 Oct. Settings shows it under Quote to approve.
+  quote_reminder: {
+    name: 'Quote reminder',
+    when: 'Once, when a quote has had no answer for the hours the shop sets',
+    wording: 'Hi [Customer’s first name], a reminder from [Shop name]: the quote for more work on your [Bike] is still waiting for your answer. See it and say yes or no to each part: [Link to the quote] — no app or sign-in needed. Your repair · [Job number].',
+    subject: 'A reminder: your quote is waiting — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
+  },
+  // Work within the customer's spending limit (Workshop day 41-43); wording
+  // approved by Jack, 22 Oct ("1: use the drafted wording").
+  work_within_limit: {
+    name: 'Work added within your limit',
+    when: 'When extra work fits the limit the customer set',
+    wording: 'Hi [Customer’s first name], we found a bit more to do on your [Bike] and went ahead, as it keeps your whole bill within the [Spending limit] limit you set. Added: [Work added], [Amount added]. See it here: [Link to the job] — no app or sign-in needed. Not what you wanted? Call [Shop phone]. Your repair · [Job number].',
+    subject: 'Work added to your repair — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Spending limit', 'Work added', 'Amount added', 'Link to the job', 'Shop phone', 'Job number', 'Shop name'],
+  },
+  // After staff record the customer's answer from a call (dq-record-answer);
+  // wording approved by Jack, 22 Oct. [What was agreed] is built from the
+  // quote: "Going ahead: …, £46.00. No thanks: …".
+  your_answers: {
+    name: 'Your answers',
+    when: 'When staff record the customer’s answer from a call',
+    wording: 'Hi [Customer’s first name], thanks for your answers about your [Bike]. [What was agreed] See it here: [Link to the job] — no app or sign-in needed. Your repair · [Job number].',
+    subject: 'Your answers — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'What was agreed', 'Link to the job', 'Job number', 'Shop name'],
+  },
+  // A staff reply to the customer's note (decision 3; ac-reply-text, as drawn).
+  shop_reply: {
+    name: 'Reply from the shop',
+    when: 'When staff reply to a customer’s note',
+    wording: '[Shop name] replied about your [Bike] ([Job number]): [The shop’s reply]. Replies to this number aren’t read — reply on your page: [Link to the job]',
+    subject: '[Shop name] replied about your repair',
+    tapIns: ['Shop name', 'Bike', 'Job number', 'The shop’s reply', 'Link to the job'],
+  },
   bike_ready: {
     name: 'Bike ready',
     when: 'When a job is marked ready',
     wording: 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
     subject: 'Your bike is ready — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Job number', 'Amount to pay', 'Link to the job', 'Shop name', 'Opening hours'],
+  },
+  // One reminder when a ready bike isn't collected (collect and pay review
+  // item 4; WP-4.3), the wording drawn on cp-setting's pop-up. Queued at
+  // ready for the shop's days, and checked when it's due (engine.js).
+  bike_still_waiting: {
+    name: 'Bike still waiting',
+    when: 'When a ready bike isn’t collected after the days the shop sets',
+    wording: 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [What’s left to pay]. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
+    subject: 'Your bike is still waiting — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'What’s left to pay', 'Link to the job', 'Job number', 'Opening hours'],
   },
   request_received: {
     group: 'booking',
@@ -77,7 +123,7 @@ export const TEMPLATES = {
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'bike_ready', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

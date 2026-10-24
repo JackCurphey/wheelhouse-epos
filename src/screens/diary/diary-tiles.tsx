@@ -2,9 +2,10 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState, type CSSPrope
 import { tileClass } from './job-extras.tsx';
 import { Chevron } from './diary-bits.tsx';
 import { BlockLinesContext, ExtrasContext, MoveContext, PickContext, SlotContext, useExtrasHandlers } from './diary-context.ts';
+import { StatusShape, hasShape, useStatusSymbols } from './status-shape.tsx';
 import { BLOCK, CHIP, SR, blockLine, describe, movable, timeText, type Outline, type Shown } from './diary-model.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
-import { STATE_LABEL, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
+import { stateWord, dropStart, hhmm, layoutLanes, lengthText, stackGroups, toMinutes } from './rules.ts';
 
 /** "New, booked online", or "New online" where a narrow week column would cut it off (diary.mjs blockMark). */
 export function NewOnlineMark({ short }: { short: boolean }) {
@@ -33,6 +34,9 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const mark = Boolean(job.newOnline);
   // The full words on a phone and in a wide column; short in a narrow week column (design).
   const shortMark = !wide && !fullMark;
+  // Show status symbols: in a narrow week column, where the word doesn't fit, and on every request, as drawn
+  // (diary.mjs jobBlock, pendingBlock); not a phone's job blocks (touchJobBlock, review), nor a state with no shape.
+  const symbol = useStatusSymbols() && hasShape(job.state) && ((!wide && !fullMark) || job.state === 'pending');
   const style: CSSProperties = { top, height };
   if (moving) {
     // Shifted across by whole columns (each column is 100% of this one's width).
@@ -51,10 +55,11 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
   const laned = !moving && lane && lane.total > 1
     ? 'left-[var(--lane-left)] w-[var(--lane-width)] hover:left-[3px] hover:z-[3] hover:w-[calc(100%-6px)] hover:delay-300 motion-safe:transition-[left,width] motion-reduce:hover:delay-0'
     : '';
-  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving?.stretch ? 'z-[2] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
+  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] py-[3px] pl-1.5 text-left ${symbol ? 'pr-4' : 'pr-1.5'} ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? (light ? 'z-[1] shadow-[0_0_0_2px_var(--wh-muted)]' : 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]') : ''} ${moving?.stretch ? 'z-[2] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
+      {symbol ? <StatusShape state={job.state} /> : null}
       {/* Confirmed straight away, until someone opens it (Jack, 19 Oct, auto-confirm),
           placed as the drawing does (diary.mjs blockMark): one line, "first line · mark";
           two lines, the first line then the mark; three or more, first, second, mark.
@@ -67,7 +72,7 @@ export function JobBlock({ job, range, wide, chosen, light = false, lane, colInd
           the job stays in its description and summary. */}
       {height >= TWO_LINES && !(mark && height < THREE_LINES) ? (
         <span aria-hidden="true" className="truncate text-xs leading-[14px] font-bold">
-          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', blockLine(job, lines.second), wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
+          {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', blockLine(job, lines.second), wide ? stateWord(job) : ''].filter(Boolean).join(' · ')}
         </span>
       ) : null}
       {mark && height >= TWO_LINES ? (

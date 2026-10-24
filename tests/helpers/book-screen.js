@@ -24,7 +24,8 @@
 // screens at other addresses ({ date: 'DateScreen' } loads
 // screens/book/date.js), so a test can see a guard on the screen a customer
 // went back to (WP-0.2); `strict` renders inside React.StrictMode, as the
-// customer app does (src/customer/main.tsx).
+// customer app does (src/customer/main.tsx). `depositHold` and `card` answer
+// /deposit-holds and the pretend card form (deposit-pay-screen).
 import { installDom, importFresh } from './dom.js';
 
 const BUILD = new URL('../../.test-build/', import.meta.url);
@@ -41,8 +42,12 @@ const BOOKED = () => ({
 export async function renderBookScreen({
   file, exportName, at, url, services, draft, mechanics = NO_MECHANICS, availability = NO_AVAILABILITY,
   terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state, real = {}, strict = false,
+  media, photoCode = NO_LINK, depositHold = NO_LINK, card = NO_LINK,
 }) {
   const uninstall = installDom(`http://localhost${url}`);
+  // A pretend screen: media(query) says which media queries match, as a phone
+  // or tablet would answer them. Left out, nothing matches (a computer).
+  if (media) window.matchMedia = (q) => ({ matches: media(q), media: q, addEventListener() {}, removeEventListener() {} });
   if (draft) window.sessionStorage.setItem('wh-book-draft:north', JSON.stringify(draft));
   const scrolled = [];
   // Both the frame's scroll-to-top and a screen's own ?start scrollIntoView
@@ -72,6 +77,9 @@ export async function renderBookScreen({
       : pathname.endsWith('/availability') ? availability
         : pathname.endsWith('/terms') ? terms
           : pathname.includes('/booking-links/') ? bookingLink
+            : pathname.includes('/photo-codes/') ? photoCode
+            : pathname.endsWith('/deposit-holds') ? depositHold
+            : pathname.includes('/pretend-payments/') ? card
             : pathname.endsWith('/bookings') ? booking
               : services;
     const { status, body } = typeof source === 'function' ? await source(address, init) : { status: 200, body: source };
@@ -114,7 +122,7 @@ export async function renderBookScreen({
   for (const [path, name] of Object.entries(real)) {
     realScreens[path] = (await importFresh(new URL(`screens/book/${path}.js`, BUILD).href))[name];
   }
-  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code']
+  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code']
     .map((p) => ({ ...child(p), Component: p === at ? Screen : realScreens[p] ?? Where }));
   const start = new URL(url, 'http://localhost');
   const entry = state ? { pathname: start.pathname, search: start.search, state } : url;

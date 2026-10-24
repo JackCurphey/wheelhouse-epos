@@ -10,6 +10,7 @@
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { ownerOnly } from '../lib/owner-only.js';
 import { prepare, dbExec } from '../db.js';
+import { paymentsConnected } from '../payments/provider.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
 import {
@@ -63,6 +64,20 @@ function serializeWorkshopSettings(row) {
     blockSecond: row.block_second,
     // Storage slots on for this shop (Workshop day 27; migration 054), off to start.
     storageSlotsOn: row.storage_slots_on === 1,
+    // Hours before a quote with no answer is reminded (Jack, 22 Oct; migration 060).
+    quoteReminderHours: row.quote_reminder_hours,
+    // Days from when a bike is marked ready to Bike still waiting, and to Today (WP-4.3; migration 064).
+    collectionReminderDays: row.collection_reminder_days,
+    collectionTodayDays: row.collection_today_days,
+    // Deposits when booking (bk-settings-deposits; migration 069), off to
+    // start; money in pence. Connected: a payment provider takes them.
+    depositOn: row.deposit_on === 1,
+    depositKind: row.deposit_kind,
+    depositPercent: row.deposit_percent ?? null,
+    depositFixedPence: row.deposit_fixed_pence ?? null,
+    depositUnknownPence: row.deposit_unknown_pence ?? null,
+    depositCancelHours: row.deposit_cancel_hours,
+    paymentsConnected: paymentsConnected(),
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -402,14 +417,31 @@ export function register(route) {
       }
     }
 
-    const showPricesOnline = body.showPricesOnline === undefined
-      ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
-    const showSignOff = body.showSignOffToCustomers === undefined
-      ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
-    const storageSlotsOn = body.storageSlotsOn === undefined
-      ? existing.storage_slots_on : (body.storageSlotsOn ? 1 : 0);
-    const confirmAutomatically = body.confirmBookingsAutomatically === undefined
-      ? existing.confirm_bookings_automatically : (body.confirmBookingsAutomatically ? 1 : 0);
+    // The on/off settings take a real true or false only, so a stray "false"
+    // can't turn one on (audit, 22 Oct, item 22); left out, each stays as it is.
+    for (const key of ['showPricesOnline', 'showSignOffToCustomers', 'storageSlotsOn', 'confirmBookingsAutomatically']) {
+      if (body[key] !== undefined && typeof body[key] !== 'boolean') return badRequest(res, `${key} must be true or false`);
+    }
+    const onOff = (key, column) => (body[key] === undefined ? existing[column] : (body[key] ? 1 : 0));
+    const showPricesOnline = onOff('showPricesOnline', 'show_prices_online');
+    const showSignOff = onOff('showSignOffToCustomers', 'show_sign_off_to_customers');
+    const storageSlotsOn = onOff('storageSlotsOn', 'storage_slots_on');
+    const confirmAutomatically = onOff('confirmBookingsAutomatically', 'confirm_bookings_automatically');
+    const quoteReminderHours = body.quoteReminderHours === undefined ? existing.quote_reminder_hours : body.quoteReminderHours;
+    if (!Number.isInteger(quoteReminderHours) || quoteReminderHours < 1 || quoteReminderHours > 168) {
+      return badRequest(res, 'Choose from 1 to 168 hours.');
+    }
+    // A bike left uncollected (WP-4.3, cp-setting): the reminder's days, and
+    // Today's, which come later.
+    const collectionReminderDays = body.collectionReminderDays === undefined ? existing.collection_reminder_days : body.collectionReminderDays;
+    if (!Number.isInteger(collectionReminderDays) || collectionReminderDays < 1 || collectionReminderDays > 60) {
+      return badRequest(res, 'Choose from 1 to 60 days.');
+    }
+    const collectionTodayDays = body.collectionTodayDays === undefined ? existing.collection_today_days : body.collectionTodayDays;
+    if (!Number.isInteger(collectionTodayDays) || collectionTodayDays < 2 || collectionTodayDays > 90) {
+      return badRequest(res, 'Choose from 2 to 90 days.');
+    }
+    if (collectionTodayDays <= collectionReminderDays) return badRequest(res, 'Show it on Today after more days than the reminder.');
 
     // What a diary block shows first and second: two different things from
     // bike, job title, customer and job number (Workshop day 17, 29).
@@ -417,6 +449,26 @@ export function register(route) {
     const blockSecond = body.blockSecond === undefined ? existing.block_second : body.blockSecond;
     if (![blockFirst, blockSecond].every((f) => BLOCK_FIELDS.includes(f))) return badRequest(res, 'Choose bike, job title, customer or job number');
     if (blockFirst === blockSecond) return badRequest(res, 'Choose two different things for the two lines');
+
+    // Deposits when booking (openspec/changes/deposit-settings design 2).
+    if (body.depositOn !== undefined && typeof body.depositOn !== 'boolean') return badRequest(res, 'depositOn must be true or false');
+    const depositOn = onOff('depositOn', 'deposit_on');
+    const depositKind = body.depositKind === undefined ? existing.deposit_kind : body.depositKind;
+    if (!['percent', 'fixed'].includes(depositKind)) return badRequest(res, 'Choose a fixed amount or a percentage');
+    const whole = (key, column, min, max, message, nullable = true) => {
+      if (body[key] === undefined) return { value: existing[column] ?? null };
+      if (body[key] === null && nullable) return { value: null };
+      return Number.isInteger(body[key]) && body[key] >= min && body[key] <= max ? { value: body[key] } : { error: message };
+    };
+    const depositPercent = whole('depositPercent', 'deposit_percent', 1, 100, 'Enter a whole percentage from 1 to 100');
+    const depositFixed = whole('depositFixedPence', 'deposit_fixed_pence', 1, 1_000_000, 'Enter an amount from 1p to £10,000');
+    const depositUnknown = whole('depositUnknownPence', 'deposit_unknown_pence', 1, 1_000_000, 'Enter an amount from 1p to £10,000');
+    const depositCancel = whole('depositCancelHours', 'deposit_cancel_hours', 0, 168, 'Choose from 0 to 168 hours.', false);
+    for (const v of [depositPercent, depositFixed, depositUnknown, depositCancel]) if (v.error) return badRequest(res, v.error);
+    // Switched on before How much is filled in, no deposit is taken until it is (design 2).
+    if (depositOn === 1 && existing.deposit_on !== 1 && !paymentsConnected()) {
+      return sendJson(res, 409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
+    }
 
     // The additional note on the confirmation: trimmed, up to 300 characters;
     // empty shows none (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
@@ -450,13 +502,19 @@ export function register(route) {
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
          show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
-         block_first = ?, block_second = ?, storage_slots_on = ?, updated_at = ? WHERE id = ?`
+         block_first = ?, block_second = ?, storage_slots_on = ?, quote_reminder_hours = ?,
+         collection_reminder_days = ?, collection_today_days = ?,
+         deposit_on = ?, deposit_kind = ?, deposit_percent = ?, deposit_fixed_pence = ?, deposit_unknown_pence = ?, deposit_cancel_hours = ?,
+         updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
           showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
-          blockFirst, blockSecond, storageSlotsOn, nowIso(), existing.id);
+          blockFirst, blockSecond, storageSlotsOn, quoteReminderHours,
+          collectionReminderDays, collectionTodayDays,
+          depositOn, depositKind, depositPercent.value, depositFixed.value, depositUnknown.value, depositCancel.value,
+          nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });

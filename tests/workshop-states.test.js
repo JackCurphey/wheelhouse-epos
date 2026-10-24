@@ -209,6 +209,9 @@ test('revising a sent quote supersedes it rather than editing it', () => {
   // proposal; the old one becomes history.
   assert.equal(quote.next('sent', 'revise'), 'superseded');
   assert.equal(quote.next('partly_approved', 'revise'), 'superseded');
+  // Jack, 22 Oct (docs/decisions/2026-10-22-quote-after-declined.md): after
+  // saying no to everything, a customer who changes their mind gets a new quote.
+  assert.equal(quote.next('declined', 'revise'), 'superseded');
 });
 
 test('a superseded quote can never be approved', () => {

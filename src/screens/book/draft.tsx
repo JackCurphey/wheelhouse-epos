@@ -28,6 +28,10 @@ export type BookingDraft = {
   // Photos were added in this tab. They live in memory only, so after a
   // refresh the problem screen says they were cleared (d3).
   hadPhotos?: boolean;
+  // The spending limit (Workshop day 41): Go ahead chosen, and the amount
+  // box as typed (whole pounds; £200 when untouched). Absent: ask first.
+  limitOn?: true;
+  limitText?: string;
   // The date screen (d4): the day, and always a real mechanic. A drop-off
   // day stores no startTime. anyMechanic (drop-off only, Jack, 26 Sep,
   // .superpowers/sdd/d4-followups/brief.md) records that the customer chose
@@ -48,6 +52,10 @@ export type BookingDraft = {
   // booking once however many times it is sent (WP-0.2). Kept through a
   // refresh; cleared with the rest of the draft once the booking is made.
   requestKey?: string;
+  // The deposit's hold (the provider's ref) once its card was accepted
+  // (deposit-pay-screen), so a retry or a refresh sends without paying
+  // again; a new hold has a new ref, so it's paid afresh.
+  depositHeld?: string;
 };
 
 type DraftApi = {

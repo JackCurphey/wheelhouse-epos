@@ -6,7 +6,7 @@ import type { IconName } from './nav.ts';
  * use (P in docs/design/user-journeys/generator/ui.mjs), so the app matches
  * them exactly. Decorative: every icon sits beside its text label.
  */
-const PATHS: Record<IconName | 'menu' | 'close', string[]> = {
+const PATHS: Record<IconName | 'menu' | 'close' | 'chevron' | 'search', string[]> = {
   today: ['M3 12l9-9 9 9', 'M5 10v10h14V10'],
   till: ['M7 20h10M12 16v4'],
   workshop: ['M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z'],
@@ -22,6 +22,8 @@ const PATHS: Record<IconName | 'menu' | 'close', string[]> = {
   check: ['M5 12l5 5L20 7'],
   menu: ['M4 6h16M4 12h16M4 18h16'],
   close: ['M6 6l12 12M18 6L6 18'],
+  chevron: ['M9 6l6 6-6 6'],
+  search: ['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z', 'M21 21l-4.3-4.3'],
 };
 
 // The shapes P draws as <rect>/<circle> rather than paths.
@@ -45,7 +47,7 @@ const EXTRA: Partial<Record<IconName, ReactNode>> = {
   ),
 };
 
-export function NavIcon({ name, size = 18 }: { name: IconName | 'menu' | 'close'; size?: number }) {
+export function NavIcon({ name, size = 18 }: { name: IconName | 'menu' | 'close' | 'chevron' | 'search'; size?: number }) {
   return (
     <svg
       width={size}

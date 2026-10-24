@@ -35,7 +35,7 @@ const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'O
 // settings these tests are about are opened, not found open.
 async function openSettings({ me = OWNER, room = 'workshop', open = room === 'workshop' && me.isOwner ? 'Online booking' : null } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null, blockFirst: 'bike', blockSecond: 'jobTitle' };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null, blockFirst: 'bike', blockSecond: 'jobTitle', depositOn: false, depositKind: 'percent', depositPercent: null, depositFixedPence: null, depositUnknownPence: null, depositCancelHours: 24, paymentsConnected: true };
   refuseHours = null;
   termsFail = false;
   putFails = false;
@@ -65,6 +65,7 @@ async function openSettings({ me = OWNER, room = 'workshop', open = room === 'wo
       if (refuseHours && body.confirmBookingsAutomatically !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.confirmationNote !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.bookingTerms !== undefined) return reply(400, { error: refuseHours });
+      if (body.depositOn === true && !settings.paymentsConnected) return reply(409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -103,7 +104,7 @@ test('Settings › Workshop › Mechanics has the switch, off, with its note', a
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   assert.equal(sw.getAttribute('aria-checked'), 'false');
   assert.ok(sw.textContent.includes('Off'));
-  assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.')));
+  assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link, and the mechanic’s name to quotes. Off: only staff see who signed a job off, and quotes say “we”.')));
 });
 
 test('switching it on saves at once, and it reads On', async () => {
@@ -765,4 +766,89 @@ test('choosing a line saves at once; choosing the other line’s choice swaps th
   fireEvent.change(ui.getByLabelText('Second line'), { target: { value: 'customer' } });
   await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body).at(-1), { blockFirst: 'jobTitle', blockSecond: 'customer' }));
   await waitFor(() => assert.match(ui.getByRole('button', { name: /^Diary blocks/ }).textContent, /Job title, then customer/));
+});
+
+// Deposits (bk-settings-deposits; Jack, 24 Oct; openspec/changes/deposit-settings).
+const depositPuts = () => calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings' && Object.keys(c.body).some((k) => k.startsWith('deposit'))).map((c) => c.body);
+async function withDeposits(over = {}) {
+  const opened = await openSettings();
+  settings = { ...settings, ...over };
+  opened.shell = shell;
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  await opened.waitFor(() => assert.ok(opened.ui.queryByRole('switch', { name: 'Take a deposit when booking' }) !== null));
+  return opened;
+}
+
+test('Deposits: the switch, off to start, and nothing under it while off', async () => {
+  const { ui } = await withDeposits();
+  assert.ok(ui.getByRole('heading', { level: 4, name: 'Deposits' }));
+  assert.equal(ui.getByRole('switch', { name: 'Take a deposit when booking' }).getAttribute('aria-checked'), 'false');
+  assert.ok(ui.queryByLabelText('How much') === null);
+  assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· no deposit ·/);
+});
+
+test('switching on saves at once and shows the drawn rows, a percentage to start', async () => {
+  const { ui, fireEvent, waitFor } = await withDeposits();
+  fireEvent.click(ui.getByRole('switch', { name: 'Take a deposit when booking' }));
+  await waitFor(() => assert.deepEqual(depositPuts(), [{ depositOn: true }]));
+  const kind = await ui.findByRole('radiogroup', { name: 'Deposit' });
+  assert.equal(kind.querySelector('[aria-checked="true"]').textContent, 'A percentage of the price');
+  assert.ok(ui.getByLabelText('How much'));
+  assert.ok(ui.queryByText('%') !== null);
+  assert.ok(ui.getByLabelText('If the price isn’t known'));
+  assert.ok(ui.queryByText('For “Not sure what’s wrong?” bookings') !== null);
+  assert.equal(ui.getByLabelText('Free to cancel until').value, '24');
+  assert.ok(ui.queryByText('Before the booked time · after that, or if they don’t come, the shop keeps the deposit') !== null);
+  assert.ok(ui.queryByText('With automatic confirming off, the customer pays before the shop has said yes; if the shop declines, the deposit is refunded automatically.') !== null);
+});
+
+test('How much saves as a whole percentage, and the fold says it', async () => {
+  const { ui, fireEvent, waitFor } = await withDeposits({ depositOn: true });
+  const box = await ui.findByLabelText('How much');
+  fireEvent.change(box, { target: { value: '20' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositPercent: 20 }));
+  await waitFor(() => assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· deposit 20% ·/));
+  fireEvent.change(box, { target: { value: '12.5' } });
+  fireEvent.blur(box);
+  assert.ok((await ui.findByText('Enter a whole percentage from 1 to 100')) !== null);
+  assert.equal(depositPuts().length, 1, 'not saved');
+});
+
+test('a fixed amount is typed in pounds and saved in pence; the fold says it', async () => {
+  const { ui, fireEvent, waitFor, within } = await withDeposits({ depositOn: true });
+  fireEvent.click(within(await ui.findByRole('radiogroup', { name: 'Deposit' })).getByRole('radio', { name: 'A fixed amount' }));
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositKind: 'fixed' }));
+  const box = await ui.findByLabelText('How much');
+  fireEvent.change(box, { target: { value: '15' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositFixedPence: 1500 }));
+  await waitFor(() => assert.equal(box.value, '15.00'));
+  assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· deposit £15\.00 ·/);
+});
+
+test('the amount for a price not known can be emptied, and Free to cancel until saves its hours', async () => {
+  const { ui, fireEvent, waitFor } = await withDeposits({ depositOn: true, depositPercent: 20, depositUnknownPence: 1000 });
+  const unknown = await ui.findByLabelText('If the price isn’t known');
+  assert.equal(unknown.value, '10.00');
+  fireEvent.change(unknown, { target: { value: '' } });
+  fireEvent.blur(unknown);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositUnknownPence: null }));
+  const hours = ui.getByLabelText('Free to cancel until');
+  fireEvent.change(hours, { target: { value: '48' } });
+  fireEvent.blur(hours);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositCancelHours: 48 }));
+});
+
+test('with automatic confirming on, the note about declining isn’t shown', async () => {
+  const { ui } = await withDeposits({ depositOn: true, confirmBookingsAutomatically: true });
+  await ui.findByLabelText('How much');
+  assert.ok(ui.queryByText(/if the shop declines, the deposit is refunded automatically/) === null);
+});
+
+test('with no payment provider connected, switching on says so and stays off', async () => {
+  const { ui, fireEvent } = await withDeposits({ paymentsConnected: false });
+  fireEvent.click(ui.getByRole('switch', { name: 'Take a deposit when booking' }));
+  assert.ok((await ui.findByText('Connect a payment provider first, then deposits can be switched on.')) !== null);
+  assert.equal(ui.getByRole('switch', { name: 'Take a deposit when booking' }).getAttribute('aria-checked'), 'false');
 });

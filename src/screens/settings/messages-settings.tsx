@@ -25,7 +25,8 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 export function useMessagesSummary(): string {
   const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
   if (!templates.data) return '';
-  return `${templates.data.filter((t) => t.live && t.enabled).length} on`;
+  // The reminder sits under Quote to approve, so it isn't counted on its own.
+  return `${templates.data.filter((t) => t.live && t.enabled && t.key !== 'quote_reminder').length} on`;
 }
 
 /** Front desk › Messages › Automatic messages, inside its fold. */
@@ -36,6 +37,11 @@ export function AutomaticMessages() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Template | null>(null);
+  // Bike still waiting says the shop's days, as drawn ("after [n] days"; cp-setting).
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ collectionReminderDays?: number }>('/api/workshop-settings') });
+  const days = settings.data?.collectionReminderDays;
+  const withDays = (t: Template, where = ''): Template => (t.key === 'bike_still_waiting' && days !== undefined
+    ? { ...t, when: `When a ready bike isn’t collected after ${days} ${days === 1 ? 'day' : 'days'}${where}` } : t);
 
   async function change(key: string, body: object) {
     setBusy((b) => new Set(b).add(key));
@@ -61,13 +67,15 @@ export function AutomaticMessages() {
   }
 
   const live = templates.data?.filter((t) => t.live) ?? [];
-  const jobMessages = live.filter((t) => t.group !== 'booking');
+  // The quote reminder sits under Quote to approve, not as a row of its own (setup.mjs).
+  const reminder = live.find((t) => t.key === 'quote_reminder');
+  const jobMessages = live.filter((t) => t.group !== 'booking' && t.key !== 'quote_reminder');
   const bookingMessages = live.filter((t) => t.group === 'booking');
   const row = (t: Template) => (
     <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
       <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
         <span className="text-[15px] font-bold">{t.name}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{t.when}</span>
+        <span className="text-[13px] text-[var(--wh-muted)]">{withDays(t).when}</span>
       </span>
       <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
       <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
@@ -78,7 +86,9 @@ export function AutomaticMessages() {
     <div className="flex flex-col gap-2">
       <div data-msg-list="true" className="flex flex-col gap-2">
         {templates.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
-        {jobMessages.map(row)}
+        {jobMessages.map((t) => (t.key === 'quote_to_approve' && reminder
+          ? <div key={t.key} className="flex flex-col gap-2">{row(t)}<ReminderRow onEdit={() => setEditing(reminder)} /></div>
+          : row(t)))}
         {/* The booking messages under their own heading, as drawn (msgListOpen). */}
         {bookingMessages.length ? (
           <>
@@ -91,12 +101,64 @@ export function AutomaticMessages() {
       </div>
       {editing ? (
         <EditMessage
-          template={templates.data?.find((t) => t.key === editing.key) ?? editing}
+          template={withDays(templates.data?.find((t) => t.key === editing.key) ?? editing, ' — set in Settings › Workshop › Collection')}
           error={error}
           onSave={(body) => change(editing.key, body)}
           onClose={closeEdit}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The quote reminder's row (Jack, 22 Oct; setup.mjs msgRowChoice reminder):
+ * "Reminder if there’s no answer, after [n] hours", saved when you leave the
+ * box, and Edit for its wording. It goes when Quote to approve goes.
+ */
+function ReminderRow({ onEdit }: { onEdit: () => void }) {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ quoteReminderHours?: number }>('/api/workshop-settings') });
+  const saved = settings.data?.quoteReminderHours;
+  const [text, setText] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function save() {
+    if (text === null || saved === undefined || text.trim() === String(saved)) { setText(null); setError(null); return; }
+    const hours = /^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
+    if (!(hours >= 1 && hours <= 168)) { setError('Choose from 1 to 168 hours.'); return; }
+    setError(null);
+    try {
+      const next = await apiMutate<{ quoteReminderHours: number }>('/api/workshop-settings', { quoteReminderHours: hours }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], (old: object | undefined) => ({ ...old, ...next }));
+      setText(null);
+    } catch {
+      setError(SAVE_FAILED);
+    }
+  }
+  // Nothing until the shop's hours are known, so the box never shows a guess (fresh review).
+  if (saved === undefined) {
+    return settings.isError ? <p className="m-0 ml-6 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t load the reminder’s hours. Try again in a moment.</p> : null;
+  }
+  return (
+    <div className="ml-6 flex flex-col gap-1">
+      <div className="flex min-h-[52px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-1 pr-2 pl-3.5">
+        <label htmlFor="quote-reminder-hours" className="grow text-sm font-semibold">Reminder if there’s no answer, after</label>
+        <span className="inline-flex items-center gap-1.5 text-sm">
+          <input
+            id="quote-reminder-hours"
+            inputMode="numeric"
+            value={text ?? String(saved)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'quote-reminder-error' : undefined}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={() => void save()}
+            className="min-h-11 w-14 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-mono"
+          />
+          hours
+        </span>
+        <button type="button" aria-label="Edit the wording of Quote reminder" onClick={onEdit} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
+      </div>
+      {error ? <p id="quote-reminder-error" role="alert" className="m-0 ml-1 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
     </div>
   );
 }

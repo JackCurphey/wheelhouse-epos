@@ -7,6 +7,8 @@
 // themselves with currentCustomerSession(). Mark's file. Moved out of
 // server.js unchanged (split plan §4.1, WP-0.4); bookings and booking links
 // follow in the next move.
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
@@ -15,6 +17,7 @@ import { currentCustomerSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobChecklistCopy } from '../workshop/checklists.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
@@ -31,14 +34,20 @@ import {
   checkJobSlot, loadCapacity,
 } from '../workshop/jobs.js';
 import {
-  approve as approveQuote, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
+  approve as approveQuote, earlierAnswers, agreedBefore, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
-import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from '../booking-photos.js';
+import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
+import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
+import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
+import { bookingDeposit } from '../workshop/booking-deposit.js';
+import { payments } from '../payments/index.js';
+import { paymentsConnected } from '../payments/provider.js';
+import { settleDeposits } from '../payments/settle.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -79,6 +88,10 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// Use my phone's codes: the same attempts as booking links, counted apart.
+const photoCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// One photo, as base64 with the same headroom as booking photos.
+const MAX_PHOTO_CODE_BODY_BYTES = Math.ceil(MAX_PHOTO_BYTES * 1.4);
 
 // A customer may change or cancel through the link while the bike has not
 // reached the shop and the booking is live (piece 12) - and only while no work
@@ -388,6 +401,12 @@ async function bookingLinkView(jobId, shop) {
     expectedReady: (row.booking_state === 'scheduled' || row.booking_state === 'reschedule_requested') && row.custody_state !== 'collected'
       ? { date: row.last_day || row.job_date, time: null } : null,
     shop: await shopLines(),
+    // The job's checklist once the work is finished (cp-summary's "Full service
+    // checklist"; Jack, 22 Oct): every item, ticked or not, and what the
+    // mechanic found. Only one a mechanic used (its own copy, fixed), so
+    // never "0 of 10" for a service done without the ticks; none while the
+    // work is under way, or for a job without one.
+    checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklistCopy(row.id)) : null,
     ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
   };
@@ -399,6 +418,40 @@ async function bookingLinkView(jobId, shop) {
 // The work is the job's order's lines; declined is the newest quote's
 // declined lines; to pay is what the till would charge (computeOrderTotals,
 // group discount included), null once paid; paid is the sale that paid it.
+// The quote as a customer sees it (Jack, 22 Oct): staff names only when the
+// shop's "Show who signed off to customers" switch is on (mechanic sign-off
+// answer 3: no staff names reach customers until a shop chooses), so "Alex
+// recommends more work" or "We recommend more work"; and the customer's own
+// first name, for "Thanks, Maya".
+async function customerQuote(result, jobId) {
+  const shows = (await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get())?.show_sign_off_to_customers === 1;
+  const who = await db.prepare(
+    `SELECT m.name AS mechanic_name, c.name AS customer_name, j.spend_limit FROM workshop_jobs j
+       LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
+      WHERE j.id = ?`
+  ).get(jobId);
+  const showPrices = (await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get())?.show_prices_online === 1;
+  const q = serializeQuoteWithLines(result.quote, result.lines, result.totals);
+  return {
+    ...q,
+    lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
+    mechanicName: shows ? who?.mechanic_name ?? null : null,
+    earlier: await earlierAnswers(result.quote),
+    agreedTotal: await agreedBefore(result.quote, showPrices),
+    spendLimit: who?.spend_limit ?? null,
+    // When the quote's reminder went, if it has (dq-quote-reminded).
+    reminderSentAt: (await db.prepare(
+      `SELECT max(sent_at) AS at FROM customer_messages
+        WHERE job_id = ? AND template_key = 'quote_reminder' AND sent_at IS NOT NULL AND sent_at >= ?`
+    ).get(jobId, result.quote.sent_at ?? '9999-12-31'))?.at ?? null,
+    customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
+  };
+}
+
+function customerChecklist(c) {
+  return c ? { name: c.name, items: c.items.map((i) => ({ name: i.label, done: i.done, note: i.note })) } : null;
+}
+
 async function jobMoney(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
@@ -414,12 +467,8 @@ async function jobMoney(jobId) {
     : [];
   // Every revision the customer saw, not only the newest: a newer quote keeps
   // the earlier answers (fresh review). Priced in the database, as the quote is.
-  const declined = await db.prepare(
-    `SELECT l.description, (l.unit_amount * l.quantity) AS line_total FROM workshop_quote_lines l
-       JOIN workshop_quotes q ON q.id = l.workshop_quote_id
-      WHERE q.workshop_job_id = ? AND q.state <> 'draft' AND l.decision = 'declined'
-      ORDER BY q.revision, l.id`
-  ).all(jobId);
+  // Each line's latest answer: pads said no to and then yes to aren't "no thanks".
+  const declined = (await latestAnswers(jobId)).filter((l) => l.decision === 'declined');
   const paid = order?.status === 'converted' && order.paid_at
     ? { at: new Date(order.paid_at).toISOString(), amount: figure(order.paid_total) } : null;
   let due = 0;
@@ -620,7 +669,7 @@ export function register(route) {
   // screens: service, service-list
   // Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
   route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
-    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
+    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically, deposit_on FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
       `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
@@ -645,6 +694,8 @@ export function register(route) {
       showPrices,
       // Step 4 words its button by it (Jack, 19 Oct, auto-confirm; drawn as bk-details-auto).
       confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
+      // Step 4 asks for the deposit's hold only when one is taken (deposit-pay-screen design 1).
+      takesDeposit: settings?.deposit_on === 1 && paymentsConnected(),
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({
@@ -779,7 +830,7 @@ export function register(route) {
       customerId: ctx.login.customer_id,
     });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, result.quote.workshop_job_id));
   });
 
   // screens: approval
@@ -882,6 +933,11 @@ export function register(route) {
     }
     const bikeNote = typeof body.bikeNote === 'string' ? body.bikeNote.trim() : '';
     if (bikeNote.length > 200) return badRequest(res, 'Your bike description can be up to 200 characters');
+    // The spending limit (Workshop day 41): whole pounds, or none to ask first.
+    const spendLimit = body.spendLimit ?? null;
+    if (spendLimit !== null && !(Number.isInteger(spendLimit) && spendLimit >= 1 && spendLimit <= 100000)) {
+      return badRequest(res, 'Enter the most the whole bill can come to, in whole pounds.');
+    }
 
     // What the customer chose: one or more services this shop ticked bookable
     // online, in the order chosen, or the "not sure" hour. Read through the
@@ -934,6 +990,14 @@ export function register(route) {
       }
     }
 
+    // The deposit, worked out on the stored prices (deposit-payments design 5):
+    // with one due, the request must carry its key and the held payment.
+    await settleDeposits();
+    const deposit = await bookingDeposit({ serviceIds: request.notSure ? [] : request.serviceIds, notSure: request.notSure });
+    if (deposit.error) return badRequest(res, deposit.error);
+    const DEPOSIT_NEEDED = { status: 400, body: { error: 'Pay the deposit first.', code: 'deposit_needed' } };
+    if (deposit.pence !== null && (!requestKey || !Number.isInteger(body.paymentId))) return sendJson(res, DEPOSIT_NEEDED.status, DEPOSIT_NEEDED.body);
+
     // Photos are checked here with the other request checks: before the guest
     // limiter and before any write, so a refusal leaves nothing behind. They are
     // allowed on a "not sure" booking too - they describe the problem, not the service.
@@ -969,10 +1033,27 @@ export function register(route) {
 
     // Inside the lock: the time checks (checkCustomerTime), then the writes.
     let confirmedAtOnce = false;
+    let heldPayment = null; // this request's deposit, held and checked
     const out = await withBookingLock([jobDate], async () => {
       if (requestKey) {
         const replay = await replayBookingRequest(requestKey, params.shopSlug);
         if (replay) return replay;
+      }
+      if (deposit.pence !== null) {
+        const pay = await db.prepare('SELECT * FROM online_payments WHERE id = ? FOR UPDATE').get(body.paymentId);
+        // This request's twin, sent at once on another day, booked while this one
+        // waited for the payment: answer the booking made (review).
+        if (pay?.job_id && pay.request_key_hash === requestKey.keyHash) {
+          const replay = await replayBookingRequest(requestKey, params.shopSlug);
+          if (replay) return replay;
+        }
+        if (!pay || pay.request_key_hash !== requestKey.keyHash || pay.job_id) return DEPOSIT_NEEDED;
+        if (pay.amount_pence !== deposit.pence) return { status: 409, body: { error: 'The deposit has changed — please pay it again.', code: 'deposit_changed' } };
+        const at = await payments()?.status(pay.provider_ref).catch(() => null);
+        if (at?.status !== 'held' || at.amountPence !== deposit.pence) {
+          return { status: 402, body: { error: 'The deposit hasn’t gone through yet.', code: 'deposit_not_held' } };
+        }
+        heldPayment = pay;
       }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;
@@ -1043,6 +1124,7 @@ export function register(route) {
           linkTokenHash: hashLinkCode(linkCode),
           customerDescription: description || null,
           customerBikeNote: bikeNoteValue,
+          spendLimit,
           questionAnswers,
           bookingRequestKeyHash: requestKey?.keyHash,
           bookingRequestBodyHash: requestKey?.bodyHash,
@@ -1070,6 +1152,17 @@ export function register(route) {
           `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
         )
         .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      // The deposit and when it's free to cancel until, worked out now and
+      // fixed: the booked start (the day's start for a whole-day booking) less
+      // the shop's hours, in the shop's time zone (design 5).
+      if (heldPayment) {
+        await db.prepare(
+          `UPDATE workshop_jobs SET deposit_pence = ?,
+             deposit_cancel_until = ((?::date + COALESCE(?::time, time '00:00')) AT TIME ZONE ws.time_zone) - make_interval(hours => ws.deposit_cancel_hours)
+           FROM (SELECT time_zone, deposit_cancel_hours FROM workshop_settings LIMIT 1) ws WHERE workshop_jobs.id = ?`
+        ).run(deposit.pence, jobDate, times.startTime ?? null, jobId);
+        await db.prepare('UPDATE online_payments SET job_id = ?, updated_at = now() WHERE id = ?').run(jobId, heldPayment.id);
+      }
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
       const booked = await bookedServices(jobId);
       // The last write, so nothing after it can fail and leave files behind for a
@@ -1099,12 +1192,62 @@ export function register(route) {
     // confirmed at once, carrying the link the customer has just been given
     // (never a new one, which would end theirs). One that can't be queued is
     // logged; the booking stands.
+    // The deposit: taken only now the booking is saved; a booking that wasn't
+    // saved lets its hold go, so nothing is taken (design 5). A provider that
+    // can't take it now leaves it held and logged; the booking stands.
+    if (heldPayment) {
+      const done = out.status === 201 ? 'taken' : 'released';
+      try {
+        if (done === 'taken') await payments().take(heldPayment.provider_ref);
+        else await payments().release(heldPayment.provider_ref);
+        await db.prepare('UPDATE online_payments SET status = ?, updated_at = now() WHERE id = ?').run(done, heldPayment.id);
+      } catch (err) {
+        console.error(`deposit ${heldPayment.id}: couldn’t be ${done}`, err);
+      }
+    }
     if (out.status === 201) await sendLinkMessage(confirmedAtOnce ? 'booking_confirmed' : 'request_received', out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
   });
 
   // The private booking link, read back without sign-in.
   // screens: pending, change-pending, cancelled
+  // Use my phone (docs/decisions/2026-10-23-use-my-phone.md; openspec/changes/use-my-phone):
+  // the phone's photo step for one quote line, with no sign-in. Unknown, used,
+  // run-out and malformed codes, and a line that changed, all get the same
+  // answer, so a code can't be probed.
+  const photoCodeGone = (res) => sendJson(res, 410, { error: 'This code has expired or has already been used' });
+  const photoCodeTooMany = (req, res) => {
+    if (photoCodeLimiter.check(clientIp(req))) return false;
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return true;
+  };
+
+  // screens: book
+  route('GET', '/api/portal/:shopSlug/photo-codes/:code', async (req, res, params) => {
+    if (photoCodeTooMany(req, res)) return;
+    const view = await photoCodeView(params.code);
+    if (!view) return photoCodeGone(res);
+    sendJson(res, 200, view);
+  });
+
+  // screens: book
+  route('POST', '/api/portal/:shopSlug/photo-codes/:code', async (req, res, params) => {
+    if (photoCodeTooMany(req, res)) return;
+    let body;
+    try {
+      body = await readJsonBody(req, MAX_PHOTO_CODE_BODY_BYTES);
+    } catch (err) {
+      return badRequest(res, err.message === 'Payload too large' ? 'Each photo can be up to 10 MB' : 'Invalid request body');
+    }
+    // The booking photo rules: a JPEG, PNG or WebP of at most 10 MB, its
+    // hidden details removed.
+    const checked = readBookingPhotos([{ dataBase64: body?.dataBase64 }]);
+    if (checked.error) return badRequest(res, checked.error);
+    const added = await addPhotoWithCode(params.code, checked.value[0]);
+    if (!added) return photoCodeGone(res);
+    sendJson(res, 201, added);
+  });
+
   route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
@@ -1164,7 +1307,54 @@ export function register(route) {
     if (!found) return;
     const result = await currentQuoteForJob(found.id);
     if (!result.ok) return notFound(res, 'There is no quote for this booking');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, found.id));
+  });
+
+  // A quote line's photo (Jack, 1 Oct; dq-quote-photo), for the customer's
+  // card: only a line of the booking's current customer-readable quote, sent
+  // as the picture its bytes show. Anything else is not found.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/quote/lines/:lineId/photo', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const result = await currentQuoteForJob(found.id);
+    const line = result.ok ? result.lines.find((l) => l.id === Number(params.lineId)) : null;
+    const file = line?.photo_attachment_id
+      ? await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?').get(line.photo_attachment_id, found.id)
+      : null;
+    const bytes = file ? await readFile(path.join(UPLOADS_DIR, file.storage_key)).catch(() => null) : null;
+    const kind = bytes ? sniffImage(bytes) : null;
+    if (!kind) return notFound(res, 'There is no photo for that line');
+    res.writeHead(200, {
+      'Content-Type': kind.contentType,
+      'Content-Length': bytes.length,
+      'Content-Disposition': 'inline',
+      'X-Content-Type-Options': 'nosniff',
+      // Kept a few minutes by the customer's browser, so each view doesn't
+      // spend the link's guessing limit again (fresh review).
+      'Cache-Control': 'private, max-age=300',
+    });
+    res.end(bytes);
+  });
+
+  // Notes with the shop (decisions 3 and 7; ac-job-note): the customer's notes
+  // and the shop's replies on their job, read and added through the link.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    sendJson(res, 200, await jobNotes(found.id, { forCustomer: true }));
+  });
+
+  // screens: approval
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: found.id, fromCustomer: true, text });
+    sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
   });
 
   // The customer cancels through their booking link (piece 12, decision 1):
@@ -1204,11 +1394,20 @@ export function register(route) {
   route('POST', '/api/portal/:shopSlug/booking-links/:code/accept-offer', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
+    // The Accept says which time the customer was shown, so a time the shop
+    // has changed since is never confirmed unseen (Jack, 22 Oct, Mark's audit P2 2).
+    const body = await readJsonBody(req);
+    const shownDate = String(body?.jobDate ?? '').trim();
+    const shownTime = body?.startTime ? String(body.startTime).trim() : '';
+    // A page that doesn't say its time (one loaded before this check) is
+    // answered as out of date, so it reloads and shows the time on offer.
+    const STALE = { status: 409, body: { error: 'The shop has changed the time it’s offering. Here’s the new one.', code: 'stale' } };
     const out = await withJobBookingLock(found.id, [], async (job) => {
       if (job.booking_state !== 'offered') {
         if (job.booking_state === 'scheduled' && job.offer_accepted_at) return undefined;
         return { status: 409, body: { error: "There's no time offered to accept", code: 'illegal' } };
       }
+      if (!isRealDate(shownDate) || job.job_date !== shownDate || (job.start_time || '') !== shownTime) return STALE;
       if (customerTooLate(job, await currentShopToday())) {
         return { status: 409, body: { error: CUSTOMER_REFUSALS.change.inShop, code: 'in_shop' } };
       }

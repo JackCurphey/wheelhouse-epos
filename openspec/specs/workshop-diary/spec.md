@@ -283,11 +283,19 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 - **THEN** its request pop-up opens, with Accept
 
 ### Requirement: "Waiting for you" lists what customers are waiting on staff for
-"Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer and the services in order; a change request SHALL also carry where the customer wants it.
+"Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer, the bike (make then model, as the diary's blocks name it, or none when the job has no bike) and the services in order; a change request SHALL also carry where the customer wants it.
 
 #### Scenario: A new online booking
 - **WHEN** Sam Reed books a Brake service online with [mechanic] at 10:00
 - **THEN** it is listed as a new booking from 10:00 to 10:45 with [mechanic], for Sam Reed, with that service, arriving when the booking was made
+
+#### Scenario: Every item carries the bike
+- **WHEN** Sam Reed books online with a Specialized Sirrus, then asks to move it, or cancels it
+- **THEN** the new booking, the change request and the cancellation each carry the bike "Specialized Sirrus"
+
+#### Scenario: A booking without a bike
+- **WHEN** a customer books online without choosing or adding a bike
+- **THEN** the item carries no bike
 
 #### Scenario: A change request
 - **WHEN** a confirmed booking with Jo at 10:00 asks to move to 14:00 with Alex on another day
@@ -1101,3 +1109,18 @@ A diary block, a stack's front card and a fanned stack's tiles SHALL show the sh
 #### Scenario: Customer, then job number
 - **WHEN** the shop chose Customer, then Job number, and Maya Patel's job WH-1001 is in the diary
 - **THEN** its block reads "Maya Patel", then "WH-1001"
+
+### Requirement: A quote with no answer after its reminder shows "No answer yet"
+When a job's quote is still waiting for the customer after its one reminder went, the diary SHALL call the job "No answer yet" where it would say "Quoting", and the job's page SHALL show "No answer to the quote yet" with when the quote and the reminder were sent and the customer's phone number, above Record their answer (Jack, 1 Oct, drop-off and quote decision 4; dq-today-no-answer).
+
+#### Scenario: The reminder went and nothing came back
+- **WHEN** Maya's quote was sent, its reminder went, and she hasn't answered
+- **THEN** the diary's WH-1042 reads "No answer yet", and its page says "No answer to the quote yet", "Sent [time] · reminder sent [time] · 07700 900 142" with Record their answer
+
+#### Scenario: Before the reminder
+- **WHEN** the quote was sent and its reminder hasn't gone yet
+- **THEN** the job reads "Quoting", with no "No answer yet" line
+
+#### Scenario: Answered
+- **WHEN** Maya answers after the reminder
+- **THEN** "No answer yet" goes

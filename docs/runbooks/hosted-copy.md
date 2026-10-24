@@ -61,15 +61,19 @@ scripts/hosting/setup.sh
 (If your Wheelhouse folder is somewhere else, use that folder in the first
 line instead.)
 
-It checks your setup, tells you what it's about to create and what it costs,
+It needs GitHub's `gh` tool, signed in as you (`brew install gh`, then
+`gh auth login`). It checks your setup, tells you what it's about to create and what it costs,
 and asks you to type `yes`. Then it:
 
-1. adds your Mac's SSH key (it makes one if you don't have one);
+1. adds your Mac's SSH key (it makes one if you don't have one), and makes
+   a second key just for GitHub's automatic updates
+   (`~/.ssh/wheelhouse-deploy`);
 2. creates the server, about a minute;
 3. creates the firewall;
 4. creates the database, **5 to 10 minutes**, the longest wait;
 5. installs and starts Wheelhouse on the server, **several more minutes**
-   while it builds.
+   while it builds;
+6. sets up automatic updates on GitHub (see "Automatic updates" below).
 
 When it finishes, it shows the **web address** and your **sign-up code**.
 Keep the code private: it's what stops strangers making accounts.
@@ -89,11 +93,45 @@ from #216) and give you a login to it. That needs an empty database, so the
 shop you make here will be cleared then. Don't keep anything in it you'll
 miss.
 
+## Automatic updates
+
+Every merge to `main` goes onto the test copy by itself, once its tests
+have passed: GitHub builds it, starts it on the server, and checks the
+health check shows the new version. If that doesn't happen within 5
+minutes, it puts the version before back and the run shows as failed, in
+red, in the repository's **Actions** tab, under "Deploy the hosted copy".
+Pull requests and other branches never go on the test copy.
+
+**Setting it up (once).** The setup script does most of it: it makes the
+deploy-only key, lets it run the update script on the server and nothing
+else, and gives GitHub the key, the server's address and the server's
+fingerprint (so GitHub only ever talks to your server). Your part:
+
+1. After this change is merged, run the setup script again (step 4, with
+   `git pull` first). Type `yes`; it reuses everything that exists.
+2. The server downloads each update from GitHub without a password, so the
+   app's package on GitHub must be public. The code already is, so this
+   shows nothing new. The package appears after the first automatic update
+   has run, even a failed one. If the script printed "One more thing, once":
+   1. Open the address it printed (your GitHub packages, then
+      `wheelhouse-epos`, then **Package settings**).
+   2. Under **Danger Zone**, choose **Change visibility**, then **Public**,
+      and type the name to confirm.
+3. In the repository's **Actions** tab, open the latest "Deploy the hosted
+   copy" run. If it failed, choose **Re-run jobs**. It's set up when it goes
+   green.
+4. Open `https://<your web address>/healthz`. It now shows
+   `"commit"` too: the version running, which should match the latest
+   commit on `main`.
+
+The update is down for a moment while the new version starts, as by hand.
+
 ## Good to know
 
-- **Updates are by hand for now.** Mark is adding automatic updates after
-  every finished change next. Until then, running `scripts/hosting/setup.sh`
-  again picks up the latest version (it keeps your sign-up code).
+- **Updates are automatic** after every merge (above). Running
+  `scripts/hosting/setup.sh` again still works too: it builds the latest
+  `main` on the server (it keeps your sign-up code). See
+  "Updating it, checking it, and undoing a bad update" below.
 - **Photos and attachments disappear** when the copy is updated.
 - **To stop paying,** delete the server (`wheelhouse-test`) and the database
   (`wheelhouse-test-db`) in DigitalOcean. That deletes everything on them.
@@ -101,6 +139,218 @@ miss.
 - **Your token** expires after 30 days. It can be deleted in DigitalOcean
   (API) once setup is done; to run the script again later, make a new one and
   run `doctl auth init` again.
+
+## Updating it, checking it, and undoing a bad update
+
+This part is the way back (design Decision 8). Mark normally does it, but
+it's written so you can follow it too. Where something hasn't been tried
+on the real copy yet, it says so, and anything not known yet is in
+brackets like `[n]`.
+
+**How it works:** each merge to `main` updates the copy by itself
+("Automatic updates" above). Each update keeps the version before ready to
+start again, and writes down the time and both versions before it changes
+anything, in `/opt/wheelhouse/deploys.log` on the server. The health check
+shows the version running.
+
+### Getting onto the server
+
+Some steps run on the server itself. Your web address has the server's
+address in it: `https://1-2-3-4.sslip.io` means the server is `1.2.3.4`.
+In Terminal, on your Mac:
+
+```
+ssh root@1.2.3.4
+```
+
+(Use your own numbers.) When you're done on the server, type `exit`.
+
+### A. Updating to the latest version
+
+Normally there's nothing to do: merging to `main` updates the copy. Each
+update writes a line in `/opt/wheelhouse/deploys.log` first. On the server:
+
+```
+tail -n 5 /opt/wheelhouse/deploys.log
+```
+
+Each line is the time in UTC (what DigitalOcean uses, so there's no
+summer-time confusion), then `deploy`, the new version's long code of 40
+letters and numbers (the commit), and `(was …)`, the version before. If an
+update goes wrong, that time is the moment the database goes back to (D),
+and the `was` code is the version that comes back.
+
+To update by hand instead (for example, if GitHub's automatic update isn't
+working):
+
+1. **Write down the time and the version that's running now.** On the
+   server:
+
+   ```
+   date -u
+   grep '^WHEELHOUSE_COMMIT=' /opt/wheelhouse/.env
+   ```
+
+   Keep both, as above.
+2. On your Mac, in the Wheelhouse folder, run the setup script again:
+
+   ```
+   git checkout main
+   git pull
+   scripts/hosting/setup.sh
+   ```
+
+   If `git checkout` or `git pull` complains, stop and tell Mark. If your
+   DigitalOcean token has expired or been deleted, the script stops and
+   says so: make a new one (step 2 near the top) and run `doctl auth init`
+   first. Type `yes` when it asks. It reuses everything that exists, fetches the latest `main` onto the
+   server, rebuilds the app and restarts it. The copy is down for a
+   moment while the new version starts. It ends with "All done" and the
+   web address. Any database changes in the new version are made as it
+   starts, before it answers. If it stops with an error instead, copy the
+   message to Mark, and don't try C or D on your own.
+3. Do the checks in B.
+
+### B. Checking it's right
+
+1. **It answers.** Open `https://<your web address>/healthz`. It should
+   show `{"status":"ok"}`. `"status":"error"` means the app can't reach
+   its database; a blank or "502" error page means the app isn't running
+   at all. Either way, tell Mark.
+2. **It's the version you expect.** The health check in step 1 shows
+   `"commit"`: it should match the latest commit on `main` on GitHub
+   (GitHub shows the first 7 characters). An automatic update only goes
+   green once it does.
+3. **It knows it's a test copy.** On the server:
+
+   ```
+   cd /opt/wheelhouse
+   grep '^WHEELHOUSE_HOSTED_COPY=' .env
+   docker compose exec app printenv WHEELHOUSE_HOSTED_COPY
+   ```
+
+   Both lines must say `1` (the first prints
+   `WHEELHOUSE_HOSTED_COPY=1`, the second just `1`). This setting is what
+   makes the app refuse real texting and email keys and refuse to connect
+   Shopify. If either is missing or different, don't use the copy: tell
+   Mark. Running the setup script again writes it back.
+4. **No real keys.** Still on the server:
+
+   ```
+   grep -E '^(TWILIO_|EMAIL_|WHATSAPP_)' .env
+   ```
+
+   This should print nothing. (The app wouldn't start with one of these
+   anyway: it refuses, naming the setting.)
+
+### C. Undoing a bad update that didn't change the database
+
+Use this when an update broke something and it added no database change.
+To tell, on your Mac in the Wheelhouse folder (with the two long codes:
+the one from A step 1, then the bad one):
+
+```
+git diff --stat <old code> <bad code> -- server/migrations/
+```
+
+If it prints nothing, use C. If it lists a file, use D. Nothing made on
+the copy is lost, except photos and attachments, which go whenever the
+app is rebuilt (they aren't kept on the test copy yet).
+
+1. **Stop automatic updates for now,** so the next merge doesn't put a
+   broken version back on. On your Mac, in the Wheelhouse folder:
+
+   ```
+   gh workflow disable "Deploy the hosted copy"
+   ```
+2. **Go back to the version before.** On the server:
+
+   ```
+   /opt/wheelhouse/deploy.sh rollback
+   ```
+
+   It starts the version before the last update again, which the server
+   kept. It takes under a minute. To go back further, use
+   `/opt/wheelhouse/deploy.sh deploy <code>` with a version's whole
+   40-character code from `deploys.log` or GitHub (every merged version
+   is kept on GitHub).
+3. Do the checks in B. In step 2 the code should be the one you went
+   back to, not the latest `main`.
+4. **Once the fix is merged,** turn automatic updates back on:
+   `gh workflow enable "Deploy the hosted copy"`. The next merge goes on
+   by itself (or re-run its update from the Actions tab). Don't run the
+   setup script before then: it always puts the latest `main` back.
+
+Time it took on the hosted copy: `[n]` minutes (not tried yet).
+
+### D. Undoing a bad update that changed the database
+
+Use this when the bad update added a database change (a new file in
+`server/migrations/`). The old version may not work with the changed
+database, so the database goes back too, to the moment written down in A
+step 1. **Anything made on the copy after that moment is lost.** Do the
+steps in this order:
+
+1. **Stop automatic updates and the bad version**, so its database change
+   can't run again. On your Mac, in the Wheelhouse folder, run
+   `gh workflow disable "Deploy the hosted copy"`. Then on the server:
+
+   ```
+   cd /opt/wheelhouse
+   docker compose stop app
+   ```
+
+   The web address shows an error page until step 4.
+2. **Restore the database to the moment before the update.** DigitalOcean
+   restores into a *new* database with a new address; the old one is left
+   as it is. In DigitalOcean, open **Databases → wheelhouse-test-db** and
+   restore it to the UTC date and time from A step 1. The exact menu and the new
+   database's name are `[to confirm on the first practice run]`: that
+   point-in-time restore is offered on this plan is still to be checked
+   (task 3.3). It takes `[n]` minutes.
+3. **Point the app at the restored database.**
+   1. Let the server reach it: in the new database's settings, add the
+      server `wheelhouse-test` to its trusted sources, as setup did for
+      the first one.
+   2. On the server, open the settings file with
+      `nano /opt/wheelhouse/.env` and change the database
+      address in the `DATABASE_URL` line (the part between `@` and
+      `:25060`) to the new database's host. Keep port **25060** (the
+      direct connection, never 25061). Save with Ctrl-O, Enter, then
+      Ctrl-X. Whether the app's login (`epos_app`) keeps the same
+      password in the restored database is
+      `[to confirm on the first practice run]`. If it doesn't, ask Mark to
+      write that line: the password has to be written in a special form
+      there.
+   3. Whether the new database has a different certificate is
+      `[to confirm on the first practice run]`. If it does, replace the
+      server's copy. On your Mac, in the Wheelhouse folder (with the new
+      database's id from DigitalOcean, and the server's address):
+
+      ```
+      doctl databases certificate get-ca <new database id> -o json | jq -r '(if type == "array" then .[] else . end) | .certificate' | base64 --decode > /tmp/ca.crt
+      scp /tmp/ca.crt root@1.2.3.4:/opt/wheelhouse/ca.crt
+      ```
+4. **Start the previous version** on the server, exactly as C step 2
+   (`/opt/wheelhouse/deploy.sh rollback`), or with the `was` code from
+   `deploys.log` (A). Then do the checks in B. The
+   health check showing `ok` means the app reaches the database it's
+   set to. To be sure it's the restored one, open the copy and check that
+   something you made after the moment in A step 1 is gone.
+5. **Tell Jack** (or, if you're Jack, tell Mark) that anything made on the
+   copy after the moment in A step 1 is gone, and photos and attachments
+   with it.
+
+Afterwards:
+- **Leave automatic updates off** until Mark has changed them and the setup
+  script to use the restored database.
+- **Don't run the setup script again** yet. It looks for the database by
+  its old name, so it would point the app back at the old, broken one.
+  Mark changes it to use the new database first (not written yet).
+- The old database keeps costing money until it's deleted. Deleting it is
+  your decision, and only once the restored one is working.
+
+Time it took on the hosted copy: `[n]` minutes (not tried yet).
 
 ## For Mark: what the script does, and where
 
@@ -116,7 +366,24 @@ miss.
   stdin with the database details): grants `epos_app` the public schema (as
   `docker/init-db.sh` does) and checks it took, rewrites
   `/opt/wheelhouse/.env` keeping the two secrets, clones `main`, and runs
-  `docker compose up -d --build`.
+  `docker compose up -d --build`, recording the image and commit in `.env`
+  (`WHEELHOUSE_IMAGE`, `WHEELHOUSE_COMMIT`) and the time in `deploys.log`.
+  It also ties GitHub's deploy-only key to `deploy.sh`
+  (`restrict,command="/opt/wheelhouse/deploy.sh"` in root's
+  `authorized_keys`).
+- `scripts/hosting/deploy.sh` (on the server; run by the deploy workflow over
+  SSH, or by hand): `deploy <commit>` pulls
+  `ghcr.io/jackcurphey/wheelhouse-epos:<commit>` before changing anything,
+  writes the time and both commits to `deploys.log`, keeps the running
+  image as `release.previous`, and starts the new one with
+  `docker compose up -d --no-build app`, swapping straight back if it won't
+  start. `rollback` starts `release.previous`. Only the running and previous
+  images are kept on the server.
+- `.github/workflows/deploy-hosted-copy.yml` (Decision 3): after `Tests`
+  passes on a push to this repository's `main`; skips a commit older than
+  the one running; builds and pushes the image; runs `deploy.sh` over SSH
+  against the stored host key; waits 5 minutes for `/healthz` to show the
+  commit, and runs `rollback` if it doesn't.
 - **Database address:** the public host (its certificate is sure to cover
   it; access is limited to the droplet by the trusted-source rule), port
   **25060** (direct). Not the

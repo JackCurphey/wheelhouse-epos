@@ -31,9 +31,10 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   - each refusal comes before any migration runs and names the setting;
   - it starts with none of these.
 - [x] 2.2 Add the guard before `runMigrations()` in the start-up order, with the known real-key list starting at Twilio. Verify the 2.1 tests pass
-- [ ] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off
-- [ ] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
-- [ ] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail
+- [x] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off. Refused with 403 before the request is read (`tests/hosted-copy-switches.test.js`); watched failing first with 400 "Could not connect"
+- [x] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
+- [x] 2.4a Write a test first that the 503 `/healthz` gives when the database is down also carries `commit`. Watch it fail, then add it and verify it passes. Extended the database-down test in `tests/server-lifecycle.test.js`; watched failing first with `commit` undefined on the 503
+- [x] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail. Seen: without line 16 it failed with "expected the real time, got 2026-09-01T06:00:00.000Z"; line 16 put back unchanged
 - [ ] 2.6 Verify `npm test` and `npm run test:browser` pass, then get a fresh review
 
 ## 3. The host and the first deploy (Mark; waits for Jack's yes on #137)
@@ -47,19 +48,22 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   - the app started from `main`, built on the server, behind Caddy.
 
   Verify point-in-time restore is available on the cluster, that migrations and row-level security work under the app's login, and that `/healthz` answers `ok` over HTTPS. Record the database address and port used, and why, in `docs/runbooks/hosted-copy.md`
-- [ ] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
+- [x] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
   - it starts on `workflow_run` and only deploys when `Tests` succeeded on a `push` to this repository's `main`;
   - it builds the image, pushes it to GitHub's container registry (package public) tagged with `head_sha`, and starts it on the server over SSH with a deploy-only key checked against a stored `known_hosts` entry, in one concurrency group, skipping an older commit;
   - it records the time before each deploy;
   - it waits for `/healthz` to show the new commit, and fails and starts the previous image otherwise.
 
   Verify that a merge deploys and `/healthz` shows its commit, and that a branch push or pull request deploys nothing
+
+  Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. and #428's pull request deployed nothing (its run skipped, no steps ran, the copy stayed on `f2b70dc`)
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
 - [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
 ## 4. The way back (Mark; after group 3)
 
-- [ ] 4.1 In `docs/runbooks/hosted-copy.md`, write deploying, checking that `WHEELHOUSE_HOSTED_COPY=1` is set, rolling back with no migration, and rolling back with a migration in Decision 8's order. Verify each rollback by doing it once on the hosted copy and writing down the time
+- [x] 4.1 In `docs/runbooks/hosted-copy.md`, write deploying, checking that `WHEELHOUSE_HOSTED_COPY=1` is set, rolling back with no migration, and rolling back with a migration in Decision 8's order. Written for today's by-hand updates (the deploy workflow, 3.4, isn't built yet) and checked against `scripts/hosting/`; the restore details read `[to confirm …]` until 4.1b
+- [ ] 4.1b Verify each rollback by doing it once on the hosted copy and writing down the time in the runbook (split from 4.1 on 22 Oct, so 4.1's tick doesn't claim a run that hasn't happened; the hosted copy isn't set up yet)
 
 ## 5. The restore rehearsal (PL-3: Jack's hands, Mark's eyes)
 
