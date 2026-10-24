@@ -67,7 +67,8 @@ test('075 adds pence beside the workshop’s pounds, backfills them, and leaves 
 
   await withClient(url.href, async (c) => {
     await c.query('CREATE TABLE schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
-    await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [FILE]);
+    // 076 builds on 075, so it waits too, and stays waiting: this test is 075's.
+    await c.query('INSERT INTO schema_migrations (filename) VALUES ($1), ($2)', [FILE, '076_workshop_pence_required.sql']);
   });
   migrate(env);
   const seeded = await withClient(url.href, async (c) => [await writePoundsWorkshop(c, 'North Street Cycles'), await writePoundsWorkshop(c, 'Second Shop')]);

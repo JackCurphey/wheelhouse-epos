@@ -183,9 +183,9 @@ test('a line records its own decision, so some can be approved and others not', 
     const quote = await insertQuote(shop.id, job.id);
     const line = (description, amount, decision) => runWithShop(shop.id, () =>
       prepare(`INSERT INTO workshop_quote_lines
-                 (workshop_quote_id, kind, description, quantity, unit_amount, decision)
-               VALUES (?, 'labour', ?, 1, ?, ?) RETURNING *`)
-        .get(quote.id, description, amount, decision));
+                 (workshop_quote_id, kind, description, quantity, unit_amount, unit_amount_pence, decision)
+               VALUES (?, 'labour', ?, 1, ?, ROUND(CAST(? AS numeric) * 100)::int, ?) RETURNING *`)
+        .get(quote.id, description, amount, amount, decision));
 
     const approved = await line('Standard service', '65.00', 'approved');
     const declined = await line('Replace gear cable', '12.00', 'declined');
@@ -208,8 +208,8 @@ test('a line decision outside the three allowed values is refused', async () => 
     await assert.rejects(
       runWithShop(shop.id, () =>
         prepare(`INSERT INTO workshop_quote_lines
-                   (workshop_quote_id, kind, description, quantity, unit_amount, decision)
-                 VALUES (?, 'labour', 'x', 1, '1.00', 'maybe')`).run(quote.id)),
+                   (workshop_quote_id, kind, description, quantity, unit_amount, unit_amount_pence, decision)
+                 VALUES (?, 'labour', 'x', 1, '1.00', 100, 'maybe')`).run(quote.id)),
       /violates check constraint/,
     );
   } finally {

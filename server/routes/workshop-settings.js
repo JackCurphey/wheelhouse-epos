@@ -190,6 +190,8 @@ function readServiceBody(body) {
   if (!name) throw new ValidationError('A service needs a name');
   const price = Number(body.price);
   if (!Number.isFinite(price) || price < 0) throw new ValidationError('A service needs a price of zero or more');
+  // Kept in whole pence (sales in pence, step A′), so well within what they hold.
+  if (price >= 1000000) throw new ValidationError('A service’s price must be under £1,000,000');
   let minutes = null;
   if (body.minutes !== undefined && body.minutes !== null && body.minutes !== '') {
     minutes = Math.trunc(Number(body.minutes));
