@@ -37,10 +37,11 @@ export function register(route) {
     const customers = await prepare(
       `SELECT id, name, phone, email FROM customers
         WHERE active = 1 AND (name ILIKE ? ESCAPE '\\' OR email ILIKE ? ESCAPE '\\' OR phone ILIKE ? ESCAPE '\\'
+              OR replace(upper(coalesce(postcode, '')), ' ', '') LIKE ? ESCAPE '\\'
               OR (?::text IS NOT NULL AND regexp_replace(coalesce(phone, ''), '\\D', '', 'g') LIKE ?::text))
         ORDER BY (name ILIKE ? ESCAPE '\\') DESC, name, id
         LIMIT ${LIMIT}`
-    ).all(text, text, text, phone, phone, `${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    ).all(text, text, text, like(q.replace(/\s+/g, '').toUpperCase()), phone, phone, `${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
     sendJson(res, 200, {
       jobs: jobs.map((j) => ({
         id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,

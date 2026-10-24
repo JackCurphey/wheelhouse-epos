@@ -1817,3 +1817,19 @@ No screen: server only.
    tapping the page shuts it, on a tablet as on a phone (review).
 8. **"Wheelhouse couldn’t search just now. Try again in a moment."** when a
    search fails (not drawn), as the screens' other failed loads say.
+
+### 24 Oct 2026: Customers, the list and Add a customer (`openspec/changes/customers-list`, `cs-list`, `cs-add`, `cs-add-match`)
+
+1. **Recent** is the latest of a customer's own change, their newest job and
+   their newest sale; 25 of them. "No customers yet." when there are none.
+2. **The match is by the same phone number (whatever its spaces) or the same
+   email**, not by name: many people share a name, and the header search
+   finds them. It says "already has this number" or "already has this email
+   address", with their phone and bike.
+3. **"A phone number or an email — at least one"** is checked in the pop-up,
+   with "Add their name." for a missing name; the server's add stays as the
+   booking page and the old app use it.
+4. **Group appears only when the shop has groups** (set up with WP-5.1).
+5. **Left out until built:** a company or club (its VAT invoice waits on the
+   accountant), the "Owes" chip (money in pence), Privacy requests.
+6. **Adding opens the new customer's page**, as "Use [name]" opens theirs.

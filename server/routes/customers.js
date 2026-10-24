@@ -81,6 +81,30 @@ async function resolveGroupIds(rawGroupIds) {
   return { ids };
 }
 
+// A UK number however it's written: +44 7700 900142, 0044 7700 900142 and
+// 07700 900142 are the same number (review), as digits from 0.
+const ukNumber = (d) => (d.startsWith('0044') ? `0${d.slice(4)}` : d.startsWith('44') && d.length === 12 ? `0${d.slice(2)}` : d);
+const UK_NUMBER_SQL = `(SELECT CASE WHEN d LIKE '0044%' THEN '0' || substr(d, 5) WHEN d LIKE '44%' AND length(d) = 12 THEN '0' || substr(d, 3) ELSE d END
+  FROM (SELECT regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') AS d) AS digits)`;
+
+// The address, postcode and offers (cs-add): optional text, trimmed, blank
+// as none; offers true or false. Absent keeps what's there.
+function customerExtras(body, existing) {
+  const text = (key, column, max) => {
+    if (body[key] === undefined) return { value: existing[column] ?? null };
+    if (body[key] !== null && typeof body[key] !== 'string') return { error: `${key} must be text` };
+    const t = (body[key] ?? '').trim();
+    if (t.length > max) return { error: `${key} can be up to ${max} characters` };
+    return { value: t || null };
+  };
+  const address = text('address', 'address', 300);
+  const postcode = text('postcode', 'postcode', 12);
+  for (const r of [address, postcode]) if (r.error) return { error: r.error };
+  if (body.marketingPermission !== undefined && typeof body.marketingPermission !== 'boolean') return { error: 'marketingPermission must be true or false' };
+  const marketing = body.marketingPermission === undefined ? (existing.marketing_permission ? 1 : 0) : (body.marketingPermission ? 1 : 0);
+  return { address: address.value, postcode: postcode.value, marketing };
+}
+
 function serializeCustomer(row, groups) {
   return {
     id: row.id,
@@ -88,6 +112,10 @@ function serializeCustomer(row, groups) {
     email: row.email,
     phone: row.phone,
     notes: row.notes,
+    // Add a customer (cs-add; migration 067, and 025 for offers).
+    address: row.address ?? null,
+    postcode: row.postcode ?? null,
+    marketingPermission: row.marketing_permission === 1 || row.marketing_permission === true,
     active: !!row.active,
     groups: groups || [],
     createdAt: row.created_at,
@@ -175,6 +203,42 @@ export function register(route) {
     sendJson(res, 200, customers);
   });
 
+  // Recent customers (cs-list; customer service review 12): the latest of
+  // their own change, newest job and newest sale, with their newest bike.
+  // screens: customers
+  route('GET', '/api/recent-customers', async (req, res) => {
+    const rows = await db.prepare(
+      `SELECT c.*, (SELECT NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') FROM customer_bikes b
+                     WHERE b.customer_id = c.id ORDER BY b.created_at DESC, b.id DESC LIMIT 1) AS bike_label,
+              GREATEST(c.updated_at::timestamptz, c.created_at::timestamptz,
+                       (SELECT max(w.created_at) FROM workshop_jobs w WHERE w.customer_id = c.id),
+                       (SELECT max(s.created_at::timestamptz) FROM sales s WHERE s.customer_id = c.id)) AS seen_at
+         FROM customers c WHERE c.active = 1
+        ORDER BY seen_at DESC NULLS LAST, c.id DESC LIMIT 25`
+    ).all();
+    sendJson(res, 200, rows.map((r) => ({ ...serializeCustomer(r), bikeLabel: r.bike_label ?? null })));
+  });
+
+  // A possible match while adding (cs-add-match; customer service review 5):
+  // the same phone number, whatever its spaces, or the same email, active only.
+  // screens: customers
+  route('GET', '/api/customer-matches', async (req, res, params, query) => {
+    const digits = ukNumber((query.get('phone') ?? '').replace(/\D/g, ''));
+    const email = (query.get('email') ?? '').trim().toLowerCase();
+    const byPhone = digits || null;
+    const byEmail = email.includes('@') ? email : null;
+    if (!byPhone && !byEmail) return sendJson(res, 200, []);
+    const rows = await db.prepare(
+      `SELECT c.*, (SELECT NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') FROM customer_bikes b
+                     WHERE b.customer_id = c.id ORDER BY b.created_at DESC, b.id DESC LIMIT 1) AS bike_label
+         FROM customers c
+        WHERE c.active = 1 AND ((?::text IS NOT NULL AND ${UK_NUMBER_SQL} = ?::text)
+                             OR (?::text IS NOT NULL AND lower(trim(coalesce(c.email, ''))) = ?::text))
+        ORDER BY c.id LIMIT 5`
+    ).all(byPhone, byPhone, byEmail, byEmail);
+    sendJson(res, 200, rows.map((r) => ({ ...serializeCustomer(r), bikeLabel: r.bike_label ?? null })));
+  });
+
   route('GET', '/api/customers/:id', async (req, res, params) => {
     const id = Number(params.id);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
@@ -197,13 +261,15 @@ export function register(route) {
     const email = (body.email || '').trim();
     const phone = (body.phone || '').trim();
     const notes = (body.notes || '').trim();
+    const extra = customerExtras(body, {});
+    if (extra.error) return badRequest(res, extra.error);
 
     const groups = await resolveGroupIds(body.groupIds);
     if (groups && groups.error) return badRequest(res, groups.error);
 
     const info = await db
-      .prepare('INSERT INTO customers (name, email, phone, notes, updated_at) VALUES (?, ?, ?, ?, ?)')
-      .run(name, email, phone, notes, nowIso());
+      .prepare('INSERT INTO customers (name, email, phone, notes, address, postcode, marketing_permission, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, nowIso());
     if (groups) await setCustomerGroups(info.lastInsertRowid, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeCustomer(row, await groupsForCustomer(row.id)));
@@ -222,13 +288,15 @@ export function register(route) {
     const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
 
     if (!name) return badRequest(res, 'Customer name is required');
+    const extra = customerExtras(body, existing);
+    if (extra.error) return badRequest(res, extra.error);
 
     const groups = await resolveGroupIds(body.groupIds);
     if (groups && groups.error) return badRequest(res, groups.error);
 
     await db.prepare(
-      'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, active = ?, updated_at = ? WHERE id = ?'
-    ).run(name, email, phone, notes, active, nowIso(), id);
+      'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ? WHERE id = ?'
+    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), id);
     if (groups) await setCustomerGroups(id, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
