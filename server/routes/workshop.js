@@ -303,9 +303,12 @@ async function issueJobLink(req, jobId, shopId) {
   return `${publicBase(req)}${linkPath(shop.slug, code)}`;
 }
 
-// Bike ready for a job just marked ready. The job's link is issued afresh
-// only for a message that will go, so a customer who gets nothing keeps the
-// link they have (fresh review).
+// Bike ready for a job just marked ready, and its one Bike still waiting for
+// the shop's days later (WP-4.3), which follows only a Bike ready that went,
+// as the quote reminder follows its quote (checked again when it's due,
+// engine.js). The job's link is issued afresh only for a message that will
+// go, so a customer who gets nothing keeps the link they have (fresh review);
+// both carry the same link, as a new one would end Bike ready's.
 async function queueBikeReady(req, jobId, shopId) {
   const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
   const skipped = await whyNotQueued('bike_ready', customerId);
@@ -313,7 +316,12 @@ async function queueBikeReady(req, jobId, shopId) {
   const link = await messageLink(() => issueJobLink(req, jobId, shopId));
   const { vars } = await jobMessageVars(jobId, shopId, link);
   const ctx = await currentSession(req);
-  return queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId: ctx?.login?.id ?? null });
+  const loginId = ctx?.login?.id ?? null;
+  const ready = await queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId });
+  // A shop with no settings row yet has the column's starting 3 days.
+  const days = (await prepare('SELECT collection_reminder_days AS days FROM workshop_settings LIMIT 1').get())?.days ?? 3;
+  await queueMessage({ customerId, jobId, key: 'bike_still_waiting', vars, delayMs: days * 86_400_000, loginId });
+  return ready;
 }
 
 // A booking message for a staff answer (Jack, 20 Oct,
@@ -884,6 +892,7 @@ export function register(route) {
           if (result.ok && unsigning) {
             await clearSignOff(id);
             await undoWaiting(id, 'bike_ready');
+            await undoWaiting(id, 'bike_still_waiting');
           }
           await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
         } catch (err) {

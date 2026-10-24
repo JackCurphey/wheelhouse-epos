@@ -44,6 +44,10 @@ import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
+import { bookingDeposit } from '../workshop/booking-deposit.js';
+import { payments } from '../payments/index.js';
+import { paymentsConnected } from '../payments/provider.js';
+import { settleDeposits } from '../payments/settle.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -665,7 +669,7 @@ export function register(route) {
   // screens: service, service-list
   // Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
   route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
-    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
+    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically, deposit_on FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
       `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
@@ -690,6 +694,8 @@ export function register(route) {
       showPrices,
       // Step 4 words its button by it (Jack, 19 Oct, auto-confirm; drawn as bk-details-auto).
       confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
+      // Step 4 asks for the deposit's hold only when one is taken (deposit-pay-screen design 1).
+      takesDeposit: settings?.deposit_on === 1 && paymentsConnected(),
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({
@@ -984,6 +990,14 @@ export function register(route) {
       }
     }
 
+    // The deposit, worked out on the stored prices (deposit-payments design 5):
+    // with one due, the request must carry its key and the held payment.
+    await settleDeposits();
+    const deposit = await bookingDeposit({ serviceIds: request.notSure ? [] : request.serviceIds, notSure: request.notSure });
+    if (deposit.error) return badRequest(res, deposit.error);
+    const DEPOSIT_NEEDED = { status: 400, body: { error: 'Pay the deposit first.', code: 'deposit_needed' } };
+    if (deposit.pence !== null && (!requestKey || !Number.isInteger(body.paymentId))) return sendJson(res, DEPOSIT_NEEDED.status, DEPOSIT_NEEDED.body);
+
     // Photos are checked here with the other request checks: before the guest
     // limiter and before any write, so a refusal leaves nothing behind. They are
     // allowed on a "not sure" booking too - they describe the problem, not the service.
@@ -1019,10 +1033,27 @@ export function register(route) {
 
     // Inside the lock: the time checks (checkCustomerTime), then the writes.
     let confirmedAtOnce = false;
+    let heldPayment = null; // this request's deposit, held and checked
     const out = await withBookingLock([jobDate], async () => {
       if (requestKey) {
         const replay = await replayBookingRequest(requestKey, params.shopSlug);
         if (replay) return replay;
+      }
+      if (deposit.pence !== null) {
+        const pay = await db.prepare('SELECT * FROM online_payments WHERE id = ? FOR UPDATE').get(body.paymentId);
+        // This request's twin, sent at once on another day, booked while this one
+        // waited for the payment: answer the booking made (review).
+        if (pay?.job_id && pay.request_key_hash === requestKey.keyHash) {
+          const replay = await replayBookingRequest(requestKey, params.shopSlug);
+          if (replay) return replay;
+        }
+        if (!pay || pay.request_key_hash !== requestKey.keyHash || pay.job_id) return DEPOSIT_NEEDED;
+        if (pay.amount_pence !== deposit.pence) return { status: 409, body: { error: 'The deposit has changed — please pay it again.', code: 'deposit_changed' } };
+        const at = await payments()?.status(pay.provider_ref).catch(() => null);
+        if (at?.status !== 'held' || at.amountPence !== deposit.pence) {
+          return { status: 402, body: { error: 'The deposit hasn’t gone through yet.', code: 'deposit_not_held' } };
+        }
+        heldPayment = pay;
       }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;
@@ -1121,6 +1152,17 @@ export function register(route) {
           `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
         )
         .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      // The deposit and when it's free to cancel until, worked out now and
+      // fixed: the booked start (the day's start for a whole-day booking) less
+      // the shop's hours, in the shop's time zone (design 5).
+      if (heldPayment) {
+        await db.prepare(
+          `UPDATE workshop_jobs SET deposit_pence = ?,
+             deposit_cancel_until = ((?::date + COALESCE(?::time, time '00:00')) AT TIME ZONE ws.time_zone) - make_interval(hours => ws.deposit_cancel_hours)
+           FROM (SELECT time_zone, deposit_cancel_hours FROM workshop_settings LIMIT 1) ws WHERE workshop_jobs.id = ?`
+        ).run(deposit.pence, jobDate, times.startTime ?? null, jobId);
+        await db.prepare('UPDATE online_payments SET job_id = ?, updated_at = now() WHERE id = ?').run(jobId, heldPayment.id);
+      }
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
       const booked = await bookedServices(jobId);
       // The last write, so nothing after it can fail and leave files behind for a
@@ -1150,6 +1192,19 @@ export function register(route) {
     // confirmed at once, carrying the link the customer has just been given
     // (never a new one, which would end theirs). One that can't be queued is
     // logged; the booking stands.
+    // The deposit: taken only now the booking is saved; a booking that wasn't
+    // saved lets its hold go, so nothing is taken (design 5). A provider that
+    // can't take it now leaves it held and logged; the booking stands.
+    if (heldPayment) {
+      const done = out.status === 201 ? 'taken' : 'released';
+      try {
+        if (done === 'taken') await payments().take(heldPayment.provider_ref);
+        else await payments().release(heldPayment.provider_ref);
+        await db.prepare('UPDATE online_payments SET status = ?, updated_at = now() WHERE id = ?').run(done, heldPayment.id);
+      } catch (err) {
+        console.error(`deposit ${heldPayment.id}: couldn’t be ${done}`, err);
+      }
+    }
     if (out.status === 201) await sendLinkMessage(confirmedAtOnce ? 'booking_confirmed' : 'request_received', out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
   });

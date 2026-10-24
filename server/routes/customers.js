@@ -9,6 +9,8 @@ import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/htt
 import { serializeBike } from '../lib/serializers.js';
 import { SALE_SELECT, serializeSale } from '../lib/sales.js';
 import { serializeWorkshopJob } from '../workshop/jobs.js';
+import { TEMPLATES } from '../messaging/templates.js';
+import { shopToday } from '../clock.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -81,6 +83,30 @@ async function resolveGroupIds(rawGroupIds) {
   return { ids };
 }
 
+// A UK number however it's written: +44 7700 900142, 0044 7700 900142 and
+// 07700 900142 are the same number (review), as digits from 0.
+export const ukNumber = (d) => (d.startsWith('0044') ? `0${d.slice(4)}` : d.startsWith('44') && d.length === 12 ? `0${d.slice(2)}` : d);
+export const UK_NUMBER_SQL = `(SELECT CASE WHEN d LIKE '0044%' THEN '0' || substr(d, 5) WHEN d LIKE '44%' AND length(d) = 12 THEN '0' || substr(d, 3) ELSE d END
+  FROM (SELECT regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') AS d) AS digits)`;
+
+// The address, postcode and offers (cs-add): optional text, trimmed, blank
+// as none; offers true or false. Absent keeps what's there.
+function customerExtras(body, existing) {
+  const text = (key, column, max) => {
+    if (body[key] === undefined) return { value: existing[column] ?? null };
+    if (body[key] !== null && typeof body[key] !== 'string') return { error: `${key} must be text` };
+    const t = (body[key] ?? '').trim();
+    if (t.length > max) return { error: `${key} can be up to ${max} characters` };
+    return { value: t || null };
+  };
+  const address = text('address', 'address', 300);
+  const postcode = text('postcode', 'postcode', 12);
+  for (const r of [address, postcode]) if (r.error) return { error: r.error };
+  if (body.marketingPermission !== undefined && typeof body.marketingPermission !== 'boolean') return { error: 'marketingPermission must be true or false' };
+  const marketing = body.marketingPermission === undefined ? (existing.marketing_permission ? 1 : 0) : (body.marketingPermission ? 1 : 0);
+  return { address: address.value, postcode: postcode.value, marketing };
+}
+
 function serializeCustomer(row, groups) {
   return {
     id: row.id,
@@ -88,6 +114,10 @@ function serializeCustomer(row, groups) {
     email: row.email,
     phone: row.phone,
     notes: row.notes,
+    // Add a customer (cs-add; migration 067, and 025 for offers).
+    address: row.address ?? null,
+    postcode: row.postcode ?? null,
+    marketingPermission: row.marketing_permission === 1 || row.marketing_permission === true,
     active: !!row.active,
     groups: groups || [],
     createdAt: row.created_at,
@@ -175,11 +205,91 @@ export function register(route) {
     sendJson(res, 200, customers);
   });
 
+  // Recent customers (cs-list; customer service review 12): the latest of
+  // their own change, newest job and newest sale, with their newest bike.
+  // screens: customers
+  route('GET', '/api/recent-customers', async (req, res) => {
+    const rows = await db.prepare(
+      `SELECT c.*, (SELECT NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') FROM customer_bikes b
+                     WHERE b.customer_id = c.id ORDER BY b.created_at DESC, b.id DESC LIMIT 1) AS bike_label,
+              GREATEST(c.updated_at::timestamptz, c.created_at::timestamptz,
+                       (SELECT max(w.created_at) FROM workshop_jobs w WHERE w.customer_id = c.id),
+                       (SELECT max(s.created_at::timestamptz) FROM sales s WHERE s.customer_id = c.id)) AS seen_at
+         FROM customers c WHERE c.active = 1
+        ORDER BY seen_at DESC NULLS LAST, c.id DESC LIMIT 25`
+    ).all();
+    sendJson(res, 200, rows.map((r) => ({ ...serializeCustomer(r), bikeLabel: r.bike_label ?? null })));
+  });
+
+  // A possible match while adding (cs-add-match; customer service review 5):
+  // the same phone number, whatever its spaces, or the same email, active only.
+  // screens: customers
+  route('GET', '/api/customer-matches', async (req, res, params, query) => {
+    const digits = ukNumber((query.get('phone') ?? '').replace(/\D/g, ''));
+    const email = (query.get('email') ?? '').trim().toLowerCase();
+    const byPhone = digits || null;
+    const byEmail = email.includes('@') ? email : null;
+    if (!byPhone && !byEmail) return sendJson(res, 200, []);
+    const rows = await db.prepare(
+      `SELECT c.*, (SELECT NULLIF(trim(coalesce(b.make, '') || ' ' || coalesce(b.model, '')), '') FROM customer_bikes b
+                     WHERE b.customer_id = c.id ORDER BY b.created_at DESC, b.id DESC LIMIT 1) AS bike_label
+         FROM customers c
+        WHERE c.active = 1 AND ((?::text IS NOT NULL AND ${UK_NUMBER_SQL} = ?::text)
+                             OR (?::text IS NOT NULL AND lower(trim(coalesce(c.email, ''))) = ?::text))
+        ORDER BY c.id LIMIT 5`
+    ).all(byPhone, byPhone, byEmail, byEmail);
+    sendJson(res, 200, rows.map((r) => ({ ...serializeCustomer(r), bikeLabel: r.bike_label ?? null })));
+  });
+
   route('GET', '/api/customers/:id', async (req, res, params) => {
     const id = Number(params.id);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     if (!row) return notFound(res, 'Customer not found');
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
+  });
+
+  // A customer's page: one history of their jobs, sales and messages, newest
+  // first (cs-page; customer service review 12). A job is open while its
+  // booking stands and the bike isn't collected (walk-through 9 L5).
+  // screens: customers
+  route('GET', '/api/customers/:id/history', async (req, res, params) => {
+    const id = Number(params.id);
+    if (!Number.isInteger(id) || id < 1 || id > 2_147_483_647) return notFound(res, 'Customer not found');
+    const customer = await db.prepare('SELECT id FROM customers WHERE id = ?').get(id);
+    if (!customer) return notFound(res, 'Customer not found');
+    // A job's day and time are the shop's, so its moment is read in the shop's time zone (review).
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    const today = shopToday(zone);
+    const jobs = await db.prepare(
+      `SELECT w.id, w.reference, w.title, w.job_date, w.start_time, w.booking_state, w.custody_state, w.work_state, w.created_at, e.name AS mechanic_name,
+              CASE WHEN w.job_date IS NULL THEN w.created_at
+                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
+         FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.customer_id = ?`
+    ).all(zone, id);
+    const sales = await db.prepare(
+      `SELECT s.id, s.created_at, s.total,
+              (SELECT string_agg(CASE WHEN i.qty > 1 THEN i.name || ' × ' || i.qty ELSE i.name END, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = s.id) AS what
+         FROM sales s WHERE s.customer_id = ?`
+    ).all(id);
+    const messages = await db.prepare(
+      `SELECT id, template_key, channel, to_address, coalesce(sent_at, created_at) AS at FROM customer_messages
+        WHERE customer_id = ? AND coalesce(direction, 'outbound') = 'outbound' AND intent_state <> 'undone'`
+    ).all(id);
+    const iso = (v) => new Date(v).toISOString();
+    const items = [
+      ...jobs.map((j) => ({
+        kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
+        bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
+        // Open while the booking stands and the bike isn't collected; a bike never
+        // booked in whose day has gone isn't (a no-show, review).
+        open: !['cancelled', 'declined', 'expired'].includes(j.booking_state) && j.custody_state !== 'collected'
+          && !(j.custody_state === 'expected' && j.job_date && j.job_date < today),
+        at: iso(j.at),
+      })),
+      ...sales.map((x) => ({ kind: 'sale', id: x.id, total: Number(x.total), what: x.what ?? '', at: iso(x.created_at) })),
+      ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
+    ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+    sendJson(res, 200, { items });
   });
 
   route('GET', '/api/customers/:id/sales', async (req, res, params) => {
@@ -197,13 +307,15 @@ export function register(route) {
     const email = (body.email || '').trim();
     const phone = (body.phone || '').trim();
     const notes = (body.notes || '').trim();
+    const extra = customerExtras(body, {});
+    if (extra.error) return badRequest(res, extra.error);
 
     const groups = await resolveGroupIds(body.groupIds);
     if (groups && groups.error) return badRequest(res, groups.error);
 
     const info = await db
-      .prepare('INSERT INTO customers (name, email, phone, notes, updated_at) VALUES (?, ?, ?, ?, ?)')
-      .run(name, email, phone, notes, nowIso());
+      .prepare('INSERT INTO customers (name, email, phone, notes, address, postcode, marketing_permission, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, nowIso());
     if (groups) await setCustomerGroups(info.lastInsertRowid, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeCustomer(row, await groupsForCustomer(row.id)));
@@ -220,15 +332,19 @@ export function register(route) {
     const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
     const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
     const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+    // A record merged into another comes back only through Undo the merge (customer-merge design 3).
+    if (existing.merged_into_id && active !== existing.active) return sendJson(res, 409, { error: 'This customer was merged into another. Undo the merge to bring them back.', code: 'merged' });
 
     if (!name) return badRequest(res, 'Customer name is required');
+    const extra = customerExtras(body, existing);
+    if (extra.error) return badRequest(res, extra.error);
 
     const groups = await resolveGroupIds(body.groupIds);
     if (groups && groups.error) return badRequest(res, groups.error);
 
     await db.prepare(
-      'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, active = ?, updated_at = ? WHERE id = ?'
-    ).run(name, email, phone, notes, active, nowIso(), id);
+      'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ? WHERE id = ?'
+    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), id);
     if (groups) await setCustomerGroups(id, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));

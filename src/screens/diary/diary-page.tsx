@@ -20,6 +20,7 @@ import { ChooseDaySheet, MonthGrid } from './diary-month.tsx';
 import { Column, Grid, NewOnlineMark } from './diary-tiles.tsx';
 import { useDiaryExtras } from './use-diary-extras.tsx';
 import { useDiaryMoves } from './use-diary-moves.ts';
+import { StatusShape, useStatusSymbols } from './status-shape.tsx';
 import {
   LEGEND, LEGEND_LABEL, addDays, addMonths, dropStart, monthLabel, monthOf, dayLabel, diaryState, gridRange, hhmm, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
@@ -39,6 +40,8 @@ export function DiaryPage() {
   const [params, setParams] = useSearchParams();
   const isPhone = useIsPhone();
   const isNarrow = useIsNarrow();
+  // Show status symbols in the legend too, so it stays a key to what's drawn (Your settings).
+  const statusSymbols = useStatusSymbols();
   const today = todayIso();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
   // On a phone the diary is always one day (decision 68); the week is the strip of days.
@@ -190,7 +193,7 @@ export function DiaryPage() {
 
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
-  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder } | null>(null);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder; forCustomer?: ForOrder['customer'] } | null>(null);
   // ---- Offer another time (Jack, 20 Oct): the same pick mode, for a request ----
   const [offering, setOffering] = useState<WorkshopJob | null>(null);
   const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
@@ -255,20 +258,27 @@ export function DiaryPage() {
   // ?job= opens that job as a click on its block does; ?order= opens New job,
   // as "Enter a time instead" does, filled in from the order. Each is read
   // once, then dropped from the address so going back or reloading doesn't
-  // open it again.
-  const fromAddress = useRef(false);
+  // open it again. Read again when the address gains one while the diary is
+  // open (the header search, picking a job here).
+  const fromAddress = useRef('');
   // The order read, until the mechanics, opening hours and jobs are in, so
   // New job chooses the mechanic and the first hour as it would from the diary.
   const [orderFor, setOrderFor] = useState<ForOrder | null>(null);
+  // The customer read for New job from their page, held the same way.
+  const [customerFor, setCustomerFor] = useState<ForOrder['customer']>(null);
   useEffect(() => {
-    if (fromAddress.current) return;
-    fromAddress.current = true;
-    if (!params.has('job') && !params.has('order')) return;
+    const asked = params.has('job') || params.has('order') || params.has('customer') ? `${params.get('job')}|${params.get('order')}|${params.get('customer')}` : '';
+    // Once read and dropped, the same job can be asked for again.
+    if (!asked) { fromAddress.current = ''; return; }
+    if (asked === fromAddress.current) return;
+    fromAddress.current = asked;
     const jobId = Number(params.get('job'));
     const orderId = Number(params.get('order'));
+    const customerId = Number(params.get('customer'));
     const kept = new URLSearchParams(params);
     kept.delete('job');
     kept.delete('order');
+    kept.delete('customer');
     setParams(kept, { replace: true });
     const words = (err: unknown) => (err instanceof ApiError ? err.message : 'the server couldn’t be reached');
     const openById = async (id: number) => {
@@ -279,6 +289,12 @@ export function DiaryPage() {
     };
     if (Number.isInteger(jobId) && jobId > 0) {
       openById(jobId).catch((err) => setNotice(`Couldn’t open that job: ${words(err)}`));
+    }
+    // New job from a customer's page, with them chosen (customer-page design 4).
+    if (Number.isInteger(customerId) && customerId > 0) {
+      apiGet<{ id: number; name: string; email: string | null; phone: string | null }>(`/api/customers/${customerId}`)
+        .then((c) => setCustomerFor(c))
+        .catch((err) => setNotice(`Couldn’t open New job for that customer: ${words(err)}`));
     }
     if (Number.isInteger(orderId) && orderId > 0) {
       (async () => {
@@ -306,6 +322,13 @@ export function DiaryPage() {
     setOrderFor(null);
     setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, order: orderFor });
   }
+  if (customerFor && notLoaded) {
+    setCustomerFor(null);
+    setNotice(`Couldn’t open New job for that customer: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
+  } else if (customerFor && mechanics.data && settings.data && jobs.data) {
+    setCustomerFor(null);
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, forCustomer: customerFor });
+  }
   const newJobDialog = newJob ? (
     <NewJobDialog
       key={`${newJob.date}-${newJob.startMin}`}
@@ -317,6 +340,7 @@ export function DiaryPage() {
       chooseMechanic={freest}
       people={people}
       order={newJob.order}
+      forCustomer={newJob.forCustomer}
       onSavedWithProblem={setNotice}
       onClose={() => setNewJob(null)}
     />
@@ -676,6 +700,7 @@ export function DiaryPage() {
                   {/* Larger on a touch screen, as drawn for the tablet (layout review 238, item 4). */}
                   <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
                   <span className="text-[13px] font-bold pointer-coarse:text-[15px]">{card.customer}</span>
+                  {card.bike ? <span className="text-xs text-[var(--wh-muted)] pointer-coarse:text-[13px]">{card.bike}</span> : null}
                   <span className="text-xs pointer-coarse:text-[13px]">{card.detail}</span>
                 </button>
                 {on ? (
@@ -705,7 +730,7 @@ export function DiaryPage() {
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
             {LEGEND.map((s) => (
               <li key={s} className="inline-flex items-center gap-1.5 text-xs">
-                <span aria-hidden="true" className={`inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`} />
+                <span aria-hidden="true" className={`relative inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`}>{statusSymbols ? <StatusShape state={s} size={11} inset={1.5} /> : null}</span>
                 {LEGEND_LABEL[s]}
               </li>
             ))}

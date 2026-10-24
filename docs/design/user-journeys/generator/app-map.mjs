@@ -188,7 +188,7 @@ export function yourSettingsDialog(size = 'desktop', { graphs = false, pin = tru
     // UX walk-through 1 L6: things on a timer wait for a key press instead.
     a11ySettingRow('ys-wait', 'Don’t close things by themselves', 'Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.', false),
     a11ySettingRow('ys-text', 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview(size)),
-    a11ySettingRow('ys-rail', 'Folded sidebar', P ? 'Not used on a phone, where the menu button opens the rooms.' : size === 'tablet' ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.' : 'Folds the sidebar down to icons on every page, for more room. Rest the pointer on it, or press Unfold, to open it. The Till always has it folded.', false),
+    a11ySettingRow('ys-rail', 'Folded sidebar', P ? 'Not used on a phone, where the menu button opens the rooms.' : size === 'tablet' ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.' : 'Folds the sidebar down to icons on every page, for more room. Press Unfold to open it. The Till always has it folded.', false),
   ];
   if (P) rows.pop(); // the folded sidebar doesn't apply on a phone
   // Reports and accounts audit L4: graphs on or off sits with the other ways of seeing.
@@ -387,7 +387,7 @@ const mapBox = (title, sub, inner) => card(`<div style="padding: 24px; display: 
 const mapLine = (a, b) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 14px"><span style="font-weight: 600">${a}</span><span style="text-align: right">${b}</span></div>`;
 const mapP = (t) => `<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
 // UX walk-through 2 L1: check-in is the PIN alone (Signing in 4), and the
-// rail's Unfold button is named beside resting on it.
+// rail's Unfold button is named (since 24 Oct the only way to open it).
 screens['map'] = {
   single: `<div style="width: ${MAP_W}px; height: ${MAP_H}px; box-sizing: border-box; padding: 48px; display: flex; flex-direction: column; gap: 28px; background: ${C.bg}">
 <div style="display: flex; flex-direction: column; gap: 8px"><h1 style="margin: 0; font-size: 38px; line-height: 1.2; font-weight: 700; letter-spacing: -0.3px">How Wheelhouse fits together</h1>${mapP('Three places people use Wheelhouse, and how they move between them.')}</div>

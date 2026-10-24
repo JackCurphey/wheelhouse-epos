@@ -25,7 +25,9 @@ const SIZES = STRICT ? { tablet: [TW, TH], phone: [PW, PH] } : DESKTOP_ONLY ? { 
 // Phone boards that may scroll: the diary views, the job page (every stage),
 // the customer page and New job.
 const PHONE_SCROLL = new Set(['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'change-selected', 'diary-context-menu', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'new-job-pick',
-  'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'customer', 'new-job', 'new-job-day']);
+  'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'customer', 'new-job', 'new-job-day',
+  // Deposits on the job (24 Oct): the job page, and its refund box over it.
+  'job-deposit', 'job-deposit-refund', 'job-deposit-refunded', 'job-not-come', 'job-didnt-come']);
 const b = await chromium.launch();
 const bad = [];
 let scrolling = 0;

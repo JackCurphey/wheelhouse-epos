@@ -1671,3 +1671,310 @@ No screen: server only.
    the photo has come is the same as Done.
 8. **If the code can't be made**, the pop-up offers Try again. *Pattern:*
    the screens' failed loads.
+
+### 23 Oct 2026: Today (`openspec/changes/today-page`, `op-today` and `op-today-staff`)
+
+1. **A drop-off still to arrive has Book in beside "Drop-off"**, where the
+   drawing shows "Drop-off" alone. *Pattern:* the Workshop Overview, where a
+   drop-off is due all day, so the two pages agree (design decision 4).
+2. **The date line has no town** ("North Street Cycles, Bolton" in the
+   drawing): Wheelhouse doesn't record a shop's town yet, so the line is the
+   day, the shop's name and its hours.
+3. **The hours are today's opening hours from Settings**; on a day the shop
+   is closed the "open [opens]–[closes]" part is left out rather than made up.
+4. **Who's in and Tills are left out** until check-ins and the till's float
+   exist (WP-1.7; Jack, 23 Oct, "1"). Staff see Workshop today alone.
+5. **No "Seen" on the lines yet**: the two kinds built (a quote with no
+   answer, messages needing a reply) go by themselves once the quote is
+   answered or the message replied to; "Seen" comes with the kinds that need it.
+6. **Needs attention reads again every minute** and when the window comes
+   back, until live updates (WP-1.9). *Pattern:* the diary's refresh.
+7. **"Every bike booked for today is in."** when Still to arrive is empty,
+   and "Loading…" while the jobs come. *Pattern:* the Overview's empty and
+   loading lines.
+8. **The lines' buttons are links** (Record their answer opens the job in
+   the diary, Open Messages opens Messages), drawn as buttons, so they can be
+   opened in a new tab. *Pattern:* the Overview's "Open job".
+9. **A message waiting since an earlier day shows the day too** ("oldest
+   from Maya Patel at Tue 20 Oct, 16:20"); today's shows the time alone, as
+   drawn (fresh review). *Pattern:* the quote line's "Sent Mon 19 Oct, 10:15".
+10. **A quote on a cancelled, declined or expired booking isn't listed**,
+    since nothing on Today could clear it (fresh review).
+
+### 23 Oct 2026: the bike on Waiting cards (`openspec/changes/waiting-bike`, `diary`)
+
+1. **A request with no bike has no bike line**, rather than "No bike" or
+   "Bike"; the card is its label, the customer and the detail, as before.
+   *Pattern:* the bike tag, which leaves the line out.
+2. **The computer's Waiting column shows the bike too**, not only the tablet
+   and phone cards: the drawing's desktop card has the same line
+   (`waitingCard` in `diary.mjs`).
+
+### 23 Oct 2026: a bike left uncollected, the server (`openspec/changes/uncollected-bike`, `cp-setting`, `cp-today-uncollected`)
+
+1. **New shops start at 3 days for the reminder and 7 for Today** (the
+   drawing shows `[n]`). 7 follows the build plan's flag for uncollected
+   online orders (Q8, `2026-10-03-build-plan-questions.md`); 3 comes before
+   it. The reminder can be 1–60 days, Today 2–90, and longer than the
+   reminder.
+2. **One reminder**, as buy online decision 7 says of uncollected bikes.
+3. **It follows Bike ready**: switched off, undone in its minute, or with no
+   way to reach the customer, no Bike still waiting either. *Pattern:* the
+   quote reminder, which only follows a quote that went.
+4. **What's left to pay is worked out again when it goes**, so a payment or
+   a changed bill in the days between is right; a paid bike is reminded with
+   "Paid — nothing more to pay", as drawn.
+5. **Contacted records who and when and takes the line off Today**; marked
+   ready again (after reopening), it counts afresh. The decision says what
+   the line shows and that it goes at hand-over, not what Contacted does.
+6. **The email subject is "Your bike is still waiting — [Shop name]"** (not
+   drawn). *Pattern:* Bike ready's "Your bike is ready — [Shop name]".
+7. **Owner only, until roles**, as the rest of Needs attention (the hint
+   says "for owners and managers").
+
+### 23 Oct 2026: a bike left uncollected, the screens (`openspec/changes/uncollected-bike`, `cp-setting`, `cp-today-uncollected`)
+
+1. **Leaving either day box saves both as they read**, so raising the
+   reminder past Today's count works by raising Today next; a refused save
+   keeps what was typed and says why (server review). *Pattern:* the other
+   number boxes, which save when left.
+2. **The fold's summary is "Reminder after 3 days"**, without the drawing's
+   "· hand-back reminders off", since that switch isn't built.
+3. **"edit it in Messages" opens Front desk with Automatic messages open**
+   (`?fold=`, new: a link can name the fold to open).
+4. **Settings › Messages says the shop's days** ("When a ready bike isn’t
+   collected after 3 days"), and its edit box adds "— set in Settings ›
+   Workshop › Collection", as drawn.
+5. **Today's line leaves out "reminder sent" until it has gone**, and the
+   bike when the job has none.
+6. **Months are three letters** ("Sep"), as drawn and as the server's
+   messages say them: the browser's British dates say "Sept", which the
+   quote's "Sent …" line also showed in September.
+
+### 23 Oct 2026: Your settings › Accessibility, first part (`openspec/changes/your-settings-accessibility`, `your-settings`)
+
+1. **Saved in a table of its own, per login** (`login_preferences`), as Jack
+   decided (23 Oct, answer 1); every switch is off until turned on.
+2. **The pop-up opens at `/workshop/your-settings`**, where your name already
+   linked, over an empty frame rather than over the page you were on;
+   Close or Escape goes back to that page (the desk when opened directly).
+   The drawing shows it over the diary.
+3. **Only the switches built show**: Reduce motion now. Show status
+   symbols, Don't close things by themselves, Folded sidebar and Larger
+   text come with what they act on; the Till PIN with PINs; Show graphs with
+   reports. With no Till column, the pop-up is one column (560px) on a
+   computer, the whole screen on a phone.
+4. **Larger text is held back, a question for Jack.** It was built as a zoom
+   of the whole app by 17/14 (text is set in pixels) and taken out after the
+   review: checked in a browser, a zoomed page put the diary's drops about a
+   fifth too far down and pop-ups beside a block off their marks.
+5. **Reduce motion stops every animation and transition**, as the
+   computer's own setting does, and the diary's hover card opens at once
+   with either.
+
+### 23 Oct 2026: Show status symbols (`openspec/changes/status-symbols`, `your-settings`, the diary's blocks)
+
+1. **Where the drawing puts them**: narrow week blocks and every request,
+   and the legend's swatches; not day view or a phone, which spell the
+   status out.
+2. **An offered time has no shape**: the drawing gives it none.
+3. **A tablet's week shows them too**, though the drawing's tablet blocks
+   (touchJobBlock) have none: its week columns are as narrow as a computer's,
+   and the switch is there for anyone who can't tell the colours apart.
+   A phone's job blocks don't (review), as drawn; its requests do.
+
+### 23 Oct 2026: emailing a receipt, the email side (`openspec/changes/receipt-email`, `cp-receipt-email`, `cp-receipt-address`)
+
+1. **The subject is "Your receipt — [Shop name]"** (not drawn). *Pattern:*
+   "Your bike is ready — [Shop name]".
+2. **As the printed receipt**: "Sale [n]", no VAT line and no "(includes
+   VAT)" until the sale records VAT; "Paid by card" and "Paid by cash", the
+   printed receipt's words, for the drawing's payment line; the shop's own
+   words at the bottom when it has them.
+3. **The footer says "give the sale number"** for the drawing's "receipt
+   number", until receipts have numbers of their own; "Questions? Call
+   [shop phone]." only when the shop has a phone.
+4. **A receipt goes to the address typed, the customer's way aside**, and is
+   kept with the sale's customer when it has one, so it shows in their
+   history later; with no customer it goes all the same.
+5. **Nothing is saved to the customer from here** (review answer 3: "for
+   this receipt only"); Save to a customer record comes with the till's pop-up.
+
+### 23 Oct 2026: Folded sidebar (`openspec/changes/folded-sidebar`, `foldedRail`, `your-settings`)
+
+1. **The keyboard opens it with Unfold, not by moving into the rail** (the
+   drawing opens on focus): opening on focus put it straight back open after
+   Escape, so a keyboard user couldn't close it.
+2. **After Fold or Escape, resting the pointer doesn't reopen it** until the
+   pointer has left the rail, so Escape works with the mouse over it.
+3. **A tablet's rail has Unfold too**, as its drawn hint says ("tap Unfold
+   to open it").
+4. **The panel over the page has the rooms, the shop and your name, without
+   the drawn shop switcher**, which comes with more than one shop.
+5. **Tapping or clicking the page beside it folds it** (not drawn; review),
+   as the phone menu's dimmed page does, so a tablet isn't left half covered.
+
+### 24 Oct 2026: the header search (`openspec/changes/header-search`, `staff-search`)
+
+1. **Results are links, not a list of options** (the later `staff-search`
+   drawing, 3 Oct: "a labelled list of rows, not a listbox"); the older
+   `cs-search-c2w` drew a listbox with the first row chosen.
+2. **"Search jobs and customers"** in the box until orders and products are
+   found too (drawn: "Search jobs, customers, orders, products").
+3. **A job row reads "Trek Domane AL 3 · Standard service · Expected · Thu 17
+   Sep"**: its stage and day (walk-through 9 H1); "approved £…" waits until
+   quote totals are read here. **A customer row reads "Customer · [phone]"**.
+4. **Five of each, two characters at least, a pause of 250 ms**; a job is found
+   by its number, its customer's name or phone (however it's spaced), or its
+   bike; a customer by name, phone or email; requests not yet confirmed are
+   found, removed customers aren't. A postcode comes with Customers' address.
+5. **"Nothing matches “[what was typed]”"** when nothing is found (the till's
+   words), said on screen and to screen readers; groups with nothing are left
+   out rather than drawn empty.
+6. **Escape clears the box on a computer**; on a tablet or phone it shuts the
+   search, as Close search does, and the focus goes back to the search button.
+7. **The sheet over the page holds the keyboard** (Tab goes round it) and
+   tapping the page shuts it, on a tablet as on a phone (review).
+8. **"Wheelhouse couldn’t search just now. Try again in a moment."** when a
+   search fails (not drawn), as the screens' other failed loads say.
+
+### 24 Oct 2026: Customers, the list and Add a customer (`openspec/changes/customers-list`, `cs-list`, `cs-add`, `cs-add-match`)
+
+1. **Recent** is the latest of a customer's own change, their newest job and
+   their newest sale; 25 of them. "No customers yet." when there are none.
+2. **The match is by the same phone number (whatever its spaces) or the same
+   email**, not by name: many people share a name, and the header search
+   finds them. It says "already has this number" or "already has this email
+   address", with their phone and bike.
+3. **"A phone number or an email — at least one"** is checked in the pop-up,
+   with "Add their name." for a missing name; the server's add stays as the
+   booking page and the old app use it.
+4. **Group appears only when the shop has groups** (set up with WP-5.1).
+5. **Left out until built:** a company or club (its VAT invoice waits on the
+   accountant), the "Owes" chip (money in pence), Privacy requests.
+6. **Adding opens the new customer's page**, as "Use [name]" opens theirs.
+
+### 24 Oct 2026: a customer's page and Edit (`openspec/changes/customer-page`, `cs-page`, `cs-page-new`, `cs-edit`)
+
+1. **History rows**: a job shows its number, the work, its day and mechanic and
+   its stage, and opens in the diary; a sale shows "Sale [n]", its day, what was
+   bought and its total; a message shows "Text" or "Email", its name and where
+   it went. Sales and messages don't open anything until their pages exist.
+2. **Eight rows, then "Show all ([n])"**; the filters show only their kind.
+3. **A cancelled job reads "Cancelled"** and a collected one "Collected" in the
+   history, beside the diary's stage words for the rest.
+4. **Offers show On or Off on the page**, changed in Edit, not with a switch
+   on the page (the drawing shows the switch): a customer's yes or no is
+   changed deliberately, with Save changes.
+5. **Bikes are listed without their own pages or "+ Add" yet** (the bike's
+   page is next), with their colour when they have one; "No bikes yet."
+6. **New job opens the diary's New job with them chosen** (`?customer=`), at a
+   time to enter, as an order does.
+7. **Left out until built**: "Owes", the account and store credit (money in
+   pence), warranty (needs "bought here"), refunds and credit changes in the
+   history.
+8. **A job never booked in, whose day has gone, isn't "Open now"** (a no-show;
+   review), though it still shows under Earlier with its stage.
+9. **Edit leaves a customer's groups as they are unless the group is changed**
+   there, so someone in two groups (the old app allows it) keeps both (review).
+10. **A UK number matches however it's written**: +44 7700 900142, 0044 … and
+    07700 900142 are the same (review).
+
+### 24 Oct 2026: possible duplicates and Merge (`openspec/changes/customer-merge`, `cs-page-dup`, `cs-merge`)
+
+1. **The page you're on is the customer kept**; for each field that differs
+   (name, phone, email, address with postcode, note) its value is chosen to
+   start, and the other's can be picked instead.
+2. **Both with an online account can't be merged yet**, with that reason; one
+   with an account moves it to the kept record. (Which sign-in survives isn't
+   decided.)
+3. **The kept record keeps its own "Happy to hear about offers"**, not the
+   other's: a yes or no is the customer's, given on that record.
+4. **"Merged with [name] on [day] · can be undone until [day]"** with "Undo
+   the merge", at the top of the kept page (not drawn; its place is "from the
+   customer's page"), in the duplicate notice's style.
+5. **Removed for good after 30 days** when merges are next read or undone, not
+   on a timer; anything that has come to point at it since (a till sale synced
+   late) moves to the kept record first.
+6. **"Added on [day] and [day]."** before the 30-day note, without the
+   drawing's "on different tills" (where each was added isn't recorded).
+7. **Duplicates are found by phone or email, not by name.**
+8. **Undo is refused once the kept record has itself been merged** into
+   another, saying to undo that one first; undoing in order keeps every job
+   and sale on one record.
+9. **A name or email differing only in capitals is offered as a choice**, so
+   the spelling kept is the one picked.
+10. **Undo puts back only what the merge changed, and only where nobody has
+    changed it since**: a correction made after the merge stays.
+11. **Undo goes newest first**: an older merge into the same record waits
+    until a later one is undone. Undo also says so when the kept record has
+    been switched off.
+12. **A hidden record comes back only through Undo**, not by switching it on.
+13. **A till that was offline finds the kept record**: its sales for the
+    merged-away customer go to the one kept, and that customer sent again
+    isn't made a second time, before and after the 30 days.
+
+### 24 Oct 2026: the shop's deposit settings (`openspec/changes/deposit-settings`, `bk-settings-deposits`)
+
+1. **The rows under "Take a deposit when booking" show only while it's on**
+   (not drawn off), as "Drop off before the booking" shows only for set times.
+2. **Deposits can be switched on before "How much" is filled in**, since its
+   row only shows once they're on; until it is, no deposit is taken and the
+   fold says "no deposit".
+3. **A deposit is never more than the price shown**, for a fixed amount too:
+   a £20 deposit on a £12.50 booking takes £12.50. A free booking takes none.
+4. **"How much" is a whole percentage** (1 to 100), and amounts are typed in
+   pounds and pence, from £0.01 to £10,000.
+5. **Deposits only switch on while a payment provider is connected** (the
+   website settings' "booking deposits are off, until you connect [payment
+   provider]"); until a real account exists that is the pretend one, and
+   only where it's asked for (`PAYMENTS_PROVIDER=pretend`: the tests, a
+   developer's computer, the hosted test copy), never by a shop running for
+   real (review).
+6. **"For: Every booking / Chosen services" waits for the service editor**,
+   which the new app doesn't have yet; until then every booking takes it.
+7. **The note about declining shows only while automatic confirming is off**,
+   as its own words say ("With automatic confirming off, …").
+
+### 24 Oct 2026: paying a booking's deposit, the server (`openspec/changes/deposit-payments`, `bk-details-deposit`, `bk-checking-payment`)
+
+1. **The card is held when the customer pays, and the money taken only once
+   the booking is saved** (Stripe's held card payments). A booking that can't
+   be saved, say the time went, lets the hold go, so nothing is taken and
+   there's nothing to refund.
+2. **The deposit is worked out by the server on the stored prices**, never
+   from the booking page, and checked again as the booking is saved: if it
+   has changed meanwhile, the customer is asked to pay it again.
+3. **The pretend provider answers as Stripe's test cards**: 4242 4242 4242
+   4242 is accepted, 4000 0000 0000 0002 is declined, anything else is "Check
+   the card number". Its card form exists only while it's the provider.
+4. **"Free to cancel until" is worked out at booking and kept on it**: the
+   booked start less the shop's hours, in the shop's time zone; for a
+   whole-day booking, from the start of the day.
+5. **A hold with no booking an hour later is let go**, and a deposit the
+   provider couldn't take as the booking was saved is taken, the next time
+   deposits are held or booked (no timer yet) (review).
+
+### 24 Oct 2026: paying the deposit on the booking page (`openspec/changes/deposit-pay-screen`, `bk-details-deposit`, `bk-card-failed`, `bk-checking-payment`)
+
+1. **The pretend card form is one "Card number" box** in the drawn card
+   form's place, saying plainly that payments are pretend while Wheelhouse is
+   being built, nothing is taken, and which test numbers pay or decline.
+2. **Pressing Pay with no card number says "Enter the card number"** and pays
+   nothing, as the other boxes say what's missing.
+3. **Once the deposit is paid, the button reads "Send request"** ("Book" when
+   the shop confirms automatically), with "Paid. It's held until your booking
+   is sent." in place of the card box, so a retry or a refresh never pays
+   twice. The drawings don't show this state.
+4. **A declined card can be tried again on the same payment**, as Stripe
+   allows: typing another number and pressing Try again pays with it.
+5. **"Free to cancel until" on step 4 is worked out in the shop's clock** from
+   the booked time less the shop's hours, as the booking shows times; the
+   booking itself keeps the exact moment.
+6. **If the deposit can't be got ready** (no connection as step 4 opens), the
+   page says "We couldn't get the deposit ready - please check your
+   connection and try again" and its button reads Try again, sending nothing
+   (review).
+7. **A hold let go meanwhile** (an hour on, or a refused booking) is asked
+   for again, saying "The deposit needs paying again — please press Pay."
+   (review).

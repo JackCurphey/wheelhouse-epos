@@ -21,6 +21,7 @@
 import { prepare, dbExec } from '../db.js';
 import { vatFromGrossPence, receiptLabel } from './money.js';
 import { flag } from './attention.js';
+import { liveCustomer, noteMoved, clientIdKnown } from '../merged-customers.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KINDS = new Set(['sale', 'customer', 'checkin']);
@@ -129,12 +130,10 @@ async function recordSale(till, item) {
   // never a database error.
   const employee = inInt4(item.employeeId)
     ? await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId) : null;
+  // A customer since merged into another is found as the one kept (customer-merge design 8).
   let customer = null;
-  if (inInt4(item.customerId)) {
-    customer = await prepare('SELECT id FROM customers WHERE id = ?').get(item.customerId);
-  } else if (typeof item.customerClientId === 'string' && UUID.test(item.customerClientId)) {
-    customer = await prepare('SELECT id FROM customers WHERE client_id = ?').get(item.customerClientId);
-  }
+  if (inInt4(item.customerId)) customer = await liveCustomer({ id: item.customerId });
+  else if (typeof item.customerClientId === 'string' && UUID.test(item.customerClientId)) customer = await liveCustomer({ clientId: item.customerClientId });
   const askedForCustomer = item.customerId != null || item.customerClientId != null;
 
   const reused = await prepare('SELECT 1 FROM till_sales WHERE till_id = ? AND receipt_number = ?').get(till.id, item.receiptNumber);
@@ -144,6 +143,9 @@ async function recordSale(till, item) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(item.clientId, till.id, till.site_id, item.receiptNumber, employee?.id ?? null, customer?.id ?? null,
     item.madeOffline === true, new Date(item.tillClockAt).toISOString(), total, vat);
+
+  // Given to the record kept by a merge still undoable: Undo puts it back.
+  if (customer) await noteMoved(customer.through, 'till_sales', saleId);
 
   if (reused) await raise('receipt_number_reused', { detail: `${label} was already used on this till`, tillSaleId: saleId });
   if (item.employeeId != null && !employee) await raise('unknown_employee', { detail: `${label}: staff member ${item.employeeId} not found`, tillSaleId: saleId });
@@ -219,8 +221,7 @@ export function checkinProblem(item) {
 const digits = (s) => (typeof s === 'string' ? s.replace(/\D/g, '') : '');
 
 async function recordCustomer(item) {
-  const held = await prepare('SELECT id FROM customers WHERE client_id = ?').get(item.clientId);
-  if (held) return { status: 'duplicate', attention: [] };
+  if (await clientIdKnown(item.clientId)) return { status: 'duplicate', attention: [] };
   const email = typeof item.email === 'string' && item.email.trim() ? item.email.trim() : null;
   const phone = typeof item.phone === 'string' && item.phone.trim() ? item.phone.trim() : null;
   const { lastInsertRowid: id } = await prepare(
