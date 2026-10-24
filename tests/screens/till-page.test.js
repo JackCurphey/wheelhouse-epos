@@ -464,3 +464,25 @@ test('Don’t close things by themselves on: sent, Paid stays and says so', asyn
   assert.equal(has(t.sale.queryByText('Nothing in the sale yet')), false);
 });
 
+test('a refusal (sent five times this hour) shows in the pop-up in the server’s words (review)', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  emailReply = { status: 429, ok: false, json: async () => ({ error: 'This receipt has been sent five times in the last hour. Try again later.', code: 'too_many' }) };
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  assert.ok(has(await box.findByText('This receipt has been sent five times in the last hour. Try again later.')));
+  assert.equal(box.getByLabelText('Email address').getAttribute('aria-invalid'), null);
+});
+
+test('while it sends, Cancel is off, so a late reply can’t surprise anyone (review)', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  emailReply = new Promise(() => {});
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  await t.waitFor(() => assert.equal(box.getByRole('button', { name: 'Cancel' }).disabled, true));
+  assert.ok(has(box.queryByRole('button', { name: 'Sending…' })));
+});
+

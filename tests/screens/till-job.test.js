@@ -395,5 +395,7 @@ test('Email on a job’s Paid box fills in the customer’s address from their r
   assert.ok(Boolean(box.queryByText(/· Maya Patel$/)));
   await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'maya@example.test'));
   assert.ok(Boolean(box.queryByText('From Maya’s customer record. A change here is used for this receipt only.')));
+  // Read out with the box, for a screen reader (review).
+  assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
 });
 

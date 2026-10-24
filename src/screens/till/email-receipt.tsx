@@ -55,7 +55,7 @@ export function EmailReceiptDialog({ saleId, customer, onClose, onSent }: {
   }
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="email-receipt-title" className="md:max-w-[480px]">
+    <Dialog open onOpenChange={(o) => { if (!o && !sending) onClose(); }} aria-labelledby="email-receipt-title" className="md:max-w-[480px]">
       {/* The server checks the address, so the drawn message shows, not the browser's own (noValidate). */}
       <form onSubmit={send} noValidate>
         <DialogHeader>
@@ -69,15 +69,17 @@ export function EmailReceiptDialog({ saleId, customer, onClose, onSent }: {
           <input
             ref={box} id="email-receipt-address" type="email" inputMode="email" autoComplete="off" placeholder="name@example.com"
             value={address} onChange={(e) => { setTyped(e.target.value); setBadAddress(null); }}
-            aria-invalid={badAddress ? true : undefined} aria-describedby={badAddress ? 'email-receipt-bad' : undefined}
+            aria-invalid={badAddress ? true : undefined}
+            aria-describedby={[badAddress ? 'email-receipt-bad' : '', customer && onFile ? 'email-receipt-from' : ''].filter(Boolean).join(' ') || undefined}
             className={`min-h-11 rounded-md border bg-[var(--wh-panel)] px-3 text-base ${badAddress ? 'border-[var(--wh-danger-hover)]' : 'border-[var(--wh-input-border)]'}`}
           />
           {badAddress ? <p id="email-receipt-bad" role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{badAddress}</p> : null}
-          {customer && onFile ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`From ${first}’s customer record. A change here is used for this receipt only.`}</p> : null}
+          {customer && onFile ? <p id="email-receipt-from" className="m-0 text-size-13 text-[var(--wh-muted)]">{`From ${first}’s customer record. A change here is used for this receipt only.`}</p> : null}
           {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
         </DialogBody>
         <DialogFooter className="flex justify-end gap-2">
-          <Button type="button" className="min-h-11" onClick={onClose}>Cancel</Button>
+          {/* Not while it sends: a reply after Cancel would start the next sale anyway (review). */}
+          <Button type="button" className="min-h-11" disabled={sending} onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary" className="min-h-11" disabled={sending || !address.trim()}>{sending ? 'Sending…' : 'Send receipt'}</Button>
         </DialogFooter>
       </form>
