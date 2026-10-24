@@ -18,9 +18,12 @@ import { StatusShape } from '@/screens/diary/status-shape.tsx';
  */
 // Larger text scales the text sizes themselves, not the page (Jack, 24 Oct
 // answer 8; openspec/changes/larger-text): after Reduce motion, as drawn.
+// Don't close things by themselves between them (Jack, 24 Oct answer 9;
+// app-map.mjs ys-wait; openspec/changes/dont-close-screens).
 const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: 'symbols' | 'text' }[] = [
   { key: 'statusSymbols', label: 'Show status symbols', hint: 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', preview: 'symbols' },
   { key: 'reduceMotion', label: 'Reduce motion', hint: 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.' },
+  { key: 'noAutoClose', label: 'Don’t close things by themselves', hint: 'Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.' },
   { key: 'largerText', label: 'Larger text', hint: 'Makes text across Wheelhouse a step larger.', preview: 'text' },
 ];
 

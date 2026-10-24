@@ -235,3 +235,102 @@ test('a quote whose message cannot be queued is still sent, and staff are told n
     await admin.end();
   }
 });
+
+// Don't close things by themselves (Jack, 24 Oct answer 9; approved drawings
+// job-finished-wait and job-finished-sent; openspec/changes/dont-close-server).
+const setWait = (on) => staff('/api/your-settings', { method: 'PUT', body: { accessibility: { noAutoClose: on } } });
+const held = (id) => inShop(() => prepare("SELECT send_after = 'infinity'::timestamptz AS held, intent_state FROM customer_messages WHERE id = ?").get(id));
+
+test('with Don’t close things by themselves on, Bike ready is held until Send now, and then it goes', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const res = await finish(job);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const ready = res.body.readyMessage;
+    assert.equal(ready.held, true);
+    assert.equal(ready.sendAfter, null);
+    assert.deepEqual(await held(ready.id), { held: true, intent_state: 'intended' });
+    // Past the sender's round (every 5 seconds), it still hasn't gone.
+    await new Promise((done) => setTimeout(done, 6_000));
+    assert.equal((await held(ready.id)).intent_state, 'intended');
+    const listed = (await staff(`/api/messages?jobId=${job.id}&limit=200`)).body.find((m) => m.id === ready.id);
+    assert.equal(listed.held, true);
+    const sent = await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} });
+    assert.equal(sent.status, 200, JSON.stringify(sent.body));
+    assert.equal(sent.body.held, false);
+    let state;
+    for (let i = 0; i < 40 && state !== 'delivered'; i += 1) {
+      await new Promise((done) => setTimeout(done, 250));
+      state = (await held(ready.id)).intent_state;
+    }
+    assert.equal(state, 'delivered');
+  } finally {
+    await setWait(false);
+  }
+});
+
+test('a held Bike ready is stopped by Undo; Send now on a message not held is refused', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    assert.equal((await staff(`/api/messages/${ready.id}/undo`, { method: 'POST', body: {} })).status, 200);
+    assert.equal((await held(ready.id)).intent_state, 'undone');
+    assert.equal((await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} })).status, 409);
+  } finally {
+    await setWait(false);
+  }
+  const { job } = await mayasJob();
+  const ready = (await finish(job)).body.readyMessage;
+  assert.ok(ready.sendAfter, 'switch off: its minute, as before');
+  assert.equal(ready.held, false);
+  const res = await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} });
+  assert.equal(res.status, 409, 'only a held message is sent now');
+});
+
+test('a held Bike ready isn’t sent once the bike has been collected (review)', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    await inShop(() => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = now() WHERE id = ?").run(job.id));
+    const res = await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} });
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.equal(res.body.error, 'The bike has been collected, so it won’t be sent.');
+  } finally {
+    await setWait(false);
+  }
+});
+
+test('a held Bike ready whose bike has gone is stopped on the sender’s next round, not left waiting (review)', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    await inShop(() => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = now() WHERE id = ?").run(job.id));
+    let state;
+    for (let i = 0; i < 40 && state !== 'undone'; i += 1) {
+      await new Promise((done) => setTimeout(done, 250));
+      state = (await held(ready.id)).intent_state;
+    }
+    assert.equal(state, 'undone');
+  } finally {
+    await setWait(false);
+  }
+});
+
+test('Send now after the reminder’s days moves Bike still waiting on, so the two don’t go together (review)', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    // As if held for days: Bike still waiting is already due.
+    await inShop(() => prepare("UPDATE customer_messages SET send_after = now() + interval '1 hour' WHERE job_id = ? AND template_key = 'bike_still_waiting'").run(job.id));
+    assert.equal((await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} })).status, 200);
+    const still = await inShop(() => prepare("SELECT send_after > now() + interval '2 days' AS later FROM customer_messages WHERE job_id = ? AND template_key = 'bike_still_waiting'").get(job.id));
+    assert.equal(still.later, true);
+  } finally {
+    await setWait(false);
+  }
+});

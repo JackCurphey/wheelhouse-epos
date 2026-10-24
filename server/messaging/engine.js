@@ -62,7 +62,7 @@ export async function undoJobMessages(jobId) {
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
-export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null }) {
+export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false }) {
   const template = await templateFor(key);
   if (!template.enabled) return { skipped: 'off' };
   const c = await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId);
@@ -70,12 +70,35 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
   if (!how) return { skipped: 'no_contact' };
   const body = render(template.wording, vars);
   const subject = how.channel === 'email' ? render(template.subject, vars) : null;
-  const sendAfter = new Date(Date.now() + delayMs).toISOString();
+  // Held (Don't close things by themselves): a send time of never, so the
+  // sender never claims it and Undo still stops it, until Send now
+  // (openspec/changes/dont-close-server design 1).
+  const sendAfter = hold ? 'infinity' : new Date(Date.now() + delayMs).toISOString();
   const row = await prepare(
     `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
      VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?) RETURNING id`
   ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId);
-  return { id: row.id, channel: how.channel, to: how.to, sendAfter };
+  return { id: row.id, channel: how.channel, to: how.to, sendAfter: hold ? null : sendAfter, held: hold };
+}
+
+/**
+ * Send now: a held message's send time becomes now, and the sender sends it
+ * next round. Bike still waiting then counts its days from now, so the two
+ * never go together (review). False when it isn't held.
+ */
+export async function sendHeldNow(id) {
+  const now = new Date();
+  const row = await prepare(
+    "UPDATE customer_messages SET send_after = ? WHERE id = ? AND intent_state = 'intended' AND send_after = 'infinity'::timestamptz RETURNING id, job_id, template_key"
+  ).get(now.toISOString(), id);
+  if (row?.template_key === 'bike_ready' && row.job_id) {
+    const days = (await prepare('SELECT collection_reminder_days AS days FROM workshop_settings LIMIT 1').get())?.days ?? 3;
+    const later = new Date(now.getTime() + days * 86_400_000).toISOString();
+    await prepare(
+      "UPDATE customer_messages SET send_after = ? WHERE job_id = ? AND template_key = 'bike_still_waiting' AND intent_state = 'intended' AND send_after < ?"
+    ).run(later, row.job_id, later);
+  }
+  return Boolean(row);
 }
 
 /**
@@ -175,7 +198,19 @@ async function stillWaitingNeeded(jobId) {
   return Boolean(job) && (await templateFor('bike_still_waiting')).enabled;
 }
 
-const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded };
+/**
+ * Bike ready only while the bike is still in the shop and finished, checked as
+ * it goes: a held one sent late, or one in its minute, is never sent once the
+ * bike has gone (dont-close-server, review).
+ */
+export async function readyStillNeeded(jobId) {
+  if (!jobId) return true;
+  return Boolean(await prepare(
+    "SELECT 1 FROM workshop_jobs WHERE id = ? AND custody_state = 'in_shop' AND work_state = 'complete'"
+  ).get(jobId));
+}
+
+const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded, bike_ready: readyStillNeeded };
 
 async function sendDueForShop(shopId) {
   const now = new Date();
@@ -184,6 +219,14 @@ async function sendDueForShop(shopId) {
       `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
        WHERE intent_state = 'sending' AND claimed_at < ?`
     ).run(new Date(now.getTime() - STUCK_MS).toISOString());
+    // A held Bike ready never comes due, so its check above never runs: one
+    // whose bike has gone (collected, or the work reopened) is stopped here,
+    // not left waiting for a Send now that can't send it (review).
+    await prepare(
+      `UPDATE customer_messages m SET intent_state = 'undone', status = 'undone'
+       WHERE m.intent_state = 'intended' AND m.template_key = 'bike_ready' AND m.send_after = 'infinity'
+         AND NOT EXISTS (SELECT 1 FROM workshop_jobs j WHERE j.id = m.job_id AND j.custody_state = 'in_shop' AND j.work_state = 'complete')`
+    ).run();
     const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
@@ -255,6 +298,9 @@ export function startSender(intervalMs = Number(process.env.WH_MESSAGES_TICK_MS 
   };
 }
 
+// Postgres's "never" comes back as Infinity, or as the word, depending on how it's read.
+const isHeld = (t) => t === Infinity || t === 'infinity' || (t instanceof Date && !Number.isFinite(t.getTime()));
+
 /** A message as the outbox shows it. */
 export function serializeMessage(row) {
   return {
@@ -272,7 +318,9 @@ export function serializeMessage(row) {
     body: row.body,
     state: row.intent_state,
     pretend: row.pretend,
-    sendAfter: row.send_after ?? null,
+    // A held message has no send time until Send now (dont-close-server design 4).
+    held: isHeld(row.send_after),
+    sendAfter: isHeld(row.send_after) ? null : row.send_after ?? null,
     sentAt: row.sent_at ?? null,
     error: row.error ?? null,
     createdAt: row.created_at,

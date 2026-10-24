@@ -22,6 +22,7 @@ let uninstall;
 let shell;
 let calls;
 let saleReply;
+let a11y;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -39,6 +40,7 @@ function stubServer(employee) {
     const u = new URL(url, 'http://localhost');
     if (method === 'POST' && u.pathname === '/api/sales') return saleReply ?? reply(201, { id: 501 });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
+    if (u.pathname === '/api/your-settings' && a11y) return reply(200, { accessibility: a11y });
     if (u.pathname === '/api/employees') return reply(200, CASHIERS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     if (u.pathname === '/api/products') return reply(200, [PADS]);
@@ -46,8 +48,9 @@ function stubServer(employee) {
   };
 }
 
-async function openTill({ employee = JO } = {}) {
+async function openTill({ employee = JO, accessibility = null } = {}) {
   saleReply = null;
+  a11y = accessibility;
   uninstall = installDom('http://localhost/workshop/till');
   window.WH_TILL_TICK_MS = 20;
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
@@ -343,4 +346,32 @@ test('Print on Paid prints the sale’s receipt, then the next sale starts', asy
   for (const want of ['North Street Cycles', 'Sale 501', 'Fit & adjust brakes£18.00', 'Total£18.00', 'Paid by card£18.00']) assert.ok(printed.includes(want), `missing "${want}" in: ${printed}`);
   await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
   assert.equal(has(t.ui.queryByRole('dialog')), false);
+});
+
+// Don't close things by themselves (Jack, 24 Oct answer 9; drawn as
+// till-receipt-wait; openspec/changes/dont-close-screens): with the switch on,
+// Paid has no countdown, Print leaves it open, and Start next sale is in No
+// receipt's place.
+test('Don’t close things by themselves on: Paid waits for Start next sale, and Print leaves it open', async () => {
+  const t = await openTill({ accessibility: { statusSymbols: false, reduceMotion: false, noAutoClose: true, largerText: false, foldedSidebar: false } });
+  saleReply = { status: 201, ok: true, json: async () => ({ id: 501, createdAt: '2026-10-06T10:45:00.000Z', items: [{ id: 1, name: 'Fit & adjust brakes', qty: 1, unitPrice: 18, lineTotal: 18 }], subtotal: 18, discount: 0, groupDiscountAmount: 0, groupDiscountName: '', total: 18, paymentMethod: 'Card', cashAmount: 0, cardAmount: 18, cashTendered: null, extraPayments: [] }) };
+  let printed = 0;
+  window.print = () => { printed += 1; };
+  await addService(t);
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(has(await pay.findByText('The next sale waits until you press Start next sale.')));
+  assert.equal(has(pay.queryByText(/Next sale starts in/)), false);
+  assert.equal(has(pay.queryByRole('button', { name: 'No receipt' })), false);
+  // Five ticks of the shortened countdown, and more: still Paid.
+  await new Promise((r) => setTimeout(r, 200));
+  assert.ok(has(t.ui.queryByRole('dialog')), 'Paid closed by itself');
+  t.fireEvent.click(pay.getByRole('button', { name: 'Print' }));
+  assert.equal(printed, 1);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(has(t.ui.queryByRole('dialog')), 'Print closed Paid');
+  assert.equal(has(t.sale.queryByText('Nothing in the sale yet')), false, 'Print moved on to the next sale');
+  t.fireEvent.click(pay.getByRole('button', { name: 'Start next sale' }));
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
 });

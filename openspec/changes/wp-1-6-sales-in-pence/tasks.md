@@ -9,22 +9,22 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
 
 ## 1. Step A: orders in pence, and the totals check (Mark, server)
 
-- [ ] 1.1 Write the totals check tests first, and watch each fail because `scripts/ci/check-money-totals.mjs` doesn't exist. Use fixtures for:
+- [x] 1.1 Write the totals check tests first, and watch each fail because `scripts/ci/check-money-totals.mjs` doesn't exist. Use fixtures for:
   - each mismatch kind (conversion, order lines, sale lines, payments, days);
   - the two known kinds (group-discount rounding, the 1p tolerance);
   - a clean database.
-- [ ] 1.2 Write `scripts/ci/check-money-totals.mjs` (`design.md` Decision 7). Verify the 1.1 tests pass, and that a fresh test database reports no mismatches, with counts
-- [ ] 1.3 Write the migration test first, on a scratch database with pounds orders. Watch it fail, then write the migration (next free number) and verify the totals check is clean after it. The test checks that:
+- [x] 1.2 Write `scripts/ci/check-money-totals.mjs` (`design.md` Decision 7). Verify the 1.1 tests pass, and that a fresh test database reports no mismatches, with counts
+- [x] 1.3 Write the migration test first, on a scratch database with pounds orders. Watch it fail, then write the migration (next free number) and verify the totals check is clean after it. The test checks that:
   - the new columns exist, as `INTEGER NOT NULL DEFAULT 0` (`vat_rate_bp` nullable);
   - amounts are backfilled with `ROUND(x * 100)`;
   - `paid_pence` equals the converted sale's total for converted orders;
   - `vat_rate_bp` comes from the product for product lines, and is empty for labour lines.
-- [ ] 1.4 Tests first for the sale-documents routes, `loadDocumentLine` and convert writing pence and pounds together (convert also setting `paid_pence` to the sale's total), and returning `…Pence` fields beside the pound fields, with statuses unchanged. Watch them fail, then build. Verify `saleDocuments` and `saleDocumentsConvertApi` pass unchanged apart from the new fields
+- [x] 1.4 Tests first for the sale-documents routes, `loadDocumentLine` and convert writing pence and pounds together (convert also setting `paid_pence` to the sale's total), and returning `…Pence` fields beside the pound fields, with statuses unchanged. Watch them fail, then build. Verify `saleDocuments` and `saleDocumentsConvertApi` pass unchanged apart from the new fields
 - [ ] 1.5 Verify that `npm test`, `npm run test:browser` and the totals check pass, then get a fresh review against `specs/sales/spec.md` and the money contract
 
 ## 2. Step A′: workshop amounts in pence (Jack, workshop, after group 1 merges)
 
-- [ ] 2.1 Jack's part of #134: move `workshop_services.price`, `workshop_quote_lines.unit_amount` and `.quantity`, and `workshop_job_services.booked_price` to pence under the money contract, and have quote approval (`answerAndAddToOrder`) write pence. Extend the totals check to them. Tests first
+- [ ] 2.1 Jack's part of #134: move `workshop_services.price`, `workshop_quote_lines.unit_amount` and `.quantity`, and `workshop_job_services.booked_price` to pence under the money contract, and have quote approval (`answerAndAddToOrder`) write pence (done early in group 1, 22 Oct: `addApprovedLinesToOrder` writes pence and pounds together, so no order row is written without its pence between steps A and A′; a fresh review found the gap). Extend the totals check to them. Tests first
 - [ ] 2.2 Replace the three JavaScript money sums (the quote approval total, `quote-panel.tsx`'s "Proposed total", `quote-card.tsx`'s customer total) with totals worked out on the server. Tests first
 - [ ] 2.3 Update `openspec/specs/workshop-jobs/spec.md` where it describes amounts. Verify that `npm test`, `npm run test:browser` and the totals check pass, then get a fresh review. Mark approves the server changes
 

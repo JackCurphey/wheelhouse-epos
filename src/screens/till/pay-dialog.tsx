@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession, type SessionEmployee } from '@/lib/auth/use-session.ts';
+import { useYourSettings } from '@/lib/your-settings.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
@@ -51,6 +52,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
   // The shop's address, phone and VAT number for the receipt (Shop details, 18 Oct).
   const shopDetails = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails & { name: string }>('/api/shop-details') });
+  // The signed-in person's Don't close things by themselves (Your settings).
+  const wait = Boolean(useYourSettings().data?.accessibility?.noAutoClose);
   const [serving, setServing] = useState<SessionEmployee | null>(me && me.isCashier ? me : null);
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
@@ -170,8 +173,9 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     // A reply that warns the job wasn't signed off names nobody (piece 3).
     const warned = Boolean((paidSale as { jobWarning?: string } | null)?.jobWarning);
     const receiptJob = job?.receipt && warned ? { ...job.receipt, checkedBy: null } : job?.receipt;
-    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); onNextSale(); } : null;
-    body = <PaidStep total={total} change={step.change} note={step.note} onPrint={onPrint} onNextSale={onNextSale} />;
+    // With Don't close things by themselves on, Print leaves Paid open (till-receipt-wait).
+    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); if (!wait) onNextSale(); } : null;
+    body = <PaidStep total={total} change={step.change} note={step.note} wait={wait} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 
   return (
@@ -272,10 +276,12 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
   );
 }
 
-function PaidStep({ total, change, note, onPrint, onNextSale }: { total: number; change: number; note: string | null; onPrint: (() => void) | null; onNextSale: () => void }) {
+// Don't close things by themselves (Jack, 24 Oct answer 9; drawn as
+// till-receipt-wait): no countdown, and Start next sale in No receipt's place.
+function PaidStep({ total, change, note, wait, onPrint, onNextSale }: { total: number; change: number; note: string | null; wait: boolean; onPrint: (() => void) | null; onNextSale: () => void }) {
   const [left, setLeft] = useState(5);
   // With a note to read, Paid waits for No receipt (as the job warning, 16 Oct).
-  const counting = !note;
+  const counting = !note && !wait;
   // Kept in a ref so a new callback from the page doesn't restart the count.
   const next = useRef(onNextSale);
   useEffect(() => { next.current = onNextSale; });
@@ -295,8 +301,9 @@ function PaidStep({ total, change, note, onPrint, onNextSale }: { total: number;
       </div>
       <div role="group" aria-label="Receipt" className="grid grid-cols-2 gap-2.5">
         <Button className="min-h-[60px]" disabled={!onPrint} onClick={() => onPrint?.()}>Print</Button>
-        <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>No receipt</Button>
+        <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>{wait ? 'Start next sale' : 'No receipt'}</Button>
       </div>
+      {wait ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">The next sale waits until you press Start next sale.</p> : null}
       {counting ? <p role="timer" className="m-0 text-center text-sm text-[var(--wh-muted)]">{`Next sale starts in ${left} second${left === 1 ? '' : 's'}`}</p> : null}
     </>
   );
