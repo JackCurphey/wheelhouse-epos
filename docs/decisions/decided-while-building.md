@@ -1978,3 +1978,13 @@ No screen: server only.
 7. **A hold let go meanwhile** (an hour on, or a refused booking) is asked
    for again, saying "The deposit needs paying again — please press Pay."
    (review).
+
+### 24 Oct 2026: the deposit on the booking page (`openspec/changes/deposit-booking-page`, `bookingLines`, `bk-request-deposit`)
+
+1. **"Deposit paid" and "Free to cancel until" sit after When, before Your
+   repair**, the drawing's order; the built page has no Extra work row there.
+2. **The request's sentence joins the built page's own**: "Please wait for
+   the shop to confirm … Check this page to see when it does. If we can't
+   fit you in, your deposit comes back in full."
+3. **Shown while the booking stands**; a cancelled or declined booking's
+   deposit words come with refunds (part 3).
