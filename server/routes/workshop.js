@@ -1185,6 +1185,11 @@ export function register(route) {
     if (reason.length > 200) return badRequest(res, 'The reason can be up to 200 characters');
     const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(id);
     if (!job) return notFound(res, 'Job not found');
+    // Once the job is paid at the till its deposit is part of the sale (Jack,
+    // 24 Oct, docs/decisions/2026-10-24-deposit-after-paid.md).
+    if (await db.prepare("SELECT 1 FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted'").get(id)) {
+      return sendJson(res, 409, { error: 'This deposit paid part of the bill at the till, so it can’t be refunded from the job.', code: 'paid_at_till' });
+    }
     const pay = await db.prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ? ORDER BY id DESC LIMIT 1').get(id);
     if (!pay || !['held', 'taken'].includes(pay.status) || pay.refund_due_reason) {
       return sendJson(res, 409, { error: 'There’s no deposit to refund on this job.', code: 'not_refundable' });
