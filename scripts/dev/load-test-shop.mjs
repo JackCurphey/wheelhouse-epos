@@ -4,18 +4,23 @@
 //
 //   node scripts/dev/load-test-shop.mjs
 //
+// On the hosted copy it runs inside the app (runbook, "Loading the test shop"):
+//
+//   docker compose exec app node scripts/dev/load-test-shop.mjs
+//
 // Every value comes from the drawings (docs/design/user-journeys/generator/),
 // listed with its source in the change's design.md; where they give none the
 // shop has a bracketed placeholder or nothing. The jobs, the week, the pending
-// booking, the change request and the services are read from diary.mjs itself,
-// so they can't drift from what is drawn. No login: Jack's is given to him
-// privately (spec, "Jack can sign in").
+// booking, the change request and the services are read from diary.mjs, through
+// test-shop-drawings.json (the image doesn't carry the drawings; a test fails
+// when the file no longer matches them), so they can't drift from what is
+// drawn. No login: Jack's is given to him privately (spec, "Jack can sign in").
 //
 // It refuses, changing nothing, when the test shop is already loaded or when
 // the database has any other shop. It writes through the server's own
 // database helpers inside one transaction, with the shop bound, so row-level
 // security applies as it does to the server.
-import { realpathSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import '../../server/load-env.js';
 
@@ -23,8 +28,8 @@ const { pool, prepare, dbExec, runWithShop } = await import('../../server/db.js'
 const { createWorkshopJob, syncJobHold } = await import('../../server/workshop/jobs.js');
 const { nowIso } = await import('../../server/lib/http.js');
 const { shopToday } = await import('../../server/clock.js');
-const { TODAY, JOBS, UNSCHEDULED, PENDING_DIARY, REQUEST_OUTLINE, SERVICE_OPTIONS, SERVICE_GROUPS, customerBikeOf } =
-  await import('../../docs/design/user-journeys/generator/diary.mjs');
+const { TODAY, JOBS, UNSCHEDULED, PENDING_DIARY, REQUEST_OUTLINE, SERVICE_OPTIONS, SERVICE_GROUPS } =
+  JSON.parse(readFileSync(new URL('./test-shop-drawings.json', import.meta.url), 'utf8'));
 
 const SHOP = { slug: 'north-street-cycles', name: 'North Street Cycles' }; // app-map.mjs:17
 const SITE = { name: 'Bolton', code: 'B' }; // book.mjs:224, sites.mjs:17
@@ -140,7 +145,7 @@ async function loadShop(shopId) {
   // The week's jobs, each with its drawn WH number and customer: the drawings'
   // own customerBikeOf(), which also gives WH-1038 and WH-1040 theirs.
   for (const j of JOBS) {
-    const customer = customers[customerBikeOf(j)[0]] ?? { customerId: null, bikeId: null };
+    const customer = customers[j.customerBike[0]] ?? { customerId: null, bikeId: null };
     const jobId = await createWorkshopJob({
       title: customer.customerId ? j.svc : j.title,
       customerId: customer.customerId, bikeId: customer.bikeId, mechanicId: staff[MECHANIC[j.mech]],

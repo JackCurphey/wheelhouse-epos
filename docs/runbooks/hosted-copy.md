@@ -140,6 +140,26 @@ The update is down for a moment while the new version starts, as by hand.
   (API) once setup is done; to run the script again later, make a new one and
   run `doctl auth init` again.
 
+## Loading the test shop
+
+The drawings' own test shop, North Street Cycles, with its staff, customers
+and the drawn week of jobs, is loaded once, by hand. It only loads onto a
+copy with no shops at all, so anything already made on the copy has to be
+cleared first. That is its own decision, made at the time; this doesn't
+clear anything.
+
+On the server (see "Getting onto the server" below):
+
+```
+cd /opt/wheelhouse
+docker compose exec app node scripts/dev/load-test-shop.mjs
+```
+
+It runs inside the app that's running, so it always matches it. It ends with
+"Loaded North Street Cycles: 38 workshop jobs from the drawings' week." If it
+says "Refused" instead, nothing was changed: it says whether the shop is
+already there, or which other shops are in the way.
+
 ## Updating it, checking it, and undoing a bad update
 
 This part is the way back (design Decision 8). Mark normally does it, but
