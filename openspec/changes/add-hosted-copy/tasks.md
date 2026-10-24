@@ -68,6 +68,7 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
   Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. and #428's pull request deployed nothing (its run skipped, no steps ran, the copy stayed on `f2b70dc`)
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
+- [x] 3.6a The loader can run on the hosted copy (fresh review, 24 Oct: the image doesn't carry the drawings it read). Its data comes from `scripts/dev/test-shop-drawings.json`, a snapshot of the drawings that `tests/test-shop-snapshot.test.js` keeps exact. The image carries the loader and the snapshot, and the runbook's "Loading the test shop" says how to run it. The tests were watched failing first. Seen on 24 Oct: built the real image locally and ran the loader inside it against an empty scratch database. It loaded the shop with its 38 jobs, and a second run was refused, changing nothing
 - [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
 ## 4. The way back (Mark; after group 3)
@@ -77,7 +78,7 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
 
 ## 5. The restore rehearsal (PL-3: Jack's hands, Mark's eyes)
 
-- [ ] 5.1 Mark writes the restore steps for Jack in plain English, in `docs/runbooks/hosted-copy.md`. Jack reads them and says they're clear
+- [x] 5.1 Mark writes the restore steps for Jack in plain English, in `docs/runbooks/hosted-copy.md`. Jack reads them and says they're clear. Written 24 Oct (Jack took WP-0.5 over): D step 2 now has the real `doctl` restore command, and the new section E is the rehearsal, step by step. Point-in-time restore over the last 7 days was checked against DigitalOcean's documentation and the cluster's daily backups (read-only, with Jack's yes). Jack read sections D and E on 24 Oct: "I've read runbook sections D and E: the restore steps are clear"
 - [ ] 5.2 Jack, with Mark watching, restores the database to a chosen moment into a new cluster, points a fresh copy at it, and opens a job. Record it in `docs/runbooks/<date>-restore-drill.md` with each step and its time. This task stays open ("blocked") until it is actually done
 - [ ] 5.3 Fill in the spec's `[n]` values from what was measured and agreed, then get a fresh review of the whole change against the spec
 
