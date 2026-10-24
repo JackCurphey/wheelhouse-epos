@@ -24,6 +24,7 @@ let calls;
 let saleReply;
 let a11y;
 let emailReply;
+let customerReply;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -41,6 +42,7 @@ function stubServer(employee) {
     const u = new URL(url, 'http://localhost');
     if (method === 'POST' && u.pathname === '/api/sales') return saleReply ?? reply(201, { id: 501 });
     if (method === 'POST' && u.pathname === '/api/sales/501/email-receipt') return emailReply ?? reply(200, { id: 9, to: JSON.parse(init.body).email });
+    if (method === 'POST' && u.pathname === '/api/customers') return customerReply ?? reply(201, { id: 77, ...JSON.parse(init.body) });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
     if (u.pathname === '/api/your-settings' && a11y) return reply(200, { accessibility: a11y });
     if (u.pathname === '/api/employees') return reply(200, CASHIERS);
@@ -53,6 +55,7 @@ function stubServer(employee) {
 async function openTill({ employee = JO, accessibility = null } = {}) {
   saleReply = null;
   emailReply = null;
+  customerReply = null;
   a11y = accessibility;
   uninstall = installDom('http://localhost/workshop/till');
   window.WH_TILL_TICK_MS = 20;
@@ -484,5 +487,76 @@ test('while it sends, Cancel is off, so a late reply can’t surprise anyone (re
   t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
   await t.waitFor(() => assert.equal(box.getByRole('button', { name: 'Cancel' }).disabled, true));
   assert.ok(has(box.queryByRole('button', { name: 'Sending…' })));
+});
+
+// Save to a customer record (decision 3, 2 Oct leftover screens: "Nobody
+// joins the customer list without agreeing"; drawn as cp-receipt-address and
+// cp-receipt-address-save; openspec/changes/till-save-customer).
+const customerPosts = () => calls.filter((c) => c.method === 'POST' && c.url === '/api/customers').map((c) => c.body);
+async function sendTicked(t) {
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  const tick = box.getByRole('checkbox', { name: /Save to a customer record/ });
+  assert.equal(tick.checked, false);
+  assert.ok(has(box.queryByText('Leave this unticked and we’ll use the address for this receipt only.')));
+  t.fireEvent.click(tick);
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  const add = t.within(await t.ui.findByRole('dialog', { name: 'Add a customer' }));
+  return { pay, add };
+}
+
+test('ticked: once sent, Add a customer opens with the address filled in, as drawn', async () => {
+  const t = await openTill();
+  const { pay, add } = await sendTicked(t);
+  assert.ok(has(add.queryByText('Receipt sent to maya@example.test')));
+  assert.equal(add.getByLabelText('Name').getAttribute('placeholder'), 'First and last name');
+  assert.equal(add.getByLabelText('Email').value, 'maya@example.test');
+  assert.ok(has(add.queryByLabelText('Phone (optional)')));
+  assert.equal(add.getByRole('checkbox', { name: 'Happy to hear about offers' }).checked, false);
+  assert.ok(has(add.queryByText('Only if they say yes. Off to start.')));
+  assert.ok(has(add.queryByText('“Not now” keeps the receipt sent and adds no one.')));
+  // Still paused: Paid hasn't moved on.
+  await new Promise((r) => setTimeout(r, 200));
+  assert.ok(has(pay.queryByText('Next sale waits until the receipt is sent')));
+});
+
+test('Add the customer saves what was typed, offers only if ticked, then the next sale', async () => {
+  const t = await openTill();
+  const { add } = await sendTicked(t);
+  t.fireEvent.change(add.getByLabelText('Name'), { target: { value: 'Maya Patel' } });
+  t.fireEvent.change(add.getByLabelText('Phone (optional)'), { target: { value: '07700 900142' } });
+  t.fireEvent.click(add.getByRole('button', { name: 'Add the customer' }));
+  await t.waitFor(() => assert.deepEqual(customerPosts(), [{ name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', marketingPermission: false }]));
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
+});
+
+test('Not now keeps the receipt sent and adds no one', async () => {
+  const t = await openTill();
+  const { add } = await sendTicked(t);
+  t.fireEvent.click(add.getByRole('button', { name: 'Not now' }));
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
+  assert.deepEqual(customerPosts(), []);
+  assert.equal(emails().length, 1);
+});
+
+test('unticked, nobody is added and no Add a customer opens', async () => {
+  const t = await openTill();
+  const pay = await paidByCard(t);
+  const box = await openEmail(t, pay);
+  t.fireEvent.change(box.getByLabelText('Email address'), { target: { value: 'maya@example.test' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Send receipt' }));
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Nothing in the sale yet'))));
+  assert.equal(has(t.ui.queryByRole('dialog', { name: 'Add a customer' })), false);
+  assert.deepEqual(customerPosts(), []);
+});
+
+test('a refused customer says why and stays to be corrected', async () => {
+  const t = await openTill();
+  const { add } = await sendTicked(t);
+  customerReply = { status: 400, ok: false, json: async () => ({ error: 'Customer name is required' }) };
+  t.fireEvent.click(add.getByRole('button', { name: 'Add the customer' }));
+  assert.ok(has(await add.findByText('Customer name is required')));
+  assert.ok(has(t.ui.queryByRole('dialog', { name: 'Add a customer' })));
 });
 

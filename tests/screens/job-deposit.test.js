@@ -161,3 +161,12 @@ test('no deposit, and a day still to come: no strip', async () => {
   const { dlg } = await openJob({ jobDate: '2099-01-05' });
   assert.ok(dlg.queryByRole('group', { name: 'Deposit' }) === null);
 });
+
+// Once the job is paid at the till its deposit is part of the sale (Jack,
+// 24 Oct, docs/decisions/2026-10-24-deposit-after-paid.md; till-online-deposit).
+test('paid at the till: the deposit shows, with no Refund the deposit', async () => {
+  const { dlg } = await openJob({ deposit: PAID, orderStatus: 'converted' });
+  assert.ok(dlg.queryAllByText(/Deposit paid/).length > 0);
+  assert.ok(dlg.queryByRole('button', { name: 'Refund the deposit' }) === null);
+});
+

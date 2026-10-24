@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api/client.ts';
 import { useServices } from './services-query.ts';
+import { useOptionalDraft } from './draft.tsx';
 
 /**
  * The frame around every book screen (Jack, 26 Sep: pinned button; loading,
@@ -41,6 +42,16 @@ export type BookFrameProps = {
 export function BookFrame({ step, title, eyebrow, back, action, actionNote, children }: BookFrameProps) {
   const { shopSlug = '' } = useParams();
   const services = useServices(shopSlug);
+  const booking = useOptionalDraft();
+  const resumed = booking?.resumed ?? false;
+  const markStep = booking?.markStep;
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // The booking's own steps record where the customer is, for coming back
+  // later (booking-draft-resume).
+  React.useEffect(() => {
+    if (step && markStep) markStep(pathname.replace(`/book/${shopSlug}`, '').replace(/^\//, ''));
+  }, [step, pathname, shopSlug, markStep]);
 
   const heading = React.useRef<HTMLHeadingElement>(null);
   const ready = services.isSuccess;
@@ -102,6 +113,14 @@ export function BookFrame({ step, title, eyebrow, back, action, actionNote, chil
         )}
         {ready && (
           <>
+            {/* Coming back to an unfinished booking (book a repair decision 9; bk-resume). */}
+            {resumed && (
+              <div role="status" className="mb-3 flex flex-wrap items-center gap-3 rounded-[10px] bg-[var(--wh-warn-bg)] px-4 py-3.5 text-size-15 text-[var(--wh-warn-ink)]">
+                <span className="grow"><strong>You didn’t finish booking.</strong> Carry on where you left off — everything you typed is still here.</span>
+                <Button onClick={() => booking?.dismissResume()}>Carry on</Button>
+                <button type="button" onClick={() => { booking?.clear(); navigate(`/book/${shopSlug}`); }} className="min-h-11 font-semibold text-[var(--wh-warn-ink)] underline">Start again</button>
+              </div>
+            )}
             {back && (
               <Link to={back} className="mb-1 inline-flex min-h-11 items-center text-sm text-[var(--accent-dark)]">
                 <span aria-hidden="true">←</span> Back
