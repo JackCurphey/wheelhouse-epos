@@ -10,6 +10,7 @@ import { serializeBike } from '../lib/serializers.js';
 import { SALE_SELECT, serializeSale } from '../lib/sales.js';
 import { serializeWorkshopJob } from '../workshop/jobs.js';
 import { TEMPLATES } from '../messaging/templates.js';
+import { shopToday } from '../clock.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -257,10 +258,15 @@ export function register(route) {
     if (!Number.isInteger(id) || id < 1 || id > 2_147_483_647) return notFound(res, 'Customer not found');
     const customer = await db.prepare('SELECT id FROM customers WHERE id = ?').get(id);
     if (!customer) return notFound(res, 'Customer not found');
+    // A job's day and time are the shop's, so its moment is read in the shop's time zone (review).
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    const today = shopToday(zone);
     const jobs = await db.prepare(
-      `SELECT w.id, w.reference, w.title, w.job_date, w.start_time, w.booking_state, w.custody_state, w.work_state, w.created_at, e.name AS mechanic_name
+      `SELECT w.id, w.reference, w.title, w.job_date, w.start_time, w.booking_state, w.custody_state, w.work_state, w.created_at, e.name AS mechanic_name,
+              CASE WHEN w.job_date IS NULL THEN w.created_at
+                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
          FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.customer_id = ?`
-    ).all(id);
+    ).all(zone, id);
     const sales = await db.prepare(
       `SELECT s.id, s.created_at, s.total,
               (SELECT string_agg(CASE WHEN i.qty > 1 THEN i.name || ' × ' || i.qty ELSE i.name END, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = s.id) AS what
@@ -275,8 +281,11 @@ export function register(route) {
       ...jobs.map((j) => ({
         kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
         bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
-        open: !['cancelled', 'declined', 'expired'].includes(j.booking_state) && j.custody_state !== 'collected',
-        at: j.job_date ? `${j.job_date}T${j.start_time || '00:00'}:00.000Z` : iso(j.created_at),
+        // Open while the booking stands and the bike isn't collected; a bike never
+        // booked in whose day has gone isn't (a no-show, review).
+        open: !['cancelled', 'declined', 'expired'].includes(j.booking_state) && j.custody_state !== 'collected'
+          && !(j.custody_state === 'expected' && j.job_date && j.job_date < today),
+        at: iso(j.at),
       })),
       ...sales.map((x) => ({ kind: 'sale', id: x.id, total: Number(x.total), what: x.what ?? '', at: iso(x.created_at) })),
       ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),

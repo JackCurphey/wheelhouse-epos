@@ -142,7 +142,7 @@ test('Edit: nothing changes until Save changes; Cancel changes nothing', async (
   fireEvent.click(dialog.getByRole('button', { name: 'Save changes' }));
   await waitFor(() => assert.equal(puts().length, 1));
   assert.equal(puts()[0].postcode, 'BL9 9ZZ');
-  assert.deepEqual(puts()[0].groupIds, [3], 'the group kept');
+  assert.ok(!('groupIds' in puts()[0]), 'the group isn’t touched, so the server keeps it');
   assert.ok((await ui.findByText('BL9 9ZZ')) !== null, 'the page shows it');
 });
 
@@ -160,4 +160,27 @@ test('Edit keeps Add’s rules: a name, and a phone or an email', async () => {
 test('a customer who isn’t there says so', async () => {
   const { ui } = await open({ who: { ...MAYA, id: 404, name: 'Nobody' }, expect: 'There’s no such customer.' });
   assert.ok(ui.queryByRole('heading', { level: 2, name: 'Nobody' }) === null);
+});
+
+test('a job still open is in Open now even when eight newer things come before it (review)', async () => {
+  const newer = Array.from({ length: 9 }, (_, i) => ({ ...TEXT, id: 200 + i, at: `2026-10-${String(10 + i).padStart(2, '0')}T09:00:00.000Z` }));
+  const { ui, within } = await open({ items: [...newer, { ...JOB, at: '2026-09-01T09:00:00.000Z' }] });
+  const hist = within(await ui.findByRole('region', { name: 'History' }));
+  const openNow = within(await hist.findByRole('list', { name: 'Open now' }));
+  assert.ok(openNow.queryByRole('link', { name: /WH-1042/ }) !== null);
+});
+
+test('saving Edit keeps every group the customer is in (review)', async () => {
+  const { ui, fireEvent, within, waitFor } = await open({ who: { ...MAYA, groups: [{ id: 3, name: 'Club members', discountPercent: 10 }, { id: 4, name: 'Staff', discountPercent: 20 }] } });
+  fireEvent.click(ui.getByRole('button', { name: 'Edit' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Edit Maya Patel’s details' }));
+  fireEvent.change(dialog.getByLabelText('Note'), { target: { value: 'Rides to work' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => assert.equal(puts().length, 1));
+  assert.ok(!('groupIds' in puts()[0]) || JSON.stringify(puts()[0].groupIds) === '[3,4]', JSON.stringify(puts()[0]));
+});
+
+test('an address that isn’t a customer’s number says there’s no such customer (review)', async () => {
+  const { ui } = await open({ who: { ...MAYA, id: 'abc', name: 'Nobody' }, expect: 'There’s no such customer.' });
+  assert.ok(ui.queryByText('There’s no such customer.') !== null);
 });

@@ -72,3 +72,25 @@ test('someone new has nothing; an unknown customer, or another shop’s, isn’t
   assert.equal((await history(999999999)).status, 404);
   assert.equal((await history(maya.id, other)).status, 404);
 });
+
+test('a job’s time is the shop’s, so it sorts with sales by the real hour (review)', async () => {
+  const lena = (await staff('/api/customers', { method: 'POST', body: { name: 'Lena Fox', phone: '07700 900811' } })).body;
+  // 10:00 on 1 Sep in the shop is 09:00 in UTC (summer time); a sale at 09:30 UTC is after it.
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Gear tune', jobDate: '2026-09-01', startTime: '10:00', endTime: '11:00', customerId: lena.id } })).body;
+  await runWithShop(owner.shop.id, () => prepare(
+    "INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, template_key, to_address, sent_at) VALUES (?, 'Hi', 'delivered', 'delivered', 'sms', 'bike_ready', '07700 900811', '2026-09-01T09:30:00Z')"
+  ).run(lena.id));
+  const items = (await history(lena.id)).body.items;
+  assert.deepEqual(items.map((i) => i.kind), ['message', 'job'], 'the 09:30 UTC message is after the 10:00 BST job');
+  assert.equal(items.find((i) => i.kind === 'job').at, '2026-09-01T09:00:00.000Z');
+  assert.equal(items.find((i) => i.kind === 'job').id, job.id);
+});
+
+test('a job never booked in, whose day has gone, isn’t open (review)', async () => {
+  const sam = (await staff('/api/customers', { method: 'POST', body: { name: 'Sam Reed', phone: '07700 900500' } })).body;
+  const gone = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Safety check', jobDate: '2026-08-20', customerId: sam.id } })).body;
+  const coming = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Safety check', jobDate: '2026-09-20', customerId: sam.id } })).body;
+  const items = (await history(sam.id)).body.items;
+  assert.equal(items.find((i) => i.id === gone.id).open, false, 'a no-show from August');
+  assert.equal(items.find((i) => i.id === coming.id).open, true, 'still to come');
+});

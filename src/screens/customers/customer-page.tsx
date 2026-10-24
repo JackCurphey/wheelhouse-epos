@@ -102,9 +102,10 @@ function History({ id }: { id: number }) {
   const [filter, setFilter] = useState<Filter>('Everything');
   const [all, setAll] = useState(false);
   const items = (history.data?.items ?? []).filter((i) => !KIND[filter] || i.kind === KIND[filter]);
-  const shown = all ? items : items.slice(0, SHOWN);
-  const open = shown.filter((i) => i.kind === 'job' && i.open);
-  const earlier = shown.filter((i) => !(i.kind === 'job' && i.open));
+  // What's open now is always shown, however much came since (review); the rest eight at a time.
+  const open = items.filter((i) => i.kind === 'job' && i.open);
+  const rest = items.filter((i) => !(i.kind === 'job' && i.open));
+  const earlier = all ? rest : rest.slice(0, Math.max(0, SHOWN - open.length));
   const head = (t: string, listId: string) => <span id={listId} className="pt-2.5 pb-1 text-[13px] font-bold text-[var(--wh-muted)]">{t}</span>;
   return (
     <section aria-labelledby="h-history" className="flex min-w-0 grow flex-col gap-1.5 self-start rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5 max-md:self-stretch">
@@ -131,7 +132,7 @@ function History({ id }: { id: number }) {
           <div className="flex flex-col">
             {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} />)}</ul></> : null}
             {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} />)}</ul></> : null}
-            {!all && items.length > SHOWN ? (
+            {!all && open.length + earlier.length < items.length ? (
               <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${items.length})`}</button>
             ) : null}
           </div>
@@ -148,6 +149,8 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
     name: customer.name, phone: customer.phone ?? '', email: customer.email ?? '', address: customer.address ?? '', postcode: customer.postcode ?? '',
     notes: customer.notes ?? '', group: customer.groups[0] ? String(customer.groups[0].id) : 'none', offers: customer.marketingPermission,
   });
+  // A customer in more than one group (the old app allows it) keeps them all unless the group is changed here (review).
+  const [groupTouched, setGroupTouched] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -160,10 +163,12 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
     try {
       const saved = await apiMutate<Customer>(`/api/customers/${customer.id}`, {
         name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(), address: form.address.trim(), postcode: form.postcode.trim(),
-        notes: form.notes.trim(), marketingPermission: form.offers, groupIds: form.group === 'none' ? [] : [Number(form.group)],
+        notes: form.notes.trim(), marketingPermission: form.offers,
+        ...(groupTouched ? { groupIds: form.group === 'none' ? [] : [Number(form.group)] } : {}),
       }, { method: 'PUT' });
       queryClient.setQueryData(['customer', customer.id], saved);
       void queryClient.invalidateQueries({ queryKey: ['recent-customers'] });
+      void queryClient.invalidateQueries({ queryKey: ['search'] });
       onClose();
     } catch (err) {
       setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
@@ -192,7 +197,7 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
           <Field id="edit-postcode" label="Postcode" value={form.postcode} onChange={set('postcode')} />
         </div>
         {groups.data?.length ? (
-          <PillGroup legend="Group" value={form.group} onChange={set('group')}
+          <PillGroup legend="Group" value={form.group} onChange={(v) => { setGroupTouched(true); set('group')(v); }}
             options={[{ value: 'none', label: 'None' }, ...groups.data.map((g) => ({ value: String(g.id), label: g.name }))]} />
         ) : null}
         <Field id="edit-note" label="Note" value={form.notes} onChange={set('notes')} />
@@ -211,14 +216,16 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
 }
 
 export function CustomerPage() {
-  const id = Number(useParams().id);
+  // A customer's number from the address; anything else is no such customer.
+  const id = Number(useParams().id ?? '');
   const isPhone = useMedia('(max-width: 767px)');
-  const customer = useQuery({ queryKey: ['customer', id], queryFn: () => apiGet<Customer>(`/api/customers/${id}`), retry: false });
-  const bikes = useQuery({ queryKey: ['customer-bikes', id], queryFn: () => apiGet<Bike[]>(`/api/customers/${id}/bikes`) });
+  const known = Number.isInteger(id);
+  const customer = useQuery({ queryKey: ['customer', id], queryFn: () => apiGet<Customer>(`/api/customers/${id}`), retry: false, enabled: known });
+  const bikes = useQuery({ queryKey: ['customer-bikes', id], queryFn: () => apiGet<Bike[]>(`/api/customers/${id}/bikes`), enabled: known });
   const [editing, setEditing] = useState(false);
   const back = <Link to={ROUTES.customers} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Customers</Link>;
-  if (customer.isError) {
-    return <div className="flex flex-col gap-2.5">{back}<p role="alert" className="m-0 text-sm">{customer.error instanceof ApiError && customer.error.status === 404 ? 'There’s no such customer.' : 'Wheelhouse couldn’t load this customer. Try again in a moment.'}</p></div>;
+  if (!known || customer.isError) {
+    return <div className="flex flex-col gap-2.5">{back}<p role="alert" className="m-0 text-sm">{!known || (customer.error instanceof ApiError && customer.error.status === 404) ? 'There’s no such customer.' : 'Wheelhouse couldn’t load this customer. Try again in a moment.'}</p></div>;
   }
   const c = customer.data;
   if (!c) return <div className="flex flex-col gap-2.5">{back}<p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></div>;

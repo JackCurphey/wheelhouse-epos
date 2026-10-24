@@ -1853,3 +1853,9 @@ No screen: server only.
 7. **Left out until built**: "Owes", the account and store credit (money in
    pence), warranty (needs "bought here"), refunds and credit changes in the
    history.
+8. **A job never booked in, whose day has gone, isn't "Open now"** (a no-show;
+   review), though it still shows under Earlier with its stage.
+9. **Edit leaves a customer's groups as they are unless the group is changed**
+   there, so someone in two groups (the old app allows it) keeps both (review).
+10. **A UK number matches however it's written**: +44 7700 900142, 0044 … and
+    07700 900142 are the same (review).
