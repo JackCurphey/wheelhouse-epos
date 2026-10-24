@@ -542,3 +542,32 @@ test('when the shop confirms automatically, the button reads Confirm booking', a
   assert.ok(ui.getByRole('button', { name: 'Confirm booking' }));
   assert.ok(ui.queryByRole('button', { name: 'Request booking' }) === null);
 });
+
+// Saying yes to service reminders (reminder-consent; ac-book-remind, account
+// and reminders decisions 2 and 8): the drawn tick, unticked, after the email.
+const REMIND = 'Remind me when my bike is due its next service';
+test('the reminder tick: drawn words, unticked to start, after the email, kept in the draft', async () => {
+  const { ui, readDraft } = await open();
+  const tick = ui.getByRole('checkbox', { name: new RegExp(REMIND) });
+  assert.equal(tick.checked, false);
+  assert.ok(ui.getByText('And ask me for a review after I collect. One message each, the way you chose above. Stop any time.'));
+  const email = ui.getByRole('textbox', { name: /Email/ });
+  assert.ok(email.compareDocumentPosition(tick) & Node.DOCUMENT_POSITION_FOLLOWING, 'the tick comes after the email box');
+  await click(tick);
+  assert.equal(readDraft().remindMe, true);
+  await click(tick);
+  assert.equal(readDraft().remindMe, undefined);
+});
+
+test('ticked, the booking says remindMe: true; unticked, it says nothing about reminders', async () => {
+  const ticked = await open({ draft: { ...READY, remindMe: true } });
+  await press(ticked.ui);
+  assert.ok(await ticked.ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.equal(posts(ticked.requests).at(-1).body.remindMe, true);
+  const { cleanup } = await rtl();
+  cleanup(); current.client.clear(); current.uninstall();
+  const unticked = await open({ draft: READY });
+  await press(unticked.ui);
+  assert.ok(await unticked.ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.ok(!('remindMe' in posts(unticked.requests).at(-1).body), JSON.stringify(posts(unticked.requests).at(-1).body));
+});

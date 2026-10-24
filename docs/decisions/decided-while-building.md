@@ -2205,3 +2205,14 @@ follows the job checklist, the closest pattern built.
 3. **Work agreed's total on the booking page comes from the server**: its
    lines' pence summed, none with prices hidden online, as each line's price
    is hidden.
+
+### 25 Oct 2026: saying yes to service reminders when booking (`openspec/changes/reminder-consent`, `ac-book-remind`)
+
+1. **Not ticking isn't a "stop".** A customer who said yes before and books
+   again without ticking keeps their yes; "Stop these" and the account are
+   where it goes off (decision 6). The tick always starts unticked, as drawn.
+2. **The tick's box is the screen's own 18px tick**, as the terms tick
+   beside it, not the drawing's 22px, so the two ticks on the step match.
+3. **The yes is kept with when and where** (booking or collection), so a
+   yes to being contacted can be shown later.
+
