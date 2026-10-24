@@ -71,6 +71,8 @@ export default {
   'job-quote': { 'Send quote': go('dq-job-sent') },
   'job-waiting-parts': { 'Mark ready for collection': go('job-finished') },
   'job-finished': { 'Undo': go('job-mechanic') },
+  // Don't close things by themselves on (24 Oct, answer 9; drawn for Jack's approval).
+  'job-finished-wait': { 'Send now': go('job-finished-sent'), Undo: go('job-mechanic') },
   'job-collection': { 'Hand over': go('cp-collected') },
   // Use my phone for a line's photo (walk-through 8, decision 6; drawn 23 Oct
   // for Jack's approval): the quote being built, before the pads' photo.
