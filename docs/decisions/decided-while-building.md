@@ -2107,4 +2107,9 @@ No screen: server only.
    back needs a decision.
 5. **The day's takings** count the deposit once, in the sale, under its own
    name. Nothing else counts the online payment.
+6. **A deposit card only held, never charged, is let go when the job is paid
+   in full at the till** ("Paid in full at the till"), so it can't be charged
+   on top later (review).
+7. **A refund pressed while the till takes payment waits its turn**, so a
+   deposit is never both counted and refunded (review).
 

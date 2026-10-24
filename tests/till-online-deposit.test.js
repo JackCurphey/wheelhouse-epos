@@ -114,3 +114,23 @@ test('once the job is paid, its deposit can’t be refunded from the job', async
   const pay = await inShop(() => prepare('SELECT status FROM online_payments WHERE job_id = ?').get(job.id));
   assert.equal(pay.status, 'taken');
 });
+
+test('a deposit only held when the job is paid in full is let go, so it’s never charged on top (review)', async () => {
+  const job = await jobWithDeposit({ status: 'held' });
+  const res = await convert(job, { cardAmount: 65 });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const pay = await inShop(() => prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ?').get(job.id));
+  assert.equal(pay.refund_due_reason, 'Paid in full at the till');
+});
+
+test('a refund and a till payment at the same moment: never both (review)', async () => {
+  const job = await jobWithDeposit();
+  const [paid, refund] = await Promise.all([
+    convert(job, { cardAmount: 52 }),
+    staff(`/api/workshop-jobs/${job.id}/deposit-refund`, { method: 'POST', body: { reason: 'Goodwill' } }),
+  ]);
+  const pay = await inShop(() => prepare('SELECT refund_due_reason FROM online_payments WHERE job_id = ?').get(job.id));
+  const counted = paid.status === 201 ? (await salePayments(paid.body.id)).some((p) => p.tender_type === 'Deposit paid online') : false;
+  assert.ok(!(counted && pay.refund_due_reason), `counted and refunded: sale ${paid.status}, refund ${refund.status}`);
+});
+

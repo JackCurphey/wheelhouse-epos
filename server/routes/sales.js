@@ -14,6 +14,7 @@ import {
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
 import { countedDeposit, depositShare, DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { refundOwed } from '../payments/refund.js';
 import { work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
 import { signOffMechanic, recordSignOff } from '../workshop/sign-off.js';
@@ -427,6 +428,8 @@ export function register(route) {
     }
     if (!reply) return;
     afterRelease.push(() => sendJson(res, 201, reply.payload));
+    // A held deposit let go above (review): made now the sale has committed.
+    if (reply.jobId) afterRelease.push(() => refundOwed(reply.jobId).catch((err) => console.error('letting a held deposit go failed', err)));
     if (reply.shopifyPushes.length) {
       afterRelease.push(() => firePendingShopifyPushes(shopId, reply.shopifyPushes));
     }
@@ -565,6 +568,15 @@ export function register(route) {
               paid_pence = (SELECT ROUND(s.total * 100)::int FROM sales s WHERE s.id = ?)
        WHERE id = ?`
     ).run('converted', saleId, nowIso(), saleId, id);
+    // A deposit card only held, never charged, didn't count, so the whole bill
+    // was paid here: the hold is let go, never taken on top (review). Made
+    // after the commit, as any refund owed.
+    if (doc.workshop_job_id) {
+      await db.prepare(
+        `UPDATE online_payments SET refund_due_reason = 'Paid in full at the till', updated_at = now()
+          WHERE job_id = ? AND status = 'held' AND refund_due_reason IS NULL`
+      ).run(doc.workshop_job_id);
+    }
     // An order tied to a workshop job (the "Show in workshop diary" link) is
     // the customer paying for and collecting that job - being tendered off is
     // the real-world signal the job itself is done, so it auto-completes here
@@ -625,6 +637,6 @@ export function register(route) {
     const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
     const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
     const payload = serializeSale(sale, savedItems, savedPayments);
-    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes };
+    return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes, jobId: doc.workshop_job_id };
   }
 }

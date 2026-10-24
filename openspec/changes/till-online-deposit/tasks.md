@@ -4,7 +4,7 @@
 
 - [x] 1.1 Tests first (`tests/till-online-deposit.test.js`): `/due` with a taken deposit, a refunded one, a held one and a kept one; convert records Deposit paid online for the server's amount and takes the rest; a till sending its own deposit payment is ignored; a deposit larger than the bill counts up to the bill; refund refused once paid. Watch each fail
 - [x] 1.2 Build it
-- [ ] 1.3 `/review` (money)
+- [x] 1.3 `/review` (money). It found two real problems, fixed with tests, each watched failing: a refund racing a till payment could both count and refund the deposit (the refund now locks the order, as paying does), and a held deposit could be taken on top of a bill paid in full (it's now let go)
 
 ## 2. Screens
 
