@@ -32,6 +32,9 @@ COPY public/ ./public/
 COPY public-portal/ ./public-portal/
 COPY public-demo/ ./public-demo/
 COPY public-storefront/ ./public-storefront/
+# The test shop's loader and its data, run by hand on the hosted copy
+# (docs/runbooks/hosted-copy.md, "Loading the test shop").
+COPY scripts/dev/load-test-shop.mjs scripts/dev/test-shop-drawings.json ./scripts/dev/
 
 # Built frontend assets from the builder stage. Copied after public/ so they
 # are never clobbered by a stale local build that slipped into the context.

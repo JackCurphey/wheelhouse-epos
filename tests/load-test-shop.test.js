@@ -126,6 +126,12 @@ test('loads North Street Cycles from the drawings onto an empty database', async
          JOIN workshop_jobs w ON w.id = j.workshop_job_id WHERE w.reference = 'WH-1042'`);
     assert.deepEqual({ ...service }, { name: 'Standard service', price: '65.00' });
 
+    // The booking page offers what book.mjs draws (:48 Standard service; :51
+    // Brake service, Gear adjustment, Safety check), so a customer can book
+    // the test shop online. The week's Gear service isn't drawn there.
+    const online = await q('SELECT name FROM workshop_services WHERE bookable_online = 1 AND active = 1 ORDER BY name');
+    assert.deepEqual(online.map((r) => r.name), ['Brake service', 'Gear adjustment', 'Safety check', 'Standard service']);
+
     const [change] = await q(
       "SELECT booking_state, requested_job_date, requested_start_time, requested_end_time FROM workshop_jobs WHERE reference = 'WH-1052'");
     assert.deepEqual({ ...change }, {
