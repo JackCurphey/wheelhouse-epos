@@ -235,7 +235,7 @@ test('the booking link gives the deposit and when it’s free to cancel until, i
   const res = await book({ jobDate: '2026-10-14', startTime: '15:00', serviceIds: [service], requestKey: p.requestKey, paymentId: p.paymentId });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const link = await (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/${res.body.privateLink.split('/').pop()}`)).json();
-  assert.deepEqual(link.deposit, { pence: 1300, cancelUntil: { date: '2026-10-13', time: '15:00' } });
+  assert.deepEqual(link.deposit, { pence: 1300, state: 'paid', refundable: true, cancelUntil: { date: '2026-10-13', time: '15:00' } });
   await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: false } });
   try {
     const none = await book({ jobDate: nextDay(), serviceIds: [service], requestKey: key() });

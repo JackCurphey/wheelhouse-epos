@@ -408,3 +408,60 @@ deposit SHALL show neither.
 #### Scenario: A request with a deposit
 - **WHEN** her request is waiting for the shop
 - **THEN** the page adds "If we can't fit you in, your deposit comes back in full."
+
+### Requirement: The deposit comes back when the booking is cancelled in time or the shop can't fit it in
+
+A booking's deposit SHALL be refunded automatically when the customer cancels
+before the time it is free to cancel until, and when the shop declines it,
+lets the request expire, or cancels it. Cancelled after that time, the
+deposit SHALL be kept, and the cancel SHALL be refused unless the customer
+chose to lose the deposit. A refund the provider can't make at once SHALL be
+made later, never lost.
+
+#### Scenario: Cancelled in time
+- **WHEN** Maya cancels two days before her booking, before Free to cancel until
+- **THEN** her £13.00 is refunded to her card
+
+#### Scenario: Cancelled late
+- **WHEN** Maya cancels after Free to cancel until and chose Cancel and lose the deposit
+- **THEN** the booking is cancelled and the £13.00 is kept
+
+#### Scenario: Late, without choosing to lose it
+- **WHEN** a page opened before the cut-off sends a cancel after it
+- **THEN** it is refused, saying the deposit would be kept, and nothing changes
+
+#### Scenario: The shop declines
+- **WHEN** the shop declines Maya's request
+- **THEN** her £13.00 is refunded automatically
+
+### Requirement: The customer's pages say what happens to the deposit
+
+The cancel pop-up SHALL say the deposit will be refunded before the cut-off,
+and after it that it isn't refundable, with the shop's number and the button
+"Cancel and lose the deposit". The cancelled page SHALL say the deposit comes
+back or was kept; the declined and expired pages SHALL say it comes back.
+Past the cut-off the booking page SHALL NOT show "Free to cancel until".
+
+#### Scenario: Cancelling late
+- **WHEN** Maya cancels after Sunday 4 October, 11:30
+- **THEN** the pop-up says "It's past Sunday 4 October, 11:30, so your £13.00 deposit isn't refundable. If something's gone wrong, call the shop on 01204 555 123 — they can still refund it." and its button reads Cancel and lose the deposit
+
+#### Scenario: Declined
+- **WHEN** the shop declines Maya's request
+- **THEN** her page says "Nothing is booked. Your £13.00 deposit comes back to your card within 5 to 10 working days."
+
+### Requirement: A request the shop hasn't confirmed gets its deposit back when cancelled
+
+A request waiting for the shop, or a time the shop offered that the customer
+hasn't accepted, SHALL get its deposit back when the customer cancels it,
+whenever that is; only a confirmed booking keeps it after the cut-off. A
+request the shop confirms after its cut-off SHALL be free to cancel for 1 hour
+from then, never past the booking's start.
+
+#### Scenario: A request cancelled after the cut-off
+- **WHEN** Maya's request for tomorrow, not yet confirmed, is cancelled after its cut-off
+- **THEN** her £13.00 is refunded, and the cancel pop-up said it would be
+
+#### Scenario: Confirmed after the cut-off
+- **WHEN** the shop confirms Maya's request after its cut-off has passed
+- **THEN** she can cancel free for 1 hour from then, never past the booking's start

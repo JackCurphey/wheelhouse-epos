@@ -1988,3 +1988,79 @@ No screen: server only.
    fit you in, your deposit comes back in full."
 3. **Shown while the booking stands**; a cancelled or declined booking's
    deposit words come with refunds (part 3).
+
+### 24 Oct 2026: refunding the deposit, the server (`openspec/changes/deposit-refunds`, `bk-cancel`, `bk-cancel-late`, `bk-declined`, `bk-staff-decline`)
+
+1. **The shop cancelling a booking refunds the deposit automatically**, as
+   declining and an expired request do: the customer was told it comes back
+   in full if the shop can't fit them in. The decisions only cover declining.
+2. **A late cancel needs the customer's own choice**: a cancel sent after the
+   cut-off without "Cancel and lose the deposit" is refused, so a page left
+   open from before the cut-off can't lose the deposit unawares.
+3. **A refund owed is recorded with the cancel or decline**, then made, so a
+   refund the provider can't make at once is made later, never lost; the
+   booking page counts it as on its way back.
+4. **The cut-off is judged by the server's clock**, as every other time rule.
+5. **A moved booking's "Free to cancel until" moves with it**: the same hours
+   before its new start, in the shop's time, however it was moved (review).
+6. ~~A request the shop hasn't confirmed yet, cancelled after the cut-off,
+   keeps the deposit.~~ **Overruled by Jack, 24 Oct**: a request the shop
+   hasn't confirmed always gets its deposit back
+   (`docs/decisions/2026-10-24-request-deposit-refund.md`).
+
+### 24 Oct 2026: the deposit on the customer's pages (`openspec/changes/deposit-refund-pages`, `bk-cancel`, `bk-cancel-late`, `bk-cancelled`, `bk-declined`)
+
+1. **Past the cut-off, "Free to cancel until" isn't shown** on the booking
+   page, so it never reads as still free; the cancel pop-up says it instead.
+2. **The late pop-up names the shop's number when the shop has one**, else
+   says "call the shop".
+3. **The green "will be refunded" note uses the page's "Booking confirmed"
+   colours**; there's no separate success colour.
+
+### 24 Oct 2026: the diary job's deposit, the server (`openspec/changes/deposit-diary-server`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is a mark on the job, not a new booking state**: who and
+   when; the booking otherwise stays as it was, and Undo clears the mark.
+2. **Any signed-in member of staff can refund a deposit by hand**, as other
+   job actions; the job shows who did it. The reason is needed, up to 200
+   characters, and the whole deposit goes back (the drawing has no part
+   amount).
+3. **A deposit is "kept" once taken and the booking was cancelled late or
+   marked Didn't come**; refunding it by hand afterwards makes it
+   "refunded".
+4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
+   then simply paid, as for any booking (review).
+
+### 24 Oct 2026: requests and the cut-off (`openspec/changes/deposit-request-refund`)
+
+1. **A booking confirmed at once by automatic confirming keeps its own
+   cut-off**, without Jack's 1-hour window: it isn't a request, and the
+   customer saw "Free to cancel until" when booking.
+
+### 24 Oct 2026: the diary job's deposit, the job pop-up (`openspec/changes/deposit-diary-screen`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is offered once the booked day has gone by the shop
+   computer's own date**, as the diary reads today.
+2. **The Undo bar after "Didn't come" stays until the job is closed**, as
+   answer 9 has nothing close by itself; the drawing's note said "for a few
+   minutes".
+3. **Opened again later, a job marked Didn't come offers Book in** (the bike
+   came after all, which clears the mark), not Put on hold.
+4. **"Not come in" shows on any booking whose day has gone with the bike not
+   in**, with or without a deposit; the deposit line shows only when it took one.
+5. **The Undo on the "Marked Didn't come" bar is underlined text**, as the
+   job's "Bike ready" Undo already is, rather than the drawing's lighter
+   button: the colours stay the app's own named ones.
+
+### 24 Oct 2026: Larger text (`openspec/changes/larger-text`, `ys-text`)
+
+1. **Every text size is on one scale, 14 to 17 with Larger text on**, the
+   same step for every size; the registry's controls too, so the app's copies
+   still match them.
+2. **The diary's hour column grows by the same step**, so its times aren't cut
+   off; the days are then a few pixels narrower. Blocks keep their place down
+   the day and their height.
+3. **The page's own heading grows with the text**, so the diary starts a
+   little lower on the page; nothing inside it moves.
+4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
+   shows the difference.

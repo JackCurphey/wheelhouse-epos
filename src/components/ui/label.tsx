@@ -33,5 +33,5 @@ export function Field({ className, ...props }: React.ComponentProps<'div'>) {
 
 /** Validation message under a field - `.field-error` in public/styles.css. */
 export function FieldError({ className, ...props }: React.ComponentProps<'p'>) {
-  return <p className={cn('mt-1 text-[12.5px] text-[var(--wh-danger)]', className)} {...props} />;
+  return <p className={cn('mt-1 text-size-12-5 text-[var(--wh-danger)]', className)} {...props} />;
 }

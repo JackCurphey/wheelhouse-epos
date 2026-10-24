@@ -3,6 +3,7 @@ import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, Label } from '@/components/ui/label';
 import { dayLabel } from './date-rules.ts';
+import { pounds } from './money.ts';
 import type { BookingDraft } from './draft.tsx';
 import type { ServicesResponse } from './services-query.ts';
 
@@ -17,7 +18,7 @@ export type DepositHold = { paymentId: number; depositPence: number; depositCanc
 const holdsPath = (shopSlug: string) => `/api/portal/${encodeURIComponent(shopSlug)}/deposit-holds`;
 const cardPath = (shopSlug: string, ref: string) => `/api/portal/${encodeURIComponent(shopSlug)}/pretend-payments/${encodeURIComponent(ref)}/card`;
 
-export const pounds = (pence: number) => `£${(pence / 100).toFixed(2)}`;
+export { pounds };
 export const HOLD_FAILED = 'We couldn’t get the deposit ready - please check your connection and try again';
 export const PAY_AGAIN = 'The deposit needs paying again — please press Pay.';
 
@@ -67,7 +68,7 @@ type PartProps = {
 };
 
 const alert = (strong: string, rest: string) => (
-  <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]">
+  <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
     <strong>{strong}</strong> {rest}
   </p>
 );
@@ -77,7 +78,7 @@ export function DepositPart({ hold, draft, paid, state, cardNumber, cardError, o
   const title = `Deposit · ${pounds(hold.depositPence)}`;
   return (
     <section role="group" aria-label={title} className="mb-4 flex flex-col gap-2 border-t border-[var(--wh-border)] pt-3">
-      <span className="text-[15px] font-bold">Deposit · <span className="font-[family-name:var(--wh-font-mono)]">{pounds(hold.depositPence)}</span></span>
+      <span className="text-size-15 font-bold">Deposit · <span className="font-[family-name:var(--wh-font-mono)]">{pounds(hold.depositPence)}</span></span>
       <p className="m-0 text-sm leading-normal">
         We take the deposit now, and it comes off the bill when you collect. <strong>If the shop can’t fit you in, it comes back in full</strong> within 5 to 10 working days.
       </p>
@@ -99,7 +100,7 @@ export function DepositPart({ hold, draft, paid, state, cardNumber, cardError, o
                   onChange={(e) => onCard(e.target.value)}
                 />
                 {cardError ? <FieldError id="deposit-card-error">{cardError}</FieldError> : null}
-                <p id="deposit-card-note" className="m-0 mt-1 text-[13px] text-[var(--wh-muted)]">
+                <p id="deposit-card-note" className="m-0 mt-1 text-size-13 text-[var(--wh-muted)]">
                   Pretend payments while Wheelhouse is being built: nothing is taken. 4242 4242 4242 4242 pays; 4000 0000 0000 0002 is declined.
                 </p>
               </Field>

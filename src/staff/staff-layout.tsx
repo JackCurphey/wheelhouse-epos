@@ -49,7 +49,7 @@ function RoomList({ role, onPick }: { role: Role; onPick?: () => void }) {
     <div className="flex flex-col gap-2">
       {roomsFor(role).map((r) => (
         <div key={r.room} className="flex flex-col gap-0.5">
-          <div className="px-3 py-0.5 text-[11px] font-bold tracking-[1px] uppercase opacity-70">{r.room}</div>
+          <div className="px-3 py-0.5 text-size-11 font-bold tracking-[1px] uppercase opacity-70">{r.room}</div>
           {r.items.map((i) => (
             <SideItem key={i.key} item={i} onPick={onPick} />
           ))}
@@ -99,7 +99,7 @@ function Footer({ user, roleName, onPick }: { user: SessionUser; roleName: strin
       <button
         type="button"
         onClick={signOut}
-        className="inline-flex min-h-11 shrink-0 items-center rounded-md px-1.5 text-[13px] whitespace-nowrap text-[var(--sidebar-foreground)] underline hover:bg-[var(--sidebar-accent)]"
+        className="inline-flex min-h-11 shrink-0 items-center rounded-md px-1.5 text-size-13 whitespace-nowrap text-[var(--sidebar-foreground)] underline hover:bg-[var(--sidebar-accent)]"
       >
         Sign out
       </button>
@@ -109,7 +109,7 @@ function Footer({ user, roleName, onPick }: { user: SessionUser; roleName: strin
 
 function Wordmark() {
   // No official Wheelhouse logo file exists yet, so no mark is drawn.
-  return <span className="px-1.5 py-1 text-[17px] font-bold">Wheelhouse</span>;
+  return <span className="px-1.5 py-1 text-size-17 font-bold">Wheelhouse</span>;
 }
 
 function RailItem({ item }: { item: NavItem }) {

@@ -48,6 +48,8 @@ import { bookingDeposit } from '../workshop/booking-deposit.js';
 import { payments } from '../payments/index.js';
 import { paymentsConnected } from '../payments/provider.js';
 import { settleDeposits } from '../payments/settle.js';
+import { oweRefund, refundOwed } from '../payments/refund.js';
+import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -332,6 +334,10 @@ async function bookingLinkView(jobId, shop) {
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
             w.booked_in_at, w.collected_at, w.deposit_pence,
             to_char(w.deposit_cancel_until AT TIME ZONE (SELECT time_zone FROM workshop_settings LIMIT 1), 'YYYY-MM-DD HH24:MI') AS deposit_cancel_local,
+            (w.deposit_cancel_until > ?::timestamptz OR w.booking_state IN ('pending', 'offered')) AS deposit_refundable,
+            (SELECT CASE WHEN p.status IN ('refunded', 'released') OR p.refund_due_reason IS NOT NULL THEN 'refunded'
+                         WHEN w.booking_state = 'cancelled' THEN 'kept' ELSE 'paid' END
+               FROM online_payments p WHERE p.job_id = w.id ORDER BY p.id DESC LIMIT 1) AS deposit_state,
             (SELECT max(p.part_date) FROM workshop_job_parts p WHERE p.workshop_job_id = w.id) AS last_day,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
@@ -339,7 +345,7 @@ async function bookingLinkView(jobId, shop) {
      FROM workshop_jobs w
      LEFT JOIN customer_bikes b ON b.id = w.bike_id
      WHERE w.id = ?`
-  ).get(jobId);
+  ).get(currentMoment().toISOString(), jobId);
   const requested = requestedOf(row);
   const today = await currentShopToday();
   const stage = bookingStage(row);
@@ -412,6 +418,10 @@ async function bookingLinkView(jobId, shop) {
     // shop's time (deposit-booking-page design 1).
     deposit: row.deposit_pence ? {
       pence: row.deposit_pence,
+      // Paid, refunded (or on its way back), or kept; and whether cancelling
+      // now would refund it (deposit-refunds design 5).
+      state: row.deposit_state ?? 'paid',
+      refundable: row.deposit_refundable === true,
       cancelUntil: row.deposit_cancel_local ? { date: row.deposit_cancel_local.slice(0, 10), time: row.deposit_cancel_local.slice(11) } : null,
     } : null,
     ...(await jobMoney(row.id)),
@@ -1372,6 +1382,7 @@ export function register(route) {
   route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
+    const body = await readJsonBody(req).catch(() => null);
     const out = await withJobBookingLock(found.id, [], async (job) => {
       // A double tap: the customer's own cancel already went through, so the
       // answer is the cancelled booking, unchanged (final review), and no second
@@ -1379,6 +1390,19 @@ export function register(route) {
       if (job.booking_state === 'cancelled' && job.cancelled_by === 'customer') return { already: true };
       const refused = customerActionRefusal(job, 'cancel', await currentShopToday());
       if (refused) return refused;
+      // The deposit: back if it's in time; past the cut-off it's kept, and only
+      // when the customer chose that (deposit-refunds design 3).
+      if (job.deposit_pence) {
+        // The server's clock, as every other time rule here (server/clock.js).
+        // A request the shop hasn't confirmed always gets it back (Jack, 24 Oct,
+        // docs/decisions/2026-10-24-request-deposit-refund.md).
+        const unconfirmed = job.booking_state === 'pending' || job.booking_state === 'offered';
+        const inTime = unconfirmed || (await db.prepare('SELECT deposit_cancel_until > ?::timestamptz AS ok FROM workshop_jobs WHERE id = ?').get(currentMoment().toISOString(), job.id)).ok;
+        if (!inTime && body?.losesDeposit !== true) {
+          return { status: 409, body: { error: 'It’s past the time you could cancel for free, so the deposit would be kept.', code: 'deposit_kept' } };
+        }
+        if (inTime) await oweRefund(job.id, 'Cancelled in time');
+      }
       await applyLocked(job, 'cancel');
       await db.prepare(
         `UPDATE workshop_jobs SET cancelled_by = 'customer', cancelled_at = now(), change_declined_at = NULL, ${CLEAR_REQUEST}
@@ -1389,6 +1413,7 @@ export function register(route) {
     });
     if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
     if (out && !out.already) return sendJson(res, out.status, out.body);
+    if (!out?.already) await refundOwed(found.id);
     if (!out?.already) await sendLinkMessage('booking_cancelled', found.id, shop.id, linkPath(params.shopSlug, params.code));
     sendJson(res, 200, await bookingLinkView(found.id, shop));
   });
@@ -1422,6 +1447,9 @@ export function register(route) {
       await db.prepare(
         'UPDATE workshop_jobs SET offered_from_date = NULL, offered_from_time = NULL, offer_message = NULL, offer_accepted_at = now() WHERE id = ?'
       ).run(job.id);
+      // Accepted after its cut-off: 1 hour to cancel free, as a request the
+      // shop confirms late (Jack, 24 Oct; review).
+      await graceOnConfirm(job.id);
       await syncJobHold(job.id);
       return undefined;
     });

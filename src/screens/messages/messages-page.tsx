@@ -75,17 +75,17 @@ export function MessagesPage() {
       </div>
       <div className="rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
         <nav aria-label="Conversations" className="flex flex-col gap-0.5 p-1.5">
-          {list.isError ? <p className="m-0 px-3 py-4 text-[15px]">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
+          {list.isError ? <p className="m-0 px-3 py-4 text-size-15">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
           {list.data && list.data.items.length === 0 ? (
-            <p className="m-0 px-3 py-4 text-[15px] leading-normal text-[var(--wh-muted)]">{filter === 'needs-reply' ? 'Nothing needs a reply. Every conversation is under All.' : 'No conversations yet.'}</p>
+            <p className="m-0 px-3 py-4 text-size-15 leading-normal text-[var(--wh-muted)]">{filter === 'needs-reply' ? 'Nothing needs a reply. Every conversation is under All.' : 'No conversations yet.'}</p>
           ) : null}
           {list.data?.items.map((r) => (
             <Link key={r.jobId} to={`?job=${r.jobId}`} aria-current={open === r.jobId ? 'true' : undefined}
               aria-label={`${r.needsReply ? 'Needs a reply: ' : ''}${r.customerName ?? 'No customer'}`}
               className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-[var(--wh-ink)] no-underline ${open === r.jobId ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-transparent'}`}>
-              <span className="flex items-center justify-between gap-2"><span className="text-[15px] font-bold">{r.customerName ?? 'No customer'}</span>
+              <span className="flex items-center justify-between gap-2"><span className="text-size-15 font-bold">{r.customerName ?? 'No customer'}</span>
                 <span className="text-xs whitespace-nowrap text-[var(--wh-muted)]">{sameDay(r.lastAt, new Date()) ? time(r.lastAt) : withinWeek(r.lastAt) ? part(r.lastAt, { weekday: 'short' }) : `${part(r.lastAt, { day: 'numeric' })} ${part(r.lastAt, { month: 'short' })}`}</span></span>
-              <span className="text-[13px] text-[var(--wh-muted)]">{[r.bikeLabel, r.reference].filter(Boolean).join(' · ')}</span>
+              <span className="text-size-13 text-[var(--wh-muted)]">{[r.bikeLabel, r.reference].filter(Boolean).join(' · ')}</span>
               <span className="flex items-center gap-1.5 text-sm">
                 {r.needsReply ? <><span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-[var(--wh-state-answer-ink)]" /><span className="shrink-0 font-semibold text-[var(--wh-state-answer-ink)]">Needs a reply</span><span aria-hidden="true">·</span></> : null}
                 {/* Who wrote last, as drawn: "You: …" once the shop has answered. */}
@@ -99,7 +99,7 @@ export function MessagesPage() {
   );
 
   const convPane = open ? <Conversation key={open} jobId={open} drafts={drafts} focusOnOpen={isPhone} /> : (
-    <div className="grow rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-10 text-center text-[15px] text-[var(--wh-muted)]">Choose a conversation to read it.</div>
+    <div className="grow rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-10 text-center text-size-15 text-[var(--wh-muted)]">Choose a conversation to read it.</div>
   );
 
   return (
@@ -171,7 +171,7 @@ function Conversation({ jobId, drafts, focusOnOpen }: { jobId: number; drafts: M
   if (job.isError || notes.isError) {
     return (
       <section aria-label="Conversation" className="flex min-w-0 grow flex-col items-start gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-4">
-        <p className="m-0 text-[15px]">Wheelhouse couldn’t load this conversation.</p>
+        <p className="m-0 text-size-15">Wheelhouse couldn’t load this conversation.</p>
         <Button className="min-h-11" onClick={() => { void job.refetch(); void notes.refetch(); }}>Try again</Button>
       </section>
     );
@@ -181,22 +181,22 @@ function Conversation({ jobId, drafts, focusOnOpen }: { jobId: number; drafts: M
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--wh-border)] pb-3">
         <span className="flex flex-col gap-0.5">
           <h2 ref={heading} tabIndex={-1} className="m-0 text-lg font-bold outline-none">{name}</h2>
-          <span className="text-[13px] text-[var(--wh-muted)]">
+          <span className="text-size-13 text-[var(--wh-muted)]">
             {[job.data?.bikeLabel, job.data?.reference].filter(Boolean).join(' · ')}
             {phone ? <> · <a href={`tel:${phone.replace(/\s+/g, '')}`} className="text-inherit">{phone}</a></> : null}
           </span>
         </span>
         <Link to={`${ROUTES.diary}?job=${jobId}`} className="min-h-11 content-center text-sm font-semibold text-[var(--wh-ink)] underline">Open the job</Link>
       </div>
-      {starter ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`On the job’s page · started by ${starter.fromCustomer ? first : 'the shop'}`}</p> : null}
+      {starter ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`On the job’s page · started by ${starter.fromCustomer ? first : 'the shop'}`}</p> : null}
       <ol aria-label={`Conversation with ${name}`} className="m-0 flex list-none flex-col gap-3 p-0">
         {thread.map((n) => {
           const mine = !n.fromCustomer;
           const who = n.fromCustomer ? name : n.from && me && n.from === me ? `You (${me})` : n.from ?? 'The shop';
           return (
             <li key={n.id} className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
-              <span className="text-[13px] text-[var(--wh-muted)]"><strong className="text-[var(--wh-ink)]">{who}</strong>{` · ${dayTime(n.at)}`}</span>
-              <span className={`max-w-[82%] px-3.5 py-2.5 text-[15px] leading-normal whitespace-pre-wrap [overflow-wrap:anywhere] ${mine
+              <span className="text-size-13 text-[var(--wh-muted)]"><strong className="text-[var(--wh-ink)]">{who}</strong>{` · ${dayTime(n.at)}`}</span>
+              <span className={`max-w-[82%] px-3.5 py-2.5 text-size-15 leading-normal whitespace-pre-wrap [overflow-wrap:anywhere] ${mine
                 ? 'rounded-[14px_14px_4px_14px] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)]'
                 : 'rounded-[14px_14px_14px_4px] border border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{n.text}</span>
             </li>
@@ -204,12 +204,12 @@ function Conversation({ jobId, drafts, focusOnOpen }: { jobId: number; drafts: M
         })}
       </ol>
       {/* The drawn bar after sending (statusBar): green with a tick when the text went; amber when it didn't. */}
-      <p role="status" className={`m-0 flex items-start gap-2 rounded-md text-[15px] font-semibold empty:hidden ${told ? 'px-3 py-2.5' : ''} ${told?.status === 'sent' ? 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]' : told ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : ''}`}>
+      <p role="status" className={`m-0 flex items-start gap-2 rounded-md text-size-15 font-semibold empty:hidden ${told ? 'px-3 py-2.5' : ''} ${told?.status === 'sent' ? 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]' : told ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : ''}`}>
         {told?.status === 'sent' ? <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : null}
         {sentHow ? <span>{sentHow}{told?.status === 'sent' ? <> <button type="button" onClick={() => setShowText(true)} className="font-semibold text-inherit underline">{`See the text ${first} gets`}</button></> : null}</span> : null}
       </p>
       <div className="flex flex-col gap-2">
-        <label htmlFor="reply" className="text-[15px] font-semibold">{told ? 'Reply again' : 'Reply'}</label>
+        <label htmlFor="reply" className="text-size-15 font-semibold">{told ? 'Reply again' : 'Reply'}</label>
         <Textarea id="reply" rows={3} placeholder="Type here" maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <p className="m-0 text-sm text-[var(--wh-muted)]">{`Goes to ${first} the way they chose, with a link to reply on the job’s page.`}</p>
@@ -231,7 +231,7 @@ function TheirText({ jobId, first, onClose }: { jobId: number; first: string; on
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="txt-title">{`What ${first} gets`}</DialogTitle>
-          {latest ? <span className="text-[13px] text-[var(--wh-muted)]">{`By ${channelWord(latest.channel)}, the way ${first} chose`}</span> : null}
+          {latest ? <span className="text-size-13 text-[var(--wh-muted)]">{`By ${channelWord(latest.channel)}, the way ${first} chose`}</span> : null}
         </div>
       </DialogHeader>
       <DialogBody>

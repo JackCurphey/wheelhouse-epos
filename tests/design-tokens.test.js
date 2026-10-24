@@ -58,7 +58,7 @@ test('every THEME_PRESETS colour clears AA against white text', () => {
 
 // The React apps take every colour from a token (src/styles/theme.css), read
 // either as var(--...) in an arbitrary value or as a Tailwind utility named
-// after a token (bg-primary, text-wh-muted). A colour written out in the code
+// after a token (bg-primary, text-size-muted). A colour written out in the code
 // - hex, rgb()/hsl() and friends, a Tailwind palette class like bg-white or
 // text-slate-500, or white/black inside an arbitrary value - skips Fjell and
 // the dark palette. Added with Fjell, 27 Sep 2026.
@@ -106,4 +106,19 @@ test('tokens.css defines every token that styles.css references', () => {
   const used = new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
   const missing = [...used].filter((t) => !defined.has(t));
   assert.deepEqual(missing, [], 'referenced but undefined tokens');
+});
+
+// Larger text (Jack, 24 Oct answer 8; openspec/changes/larger-text): every
+// text size is on the one scale Larger text raises, so none is fixed.
+test('the React code has no fixed text sizes - every size is on the shared scale', () => {
+  // The registry's controls too: the app's copies must match them byte for byte.
+  const fixed = REACT_SOURCES.flatMap((file) => [...readFile(file).matchAll(/\btext-\[(?:length:)?[\d.]+(?:px|rem|em)\]/g)].map((m) => `${file}: ${m[0]}`));
+  assert.deepEqual(fixed, [], 'use text-size-<size> or a named size from src/styles/theme.css');
+});
+
+test('every scaled size token used is defined, on the scale', () => {
+  const theme = readFile('src/styles/theme.css');
+  const used = new Set(REACT_SOURCES.flatMap((file) => [...readFile(file).matchAll(/\btext-size-([\d-]+)\b/g)].map((m) => m[1])));
+  for (const size of used) assert.match(theme, new RegExp(`--text-size-${size}:\\s*calc\\([^;]*var\\(--wh-text-scale\\)`), size);
+  for (const name of ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl']) assert.match(theme, new RegExp(`--text-${name}:\\s*calc\\([^;]*var\\(--wh-text-scale\\)`), name);
 });

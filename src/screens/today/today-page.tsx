@@ -30,7 +30,7 @@ function Card({ id, title, action, children }: { id: string; title: string; acti
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
       <div className="flex items-center justify-between gap-3">
-        <h2 id={id} tabIndex={-1} className="m-0 text-[17px] font-bold">{title}</h2>
+        <h2 id={id} tabIndex={-1} className="m-0 text-size-17 font-bold">{title}</h2>
         {action}
       </div>
       {children}
@@ -43,8 +43,8 @@ function Line({ lead, title, sub, right }: { lead?: ReactNode; title: ReactNode;
     <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)] py-2">
       {lead}
       <span className="flex min-w-0 grow flex-col gap-0.5">
-        <span className="text-[15px] font-semibold">{title}</span>
-        {sub ? <span className="text-[13px] text-[var(--wh-muted)]">{sub}</span> : null}
+        <span className="text-size-15 font-semibold">{title}</span>
+        {sub ? <span className="text-size-13 text-[var(--wh-muted)]">{sub}</span> : null}
       </span>
       {right}
     </li>
@@ -54,9 +54,9 @@ function Line({ lead, title, sub, right }: { lead?: ReactNode; title: ReactNode;
 function Stat({ label, value, note }: { label: string; value: string; note: string }) {
   return (
     <div className="flex flex-col gap-0.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 py-2.5">
-      <span className="text-[13px] text-[var(--wh-muted)]">{label}</span>
+      <span className="text-size-13 text-[var(--wh-muted)]">{label}</span>
       <span className="text-xl font-bold">{value}</span>
-      <span className="text-[13px] text-[var(--wh-muted)]">{note}</span>
+      <span className="text-size-13 text-[var(--wh-muted)]">{note}</span>
     </div>
   );
 }
@@ -121,7 +121,7 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
       {list.isError ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load what needs attention. It tries again in a minute.</p>
         : !list.isSuccess ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
         : lines.length ? <ul className="m-0 list-none p-0">{lines}</ul>
-        : <p className="m-0 flex min-h-12 items-center gap-2.5 border-t border-[var(--wh-border)] text-[15px] text-[var(--wh-muted)]"><Check size={16} aria-hidden="true" />Nothing needs you right now</p>}
+        : <p className="m-0 flex min-h-12 items-center gap-2.5 border-t border-[var(--wh-border)] text-size-15 text-[var(--wh-muted)]"><Check size={16} aria-hidden="true" />Nothing needs you right now</p>}
     </Card>
   );
 }
@@ -190,7 +190,7 @@ export function TodayPage() {
   const work = <WorkshopToday today={today} now={now} touch={touch} />;
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
-      <p className="m-0 text-[15px] text-[var(--wh-muted)] max-md:text-sm">{dateLine}</p>
+      <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{dateLine}</p>
       {/* Two columns on a computer or tablet, Needs attention on the left; one on a phone, Needs attention first. */}
       {isPhone || !attention ? (
         <div className="flex flex-col gap-3.5">{attention}{work}</div>

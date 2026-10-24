@@ -59,14 +59,14 @@ export function ChosenBar({ item, onOpen }: { item: WaitingItem; onOpen: () => v
       <div className="flex items-center gap-2.5">
         <div className="flex min-w-0 grow flex-col gap-[3px]">
           <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(item).tone]}`}>{waitingCard(item).label}</span>
-          <span className="text-[15px] font-bold">{waitingCard(item).customer}</span>
+          <span className="text-size-15 font-bold">{waitingCard(item).customer}</span>
           <span className="text-sm">{waitingCard(item).detail}</span>
         </div>
         <button
           type="button"
           aria-label={`Open ${waitingCard(item).customer}'s request`}
           onClick={onOpen}
-          className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
+          className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-size-15 font-bold text-[var(--wh-on-brand)]"
         >
           Open
         </button>
@@ -102,8 +102,8 @@ export function WaitingSheet({ open, onOpenChange, count, items, chosen, onChoos
                 className={`flex min-h-11 flex-col gap-1 rounded-lg bg-[var(--wh-panel)] px-3 py-2.5 text-left ${on ? 'border-2 border-[var(--accent)]' : 'border border-[var(--wh-border)]'}`}
               >
                 <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
-                <span className="text-[15px] font-bold">{card.customer}</span>
-                {card.bike ? <span className="text-[13px] text-[var(--wh-muted)]">{card.bike}</span> : null}
+                <span className="text-size-15 font-bold">{card.customer}</span>
+                {card.bike ? <span className="text-size-13 text-[var(--wh-muted)]">{card.bike}</span> : null}
                 <span className="text-sm">{card.detail}</span>
               </button>
             );

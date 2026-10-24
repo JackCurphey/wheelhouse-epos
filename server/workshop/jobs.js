@@ -34,6 +34,27 @@ export function requestedOf(row) {
   };
 }
 
+const iso = (t) => (t ? new Date(t).toISOString() : null);
+
+/**
+ * The job's deposit (deposit-diary-server design 2): paid, refunded (refunded,
+ * let go, or owed) or kept (taken, and cancelled late or marked Didn't come).
+ */
+function jobDeposit(row) {
+  if (!row.deposit_pence) return null;
+  const refunded = ['refunded', 'released'].includes(row.deposit_status) || !!row.deposit_refund_due;
+  return {
+    pence: row.deposit_pence,
+    paidAt: iso(row.deposit_paid_at),
+    state: refunded ? 'refunded' : row.no_show_at || row.booking_state === 'cancelled' ? 'kept' : 'paid',
+    refundedAt: iso(row.deposit_refunded_at),
+    refundReason: row.deposit_refund_reason ?? row.deposit_refund_due ?? null,
+    refundedBy: row.deposit_refunded_by ?? null,
+    noShowAt: iso(row.no_show_at),
+    noShowBy: row.no_show_by_name ?? null,
+  };
+}
+
 export function serializeWorkshopJob(row) {
   return {
     id: row.id,
@@ -55,6 +76,9 @@ export function serializeWorkshopJob(row) {
     // Where a bike in the shop is kept (storage slots, Workshop day 27; migration 054).
     storageSlotId: row.storage_slot_id ?? null,
     storageSlotName: row.storage_slot_name ?? null,
+    // The deposit, and "Didn't come" (deposit-diary-server design 2, 5).
+    deposit: jobDeposit(row),
+    noShowAt: iso(row.no_show_at),
     status: row.status,
     // The states the screens actually drive from. `status` above is the derived
     // legacy field, kept only for public/app.js and the online booking pages until
@@ -107,7 +131,9 @@ export function serializeWorkshopJob(row) {
   };
 }
 
-export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, lq.sent_at AS quote_sent_at, qr.at AS quote_reminder_sent_at, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total, ss.name AS storage_slot_name
+export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, lq.sent_at AS quote_sent_at, qr.at AS quote_reminder_sent_at, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, NULLIF(trim(b.colour), '') AS bike_colour, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total, ss.name AS storage_slot_name,
+  op.status AS deposit_status, op.created_at AS deposit_paid_at, op.refunded_at AS deposit_refunded_at, op.refund_reason AS deposit_refund_reason,
+  op.refund_due_reason AS deposit_refund_due, op.refunded_by AS deposit_refunded_by, nsl.name AS no_show_by_name
   FROM workshop_jobs w
   LEFT JOIN storage_slots ss ON ss.id = w.storage_slot_id
   LEFT JOIN customers c ON c.id = w.customer_id
@@ -118,7 +144,11 @@ export const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS q
                      WHERE q.workshop_job_id = w.id ORDER BY revision DESC LIMIT 1) lq ON true
   LEFT JOIN LATERAL (SELECT max(m.sent_at) AS at FROM customer_messages m
                      WHERE lq.state = 'sent' AND m.job_id = w.id AND m.template_key = 'quote_reminder'
-                       AND m.sent_at IS NOT NULL AND m.sent_at >= lq.sent_at) qr ON true`;
+                       AND m.sent_at IS NOT NULL AND m.sent_at >= lq.sent_at) qr ON true
+  LEFT JOIN LATERAL (SELECT p.status, p.created_at, p.refunded_at, p.refund_reason, p.refund_due_reason, rl.name AS refunded_by
+                     FROM online_payments p LEFT JOIN logins rl ON rl.id = p.refunded_by_login_id
+                     WHERE p.job_id = w.id ORDER BY p.id DESC LIMIT 1) op ON true
+  LEFT JOIN logins nsl ON nsl.id = w.no_show_by_login_id`;
 export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function resolveJobMechanicId(rawId, existingId) {

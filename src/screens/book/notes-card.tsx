@@ -81,8 +81,8 @@ export function NotesCard({ shopSlug, code, shopName }: { shopSlug: string; code
         <ol aria-label="Notes with the shop" className="m-0 flex list-none flex-col gap-3 p-0">
           {list.map((n) => (
             <li key={n.id} data-from={n.fromCustomer ? 'customer' : 'shop'} className={`flex flex-col gap-1 ${n.fromCustomer ? 'items-end' : 'items-start'}`}>
-              <span className="text-[13px] text-[var(--wh-muted)]"><strong className="text-[var(--wh-ink)]">{n.fromCustomer ? 'You' : n.from}</strong>{` · ${when(n.at)}`}</span>
-              <span className={`max-w-[82%] px-3.5 py-2.5 text-[15px] leading-normal whitespace-pre-wrap [overflow-wrap:anywhere] ${n.fromCustomer
+              <span className="text-size-13 text-[var(--wh-muted)]"><strong className="text-[var(--wh-ink)]">{n.fromCustomer ? 'You' : n.from}</strong>{` · ${when(n.at)}`}</span>
+              <span className={`max-w-[82%] px-3.5 py-2.5 text-size-15 leading-normal whitespace-pre-wrap [overflow-wrap:anywhere] ${n.fromCustomer
                 ? 'rounded-[14px_14px_4px_14px] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)]'
                 : 'rounded-[14px_14px_14px_4px] border border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{n.text}</span>
             </li>
@@ -92,7 +92,7 @@ export function NotesCard({ shopSlug, code, shopName }: { shopSlug: string; code
       {/* "let you know", not "text you": the customer may have chosen email or WhatsApp, and nothing is really sent yet (fresh review). */}
       <p role="status" className="m-0 text-sm text-[var(--wh-muted)] empty:hidden">{said || (waiting ? `Sent. ${shopName} will reply here, and we’ll let you know when they do.` : '')}</p>
       <div className="flex flex-col gap-2">
-        <label htmlFor={boxId} className="text-[15px] font-semibold">{first ? 'Add a note for the shop' : 'Reply'}</label>
+        <label htmlFor={boxId} className="text-size-15 font-semibold">{first ? 'Add a note for the shop' : 'Reply'}</label>
         <Textarea id={boxId} rows={3} placeholder="Type here" maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <p className="m-0 text-sm text-[var(--wh-muted)]">We’ll reply here and let you know when we do.</p>
