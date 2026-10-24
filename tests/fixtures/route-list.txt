@@ -207,3 +207,5 @@ POST /api/customers/:id/not-duplicate
 POST /api/customers/:id/merge
 GET /api/customers/:id/merges
 POST /api/customer-merges/:id/undo
+POST /api/portal/:shopSlug/deposit-holds
+POST /api/portal/:shopSlug/pretend-payments/:ref/card
