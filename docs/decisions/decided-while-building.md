@@ -2010,3 +2010,16 @@ No screen: server only.
    "refunded".
 4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
    then simply paid, as for any booking (review).
+
+### 24 Oct 2026: Larger text (`openspec/changes/larger-text`, `ys-text`)
+
+1. **Every text size is on one scale, 14 to 17 with Larger text on**, the
+   same step for every size; the registry's controls too, so the app's copies
+   still match them.
+2. **The diary's hour column grows by the same step**, so its times aren't cut
+   off; the days are then a few pixels narrower. Blocks keep their place down
+   the day and their height.
+3. **The page's own heading grows with the text**, so the diary starts a
+   little lower on the page; nothing inside it moves.
+4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
+   shows the difference.

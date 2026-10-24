@@ -51,40 +51,40 @@ export function JobSummary({ job, columns = true }: { job: WorkshopJob; columns?
         {job.customerDescription ? (
           <div className="flex flex-col gap-px">
             <span className="text-xs font-bold text-[var(--wh-muted)]">Customer</span>
-            <span className="text-[13px] leading-snug">{job.customerDescription}</span>
+            <span className="text-size-13 leading-snug">{job.customerDescription}</span>
           </div>
         ) : null}
         {job.notes ? (
           <div className="flex flex-col gap-px">
             <span className="text-xs font-bold text-[var(--wh-muted)]">Shop</span>
-            <span className="text-[13px] leading-snug whitespace-pre-line">{job.notes}</span>
+            <span className="text-size-13 leading-snug whitespace-pre-line">{job.notes}</span>
           </div>
         ) : null}
-        {!job.customerDescription && !job.notes ? <span className="text-[13px] text-[var(--wh-muted)]">No notes yet.</span> : null}
+        {!job.customerDescription && !job.notes ? <span className="text-size-13 text-[var(--wh-muted)]">No notes yet.</span> : null}
       </div>
       <div className={`flex flex-col gap-[5px] ${columns ? 'w-[190px] shrink-0' : ''}`}>
         <span className={label}>Line items</span>
         {!job.orderId || (order.data && order.data.items.length === 0 && declined.length === 0)
-          ? <span className="text-[13px] text-[var(--wh-muted)]">No work or parts yet.</span>
+          ? <span className="text-size-13 text-[var(--wh-muted)]">No work or parts yet.</span>
           : null}
-        {job.orderId && order.isPending ? <span className="text-[13px] text-[var(--wh-muted)]">Loading…</span> : null}
-        {job.orderId && order.isError ? <span className="text-[13px]">Couldn’t load the line items.</span> : null}
+        {job.orderId && order.isPending ? <span className="text-size-13 text-[var(--wh-muted)]">Loading…</span> : null}
+        {job.orderId && order.isError ? <span className="text-size-13">Couldn’t load the line items.</span> : null}
         {(order.data?.items ?? []).map((l) => (
-          <div key={l.id} className="flex justify-between gap-2 text-[13px]">
+          <div key={l.id} className="flex justify-between gap-2 text-size-13">
             <span className="min-w-0">{l.qty > 1 ? `${l.name} × ${l.qty}` : l.name}</span>
             <span className="font-mono">{money(l.lineTotal)}</span>
           </div>
         ))}
         {declined.map((l) => (
-          <div key={`q${l.id}`} className="flex justify-between gap-2 text-[13px] text-[var(--wh-muted)] line-through">
+          <div key={`q${l.id}`} className="flex justify-between gap-2 text-size-13 text-[var(--wh-muted)] line-through">
             <span className="min-w-0">{l.description}</span>
             <span className="font-mono">{money(l.lineTotal)}</span>
           </div>
         ))}
         {order.data ? (
           <div className="mt-1 flex justify-between gap-2 border-t border-[var(--wh-border)] pt-1.5">
-            <span className="text-[13px] font-bold">Cost</span>
-            <span className="font-mono text-[15px] font-bold">{money(order.data.total)}</span>
+            <span className="text-size-13 font-bold">Cost</span>
+            <span className="font-mono text-size-15 font-bold">{money(order.data.total)}</span>
           </div>
         ) : null}
       </div>
@@ -110,8 +110,8 @@ export function HoverSummary({ job, rect }: { job: WorkshopJob; rect: DOMRect })
       style={{ left, top, width: W }}
     >
       <div className="flex flex-col gap-0.5">
-        <span className="text-[15px] font-bold">{headOf(job)}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{whoOf(job)}</span>
+        <span className="text-size-15 font-bold">{headOf(job)}</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">{whoOf(job)}</span>
       </div>
       <JobSummary job={job} />
     </div>
@@ -207,7 +207,7 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview, onStretch, on
   const tip = at.touch
     ? 'Tip: keep holding to see the job’s summary straight away.'
     : 'Tip: hold the right mouse button to open the overview straight away.';
-  const item = `flex w-full items-center px-3.5 text-left font-semibold hover:bg-[var(--wh-hover)] focus-visible:bg-[var(--wh-hover)] ${at.touch ? 'min-h-12 text-[15px]' : 'min-h-10 text-sm'}`;
+  const item = `flex w-full items-center px-3.5 text-left font-semibold hover:bg-[var(--wh-hover)] focus-visible:bg-[var(--wh-hover)] ${at.touch ? 'min-h-12 text-size-15' : 'min-h-10 text-sm'}`;
   return (
     <div
       ref={ref}
@@ -315,7 +315,7 @@ export function StackChooser({ jobs, time, at, onClose, onPick, onMove, onMenu }
         <span className={`w-full truncate font-bold text-[var(--wh-ink)] ${at.phone ? 'text-sm' : 'text-xs'}`}>{j.bikeLabel || 'Bike'}</span>
         {at.touch || at.phone ? (
           <>
-            <span className={`w-full truncate font-bold ${at.phone ? 'text-[13px]' : 'text-xs'}`}>{j.title}</span>
+            <span className={`w-full truncate font-bold ${at.phone ? 'text-size-13' : 'text-xs'}`}>{j.title}</span>
             <span className="w-full truncate text-xs text-[var(--wh-ink)] opacity-80">{`${j.reference} · ${j.startTime ?? ''}–${j.endTime ?? ''}`}</span>
           </>
         ) : (

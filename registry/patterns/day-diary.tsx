@@ -103,7 +103,7 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
       ))}
       <div className="relative" style={{ height }} aria-hidden="true">
         {hours.map((t) => (
-          <span key={t} className="absolute left-0 text-[11px] text-[var(--wh-muted)]" style={{ top: y(t) }}>
+          <span key={t} className="absolute left-0 text-size-11 text-[var(--wh-muted)]" style={{ top: y(t) }}>
             {`${String(t / 60).padStart(2, '0')}:00`}
           </span>
         ))}
@@ -120,7 +120,7 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
                 <div
                   key={`busy-${i}`}
                   data-busy=""
-                  className="absolute inset-x-[3px] flex items-center justify-center overflow-hidden rounded-[5px] bg-[var(--wh-hover)] bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--wh-border)_5px_7px)] text-[11px] text-[var(--wh-muted)]"
+                  className="absolute inset-x-[3px] flex items-center justify-center overflow-hidden rounded-[5px] bg-[var(--wh-hover)] bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--wh-border)_5px_7px)] text-size-11 text-[var(--wh-muted)]"
                   style={{ top, height: h }}
                 >
                   Unavailable
@@ -139,7 +139,7 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
                   aria-pressed={picked}
                   onClick={() => onChange({ columnId: c.id, time: label })}
                   className={cn(
-                    'absolute inset-x-[3px] flex items-start justify-start rounded-[5px] px-1.5 pt-0.5 text-[11px] text-[var(--wh-muted)]',
+                    'absolute inset-x-[3px] flex items-start justify-start rounded-[5px] px-1.5 pt-0.5 text-size-11 text-[var(--wh-muted)]',
                     'hover:bg-[color-mix(in_srgb,var(--accent-dark)_7%,var(--wh-panel))] focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
                     picked && 'bg-[var(--accent-dark)] font-semibold text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)]',
                   )}

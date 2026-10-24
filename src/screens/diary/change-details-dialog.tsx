@@ -39,7 +39,7 @@ export function Pill({ on, onClick, children }: { on: boolean; onClick: () => vo
       role="radio"
       aria-checked={on}
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+      className={`inline-flex min-h-11 items-center rounded-full border px-3.5 text-size-13 font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
     >
       {children}
     </button>
@@ -137,7 +137,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="change-details-title">Change details</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`${job.title} · ${job.reference}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`${job.title} · ${job.reference}`}</span>
         </div>
         <button type="button" aria-label="Close" onClick={onClose} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -156,7 +156,7 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
           <div className="flex flex-col gap-1.5">
             <label htmlFor="cd-title" className={LABEL}>Job title</label>
             <input id="cd-title" value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT} aria-describedby="cd-title-hint" />
-            <span id="cd-title-hint" className="text-[13px] text-[var(--wh-muted)]">Shown on the diary block.</span>
+            <span id="cd-title-hint" className="text-size-13 text-[var(--wh-muted)]">Shown on the diary block.</span>
           </div>
           {customer && !finding ? (
             <div className="flex flex-col gap-1.5">
@@ -184,10 +184,10 @@ export function ChangeDetailsDialog({ job, onClose }: { job: WorkshopJob; onClos
                     // Pressing keeps the focus in the search (Safari, iPad), as New job.
                     <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => chooseCustomer(c)} className="flex min-h-11 flex-col justify-center rounded-md px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
                       <span className="text-sm font-bold">{c.name}</span>
-                      <span className="text-[13px] text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
+                      <span className="text-size-13 text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
                     </button>
                   ))}
-                  {found.data.length === 0 ? <span className="px-3 py-1.5 text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
+                  {found.data.length === 0 ? <span className="px-3 py-1.5 text-size-13 text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
                 </div>
               ) : null}
             </div>

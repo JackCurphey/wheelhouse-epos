@@ -60,8 +60,8 @@ export function CollectionSettings() {
   const row = (box: Box, id: string, label: string, hint: ReactNode) => (
     <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
       <span className="flex flex-col gap-0.5">
-        <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
-        <span id={`${id}-h`} className="text-[13px] text-[var(--wh-muted)]">{hint}</span>
+        <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
+        <span id={`${id}-h`} className="text-size-13 text-[var(--wh-muted)]">{hint}</span>
       </span>
       <span className="inline-flex items-center gap-2 text-sm">
         <input
@@ -72,7 +72,7 @@ export function CollectionSettings() {
           disabled={!settings.data}
           onChange={(e) => { const value = e.target.value; setTyped((t) => ({ ...t, [box]: value })); }}
           onBlur={() => void save()}
-          className="min-h-11 w-16 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+          className="min-h-11 w-16 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-size-15"
         />
         days
       </span>

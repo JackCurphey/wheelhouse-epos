@@ -114,7 +114,7 @@ export function PhotoPicker({ value, onChange, max = 5, maxBytes = 10 * 1024 * 1
         />
       </label>
       {refused.length > 0 && (
-        <ul role="alert" className="m-0 list-none rounded-md bg-[var(--wh-danger-bg)] p-2.5 text-[12.5px] text-[var(--wh-danger)]">
+        <ul role="alert" className="m-0 list-none rounded-md bg-[var(--wh-danger-bg)] p-2.5 text-size-12-5 text-[var(--wh-danger)]">
           {refused.map((r) => (
             <li key={r}>{r}</li>
           ))}

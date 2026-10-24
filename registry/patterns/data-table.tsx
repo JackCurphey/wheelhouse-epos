@@ -76,7 +76,7 @@ export function DataTable<Row>({
       {error ? (
         <div
           role="alert"
-          className="mb-3.5 flex items-center justify-between gap-3 rounded-lg bg-[var(--wh-danger-bg)] px-3.5 py-2.5 text-[13.5px] text-[var(--wh-danger)]"
+          className="mb-3.5 flex items-center justify-between gap-3 rounded-lg bg-[var(--wh-danger-bg)] px-3.5 py-2.5 text-size-13-5 text-[var(--wh-danger)]"
         >
           <span>
             Could not load {scopeLabel} for this shop. {error}

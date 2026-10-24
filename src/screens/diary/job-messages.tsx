@@ -107,7 +107,7 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
         {thread.length ? <ol aria-label={`Messages with ${customerName}`} className="m-0 flex list-none flex-col gap-3.5 p-0">
           {thread.map((m) => (m.direction === 'inbound' ? (
             <li key={m.id} data-from="customer" className="flex flex-col items-start gap-1">
-              <span className="text-[13px] font-bold">{first}</span>
+              <span className="text-size-13 font-bold">{first}</span>
               <span className="max-w-[85%] rounded-[16px_16px_16px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-2.5 text-sm leading-[1.45] whitespace-pre-wrap [overflow-wrap:anywhere] md:max-w-[78%]">{m.body}</span>
               <span className="text-xs text-[var(--wh-muted)]">{signedOffWhen(m.sentAt ?? m.createdAt)}</span>
             </li>
@@ -125,7 +125,7 @@ function ShopMessage({ m }: { m: JobMessage }) {
   return (
     <li data-from="shop" className="flex flex-col items-end gap-1 text-right">
       <span className="flex items-center gap-2">
-        <span className="text-[13px] font-bold">{m.name}</span>
+        <span className="text-size-13 font-bold">{m.name}</span>
         <span className={`inline-flex items-center rounded-full px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${TONE[d.tone]}`}>{d.word}</span>
       </span>
       <span className="max-w-[85%] rounded-[16px_16px_4px_16px] bg-[var(--wh-ink)] px-3.5 py-2.5 text-left text-sm leading-[1.45] whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--wh-panel)] md:max-w-[78%]">{m.body}</span>

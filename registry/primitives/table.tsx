@@ -17,7 +17,7 @@ export function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div className="w-full overflow-x-auto">
       <table
-        className={cn('w-full border-collapse text-[13.5px] text-[var(--wh-ink)]', className)}
+        className={cn('w-full border-collapse text-size-13-5 text-[var(--wh-ink)]', className)}
         {...props}
       />
     </div>
