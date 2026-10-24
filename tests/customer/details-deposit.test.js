@@ -103,7 +103,10 @@ test('the connection drops after paying: checking, then Check again sends the sa
   const alert = await ui.findByText('We’re checking whether your payment went through — please don’t pay again.');
   assert.ok(alert.closest('[role="alert"]').textContent.includes('Your connection dropped while sending. Nothing will be taken twice.'));
   assert.ok(ui.queryByLabelText('Card number') === null, 'no card box while checking');
-  assert.equal(readDraft().depositHeld, 'pretend_abc', 'kept through a refresh');
+  // Saved just after the message shows (the draft's own effect), so wait for
+  // it: read at once it failed on a slow CI machine (24 Oct).
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.equal(readDraft().depositHeld, 'pretend_abc', 'kept through a refresh'));
   await click(ui.getByRole('button', { name: 'Check again' }));
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
   assert.equal(sent(requests, '/pretend-payments').length, 1, 'paid once');

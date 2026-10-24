@@ -1186,11 +1186,29 @@ export function register(route) {
     if (reason.length > 200) return badRequest(res, 'The reason can be up to 200 characters');
     const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(id);
     if (!job) return notFound(res, 'Job not found');
-    const pay = await db.prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ? ORDER BY id DESC LIMIT 1').get(id);
-    if (!pay || !['held', 'taken'].includes(pay.status) || pay.refund_due_reason) {
-      return sendJson(res, 409, { error: 'There’s no deposit to refund on this job.', code: 'not_refundable' });
+    // Once the job is paid at the till its deposit is part of the sale (Jack,
+    // 24 Oct, docs/decisions/2026-10-24-deposit-after-paid.md). The job's
+    // order is locked while this decides, as paying it locks it, so a refund
+    // and a payment at the same moment go one after the other: never both
+    // counted and refunded (review).
+    await db.exec('BEGIN');
+    try {
+      const order = await db.prepare('SELECT status FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').get(id);
+      if (order?.status === 'converted') {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 409, { error: 'This deposit paid part of the bill at the till, so it can’t be refunded from the job.', code: 'paid_at_till' });
+      }
+      const pay = await db.prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ? ORDER BY id DESC LIMIT 1').get(id);
+      if (!pay || !['held', 'taken'].includes(pay.status) || pay.refund_due_reason) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 409, { error: 'There’s no deposit to refund on this job.', code: 'not_refundable' });
+      }
+      await oweRefund(id, reason, ctx?.login?.id ?? null);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
     }
-    await oweRefund(id, reason, ctx?.login?.id ?? null);
     await refundOwed(id);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
     sendJson(res, 200, serializeWorkshopJob(row));

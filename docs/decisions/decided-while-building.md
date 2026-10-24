@@ -2143,3 +2143,48 @@ follows the job checklist, the closest pattern built.
 7. **The browser's own email check is off**, so the drawn "That doesn't look
    like an email address — check it" shows instead of the browser's pop-up.
 
+### 24 Oct 2026: a deposit paid online comes off at the till (`openspec/changes/till-online-deposit`, `till-job-balance`)
+
+1. **The deposit is recorded as its own payment, "Deposit paid online"**, as
+   the receipt drawing shows it (`collect.mjs:204`). The server works it out
+   from the payment record; anything the till claims is ignored.
+2. **Only a deposit taken counts.** A card only held isn't charged yet, and
+   a refunded, owed or kept deposit doesn't come off.
+3. **The line reads "[date] · online"**, where `till-job-balance` draws
+   "[date] · card" for a deposit taken at the till, which isn't built yet.
+   Total and Take payment show what's left, as the discounts already do.
+4. **A deposit larger than the bill** (work declined after booking) counts
+   up to the bill, and the till says "The deposit is more than the bill:
+   [£n] isn't paid back here yet." **Gap for later:** paying the difference
+   back needs a decision.
+5. **The day's takings** count the deposit once, in the sale, under its own
+   name. Nothing else counts the online payment.
+6. **A deposit card only held, never charged, is let go when the job is paid
+   in full at the till** ("Paid in full at the till"), so it can't be charged
+   on top later (review).
+7. **A refund pressed while the till takes payment waits its turn**, so a
+   deposit is never both counted and refunded (review).
+
+### 24 Oct 2026: Save to a customer record from the till (`openspec/changes/till-save-customer`, `cp-receipt-address`, `cp-receipt-address-save`)
+
+1. **The new customer isn't attached to the sale.** The decision doesn't say,
+   and nothing can attach a customer to a finished sale yet, so the sale stays
+   with no customer. Jack to overrule.
+2. **Closing Add a customer (Escape or outside it) counts as Not now**: the
+   receipt stays sent and no one is added.
+3. **A customer with the same email may already exist**; Add the customer
+   adds a new record anyway, as the customer form does, and Customers' Merge
+   joins them.
+
+### 24 Oct 2026: "You didn't finish booking" (`openspec/changes/booking-draft-resume`, `bk-resume`)
+
+1. **An unfinished booking is kept on the customer's device for 7 days**,
+   then thrown away. The decision says "coming back later" without a time.
+   7 days keeps a shared computer from holding someone's name and number for
+   long. Jack to overrule.
+2. **It comes back on the step it was left on**, as drawn, and only on a new
+   tab or visit: a refresh in the same tab carries on without the banner, as
+   it always has.
+3. **Photos aren't kept**, as before; the bike step already says they need
+   adding again.
+

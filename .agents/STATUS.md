@@ -7,40 +7,39 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** 23 Oct, overnight: his queue is built (below). Next, once he
-  answers the morning's questions (`docs/decisions/2026-10-23-overnight-questions.md`
-  has the six he answered): deposits (rounding, refunds by hand, no-shows, the
-  till, the refund wording), Customers (Merge's drawn undo against "the
-  duplicate is removed"; the header search the list needs), Larger text (two
-  ways to fix the zoom), and "Don't close things by themselves" (Bike ready's
-  Undo would need the server to hold the message). "I'll do this" and "Who
-  did what" (WP-4.1) still wait for WP-1.7, WP-1.2 and WP-1.9 (22 Oct). The
-  checklist's per-line Done ticks and line notes wait for Mark's sales in
-  pence (#404), as does the till's Email receipt button. The repository stays
-  public until money comes in (23 Oct).
-- **Mark:** merged 23 Oct: #401, #406, #407, #408, #410, #414 and #415;
-  #416 merged by Jack at his request, after a fresh review, with `main`
-  merged in, the spec quoting the server's apostrophes and a test for a
-  time gone inside opening hours. Jack answered both open questions on 23
-  Oct: #402 answer 1 (leave it as it is; ready to merge) and #404 answer 1
-  (merge with the three small changes in Jack's files; needs updating from
-  `main` first). #404's migration stays 055 (`main` is at 061, with 055
-  left free for it). When sales in pence moves `unit_amount` and
-  `booked_price` to pence (#404 step 2.1), the spending limit's whole bill
-  (`wholeBill`, `agreeWithinLimit`) and the messages' "Amount added" and
-  "What was agreed" sums move with it. Next: step B of sales in pence
-  (reports read both records), after #404 merges. The hosted copy's
-  automatic updates are built and seen working (Jack, #427, #428, at
-  Mark's request); WP-0.5 left: the failed-update drill (3.5), the test
-  shop and its login (3.6), timing the rollbacks (4.1b), the restore
-  rehearsal (group 5) and 2.6's fresh review. Still open from the audit:
-  items 12, 20, 23 and 24; 18 is left as a staff choice by design
+- **Jack:** 24 Oct. Merged: Fixes and Today's morning questions (#447), the
+  header search (#448), Customers (list #449, page #450, Merge #451), the old
+  Customers screen removed (#465), deposits online (#452 to #462, Jack's
+  answers 1 to 5 and `2026-10-24-request-deposit-refund.md`), Larger text
+  (#463), "Don't close things by themselves" (drawings #464, server #466,
+  screens #467). Took WP-0.4 and WP-0.5 over from Mark (Jack's word, 24 Oct;
+  told on #199): the last route out of `server.js` (#468, so WP-0.4 is done);
+  the test copy's fresh review and its fixes (#469); the test shop loading on
+  the copy, the restore steps Jack has read, and his stage 0 walkthrough
+  `docs/runbooks/stage-0-check.md` (#470). Merging, one at a time: Done
+  ticks and staff line notes (#471, migration 074; notes staff only, Jack 24
+  Oct), the till's Email receipt (#472), a deposit paid online coming off at
+  the till (#473; no refund from the job once paid, Jack 24 Oct), Save to a
+  customer record (#474), and Jack's answer that the till may take a deposit
+  before the work is finished, deposits only (#475). Next: the WP-0.5 drills
+  with Jack on 25 Oct (failed update, timing the ways back, the test shop and
+  his login, the restore rehearsal), then the stage 0 walkthrough. Still
+  waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
+- **Mark:** merged 24 Oct: #402 (held work can't resume on an ended booking)
+  and #404 (sales in pence step A, migration 073). Next: step B of sales in
+  pence (reports read both records). Taking a deposit at the till
+  (`till-job-deposit`, paying an order in parts) is left to his design
+  decision 8, after step B; Jack answered its open question (#475). WP-0.5
+  is now Jack's (above). Still open from the audit: items 12, 20, 23 and 24
   (`docs/reviews/2026-10-22-flagged-merges-audit.md`).
-- **Waiting on Jack:** the morning's questions above. Settled 23 Oct
-  (answer 6): the old app goes piece by piece, then completely, without
-  asking again.
+- **Waiting on Jack:** the WP-0.5 drills and the stage 0 walkthrough, which
+  he does on 25 Oct. For him to overrule if he wants: the 24 Oct
+  `decided-while-building.md` sections (line notes, the till's Email receipt
+  and Save to a customer record, the online deposit at the till). A gap for
+  later: no screen lets a shop choose which services can be booked online
+  (needs a drawing).
 
-**Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
+**Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
 #208 were Jack's #151 follow-ups). WP-0.5: the host is DigitalOcean in
 London, about £20 a month with VAT (#215; Jack's UK answer in
@@ -352,8 +351,8 @@ shop first (#254), and Release 2 is done when built and checked, ready to
 sell, the all-in-one first with Lightspeed after (#256,
 `docs/decisions/2026-10-18-build-for-every-shop.md`). All of Mark's waiting
 pull requests merged on his word (#225, #231, #234, #249, #250, #256).
-Earlier: the online test copy is live at
-https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
+Earlier: the online test copy went live (#221; its address is given to Jack
+privately, never in the repo, as its spec says); 16 and 17 Oct's workshop changes
 (#236, #237, #239 to #245, #247, #248). No pull request waits for Mark's
 approval; #265 and #267 changed his server files after his go-ahead, so he checks them.
 #238, the diary layout review, is a report, all of it now built or
