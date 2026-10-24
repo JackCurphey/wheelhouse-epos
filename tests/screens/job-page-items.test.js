@@ -213,3 +213,14 @@ test('finished work: the ticks and notes can’t change, and it says how', async
   assert.ok(has(dlg.queryByText('Reopen the work to change its Done ticks and notes.')));
 });
 
+test('a note refused (the work was finished meanwhile) keeps its box and what was typed (review)', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob(open([LABOUR, PADS]));
+  fireEvent.click(dlg.getByRole('button', { name: 'Add a note for Standard service' }));
+  const box = dlg.getByRole('textbox', { name: 'Note for Standard service' });
+  fireEvent.change(box, { target: { value: 'Check the hub too' } });
+  answer = { status: 409, ok: false, json: async () => ({ error: 'This work is finished, so its work and parts can’t change. Reopen the work first.', code: 'illegal' }) };
+  fireEvent.blur(box);
+  assert.ok(has(await dlg.findByText('This work is finished, so its work and parts can’t change. Reopen the work first.')));
+  await waitFor(() => assert.equal(dlg.getByRole('textbox', { name: 'Note for Standard service' }).value, 'Check the hub too'));
+});
+

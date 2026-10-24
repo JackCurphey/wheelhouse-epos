@@ -331,15 +331,10 @@ export function register(route) {
     const items = Array.isArray(body.items) ? body.items : [];
     const discount = Math.max(0, Number(body.discount) || 0);
 
-    // Each line's Done tick and note, by the id the line had: the lines are
-    // re-inserted below with new ids, so a line sent with its old id keeps
-    // them, and a new one starts without (line-done-notes design 3).
-    const kept = new Map((await db.prepare('SELECT id, done, note FROM sale_document_items WHERE document_id = ?').all(id))
-      .map((r) => [r.id, { done: r.done === true, note: r.note }]));
     const loaded = [];
     for (const it of items) {
       try {
-        loaded.push({ ...(await loadDocumentLine(it, { checkStock: false })), ...(kept.get(Number(it.id)) ?? {}) });
+        loaded.push({ ...(await loadDocumentLine(it, { checkStock: false })), wasId: Number(it.id) });
       } catch (err) {
         if (err instanceof ValidationError) return badRequest(res, err.message);
         throw err;
@@ -350,8 +345,19 @@ export function register(route) {
 
     await db.exec('BEGIN');
     try {
+      // Each line's Done tick and note, by the id the line had: the lines are
+      // re-inserted below with new ids, so a line sent with its old id keeps
+      // them, and a new one starts without (line-done-notes design 3). Read
+      // and locked here, so a tick saved meanwhile isn't lost; each old line
+      // passes them on once, however often its id is sent (review).
+      const kept = new Map((await db.prepare('SELECT id, done, note FROM sale_document_items WHERE document_id = ? FOR UPDATE').all(id))
+        .map((r) => [r.id, { done: r.done === true, note: r.note }]));
       await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
-      for (const line of loaded) await insertDocumentLine(id, line);
+      for (const { wasId, ...line } of loaded) {
+        const was = kept.get(wasId);
+        kept.delete(wasId);
+        await insertDocumentLine(id, { ...line, ...(was ?? {}) });
+      }
       await db.prepare(
         `UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, subtotal_pence = ?, discount_pence = ?, total_pence = ?, updated_at = ?
          WHERE id = ?`
@@ -403,7 +409,11 @@ export function register(route) {
          AND EXISTS (SELECT 1 FROM sale_documents d WHERE d.id = ? AND d.status = 'open')
          AND NOT EXISTS (SELECT 1 FROM workshop_jobs w WHERE w.id = ? AND w.work_state = 'complete')`
     ).run(...values, itemId, id, id, doc.workshop_job_id);
-    if (!changes) return sendJson(res, 409, { error: FINISHED_REFUSAL, code: 'illegal' });
+    if (!changes) {
+      // Saved again meanwhile (the line has a new id), or paid or finished meanwhile.
+      if (!(await db.prepare('SELECT 1 FROM sale_document_items WHERE id = ?').get(itemId))) return notFound(res, 'That line isn’t on this order');
+      return sendJson(res, 409, { error: FINISHED_REFUSAL, code: 'illegal' });
+    }
     const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
     const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
     sendJson(res, 200, serializeSaleDocument(row, savedItems));

@@ -143,3 +143,16 @@ test('the note never reaches the customer’s booking page', async () => {
   assert.equal(view.status, 200);
   assert.doesNotMatch(await view.text(), /customer was rude/);
 });
+
+test('one line’s id sent twice passes its tick and note on once (review)', async () => {
+  const { job, lines } = await mayasJob();
+  const padsLine = lines.find((l) => l.name === 'Shimano brake pads');
+  await progress(job.orderId, padsLine.id, { done: true, note: 'Rear pads worn — replacing' });
+  const put = await staff(`/api/sale-documents/${job.orderId}/items`, { method: 'PUT', body: { items: [
+    { id: padsLine.id, productId: pads, qty: 1, unitPrice: 28 },
+    { id: padsLine.id, productId: pads, qty: 1, unitPrice: 28 },
+  ] } });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  assert.deepEqual(put.body.items.map((l) => l.done).sort(), [false, true]);
+});
+

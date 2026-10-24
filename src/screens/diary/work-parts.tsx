@@ -93,16 +93,21 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
     try {
       await apiMutate(`/api/sale-documents/${orderId}/items/${line.id}/progress`, body, { method: 'PUT' });
       await queryClient.invalidateQueries({ queryKey: ['sale-document', orderId] });
+      return true;
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 404 ? "This job's order no longer exists." : refusalText(err));
+      setError(err instanceof ApiError && err.status === 404 ? "This line changed meanwhile. Try again." : refusalText(err));
+      void queryClient.invalidateQueries({ queryKey: ['sale-document', orderId] });
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
-  // Leaving the note box saves what changed.
-  function leaveNote(line: Line) {
+  // Leaving the note box saves what changed. Refused (the work was finished
+  // meanwhile, say), the box stays with what was typed, so it isn't lost (review).
+  async function leaveNote(line: Line) {
     const draft = noteDraft[line.id];
+    if (draft !== undefined && draft.trim() !== (line.note ?? '') && !(await progress(line, { note: draft }))) return;
     setNoteDraft((d) => {
       const next = { ...d };
       delete next[line.id];
@@ -113,8 +118,6 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
       next.delete(line.id);
       return next;
     });
-    if (draft === undefined || draft.trim() === (line.note ?? '')) return;
-    void progress(line, { note: draft });
   }
 
   async function add(input: Record<string, unknown>) {
@@ -186,7 +189,7 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
                         id={`line-note-${l.id}`} aria-label={`Note for ${l.name}`} rows={2} maxLength={500}
                         value={noteDraft[l.id] ?? l.note ?? ''}
                         onChange={(e) => setNoteDraft((d) => ({ ...d, [l.id]: e.target.value }))}
-                        onBlur={() => leaveNote(l)}
+                        onBlur={() => void leaveNote(l)}
                         className="w-full min-w-40 resize-y rounded-md border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm leading-normal"
                       />
                     ) : l.note ? (
