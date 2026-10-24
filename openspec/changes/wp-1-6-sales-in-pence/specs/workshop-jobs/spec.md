@@ -32,7 +32,7 @@ A service's price SHALL be under £1,000,000, else refused with "A service’s p
 - **THEN** it is refused with "A service’s price must be under £1,000,000", not a server error
 
 ### Requirement: A quote line's total is its quantity times its unit pence, rounded once
-A quote line's total SHALL be its quantity times its unit amount in pence, rounded to a whole penny, worked out in one place on the server. A labour line's quantity MAY be part of an hour; a part line's quantity SHALL be a whole number of 1 or more, as its order line counts whole items, and any other SHALL be refused with "A part’s quantity must be a whole number of 1 or more."
+A quote line's total SHALL be its quantity times its unit amount in pence, rounded to a whole penny, worked out in one place on the server. A labour line's quantity MAY be part of an hour, and SHALL be more than 0, else refused with "Labour needs a quantity of more than 0."; a part line's quantity SHALL be a whole number of 1 or more, as its order line counts whole items, and any other SHALL be refused with "A part’s quantity must be a whole number of 1 or more."
 
 #### Scenario: Half an hour of labour
 - **WHEN** a labour line is 1.5 hours at £36.00

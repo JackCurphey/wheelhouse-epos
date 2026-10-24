@@ -213,3 +213,14 @@ test('a part line needs a whole-number quantity', async () => {
   const labour = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [TRUE_WHEEL] } });
   assert.equal(labour.status, 201, 'labour can be 1.5 hours');
 });
+
+// Review (24 Oct): labour of no time, or less, would quote £0.00 or take money
+// off the order once agreed.
+test('a labour line needs a quantity of more than 0', async () => {
+  const job = await bookedJob(200);
+  for (const quantity of [0, -1]) {
+    const res = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ ...TRUE_WHEEL, quantity }] } });
+    assert.equal(res.status, 409, `${quantity}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.error, 'Labour needs a quantity of more than 0.');
+  }
+});
