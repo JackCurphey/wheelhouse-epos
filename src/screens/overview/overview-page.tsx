@@ -43,7 +43,7 @@ function Figure({ id, label, value, note, fill }: { id: string; label: string; v
           <div className="h-full bg-[var(--accent)]" style={{ width: `${fill}%` }} />
         </div>
       ) : null}
-      <p className="m-0 text-[13px] text-[var(--wh-muted)] max-md:basis-full">{note}</p>
+      <p className="m-0 text-size-13 text-[var(--wh-muted)] max-md:basis-full">{note}</p>
     </section>
   );
 }
@@ -112,12 +112,12 @@ export function OverviewPage() {
       const start = startOf(j, today);
       return due(start, now)
         ? <Button variant="accent" size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={busy === j.id} aria-label={`Book in ${j.reference}`} onClick={() => startBookIn(j)}>Book in</Button>
-        : <span className="text-[13px] whitespace-nowrap max-md:text-sm"><span className="font-[family-name:var(--wh-font-mono)]">{start}</span> appointment</span>;
+        : <span className="text-size-13 whitespace-nowrap max-md:text-sm"><span className="font-[family-name:var(--wh-font-mono)]">{start}</span> appointment</span>;
     }
     return <Link to={`${ROUTES.diary}?job=${j.id}`} aria-label={`Open job ${j.reference}`} className={`inline-flex items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)] ${touch ? 'min-h-11' : 'min-h-8'}`}>Open job</Link>;
   };
 
-  const dateLine = <p className="m-0 text-[15px] text-[var(--wh-muted)] max-md:text-sm">{`${dayLabel(today)} · one shop, one view of the work`}</p>;
+  const dateLine = <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{`${dayLabel(today)} · one shop, one view of the work`}</p>;
   // Either read failing would make the figures look real when they aren't.
   if (day.failed) {
     return (
@@ -156,8 +156,8 @@ export function OverviewPage() {
               {shown.map((j) => (
                 <li key={j.id} className="flex items-center justify-between gap-2.5 border-t border-[var(--wh-border)] px-3.5 py-2.5 first:border-t-0">
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[15px]">{name(j)}</span>
-                    <span className="text-[13px] text-[var(--wh-muted)]">{`${j.bikeLabel ?? 'No bike'} · ${work(j)}`}</span>
+                    <span className="text-size-15">{name(j)}</span>
+                    <span className="text-size-13 text-[var(--wh-muted)]">{`${j.bikeLabel ?? 'No bike'} · ${work(j)}`}</span>
                     <span><Custody job={j} slotsOn={slotsOn} /></span>
                   </div>
                   <div className="shrink-0">{action(j)}</div>

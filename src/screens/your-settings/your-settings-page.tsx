@@ -16,11 +16,12 @@ import { StatusShape } from '@/screens/diary/status-shape.tsx';
  * Close goes back. Only the switches built show (design 5); the Till PIN
  * waits for PINs (WP-1.7).
  */
-// Larger text waits: zooming the app put the diary's drops and pop-ups off
-// their marks (review), so it's a question for Jack.
-const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: 'symbols' }[] = [
+// Larger text scales the text sizes themselves, not the page (Jack, 24 Oct
+// answer 8; openspec/changes/larger-text): after Reduce motion, as drawn.
+const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: 'symbols' | 'text' }[] = [
   { key: 'statusSymbols', label: 'Show status symbols', hint: 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', preview: 'symbols' },
   { key: 'reduceMotion', label: 'Reduce motion', hint: 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.' },
+  { key: 'largerText', label: 'Larger text', hint: 'Makes text across Wheelhouse a step larger.', preview: 'text' },
 ];
 
 function Switch({ label, on, disabled, onChange }: { label: string; on: boolean; disabled: boolean; onChange: () => void }) {
@@ -34,6 +35,24 @@ function Switch({ label, on, disabled, onChange }: { label: string; on: boolean;
   );
 }
 
+// The drawing's preview of Larger text (diary.mjs largerTextPreview): Normal at
+// 14 and Larger at 17, fixed, so it shows the step whichever is on.
+function TextPreview() {
+  // Fixed sizes on purpose (the only ones off the scale): the preview shows the step either way.
+  const col = (px: number, label: string) => (
+    <span className="flex flex-col gap-[3px]">
+      <span className="text-[var(--wh-muted)]" style={{ fontSize: 11 }}>{label}</span>
+      <span className="font-semibold" style={{ fontSize: px }}>Standard service</span>
+    </span>
+  );
+  return (
+    <div role="group" aria-label="Preview" className="flex flex-col gap-1.5">
+      <span className="text-xs font-bold tracking-[0.8px] text-[var(--wh-muted)] uppercase">Preview</span>
+      <div className="flex items-end gap-5 pt-1.5">{col(14, 'Normal')}{col(17, 'Larger')}</div>
+    </div>
+  );
+}
+
 // The drawing's preview of Show status symbols: two week blocks with their shapes (diary.mjs symbolsPreview).
 const SAMPLE: [('scheduled' | 'waiting'), string, string][] = [['scheduled', 'Trek Domane AL 3', 'Standard service'], ['waiting', 'Cannondale Quick', 'Gear adjustment']];
 function SymbolsPreview() {
@@ -44,8 +63,8 @@ function SymbolsPreview() {
         {SAMPLE.map(([state, bike, title]) => (
           <div key={state} aria-hidden="true" className={`relative w-[122px] rounded-[5px] border-[1.75px] py-[3px] pr-4 pl-1.5 ${BLOCK[state]}`}>
             <StatusShape state={state} />
-            <div className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{bike}</div>
-            <div className="truncate text-[10px] font-bold">{title}</div>
+            <div className="truncate text-size-11 font-bold text-[var(--wh-ink)]">{bike}</div>
+            <div className="truncate text-size-10 font-bold">{title}</div>
           </div>
         ))}
       </div>
@@ -90,7 +109,7 @@ export function YourSettingsPage() {
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-3.5 pr-3.5 pl-[22px]">
         <div className="flex grow flex-col gap-0.5">
           <h2 id="ys-title" className="m-0 text-xl font-bold">Your settings</h2>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`${user.name} · ${roleName} · ${isPhone ? 'just for you' : 'just for you, they don’t change what others see'}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`${user.name} · ${roleName} · ${isPhone ? 'just for you' : 'just for you, they don’t change what others see'}`}</span>
         </div>
         <button type="button" aria-label="Close" onClick={close} className="inline-flex size-11 items-center justify-center rounded-lg">
           <NavIcon name="close" size={20} />
@@ -103,16 +122,16 @@ export function YourSettingsPage() {
           <div key={r.key} className="flex flex-col gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 grow flex-col gap-1">
-                <span className="text-[15px] font-bold">{r.label}</span>
-                <span className="text-[13px] leading-[1.45] text-[var(--wh-muted)]">{r.hint}</span>
+                <span className="text-size-15 font-bold">{r.label}</span>
+                <span className="text-size-13 leading-[1.45] text-[var(--wh-muted)]">{r.hint}</span>
               </div>
               <Switch label={r.label} on={Boolean(a11y?.[r.key])} disabled={!a11y || busy.has(r.key)} onChange={() => void flip(r.key, !a11y?.[r.key])} />
             </div>
-            {r.preview === 'symbols' ? <SymbolsPreview /> : null}
+            {r.preview === 'symbols' ? <SymbolsPreview /> : r.preview === 'text' ? <TextPreview /> : null}
           </div>
         ))}
         {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t save that. Try again in a moment.</p> : null}
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">Changes apply straight away.</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">Changes apply straight away.</p>
       </div>
     </Dialog>
   );

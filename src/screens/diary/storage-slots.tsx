@@ -53,7 +53,7 @@ export function SlotDialog({ job, slots, title, busy, onDone, onClose }: {
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="slot-title">{title}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{[job.customerName, job.bikeLabel, job.title].filter(Boolean).join(' · ')}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[job.customerName, job.bikeLabel, job.title].filter(Boolean).join(' · ')}</span>
         </div>
       </DialogHeader>
       <DialogBody>

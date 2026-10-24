@@ -46,7 +46,7 @@ const when = (iso: string) => {
 
 function Row({ left, right, strong = false }: { left: string; right: string; strong?: boolean }) {
   return (
-    <div className={`flex justify-between gap-3 ${strong ? 'text-[15px] font-bold' : ''}`}>
+    <div className={`flex justify-between gap-3 ${strong ? 'text-size-15 font-bold' : ''}`}>
       <span>{left}</span>
       <span className="font-mono">{right}</span>
     </div>
@@ -65,10 +65,10 @@ function Barcode({ value }: { value: string }) {
 
 export function ReceiptPaper({ sale, shopName, job, details }: ReceiptProps) {
   return (
-    <article aria-label="Receipt" className="flex w-[72mm] flex-col gap-2.5 p-4 text-[13px] leading-snug">
+    <article aria-label="Receipt" className="flex w-[72mm] flex-col gap-2.5 p-4 text-size-13 leading-snug">
       {/* The shop's name at the top; its details and the barcode at the bottom (shop details answer 2). */}
       <div className="flex flex-col items-center gap-1 text-center">
-        <strong className="text-[17px]">{shopName}</strong>
+        <strong className="text-size-17">{shopName}</strong>
         <span>{`Sale ${sale.id}`}</span>
         <span>{when(sale.createdAt)}</span>
       </div>

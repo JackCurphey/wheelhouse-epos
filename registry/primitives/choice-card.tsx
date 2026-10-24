@@ -36,7 +36,7 @@ export function ChoiceCard({ title, detail, price, selected, className, type = '
           flex layout they take no room, so nothing moves on screen. */}
       <span className="flex flex-col gap-0.5">
         <span className="font-semibold">{title}</span>
-        {detail && <>{' '}<span className="text-[13px] text-[var(--wh-muted)]">{detail}</span></>}
+        {detail && <>{' '}<span className="text-size-13 text-[var(--wh-muted)]">{detail}</span></>}
       </span>
       {price && <>{' '}<span className="whitespace-nowrap font-mono font-medium">{price}</span></>}
     </button>

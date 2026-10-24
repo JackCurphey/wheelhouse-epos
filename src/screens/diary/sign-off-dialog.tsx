@@ -22,7 +22,7 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       role="radio"
       aria-checked={on}
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+      className={`inline-flex min-h-11 items-center rounded-full border px-3.5 text-size-13 font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
     >
       {children}
     </button>
@@ -40,11 +40,11 @@ export function SignOffDialog({ job, busy, onSign, onClose }: { job: WorkshopJob
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="sign-off-title">Who’s signing this off?</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`${job.title} · ${job.reference}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`${job.title} · ${job.reference}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">Signing off says the work is done and the bike is fine to go out. If it comes back, the job shows who passed it.</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">Signing off says the work is done and the bike is fine to go out. If it comes back, the job shows who passed it.</p>
         <RadioPillGroup aria-label="Signed off by" className="flex flex-wrap gap-2">
           {people.map((p) => <Pill key={p.id} on={chosen === p.id} onClick={() => setPicked(p.id)}>{p.name}</Pill>)}
         </RadioPillGroup>

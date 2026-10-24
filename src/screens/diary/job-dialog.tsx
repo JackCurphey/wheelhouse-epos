@@ -406,7 +406,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
             <DepositStrip job={job} notCome={canMarkNoShow(job)} onRefund={() => setRefunding(true)} />
             {/* Who signed the finished work off (Jack, 16 Oct, answer 3; drawn under the finished strip). */}
             {finished && job.signedOffByName && job.signedOffAt ? (
-              <p className="m-0 flex shrink-0 items-center gap-2 border-b border-[var(--wh-border)] px-5 py-1.5 text-[13px]">
+              <p className="m-0 flex shrink-0 items-center gap-2 border-b border-[var(--wh-border)] px-5 py-1.5 text-size-13">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
                 <span data-sign-off="true">Signed off by <strong>{job.signedOffByName}</strong>{` · ${signedOffWhen(job.signedOffAt)}`}</span>
               </p>
@@ -456,7 +456,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           aria-checked={here}
                           disabled={here || sending || job.bookingState === 'pending' || job.bookingState === 'offered' || ended}
                           onClick={() => bookIn()}
-                          className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-[13px] font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+                          className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-size-13 font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
                         >
                           <span aria-hidden="true" className={`inline-block size-3 rounded-full border ${here ? 'border-[var(--wh-accent-soft-ink)] bg-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)]'}`} />
                           Bike is here
@@ -487,11 +487,11 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                       />
                     </div>
                     {job.workState === 'complete' ? (
-                      <span className="text-[13px] text-[var(--wh-muted)]">Reopen the job to change its notes.</span>
+                      <span className="text-size-13 text-[var(--wh-muted)]">Reopen the job to change its notes.</span>
                     ) : (
                       <div className="flex items-center gap-3">
                         <Button size="sm" disabled={sending || draft === null || draft === (job.notes ?? '')} onClick={saveNotes}>Save notes</Button>
-                        <span role="status" className="text-[13px] text-[var(--wh-muted)]">{notesNote}</span>
+                        <span role="status" className="text-size-13 text-[var(--wh-muted)]">{notesNote}</span>
                       </div>
                     )}
                     {/* The service's checklist, under the notes as drawn (job-mechanic). */}
@@ -551,7 +551,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="delete-job-title">{`Delete ${job?.title ?? 'this job'}?`}</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">{[job?.reference, job?.customerName, job?.bikeLabel].filter(Boolean).join(' · ')}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{[job?.reference, job?.customerName, job?.bikeLabel].filter(Boolean).join(' · ')}</span>
           </div>
           <button type="button" aria-label="Close" onClick={() => setDeleting(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -567,7 +567,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="delete-blocked-title">Settle up first</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">{`Before ${[job?.title, job?.reference].filter(Boolean).join(' · ')} can be deleted`}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{`Before ${[job?.title, job?.reference].filter(Boolean).join(' · ')} can be deleted`}</span>
           </div>
           <button type="button" aria-label="Close" onClick={() => setDeleting(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>

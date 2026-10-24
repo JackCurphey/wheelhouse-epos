@@ -38,7 +38,7 @@ export function DepositStrip({ job, notCome, onRefund }: { job: WorkshopJob; not
   return (
     <section role="group" aria-label="Deposit" className="flex shrink-0 flex-col gap-1.5 border-b border-[var(--wh-border)] px-5 py-2">
       {notCome ? (
-        <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold">
+        <div className="flex flex-wrap items-center gap-2 text-size-13 font-semibold">
           {badge('Not come in', 'amber')}
           <span>Booked for <span className={mono}>{`${shortDay(job.jobDate)}${job.startTime ? ` · ${job.startTime}` : ''}`}</span> · the bike hasn’t come in</span>
         </div>
@@ -46,7 +46,7 @@ export function DepositStrip({ job, notCome, onRefund }: { job: WorkshopJob; not
       {d ? (
         <div className="flex flex-wrap items-center gap-2">
           {badge(head[0], head[1])}
-          <span className={`text-[13px] font-bold ${mono}`}>{pounds(d.pence)}</span>
+          <span className={`text-size-13 font-bold ${mono}`}>{pounds(d.pence)}</span>
           <span className="text-xs text-[var(--wh-muted)]">{side}</span>
           <span className="grow" />
           {d.state === 'refunded' ? null : <Button size="sm" onClick={onRefund}>Refund the deposit</Button>}
@@ -81,7 +81,7 @@ export function RefundDepositDialog({ job, onClose, onDone }: { job: WorkshopJob
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="deposit-refund-title">Refund the deposit</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{[job.customerName, job.title, job.reference].filter(Boolean).join(' · ')}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[job.customerName, job.title, job.reference].filter(Boolean).join(' · ')}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3 text-sm">
@@ -90,10 +90,10 @@ export function RefundDepositDialog({ job, onClose, onDone }: { job: WorkshopJob
           <span className={`font-semibold ${mono}`}>{pounds(d.pence)}</span>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="deposit-reason" className="text-[15px] font-semibold">Reason (needed)</label>
+          <label htmlFor="deposit-reason" className="text-size-15 font-semibold">Reason (needed)</label>
           <input id="deposit-reason" required aria-required="true" maxLength={200} value={reason}
             aria-invalid={error ? true : undefined} onChange={(e) => { setReason(e.target.value); setError(null); }}
-            className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]" />
+            className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15" />
         </div>
         <p className="m-0 text-[var(--wh-muted)]">It goes back to the card they paid with, within 5 to 10 working days.</p>
         {error ? <p role="alert" className="m-0 font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}

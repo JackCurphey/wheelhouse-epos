@@ -113,7 +113,7 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
       </div>
       <div ref={gridRef} role="group" aria-label={title} className="grid grid-cols-7 gap-[5px] text-center">
         {WEEKDAYS.map((w, i) => (
-          <span key={i} aria-hidden="true" className="text-[11px] text-[var(--wh-muted)]">{w}</span>
+          <span key={i} aria-hidden="true" className="text-size-11 text-[var(--wh-muted)]">{w}</span>
         ))}
         {Array.from({ length: leadingBlanks(month) }, (_, i) => (
           <span key={`b${i}`} data-cell="blank" />
