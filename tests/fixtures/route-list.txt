@@ -199,3 +199,5 @@ GET /api/your-settings
 PUT /api/your-settings
 POST /api/sales/:id/email-receipt
 GET /api/search
+GET /api/customers/matches
+GET /api/customers/recent
