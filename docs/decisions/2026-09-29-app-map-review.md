@@ -36,6 +36,8 @@ rail with labels and the phone top bar with a menu (68).
    screens it is a tap. Same timing as the stacked-jobs fan-out
    (decision 59 of Workshop day). Reduce motion turns the slide off but
    keeps the unfolding.
+   *Replaced 24 Oct: the rail opens only with Unfold
+   (`2026-10-24-sidebar-no-hover-unfold.md`).*
 6. **Wheelhouse-wide principle: as few clicks as possible** (Jack, 29 Sep).
    Every design should look for the step that can be dropped — hover to
    reveal, sensible defaults, one step instead of two — while keeping a

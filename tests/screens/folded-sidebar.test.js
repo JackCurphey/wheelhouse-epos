@@ -2,8 +2,10 @@
 // drawn as foldedRail and the your-settings row in app-map.mjs): the Till is
 // always folded to the icon rail; with the person's switch on, every page is.
 // The rail's Unfold opens the full sidebar over the page, Fold or Escape
-// closes it. jsdom applies no Tailwind, so which layout shows at which width
-// is checked in a browser (tests/browser/folded-sidebar.spec.ts).
+// closes it; resting the pointer on the rail doesn't open it (Jack, 24 Oct,
+// docs/decisions/2026-10-24-sidebar-no-hover-unfold.md). jsdom applies no
+// Tailwind, so which layout shows at which width is checked in a browser
+// (tests/browser/folded-sidebar.spec.ts).
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
@@ -57,6 +59,12 @@ test('the Till is folded to the rail; Unfold opens the full sidebar over the pag
   assert.ok(within(panel).getByRole('link', { name: 'Diary' }), 'the rooms are in it');
   const unfold = within(rail).getByRole('button', { name: 'Unfold the menu' });
   assert.equal(unfold.getAttribute('aria-expanded'), 'false');
+  // Resting the pointer on the rail leaves it folded: no hover rule shows the panel.
+  fireEvent.mouseEnter(rail.parentElement);
+  fireEvent.mouseOver(within(rail).getByRole('link', { name: 'Diary' }));
+  await new Promise((r) => setTimeout(r, 400));
+  assert.equal(panel.getAttribute('data-unfolded'), 'false');
+  assert.ok(!/hover/.test(panel.className), `no hover rule on the panel: ${panel.className}`);
   fireEvent.click(unfold);
   await waitFor(() => assert.equal(panel.getAttribute('data-unfolded'), 'true'));
   assert.equal(unfold.getAttribute('aria-expanded'), 'true');
@@ -84,7 +92,7 @@ test('with Folded sidebar on, the diary folds to the rail too', async () => {
 test('Your settings has Folded sidebar, as drawn for a computer, and it saves at once', async () => {
   const { ui, fireEvent, waitFor } = await open('/workshop/your-settings');
   const folded = await ui.findByRole('switch', { name: 'Folded sidebar' });
-  assert.ok(ui.queryByText('Folds the sidebar down to icons on every page, for more room. Rest the pointer on it, or press Unfold, to open it. The Till always has it folded.') !== null);
+  assert.ok(ui.queryByText('Folds the sidebar down to icons on every page, for more room. Press Unfold to open it. The Till always has it folded.') !== null);
   await waitFor(() => assert.equal(folded.disabled, false));
   fireEvent.click(folded);
   await waitFor(() => assert.equal(folded.getAttribute('aria-checked'), 'true'));

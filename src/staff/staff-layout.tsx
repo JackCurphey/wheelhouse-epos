@@ -128,16 +128,13 @@ function RailItem({ item }: { item: NavItem }) {
 
 /**
  * The icon rail, with Unfold (drawn as foldedRail, app-map.mjs; app map
- * review 4 and 5): the full sidebar opens over the page when the pointer rests
- * on the rail for about 300 ms, or with Unfold (the keyboard's way: opening
- * on focus would trap it open); Fold or Escape closes it, and resting the
- * pointer opens it again only once the pointer has left the rail. Reduce motion drops the slide, not the
+ * review 4): the full sidebar opens over the page only with Unfold, not when
+ * the pointer rests on the rail (Jack, 24 Oct: the 300 ms unfold is jarring);
+ * Fold or Escape closes it. Reduce motion drops the slide, not the
  * unfolding. On a tablet always; on a computer when folded.
  */
 function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; shopName: string; role: Role; roleName: string; folded: boolean }) {
   const [open, setOpen] = useState(false);
-  // Folded by Fold or Escape: resting the pointer doesn't open it again until it has left the rail.
-  const [dismissed, setDismissed] = useState(false);
   const unfoldRef = useRef<HTMLButtonElement>(null);
   const foldRef = useRef<HTMLButtonElement>(null);
   // A frame later, once the panel is showing: a hidden one can't take the focus.
@@ -147,7 +144,7 @@ function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; s
     const frame = requestAnimationFrame(() => foldRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [open]);
-  const fold = () => { setOpen(false); setDismissed(true); unfoldRef.current?.focus(); };
+  const fold = () => { setOpen(false); unfoldRef.current?.focus(); };
   const railRef = useRef<HTMLDivElement>(null);
   // A tap or click on the page beside it folds it, as the phone menu's backdrop does (review).
   useEffect(() => {
@@ -157,7 +154,7 @@ function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; s
     return () => document.removeEventListener('pointerdown', away);
   }, [open]);
   return (
-    <div ref={railRef} onKeyDown={(e) => { if (e.key === 'Escape' && open) fold(); }} onMouseLeave={() => setDismissed(false)} className={`group/rail sticky top-0 z-40 hidden h-screen shrink-0 ${folded ? 'md:flex' : 'md:flex lg:hidden'}`}>
+    <div ref={railRef} onKeyDown={(e) => { if (e.key === 'Escape' && open) fold(); }} className={`sticky top-0 z-40 hidden h-screen shrink-0 ${folded ? 'md:flex' : 'md:flex lg:hidden'}`}>
       {/* z-40 on the rail itself: a sticky box is its own layer, so the panel's own z-index alone stays under the page (review). */}
       <nav aria-label="Main, folded" className="flex h-screen w-[84px] flex-col gap-1.5 overflow-y-auto bg-[var(--sidebar)] px-1.5 py-2 text-[var(--sidebar-foreground)]">
         <button ref={unfoldRef} type="button" aria-label="Unfold the menu" aria-expanded={open} onClick={() => setOpen(true)}
@@ -187,7 +184,7 @@ function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; s
         data-unfolded={open}
         className={`absolute top-0 left-0 z-40 flex h-screen w-[248px] flex-col gap-3 overflow-y-auto bg-[var(--sidebar)] px-3 py-3.5 text-[var(--sidebar-foreground)] shadow-[8px_0_24px_var(--wh-backdrop)] ${open
           ? 'visible translate-x-0 opacity-100'
-          : `invisible -translate-x-3 opacity-0 delay-[250ms] ${dismissed ? '' : 'group-hover/rail:visible group-hover/rail:translate-x-0 group-hover/rail:opacity-100 group-hover/rail:delay-300'}`} motion-safe:transition-[opacity,transform,visibility] motion-safe:duration-150 motion-reduce:translate-x-0`}
+          : 'invisible -translate-x-3 opacity-0'} motion-safe:transition-[opacity,transform,visibility] motion-safe:duration-150 motion-reduce:translate-x-0`}
       >
         <div className="flex items-center gap-2.5">
           <span className="grow"><Wordmark /></span>
