@@ -24,6 +24,8 @@ let shell;
 let calls;
 let customer;
 let history;
+let duplicates;
+let merges;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -32,8 +34,10 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = null } = {}) {
+async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = null, dups = [], undoable = [] } = {}) {
   calls = [];
+  duplicates = dups;
+  merges = undoable;
   customer = { ...who };
   history = items;
   globalThis.fetch = async (url, init = {}) => {
@@ -47,6 +51,11 @@ async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = n
     if (u.pathname === '/api/customers/5') return reply(200, customer);
     if (u.pathname === '/api/customers/5/bikes') return reply(200, BIKES);
     if (u.pathname === '/api/customers/5/history') return reply(200, { items: history });
+    if (u.pathname === '/api/customers/5/possible-duplicates') return reply(200, duplicates);
+    if (u.pathname === '/api/customers/5/merges') return reply(200, merges);
+    if (u.pathname === '/api/customers/5/merge' && method === 'POST') { duplicates = []; merges = [{ id: 77, otherName: 'Maya P.', mergedAt: '2026-09-01T10:00:00.000Z', undoUntil: '2026-10-01T10:00:00.000Z' }]; return reply(200, { id: 77 }); }
+    if (u.pathname === '/api/customers/5/not-duplicate' && method === 'POST') { duplicates = []; return reply(200, { ok: true }); }
+    if (u.pathname === '/api/customer-merges/77/undo' && method === 'POST') { merges = []; return reply(200, { ok: true }); }
     if (u.pathname === '/api/customer-groups') return reply(200, [{ id: 3, name: 'Club members', discountPercent: 10 }]);
     if (u.pathname === '/api/customers/404') return reply(404, { error: 'Customer not found' });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -183,4 +192,63 @@ test('saving Edit keeps every group the customer is in (review)', async () => {
 test('an address that isn’t a customer’s number says there’s no such customer (review)', async () => {
   const { ui } = await open({ who: { ...MAYA, id: 'abc', name: 'Nobody' }, expect: 'There’s no such customer.' });
   assert.ok(ui.queryByText('There’s no such customer.') !== null);
+});
+
+// Possible duplicates and Merge (openspec/changes/customer-merge; cs-page-dup, cs-merge).
+const TWIN = { id: 8, name: 'Maya P.', phone: '07700 900142', email: null, address: null, postcode: null, notes: null, reason: 'phone', jobs: 1, sales: 2, createdAt: '2026-08-30T09:00:00.000Z' };
+const posts = () => calls.filter((c) => c.method === 'POST').map((c) => [new URL(c.url, 'http://localhost').pathname, c.body]);
+
+test('a possible duplicate is flagged on the page, as drawn, with Check', async () => {
+  const { ui, within } = await open({ dups: [TWIN] });
+  const notice = within((await ui.findByText(/Might be the same person as/)).closest('[role="status"]'));
+  assert.ok(notice.queryByText(/Might be the same person as Maya P\./) !== null);
+  assert.ok(notice.queryByText(/· same phone number/) !== null);
+  assert.ok(notice.getByRole('button', { name: 'Check' }));
+});
+
+test('Check opens The same person?, showing only what differs, with each one’s jobs and sales', async () => {
+  const { ui, fireEvent, within } = await open({ dups: [TWIN] });
+  fireEvent.click(await ui.findByRole('button', { name: 'Check' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'The same person?' }));
+  assert.ok(dialog.queryByText('Pick what to keep. Jobs, sales and bikes from both are kept together.') !== null);
+  assert.ok(dialog.queryByText('Only what’s different is shown. Both have 07700 900142.') !== null);
+  assert.ok(dialog.queryByText('2 jobs · 1 sale') !== null, 'this page’s counts');
+  assert.ok(dialog.queryByText('1 job · 2 sales') !== null, 'the other’s counts');
+  const names = within(dialog.getByRole('group', { name: 'Name' }));
+  assert.equal(names.getByRole('button', { name: 'Maya Patel' }).getAttribute('aria-pressed'), 'true', 'this page’s, to start');
+  assert.equal(names.getByRole('button', { name: 'Maya P.' }).getAttribute('aria-pressed'), 'false');
+  assert.ok(dialog.queryByRole('group', { name: 'Phone' }) === null, 'the same in both, so not shown');
+  assert.ok(dialog.queryByText(/Merging can be undone from the customer’s page for 30 days\./) !== null);
+});
+
+test('Merge into one sends the choices; the page then offers Undo the merge', async () => {
+  const { ui, fireEvent, within, waitFor } = await open({ dups: [TWIN] });
+  fireEvent.click(await ui.findByRole('button', { name: 'Check' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'The same person?' }));
+  fireEvent.click(within(dialog.getByRole('group', { name: 'Name' })).getByRole('button', { name: 'Maya P.' }));
+  fireEvent.click(dialog.getByRole('button', { name: 'Merge into one' }));
+  await waitFor(() => assert.ok(posts().some(([path]) => path === '/api/customers/5/merge')));
+  const [, body] = posts().find(([path]) => path === '/api/customers/5/merge');
+  assert.equal(body.otherId, 8);
+  assert.equal(body.keep.name, 'other');
+  assert.ok((await ui.findByText(/Merged with Maya P\./)) !== null);
+  fireEvent.click(ui.getByRole('button', { name: 'Undo the merge' }));
+  await waitFor(() => assert.ok(posts().some(([path]) => path === '/api/customer-merges/77/undo')));
+  await waitFor(() => assert.ok(ui.queryByText(/Merged with Maya P\./) === null));
+});
+
+test('They’re different people says so to the server and the notice goes', async () => {
+  const { ui, fireEvent, within, waitFor } = await open({ dups: [TWIN] });
+  fireEvent.click(await ui.findByRole('button', { name: 'Check' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'The same person?' }));
+  fireEvent.click(dialog.getByRole('button', { name: 'They’re different people' }));
+  await waitFor(() => assert.ok(posts().some(([path, b]) => path === '/api/customers/5/not-duplicate' && b.otherId === 8)));
+  await waitFor(() => assert.ok(ui.queryByText(/Might be the same person as/) === null));
+});
+
+test('a merge from earlier can be undone from the page, until its day', async () => {
+  const { ui } = await open({ undoable: [{ id: 77, otherName: 'Maya P.', mergedAt: '2026-09-01T10:00:00.000Z', undoUntil: '2026-10-01T10:00:00.000Z' }] });
+  const line = await ui.findByText(/Merged with Maya P\. on Tue 1 Sep · can be undone until Thu 1 Oct/);
+  assert.ok(line);
+  assert.ok(ui.getByRole('button', { name: 'Undo the merge' }));
 });

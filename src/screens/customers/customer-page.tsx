@@ -19,10 +19,13 @@ import { Field, OnOff, initials } from './customers-page.tsx';
  * and History: what's open now, then everything else, newest first.
  */
 type Customer = {
+  createdAt?: string;
   id: number; name: string; phone: string | null; email: string | null; notes: string | null;
   address: string | null; postcode: string | null; marketingPermission: boolean;
   groups: { id: number; name: string; discountPercent: number }[];
 };
+type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
+type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
 type Bike = { id: number; make: string | null; model: string | null; colour?: string | null };
 type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
@@ -215,6 +218,129 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
   );
 }
 
+const counted = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+// The fields "The same person?" can show, each as its words (address with its postcode).
+const MERGE_FIELDS: { key: 'name' | 'phone' | 'email' | 'address' | 'notes'; label: string; of: (c: Pick<Twin, 'name' | 'phone' | 'email' | 'address' | 'postcode' | 'notes'>) => string }[] = [
+  { key: 'name', label: 'Name', of: (c) => c.name },
+  { key: 'phone', label: 'Phone', of: (c) => c.phone ?? '' },
+  { key: 'email', label: 'Email', of: (c) => c.email ?? '' },
+  { key: 'address', label: 'Address', of: (c) => [c.address, c.postcode].filter(Boolean).join(', ') },
+  { key: 'notes', label: 'Note', of: (c) => c.notes ?? '' },
+];
+
+/** The same person? (cs-merge): only what differs, a choice of each, Merge into one or They're different people. */
+function MergeDialog({ me, twin, myJobs, mySales, onClose }: { me: Customer & { createdAt?: string }; twin: Twin; myJobs: number; mySales: number; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const differs = MERGE_FIELDS.filter((f) => f.of(me).trim().toLowerCase() !== f.of(twin).trim().toLowerCase());
+  const [keep, setKeep] = useState<Record<string, 'this' | 'other'>>({});
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const same = twin.reason === 'phone' ? me.phone : me.email;
+  async function act(path: string, body: object) {
+    setBusy(true);
+    setProblem(null);
+    try {
+      await apiMutate(path, body);
+      for (const key of [['customer', me.id], ['customer-history', me.id], ['customer-bikes', me.id], ['possible-duplicates', me.id], ['customer-merges', me.id], ['recent-customers'], ['search']]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+      onClose();
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  const pick = (key: string, side: 'this' | 'other') => setKeep((k) => ({ ...k, [key]: side }));
+  const option = (key: string, side: 'this' | 'other', words: string) => {
+    const on = (keep[key] ?? 'this') === side;
+    return (
+      <button type="button" aria-pressed={on} onClick={() => pick(key, side)}
+        className={`flex min-h-11 items-center gap-2 rounded-lg border bg-[var(--wh-panel)] px-3 text-left text-sm ${on ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-border)]'}`}>
+        <span aria-hidden="true" className="w-4">{on ? '✓' : ''}</span>{words || 'Nothing'}
+      </button>
+    );
+  };
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="merge-title" className="md:max-w-[760px]">
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="merge-title">The same person?</DialogTitle>
+          <span className="text-[13px] text-[var(--wh-muted)]">Pick what to keep. Jobs, sales and bikes from both are kept together.</span>
+        </div>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-2">
+        <div className="grid grid-cols-[120px_1fr_1fr] gap-2.5 max-md:hidden">
+          <span />
+          {[[me.name, myJobs, mySales], [twin.name, twin.jobs, twin.sales]].map(([name, jobs, sales]) => (
+            <span key={String(name)} className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-bold">{name}</span>
+              <span className="text-[13px] text-[var(--wh-muted)]">{`${counted(Number(jobs), 'job')} · ${counted(Number(sales), 'sale')}`}</span>
+            </span>
+          ))}
+        </div>
+        {same ? <p className="m-0 text-sm text-[var(--wh-muted)]">{`Only what’s different is shown. Both have ${same}.`}</p> : null}
+        {differs.map((f) => (
+          <div key={f.key} role="group" aria-label={f.label} className="grid grid-cols-[120px_1fr_1fr] items-center gap-2.5 border-t border-[var(--wh-border)] py-2 max-md:grid-cols-1">
+            <span aria-hidden="true" className="text-[13px] font-bold text-[var(--wh-muted)]">{f.label}</span>
+            {option(f.key, 'this', f.of(me))}
+            {option(f.key, 'other', f.of(twin))}
+          </div>
+        ))}
+        <p className="m-0 text-sm text-[var(--wh-muted)]">{`${me.createdAt ? `Added on ${shortDate(me.createdAt)} and ${shortDate(twin.createdAt)}. ` : ''}Merging can be undone from the customer’s page for 30 days.`}</p>
+        {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="ghost" disabled={busy} onClick={() => void act(`/api/customers/${me.id}/not-duplicate`, { otherId: twin.id })}>They’re different people</Button>
+        <Button variant="accent" disabled={busy} onClick={() => void act(`/api/customers/${me.id}/merge`, { otherId: twin.id, keep: Object.fromEntries(differs.map((f) => [f.key, keep[f.key] ?? 'this'])) })}>Merge into one</Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+
+/** The flagged duplicates and the merges that can still be undone, at the top of the page (cs-page-dup; design 7). */
+function Duplicates({ me }: { me: Customer & { createdAt?: string } }) {
+  const queryClient = useQueryClient();
+  const twins = useQuery({ queryKey: ['possible-duplicates', me.id], queryFn: () => apiGet<Twin[]>(`/api/customers/${me.id}/possible-duplicates`) });
+  const merges = useQuery({ queryKey: ['customer-merges', me.id], queryFn: () => apiGet<Merge[]>(`/api/customers/${me.id}/merges`) });
+  const history = useQuery({ queryKey: ['customer-history', me.id], queryFn: () => apiGet<{ items: Item[] }>(`/api/customers/${me.id}/history`) });
+  const [checking, setChecking] = useState<Twin | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const box = 'flex flex-wrap items-center gap-3 rounded-[10px] border border-[var(--wh-ink)] bg-[var(--wh-panel)] py-2 pr-2 pl-3.5';
+  async function undo(m: Merge) {
+    setProblem(null);
+    try {
+      await apiMutate(`/api/customer-merges/${m.id}/undo`, {});
+      for (const key of [['customer', me.id], ['customer-history', me.id], ['customer-bikes', me.id], ['possible-duplicates', me.id], ['customer-merges', me.id], ['recent-customers'], ['search']]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t undo that. Try again in a moment.');
+    }
+  }
+  const items = history.data?.items ?? [];
+  return (
+    <>
+      {(merges.data ?? []).map((m) => (
+        <div key={m.id} role="status" className={box}>
+          <span className="grow text-[15px]">{`Merged with ${m.otherName} on ${shortDate(m.mergedAt)} · can be undone until ${shortDate(m.undoUntil)}`}</span>
+          <Button onClick={() => void undo(m)}>Undo the merge</Button>
+        </div>
+      ))}
+      {(twins.data ?? []).map((t) => (
+        <div key={t.id} role="status" className={box}>
+          <span className="grow text-[15px]"><strong>{`Might be the same person as ${t.name}`}</strong> <span className="text-[var(--wh-muted)]">{t.reason === 'phone' ? '· same phone number' : '· same email address'}</span></span>
+          <Button onClick={() => setChecking(t)}>Check</Button>
+        </div>
+      ))}
+      {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
+      {checking ? (
+        <MergeDialog me={me} twin={checking} myJobs={items.filter((i) => i.kind === 'job').length} mySales={items.filter((i) => i.kind === 'sale').length} onClose={() => setChecking(null)} />
+      ) : null}
+    </>
+  );
+}
+
 export function CustomerPage() {
   // A customer's number from the address; anything else is no such customer.
   const id = Number(useParams().id ?? '');
@@ -241,6 +367,7 @@ export function CustomerPage() {
         </span>
         <Link to={newJobHref(c.id)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--wh-on-brand)] no-underline">New job</Link>
       </div>
+      <Duplicates me={c} />
       <div className={`flex gap-4 ${isPhone ? 'flex-col' : 'flex-row items-start'}`}>
         <div className={`flex shrink-0 flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] pt-1 pb-3.5 ${isPhone ? '' : 'w-80'}`}>
           <Section id="h-details" title="Details" action={<button type="button" onClick={() => setEditing(true)} className="min-h-11 px-2 text-sm font-semibold underline">Edit</button>}>
