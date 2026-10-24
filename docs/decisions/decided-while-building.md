@@ -1893,3 +1893,25 @@ No screen: server only.
 13. **A till that was offline finds the kept record**: its sales for the
     merged-away customer go to the one kept, and that customer sent again
     isn't made a second time, before and after the 30 days.
+
+### 24 Oct 2026: the shop's deposit settings (`openspec/changes/deposit-settings`, `bk-settings-deposits`)
+
+1. **The rows under "Take a deposit when booking" show only while it's on**
+   (not drawn off), as "Drop off before the booking" shows only for set times.
+2. **Deposits can be switched on before "How much" is filled in**, since its
+   row only shows once they're on; until it is, no deposit is taken and the
+   fold says "no deposit".
+3. **A deposit is never more than the price shown**, for a fixed amount too:
+   a £20 deposit on a £12.50 booking takes £12.50. A free booking takes none.
+4. **"How much" is a whole percentage** (1 to 100), and amounts are typed in
+   pounds and pence, from £0.01 to £10,000.
+5. **Deposits only switch on while a payment provider is connected** (the
+   website settings' "booking deposits are off, until you connect [payment
+   provider]"); until a real account exists that is the pretend one, and
+   only where it's asked for (`PAYMENTS_PROVIDER=pretend`: the tests, a
+   developer's computer, the hosted test copy), never by a shop running for
+   real (review).
+6. **"For: Every booking / Chosen services" waits for the service editor**,
+   which the new app doesn't have yet; until then every booking takes it.
+7. **The note about declining shows only while automatic confirming is off**,
+   as its own words say ("With automatic confirming off, …").
