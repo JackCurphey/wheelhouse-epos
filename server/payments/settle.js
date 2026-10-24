@@ -2,9 +2,11 @@
 // design 5, review): a hold with no booking an hour on is let go, so nobody's
 // card stays held for a booking that never came; a booked deposit still held
 // (the provider couldn't take it as the booking was saved) is taken. Run when
-// deposits are next held or booked; there's no timer.
+// deposits are next held or booked; there's no timer. A refund still owed
+// is made too (deposit-refunds design 2).
 import { prepare } from '../db.js';
 import { payments } from './index.js';
+import { refundOwed } from './refund.js';
 
 export async function settleDeposits() {
   const provider = payments();
@@ -26,4 +28,5 @@ export async function settleDeposits() {
       console.error(`deposit ${p.id}: couldn’t be ${to} yet`, err);
     }
   }
+  await refundOwed();
 }
