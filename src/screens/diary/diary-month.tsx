@@ -68,7 +68,7 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
                 type="button"
                 aria-label={`Open ${dayLabel(d)} in the Day view`}
                 onClick={() => onOpenDay(d)}
-                className={`self-start text-[13px] leading-[18px] font-bold ${coarse ? 'min-h-11 min-w-11 text-left' : ''} ${isToday ? 'text-[var(--wh-accent-dark)]' : ''}`}
+                className={`self-start text-size-13 leading-[18px] font-bold ${coarse ? 'min-h-11 min-w-11 text-left' : ''} ${isToday ? 'text-[var(--wh-accent-dark)]' : ''}`}
               >
                 {Number(d.slice(8))}{isToday ? ' · Today' : ''}
               </button>
@@ -103,7 +103,7 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
           );
         })}
       </section>
-      {coarse ? <p className="m-0 mt-2 text-[13px] text-[var(--wh-muted)]">Tap a day to see its jobs.</p> : null}
+      {coarse ? <p className="m-0 mt-2 text-size-13 text-[var(--wh-muted)]">Tap a day to see its jobs.</p> : null}
       <Dialog open={listDay !== null} onOpenChange={(o) => { if (!o) setListDay(null); }} aria-labelledby="month-day-title">
         <DialogHeader>
           <DialogTitle id="month-day-title">{listDay ? dayLabel(listDay) : ''}</DialogTitle>
@@ -120,8 +120,8 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
               onClick={() => { setListDay(null); onOpen(j); }}
               className="grid min-h-[52px] grid-cols-[48px_1fr_auto] items-center gap-x-2.5 gap-y-0.5 border-t border-[var(--wh-border)] px-2 py-1.5 text-left first:border-t-0"
             >
-              <span className="font-mono text-[13px] font-bold">{j.startTime ?? 'No time'}</span>
-              <span className={`flex items-center gap-1 truncate text-[13px] font-bold ${j.state === 'cancelled' ? 'line-through' : ''}`}>
+              <span className="font-mono text-size-13 font-bold">{j.startTime ?? 'No time'}</span>
+              <span className={`flex items-center gap-1 truncate text-size-13 font-bold ${j.state === 'cancelled' ? 'line-through' : ''}`}>
                 <span className="truncate">{j.bikeLabel || 'Bike'} · {j.title}</span>
                 {j.newOnline ? <>{' · '}<NewOnlineMark short /></> : null}
               </span>
@@ -131,7 +131,7 @@ export function MonthGrid({ days, month, jobs, today, coarse, onOpen, onOpenDay 
             </button>
           ))}
           {listDay ? (
-            <button type="button" onClick={() => { const d = listDay; setListDay(null); onOpenDay(d); }} className="flex min-h-11 items-center border-t border-[var(--wh-border)] px-2 text-left text-[13px] font-semibold text-[var(--wh-accent-dark)] underline underline-offset-2">
+            <button type="button" onClick={() => { const d = listDay; setListDay(null); onOpenDay(d); }} className="flex min-h-11 items-center border-t border-[var(--wh-border)] px-2 text-left text-size-13 font-semibold text-[var(--wh-accent-dark)] underline underline-offset-2">
               Open this day in the Day view
             </button>
           ) : null}
@@ -169,7 +169,7 @@ export function ChooseDaySheet({ open, date, who, whose, onClose, onPick }: {
       <DialogHeader>
         <span className="flex flex-col gap-0.5">
           <DialogTitle id="choose-day-title">Choose a day</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">Jobs in each day, {whose}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">Jobs in each day, {whose}</span>
         </span>
         <button type="button" aria-label="Close" onClick={onClose} className="inline-flex size-11 items-center justify-center rounded-lg">
           <NavIcon name="close" size={20} />
@@ -200,7 +200,7 @@ export function ChooseDaySheet({ open, date, who, whose, onClose, onPick }: {
             );
           })}
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">Tap a day to open it.</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">Tap a day to open it.</p>
       </DialogBody>
     </Dialog>
   );

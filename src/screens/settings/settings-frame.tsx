@@ -50,7 +50,7 @@ function Fold({ fold, open, onToggle, level }: { fold: SettingsFold; open: boole
         >
           <span className="flex min-w-0 grow flex-col gap-0.5 md:flex-row md:items-center md:gap-3.5">
             <span className="grow text-base font-bold">{fold.title}</span>
-            <span className="text-[13px] text-[var(--wh-muted)] md:text-right">{fold.summary}</span>
+            <span className="text-size-13 text-[var(--wh-muted)] md:text-right">{fold.summary}</span>
           </span>
           <Chevron open={open} />
         </button>
@@ -81,7 +81,7 @@ function RoomPage({ room, fold }: { room: SettingsRoom; fold: string | null }) {
   return (
     <div className="flex min-w-0 grow flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-[22px] font-bold max-md:text-xl">{room.name}</h2>
+        <h2 className="m-0 text-size-22 font-bold max-md:text-xl">{room.name}</h2>
         <p className="m-0 text-sm text-[var(--wh-muted)]">{many ? room.intro : room.areas[0]?.intro}</p>
       </div>
       {many ? (
@@ -115,7 +115,7 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
       <nav aria-label="Settings" className="hidden w-[190px] shrink-0 flex-col gap-0.5 md:flex lg:w-[220px]">
         {rooms.map((r) => (
           <Link key={r.key} to={roomHref(r.key)} aria-current={r.key === room.key ? 'page' : undefined}
-            className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-[15px] ${r.key === room.key ? 'bg-[var(--wh-surface-muted)] font-bold' : ''}`}>
+            className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-size-15 ${r.key === room.key ? 'bg-[var(--wh-surface-muted)] font-bold' : ''}`}>
             <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${r.key === room.key ? 'bg-[var(--wh-highlight)]' : ''}`} />
             {r.name}
           </Link>
@@ -127,7 +127,7 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
             <Link key={r.key} to={roomHref(r.key)} className="flex min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 first:border-t-0">
               <span className="flex min-w-0 grow flex-col gap-0.5">
                 <span className="text-base font-bold">{r.name}</span>
-                <span className="text-[13px] text-[var(--wh-muted)]">{roomLine(r)}</span>
+                <span className="text-size-13 text-[var(--wh-muted)]">{roomLine(r)}</span>
               </span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-[var(--wh-muted)]"><path d="M9 6l6 6-6 6" /></svg>
             </Link>

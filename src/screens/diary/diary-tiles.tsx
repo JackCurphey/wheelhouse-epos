@@ -430,7 +430,7 @@ function HourGutter({ range }: { range: { start: number; end: number } }) {
   return (
     <div aria-hidden="true" className="relative bg-[var(--wh-surface-muted)]" style={{ height: ((range.end - range.start) / 30) * SLOT_H }}>
       {hours.map((m) => (
-        <span key={m} className="absolute right-1 font-[family-name:var(--wh-font-mono)] text-xs text-[var(--wh-muted)]" style={{ top: Math.max(((m - range.start) / 30) * SLOT_H - 6, 1) }}>
+        <span key={m} data-hour-label="" className="absolute right-1 font-[family-name:var(--wh-font-mono)] text-xs text-[var(--wh-muted)]" style={{ top: Math.max(((m - range.start) / 30) * SLOT_H - 6, 1) }}>
           {hhmm(m)}
         </span>
       ))}
@@ -448,7 +448,9 @@ export function Grid({ heads, columns, noTime, onOpen, range, ariaLabel }: {
 }) {
   // While New job picks a time, the chips can't be opened, as blocks can't.
   const picking = useContext(PickContext);
-  const cols = `44px repeat(${heads.length}, minmax(0, 1fr))`;
+  // The hour column grows with Larger text, so its times aren't cut off (larger-text, review of the screenshot).
+  const gutter = 'calc(44px * var(--wh-text-scale))';
+  const cols = `${gutter} repeat(${heads.length}, minmax(0, 1fr))`;
   return (
     <section aria-label={ariaLabel} className="min-w-[720px] overflow-hidden rounded-[10px] md:min-w-0 border border-[var(--wh-border)] bg-[var(--wh-panel)]">
       <div className="grid border-b border-[var(--wh-border)]" style={{ gridTemplateColumns: cols }}>
@@ -461,7 +463,7 @@ export function Grid({ heads, columns, noTime, onOpen, range, ariaLabel }: {
         ))}
       </div>
       {noTime ? (
-        <div className="grid border-b border-[var(--wh-border)]" style={{ gridTemplateColumns: '44px minmax(0, 1fr)' }}>
+        <div className="grid border-b border-[var(--wh-border)]" style={{ gridTemplateColumns: `${gutter} minmax(0, 1fr)` }}>
           <div aria-hidden="true" className="bg-[var(--wh-surface-muted)] pt-[3px] text-center text-xs leading-tight font-bold text-[var(--wh-muted)]">
             No
             <br />

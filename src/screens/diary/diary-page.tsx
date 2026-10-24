@@ -378,7 +378,7 @@ export function DiaryPage() {
       aria-pressed={on}
       aria-label={name}
       onClick={() => set({ who: key === 'all' ? null : key })}
-      className={`inline-flex min-h-11 items-center gap-[7px] rounded-full border py-[5px] pr-3.5 pl-[5px] text-[13px] font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
+      className={`inline-flex min-h-11 items-center gap-[7px] rounded-full border py-[5px] pr-3.5 pl-[5px] text-size-13 font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
     >
       <span aria-hidden="true" className={`inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-xs font-bold ${on ? 'bg-[var(--wh-panel)] text-[var(--wh-accent-soft-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>
         {badge}
@@ -419,10 +419,10 @@ export function DiaryPage() {
             type="button"
             aria-label={`Waiting for you, ${waiting.data?.count ?? items.length}`}
             onClick={() => setSheetOpen(true)}
-            className="inline-flex min-h-11 items-center gap-[7px] rounded-[10px] border border-[var(--wh-on-accent)]/35 pr-2.5 pl-3 text-[15px] font-semibold text-[var(--sidebar-foreground)]"
+            className="inline-flex min-h-11 items-center gap-[7px] rounded-[10px] border border-[var(--wh-on-accent)]/35 pr-2.5 pl-3 text-size-15 font-semibold text-[var(--sidebar-foreground)]"
           >
             Waiting
-            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-[13px] font-bold text-[var(--wh-ink)]">
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-size-13 font-bold text-[var(--wh-ink)]">
               {waiting.data?.count ?? items.length}
             </span>
           </button>,
@@ -434,7 +434,7 @@ export function DiaryPage() {
             aria-label={newJobPicking ? 'Choose a time' : 'New job'}
             aria-pressed={newJobPicking}
             onClick={() => { setPicking((v) => (offering ? true : !v)); setOffering(null); setOfferAt(null); setMoveError(null); }}
-            className={`inline-flex size-11 items-center justify-center rounded-[10px] text-[22px] ${newJobPicking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
+            className={`inline-flex size-11 items-center justify-center rounded-[10px] text-size-22 ${newJobPicking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
           >
             <span aria-hidden="true">+</span>
           </button>,
@@ -516,9 +516,9 @@ export function DiaryPage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">No time</span>
               <div role="group" aria-label="No time" className="flex flex-wrap gap-1.5">
-                {noTime.length === 0 ? <span className="text-[13px] text-[var(--wh-muted)]">None</span> : null}
+                {noTime.length === 0 ? <span className="text-size-13 text-[var(--wh-muted)]">None</span> : null}
                 {noTime.map((j) => (
-                  <button type="button" key={j.partId} disabled={picking} onClick={() => openJob(j)} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
+                  <button type="button" key={j.partId} disabled={picking} onClick={() => openJob(j)} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-size-13 font-bold whitespace-nowrap ${CHIP[j.state]}`}>
                     <span className={SR}>{describe(j, false)}</span>
                     <span aria-hidden="true" className="inline-flex items-center gap-1">{j.bikeLabel || 'Bike'}{j.newOnline ? <>{' · '}<NewOnlineMark short={false} /></> : null}</span>
                   </button>
@@ -607,7 +607,7 @@ export function DiaryPage() {
               role="tab"
               aria-selected={view === v}
               onClick={() => { if (v === 'month') { setPicking(false); setOffering(null); } set({ view: v === 'week' ? null : v }); }}
-              className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-[13px] font-semibold pointer-coarse:min-h-11 ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
+              className={`inline-flex min-h-[38px] items-center rounded-lg px-4 text-size-13 font-semibold pointer-coarse:min-h-11 ${view === v ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
             >
               {v === 'week' ? 'Week' : v === 'day' ? 'Day' : 'Month'}
             </button>
@@ -622,7 +622,7 @@ export function DiaryPage() {
           <button type="button" aria-label={`Next ${unit}`} onClick={() => set({ date: shift(1) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
             <Chevron dir="next" />
           </button>
-          <button type="button" onClick={() => set({ date: null })} className="ml-0.5 min-h-11 rounded-md px-2.5 text-[13px] font-semibold">
+          <button type="button" onClick={() => set({ date: null })} className="ml-0.5 min-h-11 rounded-md px-2.5 text-size-13 font-semibold">
             Today
           </button>
         </div>
@@ -640,18 +640,18 @@ export function DiaryPage() {
           type="button"
           aria-label={`Waiting for you, ${waiting.data?.count ?? items.length}`}
           onClick={() => setSheetOpen(true)}
-          className="inline-flex min-h-11 shrink-0 items-center gap-[7px] rounded-[10px] border border-[var(--wh-input-border)] bg-[var(--wh-panel)] pr-2.5 pl-3 text-[15px] font-semibold lg:hidden"
+          className="inline-flex min-h-11 shrink-0 items-center gap-[7px] rounded-[10px] border border-[var(--wh-input-border)] bg-[var(--wh-panel)] pr-2.5 pl-3 text-size-15 font-semibold lg:hidden"
         >
           Waiting
-          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-[13px] font-bold">{waiting.data?.count ?? items.length}</span>
+          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] px-[7px] text-size-13 font-bold">{waiting.data?.count ?? items.length}</span>
         </button>
         <div className="hidden w-5 shrink-0 lg:block xl:w-2" />
         {newJobPicking ? (
-          <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
+          <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-size-15 font-semibold text-[var(--wh-on-brand)]">
             Choose a time
           </button>
         ) : (
-          <button type="button" onClick={() => { if (view === 'month') set({ view: null }); setOffering(null); setOfferAt(null); setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
+          <button type="button" onClick={() => { if (view === 'month') set({ view: null }); setOffering(null); setOfferAt(null); setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-size-15 font-semibold text-[var(--wh-on-brand)]">
             <span aria-hidden="true">+</span>
             New job
           </button>
@@ -667,10 +667,10 @@ export function DiaryPage() {
           <h2 id="waiting-heading" className="m-0 flex items-center gap-2 text-sm font-bold">
             {/* Screen readers hear the name in one piece: "Waiting for you (2)". */}
             <span aria-hidden="true">Waiting for you</span>
-            <span data-count-badge aria-hidden="true" className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-[13px] font-bold text-[var(--wh-ink)]">{waiting.data?.count ?? items.length}</span>
+            <span data-count-badge aria-hidden="true" className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-size-13 font-bold text-[var(--wh-ink)]">{waiting.data?.count ?? items.length}</span>
             <span className={SR}>{`Waiting for you (${waiting.data?.count ?? items.length})`}</span>
           </h2>
-          {items.length === 0 && waiting.isSuccess ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">Nothing waiting.</p> : null}
+          {items.length === 0 && waiting.isSuccess ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">Nothing waiting.</p> : null}
           {items.map((item) => {
             const card = waitingCard(item);
             const on = chosen === item.jobId;
@@ -699,9 +699,9 @@ export function DiaryPage() {
                 >
                   {/* Larger on a touch screen, as drawn for the tablet (layout review 238, item 4). */}
                   <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
-                  <span className="text-[13px] font-bold pointer-coarse:text-[15px]">{card.customer}</span>
-                  {card.bike ? <span className="text-xs text-[var(--wh-muted)] pointer-coarse:text-[13px]">{card.bike}</span> : null}
-                  <span className="text-xs pointer-coarse:text-[13px]">{card.detail}</span>
+                  <span className="text-size-13 font-bold pointer-coarse:text-size-15">{card.customer}</span>
+                  {card.bike ? <span className="text-xs text-[var(--wh-muted)] pointer-coarse:text-size-13">{card.bike}</span> : null}
+                  <span className="text-xs pointer-coarse:text-size-13">{card.detail}</span>
                 </button>
                 {on ? (
                   <button

@@ -35,7 +35,7 @@ const buttonVariants = cva(
       },
       size: {
         default: 'px-4 py-[9px] text-sm',
-        sm: 'rounded-md px-2.5 py-[5px] text-[13px]',
+        sm: 'rounded-md px-2.5 py-[5px] text-size-13',
       },
       block: {
         true: 'w-full',

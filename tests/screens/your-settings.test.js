@@ -63,12 +63,13 @@ test('Your settings, as drawn: whose they are, the switch built, off, and change
   assert.ok(dialog.queryByText('Accessibility') !== null);
   assert.equal((await dialog.findByRole('switch', { name: 'Reduce motion' })).getAttribute('aria-checked'), 'false');
   assert.ok(dialog.queryByText('Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.') !== null);
-  assert.ok(dialog.queryByRole('switch', { name: 'Larger text' }) === null, 'Larger text isn’t built yet');
-  // Show status symbols, first as drawn, with its preview of two week blocks.
+  // Show status symbols, first as drawn, with its preview of two week blocks;
+  // Larger text after Reduce motion (larger-text design 3).
   const switches = dialog.getAllByRole('switch').map((el) => el.getAttribute('aria-label'));
-  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion', 'Folded sidebar']);
+  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion', 'Larger text', 'Folded sidebar']);
   assert.ok(dialog.queryByText('Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.') !== null);
-  for (const words of ['Trek Domane AL 3', 'Standard service', 'Cannondale Quick', 'Gear adjustment']) assert.ok(dialog.queryByText(words) !== null, words);
+  // Standard service is in Larger text's preview too.
+  for (const words of ['Trek Domane AL 3', 'Standard service', 'Cannondale Quick', 'Gear adjustment']) assert.ok(dialog.queryAllByText(words).length > 0, words);
   assert.deepEqual([...document.querySelectorAll('dialog [data-status-shape]')].map((el) => el.getAttribute('data-status-shape')), ['scheduled', 'waiting']);
   assert.ok(dialog.queryByText('Changes apply straight away.') !== null);
 });
@@ -123,4 +124,19 @@ test('Show status symbols saves at once', async () => {
   fireEvent.click(symbols);
   await waitFor(() => assert.equal(symbols.getAttribute('aria-checked'), 'true'));
   assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ accessibility: { statusSymbols: true } }]);
+});
+
+// Larger text (Jack, 24 Oct answer 8; app-map.mjs ys-text; openspec/changes/larger-text).
+test('Larger text, as drawn: its words and preview; it saves at once and the page follows', async () => {
+  const { ui, fireEvent, waitFor, within } = await open('/workshop/your-settings');
+  const dialog = within(await ui.findByRole('dialog', { name: 'Your settings' }));
+  assert.ok(dialog.queryByText('Makes text across Wheelhouse a step larger.') !== null);
+  const preview = dialog.getByRole('group', { name: 'Preview' });
+  assert.ok(within(preview).getByText('Normal') && within(preview).getByText('Larger'));
+  const larger = await dialog.findByRole('switch', { name: 'Larger text' });
+  await waitFor(() => assert.equal(larger.disabled, false));
+  assert.ok(!html().contains('wh-larger-text'));
+  fireEvent.click(larger);
+  await waitFor(() => assert.ok(html().contains('wh-larger-text')));
+  assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ accessibility: { largerText: true } }]);
 });
