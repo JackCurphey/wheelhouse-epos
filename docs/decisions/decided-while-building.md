@@ -1859,3 +1859,37 @@ No screen: server only.
    there, so someone in two groups (the old app allows it) keeps both (review).
 10. **A UK number matches however it's written**: +44 7700 900142, 0044 … and
     07700 900142 are the same (review).
+
+### 24 Oct 2026: possible duplicates and Merge (`openspec/changes/customer-merge`, `cs-page-dup`, `cs-merge`)
+
+1. **The page you're on is the customer kept**; for each field that differs
+   (name, phone, email, address with postcode, note) its value is chosen to
+   start, and the other's can be picked instead.
+2. **Both with an online account can't be merged yet**, with that reason; one
+   with an account moves it to the kept record. (Which sign-in survives isn't
+   decided.)
+3. **The kept record keeps its own "Happy to hear about offers"**, not the
+   other's: a yes or no is the customer's, given on that record.
+4. **"Merged with [name] on [day] · can be undone until [day]"** with "Undo
+   the merge", at the top of the kept page (not drawn; its place is "from the
+   customer's page"), in the duplicate notice's style.
+5. **Removed for good after 30 days** when merges are next read or undone, not
+   on a timer; anything that has come to point at it since (a till sale synced
+   late) moves to the kept record first.
+6. **"Added on [day] and [day]."** before the 30-day note, without the
+   drawing's "on different tills" (where each was added isn't recorded).
+7. **Duplicates are found by phone or email, not by name.**
+8. **Undo is refused once the kept record has itself been merged** into
+   another, saying to undo that one first; undoing in order keeps every job
+   and sale on one record.
+9. **A name or email differing only in capitals is offered as a choice**, so
+   the spelling kept is the one picked.
+10. **Undo puts back only what the merge changed, and only where nobody has
+    changed it since**: a correction made after the merge stays.
+11. **Undo goes newest first**: an older merge into the same record waits
+    until a later one is undone. Undo also says so when the kept record has
+    been switched off.
+12. **A hidden record comes back only through Undo**, not by switching it on.
+13. **A till that was offline finds the kept record**: its sales for the
+    merged-away customer go to the one kept, and that customer sent again
+    isn't made a second time, before and after the 30 days.

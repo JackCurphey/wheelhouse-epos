@@ -85,8 +85,8 @@ async function resolveGroupIds(rawGroupIds) {
 
 // A UK number however it's written: +44 7700 900142, 0044 7700 900142 and
 // 07700 900142 are the same number (review), as digits from 0.
-const ukNumber = (d) => (d.startsWith('0044') ? `0${d.slice(4)}` : d.startsWith('44') && d.length === 12 ? `0${d.slice(2)}` : d);
-const UK_NUMBER_SQL = `(SELECT CASE WHEN d LIKE '0044%' THEN '0' || substr(d, 5) WHEN d LIKE '44%' AND length(d) = 12 THEN '0' || substr(d, 3) ELSE d END
+export const ukNumber = (d) => (d.startsWith('0044') ? `0${d.slice(4)}` : d.startsWith('44') && d.length === 12 ? `0${d.slice(2)}` : d);
+export const UK_NUMBER_SQL = `(SELECT CASE WHEN d LIKE '0044%' THEN '0' || substr(d, 5) WHEN d LIKE '44%' AND length(d) = 12 THEN '0' || substr(d, 3) ELSE d END
   FROM (SELECT regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') AS d) AS digits)`;
 
 // The address, postcode and offers (cs-add): optional text, trimmed, blank
@@ -332,6 +332,8 @@ export function register(route) {
     const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
     const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
     const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+    // A record merged into another comes back only through Undo the merge (customer-merge design 3).
+    if (existing.merged_into_id && active !== existing.active) return sendJson(res, 409, { error: 'This customer was merged into another. Undo the merge to bring them back.', code: 'merged' });
 
     if (!name) return badRequest(res, 'Customer name is required');
     const extra = customerExtras(body, existing);
