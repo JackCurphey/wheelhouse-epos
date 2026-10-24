@@ -25,7 +25,7 @@ Every total the workshop works out (a quote line's total, a quote's totals, what
 - **THEN** it is 11100 pence, given as £111.00
 
 ### Requirement: Workshop prices stay under £1,000,000
-A service's price SHALL be under £1,000,000, else refused with "A service’s price must be under £1,000,000". A quote line's total SHALL be under £1,000,000, else refused with "A line’s price must be under £1,000,000.", so every amount fits in its whole pence.
+A service's price SHALL be under £1,000,000, else refused with "A service’s price must be under £1,000,000". A quote line's unit price and total SHALL each be under £1,000,000, else refused with "A line’s price must be under £1,000,000.", and a quote's lines together SHALL be under £1,000,000, else refused with "A quote’s total must be under £1,000,000.", so every amount fits in its whole pence.
 
 #### Scenario: Too dear
 - **WHEN** staff save a service at £21,474,836.48

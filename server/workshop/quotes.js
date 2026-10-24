@@ -130,13 +130,19 @@ async function createRevisionInTransaction({ jobId, lines }) {
       && (!Number.isInteger(Number(line.quantity)) || Number(line.quantity) < 1)) {
       return { ok: false, code: 'illegal', message: 'A part’s quantity must be a whole number of 1 or more.' };
     }
-    // Its total is kept in whole pence, so well within what they hold (fresh review).
-    if (Math.abs(Number(line.unitAmount) * Number(line.quantity ?? 1)) >= 1000000) {
+    // Its unit price and total are kept in whole pence, so well within what
+    // they hold (fresh review).
+    if (Math.abs(Number(line.unitAmount)) >= 1000000 || Math.abs(Number(line.unitAmount) * Number(line.quantity ?? 1)) >= 1000000) {
       return { ok: false, code: 'illegal', message: 'A line’s price must be under £1,000,000.' };
     }
     if (line.need !== undefined && !['needed', 'optional'].includes(line.need)) {
       return { ok: false, code: 'illegal', message: "each line's need must be 'needed' or 'optional'" };
     }
+  }
+
+  // And so are the quote's totals, its lines added up (review).
+  if (lines.reduce((n, l) => n + Math.abs(Number(l.unitAmount) * Number(l.quantity ?? 1)), 0) >= 1000000) {
+    return { ok: false, code: 'illegal', message: 'A quote’s total must be under £1,000,000.' };
   }
 
   const problem = pairProblem(lines);

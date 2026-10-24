@@ -2162,7 +2162,7 @@ follows the job checklist, the closest pattern built.
    lines' pence summed, none with prices hidden online, as each line's price
    is hidden.
 4. **A price is under £1,000,000** (fresh review): the pence are whole
-   numbers that stop at £21,474,836.47, so a service's price or a quote
-   line's total of £1,000,000 or more is refused in plain words rather than
-   failing; no bike shop charges that. A quoted part needs a quantity of 1 or
+   numbers that stop at £21,474,836.47, so a service's price, a quote line's
+   price or total, or a quote's lines together, of £1,000,000 or more is
+   refused in plain words rather than failing; no bike shop charges that. A quoted part needs a quantity of 1 or
    more, so a part isn't quoted at £0.00 and then charged as one.

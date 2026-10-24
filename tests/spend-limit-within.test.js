@@ -209,7 +209,7 @@ test('a part line needs a whole-number quantity', async () => {
   const job = await bookedJob(200);
   const res = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [{ kind: 'part', description: 'Chain lube', unitAmount: 10, quantity: 1.5, need: 'needed' }] } });
   assert.equal(res.status, 409, JSON.stringify(res.body));
-  assert.equal(res.body.error, 'A part’s quantity must be a whole number.');
+  assert.equal(res.body.error, 'A part’s quantity must be a whole number of 1 or more.');
   const labour = await staff(`/api/workshop-jobs/${job.id}/quotes`, { method: 'POST', body: { lines: [TRUE_WHEEL] } });
   assert.equal(labour.status, 201, 'labour can be 1.5 hours');
 });
