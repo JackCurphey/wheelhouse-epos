@@ -49,6 +49,7 @@ import { payments } from '../payments/index.js';
 import { paymentsConnected } from '../payments/provider.js';
 import { settleDeposits } from '../payments/settle.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
+import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -333,7 +334,7 @@ async function bookingLinkView(jobId, shop) {
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
             w.booked_in_at, w.collected_at, w.deposit_pence,
             to_char(w.deposit_cancel_until AT TIME ZONE (SELECT time_zone FROM workshop_settings LIMIT 1), 'YYYY-MM-DD HH24:MI') AS deposit_cancel_local,
-            w.deposit_cancel_until > ?::timestamptz AS deposit_refundable,
+            (w.deposit_cancel_until > ?::timestamptz OR w.booking_state IN ('pending', 'offered')) AS deposit_refundable,
             (SELECT CASE WHEN p.status IN ('refunded', 'released') OR p.refund_due_reason IS NOT NULL THEN 'refunded'
                          WHEN w.booking_state = 'cancelled' THEN 'kept' ELSE 'paid' END
                FROM online_payments p WHERE p.job_id = w.id ORDER BY p.id DESC LIMIT 1) AS deposit_state,
@@ -1393,7 +1394,10 @@ export function register(route) {
       // when the customer chose that (deposit-refunds design 3).
       if (job.deposit_pence) {
         // The server's clock, as every other time rule here (server/clock.js).
-        const inTime = (await db.prepare('SELECT deposit_cancel_until > ?::timestamptz AS ok FROM workshop_jobs WHERE id = ?').get(currentMoment().toISOString(), job.id)).ok;
+        // A request the shop hasn't confirmed always gets it back (Jack, 24 Oct,
+        // docs/decisions/2026-10-24-request-deposit-refund.md).
+        const unconfirmed = job.booking_state === 'pending' || job.booking_state === 'offered';
+        const inTime = unconfirmed || (await db.prepare('SELECT deposit_cancel_until > ?::timestamptz AS ok FROM workshop_jobs WHERE id = ?').get(currentMoment().toISOString(), job.id)).ok;
         if (!inTime && body?.losesDeposit !== true) {
           return { status: 409, body: { error: 'It’s past the time you could cancel for free, so the deposit would be kept.', code: 'deposit_kept' } };
         }
@@ -1443,6 +1447,9 @@ export function register(route) {
       await db.prepare(
         'UPDATE workshop_jobs SET offered_from_date = NULL, offered_from_time = NULL, offer_message = NULL, offer_accepted_at = now() WHERE id = ?'
       ).run(job.id);
+      // Accepted after its cut-off: 1 hour to cancel free, as a request the
+      // shop confirms late (Jack, 24 Oct; review).
+      await graceOnConfirm(job.id);
       await syncJobHold(job.id);
       return undefined;
     });

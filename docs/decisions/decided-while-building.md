@@ -1983,10 +1983,10 @@ No screen: server only.
 4. **The cut-off is judged by the server's clock**, as every other time rule.
 5. **A moved booking's "Free to cancel until" moves with it**: the same hours
    before its new start, in the shop's time, however it was moved (review).
-6. **A request the shop hasn't confirmed yet, cancelled after the cut-off,
-   keeps the deposit**, as the words on step 4 say ("After that, or if you
-   don't come, the shop keeps it"). For Jack: a request for tomorrow is past
-   its cut-off at once (review).
+6. ~~A request the shop hasn't confirmed yet, cancelled after the cut-off,
+   keeps the deposit.~~ **Overruled by Jack, 24 Oct**: a request the shop
+   hasn't confirmed always gets its deposit back
+   (`docs/decisions/2026-10-24-request-deposit-refund.md`).
 
 ### 24 Oct 2026: the deposit on the customer's pages (`openspec/changes/deposit-refund-pages`, `bk-cancel`, `bk-cancel-late`, `bk-cancelled`, `bk-declined`)
 
@@ -2010,6 +2010,12 @@ No screen: server only.
    "refunded".
 4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
    then simply paid, as for any booking (review).
+
+### 24 Oct 2026: requests and the cut-off (`openspec/changes/deposit-request-refund`)
+
+1. **A booking confirmed at once by automatic confirming keeps its own
+   cut-off**, without Jack's 1-hour window: it isn't a request, and the
+   customer saw "Free to cancel until" when booking.
 
 ### 24 Oct 2026: the diary job's deposit, the job pop-up (`openspec/changes/deposit-diary-screen`, `bk-staff-deposit…`, `bk-staff-no-show…`)
 
