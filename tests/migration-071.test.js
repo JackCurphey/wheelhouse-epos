@@ -1,4 +1,4 @@
-// Migration 063 (numbered 055 until 23 Oct) (openspec/changes/wp-1-6-sales-in-pence, design.md Decision 1,
+// Migration 071 (numbered 055, then 063, until 24 Oct) (openspec/changes/wp-1-6-sales-in-pence, design.md Decision 1,
 // task 1.3): orders gain pence columns beside their pounds, backfilled with
 // ROUND(pounds * 100); paid_pence is the converted sale's total; a product
 // line's VAT rate comes from its product and a labour line's stays empty
@@ -6,7 +6,7 @@
 //
 // The test needs pounds orders written before the migration, so it makes a
 // throwaway database (scripts/dev/new-db.mjs), migrates it to 050, writes the
-// orders as the app would have, then lets the runner apply 063 and runs the
+// orders as the app would have, then lets the runner apply 071 and runs the
 // totals check (scripts/ci/check-money-totals.mjs) on the result. Making one
 // needs a superuser: ADMIN_DATABASE_URL, or POSTGRES_SUPERUSER_PASSWORD from
 // .env. CI sets one, so there it runs; it is only skipped on a machine with
@@ -23,7 +23,7 @@ import { checkMoneyTotals, formatReport } from '../scripts/ci/check-money-totals
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '063_sales_in_pence.sql';
+const FILE = '071_sales_in_pence.sql';
 
 function adminUrlOrSkip(t) {
   try {
@@ -83,7 +83,7 @@ async function writePoundsOrders(client, name) {
   return { shop: shop.id, sale: sale.id, open, converted, cancelled, noSale, openTube, openLabour, seatLine, tube, seat };
 }
 
-test('063 adds pence beside pounds on orders, backfills them, and leaves the totals check clean', async (t) => {
+test('071 adds pence beside pounds on orders, backfills them, and leaves the totals check clean', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
   const name = `epos_mig055_${process.pid}`;
@@ -162,7 +162,7 @@ test('063 adds pence beside pounds on orders, backfills them, and leaves the tot
   });
 });
 
-test('063 applies from empty, with every earlier migration', async (t) => {
+test('071 applies from empty, with every earlier migration', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
   const name = `epos_mig055e_${process.pid}`;

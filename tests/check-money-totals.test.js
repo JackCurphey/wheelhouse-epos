@@ -44,7 +44,7 @@ function oldSale({ subtotal, discount = 0, group = 0, total, cash = 0, card = 0,
 }
 
 // An order, with pence written beside pounds as the routes write them from
-// step A (migration 063), and paid_pence the converted sale's total.
+// step A (migration 071), and paid_pence the converted sale's total.
 async function order({ subtotal, discount = 0, total, lines = [], status = 'open', convertedSaleId = null }) {
   const p = (pounds) => Math.round(pounds * 100);
   const { id } = await prepare(
@@ -171,7 +171,7 @@ test('conversion: every row with pounds and pence has pounds × 100 = pence; tab
   const client = await pool.connect();
   try {
     // A temporary table stands in for a converted one, so each case is
-    // written directly rather than through migration 063's columns.
+    // written directly rather than through migration 071's columns.
     await client.query('CREATE TEMP TABLE money_fixture (id SERIAL PRIMARY KEY, shop_id INTEGER, amount NUMERIC(10,2), amount_pence INTEGER)');
     await client.query('INSERT INTO money_fixture (shop_id, amount, amount_pence) VALUES ($1, 12.34, 1234), ($1, 12.34, 1235), ($2, 1, 5)', [shop.id, -1]);
     const converted = [{ table: 'money_fixture', columns: ['amount'] }, { table: 'sale_documents', columns: ['nonexistent'] }];
@@ -285,7 +285,7 @@ test('paid_pence, once it exists, is the converted sale\'s total plus the till l
   try {
     // Temporary tables of the same names come first on this connection's
     // search path, standing in for the column step D adds (paid_pence is
-    // migration 063's).
+    // migration 071's).
     for (const t of ['sales', 'sale_documents', 'sale_document_items', 'till_sale_lines']) {
       await client.query(`CREATE TEMP TABLE ${t} (LIKE public.${t} INCLUDING DEFAULTS)`);
     }
