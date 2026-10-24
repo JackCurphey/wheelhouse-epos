@@ -35,7 +35,9 @@ test('it starts with none of these', () => {
 
 test('the real server refuses before any migration runs', async () => {
   // Production needs a Shopify key before the server loads; a dummy one, never used.
-  const env = { ...process.env, ...SAFE, SHOPIFY_TOKEN_ENCRYPTION_KEY: 'test-only-'.padEnd(64, 'x'), TWILIO_ACCOUNT_SID: 'x', PORT: '0' };
+  // A database nobody answers at (fresh review, 24 Oct): a guard that ran
+  // after migrations would fail trying to reach it, not name the setting.
+  const env = { ...process.env, ...SAFE, SHOPIFY_TOKEN_ENCRYPTION_KEY: 'test-only-'.padEnd(64, 'x'), TWILIO_ACCOUNT_SID: 'x', PORT: '0', DATABASE_URL: 'postgres://nobody:x@127.0.0.1:1/none' };
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   let out = '';
   child.stdout.on('data', (d) => { out += d; });
@@ -47,5 +49,5 @@ test('the real server refuses before any migration runs', async () => {
   });
   assert.equal(code, 1, out);
   assert.match(out, /TWILIO_ACCOUNT_SID/);
-  assert.doesNotMatch(out, /Applied migration|Migrations up to date/);
+  assert.doesNotMatch(out, /Applied migration|Migrations up to date|ECONNREFUSED|connect/i);
 });
