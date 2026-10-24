@@ -49,7 +49,8 @@ export function DepositStrip({ job, notCome, onRefund }: { job: WorkshopJob; not
           <span className={`text-size-13 font-bold ${mono}`}>{pounds(d.pence)}</span>
           <span className="text-xs text-[var(--wh-muted)]">{side}</span>
           <span className="grow" />
-          {d.state === 'refunded' ? null : <Button size="sm" onClick={onRefund}>Refund the deposit</Button>}
+          {/* Once the job is paid at the till the deposit is part of the sale (Jack, 24 Oct, deposit-after-paid). */}
+          {d.state === 'refunded' || job.orderStatus === 'converted' ? null : <Button size="sm" onClick={onRefund}>Refund the deposit</Button>}
         </div>
       ) : null}
     </section>
