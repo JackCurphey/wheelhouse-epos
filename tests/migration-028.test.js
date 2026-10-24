@@ -45,7 +45,7 @@ test('workshop_jobs.question_answers is nullable jsonb', async () => {
 test('a service inserted without questions has an empty list', async () => {
   const row = await runWithShop(owner.shop.id, async () => {
     const { lastInsertRowid } = await prepare(
-      "INSERT INTO workshop_services (name, price, updated_at) VALUES ('Plain', 10, now())"
+      "INSERT INTO workshop_services (name, price, price_pence, updated_at) VALUES ('Plain', 10, 1000, now())"
     ).run();
     return prepare('SELECT questions FROM workshop_services WHERE id = ?').get(lastInsertRowid);
   });

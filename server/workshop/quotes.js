@@ -125,13 +125,24 @@ async function createRevisionInTransaction({ jobId, lines }) {
     }
     // A part joins the order counted in whole ones, as stock is, so a quote
     // can't agree 1.5 and charge 2 (sales in pence step A′, review). Labour's
-    // hours can be 1.5.
-    if (line.kind === 'part' && line.quantity !== undefined && line.quantity !== null && !Number.isInteger(Number(line.quantity))) {
-      return { ok: false, code: 'illegal', message: 'A part’s quantity must be a whole number.' };
+    // hours can be 1.5. Nor can it quote none and charge one (fresh review).
+    if (line.kind === 'part' && line.quantity !== undefined && line.quantity !== null
+      && (!Number.isInteger(Number(line.quantity)) || Number(line.quantity) < 1)) {
+      return { ok: false, code: 'illegal', message: 'A part’s quantity must be a whole number of 1 or more.' };
+    }
+    // Its unit price and total are kept in whole pence, so well within what
+    // they hold (fresh review).
+    if (Math.abs(Number(line.unitAmount)) >= 1000000 || Math.abs(Number(line.unitAmount) * Number(line.quantity ?? 1)) >= 1000000) {
+      return { ok: false, code: 'illegal', message: 'A line’s price must be under £1,000,000.' };
     }
     if (line.need !== undefined && !['needed', 'optional'].includes(line.need)) {
       return { ok: false, code: 'illegal', message: "each line's need must be 'needed' or 'optional'" };
     }
+  }
+
+  // And so are the quote's totals, its lines added up (review).
+  if (lines.reduce((n, l) => n + Math.abs(Number(l.unitAmount) * Number(l.quantity ?? 1)), 0) >= 1000000) {
+    return { ok: false, code: 'illegal', message: 'A quote’s total must be under £1,000,000.' };
   }
 
   const problem = pairProblem(lines);

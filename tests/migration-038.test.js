@@ -49,15 +49,15 @@ test('quote lines gain need, reason, how and when decided, by whom, and when add
 
 test('a line is Needed unless it says Optional, and nothing else', async () => {
   const quoteId = await newQuote();
-  await inShop(() => prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount) VALUES (?, 'part', 'Pads', 18)").run(quoteId));
+  await inShop(() => prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount, unit_amount_pence) VALUES (?, 'part', 'Pads', 18, 1800)").run(quoteId));
   const row = await inShop(() => prepare('SELECT need FROM workshop_quote_lines WHERE workshop_quote_id = ?').get(quoteId));
   assert.equal(row.need, 'needed');
-  await assert.rejects(() => inShop(() => prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount, need) VALUES (?, 'part', 'Pads', 18, 'maybe')").run(quoteId)));
+  await assert.rejects(() => inShop(() => prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount, unit_amount_pence, need) VALUES (?, 'part', 'Pads', 18, 1800, 'maybe')").run(quoteId)));
 });
 
 test('a decision is made online, by phone or in the shop, and nothing else', async () => {
   const quoteId = await newQuote();
-  await assert.rejects(() => inShop(() => prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount, decided_via) VALUES (?, 'part', 'Pads', 18, 'email')").run(quoteId)));
+  await assert.rejects(() => inShop(() => prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, unit_amount, unit_amount_pence, decided_via) VALUES (?, 'part', 'Pads', 18, 1800, 'email')").run(quoteId)));
 });
 
 test('quotes gain sent_at and can be withdrawn', async () => {
