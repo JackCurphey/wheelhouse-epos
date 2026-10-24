@@ -12,6 +12,7 @@ import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
 import {
+import { pounds } from './deposit.tsx';
   COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
 
@@ -199,7 +200,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             {/* An offer's When is the time first asked for, as drawn (bk-offered). */}
             {row('When', offered && link.offer ? `${dayLabel(link.offer.fromDate)}${link.offer.fromTime ? `, ${link.offer.fromTime}` : ''} — not available` : whenLine(link))}
             {/* The deposit (bookingLines in book.mjs; deposit-booking-page design 2). */}
-            {link.deposit && row('Deposit paid', <span className="font-[family-name:var(--wh-font-mono)]">{`£${(link.deposit.pence / 100).toFixed(2)}`}</span>)}
+            {link.deposit && row('Deposit paid', <span className="font-[family-name:var(--wh-font-mono)]">{pounds(link.deposit.pence)}</span>)}
             {link.deposit?.cancelUntil && row('Free to cancel until', `${dayLabel(link.deposit.cancelUntil.date)}, ${link.deposit.cancelUntil.time}`)}
             {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
           </div>
