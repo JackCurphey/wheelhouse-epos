@@ -197,6 +197,7 @@ GET /api/sale-documents/:id
 POST /api/sale-documents
 PUT /api/sale-documents/:id
 PUT /api/sale-documents/:id/items
+PUT /api/sale-documents/:id/items/:itemId/progress
 GET /api/sale-documents/:id/due
 POST /api/sale-documents/:id/convert
 GET /api/dashboard

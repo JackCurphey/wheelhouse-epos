@@ -66,6 +66,10 @@ function serializeSaleDocument(row, items) {
           lineType: it.line_type,
           serviceId: it.service_id,
           minutes: it.minutes,
+          // A line's Done tick and staff note (line-done-notes): never sent
+          // to the customer, whose pages read their own columns.
+          done: it.done === true,
+          note: it.note ?? null,
         }))
       : undefined,
   };
@@ -73,6 +77,11 @@ function serializeSaleDocument(row, items) {
 
 const DOC_SELECT = `SELECT d.*, c.name AS customer_name, ca.name AS cashier_name FROM sale_documents d LEFT JOIN customers c ON c.id = d.customer_id LEFT JOIN employees ca ON ca.id = d.cashier_id`;
 const DOC_KINDS = ['quote', 'order'];
+// A line's note, at most as long as a checklist item's (line-done-notes).
+const LINE_NOTE_MAX = 500;
+const FINISHED_REFUSAL = 'This work is finished, so its work and parts can’t change. Reopen the work first.';
+// decided-while-building.md: the refusal for a paid job's work and parts.
+const PAID_REFUSAL = 'This job has been paid for, so its work and parts can’t change.';
 
 // Writes one loaded line in pence and, worked out from it, in pounds, in the
 // same statement (sales in pence, step A; design.md Decision 2: pence is the
@@ -80,8 +89,8 @@ const DOC_KINDS = ['quote', 'order'];
 async function insertDocumentLine(docId, line) {
   await db.prepare(
     `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes,
-                                      unit_price_pence, line_total_pence, vat_rate_bp)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                      unit_price_pence, line_total_pence, vat_rate_bp, done, note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     docId,
     line.product ? line.product.id : null,
@@ -95,7 +104,9 @@ async function insertDocumentLine(docId, line) {
     line.minutes,
     line.unitPricePence,
     line.lineTotalPence,
-    line.vatRateBp
+    line.vatRateBp,
+    line.done === true,
+    line.note ?? null
   );
 }
 
@@ -325,7 +336,7 @@ export function register(route) {
     const loaded = [];
     for (const it of items) {
       try {
-        loaded.push(await loadDocumentLine(it, { checkStock: false }));
+        loaded.push({ ...(await loadDocumentLine(it, { checkStock: false })), wasId: Number(it.id) });
       } catch (err) {
         if (err instanceof ValidationError) return badRequest(res, err.message);
         throw err;
@@ -336,8 +347,19 @@ export function register(route) {
 
     await db.exec('BEGIN');
     try {
+      // Each line's Done tick and note, by the id the line had: the lines are
+      // re-inserted below with new ids, so a line sent with its old id keeps
+      // them, and a new one starts without (line-done-notes design 3). Read
+      // and locked here, so a tick saved meanwhile isn't lost; each old line
+      // passes them on once, however often its id is sent (review).
+      const kept = new Map((await db.prepare('SELECT id, done, note FROM sale_document_items WHERE document_id = ? FOR UPDATE').all(id))
+        .map((r) => [r.id, { done: r.done === true, note: r.note }]));
       await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
-      for (const line of loaded) await insertDocumentLine(id, line);
+      for (const { wasId, ...line } of loaded) {
+        const was = kept.get(wasId);
+        kept.delete(wasId);
+        await insertDocumentLine(id, { ...line, ...(was ?? {}) });
+      }
       await db.prepare(
         `UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, subtotal_pence = ?, discount_pence = ?, total_pence = ?, updated_at = ?
          WHERE id = ?`
@@ -348,6 +370,52 @@ export function register(route) {
       throw err;
     }
 
+    const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
+    const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+    sendJson(res, 200, serializeSaleDocument(row, savedItems));
+  });
+
+  // One line's Done tick and staff note (Jack, 24 Oct,
+  // docs/decisions/2026-10-24-line-notes.md; openspec/changes/line-done-notes
+  // design 2): the job page's Done and Note columns. Anyone signed in; the
+  // latest change wins. No totals change. Refused on a paid order, and on a
+  // job whose work is finished, checked in the same update so a tick racing
+  // Finish is refused (as the checklist's).
+  // screens: job-page
+  route('PUT', '/api/sale-documents/:id/items/:itemId/progress', async (req, res, params) => {
+    const id = Number(params.id);
+    const itemId = Number(params.itemId);
+    const body = await readJsonBody(req);
+    const sets = [];
+    const values = [];
+    if (body.done !== undefined) {
+      if (typeof body.done !== 'boolean') return badRequest(res, 'done must be true or false');
+      sets.push('done = ?');
+      values.push(body.done);
+    }
+    if (body.note !== undefined) {
+      if (body.note !== null && typeof body.note !== 'string') return badRequest(res, 'note must be text');
+      const note = (body.note ?? '').trim();
+      if (note.length > LINE_NOTE_MAX) return badRequest(res, `A note can be at most ${LINE_NOTE_MAX} characters`);
+      sets.push('note = ?');
+      values.push(note || null);
+    }
+    if (!sets.length) return badRequest(res, 'Send done or note');
+    const doc = await db.prepare('SELECT status, workshop_job_id FROM sale_documents WHERE id = ?').get(id);
+    if (!doc || !(await db.prepare('SELECT 1 FROM sale_document_items WHERE id = ? AND document_id = ?').get(itemId, id))) {
+      return notFound(res, 'That line isn’t on this order');
+    }
+    if (doc.status !== 'open') return sendJson(res, 409, { error: PAID_REFUSAL, code: 'illegal' });
+    const { changes } = await db.prepare(
+      `UPDATE sale_document_items SET ${sets.join(', ')} WHERE id = ? AND document_id = ?
+         AND EXISTS (SELECT 1 FROM sale_documents d WHERE d.id = ? AND d.status = 'open')
+         AND NOT EXISTS (SELECT 1 FROM workshop_jobs w WHERE w.id = ? AND w.work_state = 'complete')`
+    ).run(...values, itemId, id, id, doc.workshop_job_id);
+    if (!changes) {
+      // Saved again meanwhile (the line has a new id), or paid or finished meanwhile.
+      if (!(await db.prepare('SELECT 1 FROM sale_document_items WHERE id = ?').get(itemId))) return notFound(res, 'That line isn’t on this order');
+      return sendJson(res, 409, { error: FINISHED_REFUSAL, code: 'illegal' });
+    }
     const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
     const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
     sendJson(res, 200, serializeSaleDocument(row, savedItems));
