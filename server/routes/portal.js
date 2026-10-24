@@ -31,7 +31,7 @@ import {
   requestedOf, WORKSHOP_JOB_SELECT, resolveJobMechanicId, addMinutesToTime, timeToMinutes, resolveJobTimes,
   CLEAR_REQUEST, capacityRefusal, refusal, SLOT_GONE, sendQuoteResult, parseWorkingDays, currentShopToday,
   toCapacitySettings, withBookingLock, withJobBookingLock, applyLocked, syncJobHold, createWorkshopJob,
-  checkJobSlot, loadCapacity,
+  checkJobSlot, loadCapacity, answerAndAddToOrder,
 } from '../workshop/jobs.js';
 import {
   approve as approveQuote, earlierAnswers, agreedBefore, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
@@ -283,9 +283,7 @@ async function replayBookingRequest({ keyHash, bodyHash, linkCode }, shopSlug) {
 // dispatcher bound the shop from :shopSlug, so row-level security hides every
 // other shop's), and not expired. Answers the refusal itself and returns
 // null, or returns { id }.
-// Exported for the booking link's quote answer, which stays in server.js
-// until answerAndAddToOrder moves with Jack's quote routes.
-export async function resolveBookingLink(req, res, code) {
+async function resolveBookingLink(req, res, code) {
   if (!bookingLinkLimiter.check(clientIp(req))) {
     sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
     return null;
@@ -881,6 +879,24 @@ export function register(route) {
       quoteId: Number(params.id),
       linkRevision: body.revision,
       customerId: ctx.login.customer_id,
+    }));
+  });
+
+  // The customer's whole answer in one call - every line's yes or no, then
+  // approve - so a quote with many lines doesn't run into the link's limit on
+  // attempts. The revision is the one their page showed.
+  // screens: approval, approval-done, stale
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req);
+    if (!Number.isInteger(body.revision)) return badRequest(res, 'revision is required - send the revision your page showed');
+    // The quote their page showed, by its revision; answerAll refuses it if a
+    // newer revision exists or it is no longer open (canApprove).
+    const shown = await db.prepare('SELECT id FROM workshop_quotes WHERE workshop_job_id = ? AND revision = ?').get(found.id, body.revision);
+    if (!shown) return notFound(res, 'There is no quote for this booking');
+    sendQuoteResult(res, await answerAndAddToOrder({
+      quoteId: shown.id, jobId: found.id, decisions: body.decisions, via: 'online', linkRevision: body.revision,
     }));
   });
 
