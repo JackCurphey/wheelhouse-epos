@@ -204,3 +204,10 @@ test('a service with a reminder opens with its months; emptied, Save sends none'
   fireEvent.click(b.getByRole('button', { name: 'Save' }));
   await waitFor(() => assert.match(writes().at(-1) ?? '', /"reminderMonths":null\}$/));
 });
+
+test('a service with a reminder and no time says “Reminder after [n] months”', async () => {
+  const { ui } = await openServices();
+  services = services.map((x) => (x.id === 1 ? { ...x, minutes: null, reminderMonths: 6 } : x));
+  shell.queryClient.invalidateQueries({ queryKey: ['workshop-services'] });
+  assert.ok(await ui.findByText('Reminder after 6 months'));
+});

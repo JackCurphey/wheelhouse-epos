@@ -72,9 +72,12 @@ test('serializeWorkshopService converts a row to camelCase with active as a bool
     kind: 'full',
     categoryId: null,
     position: 2,
+    // No reminder set (service-reminder-months).
+    reminderMonths: null,
     questions: [],
     includes: [],
   });
+  assert.equal(serializeWorkshopService({ ...row, reminder_months: 12 }).reminderMonths, 12);
   assert.deepEqual(serializeWorkshopService(row, [3, 1]).includes, [3, 1]);
 });
 

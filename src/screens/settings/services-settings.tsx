@@ -23,7 +23,11 @@ const words = (err: unknown) => (err instanceof ApiError && (err.status === 400 
 const money = (n: number) => `£${n.toFixed(2)}`;
 const timeLine = (minutes: number | null) => (minutes ? `${minutes} min in the diary` : '');
 // The row's line, as drawn: "60 min in the diary · reminder after [n] months".
-const rowLine = (s: Service) => [timeLine(s.minutes), s.reminderMonths ? `reminder after ${s.reminderMonths} months` : ''].filter(Boolean).join(' · ');
+// With no time in the diary, the reminder starts the line, so it takes a capital.
+const rowLine = (s: Service) => {
+  const line = [timeLine(s.minutes), s.reminderMonths ? `reminder after ${s.reminderMonths} months` : ''].filter(Boolean).join(' · ');
+  return line.charAt(0).toUpperCase() + line.slice(1);
+};
 const asNumber = (text: string) => (text.trim() === '' ? null : Number.isFinite(Number(text)) ? Number(text) : text);
 const INPUT = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
 
