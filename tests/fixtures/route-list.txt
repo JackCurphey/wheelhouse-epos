@@ -202,3 +202,8 @@ GET /api/search
 GET /api/customer-matches
 GET /api/recent-customers
 GET /api/customers/:id/history
+GET /api/customers/:id/possible-duplicates
+POST /api/customers/:id/not-duplicate
+POST /api/customers/:id/merge
+GET /api/customers/:id/merges
+POST /api/customer-merges/:id/undo
