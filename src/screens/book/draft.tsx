@@ -7,6 +7,12 @@ import * as React from 'react';
  * the tab closes. Photos are too large to store, so they live in memory only
  * and must be re-added after a reload. If the browser refuses storage, the
  * draft still works for the life of the page.
+ *
+ * Kept for later too (Jack, 1 Oct, book a repair decision 9; bk-resume;
+ * openspec/changes/booking-draft-resume): a copy on the device
+ * (localStorage, wh-book-draft-later:<shopSlug>) with when it was saved and
+ * the step it was on, for 7 days. A new tab or visit with nothing in the tab
+ * brings it back and says so (`resumed`); a refresh in the same tab doesn't.
  * Spec: docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md
  * d3 (bikeNote, hadPhotos): docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md
  */
@@ -64,7 +70,48 @@ type DraftApi = {
   update: (patch: Partial<BookingDraft>) => void;
   setPhotos: (files: File[]) => void;
   clear: () => void;
+  /** Brought back from an earlier visit, until Carry on or Start again. */
+  resumed: boolean;
+  /** The step it was left on (the address after /book/<shopSlug>), once, when resumed. */
+  takeResumeStep: () => string | null;
+  dismissResume: () => void;
+  /** Records the step the customer is on, for coming back later. */
+  markStep: (step: string) => void;
 };
+
+/** How long a booking in progress is kept on the device (decided while building, 24 Oct). */
+export const KEEP_DAYS = 7;
+export const laterKey = (shopSlug: string) => `wh-book-draft-later:${shopSlug}`;
+type Later = { draft: BookingDraft; savedAt: string; step?: string };
+
+// The kept copy, if it's a real one and young enough; an old or broken one is removed.
+function readLater(shopSlug: string): Later | null {
+  try {
+    const raw = window.localStorage.getItem(laterKey(shopSlug));
+    if (!raw) return null;
+    let later: Later | null = null;
+    try { later = JSON.parse(raw) as Later; } catch { later = null; }
+    const fresh = later && typeof later === 'object' && later.draft && typeof later.draft === 'object' && !Array.isArray(later.draft)
+      && Date.now() - Date.parse(later.savedAt) < KEEP_DAYS * 86_400_000;
+    if (!fresh) { window.localStorage.removeItem(laterKey(shopSlug)); return null; }
+    return later;
+  } catch {
+    return null;
+  }
+}
+
+function writeLater(shopSlug: string, draft: BookingDraft, step: string | undefined) {
+  try {
+    if (Object.keys(draft).length === 0) window.localStorage.removeItem(laterKey(shopSlug));
+    else window.localStorage.setItem(laterKey(shopSlug), JSON.stringify({ draft, savedAt: new Date().toISOString(), ...(step !== undefined ? { step } : {}) }));
+  } catch {
+    // Storage refused: nothing is kept for later.
+  }
+}
+
+function hasStored(shopSlug: string): boolean {
+  try { return window.sessionStorage.getItem(draftKey(shopSlug)) !== null; } catch { return false; }
+}
 
 export const draftKey = (shopSlug: string) => `wh-book-draft:${shopSlug}`;
 
@@ -100,13 +147,25 @@ function writeStored(shopSlug: string, draft: BookingDraft) {
 const DraftContext = React.createContext<DraftApi | null>(null);
 
 export function DraftProvider({ shopSlug, children }: { shopSlug: string; children: React.ReactNode }) {
-  const [draft, setDraft] = React.useState<BookingDraft>(() => readStored(shopSlug));
+  // The tab's copy first; with none, a copy kept from an earlier visit, brought into the tab.
+  const [start] = React.useState(() => {
+    if (hasStored(shopSlug)) return { draft: readStored(shopSlug), later: null as Later | null };
+    const later = readLater(shopSlug);
+    if (later && Object.keys(later.draft).length) writeStored(shopSlug, later.draft);
+    return { draft: later?.draft ?? {}, later };
+  });
+  const [draft, setDraft] = React.useState<BookingDraft>(start.draft);
   const [photos, setPhotos] = React.useState<File[]>([]);
+  const [resumed, setResumed] = React.useState(Boolean(start.later && Object.keys(start.later.draft).length));
+  const step = React.useRef<string | undefined>(start.later?.step);
+  // The first screen goes to the step left on once, not every time it's opened.
+  const stepTaken = React.useRef(false);
   const changed = React.useRef(false);
 
   React.useEffect(() => {
     if (!changed.current) return;
     writeStored(shopSlug, draft);
+    writeLater(shopSlug, draft, step.current);
   }, [shopSlug, draft]);
 
   const api = React.useMemo<DraftApi>(
@@ -122,12 +181,30 @@ export function DraftProvider({ shopSlug, children }: { shopSlug: string; childr
         changed.current = true;
         setDraft({});
         setPhotos([]);
+        setResumed(false);
+      },
+      resumed,
+      takeResumeStep: () => {
+        if (!resumed || stepTaken.current) return null;
+        stepTaken.current = true;
+        return start.later?.step || null;
+      },
+      dismissResume: () => setResumed(false),
+      markStep: (at) => {
+        if (step.current === at) return;
+        step.current = at;
+        if (Object.keys(draft).length) writeLater(shopSlug, draft, at);
       },
     }),
-    [draft, photos],
+    [draft, photos, resumed, shopSlug, start],
   );
 
   return <DraftContext.Provider value={api}>{children}</DraftContext.Provider>;
+}
+
+/** The draft, or null outside a booking (a frame shown on its own). */
+export function useOptionalDraft(): DraftApi | null {
+  return React.useContext(DraftContext);
 }
 
 export function useDraft(): DraftApi {

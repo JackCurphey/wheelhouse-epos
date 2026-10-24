@@ -2176,3 +2176,15 @@ follows the job checklist, the closest pattern built.
    adds a new record anyway, as the customer form does, and Customers' Merge
    joins them.
 
+### 24 Oct 2026: "You didn't finish booking" (`openspec/changes/booking-draft-resume`, `bk-resume`)
+
+1. **An unfinished booking is kept on the customer's device for 7 days**,
+   then thrown away. The decision says "coming back later" without a time.
+   7 days keeps a shared computer from holding someone's name and number for
+   long. Jack to overrule.
+2. **It comes back on the step it was left on**, as drawn, and only on a new
+   tab or visit: a refresh in the same tab carries on without the banner, as
+   it always has.
+3. **Photos aren't kept**, as before; the bike step already says they need
+   adding again.
+
