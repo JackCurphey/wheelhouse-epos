@@ -2,7 +2,7 @@
 // (openspec/changes/deposit-payments design 4–5), never from the booking page.
 import { prepare } from '../db.js';
 import { paymentsConnected } from '../payments/provider.js';
-import { depositPence, poundsToPence } from './deposit.js';
+import { depositPence } from './deposit.js';
 
 /**
  * { pence, cancelHours }: the deposit in pence for these services (or "not
@@ -15,10 +15,11 @@ export async function bookingDeposit({ serviceIds, notSure }) {
   if (!s || s.deposit_on !== 1) return { pence: null };
   let prices = [];
   if (!notSure) {
-    const rows = await prepare('SELECT id, price FROM workshop_services WHERE id = ANY(?) AND active = 1 AND bookable_online = 1').all(serviceIds);
+    // Prices in pence, as stored (sales in pence, step A′).
+    const rows = await prepare('SELECT id, price_pence FROM workshop_services WHERE id = ANY(?) AND active = 1 AND bookable_online = 1').all(serviceIds);
     if (rows.length !== new Set(serviceIds).size) return { error: 'That service is not available to book' };
-    const byId = new Map(rows.map((r) => [r.id, r.price]));
-    prices = serviceIds.map((id) => poundsToPence(byId.get(id)));
+    const byId = new Map(rows.map((r) => [r.id, r.price_pence]));
+    prices = serviceIds.map((id) => byId.get(id));
   }
   return {
     cancelHours: s.deposit_cancel_hours,

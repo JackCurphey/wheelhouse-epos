@@ -11,7 +11,7 @@ import {
 } from '../capacity.js';
 import { shopToday } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
-import { serializeQuote, answerAll as answerQuote } from './quotes.js';
+import { serializeQuote, answerAll as answerQuote, linePence } from './quotes.js';
 import { quote as quoteMachine } from './state-machines.js';
 import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
@@ -610,7 +610,8 @@ export async function loadCapacity(start, end, { ignoreJobId = null } = {}) {
 export async function addApprovedLinesToOrder(quoteId) {
   const quote = await db.prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
   const lines = await db.prepare(
-    "SELECT * FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved' AND added_to_order_at IS NULL ORDER BY id"
+    `SELECT *, ${linePence()}::int AS line_pence FROM workshop_quote_lines
+      WHERE workshop_quote_id = ? AND decision = 'approved' AND added_to_order_at IS NULL ORDER BY id`
   ).all(quoteId);
   if (!lines.length) return;
   const doc = await db.prepare('SELECT * FROM sale_documents WHERE workshop_job_id = ?').get(quote.workshop_job_id);
@@ -619,8 +620,10 @@ export async function addApprovedLinesToOrder(quoteId) {
   let added = 0;
   for (const l of lines) {
     const line = l.kind === 'part' && l.product_id
-      ? await loadDocumentLine({ productId: l.product_id, qty: Math.max(1, Math.round(Number(l.quantity))), unitPrice: Number(l.unit_amount) }, { checkStock: false })
-      : await loadDocumentLine({ lineType: 'labour', name: l.description, unitPrice: Number(l.quantity) * Number(l.unit_amount) }, { checkStock: false });
+      // From the pence (sales in pence, step A′): a labour line costs the
+      // quote line's total, so 1.5 hours at £33.33 is £50.00, as quoted.
+      ? await loadDocumentLine({ productId: l.product_id, qty: Math.max(1, Math.round(Number(l.quantity))), unitPrice: l.unit_amount_pence / 100 }, { checkStock: false })
+      : await loadDocumentLine({ lineType: 'labour', name: l.description, unitPrice: l.line_pence / 100 }, { checkStock: false });
     await db.prepare(
       `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes,
                                         unit_price_pence, line_total_pence, vat_rate_bp, note)
@@ -652,18 +655,19 @@ export async function addApprovedLinesToOrder(quoteId) {
 export async function wholeBill(quoteId, jobId) {
   const row = await db.prepare(
     `SELECT j.spend_limit,
-            COALESCE(d.total, 0)
-            + COALESCE((SELECT sum(js.booked_price) FROM workshop_job_services js
+            (COALESCE(d.total_pence, 0)
+            + COALESCE((SELECT sum(js.booked_price_pence) FROM workshop_job_services js
                          WHERE js.workshop_job_id = j.id
                            AND NOT EXISTS (SELECT 1 FROM sale_document_items i WHERE i.document_id = d.id AND i.service_id = js.service_id)), 0)
-            + COALESCE((SELECT sum(l.quantity * l.unit_amount) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?), 0) AS whole_bill,
+            + COALESCE((SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?), 0))::int AS whole_bill_pence,
             (SELECT count(*) FROM workshop_quote_lines l WHERE l.workshop_quote_id = ?) AS lines
        FROM workshop_jobs j
        LEFT JOIN sale_documents d ON d.workshop_job_id = j.id AND d.kind = 'order' AND d.status <> 'cancelled'
       WHERE j.id = ?
       ORDER BY d.id DESC LIMIT 1`
   ).get(quoteId, quoteId, jobId);
-  return row ? { spendLimit: row.spend_limit ?? null, wholeBill: Number(row.whole_bill), lines: Number(row.lines) } : null;
+  // In pence (sales in pence, step A′), and the same in pounds as before.
+  return row ? { spendLimit: row.spend_limit ?? null, wholeBillPence: row.whole_bill_pence, wholeBill: row.whole_bill_pence / 100, lines: Number(row.lines) } : null;
 }
 
 export async function agreeWithinLimit({ quoteId, loginId = null }) {
@@ -681,8 +685,9 @@ export async function agreeWithinLimit({ quoteId, loginId = null }) {
     const bill = await wholeBill(quoteId, quote.workshop_job_id);
     if (!bill || bill.lines === 0) return refuse('Add the extra work first.');
     if (bill.spendLimit === null) return refuse('This customer asked to be asked before any extra work. Send a quote instead.');
-    if (bill.wholeBill > bill.spendLimit) {
-      return refuse(`That takes the whole bill to £${bill.wholeBill.toFixed(2)}, over the £${bill.spendLimit} limit. Send a quote instead.`);
+    // The limit is whole pounds; the bill is pence.
+    if (bill.wholeBillPence > bill.spendLimit * 100) {
+      return refuse(`That takes the whole bill to £${(bill.wholeBillPence / 100).toFixed(2)}, over the £${bill.spendLimit} limit. Send a quote instead.`);
     }
     await db.prepare(
       `UPDATE workshop_quote_lines SET decision = 'approved', decided_via = 'limit', decided_by_login_id = ?, decided_at = now()

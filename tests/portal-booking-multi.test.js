@@ -67,8 +67,8 @@ const counts = () => runWithShop(owner.shop.id, () => prepare(
 
 const svc = (name, price, minutes, questions = []) => runWithShop(owner.shop.id, async () =>
   (await prepare(
-    "INSERT INTO workshop_services (name, price, minutes, questions, bookable_online, active, updated_at) VALUES (?, ?, ?, CAST(? AS jsonb), 1, 1, now())"
-  ).run(name, price, minutes, JSON.stringify(questions))).lastInsertRowid);
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, questions, bookable_online, active, updated_at) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, CAST(? AS jsonb), 1, 1, now())"
+  ).run(name, price, price, minutes, JSON.stringify(questions))).lastInsertRowid);
 
 const rows = (jobId) => runWithShop(owner.shop.id, () => prepare(
   'SELECT service_id, booked_price::text AS price, position FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position'
@@ -104,7 +104,7 @@ test('more than 12 hours of work is refused and nothing is saved', async () => {
 test('a service that is not bookable anywhere in the list refuses the booking', async () => {
   const ok = await svc('Fine', '10.00', 30);
   const hidden = await runWithShop(owner.shop.id, async () => (await prepare(
-    "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Staff only', 10, 30, 0, 1, now())").run()).lastInsertRowid);
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Staff only', 10, ROUND(10 * 100)::int, 30, 0, 1, now())").run()).lastInsertRowid);
   const res = await book({ serviceIds: [ok, hidden] });
   assert.equal(res.status, 400);
   assert.equal(res.body.error, 'That service is not available to book');
@@ -180,7 +180,7 @@ test('a full service and a service it includes are refused together, and nothing
   const part = await svc('Included brake', '25.00', 30);
   const other = await svc('Not included wheel', '15.00', 30);
   const full = await runWithShop(owner.shop.id, async () => (await prepare(
-    "INSERT INTO workshop_services (name, price, minutes, kind, bookable_online, active, updated_at) VALUES ('Full with brake', '80.00', 90, 'full', 1, 1, now())"
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, kind, bookable_online, active, updated_at) VALUES ('Full with brake', '80.00', ROUND(80.00 * 100)::int, 90, 'full', 1, 1, now())"
   ).run()).lastInsertRowid);
   await runWithShop(owner.shop.id, () => prepare(
     'INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, 0)'

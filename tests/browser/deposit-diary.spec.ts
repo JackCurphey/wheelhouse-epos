@@ -26,7 +26,7 @@ test.beforeAll(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
   const alex = await seedMechanic(owner.shop.id, { name: 'Alex Morgan' });
-  const service = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, 60, 1, 1, now()) RETURNING id").get()).id);
+  const service = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, ROUND(65 * 100)::int, 60, 1, 1, now()) RETURNING id").get()).id);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'timed', depositOn: true, depositPercent: 20 } })).status).toBe(200);
   const requestKey = randomBytes(32).toString('base64url');
   const hold = await portal('/deposit-holds', { serviceIds: [service], requestKey });

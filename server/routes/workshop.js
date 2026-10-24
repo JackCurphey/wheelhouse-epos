@@ -21,6 +21,7 @@ import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
   serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
+  linePence,
 } from '../workshop/quotes.js';
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
@@ -1430,13 +1431,13 @@ export function register(route) {
       const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
       const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
       const added = await db.prepare(
-        `SELECT string_agg(description, ', ' ORDER BY id) AS names, sum(quantity * unit_amount) AS total
+        `SELECT string_agg(description, ', ' ORDER BY id) AS names, sum(${linePence()})::int AS total_pence
            FROM workshop_quote_lines WHERE workshop_quote_id = ?`
       ).get(result.quote.id);
       const shop = await db.prepare('SELECT phone FROM shops WHERE id = ?').get(shopId);
       Object.assign(vars, {
         'Work added': added.names,
-        'Amount added': `£${Number(added.total).toFixed(2)}`,
+        'Amount added': `£${(added.total_pence / 100).toFixed(2)}`,
         'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
         // With no phone in Shop details, "Call the shop", as the customer's page says.
         'Shop phone': shop?.phone || 'the shop',
@@ -1483,9 +1484,10 @@ export function register(route) {
         const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
         const { customerId, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
         const lines = await db.prepare('SELECT description, decision FROM workshop_quote_lines WHERE workshop_quote_id = ? ORDER BY id').all(result.quote.id);
-        const { total } = await db.prepare(
-          "SELECT sum(quantity * unit_amount) AS total FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved'"
+        const { total_pence } = await db.prepare(
+          `SELECT sum(${linePence()})::int AS total_pence FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved'`
         ).get(result.quote.id);
+        const total = (total_pence ?? 0) / 100;
         const list = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]);
         const yes = lines.filter((l) => l.decision === 'approved').map((l) => l.description);
         const no = lines.filter((l) => l.decision === 'declined').map((l) => l.description);

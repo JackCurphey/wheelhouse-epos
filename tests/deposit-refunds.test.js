@@ -24,7 +24,7 @@ before(async () => {
   owner = await staffSignup(server.baseUrl, { shopName: 'Refund Cycles' });
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
-  service = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, 60, 1, 1, now()) RETURNING id").get()).id);
+  service = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, ROUND(65 * 100)::int, 60, 1, 1, now()) RETURNING id").get()).id);
   await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: true, depositPercent: 20 } });
 });
 after(async () => {

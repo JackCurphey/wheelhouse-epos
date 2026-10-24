@@ -156,7 +156,9 @@ export function serializeWorkshopService(row, includes = []) {
   return {
     id: row.id,
     name: row.name,
-    price: row.price,
+    // Pence is the authority; the pounds are the pence over 100 (sales in pence, step A′).
+    price: row.price_pence / 100,
+    pricePence: row.price_pence,
     minutes: row.minutes,
     // active is INTEGER 0/1 on this table, matching products.active.
     active: row.active === 1,

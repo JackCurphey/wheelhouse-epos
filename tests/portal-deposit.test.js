@@ -28,8 +28,8 @@ before(async () => {
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
   [service, extra] = await runWithShop(owner.shop.id, async () => [
-    (await prepare("INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, 60, 1, 1, now()) RETURNING id").get()).id,
-    (await prepare("INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Brake bleed', 12.5, 30, 1, 1, now()) RETURNING id").get()).id,
+    (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, ROUND(65 * 100)::int, 60, 1, 1, now()) RETURNING id").get()).id,
+    (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Brake bleed', 12.5, ROUND(12.5 * 100)::int, 30, 1, 1, now()) RETURNING id").get()).id,
   ]);
   await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: true, depositKind: 'percent', depositPercent: 20, depositCancelHours: 24 } });
 });
@@ -62,6 +62,19 @@ test('a hold is worked out on the stored prices: 20% of £65.00 and £12.50 is �
   assert.equal(h.body.provider, 'pretend');
   assert.equal(h.body.depositCancelHours, 24, 'the page shows when it’s free to cancel until');
   assert.equal(await pretendStatus(h.body.ref), 'waiting');
+});
+
+// Sales in pence, step A′: the deposit is worked out on the price in pence,
+// the authority. Only the pence changed here, to £80.00: 20% is £16.00.
+test('the deposit is worked out on the service’s price in pence', async () => {
+  await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price_pence = 8000 WHERE id = ?').run(service));
+  try {
+    const h = await hold({ serviceIds: [service], requestKey: key() });
+    assert.equal(h.status, 200, JSON.stringify(h.body));
+    assert.equal(h.body.depositPence, 1600);
+  } finally {
+    await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price_pence = 6500 WHERE id = ?').run(service));
+  }
 });
 
 test('the same request key answers the same hold; another amount lets the first go', async () => {

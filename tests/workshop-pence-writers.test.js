@@ -50,3 +50,23 @@ test('a quote line’s unit amount is written in pence too', async () => {
   const line = await row('SELECT unit_amount::float AS pounds, unit_amount_pence FROM workshop_quote_lines WHERE workshop_quote_id = ?', q.body.id);
   assert.deepEqual({ ...line }, { pounds: 24.5, unit_amount_pence: 2450 });
 });
+
+// Part 2b's readers (task 2.1): a price is read from its pence, so what a
+// service, a booked service and a deposit say is the pence over 100.
+test('a service, a booked service and the booking page read their price from the pence', async () => {
+  const service = (await staff('/api/workshop-services', { method: 'POST', body: { name: 'Brake service', price: 45, minutes: 45, bookableOnline: true } })).body;
+  // Only the pence changed: anything still reading the pounds shows £45.00.
+  await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price_pence = 4600 WHERE id = ?').run(service.id));
+  const listed = (await staff('/api/workshop-services')).body.find((s) => s.id === service.id);
+  assert.equal(listed.price, 46);
+  assert.equal(listed.pricePence, 4600);
+  expectOk(await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: true } }));
+  const online = (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/services`).then((r) => r.json()));
+  const shown = [...online.full, ...online.uncategorised, ...online.categories.flatMap((c) => c.services)].find((s) => s.id === service.id);
+  assert.equal(shown.price, 46);
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Brake service', jobDate: '2026-10-15', mechanicId: alex, serviceIds: [service.id] } })).body;
+  const labour = await staff(`/api/sale-documents/${job.orderId}/items`, { method: 'PUT', body: { items: [{ lineType: 'labour', serviceId: service.id }] } });
+  assert.equal(labour.body.items[0].unitPricePence, 4600, 'a labour line picks the service’s price in pence');
+});
+
+function expectOk(res) { assert.ok(res.status < 300, JSON.stringify(res.body)); }
