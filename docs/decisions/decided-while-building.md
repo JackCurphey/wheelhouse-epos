@@ -1979,3 +1979,22 @@ No screen: server only.
    fit you in, your deposit comes back in full."
 3. **Shown while the booking stands**; a cancelled or declined booking's
    deposit words come with refunds (part 3).
+
+### 24 Oct 2026: refunding the deposit, the server (`openspec/changes/deposit-refunds`, `bk-cancel`, `bk-cancel-late`, `bk-declined`, `bk-staff-decline`)
+
+1. **The shop cancelling a booking refunds the deposit automatically**, as
+   declining and an expired request do: the customer was told it comes back
+   in full if the shop can't fit them in. The decisions only cover declining.
+2. **A late cancel needs the customer's own choice**: a cancel sent after the
+   cut-off without "Cancel and lose the deposit" is refused, so a page left
+   open from before the cut-off can't lose the deposit unawares.
+3. **A refund owed is recorded with the cancel or decline**, then made, so a
+   refund the provider can't make at once is made later, never lost; the
+   booking page counts it as on its way back.
+4. **The cut-off is judged by the server's clock**, as every other time rule.
+5. **A moved booking's "Free to cancel until" moves with it**: the same hours
+   before its new start, in the shop's time, however it was moved (review).
+6. **A request the shop hasn't confirmed yet, cancelled after the cut-off,
+   keeps the deposit**, as the words on step 4 say ("After that, or if you
+   don't come, the shop keeps it"). For Jack: a request for tomorrow is past
+   its cut-off at once (review).
