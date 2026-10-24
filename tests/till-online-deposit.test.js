@@ -121,16 +121,17 @@ test('a deposit only held when the job is paid in full is let go, so it’s neve
   const job = await jobWithDeposit({ status: 'held' });
   const res = await convert(job, { cardAmount: 65 });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  const pay = await inShop(() => prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ?').get(job.id));
-  assert.equal(pay.refund_due_reason, 'Paid in full at the till');
-  // And let go straight away, not only marked: nothing else would until the
-  // shop's next online booking (seen in the full run's log: no database in scope).
-  let status;
-  for (let i = 0; i < 20 && status !== 'released'; i += 1) {
+  // Let go straight away, not only marked: nothing else would until the
+  // shop's next online booking (seen in the full run's log: no database in
+  // scope). Waited for, then its reason read where a made refund keeps it:
+  // read at once, CI's faster release had already moved it (24 Oct).
+  let pay;
+  for (let i = 0; i < 20 && pay?.status !== 'released'; i += 1) {
     await new Promise((done) => setTimeout(done, 100));
-    status = (await inShop(() => prepare('SELECT status FROM online_payments WHERE job_id = ?').get(job.id))).status;
+    pay = await inShop(() => prepare('SELECT status, refund_reason FROM online_payments WHERE job_id = ?').get(job.id));
   }
-  assert.equal(status, 'released');
+  assert.equal(pay.status, 'released');
+  assert.equal(pay.refund_reason, 'Paid in full at the till');
 });
 
 test('a refund and a till payment at the same moment: never both (review)', async () => {
