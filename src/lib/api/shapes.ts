@@ -84,14 +84,17 @@ export function shapeProblems(shape: Shape, value: Record<string, unknown>): str
 /** One line of an order or quote (serializeSaleDocument's items). */
 export const ORDER_LINE: Shape = {
   id: N, productId: NN, name: S, sku: SN, unitPrice: N, qty: N, lineTotal: N, lineType: S, serviceId: NN, minutes: NN,
+  unitPricePence: N, lineTotalPence: N, vatRateBp: NN,
 };
 
 /** An order or quote with its lines (GET /api/sale-documents/:id): what the
- * till reads to pay a job's order. Money is in pounds until sales in pence. */
+ * till reads to pay a job's order. Money is in pounds, with the same amounts in pence beside
+ * them (`…Pence`, sales in pence step A). */
 export const ORDER: Shape = {
   id: N, kind: S, status: S, title: S,
   customerId: NN, customerName: SN, cashierId: NN, cashierName: SN,
   subtotal: N, discount: N, total: N, note: SN,
+  subtotalPence: N, discountPence: N, totalPence: N, paidPence: N,
   convertedSaleId: NN, workshopJobId: NN,
   items: ['array'],
   createdAt: S, updatedAt: S,

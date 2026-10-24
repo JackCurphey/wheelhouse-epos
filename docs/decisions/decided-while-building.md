@@ -34,6 +34,26 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    API. No website is live and hosting isn't chosen, so this is left for
    WP-0.5 or the website stage.
 
+### 21 Oct 2026: sales in pence, step A (`openspec/changes/wp-1-6-sales-in-pence` task 1.4)
+
+No screen: server only.
+
+1. **A typed price finer than a penny is rounded to the penny once, per
+   unit, and the line is that times the quantity.** The pounds written
+   beside it come from the pence, so the old app now sees £0.33 and £0.99
+   for 3 at £0.333 where it used to store £0.333 and £0.999. Prices typed
+   to the penny are unchanged. *Pattern:* design.md Decision 2 (pence is the
+   authority, pounds worked out from it) and the money contract's
+   `ROUND(x * 100)`.
+2. **An order's `total_pence` has no group discount on it; `paid_pence` is
+   what the sale took.** So a group customer's converted order reads paid
+   less than its total. *Pattern:* the order's pounds total already left the
+   group discount to `createSale`; the totals check holds `paid_pence` to
+   the converted sale's total (design.md Decision 7).
+3. **The amount due (`GET /api/sale-documents/:id/due`) also gains `…Pence`
+   fields** beside its pounds. *Pattern:* the money contract (Decision 6):
+   an endpoint that returns pounds adds the pence beside them.
+
 ### 22 Oct 2026: held work on an ended booking
 
 5. **Held work can't be resumed on a cancelled, declined or expired booking,
