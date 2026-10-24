@@ -1859,3 +1859,23 @@ No screen: server only.
    there, so someone in two groups (the old app allows it) keeps both (review).
 10. **A UK number matches however it's written**: +44 7700 900142, 0044 … and
     07700 900142 are the same (review).
+
+### 24 Oct 2026: the shop's deposit settings (`openspec/changes/deposit-settings`, `bk-settings-deposits`)
+
+1. **The rows under "Take a deposit when booking" show only while it's on**
+   (not drawn off), as "Drop off before the booking" shows only for set times.
+2. **Deposits can be switched on before "How much" is filled in**, since its
+   row only shows once they're on; until it is, no deposit is taken and the
+   fold says "no deposit".
+3. **A deposit is never more than the price shown**, for a fixed amount too:
+   a £20 deposit on a £12.50 booking takes £12.50. A free booking takes none.
+4. **"How much" is a whole percentage** (1 to 100), and amounts are typed in
+   pounds and pence, from £0.01 to £10,000.
+5. **Deposits only switch on while a payment provider is connected** (the
+   website settings' "booking deposits are off, until you connect [payment
+   provider]"); until a real account exists that is the pretend one, never
+   used by a shop running for real.
+6. **"For: Every booking / Chosen services" waits for the service editor**,
+   which the new app doesn't have yet; until then every booking takes it.
+7. **The note about declining shows only while automatic confirming is off**,
+   as its own words say ("With automatic confirming off, …").

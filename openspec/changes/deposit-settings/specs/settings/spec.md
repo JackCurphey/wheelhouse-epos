@@ -9,6 +9,10 @@ known" and "Free to cancel until" (hours before). The fold's summary SHALL
 say the deposit or "no deposit". Deposits SHALL be off for every shop to
 start, and SHALL only switch on while a payment provider is connected.
 
+#### Scenario: Switched on before How much
+- **WHEN** the Owner switches deposits on and hasn't filled in How much
+- **THEN** deposits are on, no deposit is taken until it is filled in, and the fold says "no deposit"
+
 #### Scenario: The fold says the deposit
 - **WHEN** the shop takes 20%
 - **THEN** the Online booking fold's summary includes "deposit 20%"

@@ -26,7 +26,8 @@ import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
  */
 type DayHours = { weekday: number; open: string; close: string };
 type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; confirmBookingsAutomatically?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
-  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null };
+  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null;
+  depositOn?: boolean; depositKind?: 'percent' | 'fixed'; depositPercent?: number | null; depositFixedPence?: number | null; depositUnknownPence?: number | null; depositCancelHours?: number; paymentsConnected?: boolean };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -244,30 +245,33 @@ function NoAccess() {
   );
 }
 
-type NumberField = 'fullDayThresholdMinutes' | 'timedLeadMinutes';
+type NumberField = 'fullDayThresholdMinutes' | 'timedLeadMinutes' | 'depositPercent' | 'depositFixedPence' | 'depositUnknownPence' | 'depositCancelHours';
 
 /**
  * One number setting saved to the workshop settings when its box is left, if
  * it changed: shown in the box's own unit, refused in the screen when it
  * isn't allowed, a server refusal shown in its words.
  */
-function NumberSetting({ id, label, hint, unit, field, toBox, fromBox, invalid }: {
-  id: string; label: string; hint: string; unit: string; field: NumberField;
+function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, invalid, emptyIsNone = false }: {
+  id: string; label: string; hint: string; unit: string; prefix?: string; field: NumberField;
   toBox: (stored: number) => string; fromBox: (typed: number) => number | null; invalid: string;
+  // An empty box saves "none" (null), as "If the price isn't known" (deposit-settings design 5).
+  emptyIsNone?: boolean;
 }) {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const [typed, setTyped] = useState<string | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const stored = settings.data?.[field];
-  const shown = typed ?? (stored === undefined ? '' : toBox(stored));
+  const shown = typed ?? (stored === undefined || stored === null ? '' : toBox(stored));
 
   async function save() {
     if (typed === null) return;
     const number = Number(typed.trim());
-    const value = typed.trim() === '' || !Number.isFinite(number) ? null : fromBox(number);
-    if (value === null) { setNote({ ok: false, text: invalid }); return; }
-    if (value === stored) { setTyped(null); setNote(null); return; }
+    const none = emptyIsNone && typed.trim() === '';
+    const value = none ? null : typed.trim() === '' || !Number.isFinite(number) ? null : fromBox(number);
+    if (value === null && !none) { setNote({ ok: false, text: invalid }); return; }
+    if (value === (stored ?? null)) { setTyped(null); setNote(null); return; }
     setNote(null);
     try {
       const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { [field]: value }, { method: 'PUT' });
@@ -284,12 +288,13 @@ function NumberSetting({ id, label, hint, unit, field, toBox, fromBox, invalid }
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
           <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
-          <span id={`${id}-h`} className="text-[13px] text-[var(--wh-muted)]">{hint}</span>
+          {hint ? <span id={`${id}-h`} className="text-[13px] text-[var(--wh-muted)]">{hint}</span> : null}
         </span>
         <span className="inline-flex items-center gap-2 text-sm">
+          {prefix}
           <input
             id={id}
-            aria-describedby={`${id}-h`}
+            aria-describedby={hint ? `${id}-h` : undefined}
             inputMode="decimal"
             value={shown}
             disabled={!settings.data}
@@ -569,6 +574,94 @@ function ConfirmSetting() {
   );
 }
 
+// Pounds typed, whole pence saved: 1p to £10,000 (deposit-settings design 1).
+const penceFromPounds = (pounds: number) => { const p = Math.round(pounds * 100); return Math.abs(p - pounds * 100) < 1e-6 && p >= 1 && p <= 1_000_000 ? p : null; };
+const poundsBox = (pence: number) => (pence / 100).toFixed(2);
+const AMOUNT_INVALID = 'Enter an amount from £0.01 to £10,000';
+
+/** The deposit as the Online booking fold's summary says it (settings-frame.mjs line 192). */
+function depositWords(s: WorkshopSettings): string {
+  if (s.depositOn && s.depositKind === 'percent' && s.depositPercent) return `deposit ${s.depositPercent}%`;
+  if (s.depositOn && s.depositKind === 'fixed' && s.depositFixedPence) return `deposit £${poundsBox(s.depositFixedPence)}`;
+  return 'no deposit';
+}
+
+/**
+ * Deposits (Jack, 24 Oct, docs/decisions/2026-10-24-morning-questions.md;
+ * drawn as bk-settings-deposits; openspec/changes/deposit-settings design 5):
+ * the switch, and while it's on the drawn rows, each saved as soon as changed.
+ * "For: Every booking / Chosen services" waits for the service editor (design 6).
+ */
+function DepositSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const data = settings.data;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function put(body: object) {
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', body, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  const kind = data?.depositKind ?? 'percent';
+  const pill = (to: 'percent' | 'fixed', label: string) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={kind === to}
+      disabled={!data || saving}
+      onClick={() => { if (to !== kind) void put({ depositKind: to }); }}
+      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${kind === to ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Deposits</h4>
+      <RowSwitch label="Take a deposit when booking" on={data?.depositOn === true} disabled={saving || !data} onChange={(next) => void put({ depositOn: next })} />
+      {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      {data?.depositOn ? (
+        <>
+          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+            <span id="deposit-kind-label" className="text-[15px] font-semibold">Deposit</span>
+            <RadioPillGroup pickOnMove={false} aria-labelledby="deposit-kind-label" className="flex flex-wrap gap-2">{pill('fixed', 'A fixed amount')}{pill('percent', 'A percentage of the price')}</RadioPillGroup>
+          </div>
+          {kind === 'percent' ? (
+            <NumberSetting
+              key="percent" id="dep-pc" label="How much" hint="" unit="%" field="depositPercent" toBox={(n) => String(n)}
+              fromBox={(n) => (Number.isInteger(n) && n >= 1 && n <= 100 ? n : null)} invalid="Enter a whole percentage from 1 to 100"
+            />
+          ) : (
+            <NumberSetting
+              key="fixed" id="dep-fixed" label="How much" hint="" unit="" prefix="£" field="depositFixedPence" toBox={poundsBox}
+              fromBox={penceFromPounds} invalid={AMOUNT_INVALID}
+            />
+          )}
+          <NumberSetting
+            id="dep-unknown" label="If the price isn’t known" hint="For “Not sure what’s wrong?” bookings" unit="" prefix="£" field="depositUnknownPence"
+            toBox={poundsBox} fromBox={penceFromPounds} invalid={AMOUNT_INVALID} emptyIsNone
+          />
+          <NumberSetting
+            id="cutoff" label="Free to cancel until" hint="Before the booked time · after that, or if they don’t come, the shop keeps the deposit" unit="hours before"
+            field="depositCancelHours" toBox={(n) => String(n)} fromBox={(n) => (Number.isInteger(n) && n >= 0 && n <= 168 ? n : null)} invalid="Enter 0 to 168 whole hours"
+          />
+          {data.confirmBookingsAutomatically ? null : (
+            <p className="m-0 text-sm text-[var(--wh-muted)]">With automatic confirming off, the customer pays before the shop has said yes; if the shop declines, the deposit is refunded automatically.</p>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * A shop's own booking terms (Jack, 8 Oct, docs/decisions/2026-10-08-not-drawn-pages.md
  * row 95: a form box on bk-settings; 20 Oct). "Use your own" starts from
@@ -779,6 +872,7 @@ function OnlineBookingBox() {
       <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
       <PricesSetting />
       <ConfirmSetting />
+      <DepositSetting />
       <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Terms</h4>
       <TermsSetting />
     </div>
@@ -870,7 +964,7 @@ function OwnerSettings() {
         { key: 'workshop', title: 'Workshop', intro: 'Services, who works in the workshop, and how the diary looks.', folds: [
           // Under Services in the drawing (set-workshop-checklists); Services isn't built here yet.
           { key: 'checklists', title: 'Checklists', summary: checklists, body: <ChecklistsSettings /> },
-          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
+          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${depositWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
           { key: 'diary-blocks', title: 'Diary blocks', summary: diaryBlocks, body: <DiaryBlocksSettings /> },
           { key: 'storage-slots', title: 'Storage slots', summary: storageSlots, body: <StorageSlotsSettings /> },

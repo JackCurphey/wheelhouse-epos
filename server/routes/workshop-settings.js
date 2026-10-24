@@ -465,7 +465,7 @@ export function register(route) {
     const depositUnknown = whole('depositUnknownPence', 'deposit_unknown_pence', 1, 1_000_000, 'Enter an amount from 1p to £10,000');
     const depositCancel = whole('depositCancelHours', 'deposit_cancel_hours', 0, 168, 'Choose from 0 to 168 hours.', false);
     for (const v of [depositPercent, depositFixed, depositUnknown, depositCancel]) if (v.error) return badRequest(res, v.error);
-    if (depositOn === 1 && (depositKind === 'fixed' ? depositFixed.value : depositPercent.value) === null) return badRequest(res, 'Say how much the deposit is');
+    // Switched on before How much is filled in, no deposit is taken until it is (design 2).
     if (depositOn === 1 && existing.deposit_on !== 1 && !paymentsConnected()) {
       return sendJson(res, 409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
     }

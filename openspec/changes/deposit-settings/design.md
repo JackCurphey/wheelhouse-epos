@@ -11,9 +11,10 @@
 2. **The API** is the existing `GET`/`PUT /api/workshop-settings`, with
    `depositOn`, `depositKind`, `depositPercent`, `depositFixedPence`,
    `depositUnknownPence`, `depositCancelHours`, and a read-only
-   `paymentsConnected`. Switching on needs the amount its kind uses ("How
-   much"); switching on with no provider connected is refused with
-   `code: 'payments_not_connected'`.
+   `paymentsConnected`. Deposits can be switched on before "How much" is
+   filled in (its row shows only once they're on); until it is, no deposit
+   is taken and the fold says "no deposit". Switching on with no provider
+   connected is refused with `code: 'payments_not_connected'`.
 3. **The provider** (`server/payments/provider.js`): `PAYMENTS_PROVIDER` is
    `pretend` or `none`; left out, it is `pretend` except when
    `NODE_ENV=production`, where it is `none`, so a real shop never takes a

@@ -60,13 +60,12 @@ test('each value is checked', async () => {
   }
 });
 
-test('switching on needs the amount its kind uses', async () => {
+test('switched on before How much is filled in: on, and no deposit is taken until it is', async () => {
   await put({ depositOn: false, depositKind: 'percent', depositPercent: null, depositFixedPence: null });
   const res = await put({ depositOn: true });
-  assert.equal(res.status, 400);
-  assert.equal(res.body.error, 'Say how much the deposit is');
-  assert.equal((await put({ depositOn: true, depositKind: 'fixed', depositPercent: 20 })).status, 400, 'a percentage set, but a fixed amount chosen');
-  assert.equal((await get()).depositOn, false);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal((await get()).depositOn, true);
+  await put({ depositOn: false });
 });
 
 test('with no payment provider connected, deposits can’t be switched on', async () => {
