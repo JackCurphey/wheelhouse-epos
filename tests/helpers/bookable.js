@@ -10,7 +10,7 @@ export async function seedJobTypes(shopId) {
     const ids = {};
     for (const [name, minutes] of Object.entries(TYPES)) {
       const { lastInsertRowid } = await prepare(
-        "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES (?, 10, ?, 1, 1, now())"
+        "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES (?, 10, ROUND(10 * 100)::int, ?, 1, 1, now())"
       ).run(`Test ${name}`, minutes);
       ids[name] = lastInsertRowid;
     }
