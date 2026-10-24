@@ -385,7 +385,20 @@ test('the fake job here is the shape of the server’s', async () => {
   for (const part of job().parts) assert.deepEqual(shapes.shapeProblems(shapes.JOB_PART, part), []);
 });
 
-<<<<<<< HEAD
+// Emailing a job's receipt (cp-receipt-address-customer; openspec/changes/till-email-receipt):
+// the box holds the customer's address from their record, for this receipt only.
+test('Email on a job’s Paid box fills in the customer’s address from their record', async () => {
+  const t = await openJobTill();
+  const pay = await payByCard(t);
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Email' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Email the receipt' }));
+  assert.ok(Boolean(box.queryByText(/· Maya Patel$/)));
+  await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'maya@example.test'));
+  assert.ok(Boolean(box.queryByText('From Maya’s customer record. A change here is used for this receipt only.')));
+  // Read out with the box, for a screen reader (review).
+  assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
+});
+
 // A deposit paid online comes off (Jack, 29 Sep, selling at the till decision
 // 11; drawn as till-job-balance; openspec/changes/till-online-deposit).
 const DEPOSIT_DUE = { depositPence: 1300, depositUsedPence: 1300, depositPaidAt: '2026-09-14T10:00:00Z', leftToPayPence: 7000, leftToPay: 70 };
@@ -406,19 +419,5 @@ test('a deposit paid online comes off: a Deposit paid line, and Take payment for
 test('a deposit more than the bill says what isn’t paid back here', async () => {
   const t = await openJobTill({ dueOver: { depositPence: 9000, depositUsedPence: 8300, depositPaidAt: '2026-09-14T10:00:00Z', leftToPayPence: 0, leftToPay: 0 } });
   assert.ok(Boolean(await t.sale.findByText('The deposit is more than the bill: £7.00 isn’t paid back here yet.')));
-=======
-// Emailing a job's receipt (cp-receipt-address-customer; openspec/changes/till-email-receipt):
-// the box holds the customer's address from their record, for this receipt only.
-test('Email on a job’s Paid box fills in the customer’s address from their record', async () => {
-  const t = await openJobTill();
-  const pay = await payByCard(t);
-  t.fireEvent.click(await pay.findByRole('button', { name: 'Email' }));
-  const box = t.within(await t.ui.findByRole('dialog', { name: 'Email the receipt' }));
-  assert.ok(Boolean(box.queryByText(/· Maya Patel$/)));
-  await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'maya@example.test'));
-  assert.ok(Boolean(box.queryByText('From Maya’s customer record. A change here is used for this receipt only.')));
-  // Read out with the box, for a screen reader (review).
-  assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
->>>>>>> origin/main
 });
 
