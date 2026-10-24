@@ -2027,3 +2027,18 @@ No screen: server only.
 1. **A booking confirmed at once by automatic confirming keeps its own
    cut-off**, without Jack's 1-hour window: it isn't a request, and the
    customer saw "Free to cancel until" when booking.
+
+### 24 Oct 2026: the diary job's deposit, the job pop-up (`openspec/changes/deposit-diary-screen`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is offered once the booked day has gone by the shop
+   computer's own date**, as the diary reads today.
+2. **The Undo bar after "Didn't come" stays until the job is closed**, as
+   answer 9 has nothing close by itself; the drawing's note said "for a few
+   minutes".
+3. **Opened again later, a job marked Didn't come offers Book in** (the bike
+   came after all, which clears the mark), not Put on hold.
+4. **"Not come in" shows on any booking whose day has gone with the bike not
+   in**, with or without a deposit; the deposit line shows only when it took one.
+5. **The Undo on the "Marked Didn't come" bar is underlined text**, as the
+   job's "Bike ready" Undo already is, rather than the drawing's lighter
+   button: the colours stay the app's own named ones.
