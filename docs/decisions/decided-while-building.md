@@ -1884,3 +1884,12 @@ No screen: server only.
    and sale on one record.
 9. **A name or email differing only in capitals is offered as a choice**, so
    the spelling kept is the one picked.
+10. **Undo puts back only what the merge changed, and only where nobody has
+    changed it since**: a correction made after the merge stays.
+11. **Undo goes newest first**: an older merge into the same record waits
+    until a later one is undone. Undo also says so when the kept record has
+    been switched off.
+12. **A hidden record comes back only through Undo**, not by switching it on.
+13. **A till that was offline finds the kept record**: its sales for the
+    merged-away customer go to the one kept, and that customer sent again
+    isn't made a second time, before and after the 30 days.

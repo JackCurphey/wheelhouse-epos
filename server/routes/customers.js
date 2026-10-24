@@ -332,6 +332,8 @@ export function register(route) {
     const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
     const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
     const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+    // A record merged into another comes back only through Undo the merge (customer-merge design 3).
+    if (existing.merged_into_id && active !== existing.active) return sendJson(res, 409, { error: 'This customer was merged into another. Undo the merge to bring them back.', code: 'merged' });
 
     if (!name) return badRequest(res, 'Customer name is required');
     const extra = customerExtras(body, existing);

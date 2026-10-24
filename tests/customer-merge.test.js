@@ -8,6 +8,7 @@ import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { registerTill, tillRequest, seedProduct } from './helpers/till.js';
 
 let server;
 let owner;
@@ -189,4 +190,151 @@ test('Undo is refused once the kept record has itself been merged into another (
   const res = await staff(`/api/customer-merges/${first.id}/undo`, { method: 'POST', body: {} });
   assert.equal(res.status, 409, JSON.stringify(res.body));
   assert.equal(res.body.code, 'kept_merged');
+});
+
+// The fresh review's findings.
+const merge = async (keptId, otherId, keep = {}) => (await staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId, keep } })).body;
+const undo = (mergeId, who = owner) => staff(`/api/customer-merges/${mergeId}/undo`, { method: 'POST', body: {} }, who);
+const age = (mergeId) => inShop(() => prepare("UPDATE customer_merges SET merged_at = now() - interval '31 days' WHERE id = ?").run(mergeId));
+const customer = (id) => inShop(() => prepare('SELECT * FROM customers WHERE id = ?').get(id));
+
+test('an older merge can’t be undone while a later one into the same record stands (fresh review)', async () => {
+  const k = await add({ name: 'Rory Hale', phone: '07700 900621' });
+  const o1 = await add({ name: 'R. Hale', phone: '07700 900622' });
+  const o2 = await add({ name: 'Rory H', phone: '07700 900621' });
+  const first = await merge(k.id, o1.id, { phone: 'other' });
+  const second = await merge(k.id, o2.id, { name: 'other' });
+  const res = await undo(first.id);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'later_merge');
+  assert.equal((await undo(second.id)).status, 200);
+  assert.equal((await undo(first.id)).status, 200);
+  const back = await customer(k.id);
+  assert.deepEqual([back.name, back.phone], ['Rory Hale', '07700 900621']);
+});
+
+test('Undo keeps a change made to the kept record after the merge (fresh review)', async () => {
+  const k = await add({ name: 'Tess Bell', phone: '07700 900623', email: 'tess@example.com' });
+  const o = await add({ name: 'T. Bell', phone: '07700 900623', email: 'tb@example.com', notes: 'Likes texts' });
+  const m = await merge(k.id, o.id, { name: 'other', notes: 'other' });
+  assert.equal((await staff(`/api/customers/${k.id}`, { method: 'PUT', body: { email: 'tess.bell@example.com', notes: 'Calls first' } })).status, 200);
+  assert.equal((await undo(m.id)).status, 200);
+  const back = await customer(k.id);
+  assert.equal(back.email, 'tess.bell@example.com', 'the email corrected after the merge stays');
+  assert.equal(back.notes, 'Calls first', 'a note changed after the merge stays');
+  assert.equal(back.name, 'Tess Bell', 'the name the merge chose goes back');
+});
+
+test('two chained merges expiring together are both removed, and both merge records stay (fresh review)', async () => {
+  const a = await add({ name: 'Ada Webb', phone: '07700 900624' });
+  const b = await add({ name: 'A. Webb', phone: '07700 900624' });
+  const c = await add({ name: 'Ada W', phone: '07700 900624' });
+  const ab = await merge(b.id, a.id);
+  const bc = await merge(c.id, b.id);
+  // Newer first in id order would be the trouble case, so make the later merge the older-looking id.
+  await age(bc.id); await age(ab.id);
+  await inShop(() => prepare("UPDATE customer_merges SET merged_at = merged_at - interval '1 minute' WHERE id = ?").run(ab.id));
+  assert.equal((await staff(`/api/customers/${c.id}/merges`)).status, 200);
+  assert.equal(await customer(a.id), undefined, 'A removed');
+  assert.equal(await customer(b.id), undefined, 'B removed');
+  const kept = await inShop(() => prepare('SELECT count(*)::int AS n FROM customer_merges WHERE id IN (?, ?)').get(ab.id, bc.id));
+  assert.equal(kept.n, 2, 'both merge records stay');
+});
+
+test('Undo is refused after 30 days even when the removal couldn’t run (fresh review)', async () => {
+  const k = await add({ name: 'Ivo Grant', phone: '07700 900625' });
+  const o = await add({ name: 'I. Grant', phone: '07700 900625' });
+  const m = await merge(k.id, o.id);
+  // Another shop's online account somehow naming the hidden record stops its removal.
+  await inShop(() => prepare("INSERT INTO customer_logins (shop_id, customer_id, email, password_hash) VALUES (?, ?, ?, 'x')").run(other.shop.id, o.id, `ivo-${o.id}@example.com`), other.shop.id);
+  try {
+    await age(m.id);
+    assert.deepEqual((await staff(`/api/customers/${k.id}/merges`)).body, [], 'no Undo line');
+    const res = await undo(m.id);
+    assert.equal(res.status, 409);
+    assert.equal(res.body.code, 'not_undoable');
+  } finally {
+    await inShop(() => prepare('DELETE FROM customer_logins WHERE customer_id = ?').run(o.id), other.shop.id);
+  }
+});
+
+test('a hidden record can’t be switched back on by hand (fresh review)', async () => {
+  const k = await add({ name: 'Nell Ross', phone: '07700 900626' });
+  const o = await add({ name: 'N. Ross', phone: '07700 900626' });
+  await merge(k.id, o.id);
+  const res = await staff(`/api/customers/${o.id}`, { method: 'PUT', body: { active: true } });
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal((await customer(o.id)).active, 0);
+});
+
+test('a kept record switched off the ordinary way: Undo refused, saying so (fresh review)', async () => {
+  const k = await add({ name: 'Cal Moore', phone: '07700 900627' });
+  const o = await add({ name: 'C. Moore', phone: '07700 900627' });
+  const m = await merge(k.id, o.id);
+  assert.equal((await staff(`/api/customers/${k.id}`, { method: 'PUT', body: { active: false } })).status, 200);
+  const res = await undo(m.id);
+  assert.equal(res.status, 409);
+  assert.equal(res.body.code, 'kept_removed');
+});
+
+test('another shop can’t undo a merge (fresh review)', async () => {
+  const k = await add({ name: 'Bea Lane', phone: '07700 900628' });
+  const o = await add({ name: 'B. Lane', phone: '07700 900628' });
+  const m = await merge(k.id, o.id);
+  assert.equal((await undo(m.id, other)).status, 404);
+  assert.equal((await customer(o.id)).active, 0);
+});
+
+test('Undo moves an online account and an order back (fresh review)', async () => {
+  const k = await add({ name: 'Joy Park', phone: '07700 900629' });
+  const o = await add({ name: 'J. Park', phone: '07700 900629' });
+  const login = await inShop(async () => (await prepare("INSERT INTO customer_logins (shop_id, customer_id, email, password_hash) VALUES (?, ?, ?, 'x') RETURNING id").get(owner.shop.id, o.id, `joy-${o.id}@example.com`)).id);
+  const order = await inShop(async () => (await prepare("INSERT INTO sale_documents (kind, status, customer_id, subtotal, total) VALUES ('order', 'open', ?, 0, 0) RETURNING id").get(o.id)).id);
+  const m = await merge(k.id, o.id);
+  assert.equal((await undo(m.id)).status, 200);
+  assert.equal(await ownerOf('customer_logins', login), o.id);
+  assert.equal(await ownerOf('sale_documents', order), o.id);
+});
+
+test('a till: its sales and problems move with a merge and back with Undo; afterwards, before and after removal, it finds the kept record (fresh review)', async () => {
+  const till = await registerTill(server.baseUrl, owner, { siteCode: 'M', number: 7 });
+  const sync = async (items) => (await tillRequest(server.baseUrl, owner.shop.slug, till.token, '/sync', { method: 'POST', body: { pendingCount: 0, items } })).body.results;
+  const tube = await seedProduct(owner.shop.id);
+  let receipt = 7000;
+  const sale = (extra) => ({
+    kind: 'sale', clientId: randomUUID(), receiptNumber: ++receipt, tillClockAt: '2026-09-01T09:30:00.000Z', madeOffline: true, employeeId: cashierId,
+    lines: [{ productId: tube, description: 'Inner tube', qty: 1, unitPricePence: 699, vatRateBp: 2000 }], payments: [{ method: 'cash', amountPence: 699 }], ...extra,
+  });
+  const saleOwner = async (clientId) => (await inShop(() => prepare('SELECT customer_id FROM till_sales WHERE client_id = ?').get(clientId))).customer_id;
+  const k = await add({ name: 'Uma Shah', phone: '07700 900630' });
+  const offline = { kind: 'customer', clientId: randomUUID(), name: 'Uma S', phone: '07700 900630' };
+  const first = sale({ customerClientId: offline.clientId });
+  await sync([offline, first]);
+  const o = await inShop(() => prepare('SELECT id FROM customers WHERE client_id = ?').get(offline.clientId));
+  const problem = await inShop(() => prepare('SELECT id FROM till_attention WHERE customer_id = ?').get(o.id));
+  assert.ok(problem, 'the till flagged the possible duplicate');
+  const m = await merge(k.id, o.id);
+  assert.equal(await saleOwner(first.clientId), k.id, 'the till sale moved');
+  assert.equal(await ownerOf('till_attention', problem.id), k.id, 'the till problem moved');
+  assert.equal((await undo(m.id)).status, 200);
+  assert.equal(await saleOwner(first.clientId), o.id, 'and back');
+  assert.equal(await ownerOf('till_attention', problem.id), o.id);
+  const again = await merge(k.id, o.id);
+  const whileHidden = sale({ customerClientId: offline.clientId });
+  const byId = sale({ customerId: o.id });
+  await sync([whileHidden, byId]);
+  assert.equal(await saleOwner(whileHidden.clientId), k.id, 'a sale for the hidden record, by the till’s id, goes to the kept one');
+  assert.equal(await saleOwner(byId.clientId), k.id, 'and by its number');
+  await age(again.id);
+  await staff(`/api/customers/${k.id}/merges`);
+  assert.equal(await customer(o.id), undefined, 'removed');
+  const afterRemoval = sale({ customerClientId: offline.clientId });
+  const afterById = sale({ customerId: o.id });
+  const results = await sync([offline, afterRemoval, afterById]);
+  assert.equal(results[0].status, 'duplicate', 'the customer sent again isn’t made again');
+  assert.deepEqual(results[1].attention, [], 'no unknown customer');
+  assert.equal(await saleOwner(afterRemoval.clientId), k.id);
+  assert.equal(await saleOwner(afterById.clientId), k.id);
+  const remade = await inShop(() => prepare('SELECT count(*)::int AS n FROM customers WHERE client_id = ?').get(offline.clientId));
+  assert.equal(remade.n, 0);
 });

@@ -10,21 +10,27 @@
    workshop_jobs, sales, sale_documents, customer_messages, till_sales,
    till_attention, customer_logins (only when the kept has none; both having
    one is refused), and group memberships the kept didn't have. The ids moved
-   per table, the added memberships, and the kept record's fields before are
-   written to `customer_merges.moved` (JSON).
+   per table, the added memberships, and the kept record's fields before and
+   after are written to `customer_merges.moved` (JSON), with the other's number
+   and till id (`other_was_id`, `other_client_id`), kept after its removal.
 3. **Hidden, not removed**: the other gets `active = 0` and `merged_into_id`, so
    every list and search leaves it out. **Undo** (30 days, once) moves the
    recorded rows back where they still belong to the kept, removes the added
-   memberships, restores the fields and makes the other active again. Undo is
-   refused once the kept record has itself been merged into another: that
-   merge is undone first. Both records are locked lowest id first, so two
+   memberships, puts back each field the merge changed that nobody has changed
+   since, and makes the other active again. Undo is refused, saying why, past
+   30 days (even if the removal hasn't run), once the kept record has itself
+   been merged into another or switched off, and while a later merge into the
+   same record stands: the later one is undone first. A hidden record can't be
+   switched back on by hand. Both records are locked lowest id first, so two
    opposite merges can't deadlock.
 4. **Removed for good after 30 days**: a merged record older than 30 days is
    deleted when merges are next read or undone (no timer); anything that has
    come to point at it since (an offline till's sale synced late) moves to the
    kept record first. Each removal is its own transaction; one that fails is
-   logged and tried again next time. The merge record stays, its other id
-   cleared.
+   logged and tried again next time. Removals run oldest first, so merges one
+   after another unwind in order. The merge record stays, its other id
+   cleared; if the kept record itself goes, its kept id is cleared, not the
+   merge record deleted.
 5. **"They're different people"** writes the pair to `customer_not_duplicates`,
    which possible duplicates leave out both ways.
 6. **Possible duplicates**: the same UK number (the customers-list rule) or the
@@ -33,3 +39,8 @@
 7. **The 30-day Undo line on the kept page** (not drawn; its place is stated:
    "from the customer's page"): "Merged with [name] on [day] · can be undone
    until [day]", with Undo the merge, in the duplicate notice's style.
+8. **A till finds the kept record.** A till that was offline may still send a
+   sale naming the hidden record, by its number or the till's own id for it,
+   or send that customer again. The sale goes to the record it was merged into
+   (following merges one after another), before and after removal, and the
+   customer sent again is answered as already held, not made a second time.
