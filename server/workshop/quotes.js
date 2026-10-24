@@ -31,9 +31,10 @@ async function insertLines(quoteId, lines) {
   const ids = [];
   for (const line of lines) {
     const { lastInsertRowid } = await prepare(
-      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, need, reason, without_text, photo_attachment_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(quoteId, line.kind, line.description, line.productId ?? null, line.quantity ?? 1, line.unitAmount,
+      // Pence beside the pounds, from the same value (sales in pence, step A′).
+      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, unit_amount_pence, need, reason, without_text, photo_attachment_id)
+       VALUES (?, ?, ?, ?, ?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, ?, ?, ?)`
+    ).run(quoteId, line.kind, line.description, line.productId ?? null, line.quantity ?? 1, line.unitAmount, line.unitAmount,
       line.need === 'optional' ? 'optional' : 'needed', line.reason ? String(line.reason).trim() || null : null, withoutText(line.without),
       line.photoId ?? null);
     ids.push(lastInsertRowid);
