@@ -36,36 +36,48 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # To find the newest main commit whose Tests passed.
+      actions: read
     env:
-      # The commit that was tested; the latest main may have moved on since.
-      COMMIT: ${{ github.event.workflow_run.head_sha }}
       SITE: ${{ vars.HOSTED_COPY_URL }}
 
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      # Two quick merges can finish their tests out of order; the older one
-      # must not go on top of the newer.
-      - name: Skip a commit older than the one running
-        id: newer
+      # GitHub keeps one run waiting in the group and cancels it when another
+      # arrives, so each run deploys the newest main commit whose Tests passed,
+      # not only its own: a merge whose run was cancelled still goes on with
+      # the next. Skipped when that commit, or a newer one, is already running
+      # (merges finishing out of order). scripts/hosting/pick-deploy.sh decides.
+      - name: Choose the commit
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           running=$(curl -fsS -m 10 "$SITE/healthz" | jq -r '.commit // empty' || true)
-          echo "Running now: ${running:-unknown}"
-          if [ -n "$running" ] && [ "$running" != "$COMMIT" ] && git merge-base --is-ancestor "$COMMIT" "$running" 2>/dev/null; then
-            echo "::notice::$COMMIT is older than $running, which is already running, so it isn't deployed."
+          newest=$(gh run list --repo "$REPO" --workflow Tests --branch main --event push --status success --limit 1 --json headSha --jq '.[0].headSha // empty')
+          echo "Running now: ${running:-unknown}. Newest tested on main: ${newest:-none}."
+          choice=$(scripts/hosting/pick-deploy.sh "$running" "$newest")
+          if [ "$choice" = skip ]; then
+            echo "::notice::${newest} is already running, or older than ${running}, so nothing is deployed."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
+            echo "COMMIT=${choice#deploy }" >> "$GITHUB_ENV"
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - if: steps.newer.outputs.skip == 'false'
+      - name: Check out that commit
+        if: steps.pick.outputs.skip == 'false'
+        run: git checkout --quiet --detach "$COMMIT"
+
+      - if: steps.pick.outputs.skip == 'false'
         uses: docker/setup-buildx-action@v4
 
-      - if: steps.newer.outputs.skip == 'false'
+      - if: steps.pick.outputs.skip == 'false'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -76,18 +88,18 @@ jobs:
       # the latest main instead. NODE_ENV is a run-time setting only (the
       # server's .env): in the build, npm ci would skip the build tools.
       - name: Build the image and push it
-        if: steps.newer.outputs.skip == 'false'
+        if: steps.pick.outputs.skip == 'false'
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
-          tags: ghcr.io/jackcurphey/wheelhouse-epos:${{ github.event.workflow_run.head_sha }}
+          tags: ghcr.io/jackcurphey/wheelhouse-epos:${{ env.COMMIT }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Check automatic updates are set up
-        if: steps.newer.outputs.skip == 'false'
+        if: steps.pick.outputs.skip == 'false'
         env:
           HOST: ${{ vars.HOSTED_COPY_HOST }}
           KNOWN_HOSTS: ${{ vars.HOSTED_COPY_KNOWN_HOSTS }}
@@ -106,7 +118,7 @@ jobs:
       # The host key was read from the server by setup.sh over its own SSH
       # login, so a server answering with any other key is refused.
       - name: Set up the SSH login
-        if: steps.newer.outputs.skip == 'false'
+        if: steps.pick.outputs.skip == 'false'
         env:
           HOST: ${{ vars.HOSTED_COPY_HOST }}
           KNOWN_HOSTS: ${{ vars.HOSTED_COPY_KNOWN_HOSTS }}
@@ -130,31 +142,23 @@ jobs:
       # anything (deploys.log), for a restore; it's printed here too.
       - name: Start it on the server
         id: deploy
-        if: steps.newer.outputs.skip == 'false'
+        if: steps.pick.outputs.skip == 'false'
         run: |
           echo "Deploying $COMMIT at $(date -u +%Y-%m-%dT%H:%M:%SZ) (UTC: the moment a restore would go back to)."
           ssh hosted-copy "deploy $COMMIT"
 
       # Migrations run before the app answers, so a failed one never shows ok.
+      # Five minutes in all, by the clock (scripts/hosting/wait-healthy.sh).
       - name: Wait for the health check to show the new commit
-        if: steps.newer.outputs.skip == 'false'
-        run: |
-          body=""
-          for _ in $(seq 1 30); do
-            body=$(curl -fsS -m 10 "$SITE/healthz" || true)
-            if [ "$(jq -r '.status' <<<"$body" 2>/dev/null)" = ok ] && [ "$(jq -r '.commit' <<<"$body" 2>/dev/null)" = "$COMMIT" ]; then
-              echo "Deployed: $body"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::The hosted copy didn't answer ok with $COMMIT within 5 minutes. Last answer: ${body:-none}"
-          exit 1
+        if: steps.pick.outputs.skip == 'false'
+        run: scripts/hosting/wait-healthy.sh "$SITE" "$COMMIT" 300
 
       # Only once the new version went on: after a failed download, the version
       # before is still running, and rolling back would replace a good one.
+      # Also when the job is cancelled or runs out of time after that, which
+      # failure() alone misses (fresh review, 24 Oct).
       - name: Start the previous version again
-        if: failure() && steps.deploy.outcome == 'success'
+        if: (failure() || cancelled()) && steps.deploy.outcome == 'success'
         run: |
           ssh hosted-copy rollback
           echo "::error::$COMMIT was rolled back. If it changed the database, follow docs/runbooks/hosted-copy.md section D."
