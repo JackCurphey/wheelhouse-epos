@@ -15,10 +15,16 @@
 3. **Hidden, not removed**: the other gets `active = 0` and `merged_into_id`, so
    every list and search leaves it out. **Undo** (30 days, once) moves the
    recorded rows back where they still belong to the kept, removes the added
-   memberships, restores the fields and makes the other active again.
-4. **Removed for good after 30 days**: a merged record older than 30 days with
-   nothing pointing at it is deleted when merges are next read or made (no
-   timer); the merge record stays, its other id cleared.
+   memberships, restores the fields and makes the other active again. Undo is
+   refused once the kept record has itself been merged into another: that
+   merge is undone first. Both records are locked lowest id first, so two
+   opposite merges can't deadlock.
+4. **Removed for good after 30 days**: a merged record older than 30 days is
+   deleted when merges are next read or undone (no timer); anything that has
+   come to point at it since (an offline till's sale synced late) moves to the
+   kept record first. Each removal is its own transaction; one that fails is
+   logged and tried again next time. The merge record stays, its other id
+   cleared.
 5. **"They're different people"** writes the pair to `customer_not_duplicates`,
    which possible duplicates leave out both ways.
 6. **Possible duplicates**: the same UK number (the customers-list rule) or the

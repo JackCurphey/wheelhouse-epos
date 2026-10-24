@@ -163,3 +163,30 @@ test('groups: the kept record joins the other’s, and Undo takes away only what
   assert.deepEqual(await groupsOf(kept.id), ['Staff'], 'her own group stays');
   assert.deepEqual(await groupsOf(gone.id), ['Club members', 'Staff']);
 });
+
+test('an order moves with a merge; one made for the hidden record later moves at its removal, and nothing breaks (review)', async () => {
+  const kept = await add({ name: 'Ian Moss', phone: '07700 900611' });
+  const gone = await add({ name: 'I. Moss', phone: '07700 900611' });
+  const order = (who) => inShop(async () => (await prepare("INSERT INTO sale_documents (kind, status, customer_id, subtotal, total) VALUES ('order', 'open', ?, 0, 0) RETURNING id").get(who)).id);
+  const before = { id: await order(gone.id) };
+  const merged = (await staff(`/api/customers/${kept.id}/merge`, { method: 'POST', body: { otherId: gone.id, keep: {} } })).body;
+  assert.equal(await ownerOf('sale_documents', before.id), kept.id, 'the order moved');
+  // An offline till's sale, synced after the merge, still names the hidden record.
+  const late = await order(gone.id);
+  await inShop(() => prepare("UPDATE customer_merges SET merged_at = now() - interval '31 days' WHERE id = ?").run(merged.id));
+  const res = await staff(`/api/customers/${kept.id}/merges`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(await ownerOf('sale_documents', late), kept.id, 'the late one moved to the kept record');
+  assert.equal(await inShop(() => prepare('SELECT 1 FROM customers WHERE id = ?').get(gone.id)), undefined, 'and the hidden record is gone');
+});
+
+test('Undo is refused once the kept record has itself been merged into another (review)', async () => {
+  const a = await add({ name: 'Ann Lee', phone: '07700 900612' });
+  const b = await add({ name: 'A. Lee', phone: '07700 900612' });
+  const c = await add({ name: 'Annie Lee', phone: '07700 900612' });
+  const first = (await staff(`/api/customers/${b.id}/merge`, { method: 'POST', body: { otherId: a.id, keep: {} } })).body;
+  assert.equal((await staff(`/api/customers/${c.id}/merge`, { method: 'POST', body: { otherId: b.id, keep: {} } })).status, 200);
+  const res = await staff(`/api/customer-merges/${first.id}/undo`, { method: 'POST', body: {} });
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'kept_merged');
+});

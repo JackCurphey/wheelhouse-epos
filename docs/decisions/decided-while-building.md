@@ -1873,8 +1873,14 @@ No screen: server only.
 4. **"Merged with [name] on [day] · can be undone until [day]"** with "Undo
    the merge", at the top of the kept page (not drawn; its place is "from the
    customer's page"), in the duplicate notice's style.
-5. **Removed for good after 30 days** when merges are next read or made, not
-   on a timer.
+5. **Removed for good after 30 days** when merges are next read or undone, not
+   on a timer; anything that has come to point at it since (a till sale synced
+   late) moves to the kept record first.
 6. **"Added on [day] and [day]."** before the 30-day note, without the
    drawing's "on different tills" (where each was added isn't recorded).
 7. **Duplicates are found by phone or email, not by name.**
+8. **Undo is refused once the kept record has itself been merged** into
+   another, saying to undo that one first; undoing in order keeps every job
+   and sale on one record.
+9. **A name or email differing only in capitals is offered as a choice**, so
+   the spelling kept is the one picked.

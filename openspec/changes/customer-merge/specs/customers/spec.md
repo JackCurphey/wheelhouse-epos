@@ -30,6 +30,14 @@ hidden record SHALL be removed.
 - **WHEN** staff undo the merge within 30 days
 - **THEN** Maya P. is back with her own jobs and sales, and Maya Patel's fields are as they were
 
+#### Scenario: removed after 30 days, with anything that arrived late
+- **WHEN** 30 days have gone and a till sale synced late still names Maya P.
+- **THEN** the sale moves to Maya Patel and Maya P. is removed
+
+#### Scenario: undo after a later merge
+- **WHEN** Maya Patel has since been merged into another record
+- **THEN** undoing the first merge is refused, saying to undo the later one first
+
 #### Scenario: both have online accounts
 - **WHEN** both records have an online account
 - **THEN** Merge is refused, saying so, and nothing moves

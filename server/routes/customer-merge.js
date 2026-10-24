@@ -15,17 +15,32 @@ const FIELDS = { name: ['name'], phone: ['phone'], email: ['email'], address: ['
 
 const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
 
-/** Removes, for good, merged records whose 30 days have gone and nothing points at (design 4). */
+/**
+ * Removes, for good, merged records whose 30 days have gone (design 4). Anything
+ * that has come to point at the hidden record since the merge (an offline till's
+ * sale synced late, say) moves to the kept record first, so the removal can't fail.
+ */
 async function removeExpired() {
   const due = await prepare(
-    `SELECT m.id, m.other_id FROM customer_merges m
+    `SELECT m.id, m.kept_id, m.other_id FROM customer_merges m
       WHERE m.other_id IS NOT NULL AND m.undone_at IS NULL AND m.merged_at < now() - make_interval(days => ${UNDO_DAYS})`
   ).all();
+  if (!due.length) return;
+  const shopId = (await prepare("SELECT current_setting('app.current_shop_id')::int AS id").get()).id;
   for (const m of due) {
-    await prepare('DELETE FROM customer_group_members WHERE customer_id = ?').run(m.other_id);
-    await prepare('DELETE FROM customer_not_duplicates WHERE first_id = ? OR second_id = ?').run(m.other_id, m.other_id);
-    await prepare('UPDATE customer_merges SET other_id = NULL WHERE id = ?').run(m.id);
-    await prepare('DELETE FROM customers WHERE id = ? AND active = 0 AND merged_into_id IS NOT NULL').run(m.other_id);
+    await dbExec('BEGIN');
+    try {
+      for (const table of MOVED) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ?`).run(m.kept_id, m.other_id);
+      await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ?').run(m.kept_id, shopId, m.other_id);
+      await prepare('DELETE FROM customer_group_members WHERE customer_id = ?').run(m.other_id);
+      await prepare('DELETE FROM customer_not_duplicates WHERE first_id = ? OR second_id = ?').run(m.other_id, m.other_id);
+      await prepare('UPDATE customer_merges SET other_id = NULL WHERE id = ?').run(m.id);
+      await prepare('DELETE FROM customers WHERE id = ? AND active = 0 AND merged_into_id IS NOT NULL').run(m.other_id);
+      await dbExec('COMMIT');
+    } catch (err) {
+      await dbExec('ROLLBACK');
+      console.error(`customer merge ${m.id}: the hidden record couldn’t be removed yet`, err);
+    }
   }
 }
 
@@ -87,8 +102,10 @@ export function register(route) {
     const shopId = (await prepare("SELECT current_setting('app.current_shop_id')::int AS id").get()).id;
     await dbExec('BEGIN');
     try {
-      const kept = await prepare('SELECT * FROM customers WHERE id = ? AND active = 1 FOR UPDATE').get(id);
-      const other = await prepare('SELECT * FROM customers WHERE id = ? AND active = 1 FOR UPDATE').get(otherId);
+      // Both locked in one go, lowest id first, so two opposite merges can't deadlock.
+      const both = await prepare('SELECT * FROM customers WHERE id IN (?, ?) AND active = 1 ORDER BY id FOR UPDATE').all(id, otherId);
+      const kept = both.find((c) => c.id === id);
+      const other = both.find((c) => c.id === otherId);
       if (!kept || !other) { await dbExec('ROLLBACK'); return notFound(res, 'Customer not found'); }
       const logins = await prepare('SELECT id, customer_id FROM customer_logins WHERE shop_id = ? AND customer_id IN (?, ?)').all(shopId, id, otherId);
       if (logins.some((l) => l.customer_id === id) && logins.some((l) => l.customer_id === otherId)) {
@@ -153,6 +170,12 @@ export function register(route) {
       if (m.undone_at || !m.other_id) {
         await dbExec('ROLLBACK');
         return sendJson(res, 409, { error: 'That merge can’t be undone any more.', code: 'not_undoable' });
+      }
+      // Once the kept record has itself been merged into another, undo that merge first.
+      const kept = await prepare('SELECT active, merged_into_id FROM customers WHERE id = ? FOR UPDATE').get(m.kept_id);
+      if (!kept?.active || kept.merged_into_id) {
+        await dbExec('ROLLBACK');
+        return sendJson(res, 409, { error: 'That record has since been merged into another. Undo that merge first.', code: 'kept_merged' });
       }
       const moved = m.moved;
       for (const table of MOVED) {

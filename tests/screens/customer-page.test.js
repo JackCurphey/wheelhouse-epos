@@ -252,3 +252,10 @@ test('a merge from earlier can be undone from the page, until its day', async ()
   assert.ok(line);
   assert.ok(ui.getByRole('button', { name: 'Undo the merge' }));
 });
+
+test('a name that differs only in capitals is offered too (review)', async () => {
+  const { ui, fireEvent, within } = await open({ dups: [{ ...TWIN, name: 'maya patel' }] });
+  fireEvent.click(await ui.findByRole('button', { name: 'Check' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'The same person?' }));
+  assert.ok(dialog.queryByRole('group', { name: 'Name' }) !== null);
+});

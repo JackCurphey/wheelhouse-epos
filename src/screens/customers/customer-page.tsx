@@ -231,7 +231,7 @@ const MERGE_FIELDS: { key: 'name' | 'phone' | 'email' | 'address' | 'notes'; lab
 /** The same person? (cs-merge): only what differs, a choice of each, Merge into one or They're different people. */
 function MergeDialog({ me, twin, myJobs, mySales, onClose }: { me: Customer & { createdAt?: string }; twin: Twin; myJobs: number; mySales: number; onClose: () => void }) {
   const queryClient = useQueryClient();
-  const differs = MERGE_FIELDS.filter((f) => f.of(me).trim().toLowerCase() !== f.of(twin).trim().toLowerCase());
+  const differs = MERGE_FIELDS.filter((f) => f.of(me).trim() !== f.of(twin).trim());
   const [keep, setKeep] = useState<Record<string, 'this' | 'other'>>({});
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
