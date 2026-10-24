@@ -10,4 +10,4 @@
 
 - [x] 2.1 Tests first: the till's Deposit paid line and Take payment for the rest; the deposit strip has no Refund once paid. Watch each fail
 - [x] 2.2 Build it to `till-job-balance`
-- [ ] 2.3 `npm test`, `npm run test:browser`, lint; archive as the last commit
+- [x] 2.3 `npm test`, `npm run test:browser`, lint; archive as the last commit. `npm test`: 3116 passed, with only the 4 that need `ADMIN_DATABASE_URL` failing; `npm run test:browser`: 116 passed. The run's server log showed the held-deposit release failing with no database in scope, fixed and tested as really released
