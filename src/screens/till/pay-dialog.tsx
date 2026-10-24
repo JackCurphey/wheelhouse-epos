@@ -119,13 +119,13 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
         <button type="button" onClick={() => go({ kind: 'card', amount: total, cashPart: 0 })} className={`${BIG} border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)]`}>
           <span className="flex flex-col gap-0.5">
             <span className="text-lg font-bold">{`Card · ${money(total)}`}</span>
-            <span className="text-[13px] opacity-85">Key it into the card machine</span>
+            <span className="text-size-13 opacity-85">Key it into the card machine</span>
           </span>
         </button>
         <button type="button" onClick={() => go({ kind: 'cash' })} className={`${BIG} border-[var(--wh-border)] bg-[var(--wh-panel)]`}>
           <span className="flex flex-col gap-0.5">
             <span className="text-lg font-bold">Cash</span>
-            <span className="text-[13px] text-[var(--wh-muted)]">Enter what the customer hands you; the till works out the change</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">Enter what the customer hands you; the till works out the change</span>
           </span>
         </button>
         <Button className="min-h-14" onClick={() => go({ kind: 'split' })}>Split</Button>
@@ -135,8 +135,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     title = `Card · ${money(step.amount)}`;
     body = (
       <div className="flex flex-col items-center gap-2 py-2 text-center">
-        <span className="font-mono text-[34px]">{money(step.amount)}</span>
-        <p className="m-0 text-[15px] font-semibold">{`Key ${money(step.amount)} into the card machine.`}</p>
+        <span className="font-mono text-size-34">{money(step.amount)}</span>
+        <p className="m-0 text-size-15 font-semibold">{`Key ${money(step.amount)} into the card machine.`}</p>
         <p className="m-0 text-sm text-[var(--wh-muted)]">When the machine says approved, press Card approved. If it’s declined, nothing was taken: go back and pay another way.</p>
       </div>
     );
@@ -235,7 +235,7 @@ function CashStep({ total, saving, onBack, onTaken }: { total: number; saving: b
       </div>
       <div className="flex items-baseline justify-between rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4">
         <span className="text-lg font-bold">Change to give</span>
-        <span className="font-mono text-[34px]">{enough ? money((pence(handed) - pence(total)) / 100) : '—'}</span>
+        <span className="font-mono text-size-34">{enough ? money((pence(handed) - pence(total)) / 100) : '—'}</span>
       </div>
       <div className="flex justify-between gap-2.5 border-t border-[var(--wh-border)] pt-3.5">
         <Button variant="ghost" disabled={saving} onClick={onBack}>Back</Button>
@@ -255,16 +255,16 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
       <div className="flex flex-col gap-1.5">
         <label htmlFor="split-cash" className="text-sm font-semibold">Cash part</label>
         <input id="split-cash" inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)} aria-describedby="split-cash-hint" className="min-h-11 w-40 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-mono" />
-        <span id="split-cash-hint" className="text-[13px] text-[var(--wh-muted)]">Take the cash first; the rest goes on the card.</span>
+        <span id="split-cash-hint" className="text-size-13 text-[var(--wh-muted)]">Take the cash first; the rest goes on the card.</span>
       </div>
       <div className="flex items-baseline justify-between rounded-[10px] border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-[18px] py-4">
         <span className="text-lg font-bold">Still to pay</span>
-        <span className="font-mono text-[34px]">{money(rest)}</span>
+        <span className="font-mono text-size-34">{money(rest)}</span>
       </div>
       <button type="button" disabled={!ok} onClick={() => cash !== null && onCard(cash, rest)} className={`${BIG} border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)] disabled:opacity-50`}>
         <span className="flex flex-col gap-0.5">
           <span className="text-lg font-bold">{`Card · ${money(rest)}`}</span>
-          <span className="text-[13px] opacity-85">Key it into the card machine</span>
+          <span className="text-size-13 opacity-85">Key it into the card machine</span>
         </span>
       </button>
       <div><Button variant="ghost" onClick={onBack}>Back</Button></div>
@@ -289,7 +289,7 @@ function PaidStep({ total, change, note, onPrint, onNextSale }: { total: number;
     <>
       <div className="flex flex-col items-center gap-2 text-center">
         <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--wh-state-ready-bg)] text-3xl text-[var(--wh-state-ready-ink)]">✓</span>
-        <span className="font-mono text-[30px]">{money(total)}</span>
+        <span className="font-mono text-size-30">{money(total)}</span>
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
         {note ? <span role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-warn-ink)]">{note}</span> : null}
       </div>

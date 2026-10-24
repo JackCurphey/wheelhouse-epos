@@ -62,7 +62,7 @@ export function StorageSlotsSettings() {
       </p>
       <ul aria-label="Slots" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
         {(slots.data ?? []).map((s, i, all) => (
-          <li key={s.id} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-[var(--wh-border)] bg-[var(--wh-panel)] pl-3.5 text-[13px] font-semibold">
+          <li key={s.id} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-[var(--wh-border)] bg-[var(--wh-panel)] pl-3.5 text-size-13 font-semibold">
             {s.name}
             <button type="button" aria-label={`Remove ${s.name}`} disabled={busy} onClick={() => void run(() => apiMutate(`/api/storage-slots/${s.id}`, {}, { method: 'DELETE' }), () => {
               // The focus goes to the next chip's Remove (or the one before, or + Add a slot).

@@ -89,7 +89,7 @@ export function OfferDialog({ job, at, people, onChooseAgain, onKeep, onOffered 
           <textarea id="offer-msg" rows={3} maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)}
             className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`${first} sees the time and your message on their booking page, and accepts it or cancels. ${day} at ${time} is kept free for them; the time they asked for is let go.`}</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`${first} sees the time and your message on their booking page, and accepts it or cancels. ${day} at ${time} is kept free for them; the time they asked for is let go.`}</p>
         {/* The server needs a mechanic for the time (fresh review). */}
         {mechanic === null && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">No mechanic is free to take this time. Choose another time, in a mechanic’s column.</p>}
         {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p>}

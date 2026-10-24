@@ -77,7 +77,7 @@ function ShopDetailsBox() {
       {details.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the shop’s details. Try again in a moment.</p> : null}
       {DETAIL_ROWS.map(([key, label, autoComplete]) => (
         <div key={key} className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3 md:py-0">
-          <label htmlFor={`shop-${key}`} className="shrink-0 text-[15px] font-semibold md:w-40">{label}</label>
+          <label htmlFor={`shop-${key}`} className="shrink-0 text-size-15 font-semibold md:w-40">{label}</label>
           <input
             id={`shop-${key}`}
             value={valueOf(key)}
@@ -85,7 +85,7 @@ function ShopDetailsBox() {
             disabled={!details.data}
             onChange={(e) => setTyped((t) => ({ ...t, [key]: e.target.value }))}
             onBlur={() => void save(key)}
-            className="min-h-11 grow rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]"
+            className="min-h-11 grow rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15"
           />
         </div>
       ))}
@@ -176,7 +176,7 @@ function HoursBox() {
   };
   const setTime = (weekday: number, which: 'open' | 'close', value: string) =>
     void saveWeek(week.map((d) => (d.weekday === weekday ? { ...d, [which]: value } : d)));
-  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-size-15';
   // A time saved elsewhere outside the list still shows as it is (fresh review).
   const options = (value: string) => (HOURS.includes(value) ? HOURS : [value, ...HOURS].sort());
 
@@ -190,7 +190,7 @@ function HoursBox() {
         return (
           <div key={weekday} className="flex flex-col gap-2 border-t border-[var(--wh-border)] py-2 md:min-h-[50px] md:flex-row md:items-center md:gap-3 md:py-1">
             <div className="flex items-center justify-between gap-3 md:contents">
-              <span className="text-[15px] font-semibold md:order-1 md:w-24">{name}</span>
+              <span className="text-size-15 font-semibold md:order-1 md:w-24">{name}</span>
               <button
                 type="button"
                 aria-pressed={Boolean(day)}
@@ -237,8 +237,8 @@ function NoAccess() {
         <span aria-hidden="true" className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
-        <h2 className="m-0 text-[22px] font-bold">Settings aren’t part of your role</h2>
-        <p className="m-0 text-[15px]">Only the shop’s owner can change settings for now. Ask the owner if you need something changed.</p>
+        <h2 className="m-0 text-size-22 font-bold">Settings aren’t part of your role</h2>
+        <p className="m-0 text-size-15">Only the shop’s owner can change settings for now. Ask the owner if you need something changed.</p>
         <div><Link to={ROUTES.till} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-input-border)] px-4 font-semibold">Go to the till</Link></div>
       </div>
     </div>
@@ -287,8 +287,8 @@ function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, i
     <div className="flex flex-col gap-1">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
-          {hint ? <span id={`${id}-h`} className="text-[13px] text-[var(--wh-muted)]">{hint}</span> : null}
+          <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
+          {hint ? <span id={`${id}-h`} className="text-size-13 text-[var(--wh-muted)]">{hint}</span> : null}
         </span>
         <span className="inline-flex items-center gap-2 text-sm">
           {prefix}
@@ -300,7 +300,7 @@ function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, i
             disabled={!settings.data}
             onChange={(e) => setTyped(e.target.value)}
             onBlur={() => void save()}
-            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-size-15"
           />
           {unit}
         </span>
@@ -370,8 +370,8 @@ function NoticeSetting() {
     <div className="flex flex-col gap-1">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <label htmlFor="notice" className="text-[15px] font-semibold">Notice</label>
-          <span id="notice-h" className="text-[13px] text-[var(--wh-muted)]">How far ahead customers must book</span>
+          <label htmlFor="notice" className="text-size-15 font-semibold">Notice</label>
+          <span id="notice-h" className="text-size-13 text-[var(--wh-muted)]">How far ahead customers must book</span>
         </span>
         <div className="inline-flex items-center gap-2 text-sm">
           <input
@@ -382,7 +382,7 @@ function NoticeSetting() {
             disabled={!data}
             onChange={(e) => setTyped(e.target.value)}
             onBlur={() => void save(unit)}
-            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-size-15"
           />
           <RadioPillGroup pickOnMove={false} aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</RadioPillGroup>
         </div>
@@ -450,13 +450,13 @@ function ModeSetting() {
       {label}
     </button>
   );
-  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-size-15';
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="m-0 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">How bikes are booked in</h4>
+      <h4 className="m-0 border-t border-[var(--wh-border)] pt-3 text-size-15 font-bold">How bikes are booked in</h4>
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
-        <span id="mode-label" className="text-[15px] font-semibold">Bikes are booked in for</span>
+        <span id="mode-label" className="text-size-15 font-semibold">Bikes are booked in for</span>
         <RadioPillGroup pickOnMove={false} aria-labelledby="mode-label" className="flex flex-wrap gap-2">{pill('timed', 'A set time')}{pill('dropoff', 'The whole day')}</RadioPillGroup>
       </div>
       {data?.nextBookingMode && data.nextBookingModeFrom ? (
@@ -471,8 +471,8 @@ function ModeSetting() {
       {showWindow ? (
         <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
           <span className="flex flex-col gap-0.5">
-            <span className="text-[15px] font-semibold">Drop-off window</span>
-            <span className="text-[13px] text-[var(--wh-muted)]">Whole-day customers drop their bike off between these times</span>
+            <span className="text-size-15 font-semibold">Drop-off window</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">Whole-day customers drop their bike off between these times</span>
           </span>
           <span className="inline-flex items-center gap-2 text-sm">
             <select aria-label="Drop-off window starts" value={windowFrom} disabled={busy} onChange={(e) => void put({ dropoffWindowStart: e.target.value, dropoffWindowEnd: windowTo })} className={select}>
@@ -490,14 +490,14 @@ function ModeSetting() {
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="mode-title">{`Book bikes in for ${asking ? MODE_WORDS[asking] : ''}?`}</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">From a day you choose</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">From a day you choose</span>
           </div>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="mode-from" className="text-[15px] font-semibold">Starting on</label>
-            <input id="mode-from" type="date" min={tomorrow} value={from} onChange={(e) => setFrom(e.target.value)} aria-describedby="mode-from-h" className="min-h-11 max-w-[220px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]" />
-            <span id="mode-from-h" className="text-[13px] text-[var(--wh-muted)]">Tomorrow at the earliest</span>
+            <label htmlFor="mode-from" className="text-size-15 font-semibold">Starting on</label>
+            <input id="mode-from" type="date" min={tomorrow} value={from} onChange={(e) => setFrom(e.target.value)} aria-describedby="mode-from-h" className="min-h-11 max-w-[220px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15" />
+            <span id="mode-from-h" className="text-size-13 text-[var(--wh-muted)]">Tomorrow at the earliest</span>
           </div>
           <p className="m-0 text-sm text-[var(--wh-muted)]">{asking === 'dropoff'
             ? 'Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.'
@@ -625,13 +625,13 @@ function DepositSetting() {
   );
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Deposits</h4>
+      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-size-15 font-bold">Deposits</h4>
       <RowSwitch label="Take a deposit when booking" on={data?.depositOn === true} disabled={saving || !data} onChange={(next) => void put({ depositOn: next })} />
       {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       {data?.depositOn ? (
         <>
           <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
-            <span id="deposit-kind-label" className="text-[15px] font-semibold">Deposit</span>
+            <span id="deposit-kind-label" className="text-size-15 font-semibold">Deposit</span>
             <RadioPillGroup pickOnMove={false} aria-labelledby="deposit-kind-label" className="flex flex-wrap gap-2">{pill('fixed', 'A fixed amount')}{pill('percent', 'A percentage of the price')}</RadioPillGroup>
           </div>
           {kind === 'percent' ? (
@@ -719,14 +719,14 @@ function TermsSetting() {
     <div className="flex flex-col gap-1.5">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <span className="text-[15px] font-semibold">Booking terms</span>
-          <span className="text-[13px] text-[var(--wh-muted)]">{own !== null ? 'Your own terms · a copy is kept with each booking' : 'Wheelhouse’s standard terms · a copy is kept with each booking'}</span>
+          <span className="text-size-15 font-semibold">Booking terms</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{own !== null ? 'Your own terms · a copy is kept with each booking' : 'Wheelhouse’s standard terms · a copy is kept with each booking'}</span>
         </span>
         {!open && <Button disabled={!settings.data} onClick={() => { setNote(null); setEditing(true); }}>Use your own</Button>}
       </div>
       {open && (
         <>
-          <label htmlFor="booking-terms" className="text-[15px] font-semibold">Your booking terms</label>
+          <label htmlFor="booking-terms" className="text-size-15 font-semibold">Your booking terms</label>
           <textarea
             id="booking-terms"
             ref={boxRef}
@@ -739,7 +739,7 @@ function TermsSetting() {
             onBlur={(e) => leave(e)}
             className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal"
           />
-          <span id="booking-terms-h" className="text-[13px] text-[var(--wh-muted)]">Customers agree to these when they book. A copy is kept with each booking.</span>
+          <span id="booking-terms-h" className="text-size-13 text-[var(--wh-muted)]">Customers agree to these when they book. A copy is kept with each booking.</span>
           {own !== null && (
             <div><Button id="terms-go-back" variant="ghost" onClick={() => { setTyped(null); void put(null); }}>Go back to Wheelhouse’s standard terms</Button></div>
           )}
@@ -763,7 +763,7 @@ function BookingPreview() {
   const [open, setOpen] = useState(false);
   const p = previewLines(settings.data ?? {});
   const row = (k: string, v: string) => (
-    <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+    <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-size-15">
       <span className="text-[var(--wh-muted)]">{k}</span>{' '}<strong className="text-right">{v}</strong>
     </p>
   );
@@ -774,7 +774,7 @@ function BookingPreview() {
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="preview-title">What the customer sees</DialogTitle>
-            <span id="preview-sub" className="text-[13px] text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
+            <span id="preview-sub" className="text-size-13 text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
           </div>
           <DialogClose onClick={() => setOpen(false)} />
         </DialogHeader>
@@ -782,7 +782,7 @@ function BookingPreview() {
           <div className="flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px]">
             <span className="self-start rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>
             <h3 className="m-0 text-xl font-bold">{p.heading}</h3>
-            {p.arrival ? <p className="m-0 text-[15px] leading-normal">{p.arrival}</p> : null}
+            {p.arrival ? <p className="m-0 text-size-15 leading-normal">{p.arrival}</p> : null}
             <div>{row('Service', p.service)}{row('Bike', p.bike)}{row('When', p.when)}</div>
           </div>
           <p className="m-0 text-sm text-[var(--wh-muted)]">Customers see this once a booking is confirmed. Change a setting and preview again to see the difference.</p>
@@ -824,7 +824,7 @@ function ConfirmationNoteSetting() {
 
   return (
     <div className="flex flex-col gap-1.5 py-1.5">
-      <label htmlFor="confirm-note" className="text-[15px] font-semibold">Additional note on the confirmation</label>
+      <label htmlFor="confirm-note" className="text-size-15 font-semibold">Additional note on the confirmation</label>
       <textarea
         id="confirm-note"
         aria-describedby="confirm-note-h"
@@ -834,9 +834,9 @@ function ConfirmationNoteSetting() {
         disabled={!settings.data}
         onChange={(e) => setTyped(e.target.value)}
         onBlur={() => void save()}
-        className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
+        className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal"
       />
-      <span id="confirm-note-h" className="text-[13px] text-[var(--wh-muted)]">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span>
+      <span id="confirm-note-h" className="text-size-13 text-[var(--wh-muted)]">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span>
       <BookingPreview />
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
     </div>
@@ -874,7 +874,7 @@ function OnlineBookingBox() {
       <PricesSetting />
       <ConfirmSetting />
       <DepositSetting />
-      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Terms</h4>
+      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-size-15 font-bold">Terms</h4>
       <TermsSetting />
     </div>
   );

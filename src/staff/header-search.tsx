@@ -54,8 +54,8 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 function Row({ to, main, sub, onPick }: { to: string; main: React.ReactNode; sub: string; onPick: () => void }) {
   return (
     <li className="flex min-h-[52px] flex-col justify-center gap-0.5 rounded-lg px-3 py-1.5 hover:bg-[var(--wh-hover)]">
-      <Link to={to} onClick={onPick} className="self-start text-[15px] font-semibold text-[var(--wh-ink)] no-underline hover:underline">{main}</Link>
-      <span className="text-[13px] text-[var(--wh-muted)]">{sub}</span>
+      <Link to={to} onClick={onPick} className="self-start text-size-15 font-semibold text-[var(--wh-ink)] no-underline hover:underline">{main}</Link>
+      <span className="text-size-13 text-[var(--wh-muted)]">{sub}</span>
     </li>
   );
 }

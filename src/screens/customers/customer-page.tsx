@@ -42,7 +42,7 @@ function Section({ id, title, action, children }: { id: string; title: string; a
   return (
     <section aria-labelledby={id} className="flex flex-col">
       <div className="flex items-center justify-between gap-2 pt-3.5 pb-1.5">
-        <h3 id={id} className="m-0 text-[15px] font-bold">{title}</h3>
+        <h3 id={id} className="m-0 text-size-15 font-bold">{title}</h3>
         {action}
       </div>
       {children}
@@ -61,7 +61,7 @@ function Stage({ j }: { j: Extract<Item, { kind: 'job' }> }) {
 }
 
 function HistoryRow({ item }: { item: Item }) {
-  const tag = (t: string) => <span className="w-[76px] shrink-0 text-[13px] font-bold text-[var(--wh-muted)]">{t}</span>;
+  const tag = (t: string) => <span className="w-[76px] shrink-0 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   if (item.kind === 'job') {
     const when = [item.jobDate ? shortDay(item.jobDate) : null, item.mechanicName].filter(Boolean).join(' · ');
     return (
@@ -69,8 +69,8 @@ function HistoryRow({ item }: { item: Item }) {
         <Link to={`${ROUTES.diary}?job=${item.id}`} className="flex min-h-[52px] items-center gap-3 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
           <span className={`w-[76px] shrink-0 text-sm ${mono}`}>{item.reference}</span>
           <span className="flex min-w-0 grow flex-col gap-0.5">
-            <span className="text-[15px] font-semibold">{item.title}</span>
-            {when ? <span className="text-[13px] text-[var(--wh-muted)]">{when}</span> : null}
+            <span className="text-size-15 font-semibold">{item.title}</span>
+            {when ? <span className="text-size-13 text-[var(--wh-muted)]">{when}</span> : null}
           </span>
           <Stage j={item} />
         </Link>
@@ -82,10 +82,10 @@ function HistoryRow({ item }: { item: Item }) {
       <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
         <span className={`w-[76px] shrink-0 text-sm ${mono}`}>{`Sale ${item.id}`}</span>
         <span className="flex min-w-0 grow flex-col gap-0.5">
-          <span className="text-[15px] font-semibold">Sale</span>
-          <span className="text-[13px] text-[var(--wh-muted)]">{[shortDate(item.at), item.what].filter(Boolean).join(' · ')}</span>
+          <span className="text-size-15 font-semibold">Sale</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.at), item.what].filter(Boolean).join(' · ')}</span>
         </span>
-        <span className={`text-[15px] ${mono}`}>{money(item.total)}</span>
+        <span className={`text-size-15 ${mono}`}>{money(item.total)}</span>
       </li>
     );
   }
@@ -93,8 +93,8 @@ function HistoryRow({ item }: { item: Item }) {
     <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
       {tag(item.channel === 'email' ? 'Email' : 'Text')}
       <span className="flex min-w-0 grow flex-col gap-0.5">
-        <span className="text-[15px] font-semibold">{item.name}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{[shortDate(item.at), item.to ? `sent to ${item.to}` : null].filter(Boolean).join(' · ')}</span>
+        <span className="text-size-15 font-semibold">{item.name}</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.at), item.to ? `sent to ${item.to}` : null].filter(Boolean).join(' · ')}</span>
       </span>
     </li>
   );
@@ -109,11 +109,11 @@ function History({ id }: { id: number }) {
   const open = items.filter((i) => i.kind === 'job' && i.open);
   const rest = items.filter((i) => !(i.kind === 'job' && i.open));
   const earlier = all ? rest : rest.slice(0, Math.max(0, SHOWN - open.length));
-  const head = (t: string, listId: string) => <span id={listId} className="pt-2.5 pb-1 text-[13px] font-bold text-[var(--wh-muted)]">{t}</span>;
+  const head = (t: string, listId: string) => <span id={listId} className="pt-2.5 pb-1 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   return (
     <section aria-labelledby="h-history" className="flex min-w-0 grow flex-col gap-1.5 self-start rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5 max-md:self-stretch">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 id="h-history" className="m-0 text-[17px] font-bold">History</h3>
+        <h3 id="h-history" className="m-0 text-size-17 font-bold">History</h3>
         {history.data?.items.length ? (
           <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5">
             {(Object.keys(KIND) as Filter[]).map((f) => (
@@ -186,7 +186,7 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="edit-title">{`Edit ${customer.name}’s details`}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">Nothing changes until you save</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">Nothing changes until you save</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
@@ -205,7 +205,7 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
         ) : null}
         <Field id="edit-note" label="Note" value={form.notes} onChange={set('notes')} />
         <div className="flex items-center gap-3">
-          <span id="edit-offers" className="grow text-[15px] font-semibold">Happy to hear about offers</span>
+          <span id="edit-offers" className="grow text-size-15 font-semibold">Happy to hear about offers</span>
           <OnOff on={form.offers} labelledBy="edit-offers" onChange={() => setForm((f) => ({ ...f, offers: !f.offers }))} />
         </div>
         {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
@@ -266,7 +266,7 @@ function MergeDialog({ me, twin, myJobs, mySales, onClose }: { me: Customer & { 
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="merge-title">The same person?</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">Pick what to keep. Jobs, sales and bikes from both are kept together.</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">Pick what to keep. Jobs, sales and bikes from both are kept together.</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-2">
@@ -274,15 +274,15 @@ function MergeDialog({ me, twin, myJobs, mySales, onClose }: { me: Customer & { 
           <span />
           {[[me.name, myJobs, mySales], [twin.name, twin.jobs, twin.sales]].map(([name, jobs, sales]) => (
             <span key={String(name)} className="flex flex-col gap-0.5">
-              <span className="text-[15px] font-bold">{name}</span>
-              <span className="text-[13px] text-[var(--wh-muted)]">{`${counted(Number(jobs), 'job')} · ${counted(Number(sales), 'sale')}`}</span>
+              <span className="text-size-15 font-bold">{name}</span>
+              <span className="text-size-13 text-[var(--wh-muted)]">{`${counted(Number(jobs), 'job')} · ${counted(Number(sales), 'sale')}`}</span>
             </span>
           ))}
         </div>
         {same ? <p className="m-0 text-sm text-[var(--wh-muted)]">{`Only what’s different is shown. Both have ${same}.`}</p> : null}
         {differs.map((f) => (
           <div key={f.key} role="group" aria-label={f.label} className="grid grid-cols-[120px_1fr_1fr] items-center gap-2.5 border-t border-[var(--wh-border)] py-2 max-md:grid-cols-1">
-            <span aria-hidden="true" className="text-[13px] font-bold text-[var(--wh-muted)]">{f.label}</span>
+            <span aria-hidden="true" className="text-size-13 font-bold text-[var(--wh-muted)]">{f.label}</span>
             {option(f.key, 'this', f.of(me))}
             {option(f.key, 'other', f.of(twin))}
           </div>
@@ -323,13 +323,13 @@ function Duplicates({ me }: { me: Customer & { createdAt?: string } }) {
     <>
       {(merges.data ?? []).map((m) => (
         <div key={m.id} role="status" className={box}>
-          <span className="grow text-[15px]">{`Merged with ${m.otherName} on ${shortDate(m.mergedAt)} · can be undone until ${shortDate(m.undoUntil)}`}</span>
+          <span className="grow text-size-15">{`Merged with ${m.otherName} on ${shortDate(m.mergedAt)} · can be undone until ${shortDate(m.undoUntil)}`}</span>
           <Button onClick={() => void undo(m)}>Undo the merge</Button>
         </div>
       ))}
       {(twins.data ?? []).map((t) => (
         <div key={t.id} role="status" className={box}>
-          <span className="grow text-[15px]"><strong>{`Might be the same person as ${t.name}`}</strong> <span className="text-[var(--wh-muted)]">{t.reason === 'phone' ? '· same phone number' : '· same email address'}</span></span>
+          <span className="grow text-size-15"><strong>{`Might be the same person as ${t.name}`}</strong> <span className="text-[var(--wh-muted)]">{t.reason === 'phone' ? '· same phone number' : '· same email address'}</span></span>
           <Button onClick={() => setChecking(t)}>Check</Button>
         </div>
       ))}
@@ -360,9 +360,9 @@ export function CustomerPage() {
     <div className="flex flex-col gap-2.5">
       {back}
       <div className="flex flex-wrap items-center gap-4">
-        <span aria-hidden="true" className="inline-flex size-12 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-[17px] font-bold">{initials(c.name)}</span>
+        <span aria-hidden="true" className="inline-flex size-12 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-size-17 font-bold">{initials(c.name)}</span>
         <span className="flex grow flex-col gap-[3px]">
-          <h2 className="m-0 text-[22px] font-bold">{c.name}</h2>
+          <h2 className="m-0 text-size-22 font-bold">{c.name}</h2>
           <span className="text-sm text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
         </span>
         <Link to={newJobHref(c.id)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--wh-on-brand)] no-underline">New job</Link>
@@ -373,19 +373,19 @@ export function CustomerPage() {
           <Section id="h-details" title="Details" action={<button type="button" onClick={() => setEditing(true)} className="min-h-11 px-2 text-sm font-semibold underline">Edit</button>}>
             {c.address || c.postcode ? (
               <div className="flex flex-col gap-1 border-t border-[var(--wh-border)] py-2">
-                <span className="text-[13px] text-[var(--wh-muted)]">Address</span>
-                <span className="text-[15px] leading-[1.45]">{c.address ? <span className="block">{c.address}</span> : null}{c.postcode ? <span className="block">{c.postcode}</span> : null}</span>
+                <span className="text-size-13 text-[var(--wh-muted)]">Address</span>
+                <span className="text-size-15 leading-[1.45]">{c.address ? <span className="block">{c.address}</span> : null}{c.postcode ? <span className="block">{c.postcode}</span> : null}</span>
               </div>
             ) : null}
             {group ? (
               <div className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2">
-                <span className="text-[13px] text-[var(--wh-muted)]">Group</span>
-                <span className="text-right text-[15px] font-semibold">{`${group.name} · ${group.discountPercent}% off`}</span>
+                <span className="text-size-13 text-[var(--wh-muted)]">Group</span>
+                <span className="text-right text-size-15 font-semibold">{`${group.name} · ${group.discountPercent}% off`}</span>
               </div>
             ) : null}
             {c.notes ? (
               <div className="flex flex-col gap-1 rounded-lg bg-[var(--wh-surface-muted)] px-3 py-2.5">
-                <span className="text-[13px] font-bold">Note</span>
+                <span className="text-size-13 font-bold">Note</span>
                 <span className="text-sm leading-[1.45]">{c.notes}</span>
               </div>
             ) : null}
@@ -395,8 +395,8 @@ export function CustomerPage() {
               <ul className="m-0 list-none p-0">
                 {bikes.data.map((b) => (
                   <li key={b.id} className="flex flex-col gap-1 border-t border-[var(--wh-border)] py-2.5">
-                    <span className="text-[15px] font-semibold">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
-                    {b.colour ? <span className="text-[13px] text-[var(--wh-muted)]">{b.colour}</span> : null}
+                    <span className="text-size-15 font-semibold">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
+                    {b.colour ? <span className="text-size-13 text-[var(--wh-muted)]">{b.colour}</span> : null}
                   </li>
                 ))}
               </ul>
@@ -404,7 +404,7 @@ export function CustomerPage() {
           </Section>
           <Section id="h-glance" title="At a glance">
             <div className="flex min-h-[52px] items-center justify-between gap-3 border-t border-[var(--wh-border)]">
-              <span className="text-[15px] font-semibold">Happy to hear about offers</span>
+              <span className="text-size-15 font-semibold">Happy to hear about offers</span>
               <span className={`text-sm font-semibold ${c.marketingPermission ? '' : 'text-[var(--wh-muted)]'}`}>{c.marketingPermission ? 'On' : 'Off'}</span>
             </div>
           </Section>
