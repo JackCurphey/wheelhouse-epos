@@ -338,3 +338,49 @@ test('a till: its sales and problems move with a merge and back with Undo; after
   const remade = await inShop(() => prepare('SELECT count(*)::int AS n FROM customers WHERE client_id = ?').get(offline.clientId));
   assert.equal(remade.n, 0);
 });
+
+test('a chain whose first removal is held up: the middle record goes, and the first still lands on the record kept (review 3)', async () => {
+  const a = await add({ name: 'Eli Ward', phone: '07700 900631' });
+  const b = await add({ name: 'E. Ward', phone: '07700 900631' });
+  const c = await add({ name: 'Eli W', phone: '07700 900631' });
+  const order = await inShop(async () => (await prepare("INSERT INTO sale_documents (kind, status, customer_id, subtotal, total) VALUES ('order', 'open', ?, 0, 0) RETURNING id").get(a.id)).id);
+  const ab = await merge(b.id, a.id);
+  const bc = await merge(c.id, b.id);
+  await age(ab.id); await age(bc.id);
+  await inShop(() => prepare("UPDATE customer_merges SET merged_at = merged_at - interval '1 minute' WHERE id = ?").run(ab.id));
+  // Another shop's online account naming A holds up A's removal, but not B's.
+  await inShop(() => prepare("INSERT INTO customer_logins (shop_id, customer_id, email, password_hash) VALUES (?, ?, ?, 'x')").run(other.shop.id, a.id, `eli-${a.id}@example.com`), other.shop.id);
+  try {
+    await staff(`/api/customers/${c.id}/merges`);
+    assert.equal(await customer(b.id), undefined, 'B removed');
+    assert.equal((await customer(a.id)).merged_into_id, c.id, 'A now points at C');
+  } finally {
+    await inShop(() => prepare('DELETE FROM customer_logins WHERE customer_id = ?').run(a.id), other.shop.id);
+  }
+  await staff(`/api/customers/${c.id}/merges`);
+  assert.equal(await customer(a.id), undefined, 'A removed');
+  assert.equal(await ownerOf('sale_documents', order), c.id, 'its order on the record kept');
+  const rec = await inShop(() => prepare('SELECT kept_id FROM customer_merges WHERE id = ?').get(ab.id));
+  assert.equal(rec.kept_id, c.id);
+});
+
+test('a till sale for a hidden record goes back with Undo, through each merge in turn (review 3)', async () => {
+  const till = await registerTill(server.baseUrl, owner, { siteCode: 'M', number: 8 });
+  const tube = await seedProduct(owner.shop.id);
+  const sale = { kind: 'sale', clientId: randomUUID(), receiptNumber: 8001, tillClockAt: '2026-09-01T09:30:00.000Z', madeOffline: true, employeeId: cashierId,
+    lines: [{ productId: tube, description: 'Inner tube', qty: 1, unitPricePence: 699, vatRateBp: 2000 }], payments: [{ method: 'cash', amountPence: 699 }] };
+  const offline = { kind: 'customer', clientId: randomUUID(), name: 'Pia Cole', phone: '07700 900632' };
+  await tillRequest(server.baseUrl, owner.shop.slug, till.token, '/sync', { method: 'POST', body: { pendingCount: 0, items: [offline] } });
+  const a = await inShop(() => prepare('SELECT id FROM customers WHERE client_id = ?').get(offline.clientId));
+  const b = await add({ name: 'P. Cole', phone: '07700 900632' });
+  const c = await add({ name: 'Pia C', phone: '07700 900632' });
+  const ab = await merge(b.id, a.id);
+  const bc = await merge(c.id, b.id);
+  await tillRequest(server.baseUrl, owner.shop.slug, till.token, '/sync', { method: 'POST', body: { pendingCount: 0, items: [{ ...sale, customerClientId: offline.clientId }] } });
+  const ownerNow = async () => (await inShop(() => prepare('SELECT customer_id FROM till_sales WHERE client_id = ?').get(sale.clientId))).customer_id;
+  assert.equal(await ownerNow(), c.id, 'on the record kept');
+  assert.equal((await undo(bc.id)).status, 200);
+  assert.equal(await ownerNow(), b.id, 'back a step');
+  assert.equal((await undo(ab.id)).status, 200);
+  assert.equal(await ownerNow(), a.id, 'back to the customer the till meant');
+});

@@ -23,7 +23,8 @@ const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
 async function removeExpired() {
   const due = await prepare(
     `SELECT m.id, m.kept_id, m.other_id FROM customer_merges m
-      WHERE m.other_id IS NOT NULL AND m.undone_at IS NULL AND m.merged_at < now() - make_interval(days => ${UNDO_DAYS})
+      WHERE m.other_id IS NOT NULL AND m.kept_id IS NOT NULL AND m.undone_at IS NULL
+        AND m.merged_at < now() - make_interval(days => ${UNDO_DAYS})
       ORDER BY m.merged_at, m.id`
   ).all();
   if (!due.length) return;
@@ -33,6 +34,9 @@ async function removeExpired() {
     try {
       for (const table of MOVED) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ?`).run(m.kept_id, m.other_id);
       await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ?').run(m.kept_id, shopId, m.other_id);
+      // Anything merged into it earlier now points at the record it went into.
+      await prepare('UPDATE customers SET merged_into_id = ? WHERE merged_into_id = ?').run(m.kept_id, m.other_id);
+      await prepare('UPDATE customer_merges SET kept_id = ? WHERE kept_id = ?').run(m.kept_id, m.other_id);
       await prepare('DELETE FROM customer_group_members WHERE customer_id = ?').run(m.other_id);
       await prepare('DELETE FROM customer_not_duplicates WHERE first_id = ? OR second_id = ?').run(m.other_id, m.other_id);
       await prepare('UPDATE customer_merges SET other_id = NULL WHERE id = ?').run(m.id);
@@ -43,36 +47,6 @@ async function removeExpired() {
       console.error(`customer merge ${m.id}: the hidden record couldn’t be removed yet`, err);
     }
   }
-}
-
-/**
- * The customer a till's sale or customer means now (design 8): a hidden
- * record's sale goes to the record it was merged into, before and after it's
- * removed, following merges one after another. Null when there's none.
- */
-export async function liveCustomerId({ id, clientId }) {
-  let at = null;
-  if (id != null) at = id;
-  else if (clientId) {
-    const held = await prepare('SELECT id FROM customers WHERE client_id = ?').get(clientId);
-    at = held ? held.id : (await prepare(
-      'SELECT kept_id FROM customer_merges WHERE other_client_id = ? AND undone_at IS NULL ORDER BY merged_at DESC LIMIT 1'
-    ).get(clientId))?.kept_id ?? null;
-  }
-  for (let hops = 0; at != null && hops < 20; hops += 1) {
-    const c = await prepare('SELECT id, merged_into_id FROM customers WHERE id = ?').get(at);
-    if (c && !c.merged_into_id) return c.id;
-    at = c ? c.merged_into_id : (await prepare(
-      'SELECT kept_id FROM customer_merges WHERE other_was_id = ? AND other_id IS NULL AND undone_at IS NULL ORDER BY merged_at DESC LIMIT 1'
-    ).get(at))?.kept_id ?? null;
-  }
-  return null;
-}
-
-/** A till id once given to a customer, even one since merged away and removed. */
-export async function clientIdKnown(clientId) {
-  return Boolean(await prepare('SELECT 1 FROM customers WHERE client_id = ?').get(clientId)
-    ?? await prepare('SELECT 1 FROM customer_merges WHERE other_client_id = ? AND undone_at IS NULL').get(clientId));
 }
 
 export function register(route) {
@@ -199,11 +173,12 @@ export function register(route) {
     const shopId = (await prepare("SELECT current_setting('app.current_shop_id')::int AS id").get()).id;
     await dbExec('BEGIN');
     try {
-      const m = await prepare('SELECT * FROM customer_merges WHERE id = ? FOR UPDATE').get(mergeId);
+      // Past 30 days (expired), whether or not the removal has run yet.
+      const m = await prepare(
+        `SELECT *, merged_at < now() - make_interval(days => ${UNDO_DAYS}) AS expired FROM customer_merges WHERE id = ? FOR UPDATE`
+      ).get(mergeId);
       if (!m) { await dbExec('ROLLBACK'); return notFound(res, 'Merge not found'); }
-      // Past 30 days, whether or not the removal has run yet.
-      const expired = (await prepare(`SELECT ?::timestamptz < now() - make_interval(days => ${UNDO_DAYS}) AS gone`).get(m.merged_at)).gone;
-      if (m.undone_at || !m.other_id || expired) {
+      if (m.undone_at || !m.other_id || m.expired) {
         await dbExec('ROLLBACK');
         return sendJson(res, 409, { error: 'That merge can’t be undone any more.', code: 'not_undoable' });
       }

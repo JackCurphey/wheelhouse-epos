@@ -28,7 +28,8 @@
    come to point at it since (an offline till's sale synced late) moves to the
    kept record first. Each removal is its own transaction; one that fails is
    logged and tried again next time. Removals run oldest first, so merges one
-   after another unwind in order. The merge record stays, its other id
+   after another unwind in order, and anything merged into a record being
+   removed is pointed on at the record it went into. The merge record stays, its other id
    cleared; if the kept record itself goes, its kept id is cleared, not the
    merge record deleted.
 5. **"They're different people"** writes the pair to `customer_not_duplicates`,
@@ -44,3 +45,6 @@
    or send that customer again. The sale goes to the record it was merged into
    (following merges one after another), before and after removal, and the
    customer sent again is answered as already held, not made a second time.
+   A sale given this way during the 30 days is noted in each merge it passed
+   through, so Undo puts it back with the customer the till meant
+   (`server/merged-customers.js`).

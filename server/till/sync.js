@@ -21,7 +21,7 @@
 import { prepare, dbExec } from '../db.js';
 import { vatFromGrossPence, receiptLabel } from './money.js';
 import { flag } from './attention.js';
-import { liveCustomerId, clientIdKnown } from '../routes/customer-merge.js';
+import { liveCustomer, noteMoved, clientIdKnown } from '../merged-customers.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KINDS = new Set(['sale', 'customer', 'checkin']);
@@ -132,13 +132,8 @@ async function recordSale(till, item) {
     ? await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId) : null;
   // A customer since merged into another is found as the one kept (customer-merge design 8).
   let customer = null;
-  if (inInt4(item.customerId)) {
-    const id = await liveCustomerId({ id: item.customerId });
-    customer = id ? { id } : null;
-  } else if (typeof item.customerClientId === 'string' && UUID.test(item.customerClientId)) {
-    const id = await liveCustomerId({ clientId: item.customerClientId });
-    customer = id ? { id } : null;
-  }
+  if (inInt4(item.customerId)) customer = await liveCustomer({ id: item.customerId });
+  else if (typeof item.customerClientId === 'string' && UUID.test(item.customerClientId)) customer = await liveCustomer({ clientId: item.customerClientId });
   const askedForCustomer = item.customerId != null || item.customerClientId != null;
 
   const reused = await prepare('SELECT 1 FROM till_sales WHERE till_id = ? AND receipt_number = ?').get(till.id, item.receiptNumber);
@@ -148,6 +143,9 @@ async function recordSale(till, item) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(item.clientId, till.id, till.site_id, item.receiptNumber, employee?.id ?? null, customer?.id ?? null,
     item.madeOffline === true, new Date(item.tillClockAt).toISOString(), total, vat);
+
+  // Given to the record kept by a merge still undoable: Undo puts it back.
+  if (customer) await noteMoved(customer.through, 'till_sales', saleId);
 
   if (reused) await raise('receipt_number_reused', { detail: `${label} was already used on this till`, tillSaleId: saleId });
   if (item.employeeId != null && !employee) await raise('unknown_employee', { detail: `${label}: staff member ${item.employeeId} not found`, tillSaleId: saleId });
