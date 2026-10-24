@@ -288,3 +288,32 @@ test('a held Bike ready is stopped by Undo; Send now on a message not held is re
   const res = await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} });
   assert.equal(res.status, 409, 'only a held message is sent now');
 });
+
+test('a held Bike ready isn’t sent once the bike has been collected (review)', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    await inShop(() => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = now() WHERE id = ?").run(job.id));
+    const res = await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} });
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.equal(res.body.error, 'The bike has been collected, so it won’t be sent.');
+  } finally {
+    await setWait(false);
+  }
+});
+
+test('Send now after the reminder’s days moves Bike still waiting on, so the two don’t go together (review)', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    // As if held for days: Bike still waiting is already due.
+    await inShop(() => prepare("UPDATE customer_messages SET send_after = now() + interval '1 hour' WHERE job_id = ? AND template_key = 'bike_still_waiting'").run(job.id));
+    assert.equal((await staff(`/api/messages/${ready.id}/send-now`, { method: 'POST', body: {} })).status, 200);
+    const still = await inShop(() => prepare("SELECT send_after > now() + interval '2 days' AS later FROM customer_messages WHERE job_id = ? AND template_key = 'bike_still_waiting'").get(job.id));
+    assert.equal(still.later, true);
+  } finally {
+    await setWait(false);
+  }
+});

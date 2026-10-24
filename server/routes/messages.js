@@ -8,7 +8,7 @@ import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/htt
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
-import { serializeMessage, undoMessage, sendHeldNow } from '../messaging/engine.js';
+import { serializeMessage, undoMessage, sendHeldNow, readyStillNeeded } from '../messaging/engine.js';
 import { LIVE_KEYS, TEMPLATES, render, templateFor } from '../messaging/templates.js';
 
 const MAX_WORDING = 2000;
@@ -103,6 +103,10 @@ export function register(route) {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const id = Number(params.id);
+    const msg = await prepare('SELECT job_id, template_key FROM customer_messages WHERE id = ?').get(id);
+    if (msg?.template_key === 'bike_ready' && !(await readyStillNeeded(msg.job_id))) {
+      return sendJson(res, 409, { error: 'The bike has been collected, so it won’t be sent.', code: 'illegal' });
+    }
     if (!(await sendHeldNow(id))) return sendJson(res, 409, { error: 'It isn’t waiting to be sent', code: 'illegal' });
     const row = await prepare('SELECT * FROM customer_messages WHERE id = ?').get(id);
     sendJson(res, 200, serializeMessage(row));

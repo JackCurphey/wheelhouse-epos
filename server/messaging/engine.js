@@ -81,11 +81,23 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
   return { id: row.id, channel: how.channel, to: how.to, sendAfter: hold ? null : sendAfter, held: hold };
 }
 
-/** Send now: a held message's send time becomes now, and the sender sends it next round. False when it isn't held. */
+/**
+ * Send now: a held message's send time becomes now, and the sender sends it
+ * next round. Bike still waiting then counts its days from now, so the two
+ * never go together (review). False when it isn't held.
+ */
 export async function sendHeldNow(id) {
+  const now = new Date();
   const row = await prepare(
-    "UPDATE customer_messages SET send_after = ? WHERE id = ? AND intent_state = 'intended' AND send_after = 'infinity'::timestamptz RETURNING id"
-  ).get(new Date().toISOString(), id);
+    "UPDATE customer_messages SET send_after = ? WHERE id = ? AND intent_state = 'intended' AND send_after = 'infinity'::timestamptz RETURNING id, job_id, template_key"
+  ).get(now.toISOString(), id);
+  if (row?.template_key === 'bike_ready' && row.job_id) {
+    const days = (await prepare('SELECT collection_reminder_days AS days FROM workshop_settings LIMIT 1').get())?.days ?? 3;
+    const later = new Date(now.getTime() + days * 86_400_000).toISOString();
+    await prepare(
+      "UPDATE customer_messages SET send_after = ? WHERE job_id = ? AND template_key = 'bike_still_waiting' AND intent_state = 'intended' AND send_after < ?"
+    ).run(later, row.job_id, later);
+  }
   return Boolean(row);
 }
 
@@ -186,7 +198,19 @@ async function stillWaitingNeeded(jobId) {
   return Boolean(job) && (await templateFor('bike_still_waiting')).enabled;
 }
 
-const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded };
+/**
+ * Bike ready only while the bike is still in the shop and finished, checked as
+ * it goes: a held one sent late, or one in its minute, is never sent once the
+ * bike has gone (dont-close-server, review).
+ */
+export async function readyStillNeeded(jobId) {
+  if (!jobId) return true;
+  return Boolean(await prepare(
+    "SELECT 1 FROM workshop_jobs WHERE id = ? AND custody_state = 'in_shop' AND work_state = 'complete'"
+  ).get(jobId));
+}
+
+const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded, bike_ready: readyStillNeeded };
 
 async function sendDueForShop(shopId) {
   const now = new Date();

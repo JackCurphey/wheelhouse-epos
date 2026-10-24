@@ -17,3 +17,9 @@
 4. **As the screens read it** (`serializeMessage`): `held: true` and
    `sendAfter: null` for a held message; the finish reply's `readyMessage`
    says the same.
+5. **Never once the bike has gone** (review): Bike ready goes only while the
+   bike is in the shop and finished, checked as it's due (as Bike still
+   waiting's own check), so a held one sent late, or one in its minute, is
+   dropped once the bike is collected; Send now says so up front.
+6. **Send now moves Bike still waiting on** to its days from then (review), so
+   a Bike ready held past those days doesn't go with it.
