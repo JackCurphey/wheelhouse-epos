@@ -43,12 +43,14 @@ const paymentOf = (jobId) => inShop(() => prepare('SELECT * FROM online_payments
 const version = async (id) => (await staff(`/api/workshop-jobs/${id}`)).body.version;
 
 /** A paid booking: its job id, link code and the provider's ref. */
-async function booked() {
+async function booked({ confirm = true } = {}) {
   const requestKey = randomBytes(32).toString('base64url');
   const hold = await post('/deposit-holds', { serviceIds: [service], requestKey });
   await post(`/pretend-payments/${hold.body.ref}/card`, { cardNumber: '4242424242424242' });
   const res = await tryBooking(server.baseUrl, customer.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds: [service], requestKey, paymentId: hold.body.paymentId });
   assert.equal(res.status, 201, JSON.stringify(res.body));
+  // Confirmed by the shop unless asked not to: only a confirmed booking can keep a deposit (Jack, 24 Oct).
+  if (confirm) assert.equal((await staff(`/api/workshop-jobs/${res.body.id}/accept`, { method: 'POST', body: { version: await version(res.body.id) } })).status, 200);
   return { id: res.body.id, code: res.body.privateLink.split('/').pop(), ref: hold.body.ref };
 }
 const link = async (code) => (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/${code}`)).json();
@@ -96,18 +98,17 @@ test('late, choosing to lose it: cancelled, and the deposit kept', async () => {
 });
 
 test('the shop declining, letting it expire, or cancelling refunds it', async () => {
-  const declined = await booked();
+  const declined = await booked({ confirm: false });
   assert.equal((await staff(`/api/workshop-jobs/${declined.id}/decline`, { method: 'POST', body: { version: await version(declined.id), message: 'Sorry, we are full' } })).status, 200);
   assert.equal((await pretendStatus(declined.ref)).status, 'refunded');
   assert.equal((await paymentOf(declined.id)).refund_reason, 'Declined');
 
-  const expired = await booked();
+  const expired = await booked({ confirm: false });
   assert.equal((await staff(`/api/workshop-jobs/${expired.id}/expire`, { method: 'POST', body: { version: await version(expired.id) } })).status, 200);
   assert.equal((await pretendStatus(expired.ref)).status, 'refunded');
   assert.equal((await link(expired.code)).deposit.state, 'refunded');
 
   const cancelled = await booked();
-  assert.equal((await staff(`/api/workshop-jobs/${cancelled.id}/accept`, { method: 'POST', body: { version: await version(cancelled.id) } })).status, 200);
   assert.equal((await staff(`/api/workshop-jobs/${cancelled.id}/cancel`, { method: 'POST', body: { version: await version(cancelled.id) } })).status, 200);
   assert.equal((await pretendStatus(cancelled.ref)).status, 'refunded');
   assert.equal((await paymentOf(cancelled.id)).refund_reason, 'Cancelled by the shop');
@@ -158,4 +159,62 @@ test('a deposit only held when a refund is owed is let go (review)', async () =>
   assert.equal((await post(`/booking-links/${b.code}/cancel`, {})).status, 200);
   assert.equal((await pretendStatus(b.ref)).status, 'released');
   assert.deepEqual([(await paymentOf(b.id)).status, (await link(b.code)).deposit.state], ['released', 'refunded']);
+});
+
+// Jack, 24 Oct: a shop can't keep a deposit for a booking it hasn't confirmed
+// (docs/decisions/2026-10-24-request-deposit-refund.md).
+test('a request not yet confirmed, cancelled after its cut-off, is refunded (Jack, 24 Oct)', async () => {
+  const requestKey = randomBytes(32).toString('base64url');
+  const hold = await post('/deposit-holds', { serviceIds: [service], requestKey });
+  await post(`/pretend-payments/${hold.body.ref}/card`, { cardNumber: '4242424242424242' });
+  const res = await tryBooking(server.baseUrl, customer.cookie, owner.shop.slug, { mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds: [service], requestKey, paymentId: hold.body.paymentId });
+  const code = res.body.privateLink.split('/').pop();
+  await pastCutOff(res.body.id);
+  assert.equal((await link(code)).deposit.refundable, true, 'the link says it would be refunded');
+  const cancelled = await post(`/booking-links/${code}/cancel`, {});
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+  assert.equal((await pretendStatus(hold.body.ref)).status, 'refunded');
+  assert.equal(cancelled.body.deposit.state, 'refunded');
+});
+
+// Jack, 24 Oct: a request confirmed after its cut-off gets 1 hour to cancel
+// free, never past the booking's start (docs/decisions/2026-10-24-request-deposit-refund.md).
+test('a request confirmed after its cut-off: free to cancel for 1 hour after (Jack, 24 Oct)', async () => {
+  const b = await booked({ confirm: false });
+  await pastCutOff(b.id);
+  assert.equal((await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } })).status, 200);
+  const l = await link(b.code);
+  // The server's pinned clock is 06:00 UTC on 1 Sep 2026, 07:00 in the UK: an hour on is 08:00.
+  assert.deepEqual(l.deposit.cancelUntil, { date: '2026-09-01', time: '08:00' });
+  assert.equal(l.deposit.refundable, true);
+  assert.equal((await post(`/booking-links/${b.code}/cancel`, {})).status, 200);
+  assert.equal((await pretendStatus(b.ref)).status, 'refunded');
+});
+
+test('a request confirmed before its cut-off keeps its own cut-off', async () => {
+  const b = await booked({ confirm: false });
+  const before = (await link(b.code)).deposit.cancelUntil;
+  assert.equal((await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } })).status, 200);
+  assert.deepEqual((await link(b.code)).deposit.cancelUntil, before);
+});
+
+test('a time the shop offered, accepted after its cut-off: the same hour to cancel free (review)', async () => {
+  const b = await booked({ confirm: false });
+  const day = nextDay();
+  const offered = await staff(`/api/workshop-jobs/${b.id}/offer`, { method: 'POST', body: { version: await version(b.id), jobDate: day, startTime: '11:00', mechanicId: sam } });
+  assert.equal(offered.status, 200, JSON.stringify(offered.body));
+  await pastCutOff(b.id);
+  const accepted = await post(`/booking-links/${b.code}/accept-offer`, { jobDate: day, startTime: '11:00' });
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+  assert.deepEqual(accepted.body.deposit.cancelUntil, { date: '2026-09-01', time: '08:00' });
+});
+
+test('the hour never runs past the booking’s start (review)', async () => {
+  const b = await booked({ confirm: false });
+  // Booked for 07:30 today, UK time; the server's clock reads 07:00.
+  await inShop(() => prepare("UPDATE workshop_jobs SET job_date = '2026-09-01', start_time = '07:30', end_time = '08:30' WHERE id = ?").run(b.id));
+  await pastCutOff(b.id);
+  const res = await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual((await link(b.code)).deposit.cancelUntil, { date: '2026-09-01', time: '07:30' });
 });
