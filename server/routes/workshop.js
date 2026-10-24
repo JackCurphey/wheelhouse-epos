@@ -1165,6 +1165,68 @@ export function register(route) {
 
   // Staff saw a customer's cancellation (piece 12, decision 5): it leaves
   // "Waiting for you". Keeps the first time it was seen; still needs the version.
+  // Refund the deposit by hand, with a reason, at any stage (Jack, 24 Oct
+  // answer 2; bk-staff-deposit-refund; deposit-diary-server design 3).
+  // screens: job-page
+  route('POST', '/api/workshop-jobs/:id/deposit-refund', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    const id = Number(params.id);
+    const body = (await readJsonBody(req)) ?? {};
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!reason) return badRequest(res, 'Say why the deposit is being refunded');
+    if (reason.length > 200) return badRequest(res, 'The reason can be up to 200 characters');
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    const pay = await db.prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ? ORDER BY id DESC LIMIT 1').get(id);
+    if (!pay || !['held', 'taken'].includes(pay.status) || pay.refund_due_reason) {
+      return sendJson(res, 409, { error: 'There’s no deposit to refund on this job.', code: 'not_refundable' });
+    }
+    await oweRefund(id, reason, ctx?.login?.id ?? null);
+    await refundOwed(id);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
+  // Didn't come: the booked day has gone and the bike never came in; the
+  // deposit is kept (Jack, 24 Oct answer 3; bk-staff-no-show; design 4). A
+  // mark, not a booking state; Undo clears it.
+  // screens: job-page
+  route('POST', '/api/workshop-jobs/:id/didnt-come', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    const id = Number(params.id);
+    const body = (await readJsonBody(req)) ?? {};
+    if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+    const job = await db.prepare('SELECT booking_state, custody_state, job_date, no_show_at, version FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    if (job.version !== body.version) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    if (job.no_show_at || job.booking_state !== 'scheduled' || job.custody_state !== 'expected' || !(job.job_date < await currentShopToday())) {
+      return sendJson(res, 409, { error: 'Only a booking whose day has gone, with the bike not in, can be marked Didn’t come.', code: 'illegal' });
+    }
+    const { changes } = await db.prepare(
+      'UPDATE workshop_jobs SET no_show_at = now(), no_show_by_login_id = ?, version = version + 1, updated_at = now() WHERE id = ? AND version = ?'
+    ).run(ctx?.login?.id ?? null, id, body.version);
+    if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
+  // screens: job-page
+  route('POST', '/api/workshop-jobs/:id/didnt-come/undo', async (req, res, params) => {
+    const id = Number(params.id);
+    const body = (await readJsonBody(req)) ?? {};
+    if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+    const job = await db.prepare('SELECT no_show_at, version FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    if (job.version !== body.version) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    if (!job.no_show_at) return sendJson(res, 409, { error: 'This job isn’t marked Didn’t come.', code: 'illegal' });
+    const { changes } = await db.prepare(
+      'UPDATE workshop_jobs SET no_show_at = NULL, no_show_by_login_id = NULL, version = version + 1, updated_at = now() WHERE id = ? AND version = ?'
+    ).run(id, body.version);
+    if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
   // screens: cancelled, diary
   route('POST', '/api/workshop-jobs/:id/cancellation-seen', async (req, res, params) => {
     const id = Number(params.id);

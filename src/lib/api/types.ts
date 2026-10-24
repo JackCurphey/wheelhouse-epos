@@ -17,6 +17,17 @@ export type JobPart = {
 
 /** serializeWorkshopJob. The three `*State` fields are what screens drive
  * from; `status` is the derived legacy field kept for the old app. */
+export type JobDeposit = {
+  pence: number;
+  paidAt: string | null;
+  state: 'paid' | 'refunded' | 'kept';
+  refundedAt: string | null;
+  refundReason: string | null;
+  refundedBy: string | null;
+  noShowAt: string | null;
+  noShowBy: string | null;
+};
+
 export type WorkshopJob = {
   id: number;
   title: string;
@@ -47,6 +58,10 @@ export type WorkshopJob = {
   /** Where a bike in the shop is kept (storage slots); null when none. */
   storageSlotId: number | null;
   storageSlotName: string | null;
+  /** The deposit the booking took (deposit-diary-server design 2): paid, refunded or kept, with when, why and who. */
+  deposit: JobDeposit | null;
+  /** Marked Didn't come, when (deposit-diary-server design 4). */
+  noShowAt: string | null;
   custodyState: string;
   workState: string;
   /** Echoed on every action; see jobAction in client.ts. */
