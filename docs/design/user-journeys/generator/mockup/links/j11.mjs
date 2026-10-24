@@ -118,6 +118,8 @@ export default {
   'till-receipt-split': { Close: go('till-empty') },
   // Printing a receipt (Jack, 18 Oct): Print prints, then the next sale.
   'till-receipt-print': { Print: go('till-receipt-paper'), 'No receipt': go('till-empty') },
+  // Don't close things by themselves on (24 Oct, answer 9): Print, and the box stays.
+  'till-receipt-wait': { Print: go('till-receipt-paper'), 'Start next sale': go('till-empty') },
   'till-find-customer': { Refund: go('till-refund-older'), Change: STAY },
   'till-account': { Change: go('till-customer') },
   // Paying with only the certificate: the paid box with nothing from Maya
