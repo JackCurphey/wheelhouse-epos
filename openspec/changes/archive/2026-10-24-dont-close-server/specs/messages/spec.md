@@ -18,3 +18,7 @@ held message.
 #### Scenario: Switch off
 - **WHEN** someone with the switch off marks a job ready
 - **THEN** Bike ready goes after its minute, as before
+
+#### Scenario: The bike has gone before Send now
+- **WHEN** Maya collects the bike while Bike ready is still waiting
+- **THEN** Bike ready is never sent, and Send now says the bike has been collected
