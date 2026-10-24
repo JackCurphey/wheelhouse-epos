@@ -1893,6 +1893,7 @@ No screen: server only.
 13. **A till that was offline finds the kept record**: its sales for the
     merged-away customer go to the one kept, and that customer sent again
     isn't made a second time, before and after the 30 days.
+
 ### 24 Oct 2026: the shop's deposit settings (`openspec/changes/deposit-settings`, `bk-settings-deposits`)
 
 1. **The rows under "Take a deposit when booking" show only while it's on**
