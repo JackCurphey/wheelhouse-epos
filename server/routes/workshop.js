@@ -961,7 +961,7 @@ export function register(route) {
             const owed = { declined: 'Declined', expired: 'The request expired', cancelled: 'Cancelled by the shop' }[ended.booking_state];
             if (owed) await oweRefund(id, owed);
             // A request confirmed after its cut-off: 1 hour to cancel free (Jack, 24 Oct).
-            if (event === 'accept' && (answering === 'pending' || answering === 'offered')) await graceOnConfirm(id);
+            if (event === 'accept' && answering === 'pending') await graceOnConfirm(id);
             await syncJobHold(id);
             return { ...applied, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
           });

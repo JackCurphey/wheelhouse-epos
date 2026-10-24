@@ -197,3 +197,24 @@ test('a request confirmed before its cut-off keeps its own cut-off', async () =>
   assert.equal((await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } })).status, 200);
   assert.deepEqual((await link(b.code)).deposit.cancelUntil, before);
 });
+
+test('a time the shop offered, accepted after its cut-off: the same hour to cancel free (review)', async () => {
+  const b = await booked({ confirm: false });
+  const day = nextDay();
+  const offered = await staff(`/api/workshop-jobs/${b.id}/offer`, { method: 'POST', body: { version: await version(b.id), jobDate: day, startTime: '11:00', mechanicId: sam } });
+  assert.equal(offered.status, 200, JSON.stringify(offered.body));
+  await pastCutOff(b.id);
+  const accepted = await post(`/booking-links/${b.code}/accept-offer`, { jobDate: day, startTime: '11:00' });
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+  assert.deepEqual(accepted.body.deposit.cancelUntil, { date: '2026-09-01', time: '08:00' });
+});
+
+test('the hour never runs past the booking’s start (review)', async () => {
+  const b = await booked({ confirm: false });
+  // Booked for 07:30 today, UK time; the server's clock reads 07:00.
+  await inShop(() => prepare("UPDATE workshop_jobs SET job_date = '2026-09-01', start_time = '07:30', end_time = '08:30' WHERE id = ?").run(b.id));
+  await pastCutOff(b.id);
+  const res = await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: await version(b.id) } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual((await link(b.code)).deposit.cancelUntil, { date: '2026-09-01', time: '07:30' });
+});

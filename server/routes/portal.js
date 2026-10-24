@@ -49,6 +49,7 @@ import { payments } from '../payments/index.js';
 import { paymentsConnected } from '../payments/provider.js';
 import { settleDeposits } from '../payments/settle.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
+import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -1446,6 +1447,9 @@ export function register(route) {
       await db.prepare(
         'UPDATE workshop_jobs SET offered_from_date = NULL, offered_from_time = NULL, offer_message = NULL, offer_accepted_at = now() WHERE id = ?'
       ).run(job.id);
+      // Accepted after its cut-off: 1 hour to cancel free, as a request the
+      // shop confirms late (Jack, 24 Oct; review).
+      await graceOnConfirm(job.id);
       await syncJobHold(job.id);
       return undefined;
     });
