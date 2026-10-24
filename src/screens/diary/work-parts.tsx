@@ -56,6 +56,9 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
   // Lines whose note box "+ Add note" opened, and notes being typed.
   const [noting, setNoting] = useState<Set<number>>(new Set());
   const [noteDraft, setNoteDraft] = useState<Record<number, string>>({});
+  // A tick shows at once while it saves, and goes back if it's refused (seen
+  // in a real browser: without this the box snapped back until the reply).
+  const [ticking, setTicking] = useState<Record<number, boolean>>({});
 
 
   const lines = order.data?.items ?? [];
@@ -101,6 +104,16 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
     } finally {
       setSaving(false);
     }
+  }
+
+  async function tick(line: Line, done: boolean) {
+    setTicking((t) => ({ ...t, [line.id]: done }));
+    await progress(line, { done });
+    setTicking((t) => {
+      const next = { ...t };
+      delete next[line.id];
+      return next;
+    });
   }
 
   // Leaving the note box saves what changed. Refused (the work was finished
@@ -176,9 +189,9 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
                   <td className="px-0 py-0 text-center">
                     <label className="inline-flex min-h-9 w-11 cursor-pointer items-center justify-center">
                       <input
-                        type="checkbox" aria-label={`${l.name} done`} checked={l.done === true}
+                        type="checkbox" aria-label={`${l.name} done`} checked={ticking[l.id] ?? l.done === true}
                         disabled={!marking || saving}
-                        onChange={(e) => void progress(l, { done: e.target.checked })}
+                        onChange={(e) => void tick(l, e.target.checked)}
                         className="size-5 accent-[var(--accent-dark)]"
                       />
                     </label>

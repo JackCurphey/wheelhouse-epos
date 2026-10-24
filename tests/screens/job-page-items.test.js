@@ -224,3 +224,14 @@ test('a note refused (the work was finished meanwhile) keeps its box and what wa
   await waitFor(() => assert.equal(dlg.getByRole('textbox', { name: 'Note for Standard service' }).value, 'Check the hub too'));
 });
 
+test('a tick shows at once while it saves, and goes back if refused (seen in a real browser)', async () => {
+  const { dlg, fireEvent, waitFor } = await openJob(open([LABOUR, PADS]));
+  let refuse;
+  answer = new Promise((resolve) => { refuse = () => resolve({ status: 409, ok: false, json: async () => ({ error: 'This work is finished, so its work and parts can’t change. Reopen the work first.', code: 'illegal' }) }); });
+  const tick = dlg.getByRole('checkbox', { name: 'Brake pads (pair) done' });
+  fireEvent.click(tick);
+  assert.equal(dlg.getByRole('checkbox', { name: 'Brake pads (pair) done' }).checked, true);
+  refuse();
+  await waitFor(() => assert.equal(dlg.getByRole('checkbox', { name: 'Brake pads (pair) done' }).checked, false));
+});
+
