@@ -75,6 +75,7 @@ function stubServer(employee) {
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
+    if (u.pathname === '/api/customers/5') return reply(200, { id: 5, name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', active: true });
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]' });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], showSignOffToCustomers: SHOW_SIGN_OFF });
@@ -383,3 +384,18 @@ test('the fake job here is the shape of the server’s', async () => {
   assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB, job()), []);
   for (const part of job().parts) assert.deepEqual(shapes.shapeProblems(shapes.JOB_PART, part), []);
 });
+
+// Emailing a job's receipt (cp-receipt-address-customer; openspec/changes/till-email-receipt):
+// the box holds the customer's address from their record, for this receipt only.
+test('Email on a job’s Paid box fills in the customer’s address from their record', async () => {
+  const t = await openJobTill();
+  const pay = await payByCard(t);
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Email' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Email the receipt' }));
+  assert.ok(Boolean(box.queryByText(/· Maya Patel$/)));
+  await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'maya@example.test'));
+  assert.ok(Boolean(box.queryByText('From Maya’s customer record. A change here is used for this receipt only.')));
+  // Read out with the box, for a screen reader (review).
+  assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
+});
+

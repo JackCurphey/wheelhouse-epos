@@ -6,6 +6,7 @@ import { useYourSettings } from '@/lib/your-settings.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
+import { EmailReceiptDialog, type ReceiptCustomer } from './email-receipt.tsx';
 import { asSaleItem, money, noteButtons, pence, saleTotal, type TillLine } from './rules.ts';
 
 /**
@@ -44,7 +45,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * paying converts the order, which charges its own saved lines, and then
  * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
  */
-type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
+type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
 export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
   const session = useSession();
@@ -175,7 +176,7 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     const receiptJob = job?.receipt && warned ? { ...job.receipt, checkedBy: null } : job?.receipt;
     // With Don't close things by themselves on, Print leaves Paid open (till-receipt-wait).
     const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); if (!wait) onNextSale(); } : null;
-    body = <PaidStep total={total} change={step.change} note={step.note} wait={wait} onPrint={onPrint} onNextSale={onNextSale} />;
+    body = <PaidStep total={total} change={step.change} note={step.note} wait={wait} saleId={paidSale?.id ?? null} customer={job?.customer ?? null} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 
   return (
@@ -278,10 +279,18 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
 
 // Don't close things by themselves (Jack, 24 Oct answer 9; drawn as
 // till-receipt-wait): no countdown, and Start next sale in No receipt's place.
-function PaidStep({ total, change, note, wait, onPrint, onNextSale }: { total: number; change: number; note: string | null; wait: boolean; onPrint: (() => void) | null; onNextSale: () => void }) {
+// Email (till-receipt; openspec/changes/till-email-receipt): the countdown
+// waits while its pop-up is open (2 Oct, leftover screens M1); once sent, the
+// next sale starts, or with the setting on Paid stays and says so.
+function PaidStep({ total, change, note, wait, saleId, customer, onPrint, onNextSale }: {
+  total: number; change: number; note: string | null; wait: boolean; saleId: number | null; customer: ReceiptCustomer | null;
+  onPrint: (() => void) | null; onNextSale: () => void;
+}) {
   const [left, setLeft] = useState(5);
+  const [emailing, setEmailing] = useState(false);
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
   // With a note to read, Paid waits for No receipt (as the job warning, 16 Oct).
-  const counting = !note && !wait;
+  const counting = !note && !wait && !emailing;
   // Kept in a ref so a new callback from the page doesn't restart the count.
   const next = useRef(onNextSale);
   useEffect(() => { next.current = onNextSale; });
@@ -299,12 +308,26 @@ function PaidStep({ total, change, note, wait, onPrint, onNextSale }: { total: n
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
         {note ? <span role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-warn-ink)]">{note}</span> : null}
       </div>
-      <div role="group" aria-label="Receipt" className="grid grid-cols-2 gap-2.5">
+      <div role="group" aria-label="Receipt" className="grid grid-cols-3 gap-2.5">
         <Button className="min-h-[60px]" disabled={!onPrint} onClick={() => onPrint?.()}>Print</Button>
+        <Button className="min-h-[60px]" disabled={saleId === null} onClick={() => setEmailing(true)}>Email</Button>
         <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>{wait ? 'Start next sale' : 'No receipt'}</Button>
       </div>
-      {wait ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">The next sale waits until you press Start next sale.</p> : null}
+      {emailedTo ? <p role="status" className="m-0 text-center text-sm font-semibold">{`Receipt sent to ${emailedTo}.`}</p> : null}
+      {emailing ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">Next sale waits until the receipt is sent</p> : null}
+      {wait && !emailing ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">The next sale waits until you press Start next sale.</p> : null}
       {counting ? <p role="timer" className="m-0 text-center text-sm text-[var(--wh-muted)]">{`Next sale starts in ${left} second${left === 1 ? '' : 's'}`}</p> : null}
+      {emailing && saleId !== null ? (
+        <EmailReceiptDialog
+          saleId={saleId} customer={customer}
+          onClose={() => setEmailing(false)}
+          onSent={(to) => {
+            setEmailing(false);
+            if (wait) setEmailedTo(to);
+            else onNextSale();
+          }}
+        />
+      ) : null}
     </>
   );
 }

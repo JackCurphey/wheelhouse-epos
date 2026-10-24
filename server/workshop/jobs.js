@@ -623,10 +623,12 @@ export async function addApprovedLinesToOrder(quoteId) {
       : await loadDocumentLine({ lineType: 'labour', name: l.description, unitPrice: Number(l.quantity) * Number(l.unit_amount) }, { checkStock: false });
     await db.prepare(
       `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes,
-                                        unit_price_pence, line_total_pence, vat_rate_bp)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                        unit_price_pence, line_total_pence, vat_rate_bp, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(doc.id, line.product ? line.product.id : null, line.name, line.sku, line.unitPricePence / 100, line.qty, line.lineTotalPence / 100, line.lineType, line.serviceId, line.minutes,
-      line.unitPricePence, line.lineTotalPence, line.vatRateBp);
+      // The reason the customer was given becomes the line's staff note, so
+      // the mechanic sees why it's there (Jack, 24 Oct, line-notes).
+      line.unitPricePence, line.lineTotalPence, line.vatRateBp, l.reason?.trim() || null);
     await db.prepare('UPDATE workshop_quote_lines SET added_to_order_at = now() WHERE id = ?').run(l.id);
     added += line.lineTotalPence;
   }
