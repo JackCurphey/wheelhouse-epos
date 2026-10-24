@@ -72,7 +72,8 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
   const match = useMatch(form.phone, form.email);
   const isPhone = useMedia('(max-width: 767px)');
-  const matchedBy = match && form.phone.replace(/\D/g, '') && match.phone?.replace(/\D/g, '') === form.phone.replace(/\D/g, '') ? 'number' : 'email address';
+  // Matched by the email typed, or else by the number, however it was written (+44 or 07…).
+  const matchedBy = match && form.email.trim() && match.email?.trim().toLowerCase() === form.email.trim().toLowerCase() ? 'email address' : 'number';
 
   async function add() {
     if (!form.name.trim()) { setProblem('Add their name.'); return; }

@@ -40,7 +40,8 @@ async function open({ phone = false, withGroups = [] } = {}) {
     if (u.pathname === '/api/customer-groups') return reply(200, groups);
     if (u.pathname === '/api/customer-matches') {
       const digits = (u.searchParams.get('phone') ?? '').replace(/\D/g, '');
-      return reply(200, digits === '07700900142' ? [{ ...RECENT[0] }] : []);
+      if (u.searchParams.get('email') === 'sam@example.com') return reply(200, [{ ...RECENT[2] }]);
+      return reply(200, ['07700900142', '447700900142'].includes(digits) ? [{ ...RECENT[0] }] : []);
     }
     if (u.pathname === '/api/customers' && method === 'POST') return reply(201, { id: 99, ...body, active: true, groups: [] });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -138,4 +139,20 @@ test('adding sends what was typed, offers as chosen, and opens the new customer'
   await waitFor(() => assert.equal(posts().length, 1));
   assert.deepEqual(posts()[0], { name: 'Lena Fox', phone: '', email: 'lena@example.com', address: '', postcode: 'BL1 2AB', notes: '', marketingPermission: true, groupIds: [] });
   await waitFor(() => assert.equal(window.location.pathname, '/workshop/customers/99'));
+});
+
+test('a +44 number that’s already a customer’s says “this number”, not “this email address” (review)', async () => {
+  const { ui, fireEvent, within } = await open();
+  fireEvent.click(ui.getByRole('button', { name: '+ Add a customer' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Add a customer' }));
+  fireEvent.change(dialog.getByLabelText('Phone'), { target: { value: '+44 7700 900142' } });
+  assert.ok((await dialog.findByText('Maya Patel already has this number')) !== null);
+});
+
+test('an email that’s already a customer’s says “this email address”', async () => {
+  const { ui, fireEvent, within } = await open();
+  fireEvent.click(ui.getByRole('button', { name: '+ Add a customer' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Add a customer' }));
+  fireEvent.change(dialog.getByLabelText('Email'), { target: { value: 'sam@example.com' } });
+  assert.ok((await dialog.findByText('Sam Reed already has this email address')) !== null);
 });

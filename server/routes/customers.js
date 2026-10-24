@@ -84,9 +84,8 @@ async function resolveGroupIds(rawGroupIds) {
 // A UK number however it's written: +44 7700 900142, 0044 7700 900142 and
 // 07700 900142 are the same number (review), as digits from 0.
 const ukNumber = (d) => (d.startsWith('0044') ? `0${d.slice(4)}` : d.startsWith('44') && d.length === 12 ? `0${d.slice(2)}` : d);
-const UK_NUMBER_SQL = `(CASE WHEN regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') LIKE '0044%' THEN '0' || substr(regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g'), 5)
-  WHEN regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') LIKE '44%' AND length(regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g')) = 12 THEN '0' || substr(regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g'), 3)
-  ELSE regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') END)`;
+const UK_NUMBER_SQL = `(SELECT CASE WHEN d LIKE '0044%' THEN '0' || substr(d, 5) WHEN d LIKE '44%' AND length(d) = 12 THEN '0' || substr(d, 3) ELSE d END
+  FROM (SELECT regexp_replace(coalesce(c.phone, ''), '\\D', '', 'g') AS d) AS digits)`;
 
 // The address, postcode and offers (cs-add): optional text, trimmed, blank
 // as none; offers true or false. Absent keeps what's there.
