@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitl
 import { previewLines } from './booking-preview.ts';
 import { AutomaticMessages, useMessagesSummary } from './messages-settings.tsx';
 import { ChecklistsSettings, useChecklistsSummary } from './checklists-settings.tsx';
+import { ServicesSettings, SERVICES_SUMMARY } from './services-settings.tsx';
 import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
@@ -963,7 +964,9 @@ function OwnerSettings() {
       key: 'workshop', name: 'Workshop', intro: '',
       areas: [
         { key: 'workshop', title: 'Workshop', intro: 'Services, who works in the workshop, and how the diary looks.', folds: [
-          // Under Services in the drawing (set-workshop-checklists); Services isn't built here yet.
+          // First, as drawn (set-workshop-services; services-room).
+          { key: 'services', title: 'Services', summary: SERVICES_SUMMARY, body: <ServicesSettings /> },
+          // Under Services in the drawing (set-workshop-checklists).
           { key: 'checklists', title: 'Checklists', summary: checklists, body: <ChecklistsSettings /> },
           { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${depositWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },

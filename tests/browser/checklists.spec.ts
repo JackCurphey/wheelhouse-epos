@@ -39,7 +39,7 @@ test('a shop’s checklist from the template is ticked and noted on a job for it
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
   await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
 
-  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=workshop&fold=checklists`);
   await page.getByRole('button', { name: 'Use the full service template' }).click();
   await expect(page.getByText('10 items · not used for a service yet')).toBeVisible();
   await page.getByRole('button', { name: 'Edit Full service checklist' }).click();
