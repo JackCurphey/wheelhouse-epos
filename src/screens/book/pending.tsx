@@ -11,6 +11,7 @@ import { NotesCard, goToNoteBox } from './notes-card.tsx';
 import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
+import { pounds } from './deposit.tsx';
 import {
   COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
@@ -183,7 +184,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           </div>
           {waiting && requestedLine(link) && <p className="m-0 text-[15px] leading-normal">{requestedLine(link)}</p>}
           {/* No texts are sent yet, so the drawing's "We'll send you a text" becomes this page. */}
-          {request && !offered && <p className="m-0 text-[15px] leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.</p>}
+          {request && !offered && <p className="m-0 text-[15px] leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.{link.deposit ? ' If we can’t fit you in, your deposit comes back in full.' : ''}</p>}
           {offered && (
             <>
               <p className="m-0 text-[15px] leading-normal">{offerLine(link)}</p>
@@ -198,6 +199,9 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             {bike && row('Bike', bike)}
             {/* An offer's When is the time first asked for, as drawn (bk-offered). */}
             {row('When', offered && link.offer ? `${dayLabel(link.offer.fromDate)}${link.offer.fromTime ? `, ${link.offer.fromTime}` : ''} — not available` : whenLine(link))}
+            {/* The deposit (bookingLines in book.mjs; deposit-booking-page design 2). */}
+            {link.deposit && row('Deposit paid', <span className="font-[family-name:var(--wh-font-mono)]">{pounds(link.deposit.pence)}</span>)}
+            {link.deposit?.cancelUntil && row('Free to cancel until', `${dayLabel(link.deposit.cancelUntil.date)}, ${link.deposit.cancelUntil.time}`)}
             {row('Your repair', <span className="font-[family-name:var(--wh-font-mono)]">{link.reference}</span>)}
           </div>
           {(link.description || answerList) && (
