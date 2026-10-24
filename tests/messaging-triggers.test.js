@@ -303,6 +303,23 @@ test('a held Bike ready isn’t sent once the bike has been collected (review)',
   }
 });
 
+test('a held Bike ready whose bike has gone is stopped on the sender’s next round, not left waiting (review)', async () => {
+  await setWait(true);
+  try {
+    const { job } = await mayasJob();
+    const ready = (await finish(job)).body.readyMessage;
+    await inShop(() => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = now() WHERE id = ?").run(job.id));
+    let state;
+    for (let i = 0; i < 40 && state !== 'undone'; i += 1) {
+      await new Promise((done) => setTimeout(done, 250));
+      state = (await held(ready.id)).intent_state;
+    }
+    assert.equal(state, 'undone');
+  } finally {
+    await setWait(false);
+  }
+});
+
 test('Send now after the reminder’s days moves Bike still waiting on, so the two don’t go together (review)', async () => {
   await setWait(true);
   try {
