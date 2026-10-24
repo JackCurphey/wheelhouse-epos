@@ -17,6 +17,11 @@ import { sniffImage } from '../booking-photos.js';
 import { quote as quoteMachine, canApprove } from './state-machines.js';
 import { undoWaiting } from '../messaging/engine.js';
 
+// A line's total in pence: its quantity (a count; 1.5 hours) times its unit
+// amount in pence, to the nearest penny (sales in pence, step A′). Worked out
+// here alone, in SQL; the pounds are the pence over 100, so the two agree.
+export const linePence = (alias = '') => `ROUND(${alias}quantity * ${alias}unit_amount_pence)`;
+
 // A quote answered, withdrawn or replaced needs no reminder: one still
 // waiting stops (Jack, 22 Oct; openspec/changes/quote-reminder).
 const stopReminder = (jobId) => undoWaiting(jobId, 'quote_reminder');
@@ -253,7 +258,7 @@ export async function answerAll({ quoteId, jobId = null, decisions, via, loginId
 // and then yes to are agreed (Jack, 22 Oct; fresh review). Oldest first.
 const LATEST_ANSWERS = `
   WITH answered AS (
-    SELECT DISTINCT ON (l.description) l.description, l.decision, (l.unit_amount * l.quantity) AS line_total, q.revision, l.id
+    SELECT DISTINCT ON (l.description) l.description, l.decision, ${linePence('l.')} / 100.0 AS line_total, ${linePence('l.')}::int AS line_total_pence, q.revision, l.id
       FROM workshop_quote_lines l JOIN workshop_quotes q ON q.id = l.workshop_quote_id
      WHERE q.workshop_job_id = ? AND q.revision < ? AND q.state <> 'draft' AND l.decision IN ('approved', 'declined')
        AND NOT EXISTS (SELECT 1 FROM workshop_quote_lines p WHERE p.workshop_quote_id = q.id AND p.decision = 'pending')
@@ -261,7 +266,7 @@ const LATEST_ANSWERS = `
   )`;
 
 export async function latestAnswers(jobId, belowRevision = 2147483647) {
-  return prepare(`${LATEST_ANSWERS} SELECT description, decision, line_total FROM answered ORDER BY revision, id`).all(jobId, belowRevision);
+  return prepare(`${LATEST_ANSWERS} SELECT description, decision, line_total, line_total_pence FROM answered ORDER BY revision, id`).all(jobId, belowRevision);
 }
 
 // The new quote's "Already agreed" and "You said no thanks" (dq-quote-newer).
@@ -281,16 +286,17 @@ export async function agreedBefore(quote, showPrices) {
   const row = await prepare(
     `${LATEST_ANSWERS}
      SELECT (SELECT count(*) FROM workshop_job_services WHERE workshop_job_id = ?) AS services,
-            (SELECT CASE WHEN count(*) = count(booked_price) THEN COALESCE(sum(booked_price), 0) END FROM workshop_job_services WHERE workshop_job_id = ?) AS booked,
+            (SELECT CASE WHEN count(*) = count(booked_price_pence) THEN COALESCE(sum(booked_price_pence), 0) END FROM workshop_job_services WHERE workshop_job_id = ?) AS booked,
             (SELECT count(*) FROM answered WHERE decision = 'approved') AS yeses,
-            (SELECT COALESCE(sum(line_total), 0) FROM answered WHERE decision = 'approved') AS approved,
-            ((SELECT CASE WHEN count(*) = count(booked_price) THEN COALESCE(sum(booked_price), 0) END FROM workshop_job_services WHERE workshop_job_id = ?)
-              + (SELECT COALESCE(sum(line_total), 0) FROM answered WHERE decision = 'approved')) AS total`
+            (SELECT COALESCE(sum(line_total_pence), 0) FROM answered WHERE decision = 'approved') AS approved,
+            ((SELECT CASE WHEN count(*) = count(booked_price_pence) THEN COALESCE(sum(booked_price_pence), 0) END FROM workshop_job_services WHERE workshop_job_id = ?)
+              + (SELECT COALESCE(sum(line_total_pence), 0) FROM answered WHERE decision = 'approved')) AS total`
   ).get(quote.workshop_job_id, quote.revision, quote.workshop_job_id, quote.workshop_job_id, quote.workshop_job_id);
   const services = Number(row.services);
   if (services === 0 && Number(row.yeses) === 0) return null;
   if (services > 0 && (!showPrices || row.booked === null)) return null;
-  return services > 0 ? Number(row.total) : Number(row.approved);
+  // Worked out in pence; said in pounds, as before (pence over 100).
+  return (services > 0 ? Number(row.total) : Number(row.approved)) / 100;
 }
 
 // The job's quote a customer may see on their booking link: its latest
@@ -421,7 +427,9 @@ const LINE_TOTALS = `
     l.id, l.kind, l.description, l.product_id, l.quantity, l.unit_amount, l.decision,
     l.need, l.reason, l.decided_via, l.decided_at, l.added_to_order_at, who.name AS decided_by_name,
     l.goes_with_line_id, l.without_text, l.photo_attachment_id,
-    (l.quantity * l.unit_amount) AS line_total
+    l.unit_amount_pence,
+    ${linePence('l.')}::int AS line_total_pence,
+    ${linePence('l.')} / 100.0 AS line_total
   FROM workshop_quote_lines l
   LEFT JOIN logins who ON who.id = l.decided_by_login_id
   WHERE l.workshop_quote_id = ?
@@ -430,10 +438,10 @@ const LINE_TOTALS = `
 
 const QUOTE_TOTALS = `
   SELECT
-    COALESCE(SUM(quantity * unit_amount), 0) AS all_total,
-    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'approved'), 0) AS approved_total,
-    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'pending'), 0) AS pending_total,
-    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'declined'), 0) AS declined_total
+    COALESCE(SUM(${linePence()}), 0)::int AS all_pence,
+    COALESCE(SUM(${linePence()}) FILTER (WHERE decision = 'approved'), 0)::int AS approved_pence,
+    COALESCE(SUM(${linePence()}) FILTER (WHERE decision = 'pending'), 0)::int AS pending_pence,
+    COALESCE(SUM(${linePence()}) FILTER (WHERE decision = 'declined'), 0)::int AS declined_pence
   FROM workshop_quote_lines
   WHERE workshop_quote_id = ?
 `;
@@ -503,8 +511,10 @@ export function serializeQuoteWithLines(quote, lines, totals) {
       productId: l.product_id,
       quantity: Number(l.quantity),
       unitAmount: Number(l.unit_amount),
+      unitAmountPence: l.unit_amount_pence,
       decision: l.decision,
       lineTotal: Number(l.line_total),
+      lineTotalPence: l.line_total_pence,
       need: l.need,
       reason: l.reason ?? null,
       decidedVia: l.decided_via ?? null,
@@ -515,11 +525,16 @@ export function serializeQuoteWithLines(quote, lines, totals) {
       without: l.without_text ?? null,
       photoId: l.photo_attachment_id ?? null,
     })),
+    // Pence, and the same in pounds (sales in pence, step A′).
     totals: {
-      all: Number(totals.all_total),
-      approved: Number(totals.approved_total),
-      pending: Number(totals.pending_total),
-      declined: Number(totals.declined_total),
+      all: totals.all_pence / 100,
+      approved: totals.approved_pence / 100,
+      pending: totals.pending_pence / 100,
+      declined: totals.declined_pence / 100,
+      allPence: totals.all_pence,
+      approvedPence: totals.approved_pence,
+      pendingPence: totals.pending_pence,
+      declinedPence: totals.declined_pence,
     },
   };
 }

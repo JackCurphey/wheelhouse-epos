@@ -165,3 +165,40 @@ test('with no shop phone, the message says to call the shop; with one, it gives 
   assert.match(told2.body, /Call \[shop phone\]\./);
   assert.match(told2.body, /£1,000 limit/);
 });
+
+// Sales in pence, step A′ (openspec/changes/wp-1-6-sales-in-pence task 2.1):
+// a line's total is ROUND(quantity × unit amount in pence), so 1.5 hours at
+// £33.33 is 5000p, £50.00, everywhere: the quote, the whole bill, the
+// refusal and the message. In pounds it was £49.995, which JavaScript showed
+// as £49.99 in one place and summed as 49.995 in another.
+const TRUE_WHEEL = { kind: 'labour', description: 'True the rear wheel', unitAmount: 33.33, quantity: 1.5, need: 'needed', reason: 'It rubs the pads.' };
+
+test('a line of 1.5 hours at £33.33 is £50.00 in pence, in the quote and its totals', async () => {
+  const job = await bookedJob(200);
+  const q = await draft(job.id, [TRUE_WHEEL]);
+  const read = (await staff(`/api/quotes/${q.id}`)).body;
+  assert.equal(read.lines[0].lineTotalPence, 5000);
+  assert.equal(read.lines[0].lineTotal, 50);
+  assert.equal(read.lines[0].unitAmountPence, 3333);
+  assert.equal(read.totals.allPence, 5000);
+  assert.equal(read.totals.all, 50);
+});
+
+test('the limit is checked in pence, and its refusal says the whole bill in pence', async () => {
+  const job = await bookedJob(100);
+  const q = await draft(job.id, [TRUE_WHEEL]);
+  const res = await within(q.id);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  // The booked £65.00 and the line's £50.00.
+  assert.equal(res.body.error, 'That takes the whole bill to £115.00, over the £100 limit. Send a quote instead.');
+});
+
+test('agreed within the limit, the message says the amount added in pence', async () => {
+  const job = await bookedJob(200);
+  const q = await draft(job.id, [TRUE_WHEEL]);
+  assert.equal((await within(q.id)).status, 200);
+  const told = (await staff(`/api/messages?jobId=${job.id}`)).body.find((m) => m.key === 'work_within_limit');
+  assert.match(told.body, /True the rear wheel, £50\.00/);
+  const order = (await staff(`/api/sale-documents/${job.orderId}`)).body;
+  assert.equal(order.items.find((i) => i.name === 'True the rear wheel').lineTotalPence, 5000);
+});
