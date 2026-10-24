@@ -123,6 +123,12 @@ async function createRevisionInTransaction({ jobId, lines }) {
     if (!Number.isFinite(Number(line.unitAmount))) {
       return { ok: false, code: 'illegal', message: 'each line needs a unitAmount' };
     }
+    // A part joins the order counted in whole ones, as stock is, so a quote
+    // can't agree 1.5 and charge 2 (sales in pence step A′, review). Labour's
+    // hours can be 1.5.
+    if (line.kind === 'part' && line.quantity !== undefined && line.quantity !== null && !Number.isInteger(Number(line.quantity))) {
+      return { ok: false, code: 'illegal', message: 'A part’s quantity must be a whole number.' };
+    }
     if (line.need !== undefined && !['needed', 'optional'].includes(line.need)) {
       return { ok: false, code: 'illegal', message: "each line's need must be 'needed' or 'optional'" };
     }

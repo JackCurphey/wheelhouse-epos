@@ -4,6 +4,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
+import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -97,6 +98,17 @@ test('the newer quote’s agreed total counts the earlier yeses', async () => {
   await revise(job.id, [{ ...CABLE, description: 'Bleed rear brake', unitAmount: 15 }]);
   const shown = (await portal(`/booking-links/${code}/quote`)).body;
   assert.equal(shown.agreedTotal, 28, 'the pads she said yes to (this job has no booked services)');
+});
+
+// Sales in pence, step A′: the agreed total is summed from the pence, the
+// authority. Only the pads' pence changed here, to £30.00.
+test('the agreed total is summed from the pence', async () => {
+  const { job, code } = await answeredQuote((l) => (l.description === 'Shimano brake pads' ? 'approved' : 'declined'));
+  await runWithShop(owner.shop.id, () => prepare(
+    "UPDATE workshop_quote_lines SET unit_amount_pence = 3000 WHERE description = 'Shimano brake pads' AND workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)"
+  ).run(job.id));
+  await revise(job.id, [{ ...CABLE, description: 'Bleed rear brake', unitAmount: 15 }]);
+  assert.equal((await portal(`/booking-links/${code}/quote`)).body.agreedTotal, 30);
 });
 
 test('a line said no to, then yes to on a later quote, is agreed, not no thanks', async () => {
