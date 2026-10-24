@@ -1997,6 +1997,20 @@ No screen: server only.
 3. **The green "will be refunded" note uses the page's "Booking confirmed"
    colours**; there's no separate success colour.
 
+### 24 Oct 2026: the diary job's deposit, the server (`openspec/changes/deposit-diary-server`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is a mark on the job, not a new booking state**: who and
+   when; the booking otherwise stays as it was, and Undo clears the mark.
+2. **Any signed-in member of staff can refund a deposit by hand**, as other
+   job actions; the job shows who did it. The reason is needed, up to 200
+   characters, and the whole deposit goes back (the drawing has no part
+   amount).
+3. **A deposit is "kept" once taken and the booking was cancelled late or
+   marked Didn't come**; refunding it by hand afterwards makes it
+   "refunded".
+4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
+   then simply paid, as for any booking (review).
+
 6. ~~A request the shop hasn't confirmed yet, cancelled after the cut-off,
    keeps the deposit.~~ **Overruled by Jack, 24 Oct**: a request the shop
    hasn't confirmed always gets its deposit back
