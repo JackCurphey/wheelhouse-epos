@@ -48,3 +48,7 @@ and Your settings). Each answer was option 1 of the choices put to him.
    waits with "Send now" and Undo, the server holding the message until one
    is pressed; the till's next sale waits for "Start next sale". The waiting
    strip is drawn first, for Jack's approval.
+   *Drawn and approved (Jack, 24 Oct: "drawings look good, i approve"):*
+   `job-finished-wait`, `job-finished-sent` and `till-receipt-wait`. On the
+   till, Start next sale takes No receipt's place, and Print leaves the box
+   open; after Send now the strip has no Undo, as the message has gone.

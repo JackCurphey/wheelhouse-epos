@@ -2863,6 +2863,55 @@ screens['job-finished'] = buildJobPage({
 });
 keepDesktopSeq('job-finished');
 
+// Don't close things by themselves (Jack, 24 Oct,
+// docs/decisions/2026-10-24-morning-questions.md answer 9; the switch is
+// Your settings › Accessibility, app-map.mjs ys-wait): with it on, "Bike
+// ready" doesn't go after a minute. The strip says it is waiting, with Send
+// now and Undo, and the server holds the message until one is pressed. After
+// Send now the strip says it was sent, as the waiting-for-parts strip says
+// its "New ready date" was; nothing to undo then. Drawn for Jack's approval.
+// The same strip as job-finished's (finishedStripCompact), only its words
+// and buttons changed; built without moving the counters that name the hover
+// styles, so every board after it keeps its class names (as job-deposit).
+const READY_WAITING = 'Alex marked it ready at 15:30. “Bike ready” to Maya by text is waiting until you press Send now.';
+const READY_SENT_NOW = '“Bike ready” sent to Maya by text · [time]';
+const SEND_NOW_BTN = (sz = 'sm') => button('Send now', { variant: 'default', size: sz });
+const readyWaitingText = (f) => `<span role="status" style="font-size: ${f}px">Alex marked it ready at ${jpMono('15:30')}. “Bike ready” to Maya by text is waiting until you press Send now.</span>`;
+const readySentText = (f) => `<span role="status" style="font-size: ${f}px">Alex marked it ready at ${jpMono('15:30')}. <span style="font-weight: 600">“Bike ready” sent to Maya by text · ${jpMono('[time]')}</span></span>`;
+function finishedWaitStrip() {
+  return jpPanel(`${jpRow(`${readyWaitingText(13)}<span style="flex-grow: 1"></span>${SEND_NOW_BTN()}${UNDO_BTN()}`, 10)}`, '', 6, 0);
+}
+function finishedSentStrip() {
+  return jpPanel(`${jpRow(readySentText(13), 10)}`, '', 6, 0);
+}
+const finishedWaitPhone = () => phoneStagePanel(`${readyWaitingText(14)}<div style="display: flex; gap: 8px">${SEND_NOW_BTN('default')}${UNDO_BTN('default')}</div>`);
+const finishedSentPhone = () => phoneStagePanel(readySentText(14));
+const finishedVariant = (strip, phoneTop) => buildJobPage({
+  status: 'Finished', tone: 'green',
+  touch: {
+    footer: (size) => `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Opens the till with this job’s lines.', size === 'phone' ? 13 : 12)}`,
+    stageTop: () => strip(), phoneTop,
+  },
+  desktop: {
+    stageTop: strip(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Finished', bikeHere: true,
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Opens the till with this job’s lines.', 12)}`,
+  },
+});
+{
+  const seqs = [hoverSeq, devSeq, requestConnectorSeq];
+  screens['job-finished-wait'] = finishedVariant(finishedWaitStrip, finishedWaitPhone);
+  screens['job-finished-sent'] = finishedVariant(finishedSentStrip, finishedSentPhone);
+  [hoverSeq, devSeq, requestConnectorSeq] = seqs;
+  for (const [id, said] of [['job-finished-wait', READY_WAITING], ['job-finished-sent', READY_SENT_NOW]]) {
+    for (const [size, html] of Object.entries(screens[id])) if (!html.replace(/<[^>]+>/g, '').includes(said)) throw new Error(`${id} ${size}: the Bike ready line not found`);
+  }
+}
+
 screens['job-collection'] = buildJobPage({
   status: 'Collecting', tone: 'green',
   touch: {
@@ -3133,7 +3182,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired', 'job-finished-wait', 'job-finished-sent', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -3152,7 +3201,7 @@ export const ROWS = [
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
-  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired'] }, // Use my phone (walk-through 8, decision 6) appended, so no board moves
+  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired', 'job-finished-wait', 'job-finished-sent'] }, // Use my phone (walk-through 8, decision 6) and Don't close things by themselves (24 Oct, answer 9) appended, so no board moves
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },
 ];

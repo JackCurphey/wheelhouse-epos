@@ -51,6 +51,10 @@ export default {
   'phone-photo-check': into('phone-photo-ready', 'Walk-through 8, decision 6', "'Check the photo': '[The photo you just took]', 'Use this photo' or 'Take another'"),
   'phone-photo-done': into('phone-photo-ready', 'Walk-through 8, decision 6', "'Photo added to WH-1042': it's on the computer now; you can close this page"),
   'phone-photo-expired': into('phone-photo-ready', 'Walk-through 8, decision 6', "'This code has expired or has already been used': make a new one on the computer; nothing else shown"),
+  // Don't close things by themselves (24 Oct, morning questions answer 9),
+  // drawn for Jack's approval.
+  'job-finished-wait': into('job-overview', 'Morning questions 24 Oct, answer 9', "Don’t close things by themselves on: 'Bike ready to Maya by text is waiting until you press Send now', with 'Send now' and 'Undo'; nothing on a timer"),
+  'job-finished-sent': into('job-overview', 'Morning questions 24 Oct, answer 9', "After 'Send now': 'Bike ready sent to Maya by text · [time]'; no Undo"),
   // Customer account
   'customer': into('cs-page', 'Customer service 11', "One-shop business: history rows without the shop name (cs-page shows '· Bolton')"),
   // Overview page

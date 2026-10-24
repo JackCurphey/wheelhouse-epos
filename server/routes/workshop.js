@@ -319,7 +319,10 @@ async function queueBikeReady(req, jobId, shopId) {
   const { vars } = await jobMessageVars(jobId, shopId, link);
   const ctx = await currentSession(req);
   const loginId = ctx?.login?.id ?? null;
-  const ready = await queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId });
+  // Don't close things by themselves, the person's own switch: held until Send now (dont-close-server design 2).
+  const prefs = loginId ? await prepare('SELECT accessibility FROM login_preferences WHERE login_id = ?').get(loginId) : null;
+  const hold = prefs?.accessibility?.noAutoClose === true;
+  const ready = await queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId, hold });
   // A shop with no settings row yet has the column's starting 3 days.
   const days = (await prepare('SELECT collection_reminder_days AS days FROM workshop_settings LIMIT 1').get())?.days ?? 3;
   await queueMessage({ customerId, jobId, key: 'bike_still_waiting', vars, delayMs: days * 86_400_000, loginId });

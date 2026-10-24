@@ -1,4 +1,3 @@
-POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 GET /api/suppliers
 POST /api/suppliers
 PUT /api/suppliers/:id
@@ -54,6 +53,7 @@ GET /api/customers/:id/texts
 POST /api/customers/:id/texts
 GET /api/messages
 POST /api/messages/:id/undo
+POST /api/messages/:id/send-now
 GET /api/message-templates
 PUT /api/message-templates/:key
 POST /api/message-templates/:key/preview
@@ -156,6 +156,7 @@ POST /api/portal/:shopSlug/bikes
 GET /api/portal/:shopSlug/quotes/:id
 POST /api/portal/:shopSlug/quotes/:id/lines/:lineId/decision
 POST /api/portal/:shopSlug/quotes/:id/approve
+POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 GET /api/portal/:shopSlug/bookings
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/photo-codes/:code

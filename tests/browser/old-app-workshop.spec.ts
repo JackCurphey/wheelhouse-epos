@@ -133,3 +133,34 @@ test("a workshop job's order: Convert to sale opens the new till for the job", a
   await page.locator('#doc-convert-btn').click();
   await expect(page).toHaveURL(new RegExp(`/workshop/till\\?job=${jobId}$`));
 });
+
+// The old app's Customers screen is gone (openspec/changes/remove-old-customers;
+// CLAUDE.md rule 5): its tab, and its old links open the new pages.
+test("the old app's Office has no Customers tab, and an old Customers link opens the new page", async ({ page, context }) => {
+  await signIn(context);
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#office/dashboard`);
+  await expect(page.locator('button[data-office-nav="suppliers"]')).toBeVisible();
+  await expect(page.locator('button[data-office-nav="customers"]')).toHaveCount(0);
+  await page.goto(`${server!.baseUrl}/#office/customers`);
+  await expect(page).toHaveURL(/\/workshop\/customers$/);
+});
+
+test("an old link to a customer opens that customer's new page", async ({ page, context }) => {
+  await signIn(context);
+  const made = await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900142' } });
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#office/customers/${made.body.id}`);
+  await expect(page).toHaveURL(new RegExp(`/workshop/customers/${made.body.id}$`));
+});
+
+test("the old till's new-customer form still opens, as it's kept", async ({ page, context }) => {
+  await signIn(context);
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#till`);
+  const input = page.locator('#customer-input');
+  await input.click();
+  await input.fill('Nobody by this name');
+  await page.locator('.search-dropdown button', { hasText: /new customer/i }).first().click();
+  await expect(page.locator('#customer-form')).toBeVisible();
+});

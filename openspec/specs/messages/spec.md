@@ -127,3 +127,26 @@ Front desk › Messages SHALL list a conversation per job with notes, "Needs a r
 #### Scenario: Answering Maya
 - **WHEN** Jo opens Messages, chooses Maya Patel's conversation and sends "Yes, we’ll check it"
 - **THEN** the reply joins the thread, the page says "Sent to Maya by text, with a link to reply on the job’s page.", and Maya's conversation leaves Needs a reply
+
+### Requirement: Bike ready waits for Send now when Don't close things by themselves is on
+
+When the person marking a job ready has "Don't close things by themselves" on,
+Bike ready SHALL be held, not sent after a minute: it SHALL wait until Send now
+sends it or Undo stops it, however long that takes. Send now SHALL send only a
+held message.
+
+#### Scenario: Held, then sent
+- **WHEN** Jo, with the switch on, marks Maya's job ready and later presses Send now
+- **THEN** Bike ready waits with no send time until then, and goes as soon as she presses it
+
+#### Scenario: Held, then undone
+- **WHEN** Jo presses Undo instead
+- **THEN** Bike ready is never sent
+
+#### Scenario: Switch off
+- **WHEN** someone with the switch off marks a job ready
+- **THEN** Bike ready goes after its minute, as before
+
+#### Scenario: The bike has gone before Send now
+- **WHEN** Maya collects the bike while Bike ready is still waiting
+- **THEN** Bike ready is never sent, and Send now says the bike has been collected
