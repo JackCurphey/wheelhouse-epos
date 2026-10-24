@@ -173,18 +173,100 @@ test('it deploys only after Tests passed on a push to this repository\'s main', 
   assert.doesNotMatch(triggers(), /(pull_request|pull_request_target|push|schedule|workflow_dispatch):/, 'it must start only after Tests');
 });
 
-test('it deploys the commit that was tested, never the latest main', () => {
-  const w = workflow();
-  assert.match(w, /github\.event\.workflow_run\.head_sha/);
+test('it deploys a tested commit, never the latest main untested', () => {
+  const w = steps();
   assert.doesNotMatch(w, /github\.sha|GITHUB_SHA/);
+  // The newest main commit whose Tests passed, chosen by pick-deploy.sh, is
+  // what it checks out, builds, tags and deploys.
+  assert.match(w, /gh run list[^\n]*--workflow Tests[^\n]*--branch main[^\n]*--event push[^\n]*--status success/);
+  assert.match(w, /scripts\/hosting\/pick-deploy\.sh/);
+  assert.match(w, /git checkout --quiet --detach "\$COMMIT"/);
+  assert.match(w, /tags: ghcr\.io\/jackcurphey\/wheelhouse-epos:\$\{\{ env\.COMMIT \}\}/);
   // build-push-action's default context is the latest main, not the checkout.
-  assert.match(steps(), /^\s+context: \.$/m);
+  assert.match(w, /^\s+context: \.$/m);
 });
 
-test('one deploy at a time, never cancelling one under way, and an older commit is skipped', () => {
-  const w = workflow();
-  assert.match(w, /concurrency:\s*\n\s*group: hosted-copy\s*\n\s*cancel-in-progress: false/);
-  assert.match(w, /git merge-base --is-ancestor/);
+test('one deploy at a time, never cancelling one under way', () => {
+  assert.match(workflow(), /concurrency:\s*\n\s*group: hosted-copy\s*\n\s*cancel-in-progress: false/);
+});
+
+// pick-deploy.sh against a real git history: A, then B, then C on main.
+function history(t) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pick-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@x', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@x' } }).stdout.trim();
+  git('init', '-q');
+  const sha = {};
+  for (const name of ['A', 'B', 'C']) { git('commit', '-q', '--allow-empty', '-m', name); sha[name] = git('rev-parse', 'HEAD'); }
+  const pick = (running, newest) => spawnSync('bash', [path.join(ROOT, 'scripts', 'hosting', 'pick-deploy.sh'), running, newest], { cwd: dir, encoding: 'utf8' });
+  return { sha, pick };
+}
+
+test('pick-deploy: the newest tested commit goes on when it is newer than the one running', (t) => {
+  const { sha, pick } = history(t);
+  const r = pick(sha.A, sha.C);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), `deploy ${sha.C}`);
+  assert.equal(pick('', sha.B).stdout.trim(), `deploy ${sha.B}`, 'nothing known running: deploy');
+  assert.equal(pick('f'.repeat(40), sha.B).stdout.trim(), `deploy ${sha.B}`, 'a running commit git doesn\'t know: deploy');
+});
+
+test('pick-deploy: skipped when it is already running, or older than the one running', (t) => {
+  const { sha, pick } = history(t);
+  assert.equal(pick(sha.C, sha.C).stdout.trim(), 'skip');
+  assert.equal(pick(sha.C, sha.B).stdout.trim(), 'skip');
+});
+
+test('pick-deploy: no tested commit found is an error, not a quiet skip', (t) => {
+  const { sha, pick } = history(t);
+  const r = pick(sha.A, '');
+  assert.notEqual(r.status, 0);
+  assert.equal(r.stdout.trim(), '');
+});
+
+// wait-healthy.sh against a pretend curl that answers from a list, one line a call.
+function healthCheck(t, answers) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'wait-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(path.join(dir, 'bin'));
+  writeFileSync(path.join(dir, 'answers'), answers.join('\n') + '\n');
+  writeFileSync(path.join(dir, 'bin', 'curl'), `#!/usr/bin/env bash
+n=$(cat "${dir}/count" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "${dir}/count"
+line=$(sed -n "\${n}p" "${dir}/answers")
+[ -n "$line" ] || line=$(tail -n 1 "${dir}/answers")
+[ "$line" = down ] && exit 7
+echo "$line"
+`);
+  chmodSync(path.join(dir, 'bin', 'curl'), 0o755);
+  return (seconds) => {
+    const started = Date.now();
+    const r = spawnSync('bash', [path.join(ROOT, 'scripts', 'hosting', 'wait-healthy.sh'), 'https://copy.example.test', NEW, String(seconds)], {
+      encoding: 'utf8', env: { ...process.env, PATH: `${dir}/bin:${process.env.PATH}`, WAIT_INTERVAL: '0.2' },
+    });
+    const asked = Number(readFileSync(path.join(dir, 'count'), 'utf8'));
+    return { ...r, took: (Date.now() - started) / 1000, asked };
+  };
+}
+
+test('wait-healthy: done once /healthz answers ok with the new commit', (t) => {
+  const wait = healthCheck(t, ['down', `{"status":"ok","commit":"${OLD}"}`, `{"status":"ok","commit":"${NEW}"}`]);
+  const r = wait(10);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  // Not the old version answering ok: it waited for the new one.
+  assert.equal(r.asked, 3);
+  assert.match(r.stdout, new RegExp(`Deployed: .*${NEW}`));
+});
+
+test('wait-healthy: gives up when its time is up, by the clock, and fails', (t) => {
+  const wait = healthCheck(t, [`{"status":"error","commit":"${NEW}"}`]);
+  const r = wait(1);
+  assert.notEqual(r.status, 0);
+  assert.ok(r.took < 3, `it waited ${r.took}s for a 1s limit`);
+  assert.match(r.stdout + r.stderr, /didn't answer ok/);
+});
+
+test('the workflow waits with wait-healthy for 5 minutes', () => {
+  assert.match(steps(), /scripts\/hosting\/wait-healthy\.sh "\$SITE" "\$COMMIT" 300/);
 });
 
 test('it pushes the image deploy.sh pulls, and logs in to the server only against the stored host key', () => {
@@ -197,14 +279,12 @@ test('it pushes the image deploy.sh pulls, and logs in to the server only agains
   assert.doesNotMatch(w, /StrictHostKeyChecking[ =](no|accept-new)/);
 });
 
-test('it waits for /healthz to show the new commit, and starts the previous version if it doesn\'t', () => {
+test('it starts the previous version if the new one failed, or the job was cancelled or timed out after it went on', () => {
   const w = workflow();
-  assert.match(w, /\/healthz/);
-  assert.match(w, /\.commit/);
   // Only once the new version went on: after a failed download, the version
   // before is still running, and rolling back would replace a good one.
-  assert.match(w, /if: failure\(\) && steps\.deploy\.outcome == 'success'/);
-  assert.match(w, /rollback/);
+  assert.match(w, /if: \(failure\(\) \|\| cancelled\(\)\) && steps\.deploy\.outcome == 'success'/);
+  assert.match(w, /ssh hosted-copy rollback/);
 });
 
 test('NODE_ENV never reaches the image build', () => {

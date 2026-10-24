@@ -2,8 +2,8 @@
 // live in server/routes/portal.js, Mark's file (split plan §4.1), with the
 // customer cookie helpers and the sign-in limiters only they use. Bookings,
 // booking links and the portal quote routes followed, with their helpers and
-// limiters. One route stays in server.js: the booking link's quote answer,
-// which needs answerAndAddToOrder until Jack's quote routes move.
+// limiters. The booking link's quote answer followed last (24 Oct, Jack taking
+// WP-0.4 over), so server.js registers no route of its own.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
@@ -25,9 +25,8 @@ const ROUTES = [
   "'POST', '/api/portal/:shopSlug/booking-links/:code/cancel'", "'POST', '/api/portal/:shopSlug/booking-links/:code/change'",
   "'POST', '/api/portal/:shopSlug/booking-links/:code/withdraw-change'",
   "'GET', '/api/portal/:shopSlug/quotes/:id'", "'POST', '/api/portal/:shopSlug/quotes/:id/lines/:lineId/decision'",
-  "'POST', '/api/portal/:shopSlug/quotes/:id/approve'",
+  "'POST', '/api/portal/:shopSlug/quotes/:id/approve'", "'POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer'",
 ];
-const STAYS = "'POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer'";
 const HELPERS = [
   'setCustomerSessionCookie', 'clearCustomerSessionCookie', 'portalLoginLimiter', 'portalSignupLimiter',
   'portalGuestBookingLimiter', 'bookingLinkLimiter', 'CUSTOMER_ACTIONABLE', 'customerTooLate', 'customerCanAct',
@@ -57,7 +56,7 @@ test('the portal routes are registered, and import nothing from server.js', () =
   assert.ok(!/['"]\.\.\/server\.js['"]/.test(read(FILE)), 'portal.js imports ../server.js');
 });
 
-test('the booking link\'s quote answer waits in server.js for answerAndAddToOrder', () => {
-  assert.ok(read('server/server.js').includes(`route(${STAYS}`));
-  assert.ok(!read(FILE).includes(`route(${STAYS}`));
+test('server.js registers no route of its own: every one is in server/routes/ (WP-0.4)', () => {
+  const calls = read('server/server.js').match(/^\s*route\(/gm) ?? [];
+  assert.deepEqual(calls, []);
 });

@@ -75,8 +75,10 @@ fi
 
 step "The server"
 droplet_id=$(doctl compute droplet list --format ID,Name --no-header | awk -v n="$NAME" '$2==n {print $1}')
+new_server=""
 if [ -z "$droplet_id" ]; then
   echo "Creating it (about a minute)..."
+  new_server=yes
   droplet_id=$(doctl compute droplet create "$NAME" --region "$REGION" --size "$DROPLET_SIZE" \
     --image "$DROPLET_IMAGE" --ssh-keys "$fingerprint" --user-data-file "$HERE/cloud-init.yaml" \
     --tag-names "$NAME" --enable-monitoring --wait --format ID --no-header)
@@ -85,8 +87,12 @@ else
 fi
 ip=$(doctl compute droplet get "$droplet_id" --format PublicIPv4 --no-header)
 echo "Server address: $ip"
-# DigitalOcean reuses addresses: forget any old server this Mac saw there.
-ssh-keygen -R "$ip" >/dev/null 2>&1 || true
+# DigitalOcean reuses addresses: a new server forgets any old one this Mac saw
+# there. An existing server keeps the key this Mac trusts, so a different one
+# answering is refused rather than trusted again (fresh review, 24 Oct).
+if [ -n "$new_server" ]; then
+  ssh-keygen -R "$ip" >/dev/null 2>&1 || true
+fi
 
 step "The firewall (web and SSH only)"
 if ! doctl compute firewall list --format Name --no-header | grep -qx "$NAME"; then

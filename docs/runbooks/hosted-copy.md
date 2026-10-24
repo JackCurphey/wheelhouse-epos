@@ -140,6 +140,26 @@ The update is down for a moment while the new version starts, as by hand.
   (API) once setup is done; to run the script again later, make a new one and
   run `doctl auth init` again.
 
+## Loading the test shop
+
+The drawings' own test shop, North Street Cycles, with its staff, customers
+and the drawn week of jobs, is loaded once, by hand. It only loads onto a
+copy with no shops at all, so anything already made on the copy has to be
+cleared first. That is its own decision, made at the time; this doesn't
+clear anything.
+
+On the server (see "Getting onto the server" below):
+
+```
+cd /opt/wheelhouse
+docker compose exec app node scripts/dev/load-test-shop.mjs
+```
+
+It runs inside the app that's running, so it always matches it. It ends with
+"Loaded North Street Cycles: 38 workshop jobs from the drawings' week." If it
+says "Refused" instead, nothing was changed: it says whether the shop is
+already there, or which other shops are in the way.
+
 ## Updating it, checking it, and undoing a bad update
 
 This part is the way back (design Decision 8). Mark normally does it, but
@@ -303,11 +323,18 @@ steps in this order:
    The web address shows an error page until step 4.
 2. **Restore the database to the moment before the update.** DigitalOcean
    restores into a *new* database with a new address; the old one is left
-   as it is. In DigitalOcean, open **Databases → wheelhouse-test-db** and
-   restore it to the UTC date and time from A step 1. The exact menu and the new
-   database's name are `[to confirm on the first practice run]`: that
-   point-in-time restore is offered on this plan is still to be checked
-   (task 3.3). It takes `[n]` minutes.
+   as it is. It can go back to any moment in the last 7 days, not only to
+   a daily backup (checked 24 Oct: DigitalOcean's PostgreSQL limits page
+   says point-in-time recovery covers the last 7 days, and the database has
+   kept a backup every day since 16 Oct). On your Mac, with the UTC date and
+   time from A step 1 in place of the example:
+
+   ```
+   doctl databases create wheelhouse-test-restored --restore-from-cluster-name wheelhouse-test-db --restore-from-timestamp "2026-10-24 18:00:00 +0000 UTC" --region lon1 --size db-s-1vcpu-1gb --version 16 --num-nodes 1 --wait
+   ```
+
+   The new database costs the same as the first, about \$15 a month,
+   charged by the hour while it exists. It takes `[n]` minutes.
 3. **Point the app at the restored database.**
    1. Let the server reach it: in the new database's settings, add the
       server `wheelhouse-test` to its trusted sources, as setup did for
@@ -351,6 +378,36 @@ Afterwards:
   your decision, and only once the restored one is working.
 
 Time it took on the hosted copy: `[n]` minutes (not tried yet).
+
+### E. The restore rehearsal (practising D)
+
+Practising D once, on purpose, so a real restore isn't the first one (design
+Decision 8, tasks group 5). Your hands; someone watching each step, Mark or
+Claude. It costs a few pence: the restored database exists for an hour or
+so, then is deleted. The copy is down for a few minutes while it's pointed
+across and back.
+
+1. **Something to come back to.** Open a job on the copy and note its
+   reference. Note the time in UTC (on the server: `date -u`). Wait a minute.
+2. **Something to lose.** Add a note to that job: "made after the moment".
+   A restore to the time in step 1 must bring the job back without it.
+3. **Restore** to the time in step 1, as D step 2 (call the new database
+   `wheelhouse-test-restored`). Write down how long it took.
+4. **Point the copy at it**, as D step 3, and restart the app (on the
+   server: `cd /opt/wheelhouse && docker compose up -d app`). Answer D's
+   two `[to confirm]` questions as you go: whether `epos_app`'s password
+   stayed the same, and whether the certificate changed. Write each answer
+   in D in place of its `[to confirm]`.
+5. **Open the job.** It's there, and the note from step 2 isn't. That's
+   the proof. Write down the time from step 3 to here.
+6. **Point the copy back** at `wheelhouse-test-db`: put the `DATABASE_URL`
+   line (and the certificate, if it changed) back as they were, and restart
+   the app. Check B.
+7. **Delete the restored database** (`doctl databases delete
+   wheelhouse-test-restored`, then `yes`). It holds only test data, and it
+   keeps costing money until it's gone.
+8. Record the run in `docs/runbooks/<date>-restore-drill.md`: each step,
+   its time, and anything that surprised you.
 
 ## For Mark: what the script does, and where
 
