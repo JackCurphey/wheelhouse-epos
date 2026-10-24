@@ -24,7 +24,7 @@ const isPhoto = (a: Attachment) => a.contentType.startsWith('image/');
 // Shared with the phone's photo step (src/lib/read-base64.ts).
 export { readBase64 };
 
-const REMOVE = 'min-h-11 self-start px-0.5 text-[13px] font-semibold text-[var(--wh-danger)] underline underline-offset-2';
+const REMOVE = 'min-h-11 self-start px-0.5 text-size-13 font-semibold text-[var(--wh-danger)] underline underline-offset-2';
 
 export function JobFiles({ jobId }: { jobId: number }) {
   const queryClient = useQueryClient();

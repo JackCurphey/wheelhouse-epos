@@ -346,14 +346,14 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
         <div className="flex flex-col items-end gap-0.5">
           <p className="m-0 text-sm font-bold">{`Approved total ${money(orderTotal)}`}</p>
           {declinedNames.length ? (
-            <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`${declinedNames.join(', ')} declined. Anything beyond these lines needs a new approval.`}</p>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`${declinedNames.join(', ')} declined. Anything beyond these lines needs a new approval.`}</p>
           ) : null}
         </div>
       ) : null}
-      {q?.state === 'withdrawn' ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">The quote was withdrawn. Only the booked work stays agreed.</p> : null}
+      {q?.state === 'withdrawn' ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">The quote was withdrawn. Only the booked work stays agreed.</p> : null}
 
       {limit ? (
-        <p className="m-0 text-right text-[13px] text-[var(--wh-muted)]">
+        <p className="m-0 text-right text-size-13 text-[var(--wh-muted)]">
           {within && limit.spendLimit !== null ? `Within ${first}’s £${limit.spendLimit.toLocaleString('en-GB')} limit — no quote needed. ${first} will be told what was added.`
             : 'Quotes are sent when the customer asked to be called first, or the total is over their limit.'}
         </p>
@@ -381,7 +381,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
         ) : (
           <div role="status" className="flex flex-col gap-1.5 rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 py-2 text-sm">
             <span>{`The quote is ready for ${customer}, but no text went: ${sent.message.reason ?? ''}`}</span>
-            <span className="text-[13px] break-all text-[var(--wh-muted)]">{sent.link}</span>
+            <span className="text-size-13 break-all text-[var(--wh-muted)]">{sent.link}</span>
             <Button size="sm" className="self-start" onClick={() => { void navigator.clipboard?.writeText(sent.link).catch(() => undefined); }}>Copy link</Button>
           </div>
         )
@@ -432,7 +432,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
           <DialogHeader>
             <div className="flex min-w-0 flex-col gap-0.5">
               <DialogTitle id="line-photo-title">{viewing.description}</DialogTitle>
-              {viewing.reason ? <span className="text-[13px] text-[var(--wh-muted)]">{viewing.reason}</span> : null}
+              {viewing.reason ? <span className="text-size-13 text-[var(--wh-muted)]">{viewing.reason}</span> : null}
             </div>
           </DialogHeader>
           <DialogBody><img src={fileUrl(viewing.photoId)} alt={viewing.description} className="max-h-[70vh] w-full object-contain" /></DialogBody>
@@ -462,7 +462,7 @@ export function QuotePanel({ job, orderTotal }: { job: WorkshopJob; orderTotal: 
           <DialogHeader>
             <div className="flex min-w-0 flex-col gap-0.5">
               <DialogTitle id="withdraw-title">Withdraw this quote?</DialogTitle>
-              <span className="text-[13px] text-[var(--wh-muted)]">{[job.reference, job.customerName].filter(Boolean).join(' · ')}</span>
+              <span className="text-size-13 text-[var(--wh-muted)]">{[job.reference, job.customerName].filter(Boolean).join(' · ')}</span>
             </div>
           </DialogHeader>
           <DialogBody><p className="m-0 text-sm">{`${first}’s page will say the quote was withdrawn and there’s nothing to answer. Only the booked work stays agreed.`}</p></DialogBody>
@@ -493,7 +493,7 @@ function RecordAnswer({ customer, reference, lines, busy, onClose, onSave }: {
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="record-title">{`Record ${customer}’s answer`}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`Quote${reference ? ` for ${reference}` : ''} · answered ${via === 'phone' ? 'by phone' : 'in the shop'}`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`Quote${reference ? ` for ${reference}` : ''} · answered ${via === 'phone' ? 'by phone' : 'in the shop'}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">

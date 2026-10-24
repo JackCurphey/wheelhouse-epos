@@ -90,8 +90,8 @@ export function ChecklistsSettings() {
             {rows.map((c) => (
               <div key={c.id} className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2 pr-2 pl-3 md:flex-nowrap md:py-0">
                 <span className="flex min-w-0 grow flex-col gap-0.5">
-                  <span className="text-[15px] font-semibold">{c.name}</span>
-                  <span className="text-[13px] text-[var(--wh-muted)]">{`${itemCount(c.items.length)} · ${usedFor(c)}`}</span>
+                  <span className="text-size-15 font-semibold">{c.name}</span>
+                  <span className="text-size-13 text-[var(--wh-muted)]">{`${itemCount(c.items.length)} · ${usedFor(c)}`}</span>
                 </span>
                 <span className="ml-auto inline-flex items-center gap-2">
                   <button type="button" aria-label={`Edit ${c.name}`} onClick={() => { setError(null); setEditing({ id: c.id, name: c.name, items: [...c.items], serviceIds: [...c.serviceIds] }); }} className="min-h-11 px-3 text-sm font-semibold">Edit</button>
@@ -162,16 +162,16 @@ function EditChecklist({ start, services, busy, error, onSave, onClose }: {
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="checklist-title">{title}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">Its items, in the order the mechanic ticks them</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">Its items, in the order the mechanic ticks them</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="checklist-name" className="text-[15px] font-semibold">Name</label>
+          <label htmlFor="checklist-name" className="text-size-15 font-semibold">Name</label>
           <input id="checklist-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm" />
         </div>
         <div className="flex flex-col">
-          <span className="pb-1 text-[15px] font-bold">Items</span>
+          <span className="pb-1 text-size-15 font-bold">Items</span>
           <div ref={list} className="flex flex-col">
             {items.map((it, i) => {
               const label = it.text.trim() || `item ${i + 1}`;
@@ -200,7 +200,7 @@ function EditChecklist({ start, services, busy, error, onSave, onClose }: {
         <div><Button variant="default" onClick={add}>+ Add an item</Button></div>
         <div className="flex flex-col gap-2">
           <PillGroup
-            multiple legend={<span className="text-[15px] font-bold text-[var(--wh-ink)]">Used for</span>}
+            multiple legend={<span className="text-size-15 font-bold text-[var(--wh-ink)]">Used for</span>}
             options={services.map((s) => ({ value: String(s.id), label: s.name }))}
             value={serviceIds.map(String)}
             onChange={(v) => setServiceIds(v.map(Number))}

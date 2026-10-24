@@ -107,11 +107,11 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {link.declineMessage && (
             <>
-              <p className="m-0 text-[15px] leading-normal">{`A message from ${link.shopName}:`}</p>
-              <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-[15px] leading-normal">{`“${link.declineMessage}”`}</blockquote>
+              <p className="m-0 text-size-15 leading-normal">{`A message from ${link.shopName}:`}</p>
+              <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-size-15 leading-normal">{`“${link.declineMessage}”`}</blockquote>
             </>
           )}
-          <p className="m-0 text-[15px] leading-normal">{link.deposit ? `Nothing is booked. ${depositBack(link)}` : 'Nothing is booked.'}</p>
+          <p className="m-0 text-size-15 leading-normal">{link.deposit ? `Nothing is booked. ${depositBack(link)}` : 'Nothing is booked.'}</p>
           <div>
             <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Choose another date</Link>
           </div>
@@ -128,8 +128,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     return (
       <BookFrame title="Sorry, we couldn’t get back to you in time" eyebrow="Not booked">
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
-          <p className="m-0 text-[15px] leading-normal">{`${link.shopName} couldn’t answer your request for ${whenLine(link)} in time, so it has expired.`}</p>
-          <p className="m-0 text-[15px] leading-normal">{link.deposit ? `Nothing is booked. ${depositBack(link)}` : 'Nothing is booked.'}</p>
+          <p className="m-0 text-size-15 leading-normal">{`${link.shopName} couldn’t answer your request for ${whenLine(link)} in time, so it has expired.`}</p>
+          <p className="m-0 text-size-15 leading-normal">{link.deposit ? `Nothing is booked. ${depositBack(link)}` : 'Nothing is booked.'}</p>
           <div>
             <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Choose another date</Link>
           </div>
@@ -143,7 +143,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     return (
       <BookFrame title="Your booking is cancelled" eyebrow="Cancelled">
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
-          <p className="m-0 text-[15px] leading-normal">{cancelledLine(link)}</p>
+          <p className="m-0 text-size-15 leading-normal">{cancelledLine(link)}</p>
           <div>
             <Link to={`/book/${shopSlug}`} className={buttonVariants({ variant: 'default' })}>Book another time</Link>
           </div>
@@ -160,7 +160,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     const waiting = link.stage === 'change_requested';
     const bike = bikeRow(link);
     const row = (label: string, value: React.ReactNode) => (
-      <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+      <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-size-15">
         <span data-row="label" className="text-[var(--wh-muted)]">{label}</span>{' '}
         <span className="text-right font-semibold">{value}</span>
       </div>
@@ -170,7 +170,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} />
         <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
           {link.stage === 'confirmed' && link.changeDeclined && (
-            <p role="status" className="m-0 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>{declinedLine(link)}</span></p>
+            <p role="status" className="m-0 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>{declinedLine(link)}</span></p>
           )}
           {/* Shown on arrival, not news, so not announced (bk-page's plain badge; fresh review). */}
           <div>
@@ -182,17 +182,17 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
               ? <span className="inline-block rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">New date waiting for the shop</span>
               : <span className="inline-block rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>}
           </div>
-          {waiting && requestedLine(link) && <p className="m-0 text-[15px] leading-normal">{requestedLine(link)}</p>}
+          {waiting && requestedLine(link) && <p className="m-0 text-size-15 leading-normal">{requestedLine(link)}</p>}
           {/* No texts are sent yet, so the drawing's "We'll send you a text" becomes this page. */}
-          {request && !offered && <p className="m-0 text-[15px] leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.{link.deposit ? ' If we can’t fit you in, your deposit comes back in full.' : ''}</p>}
+          {request && !offered && <p className="m-0 text-size-15 leading-normal">Please wait for the shop to confirm before bringing your bike in. Check this page to see when it does.{link.deposit ? ' If we can’t fit you in, your deposit comes back in full.' : ''}</p>}
           {offered && (
             <>
-              <p className="m-0 text-[15px] leading-normal">{offerLine(link)}</p>
+              <p className="m-0 text-size-15 leading-normal">{offerLine(link)}</p>
               <p className="m-0 text-xl font-bold">{whenLine(link)}</p>
-              {link.offer?.message && <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-[15px] leading-normal">{`“${link.offer.message}”`}</blockquote>}
+              {link.offer?.message && <blockquote className="m-0 border-l-[3px] border-[var(--wh-border)] py-1 pl-3.5 text-size-15 leading-normal">{`“${link.offer.message}”`}</blockquote>}
             </>
           )}
-          {arrival && <p className="m-0 text-[15px] leading-normal">{arrival}</p>}
+          {arrival && <p className="m-0 text-size-15 leading-normal">{arrival}</p>}
           <div>
             {row('Service', serviceLines(link).map((sv, i) => <span key={i} className="block">{sv.price ? `${sv.name} · ${sv.price}` : sv.name}</span>))}
             {total && <p className="m-0 pb-2 text-right text-sm font-semibold">{total}</p>}
@@ -240,7 +240,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     const title = inShop ? pageHeading(link) : `Your ${bikeWords} ${link.stage === 'collected' ? 'has been collected' : 'is ready'}`;
     const bike = bikeRow(link);
     const row = (label: string, value: React.ReactNode) => (
-      <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+      <div className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-size-15">
         <span data-row="label" className="text-[var(--wh-muted)]">{label}</span>{' '}
         <span className="text-right font-semibold">{value}</span>
       </div>
@@ -257,7 +257,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
     const lines = (items: { name: string; price: number | null }[]) => (
       <div role="list" className="flex flex-col">
         {items.map((l, i) => (
-          <div role="listitem" key={i} className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px] first:border-t-0">
+          <div role="listitem" key={i} className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-size-15 first:border-t-0">
             <span className="font-semibold">{l.name}</span>
             {l.price !== null ? <span className="font-[family-name:var(--wh-font-mono)]">{priced(l.price)}</span> : null}
           </div>
@@ -279,20 +279,20 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             place of the booked-in line, then the ready day. */}
         {inShop && link.workState === 'waiting_parts' ? (
           <>
-            <p role="status" className="m-0 mb-2 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><strong>Waiting for a part — we’ll update you.</strong></p>
-            {link.expectedReady ? <p className="m-0 mb-4 text-[15px] leading-normal">{`Expected ready: ${shortDate(link.expectedReady.date)}${link.expectedReady.time ? `, ${link.expectedReady.time}` : ''}.`}</p> : null}
+            <p role="status" className="m-0 mb-2 flex gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]"><TriangleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><strong>Waiting for a part — we’ll update you.</strong></p>
+            {link.expectedReady ? <p className="m-0 mb-4 text-size-15 leading-normal">{`Expected ready: ${shortDate(link.expectedReady.date)}${link.expectedReady.time ? `, ${link.expectedReady.time}` : ''}.`}</p> : null}
           </>
-        ) : inShop ? <p className="m-0 mb-4 text-[15px] font-semibold leading-normal">{arrived}</p> : null}
+        ) : inShop ? <p className="m-0 mb-4 text-size-15 font-semibold leading-normal">{arrived}</p> : null}
         {/* Paid already (cp-summary-paid), else what's left to pay at the counter (cp-summary-inshop). */}
         {link.stage === 'ready_to_collect' && (link.paid ? card('Paid', 'paid-title', (
           <>
             <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />{link.paid.amount !== null ? `${money(link.paid.amount)} paid on ${shortDayOf(link.paid.at)}` : `Paid on ${shortDayOf(link.paid.at)}`}</p>
-            <p className="m-0 text-[15px] leading-normal">Nothing more to pay. When you come in, just give your name.</p>
+            <p className="m-0 text-size-15 leading-normal">Nothing more to pay. When you come in, just give your name.</p>
           </>
         )) : card('To pay when you collect', 'pay-title', (
           <>
             {/* Nothing owed says so, as Bike ready does (fresh review). */}
-            {link.nothingToPay ? <p className="m-0 text-[15px] leading-normal">Nothing to pay on collection. When you come in, just give your name.</p> : (
+            {link.nothingToPay ? <p className="m-0 text-size-15 leading-normal">Nothing to pay on collection. When you come in, just give your name.</p> : (
               <>
                 {typeof link.toPay === 'number' ? <p className="m-0 font-[family-name:var(--wh-font-mono)] text-3xl font-bold">{money(link.toPay)}</p> : null}
                 <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
@@ -303,7 +303,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
         {link.stage === 'collected' && card('Collected', 'collected-title', (
           <>
             <p className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]"><Check aria-hidden="true" className="size-[18px]" />{link.collectedAt ? `Collected · ${shortDayOf(link.collectedAt)}` : 'Collected'}</p>
-            <p className="m-0 text-[15px] leading-normal">
+            <p className="m-0 text-size-15 leading-normal">
               {`${link.paid?.amount ? `${money(link.paid.amount)} paid. ` : ''}Thanks for coming in — this page keeps working ${link.collectedAt ? `until ${shortDate(datePlus(londonDate(link.collectedAt), 30))}, 30 days after collection` : 'for 30 days after collection'}.`}
             </p>
           </>
@@ -317,7 +317,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
           <>
             {lines(work)}
             {/* The sum of its own lines, as drawn; only when every line has its figure. */}
-            {work.every((l) => l.price !== null) ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-[15px] font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(work.reduce((n, l) => n + (l.price ?? 0), 0))}</span></p> : null}
+            {work.every((l) => l.price !== null) ? <p className="m-0 flex justify-between border-t border-[var(--wh-border)] pt-2 text-size-15 font-bold"><span>Total</span><span className="font-[family-name:var(--wh-font-mono)]">{money(work.reduce((n, l) => n + (l.price ?? 0), 0))}</span></p> : null}
             {/* As drawn (agreed() in quote.mjs): to the notes card's box. */}
             <Button className="min-h-11 self-start" onClick={goToNoteBox}>Add a note for the shop</Button>
           </>
@@ -339,7 +339,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
             <>
               <ul className="m-0 flex list-none flex-col p-0">
                 {done.map((i, n) => (
-                  <li key={n} className="flex items-start justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px] first:border-t-0">
+                  <li key={n} className="flex items-start justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-size-15 first:border-t-0">
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="font-semibold">{i.name}</span>
                       {i.note ? <span className="text-sm leading-[1.45]"><span className="font-semibold">What the mechanic found:</span> {i.note}</span> : null}
@@ -386,7 +386,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
       <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} shopPhone={link.shop?.phone ?? null} booked={link.services.map((x) => x.name)} />
       {/* When to drop the bike off, then the shop's additional note, once the
           booking stands (Jack, 19 Oct; drawn in bk-confirmed as one paragraph). */}
-      {arrival && <p className="m-0 mb-3 text-[15px] leading-normal">{arrival}</p>}
+      {arrival && <p className="m-0 mb-3 text-size-15 leading-normal">{arrival}</p>}
       <div className="mb-4 rounded-md border border-[var(--wh-border)] p-3 text-sm">
         <p className="m-0 mb-2 flex justify-between gap-3">
           {/* The {' '} spaces keep the words apart for a screen reader, as ChoiceCard does. */}
@@ -483,7 +483,7 @@ function ExpiredPage({ details, shopSlug }: { details: ExpiredLink | null; shopS
   return (
     <BookFrame title={collected ? 'This link has expired' : 'This booking link has expired'}>
       <div className="mb-4 flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] p-4">
-        <p className="m-0 text-[15px] leading-normal">
+        <p className="m-0 text-size-15 leading-normal">
           {collected
             ? `It was for job ${details.reference}, which has been collected. If you need a copy of anything, get in touch.`
             : `It was for ${details.reference}. A booking’s link stops working 30 days after collection — or, if the bike never came in, 30 days after the booked date.`}
@@ -535,19 +535,19 @@ function CancelBooking({ link, shopSlug, code, request = false, label }: { link:
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="cancel-title">{request ? 'Cancel this request?' : 'Cancel this booking?'}</DialogTitle>
-            <span id="cancel-sub" className="text-[13px] text-[var(--wh-muted)]">{cancelSubline(link)}</span>
+            <span id="cancel-sub" className="text-size-13 text-[var(--wh-muted)]">{cancelSubline(link)}</span>
           </div>
           <DialogClose onClick={close} />
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
-          {!deposit ? <p className="m-0 text-[15px] leading-normal">There’s nothing to pay or refund.</p>
+          {!deposit ? <p className="m-0 text-size-15 leading-normal">There’s nothing to pay or refund.</p>
             : late ? (
-              <p className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-warn-ink)]">
+              <p className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
                 {`It’s past ${cutOffText(link)}, so `}<strong>{`your ${pounds(deposit.pence)} deposit isn’t refundable`}</strong>
                 {`. If something’s gone wrong, call the shop${link.shop?.phone ? ` on ${link.shop.phone}` : ''} — they can still refund it.`}
               </p>
             ) : (
-              <p className="m-0 rounded-lg bg-[var(--wh-ok-bg)] px-3.5 py-3 text-[15px] leading-snug text-[var(--wh-status-complete-ink)]">
+              <p className="m-0 rounded-lg bg-[var(--wh-ok-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-status-complete-ink)]">
                 <strong>{`Your ${pounds(deposit.pence)} deposit will be refunded`}</strong>{' to the card you paid with, within 5 to 10 working days.'}
               </p>
             )}

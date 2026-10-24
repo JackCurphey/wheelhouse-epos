@@ -160,7 +160,7 @@ export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob
           </table>
         </div>
       ) : null}
-      {order.data && !editable ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">This job&apos;s order is closed, so its work and parts can&apos;t be changed here.</p> : null}
+      {order.data && !editable ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">This job&apos;s order is closed, so its work and parts can&apos;t be changed here.</p> : null}
       {job && order.data && editable ? <QuotePanel job={job} orderTotal={Number(order.data.total)} /> : null}
     </div>
   );

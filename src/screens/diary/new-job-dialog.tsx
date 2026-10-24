@@ -63,7 +63,7 @@ function Pill({ on, onClick, children, label }: { on: boolean; onClick: () => vo
       aria-checked={on}
       aria-label={label}
       onClick={onClick}
-      className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+      className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-size-13 font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
     >
       {children}
     </button>
@@ -78,7 +78,7 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
         role="switch"
         aria-checked={on}
         onClick={() => onChange(!on)}
-        className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+        className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 text-size-13 font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
       >
         <span aria-hidden="true" className={`inline-block size-3 rounded-full border ${on ? 'border-[var(--wh-accent-soft-ink)] bg-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)]'}`} />
         {label}
@@ -379,7 +379,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               <div className="flex items-start justify-between gap-2 rounded-lg border-2 border-[var(--accent)] bg-[var(--wh-surface-muted)] px-3 py-1.5">
                 <div className="flex min-w-0 flex-col">
                   <span className="text-sm font-bold">{customer.name}</span>
-                  <span className="text-[13px] text-[var(--wh-muted)]">{[customer.phone, customer.email].filter(Boolean).join(' · ')}</span>
+                  <span className="text-size-13 text-[var(--wh-muted)]">{[customer.phone, customer.email].filter(Boolean).join(' · ')}</span>
                 </div>
                 <Button variant="ghost" size="sm" disabled={addingBike} onClick={() => { setCustomer(null); closeNewBike(); }}>Change</Button>
               </div>
@@ -411,10 +411,10 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
                       // don't focus a clicked button, so the list would close first.
                       <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => chooseCustomer(c)} className="flex flex-col rounded-md px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
                         <span className="text-sm font-bold">{c.name}</span>
-                        <span className="text-[13px] text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
+                        <span className="text-size-13 text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
                       </button>
                     ))}
-                    {found.data?.length === 0 ? <span className="px-3 py-1.5 text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
+                    {found.data?.length === 0 ? <span className="px-3 py-1.5 text-size-13 text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
                   </div>
                 ) : null}
               </div>
@@ -491,7 +491,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               </p>
             )}
             {/* Chosen for the day shown, until staff pick one themselves. */}
-            {autoChosen && !mechByHand ? <span className="text-[13px] text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
+            {autoChosen && !mechByHand ? <span className="text-size-13 text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
             {wontFit && service ? (
               <div role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
                 <span>{`${freeHere > 0 ? `Only ${freeHere} minutes free` : 'No free time'} at ${hhmm(startMin)} — this job needs ${service.minutes}. Choose another time, or save anyway and the diary will show the overlap.`}</span>{' '}
@@ -519,7 +519,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
             {bikeHere && slots.length ? (
               <div className="flex flex-col gap-1.5">
                 <SlotPills id="nj-slot" slots={slots} value={slot} onChange={setSlot} />
-                <p className="m-0 text-[13px] text-[var(--wh-muted)]">Storage slots are on for this shop. Turn them off in Settings.</p>
+                <p className="m-0 text-size-13 text-[var(--wh-muted)]">Storage slots are on for this shop. Turn them off in Settings.</p>
               </div>
             ) : null}
           </div>

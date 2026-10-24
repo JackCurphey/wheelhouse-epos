@@ -38,7 +38,7 @@ export function JobChecklistBar({ job }: { job: WorkshopJob }) {
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
         <span className="grow font-semibold">{c.name}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{progress(c)}</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">{progress(c)}</span>
       </button>
       {open ? <ChecklistDialog job={job} checklist={c} onClose={() => setOpen(false)} /> : null}
     </>
@@ -113,7 +113,7 @@ function ChecklistDialog({ job, checklist, onClose }: { job: WorkshopJob; checkl
       <DialogHeader>
         <div className="flex min-w-0 grow flex-col gap-0.5">
           <DialogTitle id="checklist-title">{checklist.name}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{sub}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{sub}</span>
         </div>
         <Button variant="primary" className="hidden md:inline-flex" onClick={close}>Done</Button>
         <button type="button" aria-label="Close, back to the job" onClick={close} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
@@ -122,7 +122,7 @@ function ChecklistDialog({ job, checklist, onClose }: { job: WorkshopJob; checkl
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3 max-md:min-h-0 max-md:grow max-md:overflow-y-auto">
         <p className="m-0 text-sm text-[var(--wh-muted)]">{progress(checklist)}</p>
-        {finished ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">Reopen the work to change its checklist.</p> : null}
+        {finished ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">Reopen the work to change its checklist.</p> : null}
         <ul className="m-0 flex max-w-[560px] list-none flex-col p-0">
           {checklist.items.map((item, i) => {
             const showNote = item.note !== null || noting.has(i);
@@ -130,7 +130,7 @@ function ChecklistDialog({ job, checklist, onClose }: { job: WorkshopJob; checkl
             return (
               <li key={`${i}-${item.label}`} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] py-1 first:border-t-0">
                 <div className="flex min-h-11 items-center gap-2.5">
-                  <label className="flex min-h-11 grow cursor-pointer items-center gap-2.5 text-[15px]">
+                  <label className="flex min-h-11 grow cursor-pointer items-center gap-2.5 text-size-15">
                     <input
                       type="checkbox" checked={item.done} disabled={finished}
                       onChange={(e) => void change(i, { done: e.target.checked })}

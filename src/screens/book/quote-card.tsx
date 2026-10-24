@@ -363,7 +363,7 @@ export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booke
           <DialogHeader>
             <div className="flex min-w-0 flex-col gap-0.5">
               <DialogTitle id="photo-title">{enlarged.description}</DialogTitle>
-              {enlarged.reason ? <span className="text-[13px] text-[var(--wh-muted)]">{enlarged.reason}</span> : null}
+              {enlarged.reason ? <span className="text-size-13 text-[var(--wh-muted)]">{enlarged.reason}</span> : null}
             </div>
           </DialogHeader>
           <DialogBody><img src={photoUrl(enlarged)} alt={enlarged.description} className="max-h-[70vh] w-full object-contain" /></DialogBody>

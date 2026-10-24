@@ -25,10 +25,10 @@ function Row({ c, phone }: { c: Recent; phone: boolean }) {
   return (
     <li className="border-t border-[var(--wh-border)] first:border-t-0">
       <Link to={customerHref(c.id)} className="flex min-h-[60px] items-center gap-3 px-3.5 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
-        <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-[13px] font-bold">{initials(c.name)}</span>
+        <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-size-13 font-bold">{initials(c.name)}</span>
         <span className="flex min-w-0 grow flex-col gap-0.5">
-          <span className="text-[15px] font-bold">{c.name}</span>
-          {c.bikeLabel ? <span className="text-[13px] text-[var(--wh-muted)]">{c.bikeLabel}</span> : null}
+          <span className="text-size-15 font-bold">{c.name}</span>
+          {c.bikeLabel ? <span className="text-size-13 text-[var(--wh-muted)]">{c.bikeLabel}</span> : null}
         </span>
         {!phone && c.phone ? <span className={`${mono} text-sm text-[var(--wh-muted)]`}>{c.phone}</span> : null}
       </Link>
@@ -39,9 +39,9 @@ function Row({ c, phone }: { c: Recent; phone: boolean }) {
 export function Field({ id, label, value, onChange, type = 'text', placeholder }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
+      <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
       <input id={id} type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)}
-        className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]" />
+        className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15" />
     </div>
   );
 }
@@ -113,7 +113,7 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="add-title">Add a customer</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">Only a name and one way to reach them are needed</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">Only a name and one way to reach them are needed</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
@@ -122,12 +122,12 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
           <Field id="add-phone" label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
           <Field id="add-email" label="Email" type="email" value={form.email} onChange={set('email')} />
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">A phone number or an email — at least one.</p>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">A phone number or an email — at least one.</p>
         {match ? (
           <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3 py-2.5">
             <span className="flex grow flex-col gap-0.5">
-              <span className="text-[15px] font-bold">{`${match.name} already has this ${matchedBy}`}</span>
-              <span className="text-[13px] text-[var(--wh-muted)]">{[match.phone, match.bikeLabel].filter(Boolean).join(' · ')}</span>
+              <span className="text-size-15 font-bold">{`${match.name} already has this ${matchedBy}`}</span>
+              <span className="text-size-13 text-[var(--wh-muted)]">{[match.phone, match.bikeLabel].filter(Boolean).join(' · ')}</span>
             </span>
             <Link to={customerHref(match.id)} onClick={onClose} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-sm font-semibold text-[var(--wh-ink)] no-underline">{`Use ${match.name}`}</Link>
           </div>
@@ -143,8 +143,8 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
         <Field id="add-note" label="Note (optional)" value={form.notes} onChange={set('notes')} placeholder="e.g. prefers texts, not calls" />
         <div className="flex items-center gap-3">
           <span className="flex grow flex-col gap-0.5">
-            <span id="add-offers" className="text-[15px] font-semibold">Happy to hear about offers</span>
-            <span className="text-[13px] text-[var(--wh-muted)]">Only if they say yes. Job updates always go.</span>
+            <span id="add-offers" className="text-size-15 font-semibold">Happy to hear about offers</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">Only if they say yes. Job updates always go.</span>
           </span>
           <OnOff on={form.offers} labelledBy="add-offers" onChange={() => setForm((f) => ({ ...f, offers: !f.offers }))} />
         </div>
