@@ -2090,3 +2090,25 @@ No screen: server only.
    checked every few seconds the way a message in its minute is.
 4. **The till's switch is the signed-in person's**, as all of Your settings
    is until PINs; the cashier picked on the till doesn't change it.
+
+### 24 Oct 2026: the till's Email receipt button (`openspec/changes/till-email-receipt`, `till-receipt`, `cp-receipt-address`)
+
+1. **The row is Print · Email · No receipt.** The drawn Text button waits
+   for texting, which has nothing on the server yet.
+2. **"Save to a customer record" and its "Add a customer" pop-up come
+   later**, as a piece of their own; the till can't add a customer yet. With
+   no customer on the sale, the address is used for this receipt only, as the
+   decision says.
+3. **Sending, sent and a failure aren't drawn.** "Send receipt" reads
+   "Sending…" while it sends (pattern: the booking page's buttons). A
+   refusal shows in the pop-up in the server's words, and a bad address shows
+   under the box.
+4. **Once sent, the next sale starts**, as the drawing goes to the empty till.
+   With "Don't close things by themselves" on, Paid stays and says "Receipt
+   sent to [address]." (pattern: Print with the setting on).
+5. **Cancel lets the countdown carry on** from where it stopped.
+6. **The pop-up says "Sale [n]"**, not the drawn "B1-[0000]", as the printed
+   receipt does until the sale records a receipt number.
+7. **The browser's own email check is off**, so the drawn "That doesn't look
+   like an email address — check it" shows instead of the browser's pop-up.
+
