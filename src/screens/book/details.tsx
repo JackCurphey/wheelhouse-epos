@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client.ts';
+import { apiGet, ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -17,8 +17,9 @@ import { jobMinutes } from './date-rules.ts';
 import { photosCleared } from './problem-rules.ts';
 import { useTerms } from './terms-query.ts';
 import { photosBase64, sendBooking } from './send.ts';
+import { DepositPart, payCard, pounds, serverCode, useDepositHold, type DepositHold, type PayState } from './deposit.tsx';
 import {
-  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
+  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, SEND_FAILED, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
   newRequestKey, refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
 } from './details-rules.ts';
 
@@ -72,6 +73,17 @@ function DetailsForm({ services, back, onExit }: FormProps) {
   const [askPhotos, setAskPhotos] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [sendError, setSendError] = React.useState<string | null>(null);
+  // The deposit (deposit-pay-screen): the request key is made as step 4
+  // opens, so the hold and the booking share it.
+  React.useEffect(() => {
+    if (services.takesDeposit && !draft.requestKey) update({ requestKey: newRequestKey() });
+  }, [services.takesDeposit, draft.requestKey, update]);
+  const holdQuery = useDepositHold(shopSlug, services, draft);
+  const hold: DepositHold | null = holdQuery.data ?? null;
+  const paid = !!hold && draft.depositHeld === hold.paymentId;
+  const [payState, setPayState] = React.useState<PayState>('ready');
+  const [cardNumber, setCardNumber] = React.useState('');
+  const [cardError, setCardError] = React.useState<string | null>(null);
   const ids: Record<ContactField, string> = {
     name: `${base}-name`, phone: `${base}-phone`, email: `${base}-email`, terms: `${base}-terms`,
   };
@@ -101,6 +113,23 @@ function DetailsForm({ services, back, onExit }: FormProps) {
     // after a refresh) repeats it and the server makes the booking once.
     const requestKey = draft.requestKey ?? newRequestKey();
     if (!draft.requestKey) update({ requestKey });
+    // The deposit is paid first, once: a booking already paid for (a retry,
+    // or after a refresh) is sent without paying again (design 4, 5).
+    let heldNow = paid;
+    if (hold && !paid) {
+      try {
+        await payCard(shopSlug, hold.ref, cardNumber);
+        update({ depositHeld: hold.paymentId });
+        heldNow = true;
+      } catch (err) {
+        setSending(false);
+        if (serverCode(err) === 'card_declined') setPayState('card-failed');
+        else if (err instanceof ApiError && err.status === 400 && err.hasServerMessage) setCardError(err.message);
+        else setSendError(SEND_FAILED);
+        setAttempt((a) => a + 1);
+        return;
+      }
+    }
     try {
       // The shop can edit its questions between problem and now, so the
       // answers are cleaned against a fresh copy. Read outside React Query
@@ -109,7 +138,8 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       const fresh = await apiGet<ServicesResponse>(servicesPath(shopSlug));
       queryClient.setQueryData(servicesQueryKey(shopSlug), fresh);
       const photoData = await photosBase64(photos);
-      const reply = await sendBooking(shopSlug, bookingBody(fresh, { ...draft, requestKey }, photoData));
+      const body = bookingBody(fresh, { ...draft, requestKey }, photoData);
+      const reply = await sendBooking(shopSlug, hold ? { ...body, paymentId: hold.paymentId } : body);
       if (shown.current) {
         clear();
         onExit({ to: reply.privateLink, replace: true });
@@ -123,6 +153,25 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       }
     } catch (err) {
       const route = refusalRoute(err);
+      const code = serverCode(err);
+      if (code === 'deposit_changed' || code === 'deposit_not_held') {
+        // Paid for another amount, or not held after all: ask for the hold
+        // and the card again (design 4).
+        update({ depositHeld: undefined });
+        setPayState('ready');
+        if (code === 'deposit_changed') void queryClient.invalidateQueries({ queryKey: ['deposit-hold', shopSlug] });
+        setSending(false);
+        setSendError(err instanceof ApiError ? err.message : SEND_FAILED);
+        setAttempt((a) => a + 1);
+        return;
+      }
+      // Paid, but the booking didn't get through: check, never pay again (bk-checking-payment).
+      if (hold && heldNow && route.to === 'stay' && route.message === SEND_FAILED) {
+        setSending(false);
+        setPayState('checking');
+        setAttempt((a) => a + 1);
+        return;
+      }
       if (route.to === 'date') {
         update({ date: undefined, mechanicId: undefined, startTime: undefined, anyMechanic: undefined });
         onExit({ to: `/book/${shopSlug}/date`, state: { timeTaken: true } });
@@ -138,6 +187,13 @@ function DetailsForm({ services, back, onExit }: FormProps) {
 
   const onRequest = () => {
     const now = fieldErrors(draft);
+    const needCard = !!hold && !paid && cardNumber.replace(/[\s-]/g, '') === '';
+    setCardError(needCard ? 'Enter the card number' : null);
+    if (needCard && now.length === 0) {
+      setAttempt((a) => a + 1);
+      document.getElementById('deposit-card')?.focus();
+      return;
+    }
     if (now.length > 0) {
       setChecked(true);
       setSendError(null);
@@ -159,17 +215,28 @@ function DetailsForm({ services, back, onExit }: FormProps) {
     void send();
   };
 
+  // The drawn labels (book.mjs detailsBody): Pay first; once paid, send; and
+  // the card-failed and checking states' own words.
+  function actionLabel() {
+    if (sending) return 'Sending…';
+    if (!hold) return services.confirmsAutomatically ? 'Confirm booking' : 'Request booking';
+    if (payState === 'checking') return 'Check again';
+    if (payState === 'card-failed') return 'Try again';
+    if (paid) return services.confirmsAutomatically ? 'Book' : 'Send request';
+    return `Pay ${pounds(hold.depositPence)} and ${services.confirmsAutomatically ? 'book' : 'send request'}`;
+  }
+
   return (
     <BookFrame
       step={4}
       title={TITLE}
       back={back}
-      action={{ label: sending ? 'Sending…' : services.confirmsAutomatically ? 'Confirm booking' : 'Request booking', onClick: onRequest, disabled: sending }}
+      action={{ label: actionLabel(), onClick: onRequest, disabled: sending || (services.takesDeposit === true && holdQuery.isPending) }}
       actionNote={
         note ? <p key={attempt} role="alert" className="m-0 text-[var(--wh-danger)]">{note}</p> : undefined
       }
     >
-      <Summary services={services} draft={draft} />
+      <Summary services={services} draft={draft} deposit={hold} />
       <TextField id={ids.name} label="Your name" autoComplete="name" required value={draft.name}
         error={errorFor('name')} onChange={(name) => update({ name })} />
       <TextField id={ids.phone} label="Mobile number" type="tel" autoComplete="tel" required value={draft.phone}
@@ -183,6 +250,12 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       />
       <TextField id={ids.email} label={emailLabel(channel)} type="email" autoComplete="email" required={channel === 'email'}
         value={draft.email} error={errorFor('email')} onChange={(email) => update({ email })} />
+      {hold ? (
+        <DepositPart
+          hold={hold} draft={draft} paid={paid} state={payState} cardNumber={cardNumber} cardError={cardError}
+          onCard={(value) => { setCardNumber(value); setCardError(null); if (payState === 'card-failed') setPayState('ready'); }}
+        />
+      ) : null}
       {/* A separate row above the tick box, so a near-miss tap on the box
           can't open the terms, and vice versa (Jack, 26 Sep). */}
       <button
@@ -241,28 +314,31 @@ function PhotosQuestion({ open, onOpenChange, onAdd, onSendWithout }: PhotosQues
   );
 }
 
-type SummaryProps = { services: ServicesResponse; draft: BookingDraft };
+type SummaryProps = { services: ServicesResponse; draft: BookingDraft; deposit?: DepositHold | null };
 
-function Summary({ services, draft }: SummaryProps) {
+// The drawn summary's deposit line (book.mjs summaryBox, deposit 'now').
+const withDeposit = (lines: string[], deposit?: DepositHold | null) => (deposit ? [...lines, `Deposit to pay now ${pounds(deposit.depositPence)}`] : lines);
+
+function Summary({ services, draft, deposit }: SummaryProps) {
   // A drop-off day stores no start time (d4).
   return draft.startTime === undefined
-    ? <DropoffSummary services={services} draft={draft} />
-    : <TimedSummary services={services} draft={draft} />;
+    ? <DropoffSummary services={services} draft={draft} deposit={deposit} />
+    : <TimedSummary services={services} draft={draft} deposit={deposit} />;
 }
 
-function TimedSummary({ services, draft }: SummaryProps) {
+function TimedSummary({ services, draft, deposit }: SummaryProps) {
   const { shopSlug = '' } = useParams();
   const mechanics = useMechanics(shopSlug);
-  return <SummaryBox lines={summaryLines(services, draft, whenText(draft, mechanics.data?.mechanics))} />;
+  return <SummaryBox lines={withDeposit(summaryLines(services, draft, whenText(draft, mechanics.data?.mechanics)), deposit)} />;
 }
 
-function DropoffSummary({ services, draft }: SummaryProps) {
+function DropoffSummary({ services, draft, deposit }: SummaryProps) {
   const { shopSlug = '' } = useParams();
   const date = draft.date ?? '';
   // That day alone, for its drop-off window.
   const availability = useAvailability(shopSlug, { start: date, end: date, minutes: jobMinutes(services, draft) });
   const dropoff = availability.data ? dropoffWindowOn(availability.data, date) : undefined;
-  return <SummaryBox lines={summaryLines(services, draft, whenText(draft, undefined, dropoff))} />;
+  return <SummaryBox lines={withDeposit(summaryLines(services, draft, whenText(draft, undefined, dropoff)), deposit)} />;
 }
 
 function SummaryBox({ lines }: { lines: string[] }) {

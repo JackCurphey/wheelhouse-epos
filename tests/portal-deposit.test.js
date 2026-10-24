@@ -217,3 +217,14 @@ test('a “Not sure” booking takes the shop’s amount for a price not known (
     await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositUnknownPence: null } });
   }
 });
+
+test('the services list tells the booking page whether a deposit is taken', async () => {
+  const read = async () => (await (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/services`)).json()).takesDeposit;
+  assert.equal(await read(), true);
+  await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: false } });
+  try {
+    assert.equal(await read(), false);
+  } finally {
+    await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: true } });
+  }
+});

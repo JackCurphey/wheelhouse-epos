@@ -41,6 +41,8 @@ export type BookingBody = {
   email?: string;
   updateChannel: UpdateChannel;
   termsAccepted: true;
+  // The deposit's held payment (deposit-payments design 5).
+  paymentId?: number;
 } & BookingRequestKey;
 
 export const DEFAULT_CHANNEL: UpdateChannel = 'sms';

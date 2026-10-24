@@ -61,7 +61,8 @@ export const pretend = {
     const digits = typeof cardNumber === 'string' ? cardNumber.replace(/[\s-]/g, '') : '';
     if (digits !== ACCEPTED_CARD && digits !== DECLINED_CARD) throw new PaymentError('bad_card', 'Check the card number.');
     const status = digits === ACCEPTED_CARD ? 'held' : 'declined';
-    await move(ref, ['waiting'], status, ', card_last4 = ?', digits.slice(-4));
+    // A declined payment can try another card, as Stripe's can.
+    await move(ref, ['waiting', 'declined'], status, ', card_last4 = ?', digits.slice(-4));
     return { status };
   },
 };
