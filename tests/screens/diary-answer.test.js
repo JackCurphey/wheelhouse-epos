@@ -361,3 +361,15 @@ test('a change request pop-up opens the full job', async () => {
   assert.ok(has(await r.ui.findByRole('dialog', { name: /Full service/ })), 'the job page opens');
   assert.ok(r.ui.queryByRole('heading', { name: 'Change request' }) === null, 'the request closes');
 });
+
+test('a request that took a deposit: declining says it’s refunded automatically (bk-staff-decline)', async () => {
+  REQUEST.deposit = { pence: 1300, paidAt: '2026-10-01T09:00:00Z', state: 'paid', refundedAt: null, refundReason: null, refundedBy: null, noShowAt: null, noShowBy: null };
+  try {
+    const r = await openDiary();
+    const dlg = await openCard(r, 'Sam Reed');
+    r.fireEvent.click(dlg.getByRole('button', { name: 'Decline' }));
+    assert.ok(has(dlg.queryByText('Declining releases the request’s reservation. The customer is told not to travel for this request. Their £13.00 deposit is refunded automatically.')));
+  } finally {
+    REQUEST.deposit = null;
+  }
+});
