@@ -295,6 +295,8 @@ check.
   answers, labour lines' `vat_rate_bp` stays empty. This doesn't change the
   approach.
 - For Jack, before WP-3.1: the two new "check these" kinds (Decision 8).
-- For Jack, before WP-3.1: may the till take a deposit on a job whose work
+- ~~For Jack, before WP-3.1: may the till take a deposit on a job whose work
   isn't finished, which the paying-for-finished-work decision refuses today?
-  (Decision 8.)
+  (Decision 8.)~~ **Answered 24 Oct, "Yes, deposits only"**
+  (`docs/decisions/2026-10-24-till-deposit-unfinished-work.md`): a deposit
+  at any stage; the payment that pays the rest still needs the work finished.
