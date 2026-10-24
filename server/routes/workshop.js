@@ -995,6 +995,8 @@ export function register(route) {
       // message that can't be queued is logged, not an error (the answer it
       // follows has been made and stands).
       if (event === 'decline' || event === 'expire' || event === 'cancel') await refundOwed(id);
+      // The bike came after all: Didn't come no longer stands (deposit-diary-server, review).
+      if (event === 'book_in') await db.prepare('UPDATE workshop_jobs SET no_show_at = NULL, no_show_by_login_id = NULL WHERE id = ? AND no_show_at IS NOT NULL').run(id);
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');

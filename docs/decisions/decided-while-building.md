@@ -1999,3 +1999,5 @@ No screen: server only.
 3. **A deposit is "kept" once taken and the booking was cancelled late or
    marked Didn't come**; refunding it by hand afterwards makes it
    "refunded".
+4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
+   then simply paid, as for any booking (review).

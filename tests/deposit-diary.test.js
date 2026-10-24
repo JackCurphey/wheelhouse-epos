@@ -139,3 +139,13 @@ test('another shop’s job is never found', async () => {
   assert.equal((await staff(`/api/workshop-jobs/${b.id}/didnt-come`, { method: 'POST', body: { version: 1 } }, other)).status, 404);
   assert.equal(await pretendStatus(b.ref), 'taken');
 });
+
+test('booking the bike in after all clears Didn’t come, and the deposit is paid again (review)', async () => {
+  const b = await booked({ past: true });
+  const marked = await staff(`/api/workshop-jobs/${b.id}/didnt-come`, { method: 'POST', body: { version: (await job(b.id)).version } });
+  assert.equal(marked.status, 200);
+  const res = await staff(`/api/workshop-jobs/${b.id}/book-in`, { method: 'POST', body: { version: marked.body.version } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.noShowAt, null);
+  assert.equal(res.body.deposit.state, 'paid');
+});
