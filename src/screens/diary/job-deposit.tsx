@@ -3,6 +3,7 @@ import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { pounds } from '@/screens/book/money.ts';
 import { shortDay, todayIso } from './rules.ts';
 
 /**
@@ -11,7 +12,6 @@ import { shortDay, todayIso } from './rules.ts';
  * bk-staff-no-show and bk-staff-no-show-kept in diary.mjs;
  * openspec/changes/deposit-diary-screen).
  */
-const pounds = (pence: number) => `£${(pence / 100).toFixed(2)}`;
 const day = (iso: string | null) => (iso ? shortDay(todayIso(new Date(iso))) : '');
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 

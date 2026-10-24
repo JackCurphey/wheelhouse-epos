@@ -9,6 +9,7 @@ import { requestMinutes } from './offer-dialog.tsx';
 import { Pill } from './change-details-dialog.tsx';
 import { noMessageNote, type BookingMessageReply } from './no-message.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
+import { pounds } from '@/screens/book/money.ts';
 
 /**
  * Answering what's waiting (journey 12 decisions 15 and 19): the request
@@ -167,7 +168,7 @@ export function RequestDialog({ item, onClose, onAnswered, onOpenJob, onOffer, o
             <textarea id="decline-msg" rows={4} maxLength={1000} value={declineWords} onChange={(e) => setDeclineWords(e.target.value)}
               className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal" />
           </div>
-          <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request.${job?.deposit ? ` Their £${(job.deposit.pence / 100).toFixed(2)} deposit is refunded automatically.` : ''}`}</p>
+          <p className="m-0 text-[13px] text-[var(--wh-muted)]">{`Declining releases the request’s reservation. The customer is told not to travel for this request.${job?.deposit ? ` Their ${pounds(job.deposit.pence)} deposit is refunded automatically.` : ''}`}</p>
         </>
       );
     }
