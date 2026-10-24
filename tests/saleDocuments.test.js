@@ -114,7 +114,7 @@ test('a labour line snapshots its service, and repricing the service later does 
   try {
     await runWithShop(shop.id, async () => {
       const svc = await prepare(
-        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+        `INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('Standard service', 55.00, ROUND(55.00 * 100)::int, 60)`
       ).run();
       const line = await loadDocumentLine(
         { lineType: 'labour', serviceId: svc.lastInsertRowid },
@@ -124,7 +124,7 @@ test('a labour line snapshots its service, and repricing the service later does 
       assert.equal(Number(line.unitPrice), 55);
       assert.equal(line.minutes, 60);
 
-      await prepare('UPDATE workshop_services SET price = 65.00 WHERE id = ?').run(svc.lastInsertRowid);
+      await prepare('UPDATE workshop_services SET price = 65.00, price_pence = ROUND(65.00 * 100)::int WHERE id = ?').run(svc.lastInsertRowid);
       // The already-loaded line keeps the price it was created with.
       assert.equal(Number(line.unitPrice), 55);
     });
@@ -148,7 +148,7 @@ test('a typed price and duration beat the service they are chosen alongside', as
   try {
     await runWithShop(shop.id, async () => {
       const svc = await prepare(
-        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+        `INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('Standard service', 55.00, ROUND(55.00 * 100)::int, 60)`
       ).run();
       const line = await loadDocumentLine(
         { lineType: 'labour', serviceId: svc.lastInsertRowid, unitPrice: 70, minutes: 90 },
@@ -221,7 +221,7 @@ test('a persisted labour line keeps its stored price after the service is repric
   try {
     await runWithShop(shop.id, async () => {
       const svc = await prepare(
-        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+        `INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('Standard service', 55.00, ROUND(55.00 * 100)::int, 60)`
       ).run();
       const line = await loadDocumentLine({ lineType: 'labour', serviceId: svc.lastInsertRowid }, { checkStock: true });
 
@@ -244,7 +244,7 @@ test('a persisted labour line keeps its stored price after the service is repric
         line.minutes
       );
 
-      await prepare('UPDATE workshop_services SET price = 65.00 WHERE id = ?').run(svc.lastInsertRowid);
+      await prepare('UPDATE workshop_services SET price = 65.00, price_pence = ROUND(65.00 * 100)::int WHERE id = ?').run(svc.lastInsertRowid);
 
       const stored = await prepare(
         'SELECT * FROM sale_document_items WHERE document_id = ?'

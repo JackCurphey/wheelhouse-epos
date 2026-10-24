@@ -143,7 +143,7 @@ test('a service from another shop is refused', async () => {
 
 test('a service the shop has not ticked bookable online is refused', async () => {
   const id = await runWithShop(owner.shop.id, async () => (await prepare(
-    "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Staff only', 10, 30, 0, 1, now())"
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Staff only', 10, ROUND(10 * 100)::int, 30, 0, 1, now())"
   ).run()).lastInsertRowid);
   const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 400, JSON.stringify(res.body));
@@ -152,7 +152,7 @@ test('a service the shop has not ticked bookable online is refused', async () =>
 
 test('a retired service is refused', async () => {
   const id = await runWithShop(owner.shop.id, async () => (await prepare(
-    "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Retired', 10, 30, 1, 0, now())"
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Retired', 10, ROUND(10 * 100)::int, 30, 1, 0, now())"
   ).run()).lastInsertRowid);
   const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 400, JSON.stringify(res.body));
@@ -172,8 +172,8 @@ const priced = (jobId) => runWithShop(owner.shop.id, async () => (await prepare(
   'SELECT service_id, booked_price::text AS booked_price FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position LIMIT 1'
 ).get(jobId)) ?? { service_id: null, booked_price: null });
 const pricedService = (price) => runWithShop(owner.shop.id, async () => (await prepare(
-  "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Priced', ?, 30, 1, 1, now())"
-).run(price)).lastInsertRowid);
+  "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Priced', ?, ROUND(CAST(? AS numeric) * 100)::int, 30, 1, 1, now())"
+).run(price, price)).lastInsertRowid);
 
 test('a named service stores its id and its price on the booking', async () => {
   const id = await pricedService('49.99');
@@ -186,7 +186,7 @@ test('changing the service price afterwards leaves the booked price alone', asyn
   const id = await pricedService('30.00');
   const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price = 99 WHERE id = ?').run(id));
+  await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price = 99, price_pence = ROUND(99 * 100)::int WHERE id = ?').run(id));
   assert.equal((await priced(res.body.id)).booked_price, '30.00');
 });
 

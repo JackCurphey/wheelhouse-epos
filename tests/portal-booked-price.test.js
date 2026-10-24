@@ -26,7 +26,7 @@ before(async () => {
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
   serviceId = await runWithShop(owner.shop.id, async () => (await prepare(
-    "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Priced service', 65.50, 60, 1, 1, now())"
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Priced service', 65.50, ROUND(65.50 * 100)::int, 60, 1, 1, now())"
   ).run()).lastInsertRowid);
 });
 
@@ -70,6 +70,19 @@ test('prices shown: the booking reply carries the service and its price', async 
   const booked = await book();
   assert.equal(booked.services[0].price, 65.5);
   assert.equal(booked.totalPrice, 65.5);
+});
+
+// Sales in pence, step A′: the booking page reads the booked price from its
+// pence, the authority. Only the pence changed here, to £70.00.
+test('the booking page shows the booked price from its pence', async () => {
+  await setShowPrices(true);
+  const booked = await book();
+  await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_job_services SET booked_price_pence = 7000 WHERE workshop_job_id = ?').run(booked.id));
+  const page = await read(codeOf(booked.privateLink));
+  assert.equal(page.status, 200, JSON.stringify(page.body));
+  const json = JSON.stringify(page.body);
+  assert.match(json, /"price":70[,}]/);
+  assert.doesNotMatch(json, /65\.5/);
 });
 
 test('prices hidden: the booking reply carries the service with no price', async () => {

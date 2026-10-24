@@ -320,7 +320,8 @@ export async function loadDocumentLine(it, { checkStock }) {
       const service = await db.prepare('SELECT * FROM workshop_services WHERE id = ? AND active = 1').get(serviceId);
       if (!service) throw new ValidationError(`Service ${serviceId} not found or inactive`);
       if (!name) name = service.name;
-      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price;
+      // From the pence (sales in pence, step A′).
+      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price_pence / 100;
       if (minutes === undefined || minutes === null || minutes === '') minutes = service.minutes;
     }
 

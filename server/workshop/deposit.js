@@ -3,8 +3,8 @@
 // openspec/changes/deposit-settings design 4). Pure, in pence.
 
 /**
- * Today's service prices are pounds (workshop_services.price); sales in pence
- * (#404) moves them to pence, and this is the one line that changes then.
+ * Pounds typed into a setting (a fixed deposit, the unknown-price deposit),
+ * to pence. Service prices are read in pence already (price_pence, step A′).
  */
 export function poundsToPence(pounds) {
   if (pounds === null || pounds === undefined || pounds === '') return null;

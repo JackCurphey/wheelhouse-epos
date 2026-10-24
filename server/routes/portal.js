@@ -167,17 +167,18 @@ async function bookedServices(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
   const rows = await db.prepare(
-    `SELECT s.name, js.booked_price FROM workshop_job_services js
+    `SELECT s.name, js.booked_price_pence FROM workshop_job_services js
      JOIN workshop_services s ON s.id = js.service_id
      WHERE js.workshop_job_id = ? ORDER BY js.position`
   ).all(jobId);
   const total = await db.prepare(
-    `SELECT CASE WHEN count(*) > 0 AND count(booked_price) = count(*) THEN sum(booked_price) END AS total
+    `SELECT CASE WHEN count(*) > 0 AND count(booked_price_pence) = count(*) THEN sum(booked_price_pence) END AS total
      FROM workshop_job_services WHERE workshop_job_id = ?`
   ).get(jobId);
   return {
-    services: rows.map((r) => ({ name: r.name, price: showPrices ? r.booked_price ?? null : null })),
-    totalPrice: showPrices ? total?.total ?? null : null,
+    // From the pence; said in pounds, as before (sales in pence, step A′).
+    services: rows.map((r) => ({ name: r.name, price: showPrices && r.booked_price_pence !== null ? r.booked_price_pence / 100 : null })),
+    totalPrice: showPrices && total?.total !== null && total?.total !== undefined ? Number(total.total) / 100 : null,
   };
 }
 
@@ -687,13 +688,13 @@ export function register(route) {
     const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically, deposit_on FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
-      `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
+      `SELECT id, name, price_pence, minutes, kind, category_id, questions FROM workshop_services
        WHERE active = 1 AND bookable_online = 1 ORDER BY position, name`
     ).all();
     const categories = await db.prepare(
       'SELECT id, name FROM workshop_service_categories ORDER BY position, name'
     ).all();
-    const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes, questions: s.questions });
+    const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price_pence / 100 : null, minutes: s.minutes, questions: s.questions });
     const individual = services.filter((s) => s.kind === 'individual');
     // What each full service includes, for its card and for d2's "already part
     // of your <full service>" warning: services still in use, bookable online
