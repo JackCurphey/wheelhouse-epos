@@ -8,7 +8,7 @@ import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/htt
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
-import { serializeMessage, undoMessage } from '../messaging/engine.js';
+import { serializeMessage, undoMessage, sendHeldNow } from '../messaging/engine.js';
 import { LIVE_KEYS, TEMPLATES, render, templateFor } from '../messaging/templates.js';
 
 const MAX_WORDING = 2000;
@@ -92,6 +92,18 @@ export function register(route) {
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const id = Number(params.id);
     if (!(await undoMessage(id))) return sendJson(res, 409, { error: 'It’s already gone', code: 'illegal' });
+    const row = await prepare('SELECT * FROM customer_messages WHERE id = ?').get(id);
+    sendJson(res, 200, serializeMessage(row));
+  });
+
+  // Send now: a message held by Don't close things by themselves goes now
+  // (dont-close-server design 3).
+  // screens: diary
+  route('POST', '/api/messages/:id/send-now', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const id = Number(params.id);
+    if (!(await sendHeldNow(id))) return sendJson(res, 409, { error: 'It isn’t waiting to be sent', code: 'illegal' });
     const row = await prepare('SELECT * FROM customer_messages WHERE id = ?').get(id);
     sendJson(res, 200, serializeMessage(row));
   });

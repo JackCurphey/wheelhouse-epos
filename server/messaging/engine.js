@@ -62,7 +62,7 @@ export async function undoJobMessages(jobId) {
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
-export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null }) {
+export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false }) {
   const template = await templateFor(key);
   if (!template.enabled) return { skipped: 'off' };
   const c = await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId);
@@ -70,12 +70,23 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
   if (!how) return { skipped: 'no_contact' };
   const body = render(template.wording, vars);
   const subject = how.channel === 'email' ? render(template.subject, vars) : null;
-  const sendAfter = new Date(Date.now() + delayMs).toISOString();
+  // Held (Don't close things by themselves): a send time of never, so the
+  // sender never claims it and Undo still stops it, until Send now
+  // (openspec/changes/dont-close-server design 1).
+  const sendAfter = hold ? 'infinity' : new Date(Date.now() + delayMs).toISOString();
   const row = await prepare(
     `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
      VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?) RETURNING id`
   ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId);
-  return { id: row.id, channel: how.channel, to: how.to, sendAfter };
+  return { id: row.id, channel: how.channel, to: how.to, sendAfter: hold ? null : sendAfter, held: hold };
+}
+
+/** Send now: a held message's send time becomes now, and the sender sends it next round. False when it isn't held. */
+export async function sendHeldNow(id) {
+  const row = await prepare(
+    "UPDATE customer_messages SET send_after = ? WHERE id = ? AND intent_state = 'intended' AND send_after = 'infinity'::timestamptz RETURNING id"
+  ).get(new Date().toISOString(), id);
+  return Boolean(row);
 }
 
 /**
@@ -255,6 +266,9 @@ export function startSender(intervalMs = Number(process.env.WH_MESSAGES_TICK_MS 
   };
 }
 
+// Postgres's "never" comes back as Infinity, or as the word, depending on how it's read.
+const isHeld = (t) => t === Infinity || t === 'infinity' || (t instanceof Date && !Number.isFinite(t.getTime()));
+
 /** A message as the outbox shows it. */
 export function serializeMessage(row) {
   return {
@@ -272,7 +286,9 @@ export function serializeMessage(row) {
     body: row.body,
     state: row.intent_state,
     pretend: row.pretend,
-    sendAfter: row.send_after ?? null,
+    // A held message has no send time until Send now (dont-close-server design 4).
+    held: isHeld(row.send_after),
+    sendAfter: isHeld(row.send_after) ? null : row.send_after ?? null,
     sentAt: row.sent_at ?? null,
     error: row.error ?? null,
     createdAt: row.created_at,
