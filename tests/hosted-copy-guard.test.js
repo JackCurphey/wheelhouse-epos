@@ -28,6 +28,14 @@ test('it refuses without NODE_ENV=production, and with transaction-scoped tenanc
   assert.match(hostedCopyRefusal({ ...SAFE, DB_TENANT_SCOPE: 'transaction' }), /DB_TENANT_SCOPE/);
 });
 
+// staff-signin-workos design 6: a live WorkOS key would sign people in to
+// WorkOS's real environment; a test key only reaches its test one.
+test('it refuses a live WorkOS key, and allows a test one', () => {
+  const why = hostedCopyRefusal({ ...SAFE, WORKOS_API_KEY: 'sk_live_abc' });
+  assert.ok(why && why.includes('WORKOS_API_KEY'), why);
+  assert.equal(hostedCopyRefusal({ ...SAFE, WORKOS_API_KEY: 'sk_test_abc', WORKOS_CLIENT_ID: 'client_123' }), null);
+});
+
 test('it starts with none of these', () => {
   assert.equal(hostedCopyRefusal(SAFE), null);
   assert.equal(hostedCopyRefusal({ ...SAFE, DB_TENANT_SCOPE: 'session' }), null);

@@ -13,6 +13,7 @@ let owner;
 let other;
 let maya;
 let mayasJob;
+let mayasBike;
 
 before(async () => {
   server = await startLiveServer();
@@ -20,6 +21,8 @@ before(async () => {
   other = await staffSignup(server.baseUrl, { shopName: 'Elsewhere Cycles' });
   maya = (await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900142', email: 'maya@example.com' } })).body;
   const bikeId = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO customer_bikes (customer_id, make, model) VALUES (?, 'Trek', 'Domane AL 3') RETURNING id").get(maya.id)).id);
+  mayasBike = bikeId;
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customer_bikes SET colour = 'Green', serial_number = '[frame number]' WHERE id = ?").run(bikeId));
   mayasJob = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-09-17', startTime: '11:30', endTime: '12:30', customerId: maya.id, bikeId } })).body;
 });
 
@@ -65,8 +68,8 @@ test('five at most of each', async () => {
 });
 
 test('fewer than two characters finds nothing, and asks nothing of the database', async () => {
-  assert.deepEqual((await search('m')).body, { jobs: [], customers: [] });
-  assert.deepEqual((await search('  ')).body, { jobs: [], customers: [] });
+  assert.deepEqual((await search('m')).body, { jobs: [], customers: [], bikes: [] });
+  assert.deepEqual((await search('  ')).body, { jobs: [], customers: [], bikes: [] });
 });
 
 test('a removed customer isn’t found; another shop’s jobs and customers never are', async () => {
@@ -75,13 +78,13 @@ test('a removed customer isn’t found; another shop’s jobs and customers neve
   assert.equal((await search('quentin')).body.customers.length, 0);
   const res = await search('maya', other);
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body, { jobs: [], customers: [] });
+  assert.deepEqual(res.body, { jobs: [], customers: [], bikes: [] });
 });
 
 test('what’s typed is a plain search, never a pattern', async () => {
   const res = await search('%_%');
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body, { jobs: [], customers: [] }, 'a % or _ matched everything');
+  assert.deepEqual(res.body, { jobs: [], customers: [], bikes: [] }, 'a % or _ matched everything');
 });
 
 test('the numbers in a job number don’t find customers by phone (review)', async () => {
@@ -89,4 +92,30 @@ test('the numbers in a job number don’t find customers by phone (review)', asy
   const res = await search(mayasJob.reference);
   assert.ok(!res.body.customers.some((c) => c.id === sam.id), 'a phone number matched the job number');
   assert.ok(res.body.jobs.some((j) => j.id === mayasJob.id));
+});
+
+// Bikes (openspec/changes/bike-search; Jack's answer of 15 Oct, not-drawn pages 7 and 8).
+test('a bike is found by make and model or frame number, with who owns it', async () => {
+  for (const q of ['domane', 'trek domane', 'TREK', 'frame number']) {
+    const bike = (await search(q)).body.bikes.find((b) => b.id === mayasBike);
+    assert.ok(bike, q);
+    assert.deepEqual(bike, { id: mayasBike, make: 'Trek', model: 'Domane AL 3', colour: 'Green', serialNumber: '[frame number]', customerId: maya.id, customerName: 'Maya Patel' });
+  }
+  assert.ok(!(await search('maya')).body.bikes.some((b) => b.id === mayasBike), 'a bike isn’t found by its owner’s name: the customer is');
+  assert.deepEqual((await search('domane', other)).body.bikes, [], 'another shop’s bike');
+});
+
+test('five bikes at most; a removed bike, or a removed customer’s, isn’t found', async () => {
+  const pat = (await staff('/api/customers', { method: 'POST', body: { name: 'Pat Brompton', phone: '07700 900321' } })).body;
+  for (let i = 0; i < 6; i++) await staff(`/api/customers/${pat.id}/bikes`, { method: 'POST', body: { make: 'Brompton', model: `C Line ${i}` } });
+  assert.equal((await search('c line')).body.bikes.length, 5);
+  const gone = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Ridley', model: 'Kanzo' } })).body;
+  assert.ok((await search('kanzo')).body.bikes.some((b) => b.id === gone.id), 'found before it’s removed');
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customer_bikes SET active = 0 WHERE id = ?').run(gone.id));
+  assert.equal((await search('kanzo')).body.bikes.length, 0);
+  const leaving = (await staff('/api/customers', { method: 'POST', body: { name: 'Lou Leaving', phone: '07700 900654' } })).body;
+  await staff(`/api/customers/${leaving.id}/bikes`, { method: 'POST', body: { make: 'Orbea', model: 'Orca' } });
+  assert.equal((await search('orca')).body.bikes.length, 1);
+  await staff(`/api/customers/${leaving.id}`, { method: 'DELETE' });
+  assert.equal((await search('orca')).body.bikes.length, 0);
 });

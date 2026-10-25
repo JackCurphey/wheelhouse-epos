@@ -69,6 +69,10 @@ function serializeWorkshopSettings(row) {
     // Days from when a bike is marked ready to Bike still waiting, and to Today (WP-4.3; migration 064).
     collectionReminderDays: row.collection_reminder_days,
     collectionTodayDays: row.collection_today_days,
+    // Review requests (account and reminders decision 5; migration 080): the
+    // shop's review page, null for none, and the days after collection.
+    reviewPageUrl: row.review_page_url ?? null,
+    reviewRequestDays: row.review_request_days,
     // Deposits when booking (bk-settings-deposits; migration 069), off to
     // start; money in pence. Connected: a payment provider takes them.
     depositOn: row.deposit_on === 1,
@@ -459,6 +463,22 @@ export function register(route) {
       return badRequest(res, 'Choose from 2 to 90 days.');
     }
     if (collectionTodayDays <= collectionReminderDays) return badRequest(res, 'Show it on Today after more days than the reminder.');
+    // Review requests (review-requests design 2): a web address, or none.
+    let reviewPageUrl = existing.review_page_url ?? null;
+    if (body.reviewPageUrl !== undefined) {
+      const text = typeof body.reviewPageUrl === 'string' ? body.reviewPageUrl.trim() : body.reviewPageUrl;
+      if (text === null || text === '') reviewPageUrl = null;
+      else if (typeof text !== 'string' || text.length > 500 || !/^https?:\/\/\S+$/i.test(text)) return badRequest(res, 'Paste the whole link to your review page, starting https://');
+      else reviewPageUrl = text;
+    }
+    if (!reviewPageUrl && existing.review_page_url) {
+      const on = (await db.prepare("SELECT enabled FROM message_templates WHERE key = 'review_request'").get())?.enabled;
+      if (on) return badRequest(res, 'Switch review requests off first.');
+    }
+    const reviewRequestDays = body.reviewRequestDays === undefined ? existing.review_request_days : body.reviewRequestDays;
+    if (!Number.isInteger(reviewRequestDays) || reviewRequestDays < 1 || reviewRequestDays > 60) {
+      return badRequest(res, 'Choose from 1 to 60 days.');
+    }
 
     // What a diary block shows first and second: two different things from
     // bike, job title, customer and job number (Workshop day 17, 29).
@@ -520,7 +540,7 @@ export function register(route) {
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
          show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
          block_first = ?, block_second = ?, storage_slots_on = ?, quote_reminder_hours = ?,
-         collection_reminder_days = ?, collection_today_days = ?,
+         collection_reminder_days = ?, collection_today_days = ?, review_page_url = ?, review_request_days = ?,
          deposit_on = ?, deposit_kind = ?, deposit_percent = ?, deposit_fixed_pence = ?, deposit_unknown_pence = ?, deposit_cancel_hours = ?,
          updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
@@ -529,7 +549,7 @@ export function register(route) {
           minNoticeMinutes, minNoticeDays, timeZone,
           showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
           blockFirst, blockSecond, storageSlotsOn, quoteReminderHours,
-          collectionReminderDays, collectionTodayDays,
+          collectionReminderDays, collectionTodayDays, reviewPageUrl, reviewRequestDays,
           depositOn, depositKind, depositPercent.value, depositFixed.value, depositUnknown.value, depositCancel.value,
           nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();

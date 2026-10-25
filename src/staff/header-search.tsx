@@ -10,15 +10,18 @@ import { ROUTES } from './routes.ts';
 /**
  * The header search (drawn as staff-search, app-map.mjs; the header's box and
  * button, diary.mjs; app map review 2; Jack, 24 Oct, answer 7;
- * openspec/changes/header-search): jobs and customers from any staff page.
+ * openspec/changes/header-search): jobs, customers and bikes (bike-search;
+ * Jack's answer of 15 Oct) from any staff page.
  * Results are a labelled list of links, grouped as drawn, not a list of
  * options (design 2). A box in the header on a computer; on a tablet or a
  * phone a button that opens the box and its results over the page.
  */
 type Job = { id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; customerName: string | null; bikeLabel: string | null };
 type Customer = { id: number; name: string; phone: string | null };
-type Found = { jobs: Job[]; customers: Customer[] };
-const LABEL = 'Search jobs and customers';
+type Bike = { id: number; make: string; model: string; colour: string; serialNumber: string; customerName: string };
+type Found = { jobs: Job[]; customers: Customer[]; bikes: Bike[] };
+const LABEL = 'Search jobs, customers and bikes';
+const total = (f: Found) => f.jobs.length + f.customers.length + (f.bikes?.length ?? 0);
 
 /** What was typed, once typing has paused (250 ms). */
 function useSettled(value: string, ms = 250) {
@@ -64,12 +67,12 @@ function Row({ to, main, sub, onPick }: { to: string; main: React.ReactNode; sub
 function said(q: string, found: Found | null, failed: boolean) {
   if (failed) return 'Wheelhouse couldn’t search just now. Try again in a moment.';
   if (!found) return '';
-  const count = found.jobs.length + found.customers.length;
+  const count = total(found);
   return count ? `${count} result${count === 1 ? '' : 's'}` : `Nothing matches “${q}”`;
 }
 
 function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => void }) {
-  const count = found.jobs.length + found.customers.length;
+  const count = total(found);
   const none = `Nothing matches “${q}”`;
   return (
     <>
@@ -86,6 +89,15 @@ function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => 
           <Group title="Customers">
             {found.customers.map((c) => (
               <Row key={c.id} to={`${ROUTES.customers}/${c.id}`} onPick={onPick} main={c.name} sub={c.phone ? `Customer · ${c.phone}` : 'Customer'} />
+            ))}
+          </Group>
+        ) : null}
+        {/* Not drawn: a Bikes group after Customers, its rows as theirs are. */}
+        {found.bikes?.length ? (
+          <Group title="Bikes">
+            {found.bikes.map((b) => (
+              <Row key={b.id} to={ROUTES['cs-bike'].replace(':id', String(b.id))} onPick={onPick}
+                main={[b.make, b.model].filter(Boolean).join(' ') || 'A bike'} sub={[b.customerName, b.colour, b.serialNumber].filter(Boolean).join(' · ')} />
             ))}
           </Group>
         ) : null}

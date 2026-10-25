@@ -17,6 +17,7 @@ import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
 import { queueServiceReminder } from '../messaging/service-reminders.js';
+import { queueReviewRequest } from '../messaging/review-requests.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
@@ -1012,13 +1013,19 @@ export function register(route) {
       // the collection drops it (service-reminder-send). Logged, never an error:
       // the collection stands.
       if (machine === custody && event === 'collect') {
-        try {
-          await queueServiceReminder(id, shopId);
-        } catch (err) {
-          console.error(`Messages: the service reminder for job ${id} could not be set up`, err);
+        // Each on its own, so one that fails doesn't stop the other (review).
+        for (const [what, setUp] of [['service reminder', queueServiceReminder], ['review request', queueReviewRequest]]) {
+          try {
+            await setUp(id, shopId, publicBase(req));
+          } catch (err) {
+            console.error(`Messages: the ${what} for job ${id} could not be set up`, err);
+          }
         }
       }
-      if (machine === custody && event === 'reopen') await undoWaiting(id, 'service_reminder');
+      if (machine === custody && event === 'reopen') {
+        await undoWaiting(id, 'service_reminder');
+        await undoWaiting(id, 'review_request');
+      }
       // The shop cancelling (Jack, 20 Oct, booking messages answer 4; 21 Oct).
       if (event === 'cancel') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_cancelled');
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);

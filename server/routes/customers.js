@@ -143,6 +143,16 @@ async function listCustomers({ search, activeOnly }) {
   return rows.map((row) => serializeCustomer(row, groupMap.get(row.id) || []));
 }
 
+// A job is open while its booking stands and the bike isn't collected; a bike
+// never booked in whose day has gone isn't (a no-show, review). Shared by a
+// customer's history and a bike's page.
+const iso = (v) => new Date(v).toISOString();
+
+function jobIsOpen(j, today) {
+  return !['cancelled', 'declined', 'expired'].includes(j.booking_state) && j.custody_state !== 'collected'
+    && !(j.custody_state === 'expected' && j.job_date && j.job_date < today);
+}
+
 export function register(route) {
   // ---------- Customer groups ----------
 
@@ -252,6 +262,11 @@ export function register(route) {
   // first (cs-page; customer service review 12). A job is open while its
   // booking stands and the bike isn't collected (walk-through 9 L5).
   // screens: customers
+  // A job's day and time are the shop's, so its moment is read in the shop's
+  // time zone (review). Shared by a customer's history and a bike's page.
+  const JOB_MOMENT = `CASE WHEN w.job_date IS NULL THEN w.created_at
+                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END`;
+
   route('GET', '/api/customers/:id/history', async (req, res, params) => {
     const id = Number(params.id);
     if (!Number.isInteger(id) || id < 1 || id > 2_147_483_647) return notFound(res, 'Customer not found');
@@ -262,8 +277,7 @@ export function register(route) {
     const today = shopToday(zone);
     const jobs = await db.prepare(
       `SELECT w.id, w.reference, w.title, w.job_date, w.start_time, w.booking_state, w.custody_state, w.work_state, w.created_at, e.name AS mechanic_name,
-              CASE WHEN w.job_date IS NULL THEN w.created_at
-                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
+              ${JOB_MOMENT} AS at
          FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.customer_id = ?`
     ).all(zone, id);
     const sales = await db.prepare(
@@ -275,15 +289,11 @@ export function register(route) {
       `SELECT id, template_key, channel, to_address, coalesce(sent_at, created_at) AS at FROM customer_messages
         WHERE customer_id = ? AND coalesce(direction, 'outbound') = 'outbound' AND intent_state <> 'undone'`
     ).all(id);
-    const iso = (v) => new Date(v).toISOString();
     const items = [
       ...jobs.map((j) => ({
         kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
         bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
-        // Open while the booking stands and the bike isn't collected; a bike never
-        // booked in whose day has gone isn't (a no-show, review).
-        open: !['cancelled', 'declined', 'expired'].includes(j.booking_state) && j.custody_state !== 'collected'
-          && !(j.custody_state === 'expected' && j.job_date && j.job_date < today),
+        open: jobIsOpen(j, today),
         at: iso(j.at),
       })),
       ...sales.map((x) => ({ kind: 'sale', id: x.id, total: Number(x.total), what: x.what ?? '', at: iso(x.created_at) })),
@@ -422,6 +432,36 @@ export function register(route) {
     if (!existing) return notFound(res, 'Bike not found');
     await db.prepare('UPDATE customer_bikes SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
     sendJson(res, 200, { ok: true });
+  });
+
+  // A bike's own page (cs-bike; openspec/changes/bike-page): the bike, who it
+  // belongs to, and every job on it newest first, each open or not as the
+  // customer's history says. A removed bike still opens: its jobs are history.
+  // screens: cs-bike
+  route('GET', '/api/bikes/:id', async (req, res, params) => {
+    const id = Number(params.id);
+    if (!Number.isInteger(id) || id < 1 || id > 2_147_483_647) return notFound(res, 'Bike not found');
+    const bike = await db.prepare(
+      `SELECT b.*, c.name AS customer_name, c.phone AS customer_phone FROM customer_bikes b
+         JOIN customers c ON c.id = b.customer_id WHERE b.id = ?`
+    ).get(id);
+    if (!bike) return notFound(res, 'Bike not found');
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    const today = shopToday(zone);
+    const jobs = await db.prepare(
+      `SELECT w.id, w.reference, w.title, w.job_date, w.start_time, w.booking_state, w.custody_state, w.work_state, e.name AS mechanic_name,
+              ${JOB_MOMENT} AS at
+         FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.bike_id = ? ORDER BY at DESC, w.id DESC`
+    ).all(zone, id);
+    sendJson(res, 200, {
+      ...serializeBike(bike),
+      customer: { id: bike.customer_id, name: bike.customer_name, phone: bike.customer_phone || null },
+      jobs: jobs.map((j) => ({
+        id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
+        bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
+        open: jobIsOpen(j, today), at: iso(j.at),
+      })),
+    });
   });
 
   route('GET', '/api/bikes/:id/jobs', async (req, res, params) => {

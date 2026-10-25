@@ -94,12 +94,14 @@ const INPUT = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)]
 /** The order New job was opened for, from the old app's "Show in workshop diary". */
 export type ForOrder = { id: number; title: string; customer: Customer | null; notes: string };
 
-export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, forCustomer, onSavedWithProblem, onClose }: {
+export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, forCustomer, forBike, onSavedWithProblem, onClose }: {
   date: string; startMin: number; mechanicId: number | null; autoChosen: boolean; entered?: boolean;
   chooseMechanic?: (day: string) => number | null; people: Person[];
   order?: ForOrder;
   /** The customer New job was opened for, from their page (customer-page design 4). */
   forCustomer?: Customer | null;
+  /** That customer's bike, when New job came from the bike's own page (bike-page design 4). */
+  forBike?: number | null;
   onSavedWithProblem?: (words: string) => void; onClose: () => void;
 }) {
   // Opened by "Enter a time instead" (Jack, 15 Oct, issue 192; drawn as
@@ -118,7 +120,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   // staff type (Jack, 16 Oct).
   const [listOpen, setListOpen] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(order?.customer ?? forCustomer ?? null);
-  const [bikeId, setBikeId] = useState<number | null>(null);
+  const [bikeId, setBikeId] = useState<number | null>(forBike ?? null);
   // "+ Add a bike": the fields while open, and why it couldn't be added.
   const [newBike, setNewBike] = useState<{ make: string; model: string; colour: string; serialNumber: string } | null>(null);
   const [bikeError, setBikeError] = useState<string | null>(null);

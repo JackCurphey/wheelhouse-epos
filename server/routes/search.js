@@ -1,7 +1,8 @@
 // The header search (openspec/changes/header-search; staff-search; app map
 // review 2; Jack, 24 Oct, answer 7): jobs and customers matching what was
-// typed, five of each, for the search on every staff page. Orders and
-// products join as they're built.
+// typed, five of each, for the search on every staff page; bikes by make and
+// model or frame number (openspec/changes/bike-search; Jack's answer of 15
+// Oct, not-drawn pages 7 and 8). Orders and products join as they're built.
 import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
 import { sendJson } from '../lib/http.js';
@@ -16,7 +17,7 @@ export function register(route) {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const q = (query.get('q') ?? '').trim().slice(0, 100);
-    if (q.length < 2) return sendJson(res, 200, { jobs: [], customers: [] });
+    if (q.length < 2) return sendJson(res, 200, { jobs: [], customers: [], bikes: [] });
     const text = like(q);
     // A phone number however it was typed: "07700 900142" or "07700900142";
     // not the numbers in a job number or a name (review).
@@ -42,6 +43,16 @@ export function register(route) {
         ORDER BY (name ILIKE ? ESCAPE '\\') DESC, name, id
         LIMIT ${LIMIT}`
     ).all(text, text, text, like(q.replace(/\s+/g, '').toUpperCase()), phone, phone, `${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    // A frame number starting with what was typed comes first; a removed bike,
+    // or a removed customer's, isn't found.
+    const bikes = await prepare(
+      `SELECT b.id, b.make, b.model, b.colour, b.serial_number, b.customer_id, c.name AS customer_name
+         FROM customer_bikes b JOIN customers c ON c.id = b.customer_id
+        WHERE b.active = 1 AND c.active = 1
+          AND ((coalesce(b.make, '') || ' ' || coalesce(b.model, '')) ILIKE ? ESCAPE '\\' OR b.serial_number ILIKE ? ESCAPE '\\')
+        ORDER BY (b.serial_number ILIKE ? ESCAPE '\\') DESC, b.make, b.model, b.id
+        LIMIT ${LIMIT}`
+    ).all(text, text, `${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
     sendJson(res, 200, {
       jobs: jobs.map((j) => ({
         id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
@@ -49,6 +60,10 @@ export function register(route) {
         customerName: j.customer_name ?? null, bikeLabel: j.bike_label ?? null,
       })),
       customers: customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone || null, email: c.email || null })),
+      bikes: bikes.map((b) => ({
+        id: b.id, make: b.make || '', model: b.model || '', colour: b.colour || '', serialNumber: b.serial_number || '',
+        customerId: b.customer_id, customerName: b.customer_name,
+      })),
     });
   });
 }

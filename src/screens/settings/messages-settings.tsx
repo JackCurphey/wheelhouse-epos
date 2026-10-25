@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
+import { RowSwitch } from './row-switch.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 
@@ -50,8 +51,9 @@ export function AutomaticMessages() {
       const saved = await apiMutate<Template>(`/api/message-templates/${key}`, body, { method: 'PUT' });
       queryClient.setQueryData<Template[]>(KEY, (list) => list?.map((t) => (t.key === key ? saved : t)));
       return saved;
-    } catch {
-      setError(SAVE_FAILED);
+    } catch (err) {
+      // The shop's own words for a refusal (a review request with no page yet), else the plain one.
+      setError(err instanceof ApiError && err.status === 400 ? err.message : SAVE_FAILED);
       return null;
     } finally {
       setBusy((b) => { const next = new Set(b); next.delete(key); return next; });
@@ -108,7 +110,9 @@ export function AutomaticMessages() {
         {bringBack.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </div>
-      {editing ? (
+      {editing?.key === 'review_request' ? (
+        <ReviewRequestBox template={templates.data?.find((t) => t.key === editing.key) ?? editing} onClose={closeEdit} />
+      ) : editing ? (
         <EditMessage
           template={withDays(templates.data?.find((t) => t.key === editing.key) ?? editing, ' — set in Settings › Workshop › Collection')}
           error={error}
@@ -283,3 +287,130 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
     </Dialog>
   );
 }
+
+/**
+ * The review request's own box (openspec/changes/review-box; drawn as
+ * ac-review-first and ac-review-setting; account and reminders decision 5,
+ * audit M6): the switch, which waits for a review page; the page; the days
+ * after collection; the wording with its fixed Stop these line and a text
+ * preview; the note. Save writes the page and days first, then the switch and
+ * the wording, as the shop refuses the switch without a page.
+ */
+type ReviewSettings = { reviewPageUrl: string | null; reviewRequestDays: number };
+function ReviewRequestBox({ template, onClose }: { template: Template; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<ReviewSettings>('/api/workshop-settings') });
+  const [on, setOn] = useState(template.enabled);
+  const [page, setPage] = useState<string | null>(null);
+  const [days, setDays] = useState<string | null>(null);
+  const [words, setWords] = useState(template.wording);
+  const [preview, setPreview] = useState<string>('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // What's typed, else what's saved, once the settings are in.
+  const pageNow = page ?? settings.data?.reviewPageUrl ?? '';
+  const daysNow = days ?? String(settings.data?.reviewRequestDays ?? '');
+  const hasPage = pageNow.trim() !== '';
+
+  useEffect(() => {
+    let current = true;
+    const t = setTimeout(() => {
+      apiMutate<Preview>(`/api/message-templates/${template.key}/preview`, { wording: words })
+        .then((p) => { if (current) setPreview(p.text); })
+        .catch(() => {});
+    }, 200);
+    return () => { current = false; clearTimeout(t); };
+  }, [template.key, words]);
+
+  function putIn(name: string) {
+    const el = box.current;
+    const at = el ? el.selectionStart : words.length;
+    const end = el ? el.selectionEnd : words.length;
+    const tag = `[${name}]`;
+    setWords(words.slice(0, at) + tag + words.slice(end));
+    setTimeout(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); }, 0);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      // On only with a page. Switching off goes first and switching on last, so
+      // the shop never refuses the order (it needs a page to be on, and won't
+      // lose the page while it's on).
+      const wantOn = on && hasPage;
+      const url = `/api/message-templates/${template.key}`;
+      if (!wantOn && template.enabled) await apiMutate(url, { enabled: false }, { method: 'PUT' });
+      const n = Number(daysNow);
+      await apiMutate('/api/workshop-settings', { reviewPageUrl: pageNow.trim() || null, reviewRequestDays: Number.isFinite(n) && daysNow.trim() !== '' ? n : daysNow }, { method: 'PUT' });
+      const change: { enabled?: boolean; wording?: string } = {};
+      if (wantOn && !template.enabled) change.enabled = true;
+      if (words !== template.wording) change.wording = words;
+      if (Object.keys(change).length) await apiMutate(url, change, { method: 'PUT' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: KEY }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-settings'] }),
+      ]);
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 400 ? err.message : SAVE_FAILED);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const input = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="rev-title" className="md:max-w-[640px]">
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="rev-title">Review request</DialogTitle>
+          <span className="text-size-13 text-[var(--wh-muted)]">Sent after a bike is collected</span>
+        </div>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-1">
+          <RowSwitch label="Send review requests" on={on && hasPage} disabled={busy || !hasPage} onChange={setOn} />
+          {/* Audit M6: the first time, off until there's a review page. */}
+          {!hasPage ? <p className="m-0 text-sm font-semibold text-[var(--wh-warn-ink)]">Add your review page first, then switch this on.</p> : null}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="rev-page" className="text-size-15 font-semibold">Your review page</label>
+          <input id="rev-page" type="url" value={pageNow} placeholder="Paste the link to your review page" aria-describedby="rev-page-hint"
+            onChange={(e) => setPage(e.target.value)} className={input} />
+          <span id="rev-page-hint" className="text-sm text-[var(--wh-muted)]">Where the link goes — your Google page, say.</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="rev-days" className="text-size-15 font-semibold">Send it</label>
+          <span className="inline-flex items-center gap-2 text-size-15">
+            <input id="rev-days" inputMode="numeric" value={daysNow} onChange={(e) => setDays(e.target.value)} className={`${input} w-16 text-center`} />
+            <span>days after collection</span>
+          </span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="rev-words" className="text-size-15 font-semibold">Wording</label>
+          <textarea id="rev-words" ref={box} rows={3} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)}
+            className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal" />
+          <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
+            {template.tapIns.map((name) => (
+              <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
+            ))}
+          </div>
+          <p className="m-0 rounded-md bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
+          <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview}</div>
+        </div>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Everyone gets the same link — Google doesn’t allow asking only happy customers. Only customers who said yes get it.</p>
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="flex justify-between gap-2.5">
+        <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={busy} onClick={() => void save()}>Save</Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+

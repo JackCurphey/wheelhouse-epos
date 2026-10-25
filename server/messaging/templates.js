@@ -130,13 +130,27 @@ export const TEMPLATES = {
     subject: 'Your [Bike] is due its [Service] — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Service', 'Shop name', 'Link to book'],
   },
+  // A review request after collection (account and reminders decision 5):
+  // off until the shop switches it on, with its review page; wording as drawn
+  // (ac-review-setting), with "Stop these" added after it. The email's
+  // subject isn't drawn.
+  review_request: {
+    group: 'reminders',
+    offUntilOn: true,
+    name: 'Review request',
+    when: 'After a bike is collected',
+    wording: 'Thanks for coming to [Shop name], [Customer’s first name]. If you have a minute, we’d love a review: [Link to review].',
+    subject: 'Thanks for coming to [Shop name]',
+    tapIns: ['Customer’s first name', 'Shop name', 'Link to review'],
+  },
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-// The service reminder joined 25 Oct (openspec/changes/service-reminder-send).
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled', 'service_reminder'];
+// The service reminder joined 25 Oct (openspec/changes/service-reminder-send),
+// and the review request (openspec/changes/review-requests).
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled', 'service_reminder', 'review_request'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
@@ -170,7 +184,8 @@ export async function templateFor(key) {
   return {
     key,
     ...base,
-    enabled: row ? row.enabled : true,
+    // A message the shop must switch on itself (the review request) is off until it does.
+    enabled: row ? row.enabled : !base.offUntilOn,
     wording: row?.wording ?? base.wording,
     subject: row?.subject ?? base.subject,
     changed: Boolean(row && (!row.enabled || row.wording !== null || row.subject !== null)),
