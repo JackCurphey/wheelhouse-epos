@@ -110,16 +110,26 @@ const SIGNIN_REFUSED = {
   expired: 'That code has expired — send a new one',
 };
 
-// The shop's login for an email signed in by code, or a new customer and a
-// login with no password for it, made together. Never a customer the shop
-// already has: an email typed isn't proof of owning it (21 Oct review).
+// The shop's login for an email signed in by code. A first sign-in joins the
+// customer the shop already has with that email, when there's exactly one,
+// active and with no online account yet: the code proves the email is theirs
+// (Jack, 25 Oct, docs/decisions/2026-10-26-customer-account.md answer 1).
+// Otherwise a new customer and a login with no password, made together.
 async function loginForSignedInEmail(shopId, email) {
   const found = () => db.prepare('SELECT * FROM customer_logins WHERE shop_id = ? AND email = ?').get(shopId, email);
   const login = await found();
   if (login) return login;
   await db.exec('BEGIN');
   try {
-    const customer = await db.prepare("INSERT INTO customers (name, email, updated_at) VALUES ('', ?, now()) RETURNING id").get(email);
+    const matches = await db.prepare(
+      `SELECT c.id, EXISTS (SELECT 1 FROM customer_logins l WHERE l.customer_id = c.id AND l.shop_id = ?) AS has_login
+         FROM customers c
+        WHERE c.active = 1 AND c.merged_into_id IS NULL AND lower(trim(coalesce(c.email, ''))) = ?
+        LIMIT 2`
+    ).all(shopId, email);
+    const customer = matches.length === 1 && !matches[0].has_login
+      ? matches[0]
+      : await db.prepare("INSERT INTO customers (name, email, updated_at) VALUES ('', ?, now()) RETURNING id").get(email);
     const made = await db.prepare(
       `INSERT INTO customer_logins (shop_id, customer_id, email) VALUES (?, ?, ?)
        ON CONFLICT (shop_id, email) DO NOTHING RETURNING *`
@@ -337,6 +347,19 @@ async function resolveBookingLink(req, res, code) {
   if (!bookingLinkLimiter.check(clientIp(req))) {
     sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
     return null;
+  }
+  // A signed-in customer opens their own repair by job-<id>, from their account
+  // (customer-account-server design 2): the same answers as a bad link for
+  // anyone else, and no expiry for the job's owner.
+  const jobId = /^job-(\d{1,9})$/.exec(code)?.[1];
+  if (jobId) {
+    const ctx = await currentCustomerSession(req);
+    const slug = new URL(req.url, 'http://x').pathname.split('/')[3];
+    const own = ctx && ctx.shop.slug === slug
+      ? await db.prepare('SELECT id FROM workshop_jobs WHERE id = ? AND customer_id = ?').get(Number(jobId), ctx.login.customer_id)
+      : null;
+    if (!own) sendJson(res, 404, { error: "We can't find that booking" });
+    return own ? { id: own.id, signedIn: true } : null;
   }
   // collected_on: the shop's own date of collection, for the 30 days after it.
   const row = /^[0-9a-f]{64}$/.test(code)
@@ -1012,6 +1035,46 @@ export function register(route) {
     sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
   });
 
+  // The account's history (ac-account; customer-account-server design 3): the
+  // signed-in customer's repairs, each with its stage and total, and their
+  // purchases from both sales records, newest first.
+  route('GET', '/api/portal/:shopSlug/history', async (req, res, params) => {
+    const ctx = await currentCustomerSession(req);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const customerId = ctx.login.customer_id;
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    const jobs = await db.prepare(
+      `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state,
+              NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike_label,
+              CASE WHEN w.job_date IS NULL THEN w.created_at
+                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
+         FROM workshop_jobs w LEFT JOIN customer_bikes b ON b.id = w.bike_id
+        WHERE w.customer_id = ?`
+    ).all(zone, customerId);
+    const repairs = [];
+    for (const j of jobs) {
+      // The repair page's own figures, so Show prices off hides the total here too.
+      const money = await jobMoney(j.id);
+      const totalPence = money.paid?.amount != null ? Math.round(money.paid.amount * 100) : money.workTotalPence;
+      repairs.push({
+        kind: 'repair', jobId: j.id, reference: j.reference, title: j.title, bikeLabel: j.bike_label,
+        stage: bookingStage(j), jobDate: j.job_date, totalPence: totalPence ?? null, at: new Date(j.at).toISOString(),
+      });
+    }
+    const sales = await db.prepare(
+      `SELECT v.source, v.id, v.receipt_number, v.total_pence, v.made_at,
+              CASE WHEN v.source = 'old'
+                   THEN (SELECT string_agg(i.name, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
+                   ELSE (SELECT string_agg(l.description, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
+         FROM all_sales v WHERE v.customer_id = ?`
+    ).all(customerId);
+    const purchases = sales.map((p) => ({
+      kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
+      what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
+    }));
+    sendJson(res, 200, [...repairs, ...purchases].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
+  });
+
   route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params, query, shop) => {
     const ctx = await currentCustomerSession(req);
     const signedIn = ctx && ctx.shop.slug === params.shopSlug;
@@ -1589,7 +1652,10 @@ export function register(route) {
     if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
     if (out && !out.already) return sendJson(res, out.status, out.body);
     if (!out?.already) await refundOwed(found.id);
-    if (!out?.already) await sendLinkMessage('booking_cancelled', found.id, shop.id, linkPath(params.shopSlug, params.code));
+    // Cancelled from the account: the message links to the account, as a
+    // job-<id> link only opens for the signed-in owner.
+    const cancelLink = found.signedIn ? `/book/${encodeURIComponent(params.shopSlug)}/account` : linkPath(params.shopSlug, params.code);
+    if (!out?.already) await sendLinkMessage('booking_cancelled', found.id, shop.id, cancelLink);
     sendJson(res, 200, await bookingLinkView(found.id, shop));
   });
 

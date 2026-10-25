@@ -70,17 +70,47 @@ test('Maya asks for a code and signs in with it: a new customer and a login with
   assert.equal((await me.json()).email, 'maya@example.test');
 });
 
-test('signing in again reuses the login, and never joins a customer the shop already has', async () => {
-  const existing = await runWithShop(shop.id, () => prepare("INSERT INTO customers (name, email) VALUES ('Sam Reed', 'sam@example.test') RETURNING id").get());
+// docs/decisions/2026-10-26-customer-account.md answer 1 (Jack, 25 Oct): the
+// code proves the email is theirs, so a first sign-in joins the one customer
+// the shop already has with it; two, or one with an online account, don't.
+const signInAs = async (email) => {
   const ip = newNetwork();
-  await ask('sam@example.test', { ip });
-  const first = await check('sam@example.test', await codeFor('sam@example.test'), { ip });
-  assert.equal(first.status, 200);
+  await ask(email, { ip });
+  return check(email, await codeFor(email.trim().toLowerCase()), { ip });
+};
+const customerWith = (name, email, extra = '') => runWithShop(shop.id, () =>
+  prepare(`INSERT INTO customers (name, email${extra ? ', active' : ''}) VALUES (?, ?${extra ? ', 0' : ''}) RETURNING id`).get(name, email));
+
+test('a first code sign-in joins the one customer the shop already has with that email, whatever its case and spaces', async () => {
+  const existing = await customerWith('Sam Reed', '  Sam@Example.TEST ');
+  assert.equal((await signInAs('sam@example.test')).status, 200);
   const [login] = await loginFor('sam@example.test');
-  assert.notEqual(login.customer_id, existing.id, 'an email typed isn’t proof of owning it');
-  await ask('sam@example.test', { ip });
-  assert.equal((await check('sam@example.test', await codeFor('sam@example.test'), { ip })).status, 200);
+  assert.equal(login.customer_id, existing.id);
+  // Signing in again reuses that login.
+  assert.equal((await signInAs('sam@example.test')).status, 200);
   assert.equal((await loginFor('sam@example.test')).length, 1);
+});
+
+test('two customers with the email, or one that already has an online account, make a new customer instead', async () => {
+  const a = await customerWith('Jo Taylor', 'jo.t@example.test');
+  const b = await customerWith('Jo Taylor', 'JO.T@example.test');
+  assert.equal((await signInAs('jo.t@example.test')).status, 200);
+  const [jo] = await loginFor('jo.t@example.test');
+  assert.ok(jo.customer_id !== a.id && jo.customer_id !== b.id, 'two matches: nobody is joined');
+
+  // An online account already on the only match: that's for staff to Merge.
+  const alex = await customerWith('Alex Morgan', 'alex@example.test');
+  await pool.query("INSERT INTO customer_logins (shop_id, customer_id, email) VALUES ($1, $2, 'alex.other@example.test')", [shop.id, alex.id]);
+  assert.equal((await signInAs('alex@example.test')).status, 200);
+  const [login] = await loginFor('alex@example.test');
+  assert.notEqual(login.customer_id, alex.id);
+});
+
+test('a customer switched off or merged away is never joined', async () => {
+  const gone = await customerWith('Lena Ford', 'lena.f@example.test', 'inactive');
+  assert.equal((await signInAs('lena.f@example.test')).status, 200);
+  const [login] = await loginFor('lena.f@example.test');
+  assert.notEqual(login.customer_id, gone.id);
 });
 
 test('a code works once; a wrong one says so; a new code replaces the old', async () => {

@@ -2,7 +2,7 @@
 
 ## 1. Tests first
 
-- [ ] 1.1 `tests/customer-code-signin.test.js`:
+- [x] 1.1 `tests/customer-code-signin.test.js`:
   - a guest customer with the email (different case and spaces) is joined;
   - two matches make a new customer;
   - a match that already has a login makes a new customer;
@@ -10,7 +10,7 @@
   - change the old "never joins" test to the two-match case.
 
   Watch each one fail.
-- [ ] 1.2 `tests/portal-account.test.js`:
+- [x] 1.2 `tests/portal-account.test.js`:
   - `job-<id>` opens the owner's repair page data, including past the
     link's expiry;
   - another customer's job, another shop's session, no session, and a
@@ -24,7 +24,7 @@
 
 ## 2. Build
 
-- [ ] 2.1 The join (design 1), the `job-` code (design 2) and `/history`
+- [x] 2.1 The join (design 1), the `job-` code (design 2) and `/history`
   (design 3). Update `tests/fixtures/route-list.txt`. Log the choices in
   `decided-while-building.md`.
 
