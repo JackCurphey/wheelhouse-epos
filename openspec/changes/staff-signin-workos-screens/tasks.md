@@ -39,7 +39,7 @@ One pull request, on top of #504.
 
 ## 3. Check
 
-- [ ] 3.1 `/review` (sign-in). Then lint, the type check, `npm test` and
+- [x] 3.1 `/review` (sign-in). Then lint, the type check, `npm test` and
   `npm run test:browser`.
 - [ ] 3.2 Look at each page in the browser at computer and phone widths
   against `auth-signedout` and `auth-expired`, and check that sign-in and
