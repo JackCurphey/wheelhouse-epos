@@ -4451,7 +4451,7 @@ function renderAuthScreen() {
       renderAuthScreen();
     });
   });
-  // Staff sign in only through WorkOS (#504), so the Log in tab leads to the
+  // Staff sign in only through WorkOS (pull request 504), so the Log in tab leads to the
   // new sign-in screen; only Create shop account still has a form here.
   document.getElementById('auth-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
