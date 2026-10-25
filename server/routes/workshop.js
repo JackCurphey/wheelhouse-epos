@@ -1594,8 +1594,18 @@ export function register(route) {
     try {
       await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? ORDER BY id FOR UPDATE').all(id);
       out = await withJobBookingLock(id, [], async (job) => {
-        // Any paid order linked to the job counts (a job can have more than one).
-        const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
+        // Money taken on the job counts, not only a converted order (Jack, 18
+        // Oct, answer 1: "a deposit or a payment"; audit item 12): a paid order
+        // linked to the job (a job can have more than one), a deposit paid on an
+        // open order, or an online deposit still held or taken. A deposit
+        // already refunded or released doesn't. The online deposit's job link is
+        // ON DELETE SET NULL, so deleting would lose track of the money.
+        const paid = Boolean(await db.prepare(
+          `SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND (status = 'converted' OR paid_pence > 0)
+           UNION ALL
+           SELECT 1 FROM online_payments WHERE job_id = ? AND status IN ('held', 'taken')
+           LIMIT 1`
+        ).get(id, id));
         const inShop = job.custody_state === 'in_shop';
         if (paid || inShop) {
           return {
