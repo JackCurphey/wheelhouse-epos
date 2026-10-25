@@ -145,10 +145,28 @@ The update is down for a moment while the new version starts, as by hand.
 The drawings' own test shop, North Street Cycles, with its staff, customers
 and the drawn week of jobs, is loaded once, by hand. It only loads onto a
 copy with no shops at all, so anything already made on the copy has to be
-cleared first. That is its own decision, made at the time; this doesn't
-clear anything.
+cleared first. That is its own decision, made at the time.
 
 On the server (see "Getting onto the server" below):
+
+**Clearing a shop first, if you decided to.** Run this once with just
+`--shop`. It removes nothing, and says what removing the shop would take:
+its logins, workshop jobs, customers and everything else in it.
+
+```
+docker compose exec app node server/scripts/remove-shop.mjs --shop <address>
+```
+
+To go ahead, type the address a second time. There's no undo:
+
+```
+docker compose exec app node server/scripts/remove-shop.mjs --shop <address> --confirm <address>
+```
+
+It ends with "Removed … and everything in it." The address is the shop's
+part of its web address, after `/book/`.
+
+**Loading the test shop:**
 
 ```
 cd /opt/wheelhouse
@@ -159,6 +177,26 @@ It runs inside the app that's running, so it always matches it. It ends with
 "Loaded North Street Cycles: 38 workshop jobs from the drawings' week." If it
 says "Refused" instead, nothing was changed: it says whether the shop is
 already there, or which other shops are in the way.
+
+The loaded shop has nobody who can sign in. Add yourself as its owner, with
+the email you sign in to WorkOS with:
+
+```
+docker compose exec app node server/scripts/add-login.mjs --shop north-street-cycles --email <your email> --name "<your name>"
+```
+
+It ends with "Added … as the owner of North Street Cycles. Sign in through
+WorkOS with that email." If it says "Refused", nothing was changed, and it
+says why:
+- no shop at that address;
+- the shop already has an owner;
+- that email already has a login, or isn't a valid email;
+- the name is missing;
+- the command wasn't typed as expected. Put a name with a space in quotes.
+
+Anything else, such as a long error ending in a database message, means it
+couldn't reach the database. Nothing was changed. Copy the message to Mark. Signing in also needs the copy set up for
+WorkOS ("Signing in with WorkOS").
 
 ## Signing in with WorkOS
 
