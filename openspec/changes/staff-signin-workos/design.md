@@ -59,7 +59,7 @@ unset. Each provider has three parts:
   - The codes live in memory. The pretend version is for one server
     process only: tests and a developer's machine.
   - User ids are `user_pretend_` plus a hash of the email.
-  - It refuses to run when `NODE_ENV=production`, as pretend payments do.
+  - It refuses to run when `NODE_ENV=production` or on the hosted test copy (`WHEELHOUSE_HOSTED_COPY=1`), since anyone could sign in as anyone on its page.
 
 ### 3. Routes
 All three sit under `/api/auth/`, outside the session check, as sign-in does
@@ -76,16 +76,18 @@ today (`server/server.js:636`).
   - calls `authenticate`;
   - finds the login (decision 4);
   - makes the session, with WorkOS's session id saved on it (migration 082);
-  - clears the state cookie and sends the person to `/`.
+  - ends any session this browser already had, makes the new one, clears the state cookie and sends the person to the staff app, `/workshop`. Its signed-out page links to WorkOS; the old app at `/` no longer can (review).
 
-  Each failure sends them to `/?signin=<reason>`, where the next change's
+  Each failure sends them to `/workshop?signin=<reason>`, where the next change's
   screens show the message. The reasons are `off`, `failed` (a bad state,
-  or WorkOS refused the code), `unchecked` (WorkOS hasn't checked the email)
-  and `not-on-staff`. The callback is rate-limited like password sign-in:
-  10 tries per network every 15 minutes.
+  or WorkOS refused the code), `unchecked` (WorkOS hasn't checked the email),
+  `not-on-staff`, and `busy`. `busy` is the callback's limit, the same as
+  password sign-in's was: 10 tries per network every 15 minutes.
 - **`POST /api/auth/logout`:** as today, and when the session has a WorkOS
   session id, the reply adds `signOutUrl`. The next change's screens go
-  there. The old app ignores it, which leaves only the WorkOS side signed in.
+  there. The staff app's Sign out goes to it (or to `/workshop` when there's
+  none); the old app ignores it. WorkOS's sign-out address carries
+  `return_to`, the app's own address, the Sign-out URI in its Redirects.
 
 The callback path is new. Jack changes the test environment's Redirects
 (redirect URI `…/api/auth/workos/callback`, sign-in start

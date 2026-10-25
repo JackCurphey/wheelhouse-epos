@@ -4,7 +4,7 @@ One pull request, about 450 changed lines.
 
 ## 1. Tests first
 
-- [ ] 1.1 Server tests (`tests/staff-signin-workos.test.js`), against a live
+- [x] 1.1 Server tests (`tests/staff-signin-workos.test.js`), against a live
   server with `STAFF_SIGNIN_PROVIDER=pretend`, going through start, the
   pretend page and the callback. They cover:
   - an owner signs in and `/api/auth/me` shows their shop;
@@ -23,37 +23,37 @@ One pull request, about 450 changed lines.
   - the callback's rate limit.
 
   Watch each one fail for the right reason before the code exists.
-- [ ] 1.2 Real-provider tests with a stand-in `fetch`:
+- [x] 1.2 Real-provider tests with a stand-in `fetch`:
   - the authorize address has the right settings;
   - authenticate sends the API key as `client_secret` and reads `sid`;
   - the sign-out address is right;
   - a missing setting means not connected, with the setting named in the log.
 
   Watch each one fail.
-- [ ] 1.3 Hosted-copy guard test: an `sk_live_` WorkOS key is refused, and
+- [x] 1.3 Hosted-copy guard test: an `sk_live_` WorkOS key is refused, and
   an `sk_test_` key isn't. Watch it fail.
-- [ ] 1.4 Screen test: the signed-out "Sign in" in the staff app goes to
+- [x] 1.4 Screen test: the signed-out "Sign in" in the staff app goes to
   `/api/auth/workos/start`. Watch it fail.
-- [ ] 1.5 Migration test from an empty scratch database: 082 adds both
+- [x] 1.5 Migration test from an empty scratch database: 082 adds both
   columns, and an existing login and session are untouched.
 
 ## 2. Build
 
-- [ ] 2.1 Migration `082_staff_signin_workos.sql` (design 5). Checked by 1.5.
-- [ ] 2.2 `server/staff-signin/` (`provider.js`, `pretend.js`, `workos.js`),
+- [x] 2.1 Migration `082_staff_signin_workos.sql` (design 5). Checked by 1.5.
+- [x] 2.2 `server/staff-signin/` (`provider.js`, `pretend.js`, `workos.js`),
   as design 2. Checked by 1.1 and 1.2.
-- [ ] 2.3 `createSession` keeps an optional WorkOS session id. The routes
+- [x] 2.3 `createSession` keeps an optional WorkOS session id. The routes
   are start, the pretend page, the callback, and `signOutUrl` on sign-out
   (design 3 and 4). Update `tests/fixtures/route-list.txt`. Checked by 1.1.
-- [ ] 2.3a WorkOS only (design 7). Make these changes:
+- [x] 2.3a WorkOS only (design 7). Make these changes:
   - password sign-in answers 410;
   - `liveServer` sets the pretend provider;
   - update `tests/server-lifecycle.test.js:146`;
   - the staff app's "Sign in" link goes to WorkOS.
 
   Checked by 1.1 and 1.4.
-- [ ] 2.4 The `sk_live_` refusal in `server/hosted-copy-guard.js`. Checked by 1.3.
-- [ ] 2.5 Log in `docs/decisions/decided-while-building.md` (Jack's section):
+- [x] 2.4 The `sk_live_` refusal in `server/hosted-copy-guard.js`. Checked by 1.3.
+- [x] 2.5 Log in `docs/decisions/decided-while-building.md` (Jack's section):
   - the callback's new address;
   - the four `?signin=` reasons;
   - the pretend page's ticked "checked" box.

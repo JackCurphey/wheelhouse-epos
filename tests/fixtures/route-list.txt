@@ -59,6 +59,10 @@ PUT /api/message-templates/:key
 POST /api/message-templates/:key/preview
 POST /api/auth/signup
 POST /api/auth/login
+GET /api/auth/workos/start
+GET /api/auth/workos/pretend
+POST /api/auth/workos/pretend
+GET /api/auth/workos/callback
 POST /api/auth/logout
 GET /api/auth/me
 GET /api/products
