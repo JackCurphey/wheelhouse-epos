@@ -136,3 +136,20 @@ test('the booking messages preview as drawn', async () => {
   const moved = await as(jo)('/api/message-templates/date_change_answered/preview', { method: 'POST', body: {} });
   assert.match(moved.body.text, /Fri 25 Sep, \[time\]\. Drop your Trek Domane AL 3 off by \[time\], half an hour before your booking\./);
 });
+
+test('the declined date-change wording is listed as part of Date change answered, follows its switch, and previews', async () => {
+  const list = (await as(owner)('/api/message-templates')).body;
+  const declined = list.find((t) => t.key === 'date_change_declined');
+  assert.equal(declined.partOf, 'date_change_answered');
+  assert.equal(declined.live, true);
+  await as(owner)('/api/message-templates/date_change_answered', { method: 'PUT', body: { enabled: false } });
+  try {
+    const off = (await as(owner)('/api/message-templates')).body.find((t) => t.key === 'date_change_declined');
+    assert.equal(off.enabled, false, 'it follows the Date change answered switch');
+  } finally {
+    await as(owner)('/api/message-templates/date_change_answered', { method: 'PUT', body: { enabled: true } });
+  }
+  const shop = (await as(owner)('/api/shop-details')).body.name;
+  const preview = await as(jo)('/api/message-templates/date_change_declined/preview', { method: 'POST', body: {} });
+  assert.equal(preview.body.text, `Hi Maya, ${shop} can’t do Fri 25 Sep, [time], so your booking stays on Thu 17 Sep, 11:30. See your booking: [link]. Your repair · WH-1042.`);
+});

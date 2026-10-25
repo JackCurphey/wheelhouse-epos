@@ -19,7 +19,7 @@ import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } fro
 import { queueServiceReminder } from '../messaging/service-reminders.js';
 import { queueReviewRequest } from '../messaging/review-requests.js';
 import { TEMPLATES } from '../messaging/templates.js';
-import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobMessageVars, bookingMessageVars, messageLink, dayAndTime } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
   serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
@@ -217,6 +217,7 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
   if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
   const requestedGone = { status: 409, body: { error: 'The requested time is no longer free', code: 'capacity' } };
   let out;
+  let declinedWhen = null;
   try {
     out = await withJobBookingLock(id, [], async (job) => {
       if (job.version !== body.version) return staleRefusal;
@@ -251,6 +252,8 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
         await db.prepare(
           `UPDATE workshop_jobs SET ${CLEAR_REQUEST}, change_declined_at = now(), updated_at = now() WHERE id = ?`
         ).run(id);
+        // Declining clears the request, so the day asked for goes into the message from here.
+        declinedWhen = dayAndTime(requested.jobDate, requested.startTime);
       }
       await syncJobHold(id);
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
@@ -262,7 +265,12 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
     out = requestedGone;
   }
   if (out?.gone) return notFound(res, 'Job not found');
-  const bookingMessage = answer === 'accept' && out.status === 200 ? await sendBookingMessage(req, id, shopId, 'date_change_answered') : undefined;
+  let bookingMessage;
+  if (out.status === 200) {
+    bookingMessage = answer === 'accept'
+      ? await sendBookingMessage(req, id, shopId, 'date_change_answered')
+      : await sendBookingMessage(req, id, shopId, 'date_change_declined', { 'New day and time': declinedWhen });
+  }
   sendJson(res, out.status, bookingMessage ? { ...out.body, bookingMessage } : out.body);
 }
 
@@ -338,7 +346,7 @@ async function queueBikeReady(req, jobId, shopId) {
 // follows has already been made and stands.
 // Returns { skipped: 'no_contact', name } when the customer can't be reached,
 // for staff to be told (booking messages answer 5); otherwise nothing.
-async function sendBookingMessage(req, jobId, shopId, key) {
+async function sendBookingMessage(req, jobId, shopId, key, extraVars = {}) {
   // Its own savepoint when the request is one transaction (DB_TENANT_SCOPE=
   // transaction): a failed statement here would otherwise leave that whole
   // transaction aborted and roll the staff answer back with it (audit item
@@ -351,7 +359,7 @@ async function sendBookingMessage(req, jobId, shopId, key) {
     if (why === 'no_contact') result = { skipped: 'no_contact', name: TEMPLATES[key].name };
     else if (!why) {
       const link = await messageLink(() => issueJobLink(req, jobId, shopId));
-      const { vars } = await bookingMessageVars(jobId, shopId, link, key);
+      const { vars } = await bookingMessageVars(jobId, shopId, link, key, extraVars);
       const ctx = await currentSession(req);
       await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
     }
@@ -1202,8 +1210,8 @@ export function register(route) {
     answerChangeRequest(req, res, Number(params.id), 'accept', shopId));
 
   // screens: change-pending, diary
-  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>
-    answerChangeRequest(req, res, Number(params.id), 'decline'));
+  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params, query, afterRelease, shopId) =>
+    answerChangeRequest(req, res, Number(params.id), 'decline', shopId));
 
   // Staff saw a customer's cancellation (piece 12, decision 5): it leaves
   // "Waiting for you". Keeps the first time it was seen; still needs the version.
