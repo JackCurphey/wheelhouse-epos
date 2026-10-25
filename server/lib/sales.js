@@ -247,7 +247,7 @@ export const SALE_SELECT = `SELECT s.*, c.name AS customer_name, ca.name AS cash
 
 // ---------- Both records at once (step B of sales in pence) ----------
 // The all_sales view gives one row per sale from the old record and from the
-// new till (migration 079). A row is told apart by `source` ('old' or
+// new till (migration 083). A row is told apart by `source` ('old' or
 // 'till') and its own id; an id with no source means 'old' so old links keep
 // working (openspec/changes/wp-1-6-sales-in-pence, design.md Decision 3).
 export const SALE_SOURCES = ['old', 'till'];
