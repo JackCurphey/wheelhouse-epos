@@ -9,7 +9,8 @@ import { UK_NUMBER_SQL, ukNumber } from './customers.js';
 
 const UNDO_DAYS = 30;
 // Every table that points at a customer, moved together (design 2).
-const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention'];
+// A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
+const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes'];
 // The fields that may differ, and the columns each takes.
 const FIELDS = { name: ['name'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
 

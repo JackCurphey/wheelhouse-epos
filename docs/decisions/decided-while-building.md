@@ -2263,6 +2263,26 @@ follows the job checklist, the closest pattern built.
 6. **The shop removing a service's months** before it's due means the
    reminder doesn't go, as no service names it any more.
 
+### 25 Oct 2026: "Stop these" for service reminders (`openspec/changes/stop-reminders`, `ac-stopped`, `ac-stopped-on`; Jack's answer 5)
+
+1. **The page that asks first isn't drawn**: "Stop service reminders?",
+   "We’ll stop sending you service reminders from [Shop name]. Job updates
+   about a bike that’s with us still come as usual.", and one button, "Stop
+   service reminders", laid out as the drawn stopped page.
+2. **A link that doesn't work** says "This link doesn’t work" and "Check you
+   opened the whole link from your message.", showing nothing about anyone,
+   as the photo step's spent code does.
+3. **The heading sits above the round tick**, as the booking pages' frame
+   and the photo step's finished page lay it out, rather than under it as
+   drawn.
+4. **The drawn "Sign in to your account" line waits** for the customer's
+   account (the emailed-code sign-in, WP-1.7).
+5. **A stop link never runs out** (a reminder can be months old) and can be
+   used again: stop, turn back on, stop. Stopping turns off service
+   reminders only; review requests will have their own stop.
+6. **The link is made when the reminder is set up and kept with it**, as
+   the timer that sends it has no web address to make one from; while
+   sending is pretend it reads "[link]", as every pretend link does.
 ### 25 Oct 2026: the reminder tick on the in-shop ready page (`openspec/changes/ready-remind-tick`, `ac-collect-remind`, `cp-summary-said-yes`; Jack's answer 8)
 
 1. **It ends the "To pay when you collect" card, above a line**, as drawn in
@@ -2275,4 +2295,3 @@ follows the job checklist, the closest pattern built.
    shows the next time the page opens.
 4. **Change shows the tick, ticked, in place**; the drawing doesn't say
    where Change goes.
-

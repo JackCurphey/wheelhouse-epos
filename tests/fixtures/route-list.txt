@@ -161,6 +161,8 @@ GET /api/portal/:shopSlug/bookings
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/photo-codes/:code
 POST /api/portal/:shopSlug/photo-codes/:code
+GET /api/portal/:shopSlug/reminder-stops/:code
+POST /api/portal/:shopSlug/reminder-stops/:code
 GET /api/portal/:shopSlug/booking-links/:code
 GET /api/portal/:shopSlug/booking-links/:code/availability
 GET /api/portal/:shopSlug/booking-links/:code/quote
