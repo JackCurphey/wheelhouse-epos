@@ -236,3 +236,36 @@ test('the shop cancelling for a customer with no way to reach them says so, by n
   const res = await act(booked.id, 'cancel');
   assert.deepEqual(res.body.bookingMessage, { skipped: 'no_contact', name: 'Booking cancelled' });
 });
+
+// Audit item 23 (Mark, 25 Oct; openspec/changes/date-change-declined-message):
+// declining a date change sends the drawn "If the shop can't" wording, with the
+// day the customer asked for; one switch (Date change answered) covers both.
+test('declining a date change sends the declined wording with the day asked for and the day it stays on', async () => {
+  const booked = await book('10:30');
+  await act(booked.id, 'accept');
+  const day = nextDay();
+  const asked = await link.change(booked.code, { jobDate: day, startTime: '16:00', mechanicId: sam });
+  assert.equal(asked.status, 200, JSON.stringify(asked.body));
+  const declined = await act(booked.id, 'decline-change');
+  assert.equal(declined.status, 200, JSON.stringify(declined.body));
+  const messages = await messagesFor(booked.id);
+  assert.deepEqual(messages.map((m) => m.template_key), ['booking_confirmed', 'date_change_declined']);
+  assert.match(messages[1].body, /can’t do \w{3} \d{1,2} \w{3}, 16:00, so your booking stays on \w{3} \d{1,2} \w{3}, 10:30\. See your booking: /);
+  assert.equal(declined.body.jobDate, (await staff(`/api/workshop-jobs/${booked.id}`)).body.jobDate, 'the booking keeps its day');
+});
+
+test('Date change answered switched off sends nothing when a date change is declined', async () => {
+  assert.equal((await staff('/api/message-templates/date_change_answered', { method: 'PUT', body: { enabled: false } })).status, 200);
+  try {
+    const booked = await book('11:30');
+    await act(booked.id, 'accept');
+    const asked = await link.change(booked.code, { jobDate: nextDay(), startTime: '15:30', mechanicId: sam });
+    assert.equal(asked.status, 200, JSON.stringify(asked.body));
+    const declined = await act(booked.id, 'decline-change');
+    assert.equal(declined.status, 200, JSON.stringify(declined.body));
+    assert.equal('bookingMessage' in declined.body, false);
+    assert.deepEqual((await messagesFor(booked.id)).map((m) => m.template_key), ['booking_confirmed']);
+  } finally {
+    await staff('/api/message-templates/date_change_answered', { method: 'PUT', body: { enabled: true } });
+  }
+});
