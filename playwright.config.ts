@@ -25,7 +25,9 @@ export default defineConfig({
     command: 'npm run build && npm start',
     // Pretend WorkOS too: a developer's .env may connect the real one, and a
     // test never reaches a real outside service (staff-signin-workos-screens).
-    env: { PORT: String(PORT), PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend' },
+    // An empty sign-in skip holds: .env never overrides a variable already set, so a
+    // developer's local skip stays out of these tests.
+    env: { PORT: String(PORT), PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend', WHEELHOUSE_DEV_AUTOLOGIN: '' },
     url: `http://127.0.0.1:${PORT}/workshop`,
     reuseExistingServer: false,
     timeout: 120_000,

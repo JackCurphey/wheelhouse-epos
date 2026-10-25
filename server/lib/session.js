@@ -5,10 +5,12 @@
 import { getSessionContext, SESSION_COOKIE } from '../auth.js';
 import { getCustomerSessionContext, CUSTOMER_SESSION_COOKIE } from '../customer-auth.js';
 import { parseCookies } from './http.js';
+import { devSession } from './dev-autologin.js';
 
 export async function currentSession(req) {
   const { [SESSION_COOKIE]: token } = parseCookies(req);
-  return getSessionContext(token);
+  // A real session wins; with none, local development may sign in by itself (dev-autologin.js).
+  return (await getSessionContext(token)) ?? (await devSession(req));
 }
 
 export async function currentCustomerSession(req) {
