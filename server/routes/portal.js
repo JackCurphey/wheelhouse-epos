@@ -39,6 +39,7 @@ import {
 import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
 import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
+import { setStopped, stopView } from '../messaging/stop-codes.js';
 import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
@@ -92,6 +93,8 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // Use my phone's codes: the same attempts as booking links, counted apart.
 const photoCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// "Stop these" codes: the same attempts again, counted apart (stop-reminders).
+const stopCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // One photo, as base64 with the same headroom as booking photos.
 const MAX_PHOTO_CODE_BODY_BYTES = Math.ceil(MAX_PHOTO_BYTES * 1.4);
 
@@ -1298,6 +1301,35 @@ export function register(route) {
     const added = await addPhotoWithCode(params.code, checked.value[0]);
     if (!added) return photoCodeGone(res);
     sendJson(res, 201, added);
+  });
+
+  // "Stop these" for service reminders (stop-reminders; account and reminders
+  // decision 6; Jack's answer 5): no sign-in; opening the page changes
+  // nothing, and a press stops them or turns them back on. A code that
+  // doesn't work gets the same answer, however it fails, so codes can't be probed.
+  const stopCodeGone = (res) => sendJson(res, 404, { error: 'This link doesn’t work' });
+  const stopCodeTooMany = (req, res) => {
+    if (stopCodeLimiter.check(clientIp(req))) return false;
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return true;
+  };
+
+  // screens: ac-stopped
+  route('GET', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {
+    if (stopCodeTooMany(req, res)) return;
+    const view = await stopView(params.code);
+    if (!view) return stopCodeGone(res);
+    sendJson(res, 200, { shopName: shop.name, ...view });
+  });
+
+  // screens: ac-stopped, ac-stopped-on
+  route('POST', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {
+    if (stopCodeTooMany(req, res)) return;
+    const body = await readJsonBody(req);
+    if (typeof body?.stop !== 'boolean') return badRequest(res, 'stop must be true or false');
+    const done = await setStopped(params.code, body.stop);
+    if (!done) return stopCodeGone(res);
+    sendJson(res, 200, { shopName: shop.name, ...done });
   });
 
   route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {

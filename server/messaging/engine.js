@@ -78,9 +78,9 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
   // `at`: a send time of its own, months off (the service reminder's).
   const sendAfter = hold ? 'infinity' : (at ?? new Date(Date.now() + delayMs)).toISOString();
   const row = await prepare(
-    `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
-     VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?) RETURNING id`
-  ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId);
+    `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id, ending)
+     VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+  ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId, ending);
   return { id: row.id, channel: how.channel, to: how.to, sendAfter: hold ? null : sendAfter, held: hold };
 }
 
@@ -233,7 +233,7 @@ async function sendDueForShop(shopId) {
     const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
-       RETURNING id, channel, to_address, subject, body, template_key, job_id, customer_id`
+       RETURNING id, channel, to_address, subject, body, template_key, job_id, customer_id, ending`
     ).all(now.toISOString(), now.toISOString());
     const sendable = [];
     for (const m of claimed) {

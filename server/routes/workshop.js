@@ -1013,7 +1013,7 @@ export function register(route) {
       // the collection stands.
       if (machine === custody && event === 'collect') {
         try {
-          await queueServiceReminder(id, shopId);
+          await queueServiceReminder(id, shopId, publicBase(req));
         } catch (err) {
           console.error(`Messages: the service reminder for job ${id} could not be set up`, err);
         }

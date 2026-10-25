@@ -9,13 +9,18 @@ import { LIVE_BOOKING_STATES, effectiveHours, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
 import { channelFor, queueMessage } from './engine.js';
 import { render, templateFor } from './templates.js';
+import { stopLink } from './stop-codes.js';
+import { messageLink } from '../workshop/job-messages.js';
 
 const KEY = 'service_reminder';
 // Links read "[link]" while sending is pretend, as messageLink's do: the
 // booking landing and the stop page come in later pieces.
 const LINK = '[link]';
-// Added after the shop's wording, so it can't be taken off (drawn: "It can't be taken off").
-export const STOP_LINE = `Stop these: ${LINK}.`;
+// Added after the shop's wording, so it can't be taken off (drawn: "It can't
+// be taken off"); its link is the customer's stop page (stop-reminders),
+// "[link]" while sending is pretend.
+export const stopLine = (link) => `Stop these: ${link}.`;
+export const STOP_LINE = stopLine(LINK);
 const LIVE = LIVE_BOOKING_STATES.map((s) => `'${s}'`).join(', ');
 
 /** The job's service with the fewest reminder months, then the first in its order (answer 2); null with none. */
@@ -75,7 +80,7 @@ async function reminderVars(jobId, shopId, serviceName) {
  * and a service has months; drops any still waiting for the same bike, or
  * from this job before (answer 3). Returns the queued message, or null.
  */
-export async function queueServiceReminder(jobId, shopId) {
+export async function queueServiceReminder(jobId, shopId, base) {
   const job = await prepare(
     `SELECT w.customer_id, w.bike_id, c.service_reminders FROM workshop_jobs w
        JOIN customers c ON c.id = w.customer_id
@@ -88,9 +93,15 @@ export async function queueServiceReminder(jobId, shopId) {
   await prepare(`${undo} AND job_id = ?`).run(jobId);
   if (job.bike_id) await prepare(`${undo} AND job_id IN (SELECT id FROM workshop_jobs WHERE bike_id = ?)`).run(job.bike_id);
   const at = await dueAt(jobId, service.months);
+  // The stop link is made now and kept with the message: the timer that sends
+  // it has no request to make one from (stop-reminders design 2).
+  const link = await messageLink(async () => {
+    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    return stopLink(base, shop.slug, job.customer_id);
+  });
   const queued = await queueMessage({
     customerId: job.customer_id, jobId, key: KEY, vars: await reminderVars(jobId, shopId, service.name),
-    at, ending: STOP_LINE,
+    at, ending: stopLine(link),
   });
   return queued.skipped ? null : queued;
 }
@@ -124,7 +135,7 @@ export async function serviceReminderNow(m, shopId) {
   const vars = await reminderVars(job.id, shopId, service.name);
   return {
     customerId: job.customer_id,
-    body: `${render(template.wording, vars)} ${STOP_LINE}`,
+    body: `${render(template.wording, vars)} ${m.ending ?? STOP_LINE}`,
     subject: how.channel === 'email' ? render(template.subject, vars) : null,
     channel: how.channel,
     to: how.to,
