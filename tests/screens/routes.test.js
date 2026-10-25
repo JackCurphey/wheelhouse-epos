@@ -9,9 +9,9 @@ const index = JSON.parse(
   await readFile(new URL('../../docs/design/release-1-journey/screen-index.json', import.meta.url), 'utf8'),
 );
 // Release 2's drawings name their screens in generator/journeys.mjs (CLAUDE.md,
-// "Where things live"), as sd15("cs-page", …); those count too.
+// "Where things live"), as sd15("cs-page", …) or sb('auth-signedout', …); those count too.
 const journeys = await readFile(new URL('../../docs/design/user-journeys/generator/journeys.mjs', import.meta.url), 'utf8');
-const SCREEN_DESIGN_IDS = new Set([...index.map((s) => s.id), ...[...journeys.matchAll(/\(\s*"([a-z0-9][a-z0-9-]*)"\s*,/g)].map((m) => m[1])]);
+const SCREEN_DESIGN_IDS = new Set([...index.map((s) => s.id), ...[...journeys.matchAll(/\(\s*["']([a-z0-9][a-z0-9-]*)["']\s*,/g)].map((m) => m[1])]);
 
 test('the five standalone edge screens have their own URLs', () => {
   // Entered from an emailed link or a stale bookmark, never by navigation -

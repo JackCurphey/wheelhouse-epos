@@ -227,3 +227,53 @@ test('with nothing connected, starting to sign in says it isn’t switched on', 
   const page = await fetch(`${off.baseUrl}/api/auth/workos/pretend?state=x&redirect_uri=x`, { redirect: 'manual' });
   assert.equal(page.status, 404, 'the pretend page only exists when the pretend WorkOS is connected');
 });
+
+// staff-signin-workos-screens: the server's part of the drawn pages.
+
+test('/me says a session has run out when the browser sent one that isn’t live, and not otherwise', async () => {
+  const gone = await fetch(`${server.baseUrl}/api/auth/me`, { headers: { cookie: `wh_session=${'0'.repeat(64)}` } });
+  assert.equal(gone.status, 401);
+  assert.deepEqual(await gone.json(), { error: 'Not signed in', reason: 'expired' });
+  const none = await fetch(`${server.baseUrl}/api/auth/me`);
+  assert.equal(none.status, 401);
+  assert.deepEqual(await none.json(), { error: 'Not signed in' });
+});
+
+// Start with ?from=, then the pretend page, then the callback with both cookies.
+async function signInFrom(email, from) {
+  const ip = newNetwork();
+  const start = await hop(`/api/auth/workos/start${from === undefined ? '' : `?from=${encodeURIComponent(from)}`}`, { ip });
+  const cookies = ['wh_signin_state', 'wh_signin_from'].map((n) => cookieValue(start.cookies, n)).filter(Boolean).join('; ');
+  const page = new URL(start.location, server.baseUrl);
+  const back = await hop('/api/auth/workos/pretend', { method: 'POST', form: { email, verified: 'on', state: page.searchParams.get('state') }, ip });
+  return hop(back.location, { cookie: cookies, ip });
+}
+
+test('signing in from a staff-app page comes back to it', async () => {
+  const { email } = await owner();
+  const done = await signInFrom(email, '/workshop/diary');
+  assert.equal(done.location, '/workshop/diary');
+  assert.ok(cookieValue(done.cookies, 'wh_session'));
+  assert.ok(done.cookies.some((c) => /^wh_signin_from=; .*Max-Age=0/.test(c)), 'the from cookie is cleared');
+});
+
+test('anywhere outside the staff app, or nothing, lands on the staff app’s front page', async () => {
+  const { email } = await owner();
+  for (const from of ['//evil.example', 'https://evil.example/workshop', '/\\evil.example', '/book/north-street', '/workshopper', undefined]) {
+    const done = await signInFrom(email, from);
+    assert.equal(done.location, '/workshop', String(from));
+  }
+});
+
+test('a failed sign-in clears the from cookie too', async () => {
+  const done = await signInFrom(`nobody-${randomUUID().slice(0, 8)}@example.com`, '/workshop/diary');
+  assert.equal(done.location, '/workshop?signin=not-on-staff');
+  assert.ok(done.cookies.some((c) => /^wh_signin_from=; .*Max-Age=0/.test(c)), done.cookies.join(' | '));
+});
+
+test('the pretend WorkOS’s sign-out comes back to the signed-out page', async () => {
+  const { email } = await owner();
+  const done = await signIn(email);
+  const out = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: done.session } });
+  assert.equal((await out.json()).signOutUrl, '/workshop/signed-out');
+});

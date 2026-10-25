@@ -63,8 +63,8 @@ export function workosProvider(env, { fetch = globalThis.fetch, log = console.er
       if (!sessionId) return null;
       const url = new URL('/user_management/sessions/logout', API);
       url.searchParams.set('session_id', sessionId);
-      // Back to the app's own address, the Sign-out URI in WorkOS's Redirects.
-      url.searchParams.set('return_to', new URL('/', redirectUri()).href);
+      // Back to the staff app's signed-out page, a Sign-out URI in WorkOS's Redirects.
+      url.searchParams.set('return_to', new URL('/workshop/signed-out', redirectUri()).href);
       return url.href;
     },
   };

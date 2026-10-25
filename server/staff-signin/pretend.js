@@ -49,6 +49,6 @@ export const pretend = {
     return { user: found.user, sessionId: found.sessionId };
   },
 
-  // WorkOS's sign-out page would come back to Wheelhouse; the pretend one goes straight there.
-  logoutUrl: ({ sessionId }) => (sessionId ? '/' : null),
+  // WorkOS's sign-out page would come back to the signed-out page; the pretend one goes straight there.
+  logoutUrl: ({ sessionId }) => (sessionId ? '/workshop/signed-out' : null),
 };

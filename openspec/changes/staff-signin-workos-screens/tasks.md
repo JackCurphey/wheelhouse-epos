@@ -4,7 +4,7 @@ One pull request, on top of #504.
 
 ## 1. Tests first
 
-- [ ] 1.1 Server tests (`tests/staff-signin-workos.test.js`):
+- [x] 1.1 Server tests (`tests/staff-signin-workos.test.js`):
   - `/me` says `expired` for a cookie with no live session, and not for no
     cookie;
   - `from=/workshop/diary` comes back there after signing in;
@@ -14,9 +14,9 @@ One pull request, on top of #504.
   - the pretend sign-out address is `/workshop/signed-out`.
 
   Watch each one fail.
-- [ ] 1.2 Provider test: WorkOS's `return_to` is `<app>/workshop/signed-out`.
+- [x] 1.2 Provider test: WorkOS's `return_to` is `<app>/workshop/signed-out`.
   Watch it fail.
-- [ ] 1.3 Screen tests (`tests/screens/staff-shell.test.js`):
+- [x] 1.3 Screen tests (`tests/screens/staff-shell.test.js`):
   - `/workshop/signed-out` shows the drawn words, and "Sign in again" goes to
     start;
   - an `expired` 401 on the diary shows the drawn words, and "Sign in again"
@@ -30,11 +30,11 @@ One pull request, on top of #504.
 
 ## 2. Build
 
-- [ ] 2.1 Server: `reason: 'expired'` on `/me`, `from` on start and the
+- [x] 2.1 Server: `reason: 'expired'` on `/me`, `from` on start and the
   callback, and the sign-out addresses (design 2, 3, 5). Checked by 1.1 and 1.2.
-- [ ] 2.2 `src/staff/signed-out.tsx` and `useSession`'s `expired` (design 1,
+- [x] 2.2 `src/staff/signed-out.tsx` and `useSession`'s `expired` (design 1,
   2, 4, 6). Checked by 1.3.
-- [ ] 2.3 Log design 4's wording, design 6, and the new Sign-out URI in
+- [x] 2.3 Log design 4's wording, design 6, and the new Sign-out URI in
   `decided-while-building.md` (Jack's section).
 
 ## 3. Check
