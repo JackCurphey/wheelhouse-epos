@@ -259,3 +259,9 @@ test('a name that differs only in capitals is offered too (review)', async () =>
   const dialog = within(await ui.findByRole('dialog', { name: 'The same person?' }));
   assert.ok(dialog.queryByRole('group', { name: 'Name' }) !== null);
 });
+
+// A bike's own page (openspec/changes/bike-page; mockup/links/j07.mjs:142): each bike links to it.
+test('each bike on the page links to its own page', async () => {
+  const { ui } = await open();
+  assert.equal((await ui.findByRole('link', { name: /Trek Domane AL 3/ })).getAttribute('href'), '/workshop/bikes/7');
+});

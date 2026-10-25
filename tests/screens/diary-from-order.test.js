@@ -149,6 +149,20 @@ test('?customer= opens New job with that customer chosen, at a time to enter, an
   assert.equal(new URL(window.location.href).searchParams.get('customer'), null);
 });
 
+// New job from a bike's page (openspec/changes/bike-page design 4): that bike chosen.
+test('?bike= with ?customer= opens New job with that bike chosen, and leaves the address', async () => {
+  BIKES.push({ id: 9, customerId: 5, make: 'Brompton', model: 'C Line', colour: 'black', active: true });
+  try {
+    const r = await openDiary('?date=2026-10-05&customer=5&bike=9');
+    const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));
+    await form.findByText('Maya Patel');
+    await r.waitFor(() => assert.equal(form.getByRole('combobox', { name: 'Bike' }).value, '9'));
+    assert.equal(new URL(window.location.href).searchParams.get('bike'), null);
+  } finally {
+    BIKES.pop();
+  }
+});
+
 test('saving New job for an order links the job to the order', async () => {
   const r = await openDiary('?date=2026-10-05&order=9');
   const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));

@@ -98,6 +98,7 @@ test('a booking returns a booking link, and the link reads the booking back', as
     changeDeclined: false,
     // Booking page stages (21 Oct): progress, the ready day and the shop's lines.
     workState: 'not_started',
+    remindersYes: false, // not ticked when booking (ready-remind-tick)
     bookedInAt: null,
     collectedAt: null,
     expectedReady: null, // a request still waiting: no ready day yet

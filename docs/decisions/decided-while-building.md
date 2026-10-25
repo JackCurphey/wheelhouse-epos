@@ -2263,3 +2263,158 @@ follows the job checklist, the closest pattern built.
 6. **The shop removing a service's months** before it's due means the
    reminder doesn't go, as no service names it any more.
 
+### 25 Oct 2026: "Stop these" for service reminders (`openspec/changes/stop-reminders`, `ac-stopped`, `ac-stopped-on`; Jack's answer 5)
+
+1. **The page that asks first isn't drawn**: "Stop service reminders?",
+   "We’ll stop sending you service reminders from [Shop name]. Job updates
+   about a bike that’s with us still come as usual.", and one button, "Stop
+   service reminders", laid out as the drawn stopped page.
+2. **A link that doesn't work** says "This link doesn’t work" and "Check you
+   opened the whole link from your message.", showing nothing about anyone,
+   as the photo step's spent code does.
+3. **The heading sits above the round tick**, as the booking pages' frame
+   and the photo step's finished page lay it out, rather than under it as
+   drawn.
+4. **The drawn "Sign in to your account" line waits** for the customer's
+   account (the emailed-code sign-in, WP-1.7).
+5. **A stop link never runs out** (a reminder can be months old) and can be
+   used again: stop, turn back on, stop. Stopping turns off service
+   reminders only; review requests will have their own stop.
+6. **The link is made when the reminder is set up and kept with it**, as
+   the timer that sends it has no web address to make one from; while
+   sending is pretend it reads "[link]", as every pretend link does.
+### 25 Oct 2026: the reminder tick on the in-shop ready page (`openspec/changes/ready-remind-tick`, `ac-collect-remind`, `cp-summary-said-yes`; Jack's answer 8)
+
+1. **It ends the "To pay when you collect" card, above a line**, as drawn in
+   the pay-online card; the paid card has none, as drawn.
+2. **Ticking saves at once**: the card has no button to send it with.
+   Unticking says no, the customer's own answer on this page (unlike not
+   ticking when booking).
+3. **The tick stays in front of the customer once ticked**, rather than
+   turning into the said-yes line under their finger; the said-yes line
+   shows the next time the page opens.
+4. **Change shows the tick, ticked, in place**; the drawing doesn't say
+   where Change goes.
+
+### 25 Oct 2026: merging two customers keeps a yes (`openspec/changes/merge-keeps-yes`; Jack's answer 9)
+
+1. **When and where the yes was given** come from the record whose yes to
+   service reminders it is, else the one whose yes to review requests it
+   is, the kept record first when both did.
+2. **A kept record that stopped reminders still becomes yes** if the other
+   record says yes, as the answer reads: a stop doesn't record when it
+   happened, so there's no telling which came later.
+3. **Undo puts the four answers back together or not at all**: once the
+   customer has changed any of them since the merge, they stay as they are,
+   so a yes never loses its date.
+
+### 25 Oct 2026: review requests, the message and when it goes (`openspec/changes/review-requests`, `ac-review-first`, `ac-review-setting`; decision 5)
+
+1. **The days start at 2**; the drawing shows "[n]". From 1 to 60.
+2. **It goes when the shop opens** on the day those days after collection
+   come round (or the next open day), as service reminders do (Jack's
+   answer 4).
+3. **Clearing the review page while review requests are on is refused**:
+   "Switch review requests off first."
+4. **The email's subject isn't drawn**: "Thanks for coming to [Shop name]".
+5. **The stop page for review requests isn't drawn**; it reads as service
+   reminders' does, with review requests' own name (audit M5): "Stop review
+   requests?", "Review requests stopped", "We won’t ask you for reviews any
+   more…", "Review requests are on again", "We’ll ask for a review after you
+   collect your bike…".
+6. **A review page must be a whole web address** starting http:// or
+   https://; anything else is refused with "Paste the whole link to your
+   review page, starting https://".
+
+### 25 Oct 2026: the review request's box in Settings › Messages (`openspec/changes/review-box`, `ac-review-first`, `ac-review-setting`)
+
+1. **The switch can go on once the page box has something in it**, typed
+   or saved; the drawn line ("Add your review page first, then switch this
+   on.") shows until then.
+2. **Clearing the page while it's on switches it off as it saves**, so the
+   shop never refuses the save.
+3. **A refusal shows the shop's own words**, in the box and from the
+   message's own On switch in the list ("Add your review page first, then
+   switch this on."), rather than "Wheelhouse couldn’t save that".
+4. **Only a text preview**, as drawn; the plain wording box also shows an
+   email preview.
+
+### 25 Oct 2026: a bike's own page (`openspec/changes/bike-page`, `cs-bike`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
+
+1. **The bike's Edit box isn't drawn**; it follows the customer page's Edit:
+   "Edit bike", "Nothing changes until you save", Make, Model, Colour, Frame
+   number and Note, Cancel and Save, the server's refusal shown in the box.
+2. **The Warranty block is left off** until a bike can be bought here:
+   nothing records a bike's purchase yet, so there is no date to show.
+3. **New job from a bike's page opens with that bike chosen** as well as its
+   owner, as New job from a customer's page opens with them.
+4. **The jobs list is "Jobs on this bike"**, split as the customer page's
+   history is: "Open now", then "Earlier, newest first", eight shown with
+   "Show all ([n])".
+
+### 25 Oct 2026: finding a bike in the header search (`openspec/changes/bike-search`, `staff-search`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
+
+1. **The Bikes group isn't drawn**; it comes after Customers, its rows as
+   theirs are: the bike's name, opening its page, with "[Owner] · [Colour] ·
+   [Frame number]" under it, leaving out what's blank.
+2. **The box is now named "Search jobs, customers and bikes"**, saying what it
+   finds so far, as it did before; the drawing's name lists orders and
+   products too, which join as they're built.
+3. **A bike is found by make and model or frame number, not by its owner's
+   name**: the owner is found under Customers. A removed bike, or a removed
+   customer's, isn't found.
+
+### 25 Oct 2026: customers sign in with a code sent by email, the server (`openspec/changes/customer-code-signin`, `cust-signin`, `cust-code`, `cust-code-expired`; signing-in decision 5)
+
+1. **A wrong code isn't drawn**; it reads as the drawn expired one does:
+   "That code isn’t right. Check it, or send a new one".
+2. **The fifth wrong try uses a code up**; after that it reads as expired,
+   with "send a new one".
+3. **A switched-off account is refused** once its code is right: "This
+   account can’t sign in. Ask the shop".
+4. **Too many asks or tries**: "Too many codes asked for. Wait a few minutes,
+   then try again" (5 per email, 10 per network, in 15 minutes) and "Too many
+   tries. Wait a few minutes, then try again" (30 checks per network).
+5. **With no sign-in provider connected** (until WorkOS is), asking for a code
+   says "Signing in by email isn’t switched on yet", as deposits stay off
+   with no payment provider.
+6. **A first sign-in makes a customer with no name**, only the email, as
+   password sign-up makes a new customer and never joins one the shop already
+   has. For Jack: these show on the Customers page with a blank name until
+   the account pages ask for one.
+
+### 25 Oct 2026: the sign-in screens (`openspec/changes/customer-signin-screens`, `cust-signin`, `cust-code`, `cust-code-expired`)
+
+1. **In the booking pages' frame, not the website's**: the shop's website
+   frame, with Account in its header, isn't built yet, so sign-in sits in the
+   frame the stop page uses (the shop's name at the top).
+2. **"Send a new code" says "We sent a new code to [email]"** and empties the
+   boxes; not drawn.
+3. **The keyboard lands on "Enter your code", not in the boxes**, as on every
+   booking page (d2: the frame puts focus on each new heading). For Jack: on a
+   phone that is one tap on the boxes before typing; putting the keyboard
+   straight in the boxes would change d2 for this page.
+4. **With no page to return to, or one that isn't this shop's own**, sign-in
+   goes on to the shop's booking page, `/book/[shop]`.
+
+### 25 Oct 2026: staff sign in through WorkOS, the server (`openspec/changes/staff-signin-workos`; signing-in decision 2; WorkOS only, Jack 25 Oct)
+
+1. **WorkOS's sign-in comes back to `/api/auth/workos/callback`**, and starts
+   at `/api/auth/workos/start`, not `/callback`: only `/api/` addresses
+   reach the sign-in routes. For Jack: WorkOS's Staging Redirects need these
+   two addresses (on `localhost:8080`).
+2. **A sign-in lands on the staff app, `/workshop`**, not the old app at
+   `/`, whose password box no longer works. Signing out goes to WorkOS's
+   sign-out and back, or to `/workshop`. **A failed sign-in goes back to the
+   staff app with its reason**:
+   `off` (nothing connected), `failed` (a link this browser didn't start, or
+   a code WorkOS refused), `unchecked` (WorkOS hasn't checked the email),
+   `not-on-staff` (no active person with that email, or the person is linked
+   to someone else: one answer for all), `busy` (10 tries per network in 15
+   minutes). The wording on screen comes with the screens change, following
+   `auth-signedout`.
+3. **The pretend WorkOS page** asks only for an email, with "WorkOS has
+   checked this email" ticked, for building and tests without the internet.
+   It never runs in production.
+4. **Password sign-in answers "Staff sign in through WorkOS now"**, the route
+   kept so the old app and the label printer helper get a clear answer.

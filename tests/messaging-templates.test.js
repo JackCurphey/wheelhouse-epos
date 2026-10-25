@@ -25,7 +25,9 @@ test('the approved booking wording and the first live messages', () => {
   // Work added within your limit, Quote reminder and Your answers joined 22 Oct (openspec/changes/spend-limit-within, quote-reminder, your-answers-message).
   // Bike still waiting joined 23 Oct, in the words drawn on cp-setting's pop-up (openspec/changes/uncollected-bike).
   // The service reminder joined 25 Oct, in the words drawn on ac-reminder-wording (openspec/changes/service-reminder-send).
-  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled', 'service_reminder']);
+  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled', 'service_reminder', 'review_request']);
+  // The review request joined 25 Oct, off until the shop switches it on (openspec/changes/review-requests).
+  assert.equal(TEMPLATES.review_request.offUntilOn, true);
   assert.equal(TEMPLATES.service_reminder.wording,
     'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].');
   assert.deepEqual(Object.keys(TEMPLATES).filter((k) => TEMPLATES[k].group === 'booking'),

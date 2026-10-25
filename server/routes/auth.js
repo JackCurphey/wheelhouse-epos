@@ -4,27 +4,54 @@
 // query) only, with no shop bound and no session required.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { dbExec, prepare, runWithShop } from '../db.js';
-import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, createShop, destroySession, getSessionContext, verifyLogin } from '../auth.js';
-import { badRequest, makeRateLimiter, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, createShop, destroySession, getSessionContext, loginForWorkosUser } from '../auth.js';
+import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
+import { staffSigninProvider } from '../staff-signin/provider.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 
-function setSessionCookie(req, res, token) {
+function sessionCookie(req, token) {
   const secure = isHttpsRequest(req) ? '; Secure' : '';
-  res.setHeader(
-    'Set-Cookie',
-    `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${secure}`
-  );
+  return `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${secure}`;
 }
+
+function setSessionCookie(req, res, token) {
+  res.setHeader('Set-Cookie', sessionCookie(req, token));
+}
+
+// The state a WorkOS sign-in started with, kept by this browser for 10
+// minutes, so a link back from WorkOS that this browser didn't start signs
+// nobody in (staff-signin-workos design 3).
+const STATE_COOKIE = 'wh_signin_state';
+function stateCookie(req, value, maxAge) {
+  const secure = isHttpsRequest(req) ? '; Secure' : '';
+  return `${STATE_COOKIE}=${value}; HttpOnly; Path=/api/auth/workos; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+}
+function sameState(a, b) {
+  if (!a || !b) return false;
+  const [x, y] = [Buffer.from(a), Buffer.from(b)];
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
+function redirect(res, location, cookies = []) {
+  if (cookies.length) res.setHeader('Set-Cookie', cookies);
+  res.writeHead(302, { Location: location });
+  res.end();
+}
+// Where a failed WorkOS sign-in goes: the staff app, whose signed-out page
+// links to WorkOS and will show the reason (staff-signin-workos-screens).
+// off, failed, unchecked, not-on-staff, busy.
+const signinFailed = (req, res, reason) => redirect(res, `/workshop?signin=${reason}`, [stateCookie(req, '', 0)]);
 
 function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
 }
 
-const loginLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
+const callbackLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
 
 const signupLimiter = makeRateLimiter(5, 60 * 60 * 1000); // 5 new shops / hour / IP
 
@@ -68,28 +95,66 @@ export function register(route) {
     sendJson(res, 201, serializeSession(await getSessionContext(token)));
   });
 
+  // WorkOS only (Jack, 25 Oct; staff-signin-workos design 7): the route stays
+  // so the old app and the print helper get a clear answer. The body is still
+  // read, so a request is answered only once it has all arrived.
   route('POST', '/api/auth/login', async (req, res) => {
+    await readJsonBody(req);
+    sendJson(res, 410, { error: 'Staff sign in through WorkOS now' });
+  });
+
+  route('GET', '/api/auth/workos/start', async (req, res) => {
+    const provider = staffSigninProvider();
+    if (!provider) return signinFailed(req, res, 'off');
+    const state = randomBytes(24).toString('hex');
+    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri() }), [stateCookie(req, state, 600)]);
+  });
+
+  // The pretend WorkOS's own page, only while it is the one connected.
+  route('GET', '/api/auth/workos/pretend', async (req, res, params, query) => {
+    const provider = staffSigninProvider();
+    if (provider?.name !== 'pretend') return notFound(res);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(provider.page({ state: query.get('state') || '' }));
+  });
+  route('POST', '/api/auth/workos/pretend', async (req, res) => {
+    const provider = staffSigninProvider();
+    if (provider?.name !== 'pretend') return notFound(res);
+    const form = new URLSearchParams((await readRawBody(req, 10_000)).toString('utf8'));
+    redirect(res, provider.issue({
+      email: form.get('email'), verified: form.get('verified') === 'on', user: form.get('user'), state: form.get('state'),
+    }));
+  });
+
+  route('GET', '/api/auth/workos/callback', async (req, res, params, query) => {
     const ip = clientIp(req);
-    if (!loginLimiter.check(ip)) return sendJson(res, 429, { error: 'Too many login attempts - please wait a few minutes and try again.' });
-    const body = await readJsonBody(req);
-    let login;
-    try {
-      login = await verifyLogin(body.email, body.password);
-    } catch (err) {
-      if (err instanceof AuthError) return sendJson(res, 401, { error: err.message });
-      throw err;
-    }
-    loginLimiter.reset(ip);
-    const token = await createSession(login.id);
-    setSessionCookie(req, res, token);
-    sendJson(res, 200, serializeSession(await getSessionContext(token)));
+    if (!callbackLimiter.check(ip)) return signinFailed(req, res, 'busy');
+    const provider = staffSigninProvider();
+    if (!provider) return signinFailed(req, res, 'off');
+    const { [STATE_COOKIE]: expected, [SESSION_COOKIE]: earlier } = parseCookies(req);
+    if (!sameState(query.get('state'), expected)) return signinFailed(req, res, 'failed');
+    const signedIn = await provider.authenticate({ code: query.get('code') || '' });
+    if (!signedIn) return signinFailed(req, res, 'failed');
+    // An email WorkOS hasn't checked is never linked: anyone could make a
+    // WorkOS account with a shop owner's email (design 4).
+    if (!signedIn.user.emailVerified) return signinFailed(req, res, 'unchecked');
+    const login = await loginForWorkosUser(signedIn.user);
+    if (!login) return signinFailed(req, res, 'not-on-staff');
+    callbackLimiter.reset(ip);
+    // Whoever was signed in on this browser before is signed out (review).
+    await destroySession(earlier);
+    const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
+    redirect(res, '/workshop', [sessionCookie(req, token), stateCookie(req, '', 0)]);
   });
 
   route('POST', '/api/auth/logout', async (req, res) => {
     const { [SESSION_COOKIE]: token } = parseCookies(req);
-    await destroySession(token);
+    const workosSessionId = await destroySession(token);
     clearSessionCookie(res);
-    sendJson(res, 200, { ok: true });
+    // A WorkOS sign-in ends at WorkOS too, so the next person at this
+    // computer signs in again rather than pressing Continue (design 3).
+    const signOutUrl = workosSessionId ? staffSigninProvider()?.logoutUrl({ sessionId: workosSessionId }) : null;
+    sendJson(res, 200, signOutUrl ? { ok: true, signOutUrl } : { ok: true });
   });
 
   route('GET', '/api/auth/me', async (req, res) => {

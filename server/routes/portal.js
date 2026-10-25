@@ -39,6 +39,7 @@ import {
 import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
 import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
+import { setStopped, stopView } from '../messaging/stop-codes.js';
 import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
@@ -47,6 +48,8 @@ import { readRequestKey } from '../booking-request-key.js';
 import { bookingDeposit } from '../workshop/booking-deposit.js';
 import { payments } from '../payments/index.js';
 import { paymentsConnected } from '../payments/provider.js';
+import { signinProvider } from '../signin/provider.js';
+import { EMAIL_RE } from '../auth.js';
 import { settleDeposits } from '../payments/settle.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
 import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
@@ -90,8 +93,54 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
+// network and by the shop's email address; codes checked, by network.
+const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
+const signinAskEmailLimiter = makeRateLimiter(5, 15 * 60 * 1000);
+const signinCheckLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+const SIGNIN_OFF = 'Signing in by email isn’t switched on yet';
+// The email typed, as the shop's logins hold it; '' for anything that isn't
+// one, or is longer than an email can be (254 characters).
+const signinEmail = (body) => {
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  return email.length <= 254 && EMAIL_RE.test(email) ? email : '';
+};
+const SIGNIN_REFUSED = {
+  wrong: 'That code isn’t right. Check it, or send a new one',
+  expired: 'That code has expired — send a new one',
+};
+
+// The shop's login for an email signed in by code, or a new customer and a
+// login with no password for it, made together. Never a customer the shop
+// already has: an email typed isn't proof of owning it (21 Oct review).
+async function loginForSignedInEmail(shopId, email) {
+  const found = () => db.prepare('SELECT * FROM customer_logins WHERE shop_id = ? AND email = ?').get(shopId, email);
+  const login = await found();
+  if (login) return login;
+  await db.exec('BEGIN');
+  try {
+    const customer = await db.prepare("INSERT INTO customers (name, email, updated_at) VALUES ('', ?, now()) RETURNING id").get(email);
+    const made = await db.prepare(
+      `INSERT INTO customer_logins (shop_id, customer_id, email) VALUES (?, ?, ?)
+       ON CONFLICT (shop_id, email) DO NOTHING RETURNING *`
+    ).get(shopId, customer.id, email);
+    if (!made) {
+      // Made by another sign-in a moment ago: theirs stands, and this customer goes.
+      await db.exec('ROLLBACK');
+      return await found();
+    }
+    await db.exec('COMMIT');
+    return made;
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 // Use my phone's codes: the same attempts as booking links, counted apart.
 const photoCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// "Stop these" codes: the same attempts again, counted apart (stop-reminders).
+const stopCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // One photo, as base64 with the same headroom as booking photos.
 const MAX_PHOTO_CODE_BODY_BYTES = Math.ceil(MAX_PHOTO_BYTES * 1.4);
 
@@ -332,6 +381,7 @@ async function bookingLinkView(jobId, shop) {
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
             w.booked_in_at, w.collected_at, w.deposit_pence,
+            (SELECT c.service_reminders FROM customers c WHERE c.id = w.customer_id) AS reminders_yes,
             to_char(w.deposit_cancel_until AT TIME ZONE (SELECT time_zone FROM workshop_settings LIMIT 1), 'YYYY-MM-DD HH24:MI') AS deposit_cancel_local,
             (w.deposit_cancel_until > ?::timestamptz OR w.booking_state IN ('pending', 'offered')) AS deposit_refundable,
             (SELECT CASE WHEN p.status IN ('refunded', 'released') OR p.refund_due_reason IS NOT NULL THEN 'refunded'
@@ -400,6 +450,9 @@ async function bookingLinkView(jobId, shop) {
     // How far the bike and its work are (Jack, 21 Oct, booking page stages; the
     // contract in openspec/changes/archive/2026-10-21-booking-page-stages/design.md).
     workState: row.work_state,
+    // Whether the customer said yes to service reminders, for the ready page's
+    // tick (ready-remind-tick): a yes or no, nothing that identifies them.
+    remindersYes: row.reminders_yes === true,
     bookedInAt: row.booked_in_at ? new Date(row.booked_in_at).toISOString() : null,
     collectedAt: row.collected_at ? new Date(row.collected_at).toISOString() : null,
     // The job's last day, as the job page's "Ready by"; no time until staff can set one.
@@ -652,6 +705,40 @@ export function register(route) {
     const token = await createCustomerSession(login.id);
     setCustomerSessionCookie(req, res, token);
     sendJson(res, 200, serializeCustomerLogin(login));
+  });
+
+  // Sign in by a code sent by email (customer-code-signin; cust-signin,
+  // cust-code). The same answer whether the email has an account or not.
+  route('POST', '/api/portal/:shopSlug/sign-in/code', async (req, res, params, query, shop) => {
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    const body = await readJsonBody(req);
+    const email = signinEmail(body);
+    if (!email) return badRequest(res, 'Type the email address you use with the shop');
+    if (!signinAskNetworkLimiter.check(clientIp(req)) || !signinAskEmailLimiter.check(`${shop.id}:${email}`)) {
+      return sendJson(res, 429, { error: 'Too many codes asked for. Wait a few minutes, then try again' });
+    }
+    await provider.sendCode({ email });
+    sendJson(res, 200, { ok: true });
+  });
+
+  route('POST', '/api/portal/:shopSlug/sign-in/check', async (req, res, params, query, shop) => {
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    if (!signinCheckLimiter.check(clientIp(req))) {
+      return sendJson(res, 429, { error: 'Too many tries. Wait a few minutes, then try again' });
+    }
+    const body = await readJsonBody(req);
+    const email = signinEmail(body);
+    const code = typeof body?.code === 'string' ? body.code.replace(/\s/g, '') : '';
+    const answer = email && /^\d{6}$/.test(code) ? await provider.checkCode({ email, code }) : 'wrong';
+    if (answer !== 'ok') return sendJson(res, 401, { error: SIGNIN_REFUSED[answer], reason: answer });
+    const login = await loginForSignedInEmail(shop.id, email);
+    if (!login.active) return sendJson(res, 403, { error: 'This account can’t sign in. Ask the shop' });
+    const customer = await db.prepare('SELECT name FROM customers WHERE id = ?').get(login.customer_id);
+    const token = await createCustomerSession(login.id);
+    setCustomerSessionCookie(req, res, token);
+    sendJson(res, 200, { id: login.id, email: login.email, name: customer?.name ?? '', shopName: shop.name, shopSlug: shop.slug });
   });
 
   route('POST', '/api/portal/:shopSlug/logout', async (req, res) => {
@@ -1307,6 +1394,35 @@ export function register(route) {
     sendJson(res, 201, added);
   });
 
+  // "Stop these" for service reminders (stop-reminders; account and reminders
+  // decision 6; Jack's answer 5): no sign-in; opening the page changes
+  // nothing, and a press stops them or turns them back on. A code that
+  // doesn't work gets the same answer, however it fails, so codes can't be probed.
+  const stopCodeGone = (res) => sendJson(res, 404, { error: 'This link doesn’t work' });
+  const stopCodeTooMany = (req, res) => {
+    if (stopCodeLimiter.check(clientIp(req))) return false;
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return true;
+  };
+
+  // screens: ac-stopped
+  route('GET', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {
+    if (stopCodeTooMany(req, res)) return;
+    const view = await stopView(params.code);
+    if (!view) return stopCodeGone(res);
+    sendJson(res, 200, { shopName: shop.name, ...view });
+  });
+
+  // screens: ac-stopped, ac-stopped-on
+  route('POST', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {
+    if (stopCodeTooMany(req, res)) return;
+    const body = await readJsonBody(req);
+    if (typeof body?.stop !== 'boolean') return badRequest(res, 'stop must be true or false');
+    const done = await setStopped(params.code, body.stop);
+    if (!done) return stopCodeGone(res);
+    sendJson(res, 200, { shopName: shop.name, ...done });
+  });
+
   route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
@@ -1421,6 +1537,23 @@ export function register(route) {
   // immediate, and every hold of the job - its own and a requested one - goes
   // at once.
   // screens: cancel, cancelled
+  // The ready page's reminder tick (ready-remind-tick; Jack's answer 8 of 25
+  // Oct): a yes is to service reminders and review requests, from collection;
+  // a no turns service reminders off. Saved at once; the link is the key.
+  // screens: ac-collect-remind, cp-summary-said-yes
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/reminders', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req).catch(() => null);
+    if (typeof body?.yes !== 'boolean') return badRequest(res, 'yes must be true or false');
+    const { customer_id: customerId } = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(found.id);
+    if (!customerId) return sendJson(res, 404, { error: "We can't find that booking" });
+    await db.prepare(body.yes
+      ? "UPDATE customers SET service_reminders = true, review_requests = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'collection' WHERE id = ?"
+      : 'UPDATE customers SET service_reminders = false WHERE id = ?').run(customerId);
+    sendJson(res, 200, { remindersYes: body.yes });
+  });
+
   route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;

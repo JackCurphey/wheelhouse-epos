@@ -117,3 +117,28 @@ customer's page.
 #### Scenario: An old link to a customer
 - **WHEN** someone opens the old app's link to customer 5
 - **THEN** the new customer page for customer 5 opens
+
+### Requirement: Merging two customers keeps a yes to reminders
+When staff merge two customers, if either said yes to service reminders, or to review requests, the kept customer SHALL say yes to it, with when and where the yes was given. Undoing the merge SHALL put the kept customer's answers back, where nobody has changed them since.
+
+#### Scenario: A guest's yes
+- **WHEN** Maya ticked "Remind me…" as a guest, and staff merge that record into her main one
+- **THEN** her main record says yes, from that booking
+
+#### Scenario: Undo
+- **WHEN** staff undo that merge
+- **THEN** her main record's answers are as they were
+
+### Requirement: Each bike has its own page
+A bike's page SHALL show the bike's name with "[Customer]’s bike" and New job; its Details (Colour, Frame number, Note) with Edit; who it Belongs to, linking to their page; and "Jobs on this bike", with what's open now first and the rest newest first (`cs-bike`). Each bike on a customer's page SHALL link to it.
+
+#### Scenario: Maya's Trek
+- **WHEN** staff open the Trek Domane AL 3 from Maya's page
+- **THEN** they see its colour, frame number and note, "Maya Patel’s bike", and every job on it
+
+### Requirement: New job from a bike starts with that bike chosen
+New job on a bike's page SHALL open New job with its owner and that bike already chosen.
+
+#### Scenario: Booking the Trek in
+- **WHEN** staff press New job on the Trek's page
+- **THEN** New job opens with Maya and the Trek chosen

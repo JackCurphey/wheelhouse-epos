@@ -9,9 +9,33 @@ import { UK_NUMBER_SQL, ukNumber } from './customers.js';
 
 const UNDO_DAYS = 30;
 // Every table that points at a customer, moved together (design 2).
-const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention'];
+// A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
+const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes'];
 // The fields that may differ, and the columns each takes.
 const FIELDS = { name: ['name'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
+// The customer's answers to reminders: not a choice, but kept in the merge's
+// before and after so Undo puts them back (merge-keeps-yes).
+const ANSWERS = ['service_reminders', 'review_requests', 'reminders_said_yes_at', 'reminders_said_yes_via'];
+
+/**
+ * If either record said yes, the kept one says yes (Jack's answer 9 of 25
+ * Oct), with when and where it was given: from the record whose yes to
+ * service reminders it is, else to review requests, so a yes always says
+ * when and where (077's check).
+ */
+function answersAfterMerge(kept, other) {
+  const service = Boolean(kept.service_reminders || other.service_reminders);
+  const review = Boolean(kept.review_requests || other.review_requests);
+  // The service-reminder yes first, from whichever record gave it; else the
+  // review-request yes (review).
+  const from = kept.service_reminders ? kept : other.service_reminders ? other : kept.review_requests ? kept : other;
+  return {
+    service_reminders: service,
+    review_requests: review,
+    reminders_said_yes_at: service || review ? from.reminders_said_yes_at : kept.reminders_said_yes_at,
+    reminders_said_yes_via: service || review ? from.reminders_said_yes_via : kept.reminders_said_yes_via,
+  };
+}
 
 const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
 
@@ -119,6 +143,7 @@ export function register(route) {
       }
       const moved = { before: {}, rows: {}, groups: [], logins: [] };
       for (const cols of Object.values(FIELDS)) for (const col of cols) moved.before[col] = kept[col] ?? null;
+      for (const col of ANSWERS) moved.before[col] = kept[col] ?? null;
       for (const table of MOVED) {
         moved.rows[table] = (await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? RETURNING id`).all(id, otherId)).map((r) => r.id);
       }
@@ -137,6 +162,11 @@ export function register(route) {
       // What the merge set, so Undo puts back only what nobody has changed since.
       moved.after = {};
       for (const [field, cols] of Object.entries(FIELDS)) for (const col of cols) moved.after[col] = keep[field] === 'other' ? other[col] ?? null : kept[col] ?? null;
+      const answers = answersAfterMerge(kept, other);
+      await prepare(
+        'UPDATE customers SET service_reminders = ?, review_requests = ?, reminders_said_yes_at = ?, reminders_said_yes_via = ? WHERE id = ?'
+      ).run(answers.service_reminders, answers.review_requests, answers.reminders_said_yes_at, answers.reminders_said_yes_via, id);
+      for (const col of ANSWERS) moved.after[col] = answers[col] ?? null;
       await prepare('UPDATE customers SET active = 0, merged_into_id = ?, updated_at = now() WHERE id = ?').run(id, otherId);
       const row = await prepare(
         'INSERT INTO customer_merges (kept_id, other_id, other_was_id, other_client_id, other_name, moved, merged_by_login_id) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?) RETURNING id'
@@ -213,8 +243,14 @@ export function register(route) {
       if (moved.logins?.length) await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ? AND id = ANY(?::int[])').run(m.other_id, shopId, m.kept_id, moved.logins);
       if (moved.groups?.length) await prepare('DELETE FROM customer_group_members WHERE customer_id = ? AND group_id = ANY(?::int[])').run(m.kept_id, moved.groups);
       // Only what the merge changed, and only where nobody has changed it since.
-      const same = (a, b) => (a ?? null) === (b ?? null);
-      const cols = Object.keys(moved.before ?? {}).filter((c) => !same(moved.before[c], moved.after?.[c]) && same(kept[c], moved.after?.[c]));
+      // A date read back is a Date; the merge's record keeps it as text (merge-keeps-yes).
+      const plain = (v) => (v instanceof Date ? v.toISOString() : v ?? null);
+      const same = (a, b) => plain(a) === plain(b);
+      // The reminder answers go back together or not at all, so a yes never
+      // loses its date: if the customer has changed any since, all stay.
+      const answersAsMerged = ANSWERS.every((c) => same(kept[c], moved.after?.[c]));
+      const cols = Object.keys(moved.before ?? {}).filter((c) => (!ANSWERS.includes(c) || answersAsMerged)
+        && !same(moved.before[c], moved.after?.[c]) && same(kept[c], moved.after?.[c]));
       if (cols.length) await prepare(`UPDATE customers SET ${cols.map((c) => `${c} = ?`).join(', ')}, updated_at = now() WHERE id = ?`).run(...cols.map((c) => moved.before[c]), m.kept_id);
       await prepare('UPDATE customers SET active = 1, merged_into_id = NULL, updated_at = now() WHERE id = ?').run(m.other_id);
       await prepare('UPDATE customer_merges SET undone_at = now() WHERE id = ?').run(m.id);

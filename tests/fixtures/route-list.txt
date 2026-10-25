@@ -59,6 +59,10 @@ PUT /api/message-templates/:key
 POST /api/message-templates/:key/preview
 POST /api/auth/signup
 POST /api/auth/login
+GET /api/auth/workos/start
+GET /api/auth/workos/pretend
+POST /api/auth/workos/pretend
+GET /api/auth/workos/callback
 POST /api/auth/logout
 GET /api/auth/me
 GET /api/products
@@ -145,6 +149,8 @@ PUT /api/workshop-services/:id
 DELETE /api/workshop-services/:id
 POST /api/portal/:shopSlug/signup
 POST /api/portal/:shopSlug/login
+POST /api/portal/:shopSlug/sign-in/code
+POST /api/portal/:shopSlug/sign-in/check
 POST /api/portal/:shopSlug/logout
 GET /api/portal/:shopSlug/me
 GET /api/portal/:shopSlug/mechanics
@@ -161,12 +167,15 @@ GET /api/portal/:shopSlug/bookings
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/photo-codes/:code
 POST /api/portal/:shopSlug/photo-codes/:code
+GET /api/portal/:shopSlug/reminder-stops/:code
+POST /api/portal/:shopSlug/reminder-stops/:code
 GET /api/portal/:shopSlug/booking-links/:code
 GET /api/portal/:shopSlug/booking-links/:code/availability
 GET /api/portal/:shopSlug/booking-links/:code/quote
 GET /api/portal/:shopSlug/booking-links/:code/quote/lines/:lineId/photo
 GET /api/portal/:shopSlug/booking-links/:code/notes
 POST /api/portal/:shopSlug/booking-links/:code/notes
+POST /api/portal/:shopSlug/booking-links/:code/reminders
 POST /api/portal/:shopSlug/booking-links/:code/cancel
 POST /api/portal/:shopSlug/booking-links/:code/accept-offer
 POST /api/portal/:shopSlug/booking-links/:code/change
@@ -188,6 +197,7 @@ GET /api/customers/:id/bikes
 POST /api/customers/:id/bikes
 PUT /api/bikes/:id
 DELETE /api/bikes/:id
+GET /api/bikes/:id
 GET /api/bikes/:id/jobs
 GET /api/sales
 GET /api/sales/:id
