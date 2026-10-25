@@ -173,6 +173,9 @@ export function serializeWorkshopService(row, includes = []) {
     kind: row.kind,
     categoryId: row.category_id,
     position: row.position,
+    // Months after collection that its reminder is due, or null for none
+    // (service-reminder-months).
+    reminderMonths: row.reminder_months ?? null,
     // Ordered; each { id, wording, kind, required, choices?, allowNotSure? }.
     // See server/service-questions.js and migration 028.
     questions: row.questions ?? [],
@@ -232,6 +235,16 @@ async function readServicePlacement(body, existing) {
     }
   }
   return { kind, categoryId, position };
+}
+
+// When a service's reminder is due: a whole number of months from 1 to 60, or
+// null for none. Omitted on PUT keeps the stored value, as placement does.
+function readReminderMonths(body, existing) {
+  if (body.reminderMonths === undefined) return existing ? existing.reminder_months ?? null : null;
+  const m = body.reminderMonths;
+  if (m === null) return null;
+  if (!Number.isInteger(m) || m < 1 || m > 60) throw new ValidationError('Remind after a whole number of months, from 1 to 60');
+  return m;
 }
 
 // A service's questions, saved as one whole list. Omitted on PUT keeps the
@@ -774,6 +787,7 @@ export function register(route) {
     let includes;
     try {
       fields = readServiceBody(body);
+      fields.reminderMonths = readReminderMonths(body, null);
       placement = await readServicePlacement(body, null);
       questions = readQuestionsOrKeep(body, []);
       includes = await readIncludes(body, placement.kind, null, null, null);
@@ -787,8 +801,8 @@ export function register(route) {
     try {
       info = await db.prepare(
         // Pence beside the pounds, from the same value (sales in pence, step A′).
-        'INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
-      ).run(fields.name, fields.price, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
+        'INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, kind, category_id, position, questions, reminder_months) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)'
+      ).run(fields.name, fields.price, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), fields.reminderMonths);
       await replaceIncludes(info.lastInsertRowid, includes);
       await db.exec('COMMIT');
     } catch (err) {
@@ -812,6 +826,7 @@ export function register(route) {
     let includes;
     try {
       fields = readServiceBody(body);
+      fields.reminderMonths = readReminderMonths(body, existing);
       placement = await readServicePlacement(body, existing);
       questions = readQuestionsOrKeep(body, existing.questions ?? []);
       const stored = (await db.prepare(
@@ -835,9 +850,9 @@ export function register(route) {
     await db.exec('BEGIN');
     try {
       await db.prepare(
-        'UPDATE workshop_services SET name = ?, price = ?, price_pence = ROUND(CAST(? AS numeric) * 100)::int, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
+        'UPDATE workshop_services SET name = ?, price = ?, price_pence = ROUND(CAST(? AS numeric) * 100)::int, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), reminder_months = ?, updated_at = ? WHERE id = ?'
       ).run(fields.name, fields.price, fields.price, fields.minutes, active, bookableOnline,
-        placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
+        placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), fields.reminderMonths, nowIso(), id);
       // Only touch the stored list when the caller actually sent one, or when
       // the demotion to individual must clear it - a save that leaves
       // `includes` out (as `questions` and placement work) must not delete and
