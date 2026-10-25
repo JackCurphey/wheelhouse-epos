@@ -122,12 +122,14 @@ test('Send a new code asks again and empties the boxes; Use a different email go
   assert.equal((await ui.findByLabelText('Email')).value, 'maya@example.test');
 });
 
+// customer-account-screens design 3: with no page of this shop's to go back
+// to, signing in goes to the account.
 for (const [why, from] of [['another site', 'https://example.com/book/north'], ['another shop', '/book/elsewhere/booking/x'], ['a look-alike shop', '/book/northern'], ['nothing given', undefined]]) {
-  test(`after the code, ${why} goes to the shop’s own booking page instead`, async () => {
+  test(`after the code, ${why} goes to the account instead`, async () => {
     const { ui } = await open({ from });
     const { fireEvent } = await rtl();
     fireEvent.change(await toCode(ui), { target: { value: '481296' } });
-    assert.ok((await ui.findByText('At /book/north')) !== null);
+    assert.ok((await ui.findByText('At /book/north/account')) !== null);
   });
 }
 
