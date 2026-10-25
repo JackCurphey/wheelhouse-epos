@@ -145,6 +145,8 @@ PUT /api/workshop-services/:id
 DELETE /api/workshop-services/:id
 POST /api/portal/:shopSlug/signup
 POST /api/portal/:shopSlug/login
+POST /api/portal/:shopSlug/sign-in/code
+POST /api/portal/:shopSlug/sign-in/check
 POST /api/portal/:shopSlug/logout
 GET /api/portal/:shopSlug/me
 GET /api/portal/:shopSlug/mechanics
