@@ -145,10 +145,28 @@ The update is down for a moment while the new version starts, as by hand.
 The drawings' own test shop, North Street Cycles, with its staff, customers
 and the drawn week of jobs, is loaded once, by hand. It only loads onto a
 copy with no shops at all, so anything already made on the copy has to be
-cleared first. That is its own decision, made at the time; this doesn't
-clear anything.
+cleared first. That is its own decision, made at the time.
 
 On the server (see "Getting onto the server" below):
+
+**Clearing a shop first, if you decided to.** Run this once with just
+`--shop`. It removes nothing, and says what removing the shop would take:
+its logins, workshop jobs, customers and everything else in it.
+
+```
+docker compose exec app node server/scripts/remove-shop.mjs --shop <address>
+```
+
+To go ahead, type the address a second time. There's no undo:
+
+```
+docker compose exec app node server/scripts/remove-shop.mjs --shop <address> --confirm <address>
+```
+
+It ends with "Removed … and everything in it." The address is the shop's
+part of its web address, after `/book/`.
+
+**Loading the test shop:**
 
 ```
 cd /opt/wheelhouse

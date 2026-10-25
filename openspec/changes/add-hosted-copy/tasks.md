@@ -79,6 +79,11 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   fail again. Seen against a scratch database: the loader loaded North Street
   Cycles, the command added jack@curphey.com as its owner, and a second
   owner was refused with exit 1, changing nothing.
+- [x] 3.6c (Jack, 25 Oct) A "remove a shop" command, so Jack can clear the shop he made at sign-up (his decision, 25 Oct) before loading the test shop:
+  - it uses the same deletion every test file's teardown uses, moved from `tests/helpers/testShop.js` to `server/remove-shop.js`;
+  - it says what it would remove until the shop's address is typed a second time.
+
+  Done 25 Oct. The tests failed first, and breaking the second-address check made them fail again.
 - [ ] 3.6 (Jack from 25 Oct; after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
 ## 4. The way back (Mark; after group 3)
