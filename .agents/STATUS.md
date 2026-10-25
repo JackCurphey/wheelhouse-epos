@@ -28,7 +28,11 @@ here before starting it, so two people never build the same one):
   is still WP-1.7. **Jack has taken staff sign-in through WorkOS** (WP-1.7's
   server side, replan slice B; Mark agreed, 25 Oct), against the fake and
   the staging account; Mark keeps roles (WP-1.1) and the settings store
-  (WP-1.2).
+  (WP-1.2). Staff sign-in through WorkOS merged 25 Oct (#504); its screens are
+  in #505. **Jack has taken add-hosted-copy task 3.6** from Mark (25 Oct):
+  loading the test shop on the hosted copy, his test login (a new
+  "add a login" command first, since WorkOS is now the only way in), and
+  setting the copy up for WorkOS (runbook, "Signing in with WorkOS").
 - **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Open for
   review 25 Oct: step B (#492), audit items 12, 20 and 24 (#496), the
   overnight runner (#490), and a replan into playable slices (#499; Mark
