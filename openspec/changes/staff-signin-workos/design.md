@@ -1,0 +1,130 @@
+# Design: staff sign in through WorkOS
+
+## Context
+
+Today staff sign in with an email and password (`POST /api/auth/login`,
+`server/routes/auth.js:71`). Wheelhouse holds the password and makes a 30-day
+session: the `sessions` table and the `wh_session` cookie (`server/auth.js:152-183`).
+The 31 Aug design (`docs/superpowers/specs/2026-08-31-workos-auth-migration-design.md`)
+would have replaced all of that with WorkOS's sealed cookie and dropped the
+session tables. Since then, 192 test files, the till's own token, the label
+printer helper and 44 `currentSession(req)` calls have come to rely on
+`wh_session`. Customers have also moved to Wheelhouse's own emailed-code
+screens (`customer-accounts`). So this design keeps Wheelhouse's own
+sessions, and uses WorkOS only to prove who the person is.
+
+## Decisions
+
+### 1. WorkOS proves who you are; Wheelhouse keeps its own session
+After WorkOS sends the person back, Wheelhouse makes the same session and
+cookie it makes today (`createSession`). Nothing downstream changes: `/me`,
+the till, the tests' helpers and the print helper all work as they do now.
+The 30-day rule (`2026-10-07-stage-1-drawing-gaps.md:212`) stays
+Wheelhouse's, and doesn't depend on what WorkOS allows (unchecked, :333).
+*Not chosen:* WorkOS's sealed cookie (the 31 Aug design), which would break
+every signed-in test and the print helper in one go.
+
+### 2. An adapter with pretend and real versions
+`server/staff-signin/provider.js` follows `server/signin/provider.js`:
+`STAFF_SIGNIN_PROVIDER` chooses `pretend` or `workos`, and `null` when it's
+unset. Each provider has three parts:
+- `authorizeUrl({ state, redirectUri })` gives the page to send the person to.
+- `authenticate({ code, redirectUri })` gives back
+  `{ user: { id, email, emailVerified }, sessionId }`.
+- `logoutUrl({ sessionId })` gives WorkOS's sign-out address, or null.
+
+- **Real:** plain `fetch` against WorkOS's own API, checked in its docs on
+  25 Oct. No SDK, so no new dependency for three calls.
+  - Authorize: `GET https://api.workos.com/user_management/authorize`
+    with `client_id`, `redirect_uri`, `response_type=code`,
+    `provider=authkit` and `state`.
+  - Authenticate: `POST https://api.workos.com/user_management/authenticate`
+    with `client_id`, `client_secret` (the API key),
+    `grant_type=authorization_code` and `code`. The session id is the
+    access token's `sid` claim. The token comes straight from WorkOS over
+    HTTPS, and only `sid` is read, so it isn't verified.
+  - Sign out:
+    `https://api.workos.com/user_management/sessions/logout?session_id=…`.
+  - Settings: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`, and
+    `WORKOS_REDIRECT_URI` (default `http://localhost:8080/api/auth/workos/callback`).
+    If a setting is missing, the provider counts as not connected, and the
+    server log names the missing setting.
+- **Pretend:** answers as WorkOS does, without the internet.
+  - Its authorize page is `GET /api/auth/workos/pretend`: a plain form
+    with an email box and a "WorkOS has checked this email" box, ticked by
+    default.
+  - Posting the form makes a one-use code, valid for 10 minutes, and goes
+    back to the callback with it.
+  - The codes live in memory. The pretend version is for one server
+    process only: tests and a developer's machine.
+  - User ids are `user_pretend_` plus a hash of the email.
+  - It refuses to run when `NODE_ENV=production`, as pretend payments do.
+
+### 3. Routes
+All three sit under `/api/auth/`, outside the session check, as sign-in does
+today (`server/server.js:636`).
+- **`GET /api/auth/workos/start`:**
+  - makes a random `state`;
+  - stores it in a 10-minute, HttpOnly, SameSite=Lax cookie (`wh_signin_state`);
+  - sends the person to `authorizeUrl`.
+
+  With no provider, it sends them to `/?signin=off`.
+- **`GET /api/auth/workos/callback`:**
+  - checks that `state` matches the cookie, which stops a sign-in link made
+    elsewhere from signing this browser in;
+  - calls `authenticate`;
+  - finds the login (decision 4);
+  - makes the session, with WorkOS's session id saved on it (migration 082);
+  - clears the state cookie and sends the person to `/`.
+
+  Each failure sends them to `/?signin=<reason>`, where the next change's
+  screens show the message. The reasons are `off`, `failed` (a bad state,
+  or WorkOS refused the code), `unchecked` (WorkOS hasn't checked the email)
+  and `not-on-staff`. The callback is rate-limited like password sign-in:
+  10 tries per network every 15 minutes.
+- **`POST /api/auth/logout`:** as today, and when the session has a WorkOS
+  session id, the reply adds `signOutUrl`. The next change's screens go
+  there. The old app ignores it, which leaves only the WorkOS side signed in.
+
+The callback path is new. Jack changes the test environment's Redirects
+(redirect URI `…/api/auth/workos/callback`, sign-in start
+`…/api/auth/workos/start`). `/callback` from the 25 Oct note isn't routed,
+because only `/api/…` paths skip the static files.
+
+### 4. Linking a WorkOS person to the staff list
+1. Look for a login with this `workos_user_id`.
+2. If there is none, look for one whose email matches (logins' emails are
+   unique across Wheelhouse, `001_init_schema.sql:38`) and that isn't
+   linked yet. Save the link.
+3. A login that is turned off, has no match, or is linked to a different
+   WorkOS person gives `not-on-staff`. All three get the same answer, so
+   nobody can test which emails exist.
+4. An email WorkOS hasn't checked gives `unchecked`, and nothing is linked.
+   Otherwise anyone could make a WorkOS account with a shop owner's email.
+
+### 5. Migration 082
+```sql
+ALTER TABLE logins   ADD COLUMN workos_user_id    TEXT UNIQUE;
+ALTER TABLE sessions ADD COLUMN workos_session_id TEXT;
+```
+Both tables are the shop registry: no `shop_id` and no row-level security
+(`server/auth.js:1-8`), so neither column needs a policy. Nothing is dropped.
+Password sign-in keeps working.
+
+### 6. The hosted test copy
+`hostedCopyRefusal` refuses a `WORKOS_API_KEY` starting `sk_live_`. Test keys
+(`sk_test_`) are allowed: they only reach WorkOS's test environment.
+`WORKOS_` isn't added to `REAL_KEY_PREFIXES`, which would refuse test
+keys too.
+
+## Risks
+
+- **Sign-in is a risky area**, so this needs `/review` before it merges.
+- **Someone else's email:** decision 4's "checked email only" rule is the
+  guard. WorkOS checks emails on its sign-up by default.
+- **The old app's sign-out** leaves the WorkOS session alive until the next
+  change's screens use `signOutUrl`. With password sign-in still there, this
+  is no worse than today.
+- **The real provider** is tested against a stand-in `fetch` in the automated
+  tests. Only Jack can sign in on the real test page, so the manual check
+  against Staging is his, with the steps in tasks.md.
