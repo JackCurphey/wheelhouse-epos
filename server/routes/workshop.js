@@ -1126,6 +1126,10 @@ export function register(route) {
     try {
       out = await withJobBookingLock(id, [jobDate], async (job) => {
         if (job.version !== body.version) return staleRefusal;
+        // The mechanic was checked before the lock; check again under it, and keep
+        // the row from changing until this commits (audit item 20, #337).
+        const mechanicStill = await db.prepare('SELECT id FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1 FOR SHARE').get(mech.mechanicId);
+        if (!mechanicStill) return { status: 400, body: { error: 'Please choose a mechanic' } };
         if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
           return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
         }

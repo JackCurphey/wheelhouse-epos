@@ -7,7 +7,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
-import { pool } from '../server/db.js';
+import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup } from './helpers/portal.js';
@@ -117,4 +117,34 @@ test('the shop can let an offered time expire: its time goes and the customer ca
   assert.equal(late.status, 409, JSON.stringify(late.body));
   assert.equal(late.body.code, 'illegal');
   assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'expired');
+});
+
+// Audit item 20 (#337): the offer's mechanic is checked before the booking
+// lock and must be checked again under it. The test holds the offered day's
+// lock itself, sends the offer (which passes the first check and then waits),
+// switches the mechanic off, and lets the lock go.
+test('a mechanic switched off while the offer waits for the lock doesn’t get the job', async () => {
+  const gone = await seedMechanic(owner.shop.id, { name: 'Leaving' });
+  const booked = await book(nextDay(), '10:00');
+  const offeredDay = nextDay();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock($1::int, $2::int)', [owner.shop.id, Number(offeredDay.replace(/-/g, ''))]);
+    let settled = false;
+    const pending = act(booked.id, 'offer', { jobDate: offeredDay, startTime: '13:00', mechanicId: gone }).then((r) => { settled = true; return r; });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    assert.equal(settled, false, 'the offer did not wait for the lock');
+    await runWithShop(owner.shop.id, () => prepare('UPDATE employees SET active = 0 WHERE id = ?').run(gone));
+    await client.query('COMMIT');
+    const res = await pending;
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.equal(res.body.error, 'Please choose a mechanic');
+  } finally {
+    await client.query('ROLLBACK').catch(() => {});
+    client.release();
+  }
+  const row = await jobRow(shopId(), booked.id);
+  assert.equal(row.booking_state, 'pending');
+  assert.notEqual(Number(row.mechanic_id), gone);
 });
