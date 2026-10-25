@@ -30,13 +30,13 @@ merges before Jack's group 2 starts (split plan §4.3). Steps C, D and E
 
 ## 3. Step B: reports read both records (Mark, server)
 
-- [ ] 3.1 Before anything changes, run the totals check on the hosted copy (or the test database, if the hosted copy isn't up yet) and save its per-day baseline. Attach the output to the pull request
-- [ ] 3.2 Tests first for the `all_sales` view, and watch each fail. Then add the view in a migration and verify the tests pass. The tests check that:
+- [ ] 3.1 Before anything changes, run the totals check on the hosted copy (or the test database, if the hosted copy isn't up yet) and save its per-day baseline. Attach the output to the pull request **Progress, 25 Oct:** run on a scratch database (no sales in it, so the baseline holds no days); the real baseline on the hosted copy is still to take before deploying step B
+- [x] 3.2 Tests first for the `all_sales` view, and watch each fail. Then add the view in a migration and verify the tests pass. The tests check that:
   - a day with one old sale and one till sale counts two, with the right total;
   - an offline till sale counts on the day of `till_clock_at`;
   - old sale [n] and till sale [n] stay apart.
-- [ ] 3.3 Tests first, then point the dashboard's today figures, `GET /api/sales`, `GET /api/sales/:id` (with a record, and old ids still working) and `GET /api/customers/:id/sales` at the view. Verify `till-sale-server`, `shop-day-window` and the dashboard tests pass
-- [ ] 3.4 Run the totals check again after deploying. Verify old-record days match the 3.1 baseline and there are no unknown mismatches. Attach the output, then get a fresh review
+- [x] 3.3 Tests first, then point the dashboard's today figures, `GET /api/sales`, `GET /api/sales/:id` (with a record, and old ids still working) and `GET /api/customers/:id/sales` at the view. Verify `till-sale-server`, `shop-day-window` and the dashboard tests pass (25 Oct: `GET /api/sales/:id` takes `?source=old|till`, no source meaning old; the customer's history timeline `/api/customers/:id/history` still reads `sales` only, left for a follow-up)
+- [ ] 3.4 (the day check now reads the view's old rows: `scripts/ci/check-money-totals.mjs`, tested) Run the totals check again after deploying. Verify old-record days match the 3.1 baseline and there are no unknown mismatches. Attach the output, then get a fresh review
 
 ## Workflow follow-up
 

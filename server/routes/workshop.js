@@ -19,7 +19,7 @@ import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } fro
 import { queueServiceReminder } from '../messaging/service-reminders.js';
 import { queueReviewRequest } from '../messaging/review-requests.js';
 import { TEMPLATES } from '../messaging/templates.js';
-import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobMessageVars, bookingMessageVars, messageLink, dayAndTime } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
   serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
@@ -217,6 +217,7 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
   if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
   const requestedGone = { status: 409, body: { error: 'The requested time is no longer free', code: 'capacity' } };
   let out;
+  let declinedWhen = null;
   try {
     out = await withJobBookingLock(id, [], async (job) => {
       if (job.version !== body.version) return staleRefusal;
@@ -251,6 +252,8 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
         await db.prepare(
           `UPDATE workshop_jobs SET ${CLEAR_REQUEST}, change_declined_at = now(), updated_at = now() WHERE id = ?`
         ).run(id);
+        // Declining clears the request, so the day asked for goes into the message from here.
+        declinedWhen = dayAndTime(requested.jobDate, requested.startTime);
       }
       await syncJobHold(id);
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
@@ -262,7 +265,12 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
     out = requestedGone;
   }
   if (out?.gone) return notFound(res, 'Job not found');
-  const bookingMessage = answer === 'accept' && out.status === 200 ? await sendBookingMessage(req, id, shopId, 'date_change_answered') : undefined;
+  let bookingMessage;
+  if (out.status === 200) {
+    bookingMessage = answer === 'accept'
+      ? await sendBookingMessage(req, id, shopId, 'date_change_answered')
+      : await sendBookingMessage(req, id, shopId, 'date_change_declined', { 'New day and time': declinedWhen });
+  }
   sendJson(res, out.status, bookingMessage ? { ...out.body, bookingMessage } : out.body);
 }
 
@@ -338,17 +346,27 @@ async function queueBikeReady(req, jobId, shopId) {
 // follows has already been made and stands.
 // Returns { skipped: 'no_contact', name } when the customer can't be reached,
 // for staff to be told (booking messages answer 5); otherwise nothing.
-async function sendBookingMessage(req, jobId, shopId, key) {
+async function sendBookingMessage(req, jobId, shopId, key, extraVars = {}) {
+  // Its own savepoint when the request is one transaction (DB_TENANT_SCOPE=
+  // transaction): a failed statement here would otherwise leave that whole
+  // transaction aborted and roll the staff answer back with it (audit item
+  // 24, #336). Otherwise it is a short transaction of its own.
+  await db.exec('BEGIN');
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
     const why = await whyNotQueued(key, customerId);
-    if (why === 'no_contact') return { skipped: 'no_contact', name: TEMPLATES[key].name };
-    if (why) return undefined;
-    const link = await messageLink(() => issueJobLink(req, jobId, shopId));
-    const { vars } = await bookingMessageVars(jobId, shopId, link, key);
-    const ctx = await currentSession(req);
-    await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+    let result;
+    if (why === 'no_contact') result = { skipped: 'no_contact', name: TEMPLATES[key].name };
+    else if (!why) {
+      const link = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { vars } = await bookingMessageVars(jobId, shopId, link, key, extraVars);
+      const ctx = await currentSession(req);
+      await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+    }
+    await db.exec('COMMIT');
+    return result;
   } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
     console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
   return undefined;
@@ -1133,6 +1151,10 @@ export function register(route) {
     try {
       out = await withJobBookingLock(id, [jobDate], async (job) => {
         if (job.version !== body.version) return staleRefusal;
+        // The mechanic was checked before the lock; check again under it, and keep
+        // the row from changing until this commits (audit item 20, #337).
+        const mechanicStill = await db.prepare('SELECT id FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1 FOR SHARE').get(mech.mechanicId);
+        if (!mechanicStill) return { status: 400, body: { error: 'Please choose a mechanic' } };
         if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
           return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
         }
@@ -1188,8 +1210,8 @@ export function register(route) {
     answerChangeRequest(req, res, Number(params.id), 'accept', shopId));
 
   // screens: change-pending, diary
-  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>
-    answerChangeRequest(req, res, Number(params.id), 'decline'));
+  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params, query, afterRelease, shopId) =>
+    answerChangeRequest(req, res, Number(params.id), 'decline', shopId));
 
   // Staff saw a customer's cancellation (piece 12, decision 5): it leaves
   // "Waiting for you". Keeps the first time it was seen; still needs the version.
@@ -1601,8 +1623,18 @@ export function register(route) {
     try {
       await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? ORDER BY id FOR UPDATE').all(id);
       out = await withJobBookingLock(id, [], async (job) => {
-        // Any paid order linked to the job counts (a job can have more than one).
-        const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
+        // Money taken on the job counts, not only a converted order (Jack, 18
+        // Oct, answer 1: "a deposit or a payment"; audit item 12): a paid order
+        // linked to the job (a job can have more than one), a deposit paid on an
+        // open order, or an online deposit still held or taken. A deposit
+        // already refunded or released doesn't. The online deposit's job link is
+        // ON DELETE SET NULL, so deleting would lose track of the money.
+        const paid = Boolean(await db.prepare(
+          `SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND (status = 'converted' OR paid_pence > 0)
+           UNION ALL
+           SELECT 1 FROM online_payments WHERE job_id = ? AND status IN ('held', 'taken')
+           LIMIT 1`
+        ).get(id, id));
         const inShop = job.custody_state === 'in_shop';
         if (paid || inShop) {
           return {

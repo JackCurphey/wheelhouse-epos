@@ -82,11 +82,18 @@ async function shopTimeZone(client, shopId) {
   return rows[0]?.time_zone || DEFAULT_TIME_ZONE;
 }
 
+// Old-record sales per shop day. From step B the all_sales view carries them
+// (its 'old' rows, so a till sale arriving late never moves a past day);
+// before the view exists, the old table is the same thing.
 async function oldSaleDays(client, shopId, timeZone) {
+  const { rows: [{ view }] } = await client.query("SELECT to_regclass('all_sales') IS NOT NULL AS view");
+  const from = view
+    ? "(SELECT made_at AS at, total_pence FROM all_sales WHERE source = 'old' AND shop_id = $1) AS o"
+    : '(SELECT created_at AS at, ROUND(total * 100)::int AS total_pence FROM sales WHERE shop_id = $1) AS o';
   const { rows } = await client.query(
-    `SELECT to_char((created_at AT TIME ZONE $2)::date, 'YYYY-MM-DD') AS day,
-            COUNT(*)::int AS count, COALESCE(SUM(ROUND(total * 100)), 0)::int AS total_pence
-       FROM sales WHERE shop_id = $1 GROUP BY 1 ORDER BY 1`,
+    `SELECT to_char((o.at AT TIME ZONE $2)::date, 'YYYY-MM-DD') AS day,
+            COUNT(*)::int AS count, COALESCE(SUM(o.total_pence), 0)::int AS total_pence
+       FROM ${from} GROUP BY 1 ORDER BY 1`,
     [shopId, timeZone]
   );
   return Object.fromEntries(rows.map((r) => [r.day, { count: r.count, totalPence: r.total_pence }]));
@@ -215,10 +222,7 @@ async function checkTillSales(client, shopId, out) {
 async function checkDays(client, shopId, saved, out) {
   if (!saved) return;
   // Decision 7.4: after step B the view's old-record rows must match the
-  // baseline. Until this reads them (task 3.4), refuse rather than pass by
-  // comparing the old table with itself.
-  const { rows: [{ view }] } = await client.query("SELECT to_regclass('all_sales') IS NOT NULL AS view");
-  if (view) throw new Error("all_sales exists, but the day check still reads sales: point it at the view's old rows (task 3.4)");
+  // baseline (oldSaleDays reads them), till sales left out.
   const now = await oldSaleDays(client, shopId, saved.timeZone);
   for (const [day, was] of Object.entries(saved.days)) {
     out.checked.days += 1;

@@ -3,7 +3,9 @@ import { test, expect } from '@playwright/test';
 test('the workshop app mounts in a real browser', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('/workshop');
+  // Signed out, /workshop goes straight on to sign-in (staff-signin-workos-screens
+  // design 6), so the app is opened at its own signed-out page.
+  await page.goto('/workshop/signed-out');
   await expect(page.locator('#wh-root')).not.toBeEmpty();
   expect(errors).toEqual([]);
 });

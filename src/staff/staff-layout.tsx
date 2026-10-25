@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router';
 import { apiMutate } from '@/lib/api/client.ts';
+import { pageNav } from '@/lib/page-nav.ts';
 import { useSession, type SessionUser } from '@/lib/auth/use-session.ts';
 import { useAccessibilityClasses, useYourSettings } from '@/lib/your-settings.ts';
 import { NAV_ROUTES, pageLabel, roomsFor, type NavItem, type Role } from './nav.ts';
 import { NavIcon } from './nav-icon.tsx';
 import { HeaderSlotContext } from './header-slot.ts';
 import { HeaderSearch } from './header-search.tsx';
+import { SignedOut } from './signed-out.tsx';
 
 /**
  * The frame every staff page sits in (journey A; Workshop day decision 68):
@@ -69,11 +71,15 @@ function ShopBlock({ name }: { name: string }) {
 }
 
 function Footer({ user, roleName, onPick }: { user: SessionUser; roleName: string; onPick?: () => void }) {
+  // A WorkOS sign-in ends at WorkOS too, so the next person at this computer
+  // signs in again (staff-signin-workos); otherwise the signed-out page.
   async function signOut() {
+    let next = '/workshop/signed-out';
     try {
-      await apiMutate('/api/auth/logout', {});
+      const done = await apiMutate<{ ok: boolean; signOutUrl?: string }>('/api/auth/logout', {});
+      if (done?.signOutUrl) next = done.signOutUrl;
     } finally {
-      window.location.assign('/');
+      pageNav.go(next);
     }
   }
   return (
@@ -245,17 +251,6 @@ function PhoneMenu({ user, shopName, role, roleName, onClose }: {
   );
 }
 
-function SignedOut() {
-  return (
-    <main className="mx-auto flex max-w-md flex-col gap-3 p-8">
-      <p>You&apos;re signed out.</p>
-      <a href="/" className="font-semibold text-[var(--wh-ink)] underline">
-        Sign in
-      </a>
-    </main>
-  );
-}
-
 /** The key of the sidebar page at this address, e.g. "diary". */
 function pageKey(pathname: string): string {
   return pathname.replace(/^\/workshop\/?/, '').split('/')[0];
@@ -272,7 +267,7 @@ export function StaffLayout() {
   const settings = useYourSettings(session.status === 'signed-in');
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
-  if (session.status === 'signed-out') return <SignedOut />;
+  if (session.status === 'signed-out') return <SignedOut expired={session.expired} />;
   if (session.status === 'error') {
     return (
       <div role="alert" className="p-8">

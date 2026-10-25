@@ -84,6 +84,35 @@ async function insertLogin(client, { shopId, name, email, password, isOwner }) {
   return rows[0];
 }
 
+// Adds a person as the owner of a shop that has none, such as the test shop
+// the loader makes (add-hosted-copy design 7, task 3.6b): staff sign in only
+// through WorkOS, so nobody can be signed in to it to add one from the app.
+// Their password is random and never shown; they sign in through WorkOS with
+// this email. Logins carry no shop_id policy, so no shop context is needed.
+export async function addOwnerLogin({ shopSlug, name, email }) {
+  const unused = randomBytes(24).toString('hex');
+  const clean = await validateNewLogin({ name, email, password: unused });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Locks the shop, so two at once can't both add an owner.
+    const { rows: [shop] } = await client.query('SELECT * FROM shops WHERE slug = $1 FOR UPDATE', [shopSlug]);
+    if (!shop) throw new AuthError(`No shop at ${shopSlug}`);
+    const { rows: [owner] } = await client.query('SELECT id FROM logins WHERE shop_id = $1 AND is_owner', [shop.id]);
+    if (owner) throw new AuthError(`${shop.name} already has an owner`);
+    const login = await insertLogin(client, { shopId: shop.id, ...clean, password: unused, isOwner: true });
+    await client.query('COMMIT');
+    return { ...login, shopName: shop.name };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    // The same email added at the same moment elsewhere (review).
+    if (err.code === '23505') throw new AuthError('An account with that email already exists');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 // Creates a shop and its first login (the owner) together, plus the default
 // data every shop starts with - what used to appear lazily on first access
 // to that shop's SQLite file (getShopDb in db.js) now has to be seeded
@@ -140,20 +169,38 @@ export async function createShop({ shopName, ownerName, email, password }) {
 }
 
 
-export async function verifyLogin(email, password) {
-  email = (email || '').trim().toLowerCase();
-  const { rows: [login] } = await pool.query('SELECT * FROM logins WHERE email = $1', [email]);
-  if (!login || !login.active || !verifyPassword(password || '', login.password_hash)) {
-    throw new AuthError('Invalid email or password');
-  }
-  return login;
-}
-
-export async function createSession(loginId) {
+// workosSessionId: the WorkOS session behind it, when the person signed in on
+// WorkOS's page, so signing out can end that too (staff-signin-workos design 3).
+export async function createSession(loginId, { workosSessionId = null } = {}) {
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
-  await pool.query('INSERT INTO sessions (token, login_id, expires_at) VALUES ($1, $2, $3)', [token, loginId, expiresAt]);
+  await pool.query(
+    'INSERT INTO sessions (token, login_id, expires_at, workos_session_id) VALUES ($1, $2, $3, $4)',
+    [token, loginId, expiresAt, workosSessionId]
+  );
   return token;
+}
+
+// The login a person WorkOS has signed in belongs to (staff-signin-workos
+// design 4): the one linked to them, or else the unlinked login with their
+// email, which is linked now. Null for a turned-off login, no match, or a
+// login linked to someone else - one answer for all three. The caller has
+// already refused an email WorkOS hasn't checked.
+export async function loginForWorkosUser({ id, email }) {
+  let { rows: [login] } = await pool.query('SELECT * FROM logins WHERE workos_user_id = $1', [id]);
+  if (!login) {
+    try {
+      ({ rows: [login] } = await pool.query(
+        'UPDATE logins SET workos_user_id = $1 WHERE email = $2 AND workos_user_id IS NULL AND active RETURNING *',
+        [id, email]
+      ));
+    } catch (err) {
+      // Two first sign-ins at once: the other one linked this person.
+      if (err.code === '23505') return loginForWorkosUser({ id, email: null });
+      throw err;
+    }
+  }
+  return login && login.active ? login : null;
 }
 
 // Resolves a session cookie to both the person signed in and their shop -
@@ -175,9 +222,11 @@ export async function getSessionContext(token) {
   return { login, shop };
 }
 
+// Returns the WorkOS session behind it, if there was one, for its sign-out.
 export async function destroySession(token) {
-  if (!token) return;
-  await pool.query('DELETE FROM sessions WHERE token = $1', [token]);
+  if (!token) return null;
+  const { rows: [gone] } = await pool.query('DELETE FROM sessions WHERE token = $1 RETURNING workos_session_id', [token]);
+  return gone?.workos_session_id ?? null;
 }
 
 export const SESSION_COOKIE = 'wh_session';
