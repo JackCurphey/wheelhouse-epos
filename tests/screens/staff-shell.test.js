@@ -28,11 +28,14 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
+// me: the signed-in person, null when signed out, or 'expired' for a
+// session that has run out (staff-signin-workos-screens design 2).
 function stubServer(me) {
   calls = [];
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url, method: options.method ?? 'GET' });
     if (url === '/api/auth/me') {
+      if (me === 'expired') return { status: 401, ok: false, json: async () => ({ error: 'Not signed in', reason: 'expired' }) };
       return me ? { status: 200, ok: true, json: async () => me } : { status: 401, ok: false, json: async () => ({ error: 'Not signed in' }) };
     }
     if (url === '/api/auth/logout') return { status: 200, ok: true, json: async () => ({ ok: true }) };
@@ -46,7 +49,10 @@ async function renderAt(path, me) {
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
-  return { ...rtl, ui: rtl.render(createElement(shell.AppShell)) };
+  // Where the page sends the browser, which jsdom can't follow.
+  const went = [];
+  shell.pageNav.go = (url) => went.push(url);
+  return { ...rtl, went, ui: rtl.render(createElement(shell.AppShell)) };
 }
 
 // The computer sidebar: the first "Main" navigation in the page.
@@ -113,11 +119,9 @@ test('Sign out signs you out on the server', async () => {
 // staff-signin-workos: signing out of a WorkOS sign-in ends it at WorkOS too,
 // so the next person at this computer signs in again; otherwise the staff
 // app's signed-out page, which links to WorkOS.
-for (const [said, goes] of [[{ ok: true, signOutUrl: 'https://api.workos.com/user_management/sessions/logout?session_id=s1' }, 'https://api.workos.com/user_management/sessions/logout?session_id=s1'], [{ ok: true }, '/workshop']]) {
+for (const [said, goes] of [[{ ok: true, signOutUrl: 'https://api.workos.com/user_management/sessions/logout?session_id=s1' }, 'https://api.workos.com/user_management/sessions/logout?session_id=s1'], [{ ok: true }, '/workshop/signed-out']]) {
   test(`Sign out then goes to ${goes}`, async () => {
-    const { ui, within, fireEvent, waitFor } = await renderAt('/workshop/diary', OWNER);
-    const went = [];
-    shell.pageNav.go = (url) => went.push(url);
+    const { ui, within, fireEvent, waitFor, went } = await renderAt('/workshop/diary', OWNER);
     const stubbed = globalThis.fetch;
     globalThis.fetch = async (url, options) => (url === '/api/auth/logout'
       ? { status: 200, ok: true, json: async () => said }
@@ -149,10 +153,56 @@ test('choosing a page from the phone menu opens it and closes the menu', async (
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Customers' }));
 });
 
-test('signed out, the app says so and links to sign in through WorkOS', async () => {
-  const { ui } = await renderAt('/workshop/diary', null);
-  assert.ok(await ui.findByText("You're signed out."));
-  assert.equal(ui.getByRole('link', { name: 'Sign in' }).getAttribute('href'), '/api/auth/workos/start');
+// staff-signin-workos-screens: the drawn pages around signing in and out.
+const START = '/api/auth/workos/start';
+
+test('signed out, with nothing to say, the app goes straight to WorkOS and back to this page', async () => {
+  const { ui, went, waitFor } = await renderAt('/workshop/diary', null);
+  await waitFor(() => assert.deepEqual(went, [`${START}?from=%2Fworkshop%2Fdiary`]));
+  assert.equal(ui.queryByRole('heading') === null, true, 'nothing else is shown');
+  assert.ok(ui.getByRole('status').textContent.includes('Taking you to sign in…'));
+});
+
+test('after signing out: the drawn auth-signedout page', async () => {
+  const { ui, went } = await renderAt('/workshop/signed-out', null);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'You’ve signed out' }));
+  assert.ok(ui.getByText('Close this window, or sign in again.'));
+  assert.equal(ui.getByRole('link', { name: 'Sign in again' }).getAttribute('href'), START);
+  assert.deepEqual(went, [], 'it doesn’t go on by itself');
+});
+
+test('a session that has run out: the drawn auth-expired page, back to this page after', async () => {
+  const { ui, went } = await renderAt('/workshop/diary', 'expired');
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Please sign in again' }));
+  assert.ok(ui.getByText('You were signed out after a while without activity. Sign in and you’ll be back where you were.'));
+  assert.equal(ui.getByRole('link', { name: 'Sign in again' }).getAttribute('href'), `${START}?from=%2Fworkshop%2Fdiary`);
+  assert.deepEqual(went, []);
+});
+
+// Design 4: not drawn, decided while building.
+const FAILED = {
+  'not-on-staff': ['That email isn’t on a staff list', 'Sign in with the email your shop has for you, or ask the shop’s owner to add you.', 'Sign in again'],
+  unchecked: ['Check your email first', 'WorkOS sent you an email to check it’s yours. Open it, then sign in again.', 'Sign in again'],
+  busy: ['Too many tries', 'Wait a few minutes, then try again.', 'Try again'],
+  failed: ['That sign-in didn’t work', 'Please try again.', 'Try again'],
+  'something-new': ['That sign-in didn’t work', 'Please try again.', 'Try again'],
+};
+for (const [reason, [heading, line, button]] of Object.entries(FAILED)) {
+  test(`a failed sign-in (${reason}) says why and offers “${button}”`, async () => {
+    const { ui, went } = await renderAt(`/workshop?signin=${reason}`, null);
+    assert.ok(await ui.findByRole('heading', { level: 1, name: heading }));
+    assert.ok(ui.getByText(line));
+    assert.equal(ui.getByRole('link', { name: button }).getAttribute('href'), START);
+    assert.deepEqual(went, []);
+  });
+}
+
+test('signing in not switched on: says so, with nothing to press', async () => {
+  const { ui, went } = await renderAt('/workshop?signin=off', null);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Signing in isn’t switched on yet' }));
+  assert.ok(ui.getByText('Ask whoever runs Wheelhouse for your shop.'));
+  assert.equal(ui.queryByRole('link') === null, true);
+  assert.deepEqual(went, []);
 });
 
 test('an edge screen opened from a customer\'s link has no staff sidebar', async () => {

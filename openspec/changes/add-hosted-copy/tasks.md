@@ -69,7 +69,22 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. and #428's pull request deployed nothing (its run skipped, no steps ran, the copy stayed on `f2b70dc`)
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
 - [x] 3.6a The loader can run on the hosted copy (fresh review, 24 Oct: the image doesn't carry the drawings it read). Its data comes from `scripts/dev/test-shop-drawings.json`, a snapshot of the drawings that `tests/test-shop-snapshot.test.js` keeps exact. The image carries the loader and the snapshot, and the runbook's "Loading the test shop" says how to run it. The tests were watched failing first. Seen on 24 Oct: built the real image locally and ran the loader inside it against an empty scratch database. It loaded the shop with its 38 jobs, and a second run was refused, changing nothing
-- [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
+- [x] 3.6b (Jack, 25 Oct, taking 3.6 from Mark) The "add a login" command (design 7, "No login"):
+  - tests first, each watched failing, cover adding an owner, and each refusal;
+  - the runbook's "Loading the test shop" says how to run it after the loader.
+
+  Verify with `npm test`, and by running it once against a scratch database.
+
+  Done 25 Oct. The tests failed first, and breaking the owner check made them
+  fail again. Seen against a scratch database: the loader loaded North Street
+  Cycles, the command added jack@curphey.com as its owner, and a second
+  owner was refused with exit 1, changing nothing.
+- [x] 3.6c (Jack, 25 Oct) A "remove a shop" command, so Jack can clear the shop he made at sign-up (his decision, 25 Oct) before loading the test shop:
+  - it uses the same deletion every test file's teardown uses, moved from `tests/helpers/testShop.js` to `server/remove-shop.js`;
+  - it says what it would remove until the shop's address is typed a second time.
+
+  Done 25 Oct. The tests failed first, and breaking the second-address check made them fail again.
+- [ ] 3.6 (Jack from 25 Oct; after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
 ## 4. The way back (Mark; after group 3)
 

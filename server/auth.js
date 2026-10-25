@@ -84,6 +84,35 @@ async function insertLogin(client, { shopId, name, email, password, isOwner }) {
   return rows[0];
 }
 
+// Adds a person as the owner of a shop that has none, such as the test shop
+// the loader makes (add-hosted-copy design 7, task 3.6b): staff sign in only
+// through WorkOS, so nobody can be signed in to it to add one from the app.
+// Their password is random and never shown; they sign in through WorkOS with
+// this email. Logins carry no shop_id policy, so no shop context is needed.
+export async function addOwnerLogin({ shopSlug, name, email }) {
+  const unused = randomBytes(24).toString('hex');
+  const clean = await validateNewLogin({ name, email, password: unused });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Locks the shop, so two at once can't both add an owner.
+    const { rows: [shop] } = await client.query('SELECT * FROM shops WHERE slug = $1 FOR UPDATE', [shopSlug]);
+    if (!shop) throw new AuthError(`No shop at ${shopSlug}`);
+    const { rows: [owner] } = await client.query('SELECT id FROM logins WHERE shop_id = $1 AND is_owner', [shop.id]);
+    if (owner) throw new AuthError(`${shop.name} already has an owner`);
+    const login = await insertLogin(client, { shopId: shop.id, ...clean, password: unused, isOwner: true });
+    await client.query('COMMIT');
+    return { ...login, shopName: shop.name };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    // The same email added at the same moment elsewhere (review).
+    if (err.code === '23505') throw new AuthError('An account with that email already exists');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 // Creates a shop and its first login (the owner) together, plus the default
 // data every shop starts with - what used to appear lazily on first access
 // to that shop's SQLite file (getShopDb in db.js) now has to be seeded
