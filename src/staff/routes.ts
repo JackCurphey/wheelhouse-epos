@@ -40,6 +40,8 @@ export const ROUTES = {
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.
   'auth-signedout': '/workshop/signed-out',
+  // "Sign in to Wheelhouse" (staff-signin), staff-signin-google.
+  'staff-signin': '/workshop/sign-in',
   reschedule: '/workshop/booking/:jobId/reschedule',
   cancel: '/workshop/booking/:jobId/cancel',
   expired: '/workshop/link-expired',

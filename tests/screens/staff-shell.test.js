@@ -156,18 +156,36 @@ test('choosing a page from the phone menu opens it and closes the menu', async (
 // staff-signin-workos-screens: the drawn pages around signing in and out.
 const START = '/api/auth/workos/start';
 
-test('signed out, with nothing to say, the app goes straight to WorkOS and back to this page', async () => {
-  const { ui, went, waitFor } = await renderAt('/workshop/diary', null);
-  await waitFor(() => assert.deepEqual(went, [`${START}?from=%2Fworkshop%2Fdiary`]));
-  assert.equal(ui.queryByRole('heading') === null, true, 'nothing else is shown');
-  assert.ok(ui.getByRole('status').textContent.includes('Taking you to sign in…'));
+// staff-signin-google: signed out, Wheelhouse's own sign-in screen, drawn as staff-signin.
+const SIGN_IN = '/workshop/sign-in';
+test('signed out on the diary: “Sign in to Wheelhouse”, Google or email, both back to the diary', async () => {
+  const { ui, went } = await renderAt('/workshop/diary', null);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Sign in to Wheelhouse' }));
+  assert.equal(ui.getByRole('link', { name: 'Continue with Google' }).getAttribute('href'), `${START}?provider=google&from=%2Fworkshop%2Fdiary`);
+  assert.equal(ui.getByRole('link', { name: 'Sign in with email' }).getAttribute('href'), `${START}?from=%2Fworkshop%2Fdiary`);
+  assert.ok(ui.getByText('or'));
+  assert.deepEqual(went, [], 'no jump to WorkOS');
+});
+
+test('/workshop/sign-in shows it even with a session that has run out, so Sign in again can’t go round in a loop', async () => {
+  const { ui } = await renderAt(`${SIGN_IN}?from=%2Fworkshop%2Fdiary`, 'expired');
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Sign in to Wheelhouse' }));
+  assert.equal(ui.getByRole('link', { name: 'Sign in with email' }).getAttribute('href'), `${START}?from=%2Fworkshop%2Fdiary`);
+});
+
+test('/workshop/sign-in shows it, going back to its own from', async () => {
+  const { ui } = await renderAt(`${SIGN_IN}?from=%2Fworkshop%2Fcustomers`, null);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Sign in to Wheelhouse' }));
+  assert.equal(ui.getByRole('link', { name: 'Continue with Google' }).getAttribute('href'), `${START}?provider=google&from=%2Fworkshop%2Fcustomers`);
+  const plain = await renderAt(SIGN_IN, null);
+  assert.equal((await plain.ui.findByRole('link', { name: 'Sign in with email' })).getAttribute('href'), START);
 });
 
 test('after signing out: the drawn auth-signedout page', async () => {
   const { ui, went } = await renderAt('/workshop/signed-out', null);
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'You’ve signed out' }));
   assert.ok(ui.getByText('Close this window, or sign in again.'));
-  assert.equal(ui.getByRole('link', { name: 'Sign in again' }).getAttribute('href'), START);
+  assert.equal(ui.getByRole('link', { name: 'Sign in again' }).getAttribute('href'), SIGN_IN);
   assert.deepEqual(went, [], 'it doesn’t go on by itself');
 });
 
@@ -175,7 +193,7 @@ test('a session that has run out: the drawn auth-expired page, back to this page
   const { ui, went } = await renderAt('/workshop/diary', 'expired');
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Please sign in again' }));
   assert.ok(ui.getByText('You were signed out after a while without activity. Sign in and you’ll be back where you were.'));
-  assert.equal(ui.getByRole('link', { name: 'Sign in again' }).getAttribute('href'), `${START}?from=%2Fworkshop%2Fdiary`);
+  assert.equal(ui.getByRole('link', { name: 'Sign in again' }).getAttribute('href'), `${SIGN_IN}?from=%2Fworkshop%2Fdiary`);
   assert.deepEqual(went, []);
 });
 
@@ -192,7 +210,7 @@ for (const [reason, [heading, line, button]] of Object.entries(FAILED)) {
     const { ui, went } = await renderAt(`/workshop?signin=${reason}`, null);
     assert.ok(await ui.findByRole('heading', { level: 1, name: heading }));
     assert.ok(ui.getByText(line));
-    assert.equal(ui.getByRole('link', { name: button }).getAttribute('href'), START);
+    assert.equal(ui.getByRole('link', { name: button }).getAttribute('href'), SIGN_IN);
     assert.deepEqual(went, []);
   });
 }
