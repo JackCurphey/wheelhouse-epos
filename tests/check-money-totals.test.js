@@ -319,3 +319,15 @@ test('order lines saved at fractions of a penny, each rounded on its own, are re
   const found = (await check(shop.id)).mismatches;
   assert.deepEqual(found.map((m) => [m.kind, m.record, m.expected, m.actual, m.known]), [['order_lines', id, 3675, 3676, false]]);
 });
+
+test('days: a till sale arriving late for a past day leaves the old-record comparison clean', async () => {
+  const shop = await newShop();
+  await runWithShop(shop.id, () => oldSale({ subtotal: 10, total: 10, cash: 10, lines: [10], at: '2026-09-02T09:00:00Z' }));
+  const client = await pool.connect();
+  let baseline;
+  try { baseline = { [shop.id]: await dayTotals(client, shop.id) }; } finally { client.release(); }
+  await runWithShop(shop.id, () => tillSale({ total: 700, lines: [700], payments: [700] })); // its clock is 2 Sep
+  const result = await check(shop.id, { baseline });
+  assert.deepEqual(result.mismatches, []);
+  assert.equal(result.checked.days, 1);
+});

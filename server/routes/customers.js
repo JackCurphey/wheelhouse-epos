@@ -7,7 +7,7 @@
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { serializeBike } from '../lib/serializers.js';
-import { SALE_SELECT, serializeSale } from '../lib/sales.js';
+import { ALL_SALES_SELECT, serializeAnySale } from '../lib/sales.js';
 import { serializeWorkshopJob } from '../workshop/jobs.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { shopToday } from '../clock.js';
@@ -306,8 +306,8 @@ export function register(route) {
     const id = Number(params.id);
     const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     if (!customer) return notFound(res, 'Customer not found');
-    const rows = await db.prepare(SALE_SELECT + ' WHERE s.customer_id = ? ORDER BY s.id DESC LIMIT 500').all(id);
-    sendJson(res, 200, rows.map((r) => serializeSale(r)));
+    const rows = await db.prepare(ALL_SALES_SELECT + ' WHERE v.customer_id = ? ORDER BY v.made_at DESC, v.source DESC, v.id DESC LIMIT 500').all(id);
+    sendJson(res, 200, rows.map((r) => serializeAnySale(r)));
   });
 
   route('POST', '/api/customers', async (req, res) => {
