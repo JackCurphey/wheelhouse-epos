@@ -20,8 +20,11 @@ function sessionCookie(req, token) {
   return `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${secure}`;
 }
 
+// Signing in ends a local sign-out (dev-autologin.js): the mark goes.
+const devSignedOutExpired = () => (devAutologinOn() ? [`${DEV_SIGNED_OUT_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`] : []);
+
 function setSessionCookie(req, res, token) {
-  res.setHeader('Set-Cookie', sessionCookie(req, token));
+  res.setHeader('Set-Cookie', [sessionCookie(req, token), ...devSignedOutExpired()]);
 }
 
 // The state a WorkOS sign-in started with, kept by this browser for 10
@@ -148,7 +151,7 @@ export function register(route) {
     // Whoever was signed in on this browser before is signed out (review).
     await destroySession(earlier);
     const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
-    redirect(res, '/workshop', [sessionCookie(req, token), stateCookie(req, '', 0)]);
+    redirect(res, '/workshop', [sessionCookie(req, token), stateCookie(req, '', 0), ...devSignedOutExpired()]);
   });
 
   route('POST', '/api/auth/logout', async (req, res) => {
