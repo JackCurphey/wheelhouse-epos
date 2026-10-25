@@ -52,6 +52,11 @@ test('the authorize address sends the person to AuthKit with the right settings'
   });
 });
 
+test('asked for Google, the authorize address goes straight to Google (provider=GoogleOAuth)', () => {
+  const url = new URL(workosProvider({ ...KEYS }).authorizeUrl({ state: 's1', redirectUri: 'http://localhost:8080/api/auth/workos/callback', provider: 'GoogleOAuth' }));
+  assert.equal(url.searchParams.get('provider'), 'GoogleOAuth');
+});
+
 test('the redirect address comes from WORKOS_REDIRECT_URI, with localhost:8080 by default', () => {
   assert.equal(workosProvider({ ...KEYS }).redirectUri(), 'http://localhost:8080/api/auth/workos/callback');
   assert.equal(workosProvider({ ...KEYS, WORKOS_REDIRECT_URI: 'https://test.example/api/auth/workos/callback' }).redirectUri(), 'https://test.example/api/auth/workos/callback');

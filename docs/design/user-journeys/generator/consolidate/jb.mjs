@@ -3,6 +3,7 @@
 import { keep, into, later } from './plan.mjs';
 
 export default {
+  'staff-signin': keep(42), // Jack, 25 Oct: Wheelhouse's own sign-in, Continue with Google; a sign-in page, as workos-signin
   'workos-signin': keep(42), // inferred: real screen; closest block is a sign-in page
   'auth-site': keep(13), // inferred: real screen, choosing the shop
   'auth-signedout': keep(40),

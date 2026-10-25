@@ -2,7 +2,7 @@
 # Which commit the deploy workflow puts on the hosted copy (WP-0.5; add-hosted-copy
 # design, Decision 3, "Order"). Run in a checkout of main with its history:
 #
-#   scripts/hosting/pick-deploy.sh <commit running now, or ""> <newest main commit whose Tests passed>
+#   scripts/hosting/pick-deploy.sh <commit running now, or ""> <the main commit this merge made>
 #
 # Prints "deploy <commit>" or "skip". GitHub keeps one run waiting per
 # concurrency group and cancels it when another arrives, so every run deploys
