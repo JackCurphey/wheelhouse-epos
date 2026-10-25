@@ -114,6 +114,20 @@ day's capacity check) is left: the offer design makes it a staff choice.
 3. **The offer's message must be text**: "The message must be text".
    *Pattern:* decline's message.
 
+### 25 Oct 2026: a declined date change sends its message (`openspec/changes/date-change-declined-message`; audit item 23; Mark's answer, 25 Oct)
+
+1. **The declined wording is the second box of the Date change answered
+   row, as drawn (`bk-msg-change`), not a row of its own.** One On/Off covers
+   both wordings, and the row's subject is shared. *Pattern:* the drawing.
+2. **[New day and time] in the declined wording is the day the customer asked
+   for**, read before the decline clears the request. *Pattern:* Offer
+   another time's "the time the customer asked for".
+3. **The Settings box's two wordings are labelled "If the shop accepts" and
+   "If the shop can't"** as drawn; the preview shows the first wording only,
+   as the drawing's one example does.
+4. **`decline-change` was missing the shop id the other answers pass**; it
+   is passed now (a message needs it).
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)

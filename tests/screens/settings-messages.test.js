@@ -274,3 +274,63 @@ test('its wording box says “Stop these” is always added and can’t be taken
   await ui.findByRole('dialog', { name: 'Bike ready' });
   assert.ok(ui.queryByText(/It can’t be taken off/) === null, 'only the service reminder has it');
 });
+
+// A declined date change (openspec/changes/date-change-declined-message; drawn
+// in bk-msg-change): Date change answered is one row, and its box has two
+// wordings, "If the shop accepts" and "If the shop can't", each saved under its own key.
+const DATE_CHANGE = template({
+  key: 'date_change_answered', name: 'Date change answered', when: 'When the shop accepts or declines a new date', group: 'booking',
+  wording: 'Hi [Customer’s first name], [Shop name] has moved your [Service] to [New day and time].', tapIns: ['Customer’s first name', 'Shop name', 'Service', 'New day and time'],
+});
+const DECLINED = template({
+  key: 'date_change_declined', name: 'Date change answered', when: 'When the shop can’t do a new date', group: null, partOf: 'date_change_answered',
+  wording: 'Hi [Customer’s first name], [Shop name] can’t do [New day and time], so your booking stays on [Booked day and time].', tapIns: ['Customer’s first name', 'Shop name', 'New day and time', 'Booked day and time'],
+});
+async function openDateChange() {
+  const t = await openSettings({ extra: [DATE_CHANGE, DECLINED] });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Edit the wording of Date change answered' }));
+  const dlg = t.within(await t.ui.findByRole('dialog', { name: 'Date change answered' }));
+  return { ...t, dlg };
+}
+
+test('Date change answered is one row, and its second wording adds no row and no count', async () => {
+  const { ui } = await openSettings({ extra: [DATE_CHANGE, DECLINED] });
+  await ui.findByText('Date change answered');
+  assert.equal(ui.getAllByText('Date change answered').length, 1);
+  assert.equal(ui.getAllByRole('button', { name: /Edit the wording of Date change answered/ }).length, 1);
+  // Quote to approve, Bike ready, Booking confirmed and Date change answered: 4, not 5.
+  assert.ok(Boolean(await ui.findByRole('button', { name: /^Automatic messages.*4 on/ })));
+});
+
+test('its box shows both wordings under their drawn headings, the second with its own tap-ins', async () => {
+  const { dlg } = await openDateChange();
+  assert.ok(has(dlg.queryByText('If the shop accepts')));
+  assert.ok(has(dlg.queryByText('If the shop can’t')));
+  assert.equal(dlg.getByLabelText('If the shop accepts').value, DATE_CHANGE.wording);
+  assert.equal(dlg.getByLabelText('If the shop can’t').value, DECLINED.wording);
+  const groups = dlg.getAllByRole('group', { name: 'Put in' });
+  assert.equal(groups.length, 2);
+  assert.ok([...groups[1].querySelectorAll('button')].some((b) => b.textContent === '+ Booked day and time'));
+});
+
+test('a message with one wording shows no headings', async () => {
+  const { dlg } = await openEdit();
+  assert.ok(dlg.queryByText('If the shop accepts') === null);
+  assert.equal(dlg.getAllByRole('group', { name: 'Put in' }).length, 1);
+});
+
+test('Done saves only the wording that changed, under its own key', async () => {
+  const { dlg, fireEvent, waitFor } = await openDateChange();
+  fireEvent.change(dlg.getByLabelText('If the shop can’t'), { target: { value: 'Sorry, no: [New day and time]' } });
+  fireEvent.click(dlg.getByRole('button', { name: 'Done' }));
+  await waitFor(() => assert.deepEqual(puts(), ['/api/message-templates/date_change_declined {"wording":"Sorry, no: [New day and time]"}']));
+});
+
+test('Go back to Wheelhouse’s wording resets both wordings', async () => {
+  const { dlg, fireEvent, waitFor } = await openDateChange();
+  fireEvent.click(dlg.getByRole('button', { name: 'Go back to Wheelhouse’s wording' }));
+  await waitFor(() => assert.deepEqual(puts().sort(), [
+    '/api/message-templates/date_change_answered {"wording":null}',
+    '/api/message-templates/date_change_declined {"wording":null}',
+  ]));
+});

@@ -110,6 +110,18 @@ export const TEMPLATES = {
     subject: 'Your new date — [Shop name]',
     tapIns: [...BOOKING, 'New day and time', 'When to drop off'],
   },
+  // The second wording of Date change answered, "If the shop can't" (bk-msg-change,
+  // as drawn; Mark, 25 Oct, openspec/changes/date-change-declined-message). It is
+  // that row's second box, not a row of its own: its on/off and subject follow
+  // the row's.
+  date_change_declined: {
+    partOf: 'date_change_answered',
+    name: 'Date change answered',
+    when: 'When the shop can’t do a new date',
+    wording: 'Hi [Customer’s first name], [Shop name] can’t do [New day and time], so your booking stays on [Booked day and time]. See your booking: [Link to the booking]. Your repair · [Job number].',
+    subject: 'Your new date — [Shop name]',
+    tapIns: [...BOOKING, 'New day and time'],
+  },
   booking_cancelled: {
     group: 'booking',
     name: 'Booking cancelled',
@@ -150,7 +162,7 @@ export const TEMPLATES = {
 // customer's side: Request received and Booking cancelled.
 // The service reminder joined 25 Oct (openspec/changes/service-reminder-send),
 // and the review request (openspec/changes/review-requests).
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled', 'service_reminder', 'review_request'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
@@ -181,14 +193,16 @@ export async function templateFor(key) {
   const base = TEMPLATES[key];
   if (!base) throw new Error(`unknown message: ${key}`);
   const row = await prepare('SELECT enabled, wording, subject FROM message_templates WHERE key = ?').get(key);
+  // A second wording follows its row's switch and subject.
+  const parent = base.partOf ? await templateFor(base.partOf) : null;
   return {
     key,
     ...base,
     // A message the shop must switch on itself (the review request) is off until it does.
-    enabled: row ? row.enabled : !base.offUntilOn,
+    enabled: parent ? parent.enabled : row ? row.enabled : !base.offUntilOn,
     wording: row?.wording ?? base.wording,
-    subject: row?.subject ?? base.subject,
-    changed: Boolean(row && (!row.enabled || row.wording !== null || row.subject !== null)),
+    subject: parent ? parent.subject : (row?.subject ?? base.subject),
+    changed: Boolean(row && (row.wording !== null || (!parent && (!row.enabled || row.subject !== null)))),
   };
 }
 
