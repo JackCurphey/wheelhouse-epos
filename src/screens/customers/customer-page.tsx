@@ -11,6 +11,7 @@ import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { shortDate } from '@/screens/diary/when.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { Field, OnOff, initials } from './customers-page.tsx';
+import { SaleDialog } from './sale-dialog.tsx';
 
 /**
  * A customer's page (drawn as cs-page and cs-page-new, customer.mjs; customer
@@ -29,7 +30,7 @@ type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: strin
 type Bike = { id: number; make: string | null; model: string | null; colour?: string | null };
 export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
-  | { kind: 'sale'; id: number; total: number; what: string; at: string }
+  | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
   | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
@@ -60,7 +61,7 @@ function Stage({ j }: { j: Extract<Item, { kind: 'job' }> }) {
   return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${tone}`}>{label}</span>;
 }
 
-export function HistoryRow({ item }: { item: Item }) {
+export function HistoryRow({ item, onOpenSale }: { item: Item; onOpenSale?: (sale: Extract<Item, { kind: 'sale' }>) => void }) {
   const tag = (t: string) => <span className="w-[76px] shrink-0 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   if (item.kind === 'job') {
     const when = [item.jobDate ? shortDay(item.jobDate) : null, item.mechanicName].filter(Boolean).join(' · ');
@@ -78,14 +79,18 @@ export function HistoryRow({ item }: { item: Item }) {
     );
   }
   if (item.kind === 'sale') {
+    // Opens the sale (cs-sale; customer-sale-dialog).
     return (
-      <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
-        <span className={`w-[76px] shrink-0 text-sm ${mono}`}>{`Sale ${item.id}`}</span>
-        <span className="flex min-w-0 grow flex-col gap-0.5">
-          <span className="text-size-15 font-semibold">Sale</span>
-          <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.at), item.what].filter(Boolean).join(' · ')}</span>
-        </span>
-        <span className={`text-size-15 ${mono}`}>{money(item.total)}</span>
+      <li className="border-t border-[var(--wh-border)]">
+        <button type="button" onClick={() => onOpenSale?.(item)}
+          className="flex min-h-[52px] w-full items-center gap-3 border-0 bg-transparent p-0 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]">
+          <span className={`w-[76px] shrink-0 text-sm ${mono}`}>{`Sale ${item.receiptNumber ?? item.id}`}</span>
+          <span className="flex min-w-0 grow flex-col gap-0.5">
+            <span className="text-size-15 font-semibold">Sale</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.at), item.what].filter(Boolean).join(' · ')}</span>
+          </span>
+          <span className={`text-size-15 ${mono}`}>{money(item.total)}</span>
+        </button>
       </li>
     );
   }
@@ -104,6 +109,7 @@ function History({ id }: { id: number }) {
   const history = useQuery({ queryKey: ['customer-history', id], queryFn: () => apiGet<{ items: Item[] }>(`/api/customers/${id}/history`) });
   const [filter, setFilter] = useState<Filter>('Everything');
   const [all, setAll] = useState(false);
+  const [sale, setSale] = useState<Extract<Item, { kind: 'sale' }> | null>(null);
   const items = (history.data?.items ?? []).filter((i) => !KIND[filter] || i.kind === KIND[filter]);
   // What's open now is always shown, however much came since (review); the rest eight at a time.
   const open = items.filter((i) => i.kind === 'job' && i.open);
@@ -133,13 +139,14 @@ function History({ id }: { id: number }) {
           </div>
         ) : (
           <div className="flex flex-col">
-            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} />)}</ul></> : null}
-            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} />)}</ul></> : null}
+            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} onOpenSale={setSale} />)}</ul></> : null}
+            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} onOpenSale={setSale} />)}</ul></> : null}
             {!all && open.length + earlier.length < items.length ? (
               <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${items.length})`}</button>
             ) : null}
           </div>
         )}
+      {sale ? <SaleDialog id={sale.id} source={sale.source} receiptNumber={sale.receiptNumber} onClose={() => setSale(null)} /> : null}
     </section>
   );
 }
