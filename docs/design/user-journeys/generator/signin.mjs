@@ -50,6 +50,20 @@ ${button('Continue', { block: true })}
   foot: `<p style="position: absolute; left: 16px; right: 16px; bottom: 20px; margin: 0; text-align: center; font-size: 13px; color: ${C.muted}">Approximate look — this page is hosted by WorkOS and styled through its branding settings</p>`,
 }));
 
+// ---------- Staff: Wheelhouse's own sign-in (Jack, 25 Oct: option 1) ----------
+// "Continue with Google" on Wheelhouse's own screen goes straight to Google's
+// account chooser (WorkOS's provider=GoogleOAuth), skipping WorkOS's page.
+// Email and password stay on WorkOS's page (decision 2), one tap away.
+// Google's sign-in rules need its official "G" logo on the button; there is
+// no file of it here yet, so a bracketed slot stands in for it.
+const googleSlot = `<span title="Google's official G logo goes here" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; border: 1px dashed #9aa5a0; color: ${C.muted}; font-size: 7px; font-weight: 700; flex-shrink: 0" aria-hidden="true">[G]</span>`;
+const orLine = `<div style="display: flex; align-items: center; gap: 12px; color: ${C.muted}; font-size: 13px"><span style="flex: 1; height: 1px; background: ${C.border}"></span>or<span style="flex: 1; height: 1px; background: ${C.border}"></span></div>`;
+const googleButton = `<a href="#" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; box-sizing: border-box; padding: 9px 16px; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 14px; font-weight: 600; text-decoration: none">${googleSlot}Continue with Google</a>`;
+screens['staff-signin'] = each((size) => centred(size, stack(`${h1('Sign in to Wheelhouse')}
+${googleButton}
+${orLine}
+${button('Sign in with email', { variant: 'default', block: true })}`, 16)));
+
 // ---------- Staff: Wheelhouse's own pages ----------
 // Where are you working today? — only for people with more than one site
 // (decision 9); tapping a site goes straight in (journey A decision 6).
@@ -285,6 +299,7 @@ screens['cust-code'] = each((size) => codePage(size));
 screens['cust-code-expired'] = each((size) => codePage(size, { expired: true }));
 
 export const TITLES = {
+  'staff-signin': 'Sign in — Wheelhouse’s own page: Continue with Google goes straight to Google; email and password on WorkOS’s page (proposed, 25 Oct)',
   'workos-signin': 'Sign in — WorkOS’s page, approximate look',
   'auth-site': 'Where are you working today? (more than one shop; tap to go straight in)',
   'auth-signedout': 'Signed out',
@@ -310,7 +325,7 @@ export const TITLES = {
 };
 
 export const ROWS = [
-  { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
+  { label: 'Staff sign-in', screens: ['staff-signin', 'workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
   { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-checkin-workshop-names', 'workshop-working-pills', 'till-pin-wrong', 'pin-change'] },
   // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
