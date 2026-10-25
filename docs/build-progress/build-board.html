@@ -326,7 +326,7 @@ const BOARD = {
   },
   updated: '25 October 2026',
   lead: 'Stage 0 is closed. Service reminders are built from the tick when booking to Stop these, review requests are in, and a bike has its own page. Mark has the till\'s next steps (step B in review, then C and the deposit) and a replan into playable slices for you.',
-  sub: 'Merged 25 Oct: #478 to #498, Jack\'s and the overnight pieces. Open from Mark: #490, #492, #496 and the replan, #499.',
+  sub: 'Merged 25 Oct: #478 to #507, Jack\'s and the overnight pieces, and Mark\'s #492, #496, #503 and #507. Open from Mark: #490 and the replan, #499.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -536,8 +536,9 @@ const BOARD = {
     { status: 'done', what: 'Review requests', detail: 'The message and when it goes (#494); its box in Settings › Messages (#495)', pr: 495 },
     { status: 'done', what: 'A bike\'s own page', detail: 'Its details, owner and jobs, Edit, and New job with the bike chosen (#497); Find a bike in the header search (#498)', pr: 498 },
     { status: 'done', what: 'Online test copy (WP-0.5) and the stage 0 check', detail: 'The four drills and the walkthrough, 25 Oct' },
-    { status: 'next', what: 'Sales in pence step B', detail: 'Reports read both records: the all_sales view, the dashboard, the sales list and a customer\'s sales (in review, #492)', pr: 492 },
-    { status: 'next', what: 'Three audit fixes', detail: 'Delete refuses a job with money held, an offer rechecks the mechanic, a failed booking message can\'t undo the answer (in review, #496)', pr: 496 },
+    { status: 'done', what: 'Sales in pence step B', detail: 'Reports read both records: the all_sales view, the dashboard, the sales list and a customer\'s sales (migration 083). Still to do on the test copy: the day baseline before and the check after', pr: 492 },
+    { status: 'done', what: 'Audit fixes and a declined date change\'s message', detail: 'Delete refuses a job with money held, an offer rechecks the mechanic, a failed booking message can\'t undo the answer (#496); declining a date change sends the drawn "If the shop can\'t" wording, the second box on Date change answered (#507)', pr: 507 },
+    { status: 'done', what: 'Local development without signing in', detail: 'WHEELHOUSE_DEV_AUTOLOGIN: off unless asked, never in production or on the test copy, only from this machine', pr: 503 },
     { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock (a proposal for you, #499)', pr: 499 },
   ],
   asks: [
