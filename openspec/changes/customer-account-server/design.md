@@ -8,6 +8,7 @@ Inside the existing transaction, before making a new customer:
 SELECT c.id, EXISTS (SELECT 1 FROM customer_logins l WHERE l.customer_id = c.id AND l.shop_id = ?) AS has_login
   FROM customers c
  WHERE c.active = 1 AND c.merged_into_id IS NULL AND lower(trim(coalesce(c.email,''))) = ?
+   AND c.email_from_customer
  LIMIT 2
 ```
 If there's exactly one row without a login, the new `customer_logins` row
@@ -51,6 +52,8 @@ Repairs and purchases are merged newest first.
 - **Cleared:** by the staff edit (`PUT /api/customers/:id`) when the email
   changes. The same email in another case keeps it.
 - **The join** requires it.
+- **A merge that takes the other record's email** clears it (Undo puts it
+  back), since that email may be one staff typed (second review).
 
 ### 5. The review's other fixes
 - **Other websites:** a `job-` request that isn't a GET, from another site
