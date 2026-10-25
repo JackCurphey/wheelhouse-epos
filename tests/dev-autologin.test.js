@@ -7,13 +7,16 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import '../server/load-env.js';
 import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { devAutologinOn, devAutologinRefusal, isLocalHost } from '../server/lib/dev-autologin.js';
+import { devAutologinOn, devAutologinRefusal, isLocalHost, sameOriginEnough } from '../server/lib/dev-autologin.js';
 
 const shops = [];
 const servers = [];
@@ -32,16 +35,17 @@ async function server(env) {
   servers.push(s);
   return s;
 }
-const get = (baseUrl, path, headers = {}) => new Promise((resolve, reject) => {
+const send = (baseUrl, path, { method = 'GET', headers = {}, body } = {}) => new Promise((resolve, reject) => {
   const url = new URL(path, baseUrl);
-  const req = http.request(url, { headers }, (res) => {
+  const req = http.request(url, { method, headers: { ...(body ? { 'content-type': 'text/plain' } : {}), ...headers } }, (res) => {
     let text = '';
     res.on('data', (d) => { text += d; });
-    res.on('end', () => resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null }));
+    res.on('end', () => resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null, headers: res.headers }));
   });
   req.on('error', reject);
-  req.end();
+  req.end(body);
 });
+const get = (baseUrl, path, headers = {}) => send(baseUrl, path, { headers });
 
 test('it is on only when asked for, outside production and the hosted copy', () => {
   assert.equal(devAutologinOn({}), false);
@@ -98,6 +102,68 @@ test('with it off, a request with no session is not signed in', async () => {
 test('no matching login means not signed in, rather than someone else', async () => {
   const s = await server({ WHEELHOUSE_DEV_AUTOLOGIN: '1', WHEELHOUSE_DEV_LOGIN_EMAIL: 'nobody@example.com' });
   assert.equal((await get(s.baseUrl, '/api/auth/me')).status, 401);
+});
+
+// A web page the developer visits can make the browser call localhost with no
+// cookie; reading the answer is blocked, but a write would land. So anything
+// that isn't a plain read must come from the app's own origin (or a tool that
+// sends no browser headers).
+test('what counts as the app’s own origin for a write', () => {
+  const at = (headers) => ({ method: 'POST', headers: { host: 'localhost:8080', ...headers } });
+  assert.equal(sameOriginEnough(at({})), true, 'curl and tests send neither header');
+  assert.equal(sameOriginEnough(at({ 'sec-fetch-site': 'same-origin' })), true);
+  assert.equal(sameOriginEnough(at({ 'sec-fetch-site': 'none' })), true);
+  assert.equal(sameOriginEnough(at({ 'sec-fetch-site': 'same-site' })), false, 'another localhost port is same-site');
+  assert.equal(sameOriginEnough(at({ 'sec-fetch-site': 'cross-site' })), false);
+  assert.equal(sameOriginEnough(at({ origin: 'http://localhost:8080' })), true);
+  assert.equal(sameOriginEnough(at({ origin: 'https://evil.example' })), false);
+  assert.equal(sameOriginEnough(at({ origin: 'null' })), false);
+  assert.equal(sameOriginEnough({ method: 'GET', headers: { host: 'localhost:8080', 'sec-fetch-site': 'cross-site' } }), true, 'reads are not writes');
+});
+
+test('a cross-site write is not the dev login, and a same-origin one is', async () => {
+  const o = await owner();
+  const s = await server({ WHEELHOUSE_DEV_AUTOLOGIN: '1', WHEELHOUSE_DEV_LOGIN_EMAIL: o.email });
+  const post = (headers) => send(s.baseUrl, '/api/customers', { method: 'POST', body: JSON.stringify({ name: 'Cross Site' }), headers });
+  assert.equal((await post({ origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' })).status, 401);
+  assert.equal((await post({ origin: 'https://evil.example' })).status, 401);
+  assert.equal((await post({ 'sec-fetch-site': 'same-site' })).status, 401);
+  assert.equal((await post({ 'sec-fetch-site': 'same-origin' })).status, 201);
+});
+
+test('signing out stays signed out until someone signs in', async () => {
+  const o = await owner();
+  const s = await server({ WHEELHOUSE_DEV_AUTOLOGIN: '1', WHEELHOUSE_DEV_LOGIN_EMAIL: o.email });
+  const out = await send(s.baseUrl, '/api/auth/logout', { method: 'POST' });
+  assert.equal(out.status, 200);
+  const cookie = [].concat(out.headers['set-cookie']).map((c) => c.split(';')[0]).filter((c) => !c.endsWith('=')).join('; ');
+  assert.equal((await get(s.baseUrl, '/api/auth/me', { cookie })).status, 401, 'signed out after logout');
+  assert.equal((await get(s.baseUrl, '/api/auth/me')).status, 200, 'a browser without the signed-out mark is still the dev login');
+  const real = await staffRequest(s.baseUrl, `${cookie}; ${o.cookie}`, '/api/auth/me');
+  assert.equal(real.status, 200, 'a real session still signs in');
+});
+
+test('NODE_ENV is compared without regard to case or spaces', () => {
+  for (const production of ['Production', 'PRODUCTION', ' production ']) {
+    assert.equal(devAutologinOn({ WHEELHOUSE_DEV_AUTOLOGIN: '1', NODE_ENV: production }), false, production);
+    assert.match(devAutologinRefusal({ WHEELHOUSE_DEV_AUTOLOGIN: '1', NODE_ENV: production }), /WHEELHOUSE_DEV_AUTOLOGIN/, production);
+  }
+});
+
+// load-env.js: the switch in .env is dropped for a node:test process, kept when
+// it was set before .env was read, and kept outside tests.
+test('load-env drops the switch from .env in a test run only', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'envtest-'));
+  const file = path.join(dir, '.env');
+  writeFileSync(file, 'WHEELHOUSE_DEV_AUTOLOGIN=1\n');
+  const run = (extra) => spawnSync(process.execPath, ['--input-type=module', '-e',
+    "await import('./server/load-env.js'); console.log(JSON.stringify(process.env.WHEELHOUSE_DEV_AUTOLOGIN ?? null))"], {
+    cwd: new URL('..', import.meta.url).pathname, encoding: 'utf8',
+    env: { PATH: process.env.PATH, WHEELHOUSE_ENV_FILE: file, ...extra },
+  }).stdout.trim();
+  assert.equal(run({}), '"1"', 'outside a test run it is kept');
+  assert.equal(run({ NODE_TEST_CONTEXT: 'child-v8' }), 'null', 'in a test run it is dropped');
+  assert.equal(run({ NODE_TEST_CONTEXT: 'child-v8', WHEELHOUSE_DEV_AUTOLOGIN: '1' }), '"1"', 'set outside .env, it is kept');
 });
 
 test('a server in production with it set does not start, and says why', async () => {

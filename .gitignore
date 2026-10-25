@@ -62,3 +62,6 @@ out-oversight-sand/
 out-c2w-sand/
 out-lightspeed-sand/
 out-mockup/
+
+# Local development only (dev sign-in skip): see docker-compose.override.yml
+docker-compose.override.yml

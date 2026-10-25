@@ -10,7 +10,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const devAutologinBefore = process.env.WHEELHOUSE_DEV_AUTOLOGIN;
-const envPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env');
+// WHEELHOUSE_ENV_FILE names another file (a test of this file uses it).
+const envPath = process.env.WHEELHOUSE_ENV_FILE || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env');
 if (existsSync(envPath)) {
   process.loadEnvFile(envPath);
 }

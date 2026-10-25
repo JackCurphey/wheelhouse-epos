@@ -8,6 +8,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, createShop, destroySession, getSessionContext, loginForWorkosUser } from '../auth.js';
 import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
+import { devAutologinOn, DEV_SIGNED_OUT_COOKIE } from '../lib/dev-autologin.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { staffSigninProvider } from '../staff-signin/provider.js';
 
@@ -48,7 +49,10 @@ function redirect(res, location, cookies = []) {
 const signinFailed = (req, res, reason) => redirect(res, `/workshop?signin=${reason}`, [stateCookie(req, '', 0)]);
 
 function clearSessionCookie(res) {
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+  const cookies = [`${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`];
+  // With the local sign-in skip on, signing out has to stick (dev-autologin.js).
+  if (devAutologinOn()) cookies.push(`${DEV_SIGNED_OUT_COOKIE}=1; HttpOnly; Path=/; SameSite=Lax`);
+  res.setHeader('Set-Cookie', cookies);
 }
 
 const callbackLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
