@@ -2517,14 +2517,14 @@ function renderSalesTable() {
         <td>${s.items ? s.items.length : ''}</td>
         <td><span class="badge ${paymentBadgeClass(s.paymentMethod)}">${esc(s.paymentMethod)}</span></td>
         <td class="num">${money(s.total)}</td>
-        <td><button class="icon-btn" data-view="${s.id}">View receipt</button></td>
+        <td><button class="icon-btn" data-view="${s.id}" data-source="${s.source || 'old'}">View receipt</button></td>
       </tr>
     `
     )
     .join('');
   tbody.querySelectorAll('button[data-view]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const sale = await api(`/api/sales/${b.dataset.view}`);
+      const sale = await api(`/api/sales/${b.dataset.view}?source=${b.dataset.source || 'old'}`);
       openModal({ type: 'receipt', sale, title: `Sale #${sale.id}` });
     })
   );
