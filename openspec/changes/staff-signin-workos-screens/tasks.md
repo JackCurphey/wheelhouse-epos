@@ -41,10 +41,23 @@ One pull request, on top of #504.
 
 - [x] 3.1 `/review` (sign-in). Then lint, the type check, `npm test` and
   `npm run test:browser`.
-- [ ] 3.2 Look at each page in the browser at computer and phone widths
+- [x] 3.2 Look at each page in the browser at computer and phone widths
   against `auth-signedout` and `auth-expired`, and check that sign-in and
   sign-out against WorkOS's real test page come back as designed. Jack adds
   the Sign-out URI first.
+
+  Done 25 Oct.
+  - **Against the drawings:** looked at at 1280 and 375 px wide (the name
+    over a card on the sand ground, the card falling away on a phone). The
+    button was changed to the drawn accent one.
+  - **Against WorkOS's real test page,** after Jack added the Sign-out URI,
+    Jack did four things, and each worked:
+    1. opened the diary signed out and went straight to WorkOS;
+    2. signed in and was back on the diary;
+    3. signed out through WorkOS and landed on "You've signed out";
+    4. pressed "Sign in again", and WorkOS asked him to sign in properly.
+  - **What the server side showed:** one live session in Wheelhouse and at
+    WorkOS, the same one, from step 4. The server log was clean.
 
 ## Workflow follow-up
 
