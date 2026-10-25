@@ -18,35 +18,39 @@ export async function makeStopCode(customerId, kind = 'service_reminders') {
 
 export const stopPath = (shopSlug, code) => `/book/${shopSlug}/stop/${code}`;
 
-/** The full link to the shop's stop page, with a fresh code. */
-export async function stopLink(base, shopSlug, customerId) {
-  return `${base}${stopPath(shopSlug, await makeStopCode(customerId))}`;
+/** The full link to the shop's stop page, with a fresh code for this kind. */
+export async function stopLink(base, shopSlug, customerId, kind = 'service_reminders') {
+  return `${base}${stopPath(shopSlug, await makeStopCode(customerId, kind))}`;
 }
+
+// The customer's answer each kind stops (review-requests design 6).
+const COLUMN = { service_reminders: 'service_reminders', review_requests: 'review_requests' };
 
 async function customerFor(code) {
   if (typeof code !== 'string' || !CODE_SHAPE.test(code)) return null;
   return prepare(
-    `SELECT c.id, c.service_reminders FROM reminder_stop_codes s JOIN customers c ON c.id = s.customer_id
-      WHERE s.code_hash = ? AND s.kind = 'service_reminders'`
+    `SELECT c.id, s.kind, c.service_reminders, c.review_requests FROM reminder_stop_codes s JOIN customers c ON c.id = s.customer_id
+      WHERE s.code_hash = ?`
   ).get(hashLinkCode(code));
 }
 
 /** Whether this code's reminders are on; null for a code that doesn't work. */
 export async function stopView(code) {
   const c = await customerFor(code);
-  return c ? { on: c.service_reminders } : null;
+  return c ? { kind: c.kind, on: c[COLUMN[c.kind]] } : null;
 }
 
 /** Stops them (stop true) or turns them back on, as a yes from the stop page; null for a code that doesn't work. */
 export async function setStopped(code, stop) {
   const c = await customerFor(code);
   if (!c) return null;
+  const column = COLUMN[c.kind];
   if (stop) {
-    await prepare('UPDATE customers SET service_reminders = false WHERE id = ?').run(c.id);
+    await prepare(`UPDATE customers SET ${column} = false WHERE id = ?`).run(c.id);
   } else {
     await prepare(
-      "UPDATE customers SET service_reminders = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'stop_page' WHERE id = ?"
+      `UPDATE customers SET ${column} = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'stop_page' WHERE id = ?`
     ).run(c.id);
   }
-  return { on: !stop };
+  return { kind: c.kind, on: !stop };
 }

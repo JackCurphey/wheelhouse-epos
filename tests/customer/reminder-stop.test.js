@@ -74,3 +74,23 @@ test('a code that doesn’t work says so, and nothing else', async () => {
   assert.ok((await ui.findByRole('heading', { name: 'This link doesn’t work' })) !== null);
   assert.ok(ui.queryByRole('button') === null || ui.queryByRole('button', { name: /Stop|Turn/ }) === null);
 });
+
+// Review requests (review-requests design 6; audit M5): the same page with
+// review requests' own name.
+test('a review request’s link: the same page, with review requests’ own name', async () => {
+  let on = true;
+  const { ui, requests } = await open((url, init) => {
+    if (init?.method === 'POST') on = !JSON.parse(init.body).stop;
+    return { status: 200, body: { shopName: 'North Street Cycles', kind: 'review_requests', on } };
+  });
+  assert.ok((await ui.findByRole('heading', { name: 'Stop review requests?' })) !== null);
+  assert.ok(ui.queryByText('We’ll stop asking you for reviews from North Street Cycles. Job updates about a bike that’s with us still come as usual.') !== null);
+  const { fireEvent } = await rtl();
+  fireEvent.click(ui.getByRole('button', { name: 'Stop review requests' }));
+  assert.ok((await ui.findByRole('heading', { name: 'Review requests stopped' })) !== null);
+  assert.ok(ui.queryByText('We won’t ask you for reviews any more. Job updates about a bike that’s with us still come as usual.') !== null);
+  fireEvent.click(ui.getByRole('button', { name: 'Turn them back on' }));
+  assert.ok((await ui.findByRole('heading', { name: 'Review requests are on again' })) !== null);
+  assert.ok(ui.queryByText('We’ll ask for a review after you collect your bike. Stop them any time with the link at the end of each one.') !== null);
+  assert.deepEqual(posts(requests), ['{"stop":true}', '{"stop":false}']);
+});

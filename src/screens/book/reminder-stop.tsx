@@ -16,7 +16,31 @@ import { RoundIcon } from './round-icon.tsx';
  * back on, and on again. A code that doesn't work says so and nothing more.
  * The drawn "Sign in to your account" line waits for the customer's account.
  */
-type View = { shopName: string; on: boolean };
+type Kind = 'service_reminders' | 'review_requests';
+type View = { shopName: string; kind?: Kind; on: boolean };
+
+// The same page for each kind, with its own name (audit M5; review-requests design 6).
+// Service reminders' words are drawn (ac-stopped, ac-stopped-on); review requests' follow them.
+const WORDS: Record<Kind, { ask: string; askBody: (shop: string) => string; button: string; stopped: string; stoppedBody: string; on: string; onBody: string }> = {
+  service_reminders: {
+    ask: 'Stop service reminders?',
+    askBody: (shop) => `We’ll stop sending you service reminders from ${shop}. Job updates about a bike that’s with us still come as usual.`,
+    button: 'Stop service reminders',
+    stopped: 'Service reminders stopped',
+    stoppedBody: 'We won’t send you service reminders any more. Job updates about a bike that’s with us still come as usual.',
+    on: 'Service reminders are on again',
+    onBody: 'We’ll remind you when your bike is due its next service. Stop them any time with the link at the end of each one.',
+  },
+  review_requests: {
+    ask: 'Stop review requests?',
+    askBody: (shop) => `We’ll stop asking you for reviews from ${shop}. Job updates about a bike that’s with us still come as usual.`,
+    button: 'Stop review requests',
+    stopped: 'Review requests stopped',
+    stoppedBody: 'We won’t ask you for reviews any more. Job updates about a bike that’s with us still come as usual.',
+    on: 'Review requests are on again',
+    onBody: 'We’ll ask for a review after you collect your bike. Stop them any time with the link at the end of each one.',
+  },
+};
 
 const isGone = (err: unknown) => err instanceof ApiError && err.status === 404;
 
@@ -58,21 +82,22 @@ export function ReminderStopScreen() {
       </BookFrame>
     );
   }
+  const w = WORDS[view.data.kind ?? 'service_reminders'];
   const oops = failed ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">That didn’t go through. Check your connection and try again.</p> : null;
 
   if (done === 'on') {
     return (
-      <BookFrame title="Service reminders are on again">
+      <BookFrame title={w.on}>
         <RoundIcon tone="ok" size="size-11"><Check size={22} aria-hidden="true" /></RoundIcon>
-        <p role="status" className="m-0">We’ll remind you when your bike is due its next service. Stop them any time with the link at the end of each one.</p>
+        <p role="status" className="m-0">{w.onBody}</p>
       </BookFrame>
     );
   }
   if (done === 'stopped' || !view.data.on) {
     return (
-      <BookFrame title="Service reminders stopped">
+      <BookFrame title={w.stopped}>
         <RoundIcon tone="ok" size="size-11"><Check size={22} aria-hidden="true" /></RoundIcon>
-        <p role="status" className="m-0">We won’t send you service reminders any more. Job updates about a bike that’s with us still come as usual.</p>
+        <p role="status" className="m-0">{w.stoppedBody}</p>
         {oops}
         <div><Button disabled={busy} onClick={() => void press(false)}>Turn them back on</Button></div>
       </BookFrame>
@@ -80,10 +105,10 @@ export function ReminderStopScreen() {
   }
   // The press, before anything stops (answer 5; not drawn, so as the stopped page).
   return (
-    <BookFrame title="Stop service reminders?">
-      <p className="m-0">{`We’ll stop sending you service reminders from ${view.data.shopName}. Job updates about a bike that’s with us still come as usual.`}</p>
+    <BookFrame title={w.ask}>
+      <p className="m-0">{w.askBody(view.data.shopName)}</p>
       {oops}
-      <div><Button variant="accent" disabled={busy} onClick={() => void press(true)}>Stop service reminders</Button></div>
+      <div><Button variant="accent" disabled={busy} onClick={() => void press(true)}>{w.button}</Button></div>
     </BookFrame>
   );
 }

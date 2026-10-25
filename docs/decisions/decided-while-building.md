@@ -2308,3 +2308,21 @@ follows the job checklist, the closest pattern built.
    customer has changed any of them since the merge, they stay as they are,
    so a yes never loses its date.
 
+### 25 Oct 2026: review requests, the message and when it goes (`openspec/changes/review-requests`, `ac-review-first`, `ac-review-setting`; decision 5)
+
+1. **The days start at 2**; the drawing shows "[n]". From 1 to 60.
+2. **It goes when the shop opens** on the day those days after collection
+   come round (or the next open day), as service reminders do (Jack's
+   answer 4).
+3. **Clearing the review page while review requests are on is refused**:
+   "Switch review requests off first."
+4. **The email's subject isn't drawn**: "Thanks for coming to [Shop name]".
+5. **The stop page for review requests isn't drawn**; it reads as service
+   reminders' does, with review requests' own name (audit M5): "Stop review
+   requests?", "Review requests stopped", "We won’t ask you for reviews any
+   more…", "Review requests are on again", "We’ll ask for a review after you
+   collect your bike…".
+6. **A review page must be a whole web address** starting http:// or
+   https://; anything else is refused with "Paste the whole link to your
+   review page, starting https://".
+
