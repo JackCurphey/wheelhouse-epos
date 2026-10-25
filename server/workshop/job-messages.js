@@ -124,7 +124,7 @@ function dropOffSentence(job, settings, bike) {
  * A booking message's tap-ins (the approved wordings, bk-msg-*), for the
  * message `key`, given the link it carries. Inside the shop's runWithShop.
  */
-export async function bookingMessageVars(jobId, shopId, link, key) {
+export async function bookingMessageVars(jobId, shopId, link, key, extra = {}) {
   const base = await jobMessageVars(jobId, shopId, link);
   const job = await prepare(
     `SELECT job_date, start_time, title, offered_from_date, offered_from_time, offer_message, decline_message
@@ -163,5 +163,5 @@ export async function bookingMessageVars(jobId, shopId, link, key) {
     vars['Booked day and time'] = dayAndTime(job.offered_from_date, job.offered_from_time) ?? when;
   }
   if (key === 'date_change_answered') vars['New day and time'] = when;
-  return { ...base, vars };
+  return { ...base, vars: { ...vars, ...extra } };
 }
