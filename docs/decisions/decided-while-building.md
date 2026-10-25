@@ -2418,3 +2418,26 @@ follows the job checklist, the closest pattern built.
    It never runs in production.
 4. **Password sign-in answers "Staff sign in through WorkOS now"**, the route
    kept so the old app and the label printer helper get a clear answer.
+
+### 25 Oct 2026: the staff sign-in screens (`openspec/changes/staff-signin-workos-screens`, `auth-signedout`, `auth-expired`)
+
+1. **A failed sign-in's words** (not drawn), in the drawn frame, one button
+   each, following the customer sign-in's messages:
+   - "That email isn’t on a staff list": "Sign in with the email your shop
+     has for you, or ask the shop’s owner to add you." · Sign in again
+   - "Check your email first": "WorkOS sent you an email to check it’s yours.
+     Open it, then sign in again." · Sign in again
+   - "Too many tries": "Wait a few minutes, then try again." · Try again
+   - "That sign-in didn’t work": "Please try again." · Try again
+   - "Signing in isn’t switched on yet": "Ask whoever runs Wheelhouse for
+     your shop." No button: it would only come back here.
+2. **Opening the staff app when not signed in goes straight to WorkOS's
+   page**, with no "You're signed out" first, and back to the page opened
+   after signing in (fewest clicks). "You've signed out" shows only after
+   signing out, and "Please sign in again" only when a session has run out.
+3. **"You've signed out" has its own address, `/workshop/signed-out`**, where
+   WorkOS's sign-out comes back. For Jack: add
+   `http://localhost:8080/workshop/signed-out` as a Sign-out URI in WorkOS's
+   Staging Redirects.
+4. **No logo** on these pages: the frame's logo slot shows the word
+   Wheelhouse only, as no logo file exists.

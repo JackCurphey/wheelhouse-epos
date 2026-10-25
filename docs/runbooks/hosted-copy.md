@@ -198,6 +198,47 @@ Anything else, such as a long error ending in a database message, means it
 couldn't reach the database. Nothing was changed. Copy the message to Mark. Signing in also needs the copy set up for
 WorkOS ("Signing in with WorkOS").
 
+## Signing in with WorkOS
+
+Staff sign in only on WorkOS's page (`openspec/specs/staff-sign-in`, Jack's
+decision of 25 Oct, `docs/decisions/2026-10-25-workos-account.md`). Until
+these three steps are done, nobody can sign in to the copy: it says "Signing
+in isn't switched on yet". The pretend WorkOS used in tests never runs here.
+Shop sign-up (step 5 above) still signs the new owner straight in, and
+signing in after that needs these steps.
+
+1. **The copy's settings.** On the server ("Getting onto the server"
+   below), add these four lines to `/opt/wheelhouse/.env`, with the copy's
+   web address in the last one. The keys are the WorkOS test keys from
+   Jack's own `.env`. Pass them privately; never put them in the
+   repository, an issue or a chat.
+   ```
+   STAFF_SIGNIN_PROVIDER=workos
+   WORKOS_API_KEY=sk_test_...
+   WORKOS_CLIENT_ID=client_...
+   WORKOS_REDIRECT_URI=https://<your web address>/api/auth/workos/callback
+   ```
+   Then restart the app: `cd /opt/wheelhouse && docker compose up -d app`.
+   The copy refuses to start with a live (`sk_live_`) key; test keys are
+   fine.
+2. **The copy's addresses in WorkOS.** In WorkOS's dashboard (Staging →
+   Applications → Redirects), add these beside the `localhost:8080` ones:
+   - Redirect URI: `https://<your web address>/api/auth/workos/callback`
+   - Initiate login URI: `https://<your web address>/api/auth/workos/start`
+   - Sign-out URI: `https://<your web address>/workshop/signed-out`
+3. **A login with your email.** Wheelhouse only lets in an email that is
+   on a shop's staff list. The login made for Jack on the test shop
+   (add-hosted-copy task 3.6) has to use the email he signs in to WorkOS
+   with.
+
+**Check it:** open `https://<your web address>/workshop`. It should go
+straight to WorkOS's sign-in page. Sign in, and you should be back in the
+staff app. Sign out, and you should land on "You've signed out".
+
+This is WorkOS's **Staging** environment, for testing only. A copy for real
+shops uses WorkOS's Production environment, with its own keys and
+addresses.
+
 ## Updating it, checking it, and undoing a bad update
 
 This part is the way back (design Decision 8). Mark normally does it, but
