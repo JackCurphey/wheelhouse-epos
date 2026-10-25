@@ -7,24 +7,21 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** 24 Oct. Merged: Fixes and Today's morning questions (#447), the
-  header search (#448), Customers (list #449, page #450, Merge #451), the old
-  Customers screen removed (#465), deposits online (#452 to #462, Jack's
-  answers 1 to 5 and `2026-10-24-request-deposit-refund.md`), Larger text
-  (#463), "Don't close things by themselves" (drawings #464, server #466,
-  screens #467). Took WP-0.4 and WP-0.5 over from Mark (Jack's word, 24 Oct;
-  told on #199): the last route out of `server.js` (#468, so WP-0.4 is done);
-  the test copy's fresh review and its fixes (#469); the test shop loading on
-  the copy, the restore steps Jack has read, and his stage 0 walkthrough
-  `docs/runbooks/stage-0-check.md` (#470). Merging, one at a time: Done
-  ticks and staff line notes (#471, migration 074; notes staff only, Jack 24
-  Oct), the till's Email receipt (#472), a deposit paid online coming off at
-  the till (#473; no refund from the job once paid, Jack 24 Oct), Save to a
-  customer record (#474), and Jack's answer that the till may take a deposit
-  before the work is finished, deposits only (#475). Next: the WP-0.5 drills
-  with Jack on 25 Oct (failed update, timing the ways back, the test shop and
-  his login, the restore rehearsal), then the stage 0 walkthrough. Still
-  waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
+- **Jack:** 25 Oct. Merged 24 Oct: #447 to #477 (Customers with Merge,
+  deposits online, Larger text, Don't close things by themselves, WP-0.4
+  finished, the test copy's review fixes and test shop, Done ticks and staff
+  notes per line, the till's Email receipt and Save to a customer record, an
+  online deposit off at the till, an unfinished booking coming back).
+  Overnight into 25 Oct, on Jack's word: the workshop's amounts in whole
+  pence (#478 to #481, migrations 075 and 076; #482 labour needs more than 0);
+  service reminders begun (WP-4.5): the yes when booking (#483, migration
+  077), Settings › Workshop › Services (#484, WP-5.1, which also closes the
+  gap of choosing which services can be booked online), and each service's
+  reminder months (#485, migration 078). Next: the WP-0.5 drills with Jack
+  today, then the stage 0 walkthrough; then sending service reminders, once
+  Jack answers the questions below. Still waiting: "I'll do this" and "Who
+  did what" (WP-1.7, WP-1.2, WP-1.9); the customer's account page (the
+  emailed-code sign-in, WP-1.7).
 - **Mark:** merged 24 Oct: #402 (held work can't resume on an ended booking)
   and #404 (sales in pence step A, migration 073). Next: step B of sales in
   pence (reports read both records). Taking a deposit at the till
@@ -32,12 +29,17 @@ here before starting it, so two people never build the same one):
   decision 8, after step B; Jack answered its open question (#475). WP-0.5
   is now Jack's (above). Still open from the audit: items 12, 20, 23 and 24
   (`docs/reviews/2026-10-22-flagged-merges-audit.md`).
-- **Waiting on Jack:** the WP-0.5 drills and the stage 0 walkthrough, which
-  he does on 25 Oct. For him to overrule if he wants: the 24 Oct
-  `decided-while-building.md` sections (line notes, the till's Email receipt
-  and Save to a customer record, the online deposit at the till). A gap for
-  later: no screen lets a shop choose which services can be booked online
-  (needs a drawing).
+- **Waiting on Jack:** the WP-0.5 drills and the stage 0 walkthrough
+  (today). Before sending service reminders is built: when the wording is
+  filled in (queued or sent), whose months count on a job with several
+  services, one reminder per bike and whether a new booking cancels it,
+  opening hours only, and whether Stop these stops on opening the link. Also:
+  the reminder tick on the in-shop ready page (drawn only on pay-online);
+  does a merge carry a yes over; discounts now on the old sales record or
+  after Mark's step C; the spreadsheet download's one file or several.
+  Waiting on Mark too: paying a repair online (how it becomes a sale, his
+  decisions 4 and 8); refunds (his steps B and C). For him to overrule: the
+  24 and 25 Oct `decided-while-building.md` sections.
 
 **Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
