@@ -9,7 +9,7 @@
 import { prepare, dbExec, runWithShop } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import {
-  serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
+  serializeSale, SALE_SELECT, ALL_SALES_SELECT, SALE_SOURCES, serializeAnySale, resolveCashierId, loadDocumentLine, createSale, firePendingShopifyPushes, shopDayWindow, computeOrderTotals,
   poundsToPence, documentTotalsPence,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
@@ -117,40 +117,70 @@ export function register(route) {
     const dateFilter = query.get('date'); // 'today' or 'YYYY-MM-DD'
     const customerId = query.get('customerId');
     const cashierId = query.get('cashierId');
-    let sql = SALE_SELECT + ' WHERE 1=1';
+    let sql = ALL_SALES_SELECT + ' WHERE 1=1';
     const args = [];
     let dateStr = null;
     if (dateFilter === 'today') dateStr = await currentShopToday();
     else if (dateFilter) dateStr = dateFilter;
     if (dateStr) {
-      const day = await shopDayWindow('s.created_at', dateStr);
+      const day = await shopDayWindow('v.made_at', dateStr);
       sql += ` AND ${day.sql}`;
       args.push(...day.args);
     }
     if (customerId) {
-      sql += ' AND s.customer_id = ?';
+      sql += ' AND v.customer_id = ?';
       args.push(Number(customerId));
     }
     if (cashierId) {
-      sql += ' AND s.cashier_id = ?';
+      sql += ' AND v.employee_id = ?';
       args.push(Number(cashierId));
     }
-    sql += ' ORDER BY s.id DESC LIMIT 500';
+    sql += ' ORDER BY v.made_at DESC, v.source DESC, v.id DESC LIMIT 500';
     const rows = await db.prepare(sql).all(...args);
     sendJson(
       res,
       200,
-      rows.map((r) => serializeSale(r))
+      rows.map((r) => serializeAnySale(r))
     );
   });
 
-  route('GET', '/api/sales/:id', async (req, res, params) => {
+  // An id with no ?source= is the old record, so links made before the new
+  // till recorded sales keep opening the same sale (design.md Decision 3).
+  route('GET', '/api/sales/:id', async (req, res, params, query) => {
     const id = Number(params.id);
-    const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(id);
+    const source = query.get('source') || 'old';
+    if (!SALE_SOURCES.includes(source)) return badRequest(res, 'source must be old or till');
+    const sale = Number.isInteger(id) && id > 0 && id <= 2_147_483_647
+      ? await db.prepare(ALL_SALES_SELECT + ' WHERE v.source = ? AND v.id = ?').get(source, id)
+      : null;
     if (!sale) return notFound(res, 'Sale not found');
+    if (source === 'till') {
+      const lines = await db.prepare(
+        `SELECT l.id, l.product_id, l.description, p.sku, l.qty, l.unit_price_pence, l.line_total_pence, l.vat_rate_bp, l.vat_pence
+           FROM till_sale_lines l LEFT JOIN products p ON p.id = l.product_id WHERE l.till_sale_id = ? ORDER BY l.id`
+      ).all(id);
+      const paid = await db.prepare('SELECT method, amount_pence FROM till_sale_payments WHERE till_sale_id = ? ORDER BY id').all(id);
+      return sendJson(res, 200, serializeAnySale(
+        sale,
+        lines.map((l) => ({
+          id: l.id,
+          productId: l.product_id,
+          name: l.description,
+          sku: l.sku ?? null,
+          qty: l.qty,
+          unitPrice: l.unit_price_pence / 100,
+          unitPricePence: l.unit_price_pence,
+          lineTotal: l.line_total_pence / 100,
+          lineTotalPence: l.line_total_pence,
+          vatRateBp: l.vat_rate_bp,
+          vatPence: l.vat_pence,
+        })),
+        paid.map((p) => ({ method: p.method, amountPence: p.amount_pence }))
+      ));
+    }
     const items = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(id);
     const payments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(id);
-    sendJson(res, 200, serializeSale(sale, items, payments));
+    sendJson(res, 200, serializeAnySale(sale, items, payments));
   });
 
   route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease, shopId) => {

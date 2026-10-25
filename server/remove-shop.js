@@ -16,11 +16,13 @@ const INDIRECT_CLEANUP = [
 // list went stale twice while writing the workshop tests - createShop() seeds
 // customer_groups and suppliers, and each one only announced itself as a
 // foreign-key error during teardown. Discovery means a new tenant-owned table
-// is cleaned up the day it is added.
+// is cleaned up the day it is added. Views (all_sales) are skipped: they hold no rows of their own.
 async function shopOwnedTables(client) {
   const { rows } = await client.query(`
-    SELECT table_name FROM information_schema.columns
-    WHERE table_schema = 'public' AND column_name = 'shop_id' AND table_name <> 'shops'
+    SELECT c.table_name FROM information_schema.columns c
+    JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+    WHERE c.table_schema = 'public' AND c.column_name = 'shop_id' AND c.table_name <> 'shops'
+      AND t.table_type = 'BASE TABLE'
   `);
   return rows.map((r) => r.table_name);
 }
