@@ -97,3 +97,26 @@ test('Undo leaves the answers alone once the customer has changed them since', a
   assert.equal(a.review_requests, true);
   assert.equal(a.reminders_said_yes_via, 'booking');
 });
+
+// Review: the service-reminder yes keeps the date and place it was given, even
+// when the kept record said yes only to review requests.
+test('a yes to service reminders keeps its own date, though the kept record said yes to reviews', async () => {
+  const kept = await maya({ service: false, review: true, at: '2026-10-03T10:00:00Z', via: 'collection' });
+  const guest = await maya({ at: '2026-09-01T10:00:00Z', via: 'booking' });
+  await merge(kept.id, guest.id);
+  const a = await answers(kept.id);
+  assert.equal(a.service_reminders, true);
+  assert.equal(a.reminders_said_yes_via, 'booking');
+  assert.equal(a.reminders_said_yes_at.toISOString(), '2026-09-01T10:00:00.000Z');
+});
+
+// Review: a merge recorded before the answers were kept still undoes.
+test('a merge recorded before the answers were kept undoes, leaving the answers be', async () => {
+  const kept = await maya(null);
+  const guest = await maya({ at: '2026-09-01T10:00:00Z', via: 'booking' });
+  const id = await merge(kept.id, guest.id);
+  await inShop(() => prepare(`UPDATE customer_merges SET moved = jsonb_set(jsonb_set(moved, '{before}', (moved->'before') - 'service_reminders' - 'review_requests' - 'reminders_said_yes_at' - 'reminders_said_yes_via'), '{after}', (moved->'after') - 'service_reminders' - 'review_requests' - 'reminders_said_yes_at' - 'reminders_said_yes_via') WHERE id = ?`).run(id));
+  const undone = await staff(`/api/customer-merges/${id}/undo`, { method: 'POST', body: {} });
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  assert.equal((await answers(kept.id)).service_reminders, true, 'nothing recorded, so nothing put back');
+});

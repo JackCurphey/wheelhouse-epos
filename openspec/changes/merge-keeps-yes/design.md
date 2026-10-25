@@ -8,9 +8,9 @@
    choose, but not as a choice: the rule is Jack's (answer 9). Undo's
    existing "only what the merge changed, and only where nobody changed it
    since" covers them with no new code.
-2. **When and where.** If the kept record said yes to either, its own date
-   and place stay. Otherwise they come from the other record, so the
-   check that every yes says when and where (077) holds.
+2. **When and where** come from the record whose yes to service reminders
+   it is (the kept one first, when both), else from the one whose yes to
+   review requests it is, so every yes says when and where (077's check).
 3. **A kept record that stopped** (no now, though it said yes before) still
    becomes yes if the other record says yes, as the answer reads. Logged:
    a stop doesn't record when it happened, so there is no telling which

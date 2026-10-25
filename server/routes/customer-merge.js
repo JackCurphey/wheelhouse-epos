@@ -19,13 +19,16 @@ const ANSWERS = ['service_reminders', 'review_requests', 'reminders_said_yes_at'
 
 /**
  * If either record said yes, the kept one says yes (Jack's answer 9 of 25
- * Oct), with when and where it was given: its own if it said yes to either,
- * else the other's, so a yes always says when and where (077's check).
+ * Oct), with when and where it was given: from the record whose yes to
+ * service reminders it is, else to review requests, so a yes always says
+ * when and where (077's check).
  */
 function answersAfterMerge(kept, other) {
   const service = Boolean(kept.service_reminders || other.service_reminders);
   const review = Boolean(kept.review_requests || other.review_requests);
-  const from = kept.service_reminders || kept.review_requests ? kept : other;
+  // The service-reminder yes first, from whichever record gave it; else the
+  // review-request yes (review).
+  const from = kept.service_reminders ? kept : other.service_reminders ? other : kept.review_requests ? kept : other;
   return {
     service_reminders: service,
     review_requests: review,

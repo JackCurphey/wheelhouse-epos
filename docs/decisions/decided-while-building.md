@@ -2286,8 +2286,9 @@ follows the job checklist, the closest pattern built.
 
 ### 25 Oct 2026: merging two customers keeps a yes (`openspec/changes/merge-keeps-yes`; Jack's answer 9)
 
-1. **When and where the yes was given** come from the kept record if it
-   said yes to either kind, else from the other.
+1. **When and where the yes was given** come from the record whose yes to
+   service reminders it is, else the one whose yes to review requests it
+   is, the kept record first when both did.
 2. **A kept record that stopped reminders still becomes yes** if the other
    record says yes, as the answer reads: a stop doesn't record when it
    happened, so there's no telling which came later.
