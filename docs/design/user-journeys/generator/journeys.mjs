@@ -90,7 +90,10 @@ export const journeys = [
   {
     id: 'jb', num: 'B', name: 'Signing in and access', who: 'Staff and customers',
     rows: [
-      { label: 'Staff sign-in (WorkOS)', screens: [sb('workos-signin', 'Sign in (WorkOS’s page, approximate look)', 'Staff')] },
+      { label: 'Staff sign-in', screens: [
+        sb('staff-signin', 'Sign in: Continue with Google, or email on WorkOS’s page', 'Staff'),
+        sb('workos-signin', 'Sign in (WorkOS’s page, approximate look)', 'Staff'),
+      ] },
       { label: 'Staff access', screens: [
         sb('auth-site', 'Where are you working today?', 'Owner'),
         sb('auth-signedout', 'Signed out', 'Staff'),

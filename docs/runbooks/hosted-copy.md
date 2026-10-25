@@ -95,9 +95,13 @@ miss.
 
 ## Automatic updates
 
-Every merge to `main` goes onto the test copy by itself, once its tests
-have passed: GitHub builds it, starts it on the server, and checks the
-health check shows the new version. If that doesn't happen within 5
+Every merge to `main` goes onto the test copy by itself, straight away:
+GitHub builds it, starts it on the server, and checks the health check
+shows the new version. Its tests ran on its pull request, which GitHub makes
+include the latest `main` before it can merge, so the tests don't run again
+after the merge. They also run once a day on `main`, at 03:00 UTC, and can
+be run by hand from the **Actions** tab, under "Tests" (Jack, 25 Oct,
+`docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md`). If that doesn't happen within 5
 minutes, it puts the version before back and the run shows as failed, in
 red, in the repository's **Actions** tab, under "Deploy the hosted copy".
 Pull requests and other branches never go on the test copy.

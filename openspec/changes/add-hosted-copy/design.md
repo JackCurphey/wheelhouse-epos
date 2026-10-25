@@ -112,6 +112,13 @@ restarts). The server's own settings file holds the run-time settings
 
 ### 3. Deploys: `main` only, after tests, in order, watched to the end
 
+**Changed 25 Oct (Jack, option 3; `docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md`):**
+Tests no longer runs after each merge. It runs on each pull request, which
+GitHub makes include the latest `main` before it merges, and once a day. So
+a merge deploys straight away: the workflow starts on the push to `main` and
+deploys that commit, `pick-deploy.sh` still keeps an older commit from
+replacing a newer one, and "after tests" now means the pull request's tests.
+
 A new workflow, `.github/workflows/deploy-hosted-copy.yml`, runs on
 `workflow_run` when `Tests` completes. It deploys only when all of these
 hold:

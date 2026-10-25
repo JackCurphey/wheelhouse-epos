@@ -27,9 +27,11 @@ test.afterAll(async () => {
   }
 });
 
-test('the diary, signed out: sign in on the pretend WorkOS page, back on the diary, then sign out', async ({ page }) => {
+test('the diary, signed out: Continue with Google, the pretend page, back on the diary, then sign out', async ({ page }) => {
   await page.goto(`${server!.baseUrl}/workshop/diary`);
-  await expect(page.getByRole('heading', { name: 'Pretend WorkOS' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in to Wheelhouse' })).toBeVisible();
+  await page.getByRole('link', { name: 'Continue with Google' }).click();
+  await expect(page.getByRole('heading', { name: 'Pretend WorkOS · Google' })).toBeVisible();
   await page.getByRole('textbox', { name: 'Email' }).fill(owner.email);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(`${server!.baseUrl}/workshop/diary`);
@@ -46,7 +48,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await expect(page.getByText('Close this window, or sign in again.')).toBeVisible();
     const button = page.getByRole('link', { name: 'Sign in again' });
     await expect(button).toBeVisible();
-    await expect(button).toHaveAttribute('href', '/api/auth/workos/start');
+    await expect(button).toHaveAttribute('href', '/workshop/sign-in');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
@@ -57,7 +59,20 @@ test('a session that has run out: “Please sign in again”, and back to the pa
   await page.goto(`${server!.baseUrl}/workshop/diary`);
   await expect(page.getByRole('heading', { level: 1, name: 'Please sign in again' })).toBeVisible();
   await page.getByRole('link', { name: 'Sign in again' }).click();
+  await page.getByRole('link', { name: 'Sign in with email' }).click();
   await page.getByRole('textbox', { name: 'Email' }).fill(owner.email);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(`${server!.baseUrl}/workshop/diary`);
 });
+
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`“Sign in to Wheelhouse” on a ${size}: as drawn, nothing off the side`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto(`${server!.baseUrl}/workshop/sign-in`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Sign in to Wheelhouse' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sign in with email' })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+}

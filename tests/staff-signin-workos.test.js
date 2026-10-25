@@ -297,3 +297,25 @@ test('/workshop/../ is outside the staff app, and a page’s own %-codes come ba
   assert.equal((await signInFrom(email, '/workshop/%2e%2e/book/x')).location, '/workshop');
   assert.equal((await signInFrom(email, '/workshop/customers?q=a%26b')).location, '/workshop/customers?q=a%26b');
 });
+
+// staff-signin-google: "Continue with Google" starts with provider=google,
+// which goes straight to Google's chooser (WorkOS's provider=GoogleOAuth).
+test('provider=google asks WorkOS for Google; anything else for its own page; from still comes back', async () => {
+  const google = await hop('/api/auth/workos/start?provider=google&from=%2Fworkshop%2Fdiary', { ip: newNetwork() });
+  const at = new URL(google.location, server.baseUrl);
+  assert.equal(at.searchParams.get('provider'), 'GoogleOAuth');
+  const page = await hop(at.pathname + at.search);
+  assert.match(page.body, /Pretend WorkOS · Google/);
+  for (const other of ['', '?provider=apple', '?provider=']) {
+    const r = await hop(`/api/auth/workos/start${other}`, { ip: newNetwork() });
+    assert.equal(new URL(r.location, server.baseUrl).searchParams.get('provider'), 'authkit', other);
+  }
+  const { email } = await owner();
+  const ip = newNetwork();
+  const start = await hop('/api/auth/workos/start?provider=google&from=%2Fworkshop%2Fdiary', { ip });
+  const cookies = ['wh_signin_state', 'wh_signin_from'].map((n) => cookieValue(start.cookies, n)).join('; ');
+  const back = await hop('/api/auth/workos/pretend', { method: 'POST', form: { email, verified: 'on', state: new URL(start.location, server.baseUrl).searchParams.get('state') }, ip });
+  const done = await hop(back.location, { cookie: cookies, ip });
+  assert.equal(done.location, '/workshop/diary');
+  assert.ok(cookieValue(done.cookies, 'wh_session'));
+});
