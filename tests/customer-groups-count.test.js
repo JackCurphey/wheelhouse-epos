@@ -33,3 +33,10 @@ test('each group comes with how many current customers are in it', async () => {
   // createShop's own groups, with nobody in them yet.
   assert.ok(list.filter((g) => g.id !== club.id).every((g) => g.customerCount === 0));
 });
+
+// Review: a missing discount (as "10%" read as a number would send) is refused,
+// not saved as 0.
+test('a discount that isn’t a number is refused, not saved as 0', async () => {
+  const res = await staff('/api/customer-groups', { method: 'POST', body: { name: 'Odd', discountPercent: null } });
+  assert.equal(res.status, 400);
+});

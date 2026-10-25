@@ -12,6 +12,12 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
  */
 type Group = { id: number; name: string; discountPercent: number; customerCount?: number };
 type Editing = { id: number | null; name: string; percent: string };
+// "10%" or " 12.5 " as a number from 0 to 100, or null for anything else (review).
+const percentOf = (typed: string) => {
+  const t = typed.trim().replace(/%$/, '').trim();
+  const n = t === '' ? NaN : Number(t);
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null;
+};
 const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 
@@ -42,10 +48,17 @@ export function CustomerGroupsSettings() {
       setBusy(false);
     }
   }
-  const save = (e: Editing) => run(() => {
-    const body = { name: e.name.trim(), discountPercent: Number(e.percent) };
+  const save = (e: Editing) => {
+    const percent = percentOf(e.percent);
+    if (percent === null) {
+      setError('Type the discount as a number from 0 to 100');
+      return;
+    }
+    void run(() => {
+    const body = { name: e.name.trim(), discountPercent: percent };
     return e.id ? apiMutate(`/api/customer-groups/${e.id}`, body, { method: 'PUT' }) : apiMutate('/api/customer-groups', body);
-  });
+    });
+  };
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -65,7 +78,7 @@ export function CustomerGroupsSettings() {
       </div>
       {editing ? (
         <GroupBox start={editing} busy={busy} error={error}
-          onSave={(e) => void save(e)}
+          onSave={save}
           onRemove={editing.id ? () => void run(() => apiMutate(`/api/customer-groups/${editing.id}`, {}, { method: 'DELETE' })) : undefined}
           onClose={() => { setEditing(null); setError(null); }} />
       ) : null}
@@ -98,7 +111,10 @@ function GroupBox({ start, busy, error, onSave, onRemove, onClose }: {
       </DialogBody>
       <DialogFooter className="flex justify-between gap-2.5">
         {onRemove ? <Button variant="danger" disabled={busy} onClick={onRemove}>Remove group</Button> : <span />}
-        <Button variant="primary" disabled={busy} onClick={() => onSave(e)}>Save</Button>
+        <span className="flex gap-2.5">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" disabled={busy} onClick={() => onSave(e)}>Save</Button>
+        </span>
       </DialogFooter>
     </Dialog>
   );

@@ -26,6 +26,8 @@ function serializeCustomerGroup(row) {
 
 function resolveDiscountPercent(raw, existing) {
   if (raw === undefined) return existing !== undefined ? existing : 0;
+  // Nothing typed isn't 0: Number(null) and Number('') would read as 0 (review).
+  if (raw === null || (typeof raw === 'string' && raw.trim() === '')) return null;
   const pct = Number(raw);
   if (!Number.isFinite(pct) || pct < 0 || pct > 100) return null;
   return pct;

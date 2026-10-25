@@ -115,3 +115,26 @@ test('no groups: the summary says so', async () => {
   const { fold } = await openGroups([]);
   assert.match(fold.textContent, /No groups yet/);
 });
+
+// Review: "10%" saves 10; anything that isn't a number between 0 and 100 is
+// refused in the box, sending nothing; Cancel closes it.
+test('the % off box takes “10%” as 10, refuses what isn’t a number, and Cancel closes it', async () => {
+  const { ui, fireEvent, waitFor, within } = await openGroups([]);
+  fireEvent.click(ui.getByRole('button', { name: '+ Add a group' }));
+  let box = within(await ui.findByRole('dialog', { name: 'Add a group' }));
+  fireEvent.change(box.getByLabelText('Name'), { target: { value: 'Club' } });
+  fireEvent.change(box.getByLabelText('% off'), { target: { value: 'ten' } });
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Type the discount as a number from 0 to 100');
+  assert.deepEqual(writes(), []);
+  fireEvent.change(box.getByLabelText('% off'), { target: { value: '' } });
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  assert.deepEqual(writes(), [], 'blank isn’t 0');
+  fireEvent.change(box.getByLabelText('% off'), { target: { value: '10%' } });
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.deepEqual(writes(), ['POST /api/customer-groups {"name":"Club","discountPercent":10}']));
+  fireEvent.click(ui.getByRole('button', { name: '+ Add a group' }));
+  box = within(await ui.findByRole('dialog', { name: 'Add a group' }));
+  fireEvent.click(box.getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Add a group' }) === null));
+});
