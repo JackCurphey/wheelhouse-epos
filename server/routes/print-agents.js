@@ -25,8 +25,11 @@ import { randomBytes } from 'node:crypto';
 // handler.
 
 const printAgentsByShop = new Map(); // shopId -> Map<deviceId, {deviceName, printers, lastSeen}>
-const printJobsByDevice = new Map(); // deviceId -> pending job array
-const printJobStatus = new Map(); // jobId -> {status, error} - not surfaced in the UI yet, kept for a future job-history view
+// Keyed by shop and device together: two shops' helpers can share a device id,
+// and a job must only ever reach its own shop's helper (25 Oct).
+const printJobsByDevice = new Map(); // `${shopId}:${deviceId}` -> pending job array
+const printJobStatus = new Map(); // jobId -> {shopId, status, error} - not surfaced in the UI yet, kept for a future job-history view
+const deviceKey = (shopId, deviceId) => `${shopId}:${deviceId}`;
 const PRINT_AGENT_STALE_MS = 25000; // ~2-3 missed check-ins before a device drops off the list
 
 function liveAgentsForShop(shopId) {
@@ -57,8 +60,9 @@ export function register(route) {
     if (!printAgentsByShop.has(ctx.shop.id)) printAgentsByShop.set(ctx.shop.id, new Map());
     printAgentsByShop.get(ctx.shop.id).set(deviceId, { deviceName, printers, lastSeen: Date.now() });
 
-    const jobs = printJobsByDevice.get(deviceId) || [];
-    printJobsByDevice.set(deviceId, []);
+    const key = deviceKey(ctx.shop.id, deviceId);
+    const jobs = printJobsByDevice.get(key) || [];
+    printJobsByDevice.set(key, []);
     sendJson(res, 200, { jobs });
   });
 
@@ -85,9 +89,10 @@ export function register(route) {
     if (!Array.isArray(pages) || !pages.length) return badRequest(res, 'At least one label page is required');
 
     const jobId = randomBytes(8).toString('hex');
-    if (!printJobsByDevice.has(params.deviceId)) printJobsByDevice.set(params.deviceId, []);
-    printJobsByDevice.get(params.deviceId).push({ jobId, printerName, widthMm, heightMm, pages });
-    printJobStatus.set(jobId, { status: 'queued' });
+    const key = deviceKey(ctx.shop.id, params.deviceId);
+    if (!printJobsByDevice.has(key)) printJobsByDevice.set(key, []);
+    printJobsByDevice.get(key).push({ jobId, printerName, widthMm, heightMm, pages });
+    printJobStatus.set(jobId, { shopId: ctx.shop.id, status: 'queued' });
     sendJson(res, 201, { jobId });
   });
 
@@ -97,7 +102,10 @@ export function register(route) {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
-    printJobStatus.set(params.printJobId, { status: body.ok ? 'done' : 'error', error: body.error });
+    // Only the shop that queued the job can mark it done.
+    const job = printJobStatus.get(params.printJobId);
+    if (!job || job.shopId !== ctx.shop.id) return sendJson(res, 404, { error: 'No such print job' });
+    printJobStatus.set(params.printJobId, { shopId: ctx.shop.id, status: body.ok ? 'done' : 'error', error: body.error });
     if (!body.ok) console.error(`Print job ${params.printJobId} failed: ${body.error}`);
     sendJson(res, 200, { ok: true });
   });
