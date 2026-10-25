@@ -332,6 +332,7 @@ async function bookingLinkView(jobId, shop) {
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
             w.booked_in_at, w.collected_at, w.deposit_pence,
+            (SELECT c.service_reminders FROM customers c WHERE c.id = w.customer_id) AS reminders_yes,
             to_char(w.deposit_cancel_until AT TIME ZONE (SELECT time_zone FROM workshop_settings LIMIT 1), 'YYYY-MM-DD HH24:MI') AS deposit_cancel_local,
             (w.deposit_cancel_until > ?::timestamptz OR w.booking_state IN ('pending', 'offered')) AS deposit_refundable,
             (SELECT CASE WHEN p.status IN ('refunded', 'released') OR p.refund_due_reason IS NOT NULL THEN 'refunded'
@@ -400,6 +401,9 @@ async function bookingLinkView(jobId, shop) {
     // How far the bike and its work are (Jack, 21 Oct, booking page stages; the
     // contract in openspec/changes/archive/2026-10-21-booking-page-stages/design.md).
     workState: row.work_state,
+    // Whether the customer said yes to service reminders, for the ready page's
+    // tick (ready-remind-tick): a yes or no, nothing that identifies them.
+    remindersYes: row.reminders_yes === true,
     bookedInAt: row.booked_in_at ? new Date(row.booked_in_at).toISOString() : null,
     collectedAt: row.collected_at ? new Date(row.collected_at).toISOString() : null,
     // The job's last day, as the job page's "Ready by"; no time until staff can set one.
@@ -1414,6 +1418,23 @@ export function register(route) {
   // immediate, and every hold of the job - its own and a requested one - goes
   // at once.
   // screens: cancel, cancelled
+  // The ready page's reminder tick (ready-remind-tick; Jack's answer 8 of 25
+  // Oct): a yes is to service reminders and review requests, from collection;
+  // a no turns service reminders off. Saved at once; the link is the key.
+  // screens: ac-collect-remind, cp-summary-said-yes
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/reminders', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req).catch(() => null);
+    if (typeof body?.yes !== 'boolean') return badRequest(res, 'yes must be true or false');
+    const { customer_id: customerId } = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(found.id);
+    if (!customerId) return sendJson(res, 404, { error: "We can't find that booking" });
+    await db.prepare(body.yes
+      ? "UPDATE customers SET service_reminders = true, review_requests = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'collection' WHERE id = ?"
+      : 'UPDATE customers SET service_reminders = false WHERE id = ?').run(customerId);
+    sendJson(res, 200, { remindersYes: body.yes });
+  });
+
   route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
