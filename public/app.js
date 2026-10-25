@@ -4413,8 +4413,11 @@ function renderAuthScreen() {
           <button class="auth-tab ${isSignup ? 'active' : ''}" data-auth-tab="signup">Create shop account</button>
         </div>
         ${authError ? `<div class="error-banner">${esc(authError)}</div>` : ''}
-        <form id="auth-form">
-          ${isSignup ? `
+        ${!isSignup ? `
+          <p>Staff sign in on Wheelhouse's sign-in screen, with Google or email.</p>
+          <a class="btn btn-primary btn-block" href="/workshop/sign-in">Sign in</a>
+        ` : `
+          <form id="auth-form">
             <div class="field">
               <label>Shop name</label>
               <input type="text" id="auth-shop-name" required autocomplete="organization" />
@@ -4427,17 +4430,17 @@ function renderAuthScreen() {
               <label>Invite code</label>
               <input type="text" id="auth-signup-code" autocomplete="off" />
             </div>
-          ` : ''}
-          <div class="field">
-            <label>Email</label>
-            <input type="email" id="auth-email" required autocomplete="email" />
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input type="password" id="auth-password" required minlength="8" autocomplete="${isSignup ? 'new-password' : 'current-password'}" />
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">${isSignup ? 'Create account' : 'Log in'}</button>
-        </form>
+            <div class="field">
+              <label>Email</label>
+              <input type="email" id="auth-email" required autocomplete="email" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input type="password" id="auth-password" required minlength="8" autocomplete="new-password" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Create account</button>
+          </form>
+        `}
       </div>
     </div>
   `;
@@ -4448,24 +4451,24 @@ function renderAuthScreen() {
       renderAuthScreen();
     });
   });
-  document.getElementById('auth-form').addEventListener('submit', async (e) => {
+  // Staff sign in only through WorkOS (#504), so the Log in tab leads to the
+  // new sign-in screen; only Create shop account still has a form here.
+  document.getElementById('auth-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     authError = '';
     try {
-      const user = isSignup
-        ? await api('/api/auth/signup', {
-            method: 'POST',
-            body: {
-              shopName: document.getElementById('auth-shop-name').value.trim(),
-              ownerName: document.getElementById('auth-owner-name').value.trim(),
-              signupCode: document.getElementById('auth-signup-code').value.trim(),
-              email,
-              password,
-            },
-          })
-        : await api('/api/auth/login', { method: 'POST', body: { email, password } });
+      const user = await api('/api/auth/signup', {
+        method: 'POST',
+        body: {
+          shopName: document.getElementById('auth-shop-name').value.trim(),
+          ownerName: document.getElementById('auth-owner-name').value.trim(),
+          signupCode: document.getElementById('auth-signup-code').value.trim(),
+          email,
+          password,
+        },
+      });
       currentUser = user;
       renderShell();
       renderRoute();
