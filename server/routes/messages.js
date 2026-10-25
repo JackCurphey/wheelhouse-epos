@@ -27,6 +27,7 @@ const EXAMPLE = {
   'Link to the job': '[link]',
   'Link to the booking': '[link]',
   'Link to book': '[link]',
+  'Link to review': '[link]',
   'Opening hours': '[opening hours]',
   Service: 'Standard service',
   'Booked day and time': 'Thu 17 Sep, 11:30',
@@ -178,7 +179,8 @@ export function register(route) {
     }
     const vars = { ...EXAMPLE, ...EXAMPLE_FOR[params.key], 'Shop name': ctx.shop.name };
     // The service reminder's fixed ending, as drawn in its preview (ac-reminder-wording).
-    const text = params.key === 'service_reminder' ? `${render(wording, vars)} ${STOP_LINE}` : render(wording, vars);
+    // And the review request's (ac-review-setting).
+    const text = ['service_reminder', 'review_request'].includes(params.key) ? `${render(wording, vars)} ${STOP_LINE}` : render(wording, vars);
     sendJson(res, 200, { text, email: { subject: render(subject, vars), body: text } });
   });
 }

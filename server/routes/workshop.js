@@ -1013,11 +1013,13 @@ export function register(route) {
       // the collection drops it (service-reminder-send). Logged, never an error:
       // the collection stands.
       if (machine === custody && event === 'collect') {
-        try {
-          await queueServiceReminder(id, shopId, publicBase(req));
-          await queueReviewRequest(id, shopId, publicBase(req));
-        } catch (err) {
-          console.error(`Messages: the service reminder for job ${id} could not be set up`, err);
+        // Each on its own, so one that fails doesn't stop the other (review).
+        for (const [what, setUp] of [['service reminder', queueServiceReminder], ['review request', queueReviewRequest]]) {
+          try {
+            await setUp(id, shopId, publicBase(req));
+          } catch (err) {
+            console.error(`Messages: the ${what} for job ${id} could not be set up`, err);
+          }
         }
       }
       if (machine === custody && event === 'reopen') {

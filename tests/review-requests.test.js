@@ -165,3 +165,23 @@ test('a review stop link says whether review requests are on, not service remind
   const seen = await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/reminder-stops/${code}`).then((r) => r.json());
   assert.equal(seen.on, false);
 });
+
+// Review: the preview reads as drawn, the shop's page and Stop these included.
+test('its preview reads as drawn, with the review link and Stop these', async () => {
+  const preview = await staff('/api/message-templates/review_request/preview', { method: 'POST', body: {} });
+  assert.equal(preview.body.text, `Thanks for coming to ${shopName}, Maya. If you have a minute, we’d love a review: [link]. Stop these: [link].`);
+});
+
+// Review: a customer who said yes to both gets both from one collection.
+test('one collection sets up both, for a customer who said yes to both', async () => {
+  await settings({ reviewPageUrl: PAGE, reviewRequestDays: 3 });
+  await switchOn(true);
+  const svc = (await staff('/api/workshop-services', { method: 'POST', body: { name: 'Standard service', price: 65, minutes: 60, kind: 'full', reminderMonths: 12 } })).body.id;
+  const customer = await maya();
+  let job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-10-13', mechanicId: alex, customerId: customer.id, serviceIds: [svc] } })).body;
+  job = (await staff(`/api/workshop-jobs/${job.id}/book-in`, { method: 'POST', body: { version: job.version } })).body;
+  assert.equal((await staff(`/api/workshop-jobs/${job.id}/collect`, { method: 'POST', body: { version: job.version } })).status, 200);
+  const keys = (await inShop(() => prepare("SELECT template_key FROM customer_messages WHERE job_id = ? AND intent_state = 'intended' ORDER BY template_key").all(job.id))).map((r) => r.template_key);
+  assert.deepEqual(keys, ['review_request', 'service_reminder']);
+  await switchOn(false);
+});
