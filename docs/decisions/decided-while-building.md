@@ -2283,4 +2283,15 @@ follows the job checklist, the closest pattern built.
 6. **The link is made when the reminder is set up and kept with it**, as
    the timer that sends it has no web address to make one from; while
    sending is pretend it reads "[link]", as every pretend link does.
+### 25 Oct 2026: the reminder tick on the in-shop ready page (`openspec/changes/ready-remind-tick`, `ac-collect-remind`, `cp-summary-said-yes`; Jack's answer 8)
 
+1. **It ends the "To pay when you collect" card, above a line**, as drawn in
+   the pay-online card; the paid card has none, as drawn.
+2. **Ticking saves at once**: the card has no button to send it with.
+   Unticking says no, the customer's own answer on this page (unlike not
+   ticking when booking).
+3. **The tick stays in front of the customer once ticked**, rather than
+   turning into the said-yes line under their finger; the said-yes line
+   shows the next time the page opens.
+4. **Change shows the tick, ticked, in place**; the drawing doesn't say
+   where Change goes.
