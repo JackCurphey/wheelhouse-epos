@@ -28,3 +28,12 @@ drawings or decisions. Jack answered both on 25 Oct, late evening.
 3. **Store credit** (not asked): decision 1 of
    `2026-10-01-account-and-reminders-review.md` shows it "when the shop uses
    it", and store credit isn't built, so the card is left out until it is.
+
+**Later change (26 Oct, after the review):** the review found that an email
+staff typed in could belong to someone else, who would then be joined to that
+customer. Jack chose option 2 of three: "2". Only a customer whose email they
+gave themselves, at an online booking or an online sign-up, is joined by a
+code sign-in. A customer staff typed in is joined by staff with Merge, as on
+21 Oct. Chosen over accepting it, and over joining with quotes and
+cancelling held back until staff confirm. Every customer already in the
+system counts as staff-typed, since where their email came from isn't known.

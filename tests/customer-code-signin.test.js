@@ -78,8 +78,12 @@ const signInAs = async (email) => {
   await ask(email, { ip });
   return check(email, await codeFor(email.trim().toLowerCase()), { ip });
 };
-const customerWith = (name, email, extra = '') => runWithShop(shop.id, () =>
-  prepare(`INSERT INTO customers (name, email${extra ? ', active' : ''}) VALUES (?, ?${extra ? ', 0' : ''}) RETURNING id`).get(name, email));
+// A customer whose email they gave themselves, as an online booking saves it
+// (Jack, 26 Oct, option 2: only those are joined); `typedByStaff` for one staff
+// typed in, `inactive` for one switched off.
+const customerWith = (name, email, { typedByStaff = false, inactive = false } = {}) => runWithShop(shop.id, () =>
+  prepare('INSERT INTO customers (name, email, email_from_customer, active) VALUES (?, ?, ?, ?) RETURNING id')
+    .get(name, email, !typedByStaff, inactive ? 0 : 1));
 
 test('a first code sign-in joins the one customer the shop already has with that email, whatever its case and spaces', async () => {
   const existing = await customerWith('Sam Reed', '  Sam@Example.TEST ');
@@ -107,10 +111,26 @@ test('two customers with the email, or one that already has an online account, m
 });
 
 test('a customer switched off or merged away is never joined', async () => {
-  const gone = await customerWith('Lena Ford', 'lena.f@example.test', 'inactive');
+  const gone = await customerWith('Lena Ford', 'lena.f@example.test', { inactive: true });
   assert.equal((await signInAs('lena.f@example.test')).status, 200);
   const [login] = await loginFor('lena.f@example.test');
   assert.notEqual(login.customer_id, gone.id);
+
+  const kept = await customerWith('Ravi Shah', 'ravi.keep@example.test');
+  const merged = await customerWith('Ravi Shah', 'ravi@example.test');
+  await runWithShop(shop.id, () => prepare('UPDATE customers SET merged_into_id = ? WHERE id = ?').run(kept.id, merged.id));
+  assert.equal((await signInAs('ravi@example.test')).status, 200);
+  const [ravi] = await loginFor('ravi@example.test');
+  assert.notEqual(ravi.customer_id, merged.id, 'merged away');
+});
+
+// Option 2 (Jack, 26 Oct): an email staff typed in could be someone else's, so
+// that customer is joined by staff with Merge, never by a sign-in.
+test('a customer whose email staff typed in is never joined by a sign-in', async () => {
+  const typed = await customerWith('Sam Brown', 'sam.b@example.test', { typedByStaff: true });
+  assert.equal((await signInAs('sam.b@example.test')).status, 200);
+  const [login] = await loginFor('sam.b@example.test');
+  assert.notEqual(login.customer_id, typed.id);
 });
 
 test('a code works once; a wrong one says so; a new code replaces the old', async () => {

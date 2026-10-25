@@ -20,11 +20,15 @@ A customer SHALL be able to sign in to a shop with a six-digit code emailed to t
 ## ADDED Requirements
 
 ### Requirement: A first code sign-in joins the one customer the shop already has
-The first sign-in by code with an email SHALL join the customer the shop already has with that email, ignoring case and spaces, when there is exactly one such active customer and that customer has no online account. Otherwise it SHALL make a new customer and login. Sign-up with a password SHALL never join an existing customer.
+The first sign-in by code with an email SHALL join the customer the shop already has with that email, ignoring case and spaces, when there is exactly one such active customer, that customer has no online account, and the email is one the customer gave themselves (at an online booking or sign-up, and not changed by staff since). Otherwise it SHALL make a new customer and login. Sign-up with a password SHALL never join an existing customer.
 
 #### Scenario: Maya booked as a guest
 - **WHEN** Maya, who booked a repair as a guest with maya@example.test, signs in with a code sent to that email for the first time
 - **THEN** she is signed in as the customer who booked that repair
+
+#### Scenario: an email staff typed in
+- **WHEN** staff saved a customer with an email, and someone signs in with a code sent to that email
+- **THEN** a new customer is made, for staff to join with Merge
 
 #### Scenario: two customers share the email
 - **WHEN** two of the shop's customers have the email and someone signs in with a code sent to it

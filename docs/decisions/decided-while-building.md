@@ -2469,3 +2469,9 @@ follows the job checklist, the closest pattern built.
    agreed's total; with Show prices off it is left out, as on the repair page.
 4. **Purchases** list what was bought, comma-separated, from either sales
    record; a till sale carries its receipt number, an old sale none.
+5. **After the review:** an action through the account (not a page load) from
+   another website is refused; account answers are never kept by the
+   browser; loading one's own repairs doesn't count toward the private links'
+   "too many attempts" limit. An email staff type in, or change, is marked
+   as not the customer's own (Jack's option 2), so a code sign-in never joins
+   that customer.

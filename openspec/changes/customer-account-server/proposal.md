@@ -13,15 +13,20 @@ open questions on 25 Oct (`docs/decisions/2026-10-26-customer-account.md`):
 This is WP-4.5. Jack is taking it, server and screens. This change is the
 server; `customer-account-screens` follows.
 
-**Risky area:** customer accounts and public routes (`/api/portal/*`). It
-needs `/review`. No migration.
+**Risky area:** customer accounts and public routes (`/api/portal/*`), and
+migration 084. It needs `/review`.
 
 ## What Changes
 
-- **Code sign-in joins an existing customer.** If the email matches exactly
-  one active customer, and that customer has no online account, the sign-in
-  joins them, with case and spaces ignored. Otherwise it makes a new customer,
-  as now. This changes the first sign-in rule in `customer-accounts`.
+- **Code sign-in joins an existing customer.** It does so when the email
+  matches exactly one active customer, that customer has no online account,
+  and the email is one they gave themselves (Jack, option 2 after the
+  review). Case and spaces are ignored. Otherwise it makes a new customer, as
+  now. This changes the first sign-in rule in `customer-accounts`.
+- **Migration 084: `customers.email_from_customer`.** It starts false for
+  every customer already there.
+  - An online booking or online sign-up sets it.
+  - Staff changing a customer's email clears it.
 - **A signed-in customer opens their own repair.** The repair page's routes
   accept `job-<id>` in place of the private code when the signed-in customer
   owns that job at this shop. They answer 404 otherwise, exactly as for a bad

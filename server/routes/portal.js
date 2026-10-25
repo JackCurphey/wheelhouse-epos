@@ -112,8 +112,9 @@ const SIGNIN_REFUSED = {
 
 // The shop's login for an email signed in by code. A first sign-in joins the
 // customer the shop already has with that email, when there's exactly one,
-// active and with no online account yet: the code proves the email is theirs
-// (Jack, 25 Oct, docs/decisions/2026-10-26-customer-account.md answer 1).
+// active, with no online account yet, and the email is one they gave
+// themselves: the code proves it's theirs, but an email staff typed in could be
+// someone else's (Jack, 25 and 26 Oct, docs/decisions/2026-10-26-customer-account.md).
 // Otherwise a new customer and a login with no password, made together.
 async function loginForSignedInEmail(shopId, email) {
   const found = () => db.prepare('SELECT * FROM customer_logins WHERE shop_id = ? AND email = ?').get(shopId, email);
@@ -125,11 +126,12 @@ async function loginForSignedInEmail(shopId, email) {
       `SELECT c.id, EXISTS (SELECT 1 FROM customer_logins l WHERE l.customer_id = c.id AND l.shop_id = ?) AS has_login
          FROM customers c
         WHERE c.active = 1 AND c.merged_into_id IS NULL AND lower(trim(coalesce(c.email, ''))) = ?
+          AND c.email_from_customer
         LIMIT 2`
     ).all(shopId, email);
     const customer = matches.length === 1 && !matches[0].has_login
       ? matches[0]
-      : await db.prepare("INSERT INTO customers (name, email, updated_at) VALUES ('', ?, now()) RETURNING id").get(email);
+      : await db.prepare("INSERT INTO customers (name, email, email_from_customer, updated_at) VALUES ('', ?, true, now()) RETURNING id").get(email);
     const made = await db.prepare(
       `INSERT INTO customer_logins (shop_id, customer_id, email) VALUES (?, ?, ?)
        ON CONFLICT (shop_id, email) DO NOTHING RETURNING *`
@@ -344,22 +346,37 @@ async function replayBookingRequest({ keyHash, bodyHash, linkCode }, shopSlug) {
 // other shop's), and not expired. Answers the refusal itself and returns
 // null, or returns { id }.
 async function resolveBookingLink(req, res, code) {
+  // A signed-in customer opens their own repair by job-<id>, from their account
+  // (customer-account-server design 2): the same answers as a bad link for
+  // anyone else, and no expiry for the job's owner. Checked before the attempt
+  // limiter, which counts only a refusal here, so loading one's own repairs
+  // never uses up the limit (review); never kept by the browser, as the answer
+  // depends on who is signed in; and an action from another website is refused.
+  const jobId = /^job-(\d{1,9})$/.exec(code)?.[1];
+  if (jobId) {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (req.method !== 'GET' && site && site !== 'same-origin' && site !== 'none') {
+      sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+      return null;
+    }
+    const ctx = await currentCustomerSession(req);
+    // The shop the dispatcher bound from :shopSlug, not the address re-read (review).
+    const here = await db.prepare("SELECT current_setting('app.current_shop_id', true) AS id").get();
+    const own = ctx && String(ctx.shop.id) === String(here?.id)
+      ? await db.prepare('SELECT id FROM workshop_jobs WHERE id = ? AND customer_id = ?').get(Number(jobId), ctx.login.customer_id)
+      : null;
+    if (own) return { id: own.id, signedIn: true };
+    if (!bookingLinkLimiter.check(clientIp(req))) {
+      sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    } else {
+      sendJson(res, 404, { error: "We can't find that booking" });
+    }
+    return null;
+  }
   if (!bookingLinkLimiter.check(clientIp(req))) {
     sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
     return null;
-  }
-  // A signed-in customer opens their own repair by job-<id>, from their account
-  // (customer-account-server design 2): the same answers as a bad link for
-  // anyone else, and no expiry for the job's owner.
-  const jobId = /^job-(\d{1,9})$/.exec(code)?.[1];
-  if (jobId) {
-    const ctx = await currentCustomerSession(req);
-    const slug = new URL(req.url, 'http://x').pathname.split('/')[3];
-    const own = ctx && ctx.shop.slug === slug
-      ? await db.prepare('SELECT id FROM workshop_jobs WHERE id = ? AND customer_id = ?').get(Number(jobId), ctx.login.customer_id)
-      : null;
-    if (!own) sendJson(res, 404, { error: "We can't find that booking" });
-    return own ? { id: own.id, signedIn: true } : null;
   }
   // collected_on: the shop's own date of collection, for the 30 days after it.
   const row = /^[0-9a-f]{64}$/.test(code)
@@ -1348,9 +1365,12 @@ export function register(route) {
       // signed-in customer it overwrites.
       await db
         .prepare(
-          `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
+          // An email typed into the booking is the customer's own (option 2, 26 Oct).
+          `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email),
+                  email_from_customer = email_from_customer OR NULLIF(?, '') IS NOT NULL,
+                  phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
         )
-        .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+        .run(request.updateChannel, request.marketingPermission, request.email, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
       // The reminder tick is a yes to service reminders and review requests,
       // with when and how; not ticking says nothing, so an earlier yes stays
       // (reminder-consent design 2). Here for the same reason as above.
@@ -1569,8 +1589,9 @@ export function register(route) {
       'Content-Disposition': 'inline',
       'X-Content-Type-Options': 'nosniff',
       // Kept a few minutes by the customer's browser, so each view doesn't
-      // spend the link's guessing limit again (fresh review).
-      'Cache-Control': 'private, max-age=300',
+      // spend the link's guessing limit again (fresh review); never by
+      // job-<id>, whose answer depends on who is signed in (review, 26 Oct).
+      'Cache-Control': found.signedIn ? 'no-store' : 'private, max-age=300',
     });
     res.end(bytes);
   });

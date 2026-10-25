@@ -25,7 +25,10 @@
 ## 2. Build
 
 - [x] 2.1 The join (design 1), the `job-` code (design 2) and `/history`
-  (design 3). Update `tests/fixtures/route-list.txt`. Log the choices in
+  (design 3).
+- [x] 2.2 After the review: Jack's option 2 (design 4, migration 084, with
+  its test from an empty scratch database) and the fixes in design 5. Tests
+  first, each watched failing; each rule broken on purpose, then restored. Update `tests/fixtures/route-list.txt`. Log the choices in
   `decided-while-building.md`.
 
 ## 3. Check

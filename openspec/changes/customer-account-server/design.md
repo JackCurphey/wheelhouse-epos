@@ -44,6 +44,24 @@ from `sale_items` (old) or `till_sale_lines` (till), mapped to
 
 Repairs and purchases are merged newest first.
 
+### 4. The customer's own email (Jack's option 2, after the review)
+- **Migration 084:** `customers.email_from_customer BOOLEAN NOT NULL DEFAULT false`.
+- **Set true:** by the online booking's update of the customer's email, and
+  by the online sign-up and code sign-in inserts.
+- **Cleared:** by the staff edit (`PUT /api/customers/:id`) when the email
+  changes. The same email in another case keeps it.
+- **The join** requires it.
+
+### 5. The review's other fixes
+- **Other websites:** a `job-` request that isn't a GET, from another site
+  (`Sec-Fetch-Site` not same-origin or none), answers 403.
+- **The shop check:** compared with the shop the dispatcher bound
+  (`app.current_shop_id`), not with the address re-read.
+- **The attempt limit:** a `job-` request is checked before the private
+  links' attempt limiter, which counts only a refusal.
+- **Caching:** `job-` answers are `Cache-Control: no-store`, a quote photo
+  included.
+
 ## Risks
 
 - **Joining the wrong person:** two people sharing an email. Jack accepted

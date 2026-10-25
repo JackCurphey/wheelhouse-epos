@@ -57,7 +57,9 @@ before(async () => {
   const email = `maya-${randomUUID().slice(0, 8)}@example.test`;
   maya = (await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email, phone: '07700 900142' } })).body;
   mayaBike = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Trek', model: 'Domane AL 3' } })).body;
-  // Maya was a guest; her code sign-in joins her (answer 1).
+  // Maya booked as a guest, so her email is her own (option 2); her code
+  // sign-in joins her (answer 1).
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET email_from_customer = true WHERE id = ?').run(maya.id));
   mayaCookie = await signIn(email);
   samCookie = await signIn(`sam-${randomUUID().slice(0, 8)}@example.test`);
 });
@@ -160,4 +162,43 @@ test('the history: repairs with their stage and total, and purchases from both r
   // Only Maya's: Sam sees none of it.
   assert.deepEqual((await portal('/history', { cookie: samCookie })).body, []);
   assert.equal((await portal('/history', { cookie: null })).status, 401);
+});
+
+// The review of 26 Oct.
+test('an action by job-<id> from another website is refused; from this one it goes through', async () => {
+  const { job } = await mayasJob();
+  const post = (site) => fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/job-${job.id}/notes`, {
+    method: 'POST', headers: { 'content-type': 'application/json', cookie: mayaCookie, 'sec-fetch-site': site }, body: JSON.stringify({ text: 'Hello' }),
+  });
+  assert.equal((await post('cross-site')).status, 403);
+  assert.equal((await post('same-origin')).status, 201);
+});
+
+test('another customer can’t act on Maya’s repair by job-<id>', async () => {
+  const { job } = await mayasJob();
+  const cancel = await portal(`/booking-links/job-${job.id}/cancel`, { method: 'POST', body: {}, cookie: samCookie });
+  assert.equal(cancel.status, 404);
+  const note = await portal(`/booking-links/job-${job.id}/notes`, { method: 'POST', body: { text: 'Not mine' }, cookie: samCookie });
+  assert.equal(note.status, 404);
+});
+
+test('opening her own repairs never uses up the private links’ attempt limit, and isn’t kept by the browser', async () => {
+  const { job } = await mayasJob();
+  for (let i = 0; i < 35; i++) {
+    const r = await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/booking-links/job-${job.id}`, { headers: { cookie: mayaCookie, 'x-forwarded-for': '198.51.100.250' } });
+    assert.equal(r.status, 200, `load ${i + 1}`);
+    if (i === 0) assert.equal(r.headers.get('cache-control'), 'no-store');
+  }
+});
+
+test('the history leaves a repair’s total out when the shop hides prices, as the repair page does', async () => {
+  const { job } = await mayasJob();
+  const full = (await staff(`/api/workshop-jobs/${job.id}`)).body;
+  const lines = await staff(`/api/sale-documents/${full.orderId}/items`, { method: 'PUT', body: { items: [{ lineType: 'labour', name: 'Standard service', unitPrice: 65, minutes: 60 }] } });
+  assert.equal(lines.status, 200, JSON.stringify(lines.body));
+  const totalFor = async () => (await portal('/history')).body.find((h) => h.kind === 'repair' && h.jobId === job.id).totalPence;
+  await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: true } });
+  assert.equal(await totalFor(), 6500);
+  await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: false } });
+  assert.equal(await totalFor(), null);
 });

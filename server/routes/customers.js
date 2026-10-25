@@ -352,9 +352,14 @@ export function register(route) {
     const groups = await resolveGroupIds(body.groupIds);
     if (groups && groups.error) return badRequest(res, groups.error);
 
+    // Staff changing an email makes it one they typed in, which a sign-in by
+    // code never joins (option 2, 26 Oct); the same email, in any case, stays
+    // the customer's own.
     await db.prepare(
-      'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ? WHERE id = ?'
-    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), id);
+      `UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ?,
+              email_from_customer = email_from_customer AND lower(trim(coalesce(email, ''))) = lower(trim(coalesce(?, '')))
+        WHERE id = ?`
+    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), email, id);
     if (groups) await setCustomerGroups(id, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
