@@ -21,7 +21,18 @@ here before starting it, so two people never build the same one):
   change answered row (Mark's answer, 25 Oct), and paying a repair online
   built on the current sales record. Still waiting: "I'll do this" and "Who
   did what" (WP-1.7, WP-1.2, WP-1.9); the customer's account page (the
-  emailed-code sign-in, WP-1.7).
+  emailed-code sign-in, WP-1.7). WorkOS: Jack made the account himself (25
+  Oct, changing Q10 for WorkOS); its Staging environment is set up and its
+  keys checked from Jack's `.env`
+  (`docs/decisions/2026-10-25-workos-account.md`). Staff sign-in through it
+  is still WP-1.7. **Jack has taken staff sign-in through WorkOS** (WP-1.7's
+  server side, replan slice B; Mark agreed, 25 Oct), against the fake and
+  the staging account; Mark keeps roles (WP-1.1) and the settings store
+  (WP-1.2). Staff sign-in through WorkOS merged 25 Oct (#504); its screens are
+  in #505. **Jack has taken add-hosted-copy task 3.6** from Mark (25 Oct):
+  loading the test shop on the hosted copy, his test login (a new
+  "add a login" command first, since WorkOS is now the only way in), and
+  setting the copy up for WorkOS (runbook, "Signing in with WorkOS").
 - **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Merged
   25 Oct: step B, reports read both records (#492, migration 083), audit
   items 12, 20 and 24 (#496), a declined date change's message as the
