@@ -38,10 +38,12 @@ const inA = (sql, ...args) => runWithShop(shopA.shop.id, () => prepare(sql).get(
 let slot = 0;
 async function createJob() {
   // A different hour each time, so the jobs don't clash in the diary.
-  const hour = String(9 + (slot++ % 9)).padStart(2, '0');
+  const hour = String(9 + (slot % 9)).padStart(2, '0');
+  const day = new Date(Date.parse(`${MONDAY}T00:00:00Z`) + Math.floor(slot / 9) * 86_400_000).toISOString().slice(0, 10);
+  slot += 1;
   const res = await req(shopA, '/api/workshop-jobs', {
     method: 'POST',
-    body: { title: 'Gear cable', jobDate: MONDAY, startTime: `${hour}:00`, endTime: `${hour}:30`, mechanicId: shopA.mechanicId },
+    body: { title: 'Gear cable', jobDate: day, startTime: `${hour}:00`, endTime: `${hour}:30`, mechanicId: shopA.mechanicId },
   });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   return res.body;
@@ -107,3 +109,43 @@ test("another shop's job: 404 on DELETE, and the job, its order and its sign-off
   const history = await inA('SELECT count(*)::int AS n FROM workshop_job_sign_offs WHERE workshop_job_id = ?', job.id);
   assert.equal(history.n, 1);
 });
+
+// Audit item 12 (#265): Jack's answer 1 says "a deposit or a payment", and a
+// deposit is not a converted order. Money held for the job stops the delete
+// too, whether it was taken on the order (paid_pence) or online (a held or
+// taken deposit); one already refunded or released doesn't.
+const deposit = (jobId, status) => runWithShop(shopA.shop.id, () => prepare(
+  `INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, job_id)
+   VALUES ('pretend', ?, 2000, ?, ?, ?)`
+).run(`ref-${jobId}-${status}`, status, `key-${jobId}-${status}`, jobId));
+
+test('an open order with a deposit paid on it (paid_pence) refuses the delete, for the money', async () => {
+  const job = await createJob();
+  await inA('UPDATE sale_documents SET paid_pence = 2000 WHERE id = ?', job.orderId);
+  const removed = await del(shopA, job.id);
+  assert.equal(removed.status, 409, JSON.stringify(removed.body));
+  assert.deepEqual([removed.body.code, removed.body.paid, removed.body.inShop], ['settle_first', true, false]);
+  assert.ok(await inA('SELECT id FROM workshop_jobs WHERE id = ?', job.id), 'the job stays');
+});
+
+for (const status of ['held', 'taken']) {
+  test(`an online deposit that is ${status} refuses the delete, for the money`, async () => {
+    const job = await createJob();
+    await deposit(job.id, status);
+    const removed = await del(shopA, job.id);
+    assert.equal(removed.status, 409, JSON.stringify(removed.body));
+    assert.deepEqual([removed.body.code, removed.body.paid], ['settle_first', true]);
+    assert.ok(await inA('SELECT id FROM workshop_jobs WHERE id = ?', job.id), 'the job stays');
+    const pay = await inA('SELECT job_id FROM online_payments WHERE job_id = ?', job.id);
+    assert.equal(pay.job_id, job.id, 'the deposit is still on the job');
+  });
+}
+
+for (const status of ['refunded', 'released', 'declined']) {
+  test(`an online deposit that is ${status} doesn't stop the delete`, async () => {
+    const job = await createJob();
+    await deposit(job.id, status);
+    const removed = await del(shopA, job.id);
+    assert.equal(removed.status, 200, JSON.stringify(removed.body));
+  });
+}
