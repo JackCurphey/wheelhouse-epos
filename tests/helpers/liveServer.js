@@ -62,8 +62,9 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
     cwd: ROOT,
-    // The pretend payment provider, as a developer's .env asks for (deposit-settings design 3).
-    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, PAYMENTS_PROVIDER: 'pretend', ...env },
+    // The pretend payment provider and pretend WorkOS, as a developer's .env
+    // asks for (deposit-settings design 3; staff-signin-workos design 7).
+    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));

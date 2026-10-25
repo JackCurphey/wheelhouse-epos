@@ -69,6 +69,9 @@ const router = createBrowserRouter([
   },
 ]);
 
+// Exported so the screen tests can watch where a sign-out goes.
+export { pageNav } from '@/lib/page-nav.ts';
+
 // Exported so tests can clear it: its five-minute clean-up timers would
 // otherwise keep a finished test run waiting.
 export const queryClient = new QueryClient({

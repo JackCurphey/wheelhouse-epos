@@ -2396,3 +2396,25 @@ follows the job checklist, the closest pattern built.
    straight in the boxes would change d2 for this page.
 4. **With no page to return to, or one that isn't this shop's own**, sign-in
    goes on to the shop's booking page, `/book/[shop]`.
+
+### 25 Oct 2026: staff sign in through WorkOS, the server (`openspec/changes/staff-signin-workos`; signing-in decision 2; WorkOS only, Jack 25 Oct)
+
+1. **WorkOS's sign-in comes back to `/api/auth/workos/callback`**, and starts
+   at `/api/auth/workos/start`, not `/callback`: only `/api/` addresses
+   reach the sign-in routes. For Jack: WorkOS's Staging Redirects need these
+   two addresses (on `localhost:8080`).
+2. **A sign-in lands on the staff app, `/workshop`**, not the old app at
+   `/`, whose password box no longer works. Signing out goes to WorkOS's
+   sign-out and back, or to `/workshop`. **A failed sign-in goes back to the
+   staff app with its reason**:
+   `off` (nothing connected), `failed` (a link this browser didn't start, or
+   a code WorkOS refused), `unchecked` (WorkOS hasn't checked the email),
+   `not-on-staff` (no active person with that email, or the person is linked
+   to someone else: one answer for all), `busy` (10 tries per network in 15
+   minutes). The wording on screen comes with the screens change, following
+   `auth-signedout`.
+3. **The pretend WorkOS page** asks only for an email, with "WorkOS has
+   checked this email" ticked, for building and tests without the internet.
+   It never runs in production.
+4. **Password sign-in answers "Staff sign in through WorkOS now"**, the route
+   kept so the old app and the label printer helper get a clear answer.

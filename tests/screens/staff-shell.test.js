@@ -110,6 +110,23 @@ test('Sign out signs you out on the server', async () => {
   await waitFor(() => assert.ok(calls.some((c) => c.url === '/api/auth/logout' && c.method === 'POST')));
 });
 
+// staff-signin-workos: signing out of a WorkOS sign-in ends it at WorkOS too,
+// so the next person at this computer signs in again; otherwise the staff
+// app's signed-out page, which links to WorkOS.
+for (const [said, goes] of [[{ ok: true, signOutUrl: 'https://api.workos.com/user_management/sessions/logout?session_id=s1' }, 'https://api.workos.com/user_management/sessions/logout?session_id=s1'], [{ ok: true }, '/workshop']]) {
+  test(`Sign out then goes to ${goes}`, async () => {
+    const { ui, within, fireEvent, waitFor } = await renderAt('/workshop/diary', OWNER);
+    const went = [];
+    shell.pageNav.go = (url) => went.push(url);
+    const stubbed = globalThis.fetch;
+    globalThis.fetch = async (url, options) => (url === '/api/auth/logout'
+      ? { status: 200, ok: true, json: async () => said }
+      : stubbed(url, options));
+    fireEvent.click(within(await sidebar(ui)).getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => assert.deepEqual(went, [goes]));
+  });
+}
+
 test('on a phone the menu opens, takes focus, and Escape closes it and returns focus', async () => {
   const { ui, fireEvent, waitFor, within } = await renderAt('/workshop/diary', OWNER);
   const open = await ui.findByRole('button', { name: 'Open menu' });
@@ -132,10 +149,10 @@ test('choosing a page from the phone menu opens it and closes the menu', async (
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Customers' }));
 });
 
-test('signed out, the app says so and links to sign in', async () => {
+test('signed out, the app says so and links to sign in through WorkOS', async () => {
   const { ui } = await renderAt('/workshop/diary', null);
   assert.ok(await ui.findByText("You're signed out."));
-  assert.equal(ui.getByRole('link', { name: 'Sign in' }).getAttribute('href'), '/');
+  assert.equal(ui.getByRole('link', { name: 'Sign in' }).getAttribute('href'), '/api/auth/workos/start');
 });
 
 test('an edge screen opened from a customer\'s link has no staff sidebar', async () => {

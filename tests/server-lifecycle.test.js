@@ -226,7 +226,7 @@ test('SIGTERM lets an in-flight request finish, stops accepting new connections,
     // Now let the in-flight request complete - it must get a real HTTP
     // response, not a reset connection.
     const raw = await finish();
-    assert.match(raw, /^HTTP\/1\.1 401/, 'the request that was in flight when SIGTERM landed must still be answered');
+    assert.match(raw, /^HTTP\/1\.1 410/, 'the request that was in flight when SIGTERM landed must still be answered');
 
     const code = await waitForExit(server.child, 5000);
     assert.equal(code, 0, `process should exit 0 after draining; stderr:\n${server.getStderr()}`);
