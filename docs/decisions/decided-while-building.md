@@ -2455,3 +2455,13 @@ follows the job checklist, the closest pattern built.
    Staging Redirects.
 4. **No logo** on these pages: the frame's logo slot shows the word
    Wheelhouse only, as no logo file exists.
+
+### 26 Oct 2026: a sale from a customer's history (`openspec/changes/customer-sale-dialog`, `cs-sale`)
+
+1. **"Refund at the till" is left out** until refunds exist; Close stands in.
+2. **"Till B1"** isn't on the pop-up: neither sales record holds which till
+   a sale was on yet.
+3. **A till sale has no "Print the receipt"** until the new record's receipt
+   exists (step C); its pop-up shows the lines, total and how it was paid.
+4. **The history lists till sales too**, with their receipt number ("Sale 12"),
+   alongside the old record's ("Sale [id]").
