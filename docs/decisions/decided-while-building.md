@@ -2211,6 +2211,14 @@ follows the job checklist, the closest pattern built.
    refused in plain words rather than failing; no bike shop charges that. A quoted part needs a quantity of 1 or
    more, so a part isn't quoted at £0.00 and then charged as one.
 
+### 25 Oct 2026: saying yes to service reminders when booking (`openspec/changes/reminder-consent`, `ac-book-remind`)
+
+1. **Not ticking isn't a "stop".** A customer who said yes before and books
+   again without ticking keeps their yes; "Stop these" and the account are
+   where it goes off (decision 6). The tick always starts unticked, as drawn.
+2. **The yes is kept with when and where** (booking or collection), so a
+   yes to being contacted can be shown later.
+
 ### 25 Oct 2026: Settings › Workshop › Services, the list and the box (`openspec/changes/services-room`, `set-workshop-services`, `ac-service-edit`)
 
 1. **Edit and Remove always show**, as Checklists' rows do, rather than on

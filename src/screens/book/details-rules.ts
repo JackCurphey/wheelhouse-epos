@@ -41,6 +41,8 @@ export type BookingBody = {
   email?: string;
   updateChannel: UpdateChannel;
   termsAccepted: true;
+  // The reminder tick, sent only when ticked (reminder-consent).
+  remindMe?: true;
   // The deposit's held payment (deposit-payments design 5).
   paymentId?: number;
 } & BookingRequestKey;
@@ -221,6 +223,7 @@ export function bookingBody(services: ServicesResponse, draft: BookingDraft, pho
     ...(email ? { email } : {}),
     updateChannel: channelOf(draft),
     termsAccepted: true,
+    ...(draft.remindMe ? { remindMe: true as const } : {}),
     ...(draft.requestKey ? { requestKey: draft.requestKey } : {}),
   };
 }
