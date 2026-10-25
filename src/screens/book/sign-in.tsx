@@ -109,7 +109,7 @@ export function SignInScreen() {
       <div className="relative flex gap-2">
         {Array.from({ length: 6 }, (_, i) => (
           <span key={i} aria-hidden="true"
-            className={`inline-flex h-14 w-12 items-center justify-center rounded-lg bg-white font-[family-name:var(--wh-font-mono)] text-2xl text-[var(--wh-ink)] ${problem ? 'border-2 border-[var(--wh-danger)]' : `border ${focused && i === code.length ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-input-border)]'}`}`}>
+            className={`inline-flex h-14 w-12 items-center justify-center rounded-lg bg-[var(--wh-panel)] font-[family-name:var(--wh-font-mono)] text-2xl text-[var(--wh-ink)] ${problem ? 'border-2 border-[var(--wh-danger)]' : `border ${focused && i === code.length ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-input-border)]'}`}`}>
             {code[i] ?? ''}
           </span>
         ))}
