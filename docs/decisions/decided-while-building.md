@@ -2363,3 +2363,22 @@ follows the job checklist, the closest pattern built.
 3. **A bike is found by make and model or frame number, not by its owner's
    name**: the owner is found under Customers. A removed bike, or a removed
    customer's, isn't found.
+
+### 25 Oct 2026: customers sign in with a code sent by email, the server (`openspec/changes/customer-code-signin`, `cust-signin`, `cust-code`, `cust-code-expired`; signing-in decision 5)
+
+1. **A wrong code isn't drawn**; it reads as the drawn expired one does:
+   "That code isn’t right. Check it, or send a new one".
+2. **The fifth wrong try uses a code up**; after that it reads as expired,
+   with "send a new one".
+3. **A switched-off account is refused** once its code is right: "This
+   account can’t sign in. Ask the shop".
+4. **Too many asks or tries**: "Too many codes asked for. Wait a few minutes,
+   then try again" (5 per email, 10 per network, in 15 minutes) and "Too many
+   tries. Wait a few minutes, then try again" (30 checks per network).
+5. **With no sign-in provider connected** (until WorkOS is), asking for a code
+   says "Signing in by email isn’t switched on yet", as deposits stay off
+   with no payment provider.
+6. **A first sign-in makes a customer with no name**, only the email, as
+   password sign-up makes a new customer and never joins one the shop already
+   has. For Jack: these show on the Customers page with a blank name until
+   the account pages ask for one.

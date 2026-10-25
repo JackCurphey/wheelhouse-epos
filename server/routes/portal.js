@@ -48,6 +48,8 @@ import { readRequestKey } from '../booking-request-key.js';
 import { bookingDeposit } from '../workshop/booking-deposit.js';
 import { payments } from '../payments/index.js';
 import { paymentsConnected } from '../payments/provider.js';
+import { signinProvider } from '../signin/provider.js';
+import { EMAIL_RE } from '../auth.js';
 import { settleDeposits } from '../payments/settle.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
 import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
@@ -91,6 +93,50 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
+// network and by the shop's email address; codes checked, by network.
+const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
+const signinAskEmailLimiter = makeRateLimiter(5, 15 * 60 * 1000);
+const signinCheckLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+const SIGNIN_OFF = 'Signing in by email isn’t switched on yet';
+// The email typed, as the shop's logins hold it; '' for anything that isn't
+// one, or is longer than an email can be (254 characters).
+const signinEmail = (body) => {
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  return email.length <= 254 && EMAIL_RE.test(email) ? email : '';
+};
+const SIGNIN_REFUSED = {
+  wrong: 'That code isn’t right. Check it, or send a new one',
+  expired: 'That code has expired — send a new one',
+};
+
+// The shop's login for an email signed in by code, or a new customer and a
+// login with no password for it, made together. Never a customer the shop
+// already has: an email typed isn't proof of owning it (21 Oct review).
+async function loginForSignedInEmail(shopId, email) {
+  const found = () => db.prepare('SELECT * FROM customer_logins WHERE shop_id = ? AND email = ?').get(shopId, email);
+  const login = await found();
+  if (login) return login;
+  await db.exec('BEGIN');
+  try {
+    const customer = await db.prepare("INSERT INTO customers (name, email, updated_at) VALUES ('', ?, now()) RETURNING id").get(email);
+    const made = await db.prepare(
+      `INSERT INTO customer_logins (shop_id, customer_id, email) VALUES (?, ?, ?)
+       ON CONFLICT (shop_id, email) DO NOTHING RETURNING *`
+    ).get(shopId, customer.id, email);
+    if (!made) {
+      // Made by another sign-in a moment ago: theirs stands, and this customer goes.
+      await db.exec('ROLLBACK');
+      return await found();
+    }
+    await db.exec('COMMIT');
+    return made;
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 // Use my phone's codes: the same attempts as booking links, counted apart.
 const photoCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // "Stop these" codes: the same attempts again, counted apart (stop-reminders).
@@ -652,6 +698,40 @@ export function register(route) {
     const token = await createCustomerSession(login.id);
     setCustomerSessionCookie(req, res, token);
     sendJson(res, 200, serializeCustomerLogin(login));
+  });
+
+  // Sign in by a code sent by email (customer-code-signin; cust-signin,
+  // cust-code). The same answer whether the email has an account or not.
+  route('POST', '/api/portal/:shopSlug/sign-in/code', async (req, res, params, query, shop) => {
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    const body = await readJsonBody(req);
+    const email = signinEmail(body);
+    if (!email) return badRequest(res, 'Type the email address you use with the shop');
+    if (!signinAskNetworkLimiter.check(clientIp(req)) || !signinAskEmailLimiter.check(`${shop.id}:${email}`)) {
+      return sendJson(res, 429, { error: 'Too many codes asked for. Wait a few minutes, then try again' });
+    }
+    await provider.sendCode({ email });
+    sendJson(res, 200, { ok: true });
+  });
+
+  route('POST', '/api/portal/:shopSlug/sign-in/check', async (req, res, params, query, shop) => {
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    if (!signinCheckLimiter.check(clientIp(req))) {
+      return sendJson(res, 429, { error: 'Too many tries. Wait a few minutes, then try again' });
+    }
+    const body = await readJsonBody(req);
+    const email = signinEmail(body);
+    const code = typeof body?.code === 'string' ? body.code.replace(/\s/g, '') : '';
+    const answer = email && /^\d{6}$/.test(code) ? await provider.checkCode({ email, code }) : 'wrong';
+    if (answer !== 'ok') return sendJson(res, 401, { error: SIGNIN_REFUSED[answer], reason: answer });
+    const login = await loginForSignedInEmail(shop.id, email);
+    if (!login.active) return sendJson(res, 403, { error: 'This account can’t sign in. Ask the shop' });
+    const customer = await db.prepare('SELECT name FROM customers WHERE id = ?').get(login.customer_id);
+    const token = await createCustomerSession(login.id);
+    setCustomerSessionCookie(req, res, token);
+    sendJson(res, 200, { id: login.id, email: login.email, name: customer?.name ?? '', shopName: shop.name, shopSlug: shop.slug });
   });
 
   route('POST', '/api/portal/:shopSlug/logout', async (req, res) => {
