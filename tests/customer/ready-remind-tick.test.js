@@ -80,3 +80,18 @@ test('no tick while the bike is still in the workshop, or once it’s paid', asy
   await paid.ui.findByRole('region', { name: 'Paid' });
   assert.ok(paid.ui.queryByRole('checkbox', { name: new RegExp(TICK) }) === null);
 });
+
+// Review: a save that fails says so, and the box goes back, so the customer
+// never thinks they said yes when they didn't.
+test('a tick that doesn’t save goes back, and says so', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
+    url: `/book/north/booking/${CODE}`, services: SERVICES,
+    bookingLink: (url) => (url.endsWith('/reminders') ? { status: 500, body: { error: 'Internal error' } } : { status: 200, body: READY }),
+  });
+  const { fireEvent, waitFor } = await import('@testing-library/react');
+  const tick = await current.ui.findByRole('checkbox', { name: new RegExp(TICK) });
+  fireEvent.click(tick);
+  await waitFor(() => assert.ok(current.ui.queryByText('That didn’t save. Check your connection and try again.') !== null));
+  assert.equal(current.ui.getByRole('checkbox', { name: new RegExp(TICK) }).checked, false);
+});
