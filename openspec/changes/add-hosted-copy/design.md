@@ -259,7 +259,20 @@ the week, the pending booking, the change request and the services from
   label and theme settings, the Madison mock supplier) are the ones
   `createShop()` gives every new shop (`server/auth.js:85`).
 - **No login.** Jack's login is given to him privately (spec, "Jack can
-  sign in"), so the loader makes none.
+  sign in"), so the loader makes none. Since staff sign in only through WorkOS (#504, 25 Oct),
+  nobody can be signed in to a freshly loaded shop to add one from the app.
+  So a command adds it (task 3.6b):
+  `node server/scripts/add-login.mjs --shop <address> --email <email> --name <name>`
+  adds that person as the shop's owner. It refuses if:
+  - the shop isn't found;
+  - the shop already has an owner;
+  - the email isn't valid, or already has a login anywhere;
+  - the name is missing.
+
+  Their stored password is random and never shown, because they sign in
+  through WorkOS with that email. It lives in `server/scripts/`, which the
+  app's image already carries, so the Dockerfile doesn't change. It goes
+  through `server/auth.js`, the only file that writes logins.
 - **Site:** Bolton, code B (`G/book.mjs:224`, `G/sites.mjs:17`). **No
   tills:** a till's sign-in belongs to the device that sets it up, so Jack
   makes B1, "Front counter", through "Set up this till"
