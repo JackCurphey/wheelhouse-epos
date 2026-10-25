@@ -112,6 +112,22 @@ test('the reminder keeps its Stop these line, and puts it back after the shop’
   assert.ok(sent.body.endsWith('[link]. Stop these: https://shop.example/book/x/stop/abc.'), sent.body);
 });
 
+// Review: a merge moves the duplicate's stop codes to the kept record, so a
+// link from before the merge stops the kept record's reminders; Undo puts them back.
+test('after a merge, a stop link made for the duplicate stops the kept record’s reminders', async () => {
+  const kept = await maya();
+  const guest = await maya();
+  const code = await inShop(() => makeStopCode(guest.id));
+  const merged = await staff(`/api/customers/${kept.id}/merge`, { method: 'POST', body: { otherId: guest.id, keep: {} } });
+  assert.equal(merged.status, 200, JSON.stringify(merged.body));
+  assert.equal((await post(code, { stop: true })).body.on, false);
+  assert.equal((await answers(kept.id)).service_reminders, false, 'the kept record stops');
+  const undone = await staff(`/api/customer-merges/${merged.body.id}/undo`, { method: 'POST', body: {} });
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  const owner = await inShop(() => prepare('SELECT customer_id FROM reminder_stop_codes ORDER BY id DESC LIMIT 1').get());
+  assert.equal(owner.customer_id, guest.id, 'Undo gives the code back');
+});
+
 // Last in this file: it uses up the attempts. Codes can't be churned through.
 test('too many attempts from one place are refused for a while', async () => {
   let last;

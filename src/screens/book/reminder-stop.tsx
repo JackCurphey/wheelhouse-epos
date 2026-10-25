@@ -5,6 +5,7 @@ import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { BookFrame } from './frame.tsx';
+import { RoundIcon } from './round-icon.tsx';
 
 /**
  * "Stop these" for service reminders (openspec/changes/stop-reminders; drawn
@@ -45,7 +46,7 @@ export function ReminderStopScreen() {
   if (view.isError && isGone(view.error)) {
     return (
       <BookFrame title="This link doesn’t work">
-        <RoundIcon tone="warn"><TriangleAlert size={24} aria-hidden="true" /></RoundIcon>
+        <RoundIcon tone="warn" size="size-11"><TriangleAlert size={24} aria-hidden="true" /></RoundIcon>
         <p className="m-0">Check you opened the whole link from your message.</p>
       </BookFrame>
     );
@@ -62,7 +63,7 @@ export function ReminderStopScreen() {
   if (done === 'on') {
     return (
       <BookFrame title="Service reminders are on again">
-        <RoundIcon tone="ok"><Check size={22} aria-hidden="true" /></RoundIcon>
+        <RoundIcon tone="ok" size="size-11"><Check size={22} aria-hidden="true" /></RoundIcon>
         <p role="status" className="m-0">We’ll remind you when your bike is due its next service. Stop them any time with the link at the end of each one.</p>
       </BookFrame>
     );
@@ -70,7 +71,7 @@ export function ReminderStopScreen() {
   if (done === 'stopped' || !view.data.on) {
     return (
       <BookFrame title="Service reminders stopped">
-        <RoundIcon tone="ok"><Check size={22} aria-hidden="true" /></RoundIcon>
+        <RoundIcon tone="ok" size="size-11"><Check size={22} aria-hidden="true" /></RoundIcon>
         <p role="status" className="m-0">We won’t send you service reminders any more. Job updates about a bike that’s with us still come as usual.</p>
         {oops}
         <div><Button disabled={busy} onClick={() => void press(false)}>Turn them back on</Button></div>
@@ -85,10 +86,4 @@ export function ReminderStopScreen() {
       <div><Button variant="accent" disabled={busy} onClick={() => void press(true)}>Stop service reminders</Button></div>
     </BookFrame>
   );
-}
-
-/** The drawn round icon on the stopped pages, as the photo step's (roundIcon). */
-function RoundIcon({ tone, children }: { tone: 'ok' | 'warn'; children: React.ReactNode }) {
-  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]';
-  return <span className={`mb-3 inline-flex size-11 items-center justify-center rounded-full ${look}`}>{children}</span>;
 }

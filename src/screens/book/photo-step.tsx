@@ -7,6 +7,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { PHOTO_TYPES } from '@/components/ui/photo-picker';
 import { readBase64 } from '@/lib/read-base64.ts';
 import { BookFrame, PinnedRoom } from './frame.tsx';
+import { RoundIcon } from './round-icon.tsx';
 
 /**
  * Use my phone, the phone's side (openspec/changes/use-my-phone; drawn as
@@ -151,10 +152,3 @@ function PinnedChoices({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-/** The drawn round icon on the done and expired pages (roundIcon in diary.mjs). */
-function RoundIcon({ tone, children }: { tone: 'ok' | 'warn'; children: React.ReactNode }) {
-  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]';
-  return <span className={`mb-3 inline-flex size-12 items-center justify-center rounded-full ${look}`}>{children}</span>;
-}
-

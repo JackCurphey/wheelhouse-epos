@@ -7,7 +7,7 @@
 import { pool, prepare } from '../db.js';
 import { LIVE_BOOKING_STATES, effectiveHours, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
-import { channelFor, queueMessage } from './engine.js';
+import { channelFor, queueMessage, whyNotQueued } from './engine.js';
 import { render, templateFor } from './templates.js';
 import { stopLink } from './stop-codes.js';
 import { messageLink } from '../workshop/job-messages.js';
@@ -92,6 +92,9 @@ export async function queueServiceReminder(jobId, shopId, base) {
   const undo = "UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE template_key = 'service_reminder' AND intent_state = 'intended'";
   await prepare(`${undo} AND job_id = ?`).run(jobId);
   if (job.bike_id) await prepare(`${undo} AND job_id IN (SELECT id FROM workshop_jobs WHERE bike_id = ?)`).run(job.bike_id);
+  // Nothing goes to a customer with no way to reach them, or with the message
+  // off, so no stop code is made for one (review).
+  if (await whyNotQueued(KEY, job.customer_id)) return null;
   const at = await dueAt(jobId, service.months);
   // The stop link is made now and kept with the message: the timer that sends
   // it has no request to make one from (stop-reminders design 2).
