@@ -39,12 +39,16 @@ Signing out of a session that began on WorkOS's page SHALL end it in Wheelhouse 
 - **WHEN** a person who signed in through WorkOS signs out
 - **THEN** their Wheelhouse session ends and they are taken through WorkOS's sign-out, back to Wheelhouse
 
-### Requirement: Nothing connected means today's sign-in
-With no staff sign-in service connected, starting a WorkOS sign-in SHALL say it isn't switched on, and signing in with email and password SHALL work as it does today. With one connected, email-and-password sign-in SHALL still work, for now.
+### Requirement: Staff sign in only through WorkOS
+Staff SHALL sign in only on WorkOS's page. Signing in to Wheelhouse with an email and password directly SHALL be refused, saying staff sign in through WorkOS. "Sign in" in the staff app SHALL go to WorkOS's page.
+
+#### Scenario: the old password box
+- **WHEN** someone sends a staff email and password straight to Wheelhouse's sign-in
+- **THEN** they are not signed in, and are told staff sign in through WorkOS
 
 #### Scenario: not switched on
-- **WHEN** no staff sign-in service is connected and someone starts a WorkOS sign-in
-- **THEN** they are told signing in through WorkOS isn't switched on yet
+- **WHEN** no staff sign-in service is connected and someone starts signing in
+- **THEN** they are told signing in isn't switched on yet
 
 ### Requirement: The test copy never uses a live sign-in key
 The hosted test copy of Wheelhouse SHALL refuse to start if it is given a live WorkOS key.

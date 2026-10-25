@@ -23,7 +23,15 @@ and the sign-in routes, so it needs `/review` before it merges.
   - a **pretend** WorkOS, for tests and for building without the internet;
   - the **real** WorkOS, which uses the test keys in `.env`.
   `STAFF_SIGNIN_PROVIDER=pretend` or `workos` chooses one. If it's left out,
-  nothing is connected and today's sign-in works as it does now.
+  nothing is connected and nobody can sign in, so a developer's `.env` names
+  one.
+- **BREAKING: staff sign in only through WorkOS** (Jack, 25 Oct: "lets do
+  just work os").
+  - `POST /api/auth/login` (email and password) refuses, saying staff sign
+    in through WorkOS.
+  - The new app's "Sign in" goes to WorkOS.
+  - Passwords already stored are left alone but no longer used. Removing
+    them is a later change.
 - **`GET /api/auth/workos/start`** sends the person to WorkOS's sign-in page.
 - **`GET /api/auth/workos/callback`** is where WorkOS sends them back. The
   person is signed in to Wheelhouse with the same 30-day session staff
@@ -37,7 +45,6 @@ and the sign-in routes, so it needs `/review` before it merges.
 - The hosted test copy refuses to start with a live (`sk_live_`) WorkOS key.
 
 **The next change (`staff-signin-workos-screens`): the screens**
-- "Sign in" in the new app goes to WorkOS when it's connected.
 - `auth-signedout` ("You've signed out", "Sign in again") and `auth-expired`
   (`docs/design/user-journeys/generator/signin.mjs:64-65`).
 - The message when an email isn't on any staff list.
@@ -50,12 +57,18 @@ and the sign-in routes, so it needs `/review` before it merges.
 
 ## Out of scope
 
-- **Removing email-and-password sign-in.** It stays as a backup for now,
-  because the label printer helper (`print-agent/main.js:69-71`) still signs
-  in with a staff password. It goes in a later piece, once the helper has its
-  own key (the default Jack is being asked about, 25 Oct).
-- **Shop sign-up** still makes the owner with a password. The owner can then
-  sign in through WorkOS with the same email.
+- **The label printer helper's own key.** The helper signs in with a staff
+  password (`print-agent/main.js:69-71`), so it stops working when this
+  merges, until a later change gives it its own key. Jack chose this,
+  knowing it, on 25 Oct.
+- **The hosted test copy's sign-in.** The test copy runs as production, so
+  the pretend WorkOS refuses to run there. It needs the WorkOS test keys
+  and its own address added to WorkOS's Redirects before anyone can sign in
+  to it. Mark's add-hosted-copy task 3.6 ("make Jack's test login") changes
+  to match.
+- **Shop sign-up and adding a person** still ask for a password, which is
+  stored but no longer used. Taking the password boxes out goes with the
+  old app's screens.
 - **Roles and permissions** are WP-1.1 (Mark). `is_owner` stays as it is.
 - **Inviting staff through WorkOS.** A person signs in through WorkOS with the
   email the shop already has for them, and is linked the first time.

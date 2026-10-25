@@ -11,7 +11,8 @@ session tables. Since then, 192 test files, the till's own token, the label
 printer helper and 44 `currentSession(req)` calls have come to rely on
 `wh_session`. Customers have also moved to Wheelhouse's own emailed-code
 screens (`customer-accounts`). So this design keeps Wheelhouse's own
-sessions, and uses WorkOS only to prove who the person is.
+sessions, and uses WorkOS only to prove who the person is. WorkOS becomes
+the only way staff sign in (Jack, 25 Oct; decision 7).
 
 ## Decisions
 
@@ -117,14 +118,39 @@ Password sign-in keeps working.
 `WORKOS_` isn't added to `REAL_KEY_PREFIXES`, which would refuse test
 keys too.
 
+### 7. WorkOS only (Jack, 25 Oct)
+- **`POST /api/auth/login`** answers 410 with "Staff sign in through
+  WorkOS now", whatever the email and password. The route stays so the old
+  app and the print helper get a clear answer, not a 404.
+  `tests/server-lifecycle.test.js:146`, the one test that posts to it,
+  changes to expect this.
+- **Shop sign-up** still signs the new owner straight in, as today. It needs
+  the private sign-up code, so it isn't a way round WorkOS. The next time the
+  owner signs in, it's through WorkOS with the same email.
+- **The new app's "Sign in"** (`src/staff/staff-layout.tsx:248-256,275`)
+  goes to `/api/auth/workos/start` and no longer to the old app's password
+  form.
+- **No provider:** nobody can sign in, apart from a new shop's sign-up.
+  `tests/helpers/liveServer.js` sets `STAFF_SIGNIN_PROVIDER=pretend`, as it
+  does for payments. Each developer's `.env` needs
+  `STAFF_SIGNIN_PROVIDER=pretend` or `workos`.
+- **Breaks, knowingly:**
+  - the label printer helper, until it has its own key (a later change);
+  - signing in to the hosted test copy, until it has the WorkOS test keys
+    and its address is in WorkOS's Redirects. Mark's add-hosted-copy 3.6 is
+    told.
+
 ## Risks
 
 - **Sign-in is a risky area**, so this needs `/review` before it merges.
 - **Someone else's email:** decision 4's "checked email only" rule is the
   guard. WorkOS checks emails on its sign-up by default.
 - **The old app's sign-out** leaves the WorkOS session alive until the next
-  change's screens use `signOutUrl`. With password sign-in still there, this
-  is no worse than today.
+  change's screens use `signOutUrl`. Signing in again then goes straight
+  through WorkOS without a password for a while. At a shared computer that
+  matters, so the next change's sign-out comes straight after this one.
+- **Label printing stops** for anyone using the helper until it has its own
+  key. No real shop uses Wheelhouse yet.
 - **The real provider** is tested against a stand-in `fetch` in the automated
   tests. Only Jack can sign in on the real test page, so the manual check
   against Staging is his, with the steps in tasks.md.
