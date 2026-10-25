@@ -62,15 +62,26 @@ One pull request, about 450 changed lines.
 
 ## 3. Check
 
-- [ ] 3.1 `/review`, because this is sign-in and a migration. Then
+- [x] 3.1 `/review`, because this is sign-in and a migration. Then
   `npm run lint`, `npm test` and `npm run test:browser`, all passing locally.
-- [ ] 3.2 Against the real test environment, once Jack has changed its
+- [x] 3.2 Against the real test environment, once Jack has changed its
   Redirects (design 3):
   - start the app with `STAFF_SIGNIN_PROVIDER=workos`;
   - Jack signs in on WorkOS's page with his staff email and lands signed in;
   - then he signs out through `signOutUrl`.
 
   The proof is `/api/auth/me` before and after, and the server log.
+
+  Done 25 Oct. Jack signed in on WorkOS's real test page as jack@curphey.com
+  (a local-only shop) and signed out. His login was linked to his WorkOS
+  person. WorkOS then listed only the session from his later sign-in as
+  active. The server log was clean. For 3.1, an independent review found six
+  points (sign-out not ending WorkOS's session in the staff app, no
+  `return_to`, the old app as a dead end, two 500s on odd input, pretend on
+  the hosted copy). Each was fixed with a test watched failing first. Lint,
+  the type check and 127 browser tests pass. `npm test` passes 3313 of 3317.
+  The other 4 fail on untouched `main` too: no `ADMIN_DATABASE_URL` on Jack's
+  Mac.
 
 ## Workflow follow-up
 
