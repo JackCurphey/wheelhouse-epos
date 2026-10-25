@@ -93,7 +93,7 @@ test('the sign-out address ends that WorkOS session and comes back to Wheelhouse
   assert.equal(url.origin + url.pathname, 'https://api.workos.com/user_management/sessions/logout');
   assert.equal(url.searchParams.get('session_id'), 'session_01');
   // The Sign-out URI set in WorkOS's Redirects: the app's own address.
-  assert.equal(url.searchParams.get('return_to'), 'http://localhost:8080/');
+  assert.equal(url.searchParams.get('return_to'), 'http://localhost:8080/workshop/signed-out');
   assert.equal(p.logoutUrl({ sessionId: null }), null);
 });
 

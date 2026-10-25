@@ -31,10 +31,29 @@ function setSessionCookie(req, res, token) {
 // minutes, so a link back from WorkOS that this browser didn't start signs
 // nobody in (staff-signin-workos design 3).
 const STATE_COOKIE = 'wh_signin_state';
-function stateCookie(req, value, maxAge) {
+function stateCookie(req, value, maxAge, name = STATE_COOKIE) {
   const secure = isHttpsRequest(req) ? '; Secure' : '';
-  return `${STATE_COOKIE}=${value}; HttpOnly; Path=/api/auth/workos; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+  return `${name}=${value}; HttpOnly; Path=/api/auth/workos; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
+// The staff-app page to come back to after signing in (staff-signin-workos-screens
+// design 3): only /workshop or a page under it, never anywhere else. Read the
+// way a browser would (dot segments, %2e, tabs and line breaks gone, other
+// characters %-encoded), so what is checked is where the browser would go and
+// nothing in it can break the reply (review).
+const FROM_COOKIE = 'wh_signin_from';
+const HERE = 'http://wheelhouse.invalid';
+function staffAppPage(from) {
+  if (typeof from !== 'string' || !from.startsWith('/') || from.startsWith('//') || from.includes('\\')) return null;
+  let url;
+  try {
+    url = new URL(from, HERE);
+  } catch {
+    return null;
+  }
+  if (url.origin !== HERE) return null;
+  return url.pathname === '/workshop' || url.pathname.startsWith('/workshop/') ? url.pathname + url.search : null;
+}
+
 function sameState(a, b) {
   if (!a || !b) return false;
   const [x, y] = [Buffer.from(a), Buffer.from(b)];
@@ -49,7 +68,8 @@ function redirect(res, location, cookies = []) {
 // Where a failed WorkOS sign-in goes: the staff app, whose signed-out page
 // links to WorkOS and will show the reason (staff-signin-workos-screens).
 // off, failed, unchecked, not-on-staff, busy.
-const signinFailed = (req, res, reason) => redirect(res, `/workshop?signin=${reason}`, [stateCookie(req, '', 0)]);
+const signinFailed = (req, res, reason) =>
+  redirect(res, `/workshop?signin=${reason}`, [stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE)]);
 
 function clearSessionCookie(res) {
   const cookies = [`${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`];
@@ -110,11 +130,15 @@ export function register(route) {
     sendJson(res, 410, { error: 'Staff sign in through WorkOS now' });
   });
 
-  route('GET', '/api/auth/workos/start', async (req, res) => {
+  route('GET', '/api/auth/workos/start', async (req, res, params, query) => {
     const provider = staffSigninProvider();
     if (!provider) return signinFailed(req, res, 'off');
     const state = randomBytes(24).toString('hex');
-    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri() }), [stateCookie(req, state, 600)]);
+    const from = staffAppPage(query.get('from'));
+    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri() }), [
+      stateCookie(req, state, 600),
+      stateCookie(req, from ? encodeURIComponent(from) : '', from ? 600 : 0, FROM_COOKIE),
+    ]);
   });
 
   // The pretend WorkOS's own page, only while it is the one connected.
@@ -138,7 +162,7 @@ export function register(route) {
     if (!callbackLimiter.check(ip)) return signinFailed(req, res, 'busy');
     const provider = staffSigninProvider();
     if (!provider) return signinFailed(req, res, 'off');
-    const { [STATE_COOKIE]: expected, [SESSION_COOKIE]: earlier } = parseCookies(req);
+    const { [STATE_COOKIE]: expected, [SESSION_COOKIE]: earlier, [FROM_COOKIE]: from } = parseCookies(req);
     if (!sameState(query.get('state'), expected)) return signinFailed(req, res, 'failed');
     const signedIn = await provider.authenticate({ code: query.get('code') || '' });
     if (!signedIn) return signinFailed(req, res, 'failed');
@@ -151,7 +175,9 @@ export function register(route) {
     // Whoever was signed in on this browser before is signed out (review).
     await destroySession(earlier);
     const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
-    redirect(res, '/workshop', [sessionCookie(req, token), stateCookie(req, '', 0), ...devSignedOutExpired()]);
+    // parseCookies has already decoded it (review: not twice).
+    const back = staffAppPage(from) ?? '/workshop';
+    redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE), ...devSignedOutExpired()]);
   });
 
   route('POST', '/api/auth/logout', async (req, res) => {
@@ -166,7 +192,13 @@ export function register(route) {
 
   route('GET', '/api/auth/me', async (req, res) => {
     const ctx = await currentSession(req);
-    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!ctx) {
+      // A session cookie that isn't live any more has run out (or was ended
+      // elsewhere): the staff app shows auth-expired, not a fresh sign-in
+      // (staff-signin-workos-screens design 2). Signing out clears the cookie.
+      const sent = parseCookies(req)[SESSION_COOKIE];
+      return sendJson(res, 401, sent ? { error: 'Not signed in', reason: 'expired' } : { error: 'Not signed in' });
+    }
     // The staff member this login is (migration 013), so the till knows who
     // is serving. Read here, not in serializeSession, which login and signup
     // share. This route runs outside a shop's scope, so it opens one.

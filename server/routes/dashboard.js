@@ -16,11 +16,13 @@ const db = { prepare, exec: dbExec };
 
 export function register(route) {
   route('GET', '/api/dashboard', async (req, res) => {
-    const today = await shopDayWindow('created_at', await currentShopToday());
+    // Both records, in pence (the all_sales view): a sale counts once wherever
+    // it was recorded, on the day of the till's clock for a till sale.
+    const today = await shopDayWindow('made_at', await currentShopToday());
     const todayAgg = await db
       .prepare(
-        `SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
-         FROM sales WHERE ${today.sql}`
+        `SELECT COUNT(*) AS count, COALESCE(SUM(total_pence), 0) AS total_pence
+         FROM all_sales WHERE ${today.sql}`
       )
       .get(...today.args);
 
@@ -32,22 +34,29 @@ export function register(route) {
       .all())
       .map(serializeProduct);
 
-    const todayItems = await shopDayWindow('s.created_at', await currentShopToday());
+    const todayOld = await shopDayWindow('s.created_at', await currentShopToday());
+    const todayTill = await shopDayWindow('t.till_clock_at', await currentShopToday());
     const topToday = await db
       .prepare(
-        `SELECT si.name, SUM(si.qty) AS qty, SUM(si.line_total) AS revenue
-         FROM sale_items si
-         JOIN sales s ON s.id = si.sale_id
-         WHERE ${todayItems.sql}
-         GROUP BY si.name
+        `SELECT name, SUM(qty) AS qty, SUM(revenue) AS revenue FROM (
+           SELECT si.name, si.qty, si.line_total AS revenue
+             FROM sale_items si JOIN sales s ON s.id = si.sale_id
+            WHERE ${todayOld.sql}
+           UNION ALL
+           SELECT l.description, l.qty, l.line_total_pence / 100.0
+             FROM till_sale_lines l JOIN till_sales t ON t.id = l.till_sale_id
+            WHERE ${todayTill.sql}
+         ) lines
+         GROUP BY name
          ORDER BY revenue DESC
          LIMIT 5`
       )
-      .all(...todayItems.args);
+      .all(...todayOld.args, ...todayTill.args);
 
     sendJson(res, 200, {
       todayCount: todayAgg.count,
-      todayTotal: todayAgg.total,
+      todayTotal: todayAgg.total_pence / 100,
+      todayTotalPence: todayAgg.total_pence,
       lowStock,
       topToday,
     });
