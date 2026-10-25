@@ -94,7 +94,10 @@ test('each row carries the customer and the staff member, and a till sale its re
 test('a shop sees only its own sales through the view', async () => {
   const mine = await newShop();
   const other = await newShop();
-  await runWithShop(other.id, () => oldSale({ total: 99, at: '2026-09-01T10:00:00Z' }));
+  await runWithShop(other.id, async () => {
+    await oldSale({ total: 99, at: '2026-09-01T10:00:00Z' });
+    await tillSale({ totalPence: 9900, clockAt: '2026-09-01T10:00:00Z' });
+  });
   const found = await runWithShop(mine.id, () => rows());
   assert.deepEqual(found, []);
 });

@@ -131,6 +131,13 @@ test('?source=till gives the till sale, with its lines and payments in pence', a
   assert.deepEqual(res.body.items.map((i) => ({ name: i.name, qty: i.qty, lineTotalPence: i.lineTotalPence, vatRateBp: i.vatRateBp })),
     [{ name: 'Pump', qty: 1, lineTotalPence: 700, vatRateBp: 2000 }]);
   assert.deepEqual(res.body.payments, [{ method: 'card', amountPence: 700 }]);
+  // The old app's receipt window reads these pound fields (review): a till sale has no
+  // discount (its lines add up to its total), and its card payment is the card amount.
+  assert.deepEqual(
+    { subtotal: res.body.subtotal, discount: res.body.discount, cashAmount: res.body.cashAmount, cardAmount: res.body.cardAmount, vatPence: res.body.vatPence },
+    { subtotal: 7, discount: 0, cashAmount: 0, cardAmount: 7, vatPence: 417 }
+  );
+  assert.deepEqual(res.body.extraPayments, []);
 });
 
 test('an unknown source is a 400, and a till sale that isn\'t there is a 404', async () => {

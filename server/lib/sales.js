@@ -283,8 +283,16 @@ export function serializeAnySale(row, items, payments) {
       customerName: row.customer_name,
       cashierId: row.cashier_id,
       cashierName: row.cashier_name,
+      // Pound fields the old app's receipt window reads. A till sale has no
+      // discount (its lines add up to its total); cash and card come from its
+      // payments, any other method is listed as an extra payment.
+      subtotal: row.total_pence / 100,
+      discount: 0,
       total: row.total_pence / 100,
       totalPence: row.total_pence,
+      cashAmount: (payments || []).filter((p) => p.method === 'cash').reduce((n, p) => n + p.amountPence, 0) / 100,
+      cardAmount: (payments || []).filter((p) => p.method === 'card').reduce((n, p) => n + p.amountPence, 0) / 100,
+      extraPayments: payments ? payments.filter((p) => p.method !== 'cash' && p.method !== 'card').map((p) => ({ tenderType: p.method, amount: p.amountPence / 100 })) : undefined,
       vatPence: row.vat_pence,
       receiptNumber: row.receipt_number,
       paymentMethod: tillPaymentLabel(row.till_methods),
