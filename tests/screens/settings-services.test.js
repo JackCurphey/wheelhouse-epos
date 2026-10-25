@@ -211,3 +211,11 @@ test('a service with a reminder and no time says “Reminder after [n] months”
   shell.queryClient.invalidateQueries({ queryKey: ['workshop-services'] });
   assert.ok(await ui.findByText('Reminder after 6 months'));
 });
+
+// Sending service reminders: the box's drawn line, now that the message exists.
+test('the service box says where the reminder’s wording is', async () => {
+  const { ui, fireEvent, within } = await openServices();
+  fireEvent.click(ui.getByRole('button', { name: 'Edit Standard service' }));
+  const box = await ui.findByRole('dialog', { name: 'Standard service' });
+  assert.ok(within(box).getByText('The wording is in Settings › Messages › Service reminder.'));
+});

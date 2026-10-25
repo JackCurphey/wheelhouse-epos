@@ -40,9 +40,9 @@ afterEach(async () => {
 // The preview the server fills in: the drawings' example.
 const fill = (words) => words.replace('[Customer’s first name]', 'Maya').replace('[Bike]', 'Trek Domane AL 3').replace('[Shop name]', 'North Street Cycles');
 
-async function openSettings({ slowSettings = false } = {}) {
+async function openSettings({ slowSettings = false, extra = [] } = {}) {
   calls = [];
-  templates = TEMPLATES();
+  templates = [...TEMPLATES(), ...extra];
   failPut = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -239,4 +239,38 @@ test('until the settings load, the hours box waits rather than showing 24', asyn
   const { ui } = await openSettings({ slowSettings: true });
   await ui.findByText('Quote to approve');
   assert.ok(ui.queryByRole('textbox', { name: 'Reminder if there’s no answer, after' }) === null);
+});
+
+// Sending service reminders (openspec/changes/service-reminder-send; setup.mjs
+// bringBackRows, account.mjs ac-reminder-wording): under "Bringing customers
+// back", with its note, and its box says "Stop these" can't be taken off.
+const SERVICE_REMINDER = template({
+  key: 'service_reminder', name: 'Service reminder', when: 'When a bike is due its next service — set on each service', group: 'reminders',
+  wording: 'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].',
+  tapIns: ['Customer’s first name', 'Bike', 'Service', 'Shop name', 'Link to book'],
+});
+test('the service reminder sits under “Bringing customers back”, after the booking messages, with its note', async () => {
+  const { ui } = await openSettings({ extra: [SERVICE_REMINDER] });
+  const list = await ui.findByText((_, el) => el?.getAttribute('data-msg-list') === 'true');
+  await ui.findByText('Service reminder');
+  const headings = [...list.querySelectorAll('h5')].map((h) => h.textContent);
+  assert.deepEqual(headings, ['Booking messages', 'Bringing customers back']);
+  assert.ok(list.textContent.includes('Only to customers who said yes. Each ends “Stop these: [link]”.'));
+  const back = [...list.querySelectorAll('h5')][1];
+  const row = [...list.querySelectorAll('span')].find((el) => el.textContent === 'Service reminder');
+  assert.ok(back.compareDocumentPosition(row) & 4, 'the service reminder is under its heading');
+  assert.ok(has(ui.queryByText('When a bike is due its next service — set on each service')));
+});
+
+test('its wording box says “Stop these” is always added and can’t be taken off', async () => {
+  const { ui, fireEvent } = await openSettings({ extra: [SERVICE_REMINDER] });
+  fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Service reminder' }));
+  await ui.findByRole('dialog', { name: 'Service reminder' });
+  // Its subtitle as drawn (ac-reminder-wording), saying where the months are set (review).
+  assert.ok(has(ui.queryByText('Sent when a bike is due its next service — set on each service in Settings › Workshop')));
+  assert.ok(has(ui.queryByText('Always added at the end: “Stop these: [link]”. It can’t be taken off.')));
+  fireEvent.click(ui.getByRole('button', { name: 'Done' }));
+  fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Bike ready' }));
+  await ui.findByRole('dialog', { name: 'Bike ready' });
+  assert.ok(ui.queryByText(/It can’t be taken off/) === null, 'only the service reminder has it');
 });

@@ -62,18 +62,21 @@ export async function undoJobMessages(jobId) {
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
-export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false }) {
+export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false, ending = null, at = null }) {
   const template = await templateFor(key);
   if (!template.enabled) return { skipped: 'off' };
   const c = await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId);
   const how = c && channelFor(c);
   if (!how) return { skipped: 'no_contact' };
-  const body = render(template.wording, vars);
+  // A fixed ending goes after the shop's wording, so it can't be taken off
+  // (the service reminder's "Stop these").
+  const body = ending ? `${render(template.wording, vars)} ${ending}` : render(template.wording, vars);
   const subject = how.channel === 'email' ? render(template.subject, vars) : null;
   // Held (Don't close things by themselves): a send time of never, so the
   // sender never claims it and Undo still stops it, until Send now
   // (openspec/changes/dont-close-server design 1).
-  const sendAfter = hold ? 'infinity' : new Date(Date.now() + delayMs).toISOString();
+  // `at`: a send time of its own, months off (the service reminder's).
+  const sendAfter = hold ? 'infinity' : (at ?? new Date(Date.now() + delayMs)).toISOString();
   const row = await prepare(
     `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
      VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?) RETURNING id`
@@ -230,7 +233,7 @@ async function sendDueForShop(shopId) {
     const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
-       RETURNING id, channel, to_address, subject, body, template_key, job_id`
+       RETURNING id, channel, to_address, subject, body, template_key, job_id, customer_id`
     ).all(now.toISOString(), now.toISOString());
     const sendable = [];
     for (const m of claimed) {
@@ -238,6 +241,18 @@ async function sendDueForShop(shopId) {
       if (stillNeeded && !(await stillNeeded(m.job_id))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
         continue;
+      }
+      // A service reminder was set up months ago: checked, and its words
+      // written, now (service-reminder-send design 5 and 6; Jack, 25 Oct).
+      if (m.template_key === 'service_reminder') {
+        const { serviceReminderNow } = await import('./service-reminders.js');
+        const now = await serviceReminderNow(m, shopId);
+        if (!now) {
+          await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
+          continue;
+        }
+        Object.assign(m, { customer_id: now.customerId, body: now.body, subject: now.subject, channel: now.channel, to_address: now.to });
+        await prepare('UPDATE customer_messages SET customer_id = ?, body = ?, subject = ?, channel = ?, to_address = ? WHERE id = ?').run(m.customer_id, m.body, m.subject, m.channel, m.to_address, m.id);
       }
       // Bike still waiting was filled in days ago: what's left to pay is said
       // as it is now, paid or not (fresh review), and recorded as sent.
