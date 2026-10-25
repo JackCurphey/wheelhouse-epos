@@ -14,7 +14,8 @@ CREATE TABLE pretend_signin_codes (
   used_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_pretend_signin_codes_email ON pretend_signin_codes(shop_id, email);
+-- One live code per email, so two asks at once can't leave two (review).
+CREATE UNIQUE INDEX idx_pretend_signin_codes_live ON pretend_signin_codes(shop_id, email) WHERE used_at IS NULL;
 ALTER TABLE pretend_signin_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pretend_signin_codes FORCE ROW LEVEL SECURITY;
 CREATE POLICY pretend_signin_codes_shop_isolation ON pretend_signin_codes

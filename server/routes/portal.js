@@ -99,6 +99,12 @@ const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
 const signinAskEmailLimiter = makeRateLimiter(5, 15 * 60 * 1000);
 const signinCheckLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 const SIGNIN_OFF = 'Signing in by email isn’t switched on yet';
+// The email typed, as the shop's logins hold it; '' for anything that isn't
+// one, or is longer than an email can be (254 characters).
+const signinEmail = (body) => {
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  return email.length <= 254 && EMAIL_RE.test(email) ? email : '';
+};
 const SIGNIN_REFUSED = {
   wrong: 'That code isn’t right. Check it, or send a new one',
   expired: 'That code has expired — send a new one',
@@ -700,8 +706,8 @@ export function register(route) {
     const provider = signinProvider();
     if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
     const body = await readJsonBody(req);
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    if (!EMAIL_RE.test(email)) return badRequest(res, 'Type the email address you use with the shop');
+    const email = signinEmail(body);
+    if (!email) return badRequest(res, 'Type the email address you use with the shop');
     if (!signinAskNetworkLimiter.check(clientIp(req)) || !signinAskEmailLimiter.check(`${shop.id}:${email}`)) {
       return sendJson(res, 429, { error: 'Too many codes asked for. Wait a few minutes, then try again' });
     }
@@ -716,9 +722,9 @@ export function register(route) {
       return sendJson(res, 429, { error: 'Too many tries. Wait a few minutes, then try again' });
     }
     const body = await readJsonBody(req);
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const code = typeof body.code === 'string' ? body.code.replace(/\s/g, '') : '';
-    const answer = EMAIL_RE.test(email) && /^\d{6}$/.test(code) ? await provider.checkCode({ email, code }) : 'wrong';
+    const email = signinEmail(body);
+    const code = typeof body?.code === 'string' ? body.code.replace(/\s/g, '') : '';
+    const answer = email && /^\d{6}$/.test(code) ? await provider.checkCode({ email, code }) : 'wrong';
     if (answer !== 'ok') return sendJson(res, 401, { error: SIGNIN_REFUSED[answer], reason: answer });
     const login = await loginForSignedInEmail(shop.id, email);
     if (!login.active) return sendJson(res, 403, { error: 'This account can’t sign in. Ask the shop' });

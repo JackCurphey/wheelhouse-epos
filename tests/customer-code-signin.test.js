@@ -196,3 +196,21 @@ test('with no provider connected, asking says signing in by email isn’t switch
     await deleteTestShop(offShop.id);
   }
 });
+
+// Review: two asks at once leave one live code; a null body or a huge email is refused, not a crash.
+test('two codes asked for at once leave one that works', async () => {
+  const ip = newNetwork();
+  await Promise.all([ask('double@example.test', { ip }), ask('double@example.test', { ip })]);
+  const live = await runWithShop(shop.id, () => prepare('SELECT count(*)::int AS n FROM pretend_signin_codes WHERE email = ? AND used_at IS NULL').get('double@example.test'));
+  assert.equal(live.n, 1);
+});
+
+test('a body of null, or an email longer than any real one, is refused as a bad request', async () => {
+  for (const path of ['code', 'check']) {
+    const res = await fetch(`${server.baseUrl}/api/portal/${shop.slug}/sign-in/${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': newNetwork() }, body: 'null',
+    });
+    assert.ok(res.status === 400 || res.status === 401, `${path}: ${res.status}`);
+  }
+  assert.equal((await ask(`${'a'.repeat(250)}@example.test`)).status, 400);
+});

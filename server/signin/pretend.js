@@ -11,12 +11,14 @@ const WRONG_TRIES = 5;
 
 export const pretend = {
   name: 'pretend',
-  /** Sends a new code to `email`, replacing its earlier ones. */
+  /** Sends a new code to `email`, replacing its earlier one. */
   async sendCode({ email }) {
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    await prepare('UPDATE pretend_signin_codes SET used_at = now() WHERE email = ? AND used_at IS NULL').run(email);
+    // One statement over the one live code per email, so two asks at once leave one (review).
     await prepare(
-      `INSERT INTO pretend_signin_codes (email, code, expires_at) VALUES (?, ?, now() + interval '${VALID_MINUTES} minutes')`
+      `INSERT INTO pretend_signin_codes (email, code, expires_at) VALUES (?, ?, now() + interval '${VALID_MINUTES} minutes')
+       ON CONFLICT (shop_id, email) WHERE used_at IS NULL
+       DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at, wrong_tries = 0, created_at = now()`
     ).run(email, code);
     if (process.env.NODE_ENV !== 'production') console.log(`Pretend sign-in: the code for ${email} is ${code}`);
     return { ok: true };
