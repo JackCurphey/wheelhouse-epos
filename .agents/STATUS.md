@@ -25,7 +25,10 @@ here before starting it, so two people never build the same one):
   Oct, changing Q10 for WorkOS); its Staging environment is set up and its
   keys checked from Jack's `.env`
   (`docs/decisions/2026-10-25-workos-account.md`). Staff sign-in through it
-  is still WP-1.7; Mark needs the staging keys from Jack to run it.
+  is still WP-1.7. **Jack has taken staff sign-in through WorkOS** (WP-1.7's
+  server side, replan slice B; Mark agreed, 25 Oct), against the fake and
+  the staging account; Mark keeps roles (WP-1.1) and the settings store
+  (WP-1.2).
 - **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Open for
   review 25 Oct: step B (#492), audit items 12, 20 and 24 (#496), the
   overnight runner (#490), and a replan into playable slices (#499; Mark
