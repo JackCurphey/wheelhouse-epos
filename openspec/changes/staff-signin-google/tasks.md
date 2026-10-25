@@ -31,9 +31,19 @@
 ## 3. Check
 
 - [x] 3.1 `/review` (sign-in); lint, the type check, `npm test`, `npm run test:browser`.
-- [ ] 3.2 Look at the screen against the drawing at both widths. Jack
+- [x] 3.2 Look at the screen against the drawing at both widths. Jack
   presses "Continue with Google" on his Mac against WorkOS's real test
   environment, and on the hosted copy after merging.
+
+  Done 25 Oct.
+  - **Against the drawing:** looked at at 1280 and 375 px. The review's
+    stronger outline is the drawing's.
+  - **On Jack's Mac, against WorkOS's real test environment:** "Continue with
+    Google" went from WorkOS straight to `accounts.google.com`. Jack chose
+    his Google account and was back on the diary, signed in to his local
+    shop. His login's earlier WorkOS link held: Google and email are one
+    WorkOS person. One live WorkOS-backed session, and a clean server log.
+  - **On the hosted copy:** it follows once this merges.
 
 ## Workflow follow-up
 
