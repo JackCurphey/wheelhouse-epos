@@ -23,9 +23,9 @@ here before starting it, so two people never build the same one):
   (#508); the test copy's remove-a-shop and add-a-login commands (#506), its
   test shop loaded with Jack as owner and connected to WorkOS (add-hosted-copy
   3.6, taken from Mark); tests on pull requests and once a day, not after a
-  merge (#509, Jack's option 3; the copy updates about a minute after a merge).
-  Open: print jobs per shop (#510), the old app's Log in leading to the new
-  sign-in (#512). Next, each waiting on an answer from Jack or Mark: paying a
+  merge (#509, Jack's option 3; the copy updates about a minute after a merge);
+  print jobs reach only their own shop's helper (#510). Open: the old app's
+  Log in leading to the new sign-in (#512). Next, each waiting on an answer from Jack or Mark: paying a
   repair online (how it becomes a sale; Jack asked Mark on #199); the
   customer's account page (whose history a new code sign-in sees, and opening
   a job from it); the label printer helper's own key (where the owner makes
