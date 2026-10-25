@@ -20,6 +20,7 @@ test.beforeAll(async () => {
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
   const staff = (path: string, options?: object) => staffRequest(server!.baseUrl, owner.cookie, path, options);
   const maya = (await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900142' } })).body;
+  await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Trek', model: 'Domane AL 3', colour: 'Green', serialNumber: '[frame number]' } });
   job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-09-17', startTime: '11:30', endTime: '12:30', customerId: maya.id } })).body;
 });
 
@@ -40,9 +41,20 @@ async function signIn(page: Page, context: BrowserContext, path: string) {
 test.describe('on a computer', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
+  // openspec/changes/bike-search: a frame number finds the bike, which opens its page.
+  test('a frame number finds the bike under Bikes, and it opens the bike’s page', async ({ page, context }) => {
+    await signIn(page, context, '/workshop/today');
+    await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' }).fill('frame number');
+    const bikes = page.getByRole('group', { name: 'Bikes' });
+    await expect(bikes.getByText('Maya Patel · Green · [frame number]')).toBeVisible();
+    await bikes.getByRole('link', { name: 'Trek Domane AL 3' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Trek Domane AL 3' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Search results' })).toHaveCount(0);
+  });
+
   test('the results drop down under the box, over the page, and a job opens in the diary', async ({ page, context }) => {
     await signIn(page, context, '/workshop/today');
-    const box = page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs and customers' });
+    const box = page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
     await box.fill('maya');
     const results = page.getByRole('region', { name: 'Search results' });
     await expect(results.getByRole('link', { name: `${job.reference} · Maya Patel` })).toBeVisible();
@@ -61,7 +73,7 @@ test.describe('on the diary', () => {
     await signIn(page, context, '/workshop/diary?date=2026-09-17');
     const dialog = page.getByRole('dialog', { name: /Standard service/ });
     for (let round = 0; round < 2; round++) {
-      await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs and customers' }).fill('maya');
+      await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' }).fill('maya');
       await page.getByRole('region', { name: 'Search results' }).getByRole('link', { name: `${job.reference} · Maya Patel` }).click();
       await expect(dialog).toBeVisible();
       await page.keyboard.press('Escape');
@@ -75,7 +87,7 @@ test.describe('on a phone', () => {
 
   test('the search button opens the box across the top; Close search shuts it', async ({ page, context }) => {
     await signIn(page, context, '/workshop/today');
-    await page.getByRole('button', { name: 'Search jobs and customers' }).click();
+    await page.getByRole('button', { name: 'Search jobs, customers and bikes' }).click();
     const sheet = page.getByRole('dialog', { name: 'Search' });
     await expect(sheet).toBeVisible();
     await sheet.getByRole('searchbox').fill('maya');

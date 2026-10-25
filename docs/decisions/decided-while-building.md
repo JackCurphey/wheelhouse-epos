@@ -2351,3 +2351,15 @@ follows the job checklist, the closest pattern built.
 4. **The jobs list is "Jobs on this bike"**, split as the customer page's
    history is: "Open now", then "Earlier, newest first", eight shown with
    "Show all ([n])".
+
+### 25 Oct 2026: finding a bike in the header search (`openspec/changes/bike-search`, `staff-search`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
+
+1. **The Bikes group isn't drawn**; it comes after Customers, its rows as
+   theirs are: the bike's name, opening its page, with "[Owner] · [Colour] ·
+   [Frame number]" under it, leaving out what's blank.
+2. **The box is now named "Search jobs, customers and bikes"**, saying what it
+   finds so far, as it did before; the drawing's name lists orders and
+   products too, which join as they're built.
+3. **A bike is found by make and model or frame number, not by its owner's
+   name**: the owner is found under Customers. A removed bike, or a removed
+   customer's, isn't found.
