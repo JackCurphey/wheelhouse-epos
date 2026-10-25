@@ -33,7 +33,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://epos_app:${POSTGRES_PASSWORD}@postgres:5432/epos
+      DATABASE_URL: postgres://epos_app:${POSTGRES_PASSWORD}@postgres:5432/${EPOS_DB_NAME:-epos}
       PORT: 4000
       # Safe here, and only here: the app is reached through the gateway,
       # which overwrites x-forwarded-for from the real socket and drops
