@@ -2455,3 +2455,14 @@ follows the job checklist, the closest pattern built.
    Staging Redirects.
 4. **No logo** on these pages: the frame's logo slot shows the word
    Wheelhouse only, as no logo file exists.
+
+### 26 Oct 2026: customer groups in Settings (`openspec/changes/customer-groups-settings`, `cs-groups`)
+
+1. **Settings › Front desk › Payments shows only Customer groups** for now
+   (stage 1 drawing gaps decision 6, "show only what works"): the card
+   machine and ways to pay come with their pieces.
+2. **The group's box isn't drawn**: Name and "% off", Save, and "Remove
+   group" for an existing one, following the Services box.
+3. **Removing a group** leaves its customers in no group, as the server
+   already did; no confirmation step, as Services' Remove has none.
+4. **With no groups** the fold's summary reads "No groups yet".
