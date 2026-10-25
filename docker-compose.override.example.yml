@@ -1,0 +1,10 @@
+# Copy this to docker-compose.override.yml (git-ignored) to let your dev
+# container skip signing in (server/lib/dev-autologin.js); `docker compose up`
+# reads the override beside docker-compose.yml. Also set
+# WHEELHOUSE_DEV_AUTOLOGIN=1 in .env. The shop's own install runs
+# docker-compose.yml alone and never has this file, so it can't get the switch.
+services:
+  app:
+    environment:
+      WHEELHOUSE_DEV_AUTOLOGIN: ${WHEELHOUSE_DEV_AUTOLOGIN:-}
+      WHEELHOUSE_DEV_LOGIN_EMAIL: ${WHEELHOUSE_DEV_LOGIN_EMAIL:-}

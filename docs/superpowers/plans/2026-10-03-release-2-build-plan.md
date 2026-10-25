@@ -150,7 +150,7 @@ of them blocks building; all of them block going live.
 | Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Stripe Terminal first, then SumUp, then Paymentsense (Ingenico Move/5000, #138), each its own connection behind the same adapter (Jack, 5 Oct; `docs/decisions/2026-10-05-card-payments-provider.md`) |
 | Online payments (PAY-05) | fake provider with test outcomes | Stripe (payment links and checkout), the same company as the card reader (Jack, 5 Oct); Mark sets the account up, with Jack's yes (Q10; project rules) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
-| Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
+| Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Done: Jack made the WorkOS account, Staging set up (25 Oct, changing Q10; `docs/decisions/2026-10-25-workos-account.md`) |
 | Text messages (Twilio) | already real; fake in tests | keys exist in Jack's set-up |
 | Xero and QuickBooks | spreadsheet downloads first, then a fake connector | developer accounts (Q10) |
 | Citrus Lime import | Excel files laid out by the real Cloud Reports column names (`specs/2026-10-05-citrus-lime-exports.md`, #136) | Jack's real export files, and Citrus Lime's full export |
