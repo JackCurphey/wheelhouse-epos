@@ -41,6 +41,49 @@ export function PendingScreen() {
   return <BookFrame title="Loading…">{null}</BookFrame>;
 }
 
+/**
+ * The reminder tick on the ready page (openspec/changes/ready-remind-tick; Jack's
+ * answer 8 of 25 Oct): drawn as ac-collect-remind, saved at once through the
+ * booking link. A customer who said yes sees the drawn line instead
+ * (cp-summary-said-yes); Change shows the tick, ticked, to untick.
+ */
+function RemindTick({ yes: saidYes, shopSlug, code }: { yes: boolean; shopSlug: string; code: string }) {
+  const [yes, setYes] = React.useState(saidYes);
+  // A customer who hasn't said yes keeps the tick in front of them, ticked or
+  // not, rather than it turning into the said-yes line under their finger.
+  const [changing, setChanging] = React.useState(!saidYes);
+  const [failed, setFailed] = React.useState(false);
+  async function answer(next: boolean) {
+    setYes(next);
+    setFailed(false);
+    try {
+      await apiMutate(`${bookingLinkPath(shopSlug, code)}/reminders`, { yes: next }, { method: 'POST' });
+    } catch {
+      setYes(!next);
+      setFailed(true);
+    }
+  }
+  return (
+    <div className="border-t border-[var(--wh-border)] pt-2">
+      {yes && !changing ? (
+        <p className="m-0 text-sm leading-normal">
+          You’ll get a reminder when the next service is due.{' '}
+          <button type="button" className="font-semibold underline" onClick={() => setChanging(true)}>Change</button>
+        </p>
+      ) : (
+        <label className="flex min-h-11 cursor-pointer items-start gap-3">
+          <input type="checkbox" checked={yes} onChange={(e) => void answer(e.target.checked)} className="mt-px size-[22px] shrink-0 accent-[var(--accent-dark)]" />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-size-15 font-semibold">Remind me when my bike is due its next service</span>
+            <span className="text-size-13 leading-[1.45] text-[var(--wh-muted)]">And ask me for a review after I collect. One message each, the way you chose when you booked. Stop any time.</span>
+          </span>
+        </label>
+      )}
+      {failed ? <p role="alert" className="m-0 mt-1 text-sm text-[var(--wh-danger-hover)]">That didn’t save. Check your connection and try again.</p> : null}
+    </div>
+  );
+}
+
 function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: string; code: string }) {
   const [copied, setCopied] = React.useState(false);
   // Change the date's strip, open in place of the buttons (drawn as bk-change).
@@ -298,6 +341,8 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
                 <p className="m-0 text-sm text-[var(--wh-muted)]">Pay at the counter by card or cash. When you come in, just give your name.</p>
               </>
             )}
+            {/* Saying yes to service reminders at collection (ready-remind-tick; ac-collect-remind, cp-summary-said-yes). */}
+            <RemindTick yes={link.remindersYes === true} shopSlug={shopSlug} code={code} />
           </>
         )))}
         {link.stage === 'collected' && card('Collected', 'collected-title', (

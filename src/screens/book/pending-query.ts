@@ -72,6 +72,8 @@ export type BookingLink = {
   work?: { name: string; price: number | null }[];
   // Work agreed's total, the lines' pence summed by the server; null with prices hidden.
   workTotal?: number | null;
+  // Whether the customer said yes to service reminders (ready-remind-tick).
+  remindersYes?: boolean;
   declined?: { name: string; price: number | null }[];
   /** The job's checklist once the work is finished (cp-summary; Jack, 22 Oct): every item and what the mechanic found. */
   checklist?: { name: string; items: { name: string; done: boolean; note: string | null }[] } | null;
