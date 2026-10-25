@@ -160,6 +160,7 @@ test('signed out, with nothing to say, the app goes straight to WorkOS and back 
   const { ui, went, waitFor } = await renderAt('/workshop/diary', null);
   await waitFor(() => assert.deepEqual(went, [`${START}?from=%2Fworkshop%2Fdiary`]));
   assert.equal(ui.queryByRole('heading') === null, true, 'nothing else is shown');
+  assert.ok(ui.getByRole('status').textContent.includes('Taking you to sign in…'));
 });
 
 test('after signing out: the drawn auth-signedout page', async () => {

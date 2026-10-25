@@ -277,3 +277,23 @@ test('the pretend WorkOS’s sign-out comes back to the signed-out page', async 
   const out = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: done.session } });
   assert.equal((await out.json()).signOutUrl, '/workshop/signed-out');
 });
+
+// Review of staff-signin-workos-screens: from is resolved as a URL, then kept
+// only as a staff-app page, so nothing in it can break the reply or leave the app.
+test('a from with line breaks or other characters still signs in, onto a staff-app page', async () => {
+  const { email } = await owner();
+  for (const from of ['/workshop/\r\nX: y', '/workshop/中', '/workshop/\tdiary']) {
+    const done = await signInFrom(email, from);
+    assert.equal(done.status, 302, `${JSON.stringify(from)}: ${done.body}`);
+    assert.match(done.location, /^\/workshop(\/|$)/, JSON.stringify(from));
+    assert.doesNotMatch(done.location, /[\r\n\t]/);
+    assert.ok(cookieValue(done.cookies, 'wh_session'), JSON.stringify(from));
+  }
+});
+
+test('/workshop/../ is outside the staff app, and a page’s own %-codes come back as they were', async () => {
+  const { email } = await owner();
+  assert.equal((await signInFrom(email, '/workshop/../book/x')).location, '/workshop');
+  assert.equal((await signInFrom(email, '/workshop/%2e%2e/book/x')).location, '/workshop');
+  assert.equal((await signInFrom(email, '/workshop/customers?q=a%26b')).location, '/workshop/customers?q=a%26b');
+});

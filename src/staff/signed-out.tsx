@@ -62,7 +62,14 @@ export function SignedOut({ expired }: { expired: boolean }) {
     if (!message) pageNav.go(startFrom(pathname + search));
   }, [message, pathname, search]);
 
-  if (!message) return null;
+  // Said while the browser goes on to WorkOS, for screen readers (review).
+  if (!message) {
+    return (
+      <p role="status" className="p-8 text-[var(--wh-muted)]">
+        Taking you to sign in…
+      </p>
+    );
+  }
   return (
     <main className="flex min-h-screen flex-col gap-7 bg-[var(--wh-panel)] px-5 py-7 sm:items-center sm:justify-center sm:gap-6 sm:bg-[var(--wh-bg)] sm:p-8">
       <p className="text-lg font-bold text-[var(--wh-ink)] sm:text-xl">Wheelhouse</p>
@@ -72,8 +79,8 @@ export function SignedOut({ expired }: { expired: boolean }) {
             <Lock aria-hidden="true" className="size-6" />
           </span>
         )}
-        <h1 className="m-0 text-[26px] leading-tight font-bold tracking-[-0.3px] text-[var(--wh-ink)]">{message.heading}</h1>
-        <p className="m-0 text-[15px] leading-normal text-[var(--wh-muted)]">{message.line}</p>
+        <h1 className="m-0 text-size-26 leading-tight font-bold tracking-[-0.3px] text-[var(--wh-ink)]">{message.heading}</h1>
+        <p className="m-0 text-size-15 leading-normal text-[var(--wh-muted)]">{message.line}</p>
         {message.button && message.href && (
           <a href={message.href} className={cn(buttonVariants({ block: true }))}>
             {message.button}

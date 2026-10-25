@@ -32,11 +32,22 @@ function stateCookie(req, value, maxAge, name = STATE_COOKIE) {
   return `${name}=${value}; HttpOnly; Path=/api/auth/workos; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 // The staff-app page to come back to after signing in (staff-signin-workos-screens
-// design 3): only /workshop or a page under it, never anywhere else.
+// design 3): only /workshop or a page under it, never anywhere else. Read the
+// way a browser would (dot segments, %2e, tabs and line breaks gone, other
+// characters %-encoded), so what is checked is where the browser would go and
+// nothing in it can break the reply (review).
 const FROM_COOKIE = 'wh_signin_from';
+const HERE = 'http://wheelhouse.invalid';
 function staffAppPage(from) {
-  if (typeof from !== 'string' || from.includes('//') || from.includes('\\')) return null;
-  return from === '/workshop' || from.startsWith('/workshop/') || from.startsWith('/workshop?') ? from : null;
+  if (typeof from !== 'string' || !from.startsWith('/') || from.startsWith('//') || from.includes('\\')) return null;
+  let url;
+  try {
+    url = new URL(from, HERE);
+  } catch {
+    return null;
+  }
+  if (url.origin !== HERE) return null;
+  return url.pathname === '/workshop' || url.pathname.startsWith('/workshop/') ? url.pathname + url.search : null;
 }
 
 function sameState(a, b) {
@@ -157,12 +168,8 @@ export function register(route) {
     // Whoever was signed in on this browser before is signed out (review).
     await destroySession(earlier);
     const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
-    let back = '/workshop';
-    try {
-      back = staffAppPage(from ? decodeURIComponent(from) : null) ?? back;
-    } catch {
-      // A from cookie that isn't valid percent-encoding: the front page.
-    }
+    // parseCookies has already decoded it (review: not twice).
+    const back = staffAppPage(from) ?? '/workshop';
     redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE)]);
   });
 
