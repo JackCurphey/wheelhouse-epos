@@ -193,7 +193,7 @@ export function DiaryPage() {
 
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
-  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder; forCustomer?: ForOrder['customer'] } | null>(null);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean; entered?: boolean; order?: ForOrder; forCustomer?: ForOrder['customer']; forBike?: number | null } | null>(null);
   // ---- Offer another time (Jack, 20 Oct): the same pick mode, for a request ----
   const [offering, setOffering] = useState<WorkshopJob | null>(null);
   const [offerAt, setOfferAt] = useState<OfferAt | null>(null);
@@ -266,8 +266,10 @@ export function DiaryPage() {
   const [orderFor, setOrderFor] = useState<ForOrder | null>(null);
   // The customer read for New job from their page, held the same way.
   const [customerFor, setCustomerFor] = useState<ForOrder['customer']>(null);
+  // And the bike, from a bike's own page (bike-page design 4).
+  const [bikeFor, setBikeFor] = useState<number | null>(null);
   useEffect(() => {
-    const asked = params.has('job') || params.has('order') || params.has('customer') ? `${params.get('job')}|${params.get('order')}|${params.get('customer')}` : '';
+    const asked = params.has('job') || params.has('order') || params.has('customer') ? `${params.get('job')}|${params.get('order')}|${params.get('customer')}|${params.get('bike')}` : '';
     // Once read and dropped, the same job can be asked for again.
     if (!asked) { fromAddress.current = ''; return; }
     if (asked === fromAddress.current) return;
@@ -275,10 +277,12 @@ export function DiaryPage() {
     const jobId = Number(params.get('job'));
     const orderId = Number(params.get('order'));
     const customerId = Number(params.get('customer'));
+    const bikeId = Number(params.get('bike'));
     const kept = new URLSearchParams(params);
     kept.delete('job');
     kept.delete('order');
     kept.delete('customer');
+    kept.delete('bike');
     setParams(kept, { replace: true });
     const words = (err: unknown) => (err instanceof ApiError ? err.message : 'the server couldn’t be reached');
     const openById = async (id: number) => {
@@ -293,7 +297,7 @@ export function DiaryPage() {
     // New job from a customer's page, with them chosen (customer-page design 4).
     if (Number.isInteger(customerId) && customerId > 0) {
       apiGet<{ id: number; name: string; email: string | null; phone: string | null }>(`/api/customers/${customerId}`)
-        .then((c) => setCustomerFor(c))
+        .then((c) => { setBikeFor(Number.isInteger(bikeId) && bikeId > 0 ? bikeId : null); setCustomerFor(c); })
         .catch((err) => setNotice(`Couldn’t open New job for that customer: ${words(err)}`));
     }
     if (Number.isInteger(orderId) && orderId > 0) {
@@ -327,7 +331,7 @@ export function DiaryPage() {
     setNotice(`Couldn’t open New job for that customer: ${notLoaded instanceof ApiError ? notLoaded.message : 'the server couldn’t be reached'}`);
   } else if (customerFor && mechanics.data && settings.data && jobs.data) {
     setCustomerFor(null);
-    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, forCustomer: customerFor });
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true, entered: true, forCustomer: customerFor, forBike: bikeFor });
   }
   const newJobDialog = newJob ? (
     <NewJobDialog
@@ -341,6 +345,7 @@ export function DiaryPage() {
       people={people}
       order={newJob.order}
       forCustomer={newJob.forCustomer}
+      forBike={newJob.forBike}
       onSavedWithProblem={setNotice}
       onClose={() => setNewJob(null)}
     />

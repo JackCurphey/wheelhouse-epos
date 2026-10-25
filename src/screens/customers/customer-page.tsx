@@ -27,7 +27,7 @@ type Customer = {
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
 type Bike = { id: number; make: string | null; model: string | null; colour?: string | null };
-type Item =
+export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
   | { kind: 'sale'; id: number; total: number; what: string; at: string }
   | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string };
@@ -38,7 +38,7 @@ const mono = 'font-[family-name:var(--wh-font-mono)]';
 const money = (pounds: number) => `£${pounds.toFixed(2)}`;
 const newJobHref = (id: number) => `${ROUTES.diary}?customer=${id}`;
 
-function Section({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
+export function Section({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} className="flex flex-col">
       <div className="flex items-center justify-between gap-2 pt-3.5 pb-1.5">
@@ -60,7 +60,7 @@ function Stage({ j }: { j: Extract<Item, { kind: 'job' }> }) {
   return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${tone}`}>{label}</span>;
 }
 
-function HistoryRow({ item }: { item: Item }) {
+export function HistoryRow({ item }: { item: Item }) {
   const tag = (t: string) => <span className="w-[76px] shrink-0 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   if (item.kind === 'job') {
     const when = [item.jobDate ? shortDay(item.jobDate) : null, item.mechanicName].filter(Boolean).join(' · ');
@@ -394,9 +394,12 @@ export function CustomerPage() {
             {bikes.data?.length ? (
               <ul className="m-0 list-none p-0">
                 {bikes.data.map((b) => (
-                  <li key={b.id} className="flex flex-col gap-1 border-t border-[var(--wh-border)] py-2.5">
-                    <span className="text-size-15 font-semibold">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
-                    {b.colour ? <span className="text-size-13 text-[var(--wh-muted)]">{b.colour}</span> : null}
+                  <li key={b.id} className="border-t border-[var(--wh-border)]">
+                    {/* Each bike opens its own page (bike-page; mockup/links/j07.mjs:142). */}
+                    <Link to={ROUTES['cs-bike'].replace(':id', String(b.id))} className="flex flex-col gap-1 py-2.5 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
+                      <span className="text-size-15 font-semibold underline">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
+                      {b.colour ? <span className="text-size-13 text-[var(--wh-muted)]">{b.colour}</span> : null}
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -14,6 +14,7 @@ import { MessagesPage } from '@/screens/messages/messages-page.tsx';
 import { TodayPage } from '@/screens/today/today-page.tsx';
 import { CustomersPage } from '@/screens/customers/customers-page.tsx';
 import { CustomerPage } from '@/screens/customers/customer-page.tsx';
+import { BikePage } from '@/screens/customers/bike-page.tsx';
 import { YourSettingsPage } from '@/screens/your-settings/your-settings-page.tsx';
 
 /**
@@ -27,10 +28,10 @@ import { YourSettingsPage } from '@/screens/your-settings/your-settings-page.tsx
 // are built; an id with no entry renders the placeholder, so every URL in
 // ROUTES is routable from day one - including the five edge screens entered
 // from outside the app.
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'cs-page', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'cs-page', 'cs-bike', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 
