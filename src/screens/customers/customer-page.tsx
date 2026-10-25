@@ -38,6 +38,8 @@ const SHOWN = 8;
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 const money = (pounds: number) => `£${pounds.toFixed(2)}`;
 const newJobHref = (id: number) => `${ROUTES.diary}?customer=${id}`;
+// Old and till sales are numbered apart, so a sale's key carries its record (review).
+const rowKey = (i: Item) => `${i.kind}${i.kind === 'sale' ? i.source : ''}${i.id}`;
 
 export function Section({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -139,8 +141,8 @@ function History({ id }: { id: number }) {
           </div>
         ) : (
           <div className="flex flex-col">
-            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} onOpenSale={setSale} />)}</ul></> : null}
-            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={`${i.kind}${i.id}`} item={i} onOpenSale={setSale} />)}</ul></> : null}
+            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} />)}</ul></> : null}
+            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} />)}</ul></> : null}
             {!all && open.length + earlier.length < items.length ? (
               <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${items.length})`}</button>
             ) : null}

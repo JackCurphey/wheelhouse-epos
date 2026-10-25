@@ -285,7 +285,7 @@ test('choosing a sale opens it: its lines, the total and how it was paid, with P
   assert.ok(d.getAllByText('£10.00').length >= 2, 'the line and the total');
   assert.ok(d.getByText('Paid by'));
   assert.ok(d.getByText('Cash'));
-  assert.ok(d.getByText(/served by Jo Taylor · Maya Patel/));
+  assert.ok(d.getByText(/, 15:00 · served by Jo Taylor · Maya Patel/));
   assert.ok(d.getByRole('button', { name: 'Print the receipt' }));
   assert.equal(d.queryByRole('button', { name: 'Refund at the till' }) === null, true, 'refunds aren’t built');
 });

@@ -21,6 +21,8 @@ type Sale = ReceiptSale & {
 };
 
 const mono = 'font-[family-name:var(--wh-font-mono)]';
+// "[date], [time]" in the shop's clock (design 2, review).
+const when = (at: string) => `${shortDate(at)}, ${new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}`;
 const money = (pounds: number) => `£${pounds.toFixed(2)}`;
 
 export function SaleDialog({ id, source, receiptNumber, onClose }: { id: number; source: 'old' | 'till'; receiptNumber: number | null; onClose: () => void }) {
@@ -39,7 +41,7 @@ export function SaleDialog({ id, source, receiptNumber, onClose }: { id: number;
         <DialogTitle id="sale-title">{title}</DialogTitle>
         {s ? (
           <p className="m-0 text-sm text-[var(--wh-muted)]">
-            {[shortDate(s.createdAt), s.cashierName ? `served by ${s.cashierName}` : null, s.customerName].filter(Boolean).join(' · ')}
+            {[when(s.createdAt), s.cashierName ? `served by ${s.cashierName}` : null, s.customerName].filter(Boolean).join(' · ')}
           </p>
         ) : null}
       </DialogHeader>

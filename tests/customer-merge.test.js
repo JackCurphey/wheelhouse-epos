@@ -384,3 +384,20 @@ test('a till sale for a hidden record goes back with Undo, through each merge in
   assert.equal((await undo(ab.id)).status, 200);
   assert.equal(await ownerNow(), a.id, 'back to the customer the till meant');
 });
+
+// Review of customer-sale-dialog: the other record's sales count reads both
+// sales records, as her own history now does.
+test('a possible duplicate’s sales count includes till sales', async () => {
+  const me = await add({ name: 'Tom Hall', phone: '07700 900690' });
+  const twin = await add({ name: 'T. Hall', phone: '07700 900690' });
+  await inShop(async () => {
+    const site = await prepare("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id").get();
+    const till = await prepare('INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?) RETURNING id').get(site.id, 'B1', 'Till 1', randomUUID());
+    await prepare(
+      `INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, made_offline, till_clock_at, received_at, total_pence, vat_pence, customer_id)
+       VALUES (?, ?, ?, 3, false, now(), now(), 500, 83, ?)`
+    ).run(randomUUID(), till.id, site.id, twin.id);
+  });
+  const found = (await dups(me.id)).find((d) => d.id === twin.id);
+  assert.equal(found.sales, 1);
+});
