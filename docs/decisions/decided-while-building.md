@@ -2219,3 +2219,22 @@ follows the job checklist, the closest pattern built.
 2. **The yes is kept with when and where** (booking or collection), so a
    yes to being contacted can be shown later.
 
+### 25 Oct 2026: Settings › Workshop › Services, the list and the box (`openspec/changes/services-room`, `set-workshop-services`, `ac-service-edit`)
+
+1. **Edit and Remove always show**, as Checklists' rows do, rather than on
+   hover at a desk as drawn.
+2. **No "+ Add a group" and no handle to move services yet.** The groups
+   are the two kinds the app has, and the server lists services by name;
+   neither is drawn beyond its button. Both are for later.
+3. **"+ Add a service" opens the same box empty, titled "New service"**, in
+   the group chosen, with "Customers can book this online" on (not drawn;
+   as Checklists' "New checklist", and the walk-through's "on unless
+   switched off").
+4. **Remove doesn't ask first**, as Checklists' Remove doesn't. The service
+   is only switched off: it leaves the list and online booking, and past
+   jobs keep it. There is no way to bring one back on screen yet.
+5. **An empty price is refused** with the shop's own words ("A service
+   needs a price of zero or more"), rather than saved as £0.00.
+6. **This is where a shop now chooses which services can be booked online**,
+   the gap logged on 24 Oct, using the walk-through's line for the box.
+
