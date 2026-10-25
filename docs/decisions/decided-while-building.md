@@ -2284,3 +2284,14 @@ follows the job checklist, the closest pattern built.
    the timer that sends it has no web address to make one from; while
    sending is pretend it reads "[link]", as every pretend link does.
 
+### 25 Oct 2026: merging two customers keeps a yes (`openspec/changes/merge-keeps-yes`; Jack's answer 9)
+
+1. **When and where the yes was given** come from the kept record if it
+   said yes to either kind, else from the other.
+2. **A kept record that stopped reminders still becomes yes** if the other
+   record says yes, as the answer reads: a stop doesn't record when it
+   happened, so there's no telling which came later.
+3. **Undo puts the four answers back together or not at all**: once the
+   customer has changed any of them since the merge, they stay as they are,
+   so a yes never loses its date.
+
