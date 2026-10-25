@@ -14,14 +14,16 @@ export const pretend = {
   name: 'pretend',
   redirectUri: () => '/api/auth/workos/callback',
 
-  authorizeUrl({ state, redirectUri }) {
-    return `/api/auth/workos/pretend?${new URLSearchParams({ state, redirect_uri: redirectUri })}`;
+  authorizeUrl({ state, redirectUri, provider = 'authkit' }) {
+    return `/api/auth/workos/pretend?${new URLSearchParams({ state, redirect_uri: redirectUri, provider })}`;
   },
 
   /** The pretend page: the form a developer fills in where WorkOS's page would be. */
-  page({ state }) {
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Pretend WorkOS</title></head>
-<body><main><h1>Pretend WorkOS</h1><p>WorkOS's sign-in page goes here when it's connected.</p>
+  page({ state, provider }) {
+    // Says which way was asked for, so a test can tell Google from WorkOS's page.
+    const heading = provider === 'GoogleOAuth' ? 'Pretend WorkOS · Google' : 'Pretend WorkOS';
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${heading}</title></head>
+<body><main><h1>${heading}</h1><p>WorkOS's sign-in page goes here when it's connected.</p>
 <form method="post" action="/api/auth/workos/pretend">
 <input type="hidden" name="state" value="${escapeHtml(state)}">
 <label>Email <input type="email" name="email" required autofocus></label>

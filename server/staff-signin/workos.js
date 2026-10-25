@@ -20,10 +20,11 @@ export function workosProvider(env, { fetch = globalThis.fetch, log = console.er
     name: 'workos',
     redirectUri,
 
-    authorizeUrl({ state, redirectUri }) {
+    // provider: 'authkit' for WorkOS's own page, 'GoogleOAuth' straight to Google.
+    authorizeUrl({ state, redirectUri, provider = 'authkit' }) {
       const url = new URL('/user_management/authorize', API);
       url.search = new URLSearchParams({
-        client_id: env.WORKOS_CLIENT_ID, redirect_uri: redirectUri, response_type: 'code', provider: 'authkit', state,
+        client_id: env.WORKOS_CLIENT_ID, redirect_uri: redirectUri, response_type: 'code', provider, state,
       });
       return url.href;
     },

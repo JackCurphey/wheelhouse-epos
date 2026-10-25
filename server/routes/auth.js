@@ -135,7 +135,10 @@ export function register(route) {
     if (!provider) return signinFailed(req, res, 'off');
     const state = randomBytes(24).toString('hex');
     const from = staffAppPage(query.get('from'));
-    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri() }), [
+    // "Continue with Google" goes straight to Google's chooser; anything else
+    // to WorkOS's own page (staff-signin-google design 3).
+    const via = query.get('provider') === 'google' ? 'GoogleOAuth' : 'authkit';
+    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri(), provider: via }), [
       stateCookie(req, state, 600),
       stateCookie(req, from ? encodeURIComponent(from) : '', from ? 600 : 0, FROM_COOKIE),
     ]);
@@ -146,7 +149,7 @@ export function register(route) {
     const provider = staffSigninProvider();
     if (provider?.name !== 'pretend') return notFound(res);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(provider.page({ state: query.get('state') || '' }));
+    res.end(provider.page({ state: query.get('state') || '', provider: query.get('provider') || '' }));
   });
   route('POST', '/api/auth/workos/pretend', async (req, res) => {
     const provider = staffSigninProvider();
