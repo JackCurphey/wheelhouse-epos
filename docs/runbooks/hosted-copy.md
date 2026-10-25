@@ -160,6 +160,19 @@ It runs inside the app that's running, so it always matches it. It ends with
 says "Refused" instead, nothing was changed: it says whether the shop is
 already there, or which other shops are in the way.
 
+The loaded shop has nobody who can sign in. Add yourself as its owner, with
+the email you sign in to WorkOS with:
+
+```
+docker compose exec app node server/scripts/add-login.mjs --shop north-street-cycles --email <your email> --name "<your name>"
+```
+
+It ends with "Added … as the owner of North Street Cycles. Sign in through
+WorkOS with that email." If it says "Refused", nothing was changed, and it
+says why: no shop at that address, the shop already has an owner, or that
+email already has a login. Signing in also needs the copy set up for
+WorkOS ("Signing in with WorkOS").
+
 ## Updating it, checking it, and undoing a bad update
 
 This part is the way back (design Decision 8). Mark normally does it, but
