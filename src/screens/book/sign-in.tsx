@@ -42,6 +42,10 @@ export function SignInScreen() {
   const [problem, setProblem] = React.useState<{ words: string; expired: boolean } | null>(null);
   const [resent, setResent] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  // Whether the code box has the keyboard, so the next box is marked only then (review).
+  const [focused, setFocused] = React.useState(false);
+  // The latest check: an answer to one a newer check replaced is let go (review).
+  const latest = React.useRef(0);
   const emailId = React.useId();
   const codeError = React.useId();
 
@@ -61,17 +65,16 @@ export function SignInScreen() {
   }
 
   async function check(typed: string) {
-    setBusy(true);
+    const mine = ++latest.current;
     setProblem(null);
     setResent(false);
     try {
       await apiMutate(`${base}/check`, { email: email.trim(), code: typed }, { method: 'POST' });
       navigate(returnTo(search.get('from'), shopSlug), { replace: true });
     } catch (err) {
+      if (mine !== latest.current) return;
       const reason = err instanceof ApiError ? (err.body as { reason?: string } | null)?.reason : undefined;
       setProblem({ words: said(err), expired: reason === 'expired' });
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -79,7 +82,8 @@ export function SignInScreen() {
   function typing(value: string) {
     const digits = value.replace(/\D/g, '').slice(0, 6);
     setCode(digits);
-    if (digits.length === 6 && !busy) void check(digits);
+    // Every sixth digit checks, even while an earlier check is out (review).
+    if (digits.length === 6) void check(digits);
   }
 
   if (step === 'email') {
@@ -105,12 +109,12 @@ export function SignInScreen() {
       <div className="relative flex gap-2">
         {Array.from({ length: 6 }, (_, i) => (
           <span key={i} aria-hidden="true"
-            className={`inline-flex h-14 w-12 items-center justify-center rounded-lg bg-white font-[family-name:var(--wh-font-mono)] text-2xl text-[var(--wh-ink)] ${problem ? 'border-2 border-[var(--wh-danger)]' : `border ${i === code.length ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-input-border)]'}`}`}>
+            className={`inline-flex h-14 w-12 items-center justify-center rounded-lg bg-white font-[family-name:var(--wh-font-mono)] text-2xl text-[var(--wh-ink)] ${problem ? 'border-2 border-[var(--wh-danger)]' : `border ${focused && i === code.length ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-input-border)]'}`}`}>
             {code[i] ?? ''}
           </span>
         ))}
         <input aria-label="Your 6-digit code" autoComplete="one-time-code" inputMode="numeric" maxLength={6}
-          value={code} onChange={(e) => typing(e.target.value)}
+          value={code} onChange={(e) => typing(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           aria-invalid={problem ? true : undefined} aria-describedby={problem ? codeError : undefined}
           className="absolute inset-0 h-full w-full opacity-0" />
       </div>

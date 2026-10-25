@@ -130,3 +130,33 @@ for (const [why, from] of [['another site', 'https://example.com/book/north'], [
     assert.ok((await ui.findByText('At /book/north')) !== null);
   });
 }
+
+// Review: a code fixed while the last check is still out is checked too; the
+// box shows where the keyboard is only while it's there.
+test('a code corrected while the wrong one is still being checked is checked as well', async () => {
+  let release;
+  const held = new Promise((r) => { release = r; });
+  const plain = server();
+  const { ui } = await open({ from: BOOKING, signIn: async (url, init) => {
+    if (JSON.parse(init.body).code === '000000') await held;
+    return plain(url, init);
+  } });
+  const { fireEvent } = await rtl();
+  const box = await toCode(ui);
+  fireEvent.change(box, { target: { value: '000000' } });
+  fireEvent.change(box, { target: { value: '481296' } });
+  assert.ok((await ui.findByText(`At ${BOOKING}`)) !== null);
+  release();
+});
+
+test('the next box is marked only while the code box has the keyboard', async () => {
+  const { ui } = await open();
+  const { fireEvent } = await rtl();
+  const box = await toCode(ui);
+  const marked = () => [...box.parentElement.querySelectorAll('span')].filter((s) => s.className.includes('border-[var(--wh-ink)]')).length;
+  assert.equal(marked(), 0);
+  fireEvent.focus(box);
+  assert.equal(marked(), 1);
+  fireEvent.blur(box);
+  assert.equal(marked(), 0);
+});
