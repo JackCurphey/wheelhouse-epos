@@ -2295,3 +2295,16 @@ follows the job checklist, the closest pattern built.
    shows the next time the page opens.
 4. **Change shows the tick, ticked, in place**; the drawing doesn't say
    where Change goes.
+
+### 25 Oct 2026: merging two customers keeps a yes (`openspec/changes/merge-keeps-yes`; Jack's answer 9)
+
+1. **When and where the yes was given** come from the record whose yes to
+   service reminders it is, else the one whose yes to review requests it
+   is, the kept record first when both did.
+2. **A kept record that stopped reminders still becomes yes** if the other
+   record says yes, as the answer reads: a stop doesn't record when it
+   happened, so there's no telling which came later.
+3. **Undo puts the four answers back together or not at all**: once the
+   customer has changed any of them since the merge, they stay as they are,
+   so a yes never loses its date.
+
