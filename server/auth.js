@@ -105,6 +105,8 @@ export async function addOwnerLogin({ shopSlug, name, email }) {
     return { ...login, shopName: shop.name };
   } catch (err) {
     await client.query('ROLLBACK');
+    // The same email added at the same moment elsewhere (review).
+    if (err.code === '23505') throw new AuthError('An account with that email already exists');
     throw err;
   } finally {
     client.release();

@@ -26,9 +26,12 @@ try {
     console.log(`Added ${login.name} (${login.email}) as the owner of ${login.shopName}. Sign in through WorkOS with that email.`);
   }
 } catch (err) {
-  if (!(err instanceof AuthError) && err.code !== 'ERR_PARSE_ARGS_UNKNOWN_OPTION') throw err;
-  console.error(`Refused: ${err.message}. Nothing was changed.`);
-  if (err.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') console.error(USAGE);
+  // A typing slip (an unknown option, a name without quotes, an option with
+  // no value) is a refusal too, not a stack trace (review).
+  const slip = String(err.code ?? '').startsWith('ERR_PARSE_ARGS_');
+  if (!(err instanceof AuthError) && !slip) throw err;
+  console.error(slip ? 'Refused: the command wasn’t typed as expected. Nothing was changed.' : `Refused: ${err.message}. Nothing was changed.`);
+  if (slip) console.error(`${USAGE}\nPut a name with a space in quotes: --name "Jack Curphey".`);
   code = 1;
 } finally {
   await pool.end();

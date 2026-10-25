@@ -169,8 +169,15 @@ docker compose exec app node server/scripts/add-login.mjs --shop north-street-cy
 
 It ends with "Added … as the owner of North Street Cycles. Sign in through
 WorkOS with that email." If it says "Refused", nothing was changed, and it
-says why: no shop at that address, the shop already has an owner, or that
-email already has a login. Signing in also needs the copy set up for
+says why:
+- no shop at that address;
+- the shop already has an owner;
+- that email already has a login, or isn't a valid email;
+- the name is missing;
+- the command wasn't typed as expected. Put a name with a space in quotes.
+
+Anything else, such as a long error ending in a database message, means it
+couldn't reach the database. Nothing was changed. Copy the message to Mark. Signing in also needs the copy set up for
 WorkOS ("Signing in with WorkOS").
 
 ## Updating it, checking it, and undoing a bad update

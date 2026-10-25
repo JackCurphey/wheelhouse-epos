@@ -52,6 +52,33 @@ test('refuses a shop that isn’t there, one that has an owner, a taken or bad e
   await assert.rejects(addOwnerLogin({ shopSlug: shop.slug, name: '  ', email: email() }), /Name is required/);
   const { rows } = await pool.query('SELECT id FROM logins WHERE shop_id = $1', [shop.id]);
   assert.equal(rows.length, 0, 'nothing was added');
+  const { rows: ownedLogins } = await pool.query('SELECT id FROM logins WHERE shop_id = $1', [owned.shop.id]);
+  assert.equal(ownedLogins.length, 1, 'the shop with an owner still has just its owner');
+});
+
+test('two at once: one becomes the owner, the other is refused', async () => {
+  const shop = await shopWithoutOwner();
+  const results = await Promise.allSettled([
+    addOwnerLogin({ shopSlug: shop.slug, name: 'Jack', email: email() }),
+    addOwnerLogin({ shopSlug: shop.slug, name: 'Mark', email: email() }),
+  ]);
+  assert.deepEqual(results.map((r) => r.status).sort(), ['fulfilled', 'rejected']);
+  assert.match(results.find((r) => r.status === 'rejected').reason.message, /already has an owner/);
+  const { rows } = await pool.query('SELECT id FROM logins WHERE shop_id = $1', [shop.id]);
+  assert.equal(rows.length, 1);
+});
+
+test('the same email twice at once: one is added, the other is told it already exists', async () => {
+  const [a, b] = [await shopWithoutOwner(), await shopWithoutOwner()];
+  const who = email();
+  const results = await Promise.allSettled([
+    addOwnerLogin({ shopSlug: a.slug, name: 'Jack', email: who }),
+    addOwnerLogin({ shopSlug: b.slug, name: 'Jack', email: who }),
+  ]);
+  assert.deepEqual(results.map((r) => r.status).sort(), ['fulfilled', 'rejected']);
+  const refused = results.find((r) => r.status === 'rejected').reason;
+  assert.ok(refused instanceof AuthError, String(refused));
+  assert.match(refused.message, /already exists/);
 });
 
 function run(args) {
@@ -73,4 +100,12 @@ test('the command says what it did, and refuses with a reason and a failing exit
   const missing = await run([]);
   assert.equal(missing.code, 1);
   assert.match(missing.out, /--shop <address> --email <email> --name <name>/);
+  // Typing slips (review): a name without quotes, an option with no value.
+  for (const args of [['--shop', shop.slug, '--email', email(), '--name', 'Jack', 'Curphey'], ['--shop', shop.slug, '--name', 'Jack', '--email']]) {
+    const slip = await run(args);
+    assert.equal(slip.code, 1, args.join(' '));
+    assert.match(slip.out, /^Refused: /m, slip.out);
+    assert.match(slip.out, /--shop <address> --email <email> --name <name>/);
+    assert.doesNotMatch(slip.out, /\n\s+at /, 'no stack trace');
+  }
 });
