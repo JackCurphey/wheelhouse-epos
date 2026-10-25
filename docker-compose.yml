@@ -46,6 +46,11 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      # Local development only: skip signing in for a request addressed to
+      # localhost (server/lib/dev-autologin.js). Empty means off; the server
+      # refuses to start with it set in production or on the hosted copy.
+      WHEELHOUSE_DEV_AUTOLOGIN: ${WHEELHOUSE_DEV_AUTOLOGIN:-}
+      WHEELHOUSE_DEV_LOGIN_EMAIL: ${WHEELHOUSE_DEV_LOGIN_EMAIL:-}
     volumes:
       # Workshop job attachments (server.js's UPLOADS_DIR) - a named volume
       # so they survive an image rebuild, same reasoning as epos_pgdata.
