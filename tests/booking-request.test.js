@@ -23,7 +23,15 @@ test('a full request parses to exactly these fields, no more, no less', () => {
     updateChannel: 'email',
     termsAccepted: true,
     marketingPermission: false,
+    remindMe: false,
   });
+});
+
+// The reminder tick (reminder-consent): only true counts.
+test('remindMe is true only when the tick sent true', () => {
+  const base = { serviceIds: [7], email: 'a@example.com', updateChannel: 'email', termsAccepted: true };
+  assert.equal(parseBookingRequest({ ...base, remindMe: true }, '').value.remindMe, true);
+  for (const remindMe of [false, 'true', 1, null]) assert.equal(parseBookingRequest({ ...base, remindMe }, '').value.remindMe, false, String(remindMe));
 });
 
 test('not sure has no services', () => {

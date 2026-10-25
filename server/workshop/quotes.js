@@ -130,6 +130,11 @@ async function createRevisionInTransaction({ jobId, lines }) {
       && (!Number.isInteger(Number(line.quantity)) || Number(line.quantity) < 1)) {
       return { ok: false, code: 'illegal', message: 'A part’s quantity must be a whole number of 1 or more.' };
     }
+    // Labour of no time would quote £0.00, and less would take money off the
+    // order once agreed (review). Hours can be part of one.
+    if (line.kind === 'labour' && line.quantity !== undefined && line.quantity !== null && !(Number(line.quantity) > 0)) {
+      return { ok: false, code: 'illegal', message: 'Labour needs a quantity of more than 0.' };
+    }
     // Its unit price and total are kept in whole pence, so well within what
     // they hold (fresh review).
     if (Math.abs(Number(line.unitAmount)) >= 1000000 || Math.abs(Number(line.unitAmount) * Number(line.quantity ?? 1)) >= 1000000) {
