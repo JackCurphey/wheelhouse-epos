@@ -2517,14 +2517,14 @@ function renderSalesTable() {
         <td>${s.items ? s.items.length : ''}</td>
         <td><span class="badge ${paymentBadgeClass(s.paymentMethod)}">${esc(s.paymentMethod)}</span></td>
         <td class="num">${money(s.total)}</td>
-        <td><button class="icon-btn" data-view="${s.id}">View receipt</button></td>
+        <td><button class="icon-btn" data-view="${s.id}" data-source="${s.source || 'old'}">View receipt</button></td>
       </tr>
     `
     )
     .join('');
   tbody.querySelectorAll('button[data-view]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const sale = await api(`/api/sales/${b.dataset.view}`);
+      const sale = await api(`/api/sales/${b.dataset.view}?source=${b.dataset.source || 'old'}`);
       openModal({ type: 'receipt', sale, title: `Sale #${sale.id}` });
     })
   );
@@ -4355,7 +4355,7 @@ function renderReceiptModal(holder, sale, title) {
             <div class="rline"><span>Discount</span><span>−${money(sale.discount)}</span></div>
             ${sale.groupDiscountAmount ? `<div class="rline"><span>${esc(sale.groupDiscountName)} discount</span><span>−${money(sale.groupDiscountAmount)}</span></div>` : ''}
             <div class="rline rtotal"><span>Total</span><span>${money(sale.total)}</span></div>
-            <div class="rline"><span>Inc. VAT (20%)</span><span>${money(vatFromInclusive(sale.total))}</span></div>
+            <div class="rline"><span>${sale.vatPence != null ? 'Inc. VAT' : 'Inc. VAT (20%)'}</span><span>${money(sale.vatPence != null ? sale.vatPence / 100 : vatFromInclusive(sale.total))}</span></div>
             <div class="rline"><span>Payment</span><span>${esc(sale.paymentMethod)}</span></div>
             ${
               sale.paymentMethod === 'Split'
