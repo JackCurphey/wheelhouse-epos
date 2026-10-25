@@ -69,7 +69,7 @@ test.describe('on a computer', () => {
     await expect(add.getByText('Maya Patel already has this number')).toBeVisible();
     await add.getByRole('link', { name: 'Use Maya Patel' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Maya Patel' })).toBeVisible();
-    await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs and customers' }).fill('bl12ab');
+    await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' }).fill('bl12ab');
     await expect(page.getByRole('region', { name: 'Search results' }).getByRole('link', { name: 'Maya Patel' })).toBeVisible();
   });
 });
