@@ -2238,3 +2238,12 @@ follows the job checklist, the closest pattern built.
 6. **This is where a shop now chooses which services can be booked online**,
    the gap logged on 24 Oct, using the walk-through's line for the box.
 
+### 25 Oct 2026: when each service's reminder is due (`openspec/changes/service-reminder-months`, `ac-service-edit`, `ac-services`)
+
+1. **Months from 1 to 60, or empty for none.** 60 (five years) is a ceiling
+   chosen here to catch a slip of the keyboard; 0 is refused, as empty
+   already means no reminder.
+2. **The box's drawn line "The wording is in Settings › Messages › Service
+   reminder." waits** until that message exists, so it doesn't point at
+   nothing.
+

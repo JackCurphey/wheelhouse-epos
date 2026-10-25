@@ -12,8 +12,8 @@ import { RowSwitch } from './row-switch.tsx';
  * by group, each one's box, adding and removing. Built as Checklists is.
  */
 type Kind = 'full' | 'individual';
-type Service = { id: number; name: string; price: number; minutes: number | null; active: boolean; bookableOnline: boolean; kind: Kind };
-type Editing = { id: number | null; name: string; kind: Kind; minutes: string; price: string; bookableOnline: boolean };
+type Service = { id: number; name: string; price: number; minutes: number | null; active: boolean; bookableOnline: boolean; kind: Kind; reminderMonths: number | null };
+type Editing = { id: number | null; name: string; kind: Kind; minutes: string; price: string; bookableOnline: boolean; reminderMonths: string };
 
 const KEY = ['workshop-services'];
 const GROUPS = [{ value: 'full', label: 'Full service' }, { value: 'individual', label: 'Individual service' }];
@@ -22,6 +22,13 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 const words = (err: unknown) => (err instanceof ApiError && (err.status === 400 || err.status === 404) ? err.message : SAVE_FAILED);
 const money = (n: number) => `£${n.toFixed(2)}`;
 const timeLine = (minutes: number | null) => (minutes ? `${minutes} min in the diary` : '');
+// The row's line, as drawn: "60 min in the diary · reminder after [n] months".
+// With no time in the diary, the reminder starts the line, so it takes a capital.
+const rowLine = (s: Service) => {
+  const line = [timeLine(s.minutes), s.reminderMonths ? `reminder after ${s.reminderMonths} months` : ''].filter(Boolean).join(' · ');
+  return line.charAt(0).toUpperCase() + line.slice(1);
+};
+const asNumber = (text: string) => (text.trim() === '' ? null : Number.isFinite(Number(text)) ? Number(text) : text);
 const INPUT = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
 
 /** The fold's summary: the two groups, as drawn. */
@@ -56,9 +63,9 @@ export function ServicesSettings() {
     // be read as £0.00. Anything else the box doesn't show is left out, so
     // the shop keeps it (design 4).
     if (e.price.trim() === '') { setError('A service needs a price of zero or more'); return; }
-    const minutes = e.minutes.trim() === '' ? null : Number.isFinite(Number(e.minutes)) ? Number(e.minutes) : e.minutes;
+    // A number that isn't one goes as typed, so the shop refuses it in its own words.
     const price = Number.isFinite(Number(e.price)) ? Number(e.price) : e.price;
-    const body = { name: e.name, kind: e.kind, minutes, price, bookableOnline: e.bookableOnline };
+    const body = { name: e.name, kind: e.kind, minutes: asNumber(e.minutes), price, bookableOnline: e.bookableOnline, reminderMonths: asNumber(e.reminderMonths) };
     const ok = await run(() => (e.id === null
       ? apiMutate('/api/workshop-services', body)
       : apiMutate(`/api/workshop-services/${e.id}`, body, { method: 'PUT' })));
@@ -67,10 +74,10 @@ export function ServicesSettings() {
 
   const edit = (s: Service) => {
     setError(null);
-    setEditing({ id: s.id, name: s.name, kind: s.kind, minutes: s.minutes ? String(s.minutes) : '', price: s.price.toFixed(2), bookableOnline: s.bookableOnline });
+    setEditing({ id: s.id, name: s.name, kind: s.kind, minutes: s.minutes ? String(s.minutes) : '', price: s.price.toFixed(2), bookableOnline: s.bookableOnline, reminderMonths: s.reminderMonths ? String(s.reminderMonths) : '' });
   };
   // A new service is on for online booking, as the box's line says (design 3).
-  const startNew = () => { setError(null); setEditing({ id: null, name: '', kind, minutes: '', price: '', bookableOnline: true }); };
+  const startNew = () => { setError(null); setEditing({ id: null, name: '', kind, minutes: '', price: '', bookableOnline: true, reminderMonths: '' }); };
   const rows = (list.data ?? []).filter((s) => s.active && s.kind === kind);
   return (
     <div className="flex flex-col gap-2.5">
@@ -81,7 +88,7 @@ export function ServicesSettings() {
           <div key={s.id} className="flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2 pr-2 pl-3 md:flex-nowrap md:py-0">
             <span className="flex min-w-0 grow flex-col gap-px">
               <span className="text-size-15 font-semibold">{s.name}</span>
-              {timeLine(s.minutes) ? <span className="text-xs text-[var(--wh-muted)]">{timeLine(s.minutes)}</span> : null}
+              {rowLine(s) ? <span className="text-xs text-[var(--wh-muted)]">{rowLine(s)}</span> : null}
             </span>
             <span className="font-[family-name:var(--wh-font-mono)] text-sm">{money(s.price)}</span>
             <span className="ml-auto inline-flex items-center gap-2">
@@ -137,6 +144,15 @@ function EditService({ start, busy, error, onSave, onClose }: {
           <span className="inline-flex items-center gap-2 text-size-15">
             <input id="svc-price" inputMode="decimal" value={e.price} onChange={(ev) => set({ price: ev.target.value })} className={`${INPUT} w-[120px] font-[family-name:var(--wh-font-mono)]`} />
           </span>
+        </div>
+        {/* When its reminder is due (ac-service-edit; account and reminders decision 2).
+            The drawn line about the wording waits for the Service reminder message. */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="svc-rem" className="text-size-15 font-semibold">Remind customers it’s due after</label>
+          <span className="inline-flex items-center gap-2 text-size-15">
+            <input id="svc-rem" inputMode="numeric" value={e.reminderMonths} onChange={(ev) => set({ reminderMonths: ev.target.value })} className={`${INPUT} w-16 text-center`} />months
+          </span>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">Counted from when the bike is collected. Only customers who said yes get it. Leave empty for no reminder — for a puncture, say.</p>
         </div>
         {/* The walk-through's line for the box (coverage 7: on unless switched off). */}
         <RowSwitch label="Customers can book this online" on={e.bookableOnline} disabled={busy} onChange={(on) => set({ bookableOnline: on })} />

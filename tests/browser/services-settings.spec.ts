@@ -63,10 +63,12 @@ test('the Owner adds, changes and removes a service, and online booking follows'
   const box = page.getByRole('dialog', { name: 'Standard service' });
   await expect(box.getByText('Full service · 60 min in the diary · £65.00')).toBeVisible();
   await box.getByRole('textbox', { name: 'Time in the diary' }).fill('90');
+  // When its reminder is due (service-reminder-months).
+  await box.getByRole('textbox', { name: 'Remind customers it’s due after' }).fill('12');
   await box.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('90 min in the diary')).toBeVisible();
+  await expect(page.getByText('90 min in the diary · reminder after 12 months')).toBeVisible();
   const saved = await staffRequest(server!.baseUrl, owner.cookie, '/api/workshop-services');
-  expect((saved.body as { name: string; minutes: number; price: number }[]).find((s) => s.name === 'Standard service')).toMatchObject({ minutes: 90, price: 65 });
+  expect((saved.body as { name: string; minutes: number; price: number }[]).find((s) => s.name === 'Standard service')).toMatchObject({ minutes: 90, price: 65, reminderMonths: 12 });
 
   // Remove Brake service.
   await page.getByRole('group', { name: 'Service groups' }).getByText('Individual service').click();

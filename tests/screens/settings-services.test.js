@@ -9,7 +9,7 @@ import { installDom, importFresh } from '../helpers/dom.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
-const svc = (over) => ({ id: 1, name: 'Standard service', price: 65, pricePence: 6500, minutes: 60, active: true, bookableOnline: true, kind: 'full', categoryId: null, position: 0, questions: [], includes: [], ...over });
+const svc = (over) => ({ id: 1, name: 'Standard service', price: 65, pricePence: 6500, minutes: 60, active: true, bookableOnline: true, kind: 'full', categoryId: null, position: 0, questions: [], includes: [], reminderMonths: null, ...over });
 const SERVICES = [
   svc({}),
   svc({ id: 2, name: 'Safety check', price: 0, pricePence: 0, kind: 'individual' }),
@@ -119,7 +119,7 @@ test('Edit opens the service’s box, filled in, and Save sends just what the bo
   assert.equal(b.getByRole('switch', { name: 'Customers can book this online' }).getAttribute('aria-checked'), 'true');
   fireEvent.change(b.getByRole('textbox', { name: 'Time in the diary' }), { target: { value: '90' } });
   fireEvent.click(b.getByRole('button', { name: 'Save' }));
-  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/workshop-services/1 {"name":"Standard service","kind":"full","minutes":90,"price":65,"bookableOnline":true}']));
+  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/workshop-services/1 {"name":"Standard service","kind":"full","minutes":90,"price":65,"bookableOnline":true,"reminderMonths":null}']));
   await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
   assert.ok(await ui.findByText('90 min in the diary'));
 });
@@ -149,7 +149,7 @@ test('+ Add a service opens the box empty, in the group chosen, with online book
   fireEvent.change(b.getByRole('textbox', { name: 'Name' }), { target: { value: 'Puncture repair' } });
   fireEvent.change(b.getByRole('textbox', { name: 'Price' }), { target: { value: '12.50' } });
   fireEvent.click(b.getByRole('button', { name: 'Save' }));
-  await waitFor(() => assert.deepEqual(writes(), ['POST /api/workshop-services {"name":"Puncture repair","kind":"individual","minutes":null,"price":12.5,"bookableOnline":true}']));
+  await waitFor(() => assert.deepEqual(writes(), ['POST /api/workshop-services {"name":"Puncture repair","kind":"individual","minutes":null,"price":12.5,"bookableOnline":true,"reminderMonths":null}']));
   await waitFor(() => assert.ok(rowNames(ui).includes('Puncture repair')));
 });
 
@@ -165,7 +165,7 @@ test('switching online booking off is sent; Cancel sends nothing', async () => {
   box = await ui.findByRole('dialog', { name: 'Standard service' });
   fireEvent.click(within(box).getByRole('switch', { name: 'Customers can book this online' }));
   fireEvent.click(within(box).getByRole('button', { name: 'Save' }));
-  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/workshop-services/1 {"name":"Standard service","kind":"full","minutes":60,"price":65,"bookableOnline":false}']));
+  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/workshop-services/1 {"name":"Standard service","kind":"full","minutes":60,"price":65,"bookableOnline":false,"reminderMonths":null}']));
 });
 
 test('Remove retires the service, and it leaves the list', async () => {
@@ -174,4 +174,40 @@ test('Remove retires the service, and it leaves the list', async () => {
   fireEvent.click(ui.getByRole('button', { name: 'Remove Brake service' }));
   await waitFor(() => assert.deepEqual(writes(), ['DELETE /api/workshop-services/4 {}']));
   await waitFor(() => assert.deepEqual(rowNames(ui), ['Safety check', 'Gear adjustment']));
+});
+
+// When each service's reminder is due (service-reminder-months; ac-service-edit,
+// ac-services): the drawn field and note, and the row's words.
+test('the box has the reminder months and the drawn note; Save sends them; the row says so', async () => {
+  const { ui, fireEvent, waitFor, within } = await openServices();
+  fireEvent.click(ui.getByRole('button', { name: 'Edit Standard service' }));
+  const box = await ui.findByRole('dialog', { name: 'Standard service' });
+  const b = within(box);
+  const months = b.getByRole('textbox', { name: 'Remind customers it’s due after' });
+  assert.equal(months.value, '');
+  assert.ok(b.getByText('Counted from when the bike is collected. Only customers who said yes get it. Leave empty for no reminder — for a puncture, say.'));
+  fireEvent.change(months, { target: { value: '12' } });
+  fireEvent.click(b.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/workshop-services/1 {"name":"Standard service","kind":"full","minutes":60,"price":65,"bookableOnline":true,"reminderMonths":12}']));
+  assert.ok(await ui.findByText('60 min in the diary · reminder after 12 months'));
+});
+
+test('a service with a reminder opens with its months; emptied, Save sends none', async () => {
+  const { ui, fireEvent, waitFor, within } = await openServices();
+  services = services.map((x) => (x.id === 1 ? { ...x, reminderMonths: 6 } : x));
+  shell.queryClient.invalidateQueries({ queryKey: ['workshop-services'] });
+  assert.ok(await ui.findByText('60 min in the diary · reminder after 6 months'));
+  fireEvent.click(ui.getByRole('button', { name: 'Edit Standard service' }));
+  const b = within(await ui.findByRole('dialog', { name: 'Standard service' }));
+  assert.equal(b.getByRole('textbox', { name: 'Remind customers it’s due after' }).value, '6');
+  fireEvent.change(b.getByRole('textbox', { name: 'Remind customers it’s due after' }), { target: { value: '' } });
+  fireEvent.click(b.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.match(writes().at(-1) ?? '', /"reminderMonths":null\}$/));
+});
+
+test('a service with a reminder and no time says “Reminder after [n] months”', async () => {
+  const { ui } = await openServices();
+  services = services.map((x) => (x.id === 1 ? { ...x, minutes: null, reminderMonths: 6 } : x));
+  shell.queryClient.invalidateQueries({ queryKey: ['workshop-services'] });
+  assert.ok(await ui.findByText('Reminder after 6 months'));
 });
