@@ -30,7 +30,7 @@
 
 ## 3. Check
 
-- [ ] 3.1 `/review` (sign-in); lint, the type check, `npm test`, `npm run test:browser`.
+- [x] 3.1 `/review` (sign-in); lint, the type check, `npm test`, `npm run test:browser`.
 - [ ] 3.2 Look at the screen against the drawing at both widths. Jack
   presses "Continue with Google" on his Mac against WorkOS's real test
   environment, and on the hosted copy after merging.

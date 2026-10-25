@@ -79,7 +79,7 @@ function SignIn({ pathname, search }: { pathname: string; search: string }) {
   return (
     <Frame>
       <h1 className={heading}>Sign in to Wheelhouse</h1>
-      <a href={withFrom(`${START}?provider=google`, from, '&')} className={cn(buttonVariants({ block: true }), 'min-h-11 gap-2.5')}>
+      <a href={withFrom(`${START}?provider=google`, from, '&')} className={cn(buttonVariants({ block: true }), 'min-h-11 gap-2.5 border-[var(--input)]')}>
         {/* Google's official "G" logo goes here; no file of it yet (staff-signin-google, out of scope). */}
         <span aria-hidden="true" className="inline-flex size-5 items-center justify-center rounded border border-dashed border-[var(--wh-border)] text-size-10 text-[var(--wh-muted)]">
           [G]
@@ -91,7 +91,7 @@ function SignIn({ pathname, search }: { pathname: string; search: string }) {
         or
         <span aria-hidden="true" className="h-px flex-1 bg-[var(--wh-border)]" />
       </div>
-      <a href={withFrom(START, from)} className={cn(buttonVariants({ block: true }), 'min-h-11')}>
+      <a href={withFrom(START, from)} className={cn(buttonVariants({ block: true }), 'min-h-11 border-[var(--input)]')}>
         Sign in with email
       </a>
     </Frame>
