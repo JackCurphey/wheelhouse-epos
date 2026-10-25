@@ -2326,6 +2326,18 @@ follows the job checklist, the closest pattern built.
    https://; anything else is refused with "Paste the whole link to your
    review page, starting https://".
 
+### 25 Oct 2026: the review request's box in Settings › Messages (`openspec/changes/review-box`, `ac-review-first`, `ac-review-setting`)
+
+1. **The switch can go on once the page box has something in it**, typed
+   or saved; the drawn line ("Add your review page first, then switch this
+   on.") shows until then.
+2. **Clearing the page while it's on switches it off as it saves**, so the
+   shop never refuses the save.
+3. **A refusal shows the shop's own words**, in the box and from the
+   message's own On switch in the list ("Add your review page first, then
+   switch this on."), rather than "Wheelhouse couldn’t save that".
+4. **Only a text preview**, as drawn; the plain wording box also shows an
+   email preview.
 
 ### 25 Oct 2026: a bike's own page (`openspec/changes/bike-page`, `cs-bike`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
 
