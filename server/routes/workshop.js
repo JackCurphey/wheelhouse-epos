@@ -338,16 +338,26 @@ async function queueBikeReady(req, jobId, shopId) {
 // Returns { skipped: 'no_contact', name } when the customer can't be reached,
 // for staff to be told (booking messages answer 5); otherwise nothing.
 async function sendBookingMessage(req, jobId, shopId, key) {
+  // Its own savepoint when the request is one transaction (DB_TENANT_SCOPE=
+  // transaction): a failed statement here would otherwise leave that whole
+  // transaction aborted and roll the staff answer back with it (audit item
+  // 24, #336). Otherwise it is a short transaction of its own.
+  await db.exec('BEGIN');
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
     const why = await whyNotQueued(key, customerId);
-    if (why === 'no_contact') return { skipped: 'no_contact', name: TEMPLATES[key].name };
-    if (why) return undefined;
-    const link = await messageLink(() => issueJobLink(req, jobId, shopId));
-    const { vars } = await bookingMessageVars(jobId, shopId, link, key);
-    const ctx = await currentSession(req);
-    await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+    let result;
+    if (why === 'no_contact') result = { skipped: 'no_contact', name: TEMPLATES[key].name };
+    else if (!why) {
+      const link = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { vars } = await bookingMessageVars(jobId, shopId, link, key);
+      const ctx = await currentSession(req);
+      await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+    }
+    await db.exec('COMMIT');
+    return result;
   } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
     console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
   return undefined;

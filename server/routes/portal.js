@@ -589,16 +589,23 @@ async function withdrawRequest(job) {
 // real message isn't queued. After the commit; one that can't be queued is
 // logged, and what the customer did stands.
 async function sendLinkMessage(key, jobId, shopId, privateLink) {
+  // Its own savepoint when the request is one transaction (DB_TENANT_SCOPE=
+  // transaction), so a failed statement here can't abort it and roll back what
+  // the customer did (audit item 24, #336); otherwise a short transaction.
+  await db.exec('BEGIN');
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
-    if (await whyNotQueued(key, customerId)) return;
-    const link = await messageLink(async () => {
-      if (!process.env.APP_PUBLIC_URL) throw new Error('APP_PUBLIC_URL is needed for a customer message sent from a public route');
-      return `${process.env.APP_PUBLIC_URL}${privateLink}`;
-    });
-    const { vars } = await bookingMessageVars(jobId, shopId, link, key);
-    await queueMessage({ customerId, jobId, key, vars });
+    if (!(await whyNotQueued(key, customerId))) {
+      const link = await messageLink(async () => {
+        if (!process.env.APP_PUBLIC_URL) throw new Error('APP_PUBLIC_URL is needed for a customer message sent from a public route');
+        return `${process.env.APP_PUBLIC_URL}${privateLink}`;
+      });
+      const { vars } = await bookingMessageVars(jobId, shopId, link, key);
+      await queueMessage({ customerId, jobId, key, vars });
+    }
+    await db.exec('COMMIT');
   } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
     console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
 }
