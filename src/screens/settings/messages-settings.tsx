@@ -238,7 +238,8 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="msg-title">{template.name}</DialogTitle>
-          <span className="text-size-13 text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}`}</span>
+          {/* The service reminder's box says where its months are set, as drawn (ac-reminder-wording). */}
+          <span className="text-size-13 text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}${template.key === 'service_reminder' ? ' in Settings › Workshop' : ''}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">

@@ -251,8 +251,8 @@ async function sendDueForShop(shopId) {
           await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
           continue;
         }
-        Object.assign(m, { body: now.body, subject: now.subject, channel: now.channel, to_address: now.to });
-        await prepare('UPDATE customer_messages SET body = ?, subject = ?, channel = ?, to_address = ? WHERE id = ?').run(m.body, m.subject, m.channel, m.to_address, m.id);
+        Object.assign(m, { customer_id: now.customerId, body: now.body, subject: now.subject, channel: now.channel, to_address: now.to });
+        await prepare('UPDATE customer_messages SET customer_id = ?, body = ?, subject = ?, channel = ?, to_address = ? WHERE id = ?').run(m.customer_id, m.body, m.subject, m.channel, m.to_address, m.id);
       }
       // Bike still waiting was filled in days ago: what's left to pay is said
       // as it is now, paid or not (fresh review), and recorded as sent.

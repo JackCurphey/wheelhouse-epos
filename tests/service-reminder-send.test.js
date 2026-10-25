@@ -173,3 +173,24 @@ test('Settings › Messages shows it, and its preview reads as drawn, ending “
   const preview = await staff('/api/message-templates/service_reminder/preview', { method: 'POST', body: {} });
   assert.equal(preview.body.text, `Hi Maya, your Trek Domane AL 3 is due its Standard service at ${shopName}. Book a repair here — it’s ready to go: [link]. Stop these: [link].`);
 });
+
+// Review: when it goes, it reads the job's customer now (records merged move
+// the job, not the message), and drops itself if the bike was collected since.
+test('when it goes, it’s for the job’s customer now, and not if the bike was collected again since', async () => {
+  const svc = await service('Standard service', 12);
+  const first = await maya();
+  const job = await collectedJob(first, [svc]);
+  const [r] = await reminders(job.id);
+  const kept = await maya();
+  await inShop(() => prepare("UPDATE customers SET phone = '07700 900555' WHERE id = ?").run(kept.customer.id));
+  await inShop(() => prepare('UPDATE workshop_jobs SET customer_id = ? WHERE id = ?').run(kept.customer.id, job.id));
+  await dueNow(r.id);
+  assert.equal((await settled(r.id)).to_address, '07700 900555');
+  // The same bike collected later, set up some other way than a collect here.
+  const again = await collectedJob(first, [svc]);
+  const [r2] = await reminders(again.id);
+  const later = await inShop(async () => (await prepare("INSERT INTO workshop_jobs (title, job_date, customer_id, bike_id, custody_state, collected_at) VALUES ('Service', '2026-10-20', ?, ?, 'collected', now() + interval '1 day') RETURNING id").get(first.customer.id, first.bikeId)).id);
+  assert.ok(later);
+  await dueNow(r2.id);
+  assert.equal((await settled(r2.id)).intent_state, 'undone');
+});

@@ -100,12 +100,13 @@ export async function queueServiceReminder(jobId, shopId) {
  * written now (answer 1): { body, subject, channel, to }, or null to undo it.
  */
 export async function serviceReminderNow(m, shopId) {
-  if (!m.job_id || !m.customer_id) return null;
+  if (!m.job_id) return null;
+  // The job's customer now: merging records moves the job, not the message (review).
   const job = await prepare(
-    `SELECT w.id, w.bike_id, w.collected_at, c.service_reminders, c.phone, c.email, c.update_channel
-       FROM workshop_jobs w JOIN customers c ON c.id = ?
+    `SELECT w.id, w.bike_id, w.collected_at, w.customer_id, c.service_reminders, c.phone, c.email, c.update_channel
+       FROM workshop_jobs w JOIN customers c ON c.id = w.customer_id
       WHERE w.id = ? AND w.custody_state = 'collected'`
-  ).get(m.customer_id, m.job_id);
+  ).get(m.job_id);
   if (!job?.service_reminders) return null;
   const template = await templateFor(KEY);
   if (!template.enabled) return null;
@@ -122,6 +123,7 @@ export async function serviceReminderNow(m, shopId) {
   if (!how || !service) return null;
   const vars = await reminderVars(job.id, shopId, service.name);
   return {
+    customerId: job.customer_id,
     body: `${render(template.wording, vars)} ${STOP_LINE}`,
     subject: how.channel === 'email' ? render(template.subject, vars) : null,
     channel: how.channel,

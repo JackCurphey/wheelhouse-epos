@@ -266,6 +266,8 @@ test('its wording box says “Stop these” is always added and can’t be taken
   const { ui, fireEvent } = await openSettings({ extra: [SERVICE_REMINDER] });
   fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Service reminder' }));
   await ui.findByRole('dialog', { name: 'Service reminder' });
+  // Its subtitle as drawn (ac-reminder-wording), saying where the months are set (review).
+  assert.ok(has(ui.queryByText('Sent when a bike is due its next service — set on each service in Settings › Workshop')));
   assert.ok(has(ui.queryByText('Always added at the end: “Stop these: [link]”. It can’t be taken off.')));
   fireEvent.click(ui.getByRole('button', { name: 'Done' }));
   fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Bike ready' }));
