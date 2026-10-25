@@ -11,6 +11,8 @@ const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: t
 // The drawing's example: WH-1042, Maya Patel's Trek Domane AL 3, expected.
 const MAYA_JOB = { id: 42, reference: 'WH-1042', title: 'Standard service', jobDate: '2026-09-17', startTime: '11:30', bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3' };
 const MAYA = { id: 5, name: 'Maya Patel', phone: '07700 900142', email: 'maya@example.com' };
+// Her Trek, as the bike's page draws it (cs-bike, customer.mjs).
+const TREK = { id: 7, make: 'Trek', model: 'Domane AL 3', colour: 'Green', serialNumber: '[frame number]', customerId: 5, customerName: 'Maya Patel' };
 
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -36,7 +38,8 @@ async function open(path = '/workshop/today', { phone = false } = {}) {
     if (u.pathname === '/api/search') {
       const q = u.searchParams.get('q');
       searches.push(q);
-      return reply(200, q.toLowerCase().includes('maya') ? { jobs: [MAYA_JOB], customers: [MAYA] } : { jobs: [], customers: [] });
+      if (q.toLowerCase().includes('trek')) return reply(200, { jobs: [], customers: [], bikes: [TREK, { ...TREK, id: 8, colour: '', serialNumber: '' }] });
+      return reply(200, q.toLowerCase().includes('maya') ? { jobs: [MAYA_JOB], customers: [MAYA], bikes: [] } : { jobs: [], customers: [], bikes: [] });
     }
     if (u.pathname === '/api/your-settings') return reply(200, { accessibility: { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false } });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -57,7 +60,7 @@ async function open(path = '/workshop/today', { phone = false } = {}) {
 test('every staff page has the search box in its header', async () => {
   for (const path of ['/workshop/today', '/workshop/diary', '/workshop/settings']) {
     const { ui, cleanup } = await open(path);
-    assert.ok(ui.getByRole('banner').querySelector('input[type="search"][aria-label="Search jobs and customers"]'), path);
+    assert.ok(ui.getByRole('banner').querySelector('input[type="search"][aria-label="Search jobs, customers and bikes"]'), path);
     cleanup();
     uninstall();
   }
@@ -65,7 +68,7 @@ test('every staff page has the search box in its header', async () => {
 
 test('typing finds the jobs and the customers, grouped, each a link to its page, with a count', async () => {
   const { ui, fireEvent, within } = await open();
-  const box = ui.getByRole('searchbox', { name: 'Search jobs and customers' });
+  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
   // Typed a letter at a time: one search, once typing stops.
   for (const value of ['m', 'ma', 'may', 'maya']) {
     fireEvent.change(box, { target: { value } });
@@ -85,7 +88,7 @@ test('typing finds the jobs and the customers, grouped, each a link to its page,
 
 test('nothing found says so, and one letter doesn’t search', async () => {
   const { ui, fireEvent } = await open();
-  const box = ui.getByRole('searchbox', { name: 'Search jobs and customers' });
+  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
   fireEvent.change(box, { target: { value: 'z' } });
   await new Promise((r) => setTimeout(r, 400));
   assert.deepEqual(searches, []);
@@ -96,7 +99,7 @@ test('nothing found says so, and one letter doesn’t search', async () => {
 
 test('Escape clears the results and stays in the box', async () => {
   const { ui, fireEvent, waitFor } = await open();
-  const box = ui.getByRole('searchbox', { name: 'Search jobs and customers' });
+  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
   box.focus();
   fireEvent.change(box, { target: { value: 'maya' } });
   await ui.findByRole('region', { name: 'Search results' });
@@ -107,12 +110,12 @@ test('Escape clears the results and stays in the box', async () => {
 
 test('on a phone, the search button opens the box over the page; Close search and Escape shut it', async () => {
   const { ui, fireEvent, waitFor, within } = await open('/workshop/today', { phone: true });
-  const button = ui.getByRole('button', { name: 'Search jobs and customers' });
+  const button = ui.getByRole('button', { name: 'Search jobs, customers and bikes' });
   assert.equal(button.getAttribute('aria-expanded'), 'false');
   fireEvent.click(button);
   const sheet = within(await ui.findByRole('dialog', { name: 'Search' }));
   assert.equal(button.getAttribute('aria-expanded'), 'true');
-  const box = sheet.getByRole('searchbox', { name: 'Search jobs and customers' });
+  const box = sheet.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
   await waitFor(() => assert.ok(document.activeElement === box, 'the box takes the focus'));
   fireEvent.change(box, { target: { value: 'maya' } });
   assert.ok((await sheet.findByRole('link', { name: 'WH-1042 · Maya Patel' })) !== null);
@@ -126,7 +129,7 @@ test('on a phone, the search button opens the box over the page; Close search an
 
 test('picking a job while already on the diary opens it there (review)', async () => {
   const { ui, fireEvent, waitFor } = await open('/workshop/diary');
-  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs and customers' }), { target: { value: 'maya' } });
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'maya' } });
   fireEvent.click(await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' }));
   await waitFor(() => assert.ok(calls.some((c) => c.endsWith('/api/workshop-jobs/42')), 'the diary didn’t open the job'));
 });
@@ -135,7 +138,20 @@ test('the count is said in one place that’s always there, so a screen reader h
   const { ui, fireEvent, waitFor } = await open();
   const status = document.querySelector('[data-search-status]');
   assert.ok(status, 'a status line before anything is typed');
-  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs and customers' }), { target: { value: 'maya' } });
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'maya' } });
   await waitFor(() => assert.equal(status.textContent, '2 results'));
   assert.ok(status.isConnected, 'the same line, not a new one');
+});
+
+// Bikes (openspec/changes/bike-search): after Customers, each opening its page.
+test('a bike is found under Bikes, a link to its page with its owner, colour and frame number', async () => {
+  const { ui, fireEvent, within, waitFor } = await open();
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'trek' } });
+  const results = within(await ui.findByRole('region', { name: 'Search results' }));
+  const bikes = within(results.getByRole('group', { name: 'Bikes' }));
+  const links = bikes.getAllByRole('link', { name: 'Trek Domane AL 3' });
+  assert.deepEqual(links.map((a) => a.getAttribute('href')), ['/workshop/bikes/7', '/workshop/bikes/8']);
+  assert.ok(bikes.queryByText('Maya Patel · Green · [frame number]') !== null);
+  assert.ok(bikes.queryByText('Maya Patel') !== null, 'what’s blank is left out');
+  await waitFor(() => assert.equal(document.querySelector('[data-search-status]').textContent, '2 results'));
 });
