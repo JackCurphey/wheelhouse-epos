@@ -238,7 +238,7 @@ const BOARD = {
           { id: "WP-1.4", what: "Shops and sites everywhere", status: "todo", detail: "Written down (#154), not built" },
           { id: "WP-1.5", what: "Products, stock, sizes and colours", status: "todo", detail: "Only the old app's products" },
           { id: "WP-1.6", what: "One sales record in pence", status: "part", detail: "Step A merged (#404); the workshop's amounts in pence (#478 to #482); step B (reports read both records) is built and in review (#492); step C, the new till on sync, is next" },
-          { id: "WP-1.7", what: "Sign-in and PINs", status: "todo", detail: "Not built" },
+          { id: "WP-1.7", what: "Sign-in and PINs", status: "part", detail: "Customers sign in with an emailed code (#500, #502); staff sign in only through WorkOS (#504), with its pages (#505) and Wheelhouse's own sign-in screen with Continue with Google (#508); not yet: till PINs, the shared workshop computer, the label printer helper's own key" },
           { id: "WP-1.8", what: "Messages engine and email", status: "part", detail: "The engine, wording, Undo, Settings › Messages and the reminder, pretend sending (#321 to #330, #418)" },
           { id: "WP-1.9", what: "Live updates", status: "todo", detail: "Not built" },
           { id: "WP-1.10", what: "Needs attention and Today", status: "part", detail: "Today with Needs attention for the Owner and Workshop today (#437), the uncollected bike line (#441); not yet: Tills, Who's in (wait for PINs)" },
@@ -297,7 +297,7 @@ const BOARD = {
         { done: true, what: 'Stage check: walk booking, the till and the diary in the real app', detail: 'You, 25 Oct' },
       ],
     },
-    now: 'Stage 0 is closed (the drills and the walkthrough, 25 Oct). On 25 Oct: service reminders built from yes-when-booking to Stop these, a merge keeping the yes, review requests, a bike\'s own page and Find a bike (#483 to #498). Mark has open for review: sales in pence step B (#492), three audit fixes (#496), the overnight runner (#490), and a replan into playable slices (#499).',
+    now: 'Stage 0 is closed. On 25 Oct, evening: staff sign in through WorkOS only, with Wheelhouse\'s own sign-in screen and Continue with Google (#504, #505, #508); customers sign in with an emailed code (#500, #502); the test copy runs the drawings\' North Street Cycles with you as owner (#506); tests run on pull requests and once a day, so a merge is on the test copy in about a minute (#509); print jobs stay with their own shop (#510); the old app\'s Log in leads to the new sign-in (#512).',
     next: {
       Mark: [
         { what: 'Sales in pence step C', detail: 'The new till records through sync instead of POST /api/sales; the first piece of "a shop day" (replan slice B)' },
@@ -305,12 +305,13 @@ const BOARD = {
         { what: 'Then the shop day', detail: 'Roles on the server, the settings store and activity log, sign-in and PINs (slice B in the replan, #499)' },
       ],
       Jack: [
-        { what: 'The declined date change\'s message', detail: 'A second box on the Date change answered row (Mark\'s answer, 25 Oct); the wording is the drawn one' },
-        { what: 'Paying a repair online', detail: 'Built on the current sales record and redone at step C (Mark\'s call, 25 Oct)' },
+        { what: 'Paying a repair online', detail: 'Waits on how the payment becomes a sale (your question to Mark on #199) and his till-deposit design' },
+        { what: 'The customer\'s account page', detail: 'Waits on your answer: a new code sign-in starts an empty customer, so whose history does it show, and how does it open a job?' },
         { what: 'Waiting on groundwork', detail: 'I\'ll do this and Who did what wait for who\'s at the device and the activity record (your answer, 22 Oct)' },
       ],
     },
     waiting: [
+      { what: 'From the evening', detail: 'Where the owner makes the label printer helper\'s key (not drawn; a helper already signed in keeps working up to 30 days). Google\'s official G logo file for the sign-in button. The test server\'s "System restart required". Customer sign-in through real WorkOS would send real emails, which the test copy forbids: keep the pretend one?' },
       { what: 'The replan', detail: 'Playable slices A to F (#499): the shop day (sign-in, PINs, opening, cash-up) before stock. Mark has answered its four questions; it is yours to accept or change.' },
       { what: 'Small questions left', detail: 'Discounts: build now on the old sales record (redone at Mark\'s step C), or wait for it? The spreadsheet download: one file or several, and only once all four lists can be made?' },
       { what: 'Waiting on Mark', detail: 'Paying a repair online: how it becomes a sale overlaps his sales-in-pence design (decisions 4 and 8). Refunds wait for his steps B and C.' },
@@ -324,9 +325,9 @@ const BOARD = {
       { what: 'Still his from before', detail: 'When the front page switches to the new app.' },
     ],
   },
-  updated: '25 October 2026',
-  lead: 'Stage 0 is closed. Service reminders are built from the tick when booking to Stop these, review requests are in, and a bike has its own page. Mark has the till\'s next steps (step B in review, then C and the deposit) and a replan into playable slices for you.',
-  sub: 'Merged 25 Oct: #478 to #507, Jack\'s and the overnight pieces, and Mark\'s #492, #496, #503 and #507. Open from Mark: #490 and the replan, #499.',
+  updated: '25 October 2026, evening',
+  lead: 'Staff now sign in through WorkOS, with Continue with Google on Wheelhouse\'s own screen, and the test copy runs the drawings\' North Street Cycles with you as owner. Customers sign in with an emailed code. Tests now run on pull requests and once a day, so a merge reaches the test copy in about a minute.',
+  sub: 'Merged 25 Oct: #478 to #512, Jack\'s pieces and Mark\'s #492, #496, #503 and #507. Open: Mark\'s #490 and the replan, #499.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -539,6 +540,12 @@ const BOARD = {
     { status: 'done', what: 'Sales in pence step B', detail: 'Reports read both records: the all_sales view, the dashboard, the sales list and a customer\'s sales (migration 083). Still to do on the test copy: the day baseline before and the check after', pr: 492 },
     { status: 'done', what: 'Audit fixes and a declined date change\'s message', detail: 'Delete refuses a job with money held, an offer rechecks the mechanic, a failed booking message can\'t undo the answer (#496); declining a date change sends the drawn "If the shop can\'t" wording, the second box on Date change answered (#507)', pr: 507 },
     { status: 'done', what: 'Local development without signing in', detail: 'WHEELHOUSE_DEV_AUTOLOGIN: off unless asked, never in production or on the test copy, only from this machine', pr: 503 },
+    { status: 'done', what: 'Customers sign in with a code by email', detail: 'The server (#500) and the screens (#502), against the pretend sign-in until real emails are allowed', pr: 502 },
+    { status: 'done', what: 'Staff sign in through WorkOS', detail: 'WorkOS only, your test account (#504); You\'ve signed out, Please sign in again and why a sign-in failed (#505); Sign in to Wheelhouse with Continue with Google straight to Google (#508). The label printer helper waits for its own key', pr: 508 },
+    { status: 'done', what: 'The test copy: your test shop and WorkOS', detail: 'Commands to remove a shop and add an owner login (#506); the copy runs the drawings\' North Street Cycles with you as owner, signing in through WorkOS', pr: 506 },
+    { status: 'done', what: 'Tests on pull requests and once a day', detail: 'No second run after a merge, so the copy updates about a minute after merging (#509)', pr: 509 },
+    { status: 'done', what: 'Print jobs per shop', detail: 'A job reaches only its own shop\'s label printer helper', pr: 510 },
+    { status: 'done', what: 'The old app\'s Log in', detail: 'Leads to the new sign-in screen', pr: 512 },
     { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock (a proposal for you, #499)', pr: 499 },
   ],
   asks: [
@@ -577,7 +584,7 @@ const BOARD = {
         ['Your booking page', 'built', 'Confirmed or waiting; change the date, cancel, accept another time, see why it was declined; then progress, the amount to pay and what was done; notes with the shop'],
       ] },
       { room: 'Website and account', pages: [
-        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'none'], ['Customer sign-in', 'none'],
+        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'none'], ['Customer sign-in', 'built', 'Sign in with a code sent by email (#500, #502); the account page isn\'t built yet'],
       ] },
     ] },
   ],

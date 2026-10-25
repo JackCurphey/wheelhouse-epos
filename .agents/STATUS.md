@@ -17,22 +17,24 @@ here before starting it, so two people never build the same one):
   #488, #489, #491, #493), Settings › Workshop › Services (#484), review
   requests (#494, #495), a bike's own page and Find a bike (#497, #498).
   Stage 0 is closed: the WP-0.5 drills and the walkthrough are done (Mark, 25
-  Oct). Next: the declined date change's message as a second box on the Date
-  change answered row (Mark's answer, 25 Oct), and paying a repair online
-  built on the current sales record. Still waiting: "I'll do this" and "Who
-  did what" (WP-1.7, WP-1.2, WP-1.9); the customer's account page (the
-  emailed-code sign-in, WP-1.7). WorkOS: Jack made the account himself (25
-  Oct, changing Q10 for WorkOS); its Staging environment is set up and its
-  keys checked from Jack's `.env`
-  (`docs/decisions/2026-10-25-workos-account.md`). Staff sign-in through it
-  is still WP-1.7. **Jack has taken staff sign-in through WorkOS** (WP-1.7's
-  server side, replan slice B; Mark agreed, 25 Oct), against the fake and
-  the staging account; Mark keeps roles (WP-1.1) and the settings store
-  (WP-1.2). Staff sign-in through WorkOS merged 25 Oct (#504); its screens are
-  in #505. **Jack has taken add-hosted-copy task 3.6** from Mark (25 Oct):
-  loading the test shop on the hosted copy, his test login (a new
-  "add a login" command first, since WorkOS is now the only way in), and
-  setting the copy up for WorkOS (runbook, "Signing in with WorkOS").
+  Oct). Merged 25 Oct, evening: customer sign-in by emailed code (#500,
+  #502); staff sign-in through WorkOS only, Jack's test account (#504), its
+  pages (#505) and Wheelhouse's own sign-in screen with Continue with Google
+  (#508); the test copy's remove-a-shop and add-a-login commands (#506), its
+  test shop loaded with Jack as owner and connected to WorkOS (add-hosted-copy
+  3.6, taken from Mark); tests on pull requests and once a day, not after a
+  merge (#509, Jack's option 3; the copy updates about a minute after a merge);
+  print jobs reach only their own shop's helper (#510); the old app's Log in
+  leads to the new sign-in (#512). Next, each waiting on an answer from Jack or Mark: paying a
+  repair online (how it becomes a sale; Jack asked Mark on #199); the
+  customer's account page (whose history a new code sign-in sees, and opening
+  a job from it); the label printer helper's own key (where the owner makes
+  it isn't drawn; a helper already signed in keeps its 30-day session).
+  Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
+  WorkOS: Jack's account, Staging only
+  (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
+  "continue to workos.com" until there's a domain ($99 a month, waits for
+  revenue).
 - **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Merged
   25 Oct: step B, reports read both records (#492, migration 083), audit
   items 12, 20 and 24 (#496), a declined date change's message as the
@@ -53,7 +55,10 @@ here before starting it, so two people never build the same one):
   discounts now on the old sales record or after Mark's step C; the
   spreadsheet download's one file or several. Refunds wait for Mark's steps
   B and C. For him to overrule: the 24 and 25 Oct `decided-while-building.md`
-  sections.
+  sections. From 25 Oct evening: where the owner makes the label printer
+  helper's key; paying a repair online (with Mark, #199); the customer
+  account's history and job links; Google's official "G" logo file for the
+  sign-in button; the hosted server's "System restart required".
 
 **Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
