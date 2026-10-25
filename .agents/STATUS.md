@@ -21,7 +21,11 @@ here before starting it, so two people never build the same one):
   change answered row (Mark's answer, 25 Oct), and paying a repair online
   built on the current sales record. Still waiting: "I'll do this" and "Who
   did what" (WP-1.7, WP-1.2, WP-1.9); the customer's account page (the
-  emailed-code sign-in, WP-1.7).
+  emailed-code sign-in, WP-1.7). WorkOS: Jack made the account himself (25
+  Oct, changing Q10 for WorkOS); its Staging environment is set up and its
+  keys checked from Jack's `.env`
+  (`docs/decisions/2026-10-25-workos-account.md`). Staff sign-in through it
+  is still WP-1.7; Mark needs the staging keys from Jack to run it.
 - **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Open for
   review 25 Oct: step B (#492), audit items 12, 20 and 24 (#496), the
   overnight runner (#490), and a replan into playable slices (#499; Mark
