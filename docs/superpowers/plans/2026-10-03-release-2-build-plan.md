@@ -305,8 +305,9 @@ later packages.
 *Building blocks built here:* 13 Shop switcher; 22 Status line (no board of its own); 26 "Working: [name] · Switch" bar for a shared workshop computer (no board of its own); 40 Message or outcome page; 42 Emailed-code sign-in; 43 PIN pad.
 *Reused, already built:* 1 Settings page (WP-1.3).
 
-*Screens it builds (8) and the situations it covers:*
+*Screens it builds (9) and the situations it covers:*
 
+- **`staff-signin`** (block 42, Emailed-code sign-in) — no other situations. Wheelhouse's own sign-in with Continue with Google (Jack, 25 Oct; built by the OpenSpec change staff-signin-google).
 - **`workos-signin`** (block 42, Emailed-code sign-in) — no other situations.
 - **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
 - **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.
