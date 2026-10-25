@@ -336,3 +336,13 @@ of that repository first.
   tests named in `tasks.md`. After Jack's yes to deleting `registry/`, also
   `tsconfig.json` and `eslint.config.js` (task 6.3).
 - **No change** to the server, the database, or any screen file.
+
+## Mark's answers (25 Oct)
+
+Mark approved the three decisions put to Jack in pull request #511, in the form recommended there:
+
+1. **Radix:** option 1. The browser's own controls wherever they exist; Radix only for menus, the right-click menu, small pop-overs, hover previews and tabs. (Open question 1.)
+2. **Deleting the app's `registry/` folder and `public/r/`** once `react-repo` has run for one full release with every check passing. (Open question 2.)
+3. **Held components:** `sonner`, `command`, `chart` and `navigation-menu` are in `react-repo` now; screens install them when the piece that needs each one starts. (Open question 6, taken as the registry holding the full range.)
+
+**Still Jack's, by the project rules (`CLAUDE.md`):** answers 1 and 2. Answer 1 reverses his 26 Sep "no Radix" choice for the app, and a recorded decision is never reopened without him; answer 2 is a deletion outside rule 5. Mark's answers are the recommendation Jack is asked to confirm; nothing in the app uses Radix or loses `registry/` until he does. The rest of this change does not wait on either.
