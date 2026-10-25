@@ -18,6 +18,16 @@ outside-services table says "Mark: WorkOS account (Q10)".
   (`docs/superpowers/specs/2026-08-31-workos-auth-migration-design.md`):
   Redirect URI `http://localhost:8080/callback`, Initiate login URI
   `http://localhost:8080/api/auth/login`, Sign-out URI `http://localhost:8080/`.
+  **Changed by `openspec/changes/staff-signin-workos` (25 Oct):** the Redirect
+  URI becomes `http://localhost:8080/api/auth/workos/callback` and the
+  Initiate login URI `http://localhost:8080/api/auth/workos/start`, because
+  only `/api/` addresses reach the sign-in routes. Jack changes them in
+  WorkOS's dashboard.
+- **WorkOS only** (Jack, 25 Oct: "lets do just work os"): staff sign in only
+  on WorkOS's page; Wheelhouse's own password sign-in is switched off by
+  `staff-signin-workos`. The label printer helper stops working until it has
+  its own key, and the hosted test copy needs the test keys and its own
+  address in WorkOS's Redirects before anyone can sign in to it.
 - Jack's local `.env` holds `WORKOS_API_KEY` (a staging `sk_test_` key),
   `WORKOS_CLIENT_ID` and `WORKOS_COOKIE_PASSWORD`. Keys are never committed.
 - Checked 25 Oct with a one-off script outside the repo: WorkOS accepted the
