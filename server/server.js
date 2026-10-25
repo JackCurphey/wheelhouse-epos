@@ -1,6 +1,7 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
 import { hostedCopyRefusal } from './hosted-copy-guard.js';
+import { devAutologinRefusal } from './lib/dev-autologin.js';
 import { startSender } from './messaging/engine.js';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -910,6 +911,12 @@ if (isMainModule) {
   console.log(SIGNALS_READY);
 
   // The hosted test copy refuses anything unsafe before any migration runs.
+  // The dev sign-in switch must never be on where anyone else can reach the server.
+  const devRefusal = devAutologinRefusal(process.env);
+  if (devRefusal) {
+    console.error(devRefusal);
+    process.exit(1);
+  }
   const hostedRefusal = hostedCopyRefusal(process.env);
   if (hostedRefusal) {
     console.error(hostedRefusal);

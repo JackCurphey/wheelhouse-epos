@@ -1,8 +1,10 @@
 name: Deploy the hosted copy
 
-# Every merge to main goes onto the hosted test copy once Tests has passed on
-# that commit (WP-0.5 task 3.4; openspec/changes/add-hosted-copy/design.md,
-# Decision 3). The image is built here, pushed to GitHub's container registry
+# Every merge to main goes onto the hosted test copy straight away (WP-0.5 task
+# 3.4; openspec/changes/add-hosted-copy/design.md, Decision 3). Its tests ran
+# on the pull request, which GitHub makes include the latest main before it
+# merges; Tests no longer runs again after a merge (Jack, 25 Oct, option 3:
+# docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md). The image is built here, pushed to GitHub's container registry
 # tagged with the commit, and started on the server by scripts/hosting/deploy.sh
 # over SSH. Setting it up, and undoing a bad update: docs/runbooks/hosted-copy.md.
 #
@@ -13,9 +15,8 @@ name: Deploy the hosted copy
 #   and nothing else on the server).
 
 on:
-  workflow_run:
-    workflows: [Tests]
-    types: [completed]
+  push:
+    branches: [main]
 
 # One deploy at a time, and a deploy under way is never cut off half done.
 concurrency:
@@ -24,20 +25,13 @@ concurrency:
 
 jobs:
   deploy:
-    # Only a push to this repository's main whose tests passed. A fork's branch
-    # called main would otherwise match.
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+    # Only this repository's main: a fork's copy of this workflow never deploys.
+    if: github.repository == 'JackCurphey/wheelhouse-epos'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
       packages: write
-      # To find the newest main commit whose Tests passed.
-      actions: read
     env:
       SITE: ${{ vars.HOSTED_COPY_URL }}
 
@@ -48,22 +42,18 @@ jobs:
           persist-credentials: false
 
       # GitHub keeps one run waiting in the group and cancels it when another
-      # arrives, so each run deploys the newest main commit whose Tests passed,
-      # not only its own: a merge whose run was cancelled still goes on with
-      # the next. Skipped when that commit, or a newer one, is already running
-      # (merges finishing out of order). scripts/hosting/pick-deploy.sh decides.
+      # arrives, so a merge whose run was cancelled goes on with the next one,
+      # which carries a newer main. Skipped when that commit, or a newer one,
+      # is already running (merges finishing out of order).
+      # scripts/hosting/pick-deploy.sh decides.
       - name: Choose the commit
         id: pick
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
         run: |
           running=$(curl -fsS -m 10 "$SITE/healthz" | jq -r '.commit // empty' || true)
-          newest=$(gh run list --repo "$REPO" --workflow Tests --branch main --event push --status success --limit 1 --json headSha --jq '.[0].headSha // empty')
-          echo "Running now: ${running:-unknown}. Newest tested on main: ${newest:-none}."
-          choice=$(scripts/hosting/pick-deploy.sh "$running" "$newest")
+          echo "Running now: ${running:-unknown}. This merge: $GITHUB_SHA."
+          choice=$(scripts/hosting/pick-deploy.sh "$running" "$GITHUB_SHA")
           if [ "$choice" = skip ]; then
-            echo "::notice::${newest} is already running, or older than ${running}, so nothing is deployed."
+            echo "::notice::$GITHUB_SHA is already running, or older than ${running}, so nothing is deployed."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "COMMIT=${choice#deploy }" >> "$GITHUB_ENV"

@@ -1,14 +1,14 @@
 name: Tests
 
+# On each pull request, which GitHub makes include the latest main before it
+# can merge, so what merges has just been tested; once a day on main, at 03:00
+# UTC, as a safety net; and by hand. Not again after each merge (Jack, 25 Oct,
+# option 3: docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md).
 on:
-  push:
-    # Both names on purpose, while the default branch is being renamed from
-    # master to main. Renaming needs repo admin, so it may land at any time
-    # or not for a while; listing both means the push trigger keeps firing
-    # either side of it and nothing has to be timed. Drop master once the
-    # rename is done.
-    branches: [main, master]
   pull_request:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   test:

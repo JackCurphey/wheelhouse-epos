@@ -162,28 +162,34 @@ const steps = () => workflow().split('\n').filter((l) => !/^\s*#/.test(l)).join(
 // Its triggers: the top-level on: block.
 const triggers = () => (workflow().match(/^on:\n((?: .*\n|\n)*)/m) || [])[1] ?? '';
 
-test('it deploys only after Tests passed on a push to this repository\'s main', () => {
-  const w = workflow();
-  assert.match(w, /workflow_run:\s*\n\s*workflows: \[Tests\]\s*\n\s*types: \[completed\]/);
-  assert.match(w, /github\.event\.workflow_run\.conclusion == 'success'/);
-  assert.match(w, /github\.event\.workflow_run\.event == 'push'/);
-  assert.match(w, /github\.event\.workflow_run\.head_branch == 'main'/);
-  assert.match(w, /github\.event\.workflow_run\.head_repository\.full_name == github\.repository/);
-  assert.ok(triggers().length > 0, 'no on: block');
-  assert.doesNotMatch(triggers(), /(pull_request|pull_request_target|push|schedule|workflow_dispatch):/, 'it must start only after Tests');
+// Jack, 25 Oct (option 3, docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md):
+// Tests runs on each pull request, which must include the latest main before
+// it merges, and once a day; not again after a merge. So the copy updates
+// straight after each merge, with the commit the merge made.
+test('it deploys on a push to this repository\'s main, and nothing else', () => {
+  const t = triggers();
+  assert.match(t, /^\s+push:\s*\n\s+branches: \[main\]\s*$/m);
+  assert.doesNotMatch(t, /(workflow_run|pull_request|pull_request_target|schedule|workflow_dispatch):/, 'only a merge to main deploys');
+  assert.match(steps(), /github\.repository == 'JackCurphey\/wheelhouse-epos'/, 'a fork\'s main never deploys');
 });
 
-test('it deploys a tested commit, never the latest main untested', () => {
+test('it deploys the commit the merge made, through pick-deploy.sh, never an older one over a newer', () => {
   const w = steps();
-  assert.doesNotMatch(w, /github\.sha|GITHUB_SHA/);
-  // The newest main commit whose Tests passed, chosen by pick-deploy.sh, is
-  // what it checks out, builds, tags and deploys.
-  assert.match(w, /gh run list[^\n]*--workflow Tests[^\n]*--branch main[^\n]*--event push[^\n]*--status success/);
-  assert.match(w, /scripts\/hosting\/pick-deploy\.sh/);
+  assert.doesNotMatch(w, /gh run list/, 'it no longer waits for a Tests run on main');
+  assert.match(w, /scripts\/hosting\/pick-deploy\.sh "\$running" "\$GITHUB_SHA"/);
   assert.match(w, /git checkout --quiet --detach "\$COMMIT"/);
   assert.match(w, /tags: ghcr\.io\/jackcurphey\/wheelhouse-epos:\$\{\{ env\.COMMIT \}\}/);
   // build-push-action's default context is the latest main, not the checkout.
   assert.match(w, /^\s+context: \.$/m);
+});
+
+const TESTS_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'test.yml');
+test('Tests runs on each pull request and once a day, not after each merge', () => {
+  const on = (readFileSync(TESTS_WORKFLOW, 'utf8').match(/^on:\n((?: .*\n|\n)*)/m) || [])[1] ?? '';
+  assert.match(on, /^\s+pull_request:/m);
+  assert.match(on, /^\s+schedule:\s*\n\s+- cron: '0 3 \* \* \*'/m, 'once a day, at 03:00 UTC');
+  assert.match(on, /^\s+workflow_dispatch:/m, 'and by hand');
+  assert.doesNotMatch(on, /^\s+push:/m, 'not after each merge');
 });
 
 test('one deploy at a time, never cancelling one under way', () => {
