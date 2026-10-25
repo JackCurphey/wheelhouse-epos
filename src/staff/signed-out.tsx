@@ -82,7 +82,7 @@ export function SignedOut({ expired }: { expired: boolean }) {
         <h1 className="m-0 text-size-26 leading-tight font-bold tracking-[-0.3px] text-[var(--wh-ink)]">{message.heading}</h1>
         <p className="m-0 text-size-15 leading-normal text-[var(--wh-muted)]">{message.line}</p>
         {message.button && message.href && (
-          <a href={message.href} className={cn(buttonVariants({ block: true }))}>
+          <a href={message.href} className={cn(buttonVariants({ variant: 'accent', block: true }))}>
             {message.button}
           </a>
         )}
