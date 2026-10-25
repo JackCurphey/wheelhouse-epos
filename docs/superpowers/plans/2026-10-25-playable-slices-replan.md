@@ -1,7 +1,7 @@
 # Replan proposal: build in playable slices (25 Oct 2026)
 
 **Status: a proposal from Mark's session, for Jack to accept, change or drop.**
-Nothing here changes the build plan or the split plan until Jack says so; if
+Nothing here changes the build plan or the split plan until Jack accepts it (Mark answered the four questions in §4 on 25 Oct); if
 he accepts, §9 of the split plan and the build board's "next" lists get
 updated in the day's status pull request. It reorders work only: no package is
 dropped, and no decision is reopened.
@@ -23,7 +23,7 @@ of date.
 | WP-1.6: step B is "Mark's next" | Step B is built and in review, #492 (the `all_sales` view, the dashboard, the sales list and a customer's sales read both records). Not yet done inside it: the real baseline and the second check on the hosted copy (tasks 3.1 and 3.4) |
 | "Still open from the audit: items 12, 20, 23, 24" | 12, 20 and 24 are fixed in #496 (open). 23 (a declined date change sends nothing) waits on Jack: where the second wording is stored and edited in Settings |
 | Overnight runner not mentioned | #490 (open) keeps the runner, brief and queue in the repo |
-| Stage 0: "nearly done", the WP-0.5 drills and the walkthrough are Jack's today | I can't see from the repo whether the four drills or the walkthrough have happened; `STATUS.md` still lists both as waiting. Jack to say |
+| Stage 0: "nearly done", the WP-0.5 drills and the walkthrough are Jack's today | Done (Mark, 25 Oct); `STATUS.md` and the board still list both as waiting |
 | `lead`/`sub` text names #447 to #485 | Seventeen or so merges since; the day's status pull request catches it up |
 
 The package list itself (stages 0 to 8, 38 packages on the board) still matches the build
@@ -56,7 +56,7 @@ screens and the workshop. Package ids are the build plan's.
 
 | Slice | You can play | Packages it takes | It needs first | Lanes |
 |---|---|---|---|---|
-| **A. A repair, start to finish** (nearly there) | Book online, answer it, take the bike in, quote, work, ready, collect, pay with a deposit taken off, receipt, the reminder and review text | Close stage 0 (WP-0.5 drills, the stage check); sales-in-pence step B (#492) and step C; the deposit at the till (`till-job-deposit`); finish the audit items | Jack's answer on item 23; the decision on paying a repair online (how it becomes a sale) | Mark: B, C, deposit at the till. Jack: drills, walkthrough |
+| **A. A repair, start to finish** (nearly there) | Book online, answer it, take the bike in, quote, work, ready, collect, pay with a deposit taken off, receipt, the reminder and review text | Sales-in-pence step B (#492) and step C; the deposit at the till (`till-job-deposit`); paying a repair online (on the current sales record, redone at step C); audit item 23 | Nothing blocking: item 23 and paying online are decided (§4) | Mark: B, C, deposit at the till. Jack: item 23's screens, paying online |
 | **B. A shop day with real people** | Staff sign in with a PIN, see only their own rooms, the shop opens with a float check, sells, the day closes with a count and a report | WP-1.1 server half, 1.2 (settings store, change record, activity log), 1.7 (sign-in and PINs, against the fake WorkOS), 3.3 (opening), 3.4 (cash-up), 1.10 (Tills and Who's in on Today), the till's discounts and refunds (3.1) | Slice A's step C: the new till on sync | Mark: 1.1, 1.2, 1.7 server. Jack: sign-in and PIN screens, then 3.3 and 3.4 |
 | **C. Stock you can trust** | Add a product with sizes and colours, receive a delivery, sell it and watch stock drop, count the shelf | WP-1.5, 2.1, 2.3, 2.2, then 2.4 (import, first half) | Nothing from B, so C can start in parallel once A's server work is out of Mark's lane | Mark: 1.5 server, then 2.1 to 2.3 server. Jack: stock screens |
 | **D. The owner's view** | Reports and takings by day, the activity log, staff and roles setup, payments set up | WP-5.1 (what's left), 5.3, 5.4, 1.11's spreadsheet download | B for who did what; C for stock figures | Mark: reporting layer. Jack: the screens |
@@ -77,18 +77,25 @@ What moves, against the build plan's stage order:
 - **2.4 (import, first half)** moves to the end of C, since it needs products
   first and nothing in A or B needs it.
 
-## 4. What I need from Jack
+## 4. Answers (Mark, 25 Oct; Jack still to accept the plan as a whole)
 
-1. Is the order A, B, C, D, E, F right, or do you want stock (C) before the
-   shop day (B)? (B first is my pick: it makes the till and workshop work
-   usable by more than the Owner. C first is better if you would rather play
-   with stock early.)
-2. Item 23: the declined-date-change message. The wording is drawn
-   (`generator/book.mjs:489`); is it a second box on the "Date change
-   answered" row in Settings, or its own row?
-3. Paying a repair online: should it wait for step C (my view), or be built on
-   the old sales record and redone?
-4. Have the four drills and the stage 0 walkthrough happened?
+1. **Order:** B before C. The shop day (sign-in, PINs, opening, cash-up)
+   comes before stock. The order is A, B, C, D, E, F.
+2. **Item 23:** the declined date change's wording goes in the existing "Date
+   change answered" row in Settings as a second box, as drawn
+   (`generator/book.mjs:489`, "If the shop can't"), not as its own row. It is
+   unblocked; the row's subtitle and the second message trigger are the work.
+3. **Paying a repair online does not wait for step C.** It is built on the
+   current sales record and redone when step C lands (Mark's call; it
+   overlaps his sales-in-pence decisions 4 and 8, which is why it is logged
+   here).
+4. **Stage 0:** the four drills and the walkthrough have happened, so stage 0
+   is closed apart from anything the walkthrough found.
+
+What changes in the slices because of these answers: slice A no longer waits
+on the paying-online decision and no longer lists closing stage 0; its open
+items are step B's two baseline checks, step C, the deposit at the till,
+paying a repair online, and item 23. Slice B is next after A's server work.
 
 ## 5. What this plan does not claim
 
