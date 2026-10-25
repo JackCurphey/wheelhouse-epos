@@ -36,3 +36,10 @@ export const PHOTO_STEP_ROUTE = '/book/:shopSlug/photo/:code';
  * (server/messaging/stop-codes.js) gives the same address.
  */
 export const STOP_ROUTE = '/book/:shopSlug/stop/:code';
+
+/**
+ * Signing in by a code sent by email (openspec/changes/customer-signin-screens;
+ * cust-signin, cust-code): the shop's sign-in page. Apart from the booking
+ * steps, as the photo and stop pages are. `?from=` is where it returns to.
+ */
+export const SIGNIN_ROUTE = '/book/:shopSlug/sign-in';
