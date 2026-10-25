@@ -244,9 +244,11 @@ async function sendDueForShop(shopId) {
       }
       // A service reminder was set up months ago: checked, and its words
       // written, now (service-reminder-send design 5 and 6; Jack, 25 Oct).
-      if (m.template_key === 'service_reminder') {
-        const { serviceReminderNow } = await import('./service-reminders.js');
-        const now = await serviceReminderNow(m, shopId);
+      // So is a review request, days later (review-requests design 5).
+      if (m.template_key === 'service_reminder' || m.template_key === 'review_request') {
+        const now = m.template_key === 'service_reminder'
+          ? await (await import('./service-reminders.js')).serviceReminderNow(m, shopId)
+          : await (await import('./review-requests.js')).reviewRequestNow(m, shopId);
         if (!now) {
           await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
           continue;

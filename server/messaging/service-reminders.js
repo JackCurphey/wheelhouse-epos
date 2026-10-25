@@ -39,12 +39,12 @@ const addDay = (date) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).
  * When it goes (answer 4): the shop's date of collection plus the months, then
  * the first open day from there, at its opening time, in the shop's time zone.
  */
-async function dueAt(jobId, months) {
+export async function dueAt(jobId, { months = 0, days = 0 }) {
   const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   const tz = settings?.time_zone ?? 'Europe/London';
   const { due } = await prepare(
-    "SELECT to_char((collected_at AT TIME ZONE ?)::date + make_interval(months => ?::int), 'YYYY-MM-DD') AS due FROM workshop_jobs WHERE id = ?"
-  ).get(tz, months, jobId);
+    "SELECT to_char((collected_at AT TIME ZONE ?)::date + make_interval(months => ?::int, days => ?::int), 'YYYY-MM-DD') AS due FROM workshop_jobs WHERE id = ?"
+  ).get(tz, months, days, jobId);
   const hours = settings ? toCapacitySettings(settings) : null;
   let day = due;
   let open = hours?.openingTime ?? '09:00';
@@ -95,7 +95,7 @@ export async function queueServiceReminder(jobId, shopId, base) {
   // Nothing goes to a customer with no way to reach them, or with the message
   // off, so no stop code is made for one (review).
   if (await whyNotQueued(KEY, job.customer_id)) return null;
-  const at = await dueAt(jobId, service.months);
+  const at = await dueAt(jobId, { months: service.months });
   // The stop link is made now and kept with the message: the timer that sends
   // it has no request to make one from (stop-reminders design 2).
   const link = await messageLink(async () => {

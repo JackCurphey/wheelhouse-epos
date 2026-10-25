@@ -145,11 +145,16 @@ export function register(route) {
     } catch (err) {
       return badRequest(res, err.message);
     }
+    // A review request needs the shop's review page first (ac-review-first).
+    if (params.key === 'review_request' && sent.enabled === true
+      && !(await prepare('SELECT review_page_url FROM workshop_settings LIMIT 1').get())?.review_page_url) {
+      return badRequest(res, 'Add your review page first, then switch this on.');
+    }
     const set = [...Object.keys(sent).map((c) => `${c} = EXCLUDED.${c}`), 'updated_at = EXCLUDED.updated_at'];
     await prepare(
       `INSERT INTO message_templates (key, enabled, wording, subject, updated_at) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT (shop_id, key) DO UPDATE SET ${set.join(', ')}`
-    ).run(params.key, sent.enabled ?? true, sent.wording ?? null, sent.subject ?? null, nowIso());
+    ).run(params.key, sent.enabled ?? !TEMPLATES[params.key].offUntilOn, sent.wording ?? null, sent.subject ?? null, nowIso());
     sendJson(res, 200, asSetting(await templateFor(params.key)));
   });
 
