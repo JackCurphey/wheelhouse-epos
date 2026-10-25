@@ -16,6 +16,7 @@ import { newLinkCode, hashLinkCode, linkPath, linkExpiry, photoCodePath } from '
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { queueServiceReminder } from '../messaging/service-reminders.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import {
@@ -1007,6 +1008,17 @@ export function register(route) {
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');
+      // A service reminder from this visit, once the bike has gone; reopening
+      // the collection drops it (service-reminder-send). Logged, never an error:
+      // the collection stands.
+      if (machine === custody && event === 'collect') {
+        try {
+          await queueServiceReminder(id, shopId);
+        } catch (err) {
+          console.error(`Messages: the service reminder for job ${id} could not be set up`, err);
+        }
+      }
+      if (machine === custody && event === 'reopen') await undoWaiting(id, 'service_reminder');
       // The shop cancelling (Jack, 20 Oct, booking messages answer 4; 21 Oct).
       if (event === 'cancel') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_cancelled');
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);

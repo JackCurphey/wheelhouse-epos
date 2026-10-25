@@ -10,6 +10,7 @@ import { ownerOnly } from '../lib/owner-only.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
 import { serializeMessage, undoMessage, sendHeldNow, readyStillNeeded } from '../messaging/engine.js';
 import { LIVE_KEYS, TEMPLATES, render, templateFor } from '../messaging/templates.js';
+import { STOP_LINE } from '../messaging/service-reminders.js';
 
 const MAX_WORDING = 2000;
 const MAX_SUBJECT = 200;
@@ -25,6 +26,7 @@ const EXAMPLE = {
   'Link to the quote': '[link]',
   'Link to the job': '[link]',
   'Link to the booking': '[link]',
+  'Link to book': '[link]',
   'Opening hours': '[opening hours]',
   Service: 'Standard service',
   'Booked day and time': 'Thu 17 Sep, 11:30',
@@ -170,7 +172,8 @@ export function register(route) {
       return badRequest(res, err.message);
     }
     const vars = { ...EXAMPLE, ...EXAMPLE_FOR[params.key], 'Shop name': ctx.shop.name };
-    const text = render(wording, vars);
+    // The service reminder's fixed ending, as drawn in its preview (ac-reminder-wording).
+    const text = params.key === 'service_reminder' ? `${render(wording, vars)} ${STOP_LINE}` : render(wording, vars);
     sendJson(res, 200, { text, email: { subject: render(subject, vars), body: text } });
   });
 }

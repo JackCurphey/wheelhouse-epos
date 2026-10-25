@@ -2247,3 +2247,19 @@ follows the job checklist, the closest pattern built.
    reminder." waits** until that message exists, so it doesn't point at
    nothing.
 
+### 25 Oct 2026: sending service reminders (`openspec/changes/service-reminder-send`, `ac-reminder-wording`, `set-msg-list`; Jack's answers 1 to 4 of `2026-10-25-morning-questions.md`)
+
+1. **The email's subject isn't drawn**: "Your [Bike] is due its [Service]
+   — [Shop name]", as the other messages' subjects read.
+2. **"Stop these: [link]." keeps the full stop** the drawn preview ends
+   with, after the shop's wording, on every reminder and in the preview.
+3. **Both links read "[link]" while sending is pretend**, as every pretend
+   message's do; the booking landing and the stop page are the next pieces.
+4. **A shop open no day of the week** sends on the due day at its usual
+   opening time; otherwise the first open day within a week.
+5. **A job with no bike keeps its own reminder** (one per bike can't match
+   it), and when it's due it is still checked for the customer's yes, the
+   message being on and the job still collected.
+6. **The shop removing a service's months** before it's due means the
+   reminder doesn't go, as no service names it any more.
+

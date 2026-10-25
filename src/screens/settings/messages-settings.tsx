@@ -69,8 +69,10 @@ export function AutomaticMessages() {
   const live = templates.data?.filter((t) => t.live) ?? [];
   // The quote reminder sits under Quote to approve, not as a row of its own (setup.mjs).
   const reminder = live.find((t) => t.key === 'quote_reminder');
-  const jobMessages = live.filter((t) => t.group !== 'booking' && t.key !== 'quote_reminder');
+  const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.key !== 'quote_reminder');
   const bookingMessages = live.filter((t) => t.group === 'booking');
+  // Bringing customers back: the service reminder (service-reminder-send; setup.mjs bringBackRows).
+  const bringBack = live.filter((t) => t.group === 'reminders');
   const row = (t: Template) => (
     <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
       <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
@@ -97,6 +99,13 @@ export function AutomaticMessages() {
           </>
         ) : null}
         {bookingMessages.map(row)}
+        {bringBack.length ? (
+          <>
+            <h5 className="m-0 mt-2 text-sm font-bold">Bringing customers back</h5>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">Only to customers who said yes. Each ends “Stop these: [link]”.</p>
+          </>
+        ) : null}
+        {bringBack.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </div>
       {editing ? (
@@ -245,6 +254,10 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
               <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
             ))}
           </div>
+          {/* The service reminder's fixed ending (ac-reminder-wording, audit M8). */}
+          {template.key === 'service_reminder' ? (
+            <p className="m-0 rounded-md bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>
+          ) : null}
           {/* UX walk-through 7 M6, drawn under the wording (set-msg-edit). */}
           <p className="m-0 text-sm text-[var(--wh-muted)]">With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.</p>
         </div>

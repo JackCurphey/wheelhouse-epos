@@ -118,12 +118,25 @@ export const TEMPLATES = {
     subject: 'Booking cancelled — [Shop name]',
     tapIns: BOOKING,
   },
+  // When a bike is due its next service (account and reminders decision 2):
+  // the wording as drawn (ac-reminder-wording); "Stop these: [link]" is added
+  // after it, so it can't be taken off. The email's subject isn't drawn
+  // (service-reminder-send design 8).
+  service_reminder: {
+    group: 'reminders',
+    name: 'Service reminder',
+    when: 'When a bike is due its next service — set on each service',
+    wording: 'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].',
+    subject: 'Your [Bike] is due its [Service] — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Service', 'Shop name', 'Link to book'],
+  },
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled'];
+// The service reminder joined 25 Oct (openspec/changes/service-reminder-send).
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled', 'service_reminder'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

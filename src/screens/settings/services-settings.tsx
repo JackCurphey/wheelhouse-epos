@@ -146,7 +146,7 @@ function EditService({ start, busy, error, onSave, onClose }: {
           </span>
         </div>
         {/* When its reminder is due (ac-service-edit; account and reminders decision 2).
-            The drawn line about the wording waits for the Service reminder message. */}
+            Then the drawn line about where its wording is. */}
         <div className="flex flex-col gap-2">
           <label htmlFor="svc-rem" className="text-size-15 font-semibold">Remind customers it’s due after</label>
           <span className="inline-flex items-center gap-2 text-size-15">
@@ -154,6 +154,7 @@ function EditService({ start, busy, error, onSave, onClose }: {
           </span>
           <p className="m-0 text-sm text-[var(--wh-muted)]">Counted from when the bike is collected. Only customers who said yes get it. Leave empty for no reminder — for a puncture, say.</p>
         </div>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">The wording is in Settings › Messages › Service reminder.</p>
         {/* The walk-through's line for the box (coverage 7: on unless switched off). */}
         <RowSwitch label="Customers can book this online" on={e.bookableOnline} disabled={busy} onChange={(on) => set({ bookableOnline: on })} />
         {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
