@@ -2370,3 +2370,17 @@ follows the job checklist, the closest pattern built.
    password sign-up makes a new customer and never joins one the shop already
    has. For Jack: these show on the Customers page with a blank name until
    the account pages ask for one.
+
+### 25 Oct 2026: the sign-in screens (`openspec/changes/customer-signin-screens`, `cust-signin`, `cust-code`, `cust-code-expired`)
+
+1. **In the booking pages' frame, not the website's**: the shop's website
+   frame, with Account in its header, isn't built yet, so sign-in sits in the
+   frame the stop page uses (the shop's name at the top).
+2. **"Send a new code" says "We sent a new code to [email]"** and empties the
+   boxes; not drawn.
+3. **The keyboard lands on "Enter your code", not in the boxes**, as on every
+   booking page (d2: the frame puts focus on each new heading). For Jack: on a
+   phone that is one tap on the boxes before typing; putting the keyboard
+   straight in the boxes would change d2 for this page.
+4. **With no page to return to, or one that isn't this shop's own**, sign-in
+   goes on to the shop's booking page, `/book/[shop]`.
