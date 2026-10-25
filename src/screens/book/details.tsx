@@ -261,6 +261,19 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       />
       <TextField id={ids.email} label={emailLabel(channel)} type="email" autoComplete="email" required={channel === 'email'}
         value={draft.email} error={errorFor('email')} onChange={(email) => update({ email })} />
+      {/* Say yes once to service reminders, unticked to start (ac-book-remind;
+          account and reminders decisions 2 and 8). */}
+      <Checkbox
+        className="mb-3 items-start gap-3 [&>input]:mt-px [&>input]:size-[22px]"
+        checked={draft.remindMe === true}
+        onChange={(e) => update({ remindMe: e.target.checked ? true : undefined })}
+        label={(
+          <span className="flex flex-col gap-0.5">
+            <span className="text-size-15 font-semibold">Remind me when my bike is due its next service</span>
+            <span className="text-size-13 leading-[1.45] text-[var(--wh-muted)]">And ask me for a review after I collect. One message each, the way you chose above. Stop any time.</span>
+          </span>
+        )}
+      />
       {hold ? (
         <DepositPart
           hold={hold} draft={draft} paid={paid} state={payState} cardNumber={cardNumber} cardError={cardError}

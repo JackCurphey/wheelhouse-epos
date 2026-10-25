@@ -1194,6 +1194,16 @@ export function register(route) {
           `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
         )
         .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      // The reminder tick is a yes to service reminders and review requests,
+      // with when and how; not ticking says nothing, so an earlier yes stays
+      // (reminder-consent design 2). Here for the same reason as above.
+      if (request.remindMe) {
+        await db
+          .prepare(
+            `UPDATE customers SET service_reminders = true, review_requests = true, reminders_said_yes_at = ?, reminders_said_yes_via = 'booking' WHERE id = ?`
+          )
+          .run(nowIso(), customerId);
+      }
       // The deposit and when it's free to cancel until, worked out now and
       // fixed: the booked start (the day's start for a whole-day booking) less
       // the shop's hours, in the shop's time zone (design 5).
