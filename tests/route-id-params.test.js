@@ -76,5 +76,8 @@ test('a param that is not a row id is left alone: a print job id is hex', async 
     method: 'POST',
     body: { ok: true },
   });
-  assert.equal(res.status, 200, JSON.stringify(res.body));
+  // It reaches the handler, which knows no such job (print jobs are per shop
+  // since 25 Oct), not the id check's own Not found.
+  assert.equal(res.status, 404, JSON.stringify(res.body));
+  assert.deepEqual(res.body, { error: 'No such print job' });
 });
