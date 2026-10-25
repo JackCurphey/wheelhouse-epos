@@ -2326,3 +2326,16 @@ follows the job checklist, the closest pattern built.
    https://; anything else is refused with "Paste the whole link to your
    review page, starting https://".
 
+
+### 25 Oct 2026: a bike's own page (`openspec/changes/bike-page`, `cs-bike`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
+
+1. **The bike's Edit box isn't drawn**; it follows the customer page's Edit:
+   "Edit bike", "Nothing changes until you save", Make, Model, Colour, Frame
+   number and Note, Cancel and Save, the server's refusal shown in the box.
+2. **The Warranty block is left off** until a bike can be bought here:
+   nothing records a bike's purchase yet, so there is no date to show.
+3. **New job from a bike's page opens with that bike chosen** as well as its
+   owner, as New job from a customer's page opens with them.
+4. **The jobs list is "Jobs on this bike"**, split as the customer page's
+   history is: "Open now", then "Earlier, newest first", eight shown with
+   "Show all ([n])".

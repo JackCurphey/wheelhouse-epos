@@ -191,6 +191,7 @@ GET /api/customers/:id/bikes
 POST /api/customers/:id/bikes
 PUT /api/bikes/:id
 DELETE /api/bikes/:id
+GET /api/bikes/:id
 GET /api/bikes/:id/jobs
 GET /api/sales
 GET /api/sales/:id
