@@ -91,3 +91,9 @@ signed in keep working up to 30 days meanwhile.
 **Wait for Mark's step C** (Jack: "Wait for step C"). They come in slice B,
 on the new till, so the money part is built once. Customer group discounts
 already work at the till meanwhile.
+
+## 7. The till's quick buttons in Settings
+
+**Wait for slice B** (Jack: "Wait for slice B"). They are built with the new
+till after Mark's step C, so the till screen changes once. Today's automatic
+Workshop buttons stay as they are until then.
