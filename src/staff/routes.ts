@@ -38,6 +38,13 @@ export const ROUTES = {
   'cs-bike': '/workshop/bikes/:id',
   // A product's page (st-product), from Stock (openspec/changes/stock-list).
   'st-product': '/workshop/stock/:id',
+  // New order (rs-order) and an order (rs-order-ordered), from Deliveries and
+  // orders (openspec/changes/deliveries-orders).
+  'rs-order': '/workshop/deliveries/new-order',
+  'rs-order-ordered': '/workshop/deliveries/orders/:id',
+  // Receive a delivery (rs-receive), from the hub and an order; ?order=[id]
+  // picks the order (openspec/changes/receive-delivery).
+  'rs-receive': '/workshop/deliveries/receive',
   // "You've signed out" (auth-signedout), where Sign out and WorkOS's sign-out
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.
