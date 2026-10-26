@@ -85,7 +85,7 @@ export function register(route) {
       `SELECT c.id, c.name, c.phone, c.email, c.address, c.postcode, c.notes, c.created_at,
               CASE WHEN ?::text <> '' AND ${UK_NUMBER_SQL} = ?::text THEN 'phone' ELSE 'email' END AS reason,
               (SELECT count(*)::int FROM workshop_jobs w WHERE w.customer_id = c.id) AS jobs,
-              (SELECT count(*)::int FROM sales s WHERE s.customer_id = c.id) AS sales
+              (SELECT count(*)::int FROM all_sales s WHERE s.customer_id = c.id) AS sales
          FROM customers c
         WHERE c.id <> ? AND c.active = 1
           AND ((?::text <> '' AND ${UK_NUMBER_SQL} = ?::text) OR (?::text <> '' AND lower(trim(coalesce(c.email, ''))) = ?::text))
