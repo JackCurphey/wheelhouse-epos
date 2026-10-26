@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { ROUTES } from '@/staff/routes.ts';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Back, Card, Page, Row, STATUS, Tag, day, isOpen, money, mono, stillToCome, type Order } from './deliveries-bits.tsx';
 
@@ -12,8 +13,9 @@ import { Back, Card, Page, Row, STATUS, Tag, day, isOpen, money, mono, stillToCo
  * openspec/changes/deliveries-orders design 4): what was ordered and what
  * has arrived, the server's total, and for the Owner Mark as ordered (a
  * draft) or Close the order, which asks first. "Receive against this
- * order" comes with receiving; an order something has arrived from can't
- * be closed until the server can drop what's still to come.
+ * order", for anyone, while it's still to come (openspec/changes/receive-delivery);
+ * an order something has arrived from can't be closed until the server can
+ * drop what's still to come.
  */
 export function OrderPage() {
   const id = Number(useParams().id ?? '');
@@ -63,10 +65,11 @@ export function OrderPage() {
         </ul>
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1.5">
           <span className="text-size-15">Total cost <span className={`text-base font-bold ${mono}`}>{money(o.totalCost)}</span></span>
-          {owner && isOpen(o) ? (
+          {isOpen(o) && (owner || o.status !== 'draft') ? (
             <span className="flex flex-wrap gap-2">
-              {arrived ? null : <Button variant="default" disabled={busy} onClick={() => setClosing(true)}>Close the order</Button>}
-              {o.status === 'draft' ? <Button variant="accent" disabled={busy} onClick={() => void act('mark-ordered')}>Mark as ordered</Button> : null}
+              {owner && !arrived ? <Button variant="default" disabled={busy} onClick={() => setClosing(true)}>Close the order</Button> : null}
+              {owner && o.status === 'draft' ? <Button variant="accent" disabled={busy} onClick={() => void act('mark-ordered')}>Mark as ordered</Button> : null}
+              {o.status !== 'draft' ? <Link to={`${ROUTES['rs-receive']}?order=${o.id}`} className={buttonVariants({ variant: 'accent' })}>Receive against this order</Link> : null}
             </span>
           ) : null}
         </div>

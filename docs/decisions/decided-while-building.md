@@ -2685,3 +2685,47 @@ follows the job checklist, the closest pattern built.
 11. **The header** keeps "Deliveries and orders" on New order and an order,
     as a customer's page keeps "Customers"; each sub-page has the drawn way
     back and its own heading.
+
+### 26 Oct 2026: receiving a delivery (`openspec/changes/receive-delivery`, `rs-receive`, `rs-problem`; WP-2.3)
+
+1. **Against an order only, for now:** the receive route books in against
+   one order, so "From" lists the orders still to come (ordered or partly
+   delivered), newest first, named by supplier ("[Supplier] · ordered
+   [date]" when a supplier has two). The drawing's supplier pills and "Works
+   with or without an order" wait for a write that adds stock without an
+   order; the hub's note says only "Scan each item as it comes out of the
+   box." With none: "No orders are waiting for a delivery." (not drawn).
+2. **Left out, as asked:** frame numbers (`rs-frame`) and a part a job is
+   waiting for ("Job WH-1042 is waiting for 1", holding it): order lines
+   and stock record neither a job nor a frame. Also left out: Add this
+   product (an unknown barcode says "Nothing in Wheelhouse has the barcode
+   [code]"), the booked-in board and labels (`rs-booked`, `rs-labels`),
+   and the hub's To return, Products to add and Recent deliveries.
+3. **Scanning** follows New order's box: Enter looks the code up itself (a
+   scanner presses Enter before any search comes back), taking an exact
+   barcode or code, or the only match; a click takes any match. Not on the
+   order: "[name] isn’t on this order". Each scan says "Added [name] · 1"
+   (the drawing's announcement, without the job).
+4. **A count stops at what's still to come** on its line ("All [n] [name]
+   still to come are counted"); the server refuses more anyway. − at 1
+   takes the line off, without the audit's Undo; a line with a problem
+   marked can't go below what's set aside.
+5. **Problems:** recorded in a new table (migration 090,
+   `delivery_problems`) with the order line, kind, how many and a note (up
+   to 500 characters). Damaged and wrong come out of what was scanned and
+   aren't booked in; the line stays to come on the order, as qty_received
+   counts only what went into stock. Missing is on top of what was scanned,
+   up to what's still to come, and changes no count. Marking the same kind
+   again replaces it. A missing one reads "Missing · [n]" on the line (not
+   drawn). Who marked it isn't recorded yet.
+6. **Book in** sends one request; the page then says "[n] items booked in ·
+   stock updated" (the booked-in board's words), empties the list and
+   refreshes the order. Changing From empties the list.
+7. **Atomic and counted once:** the order is locked while what's still to
+   come is checked, and stock is added in the update itself, so two people
+   booking the same line at once can't both get it, and bookings of one
+   product on two orders both land. An order with only problems marked
+   keeps its status.
+8. **"Receive against this order"** shows on an order still to come, for
+   anyone, beside Close the order; "Receive a delivery" is on the hub for
+   everyone (decision 4).

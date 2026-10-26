@@ -21,6 +21,8 @@ const db = { prepare, exec: dbExec };
 // roles bring "Can order stock" (receiving decision 4; WP-1.1); everyone can
 // read orders and receive against them (openspec/changes/deliveries-orders).
 const ORDER_STOCK = "Only the shop's owner can order stock";
+// What can be wrong with a delivered item (receiving decision 9; migration 090).
+const PROBLEM_KINDS = ['damaged', 'wrong_item', 'missing'];
 
 // The order's total cost in pounds, as unit_cost is stored (NUMERIC(10,2)),
 // rounded to the penny so floating-point sums don't show (3 x 1.10).
@@ -234,69 +236,101 @@ export function register(route) {
     sendJson(res, 200, serializePurchaseOrder(row, items));
   });
 
+  // Booking a delivery in (openspec/changes/receive-delivery, the contract):
+  // open to everyone (receiving decision 4). `items` go into stock and the
+  // line's qty_received; `problems` (decision 9: damaged, wrong item or
+  // missing) are recorded and go into neither, so they stay to come.
+  // Atomic and counted once: the order is locked before its lines are read
+  // and checked, so a second booking of the same order waits, then sees the
+  // first one's counts; stock is added in the UPDATE itself, never from a
+  // value read earlier, so bookings of one product on two orders both land.
   route('POST', '/api/purchase-orders/:id/receive', async (req, res, params, query, afterRelease, shopId) => {
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Purchase order not found');
-    if (!['ordered', 'partially_received'].includes(existing.status)) {
-      return badRequest(res, 'This purchase order is not awaiting delivery');
-    }
     const body = await readJsonBody(req);
     const receipts = Array.isArray(body.items) ? body.items : [];
-    const existingItems = await loadPurchaseOrderItems(id);
-    const itemsById = new Map(existingItems.map((it) => [it.id, it]));
+    const problemsIn = Array.isArray(body.problems) ? body.problems : [];
 
-    const toApply = [];
+    const asked = [];
     for (const r of receipts) {
-      const itemId = Number(r.itemId);
       const qtyReceived = Math.trunc(Number(r.qtyReceived));
       if (!qtyReceived || qtyReceived <= 0) continue;
-      const line = itemsById.get(itemId);
-      if (!line) return badRequest(res, `Purchase order line ${itemId} not found`);
-      const outstanding = line.qty_ordered - line.qty_received;
-      if (qtyReceived > outstanding) {
-        return badRequest(res, `Cannot receive ${qtyReceived} of "${line.product_name}" - only ${outstanding} outstanding`);
-      }
-      toApply.push({ line, qtyReceived });
+      asked.push({ itemId: Number(r.itemId), qtyReceived });
     }
-    if (toApply.length === 0) return badRequest(res, 'No quantities to receive were provided');
+    const problems = [];
+    for (const p of problemsIn) {
+      const qty = Number(p.qty);
+      if (!PROBLEM_KINDS.includes(p.kind)) return badRequest(res, 'A problem is damaged, wrong_item or missing');
+      if (!Number.isInteger(qty) || qty <= 0) return badRequest(res, 'A problem needs how many, a whole number above 0');
+      problems.push({ itemId: Number(p.itemId), kind: p.kind, qty, note: String(p.note ?? '').trim().slice(0, 500) });
+    }
+    if (asked.length === 0 && problems.length === 0) return badRequest(res, 'No quantities to receive were provided');
 
     // Same reasoning as createSale's shopifyPushes: the HTTP calls wait until
     // after COMMIT and after the request releases its pooled connection, so
     // they hold neither this receipt's row locks nor a connection for the
     // duration of a retried Shopify request.
     const shopifyPushes = [];
+    let refusal = null;
 
     await db.exec('BEGIN');
     try {
-      for (const { line, qtyReceived } of toApply) {
-        await db.prepare('UPDATE purchase_order_items SET qty_received = qty_received + ? WHERE id = ?').run(
-          qtyReceived,
-          line.id
-        );
-        const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(line.product_id);
-        const newQty = product.stock_qty + qtyReceived;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(
-          newQty,
-          nowIso(),
-          product.id
-        );
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id) VALUES (?, ?, 'po_receipt', ?, ?)`
-        ).run(product.id, qtyReceived, `Booked in from PO #${id}${existing.reference ? ` (${existing.reference})` : ''}`, id);
-        if (product.shopify_inventory_item_id) {
-          shopifyPushes.push({ product, newQty });
+      const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) refusal = () => notFound(res, 'Purchase order not found');
+      else if (!['ordered', 'partially_received'].includes(existing.status)) {
+        refusal = () => badRequest(res, 'This purchase order is not awaiting delivery');
+      } else {
+        const itemsById = new Map((await loadPurchaseOrderItems(id)).map((it) => [it.id, it]));
+        // What each line takes from what's still to come: booked in, set
+        // aside, or missing.
+        const taken = new Map();
+        for (const { itemId, qtyReceived, qty } of [...asked, ...problems]) {
+          const line = itemsById.get(itemId);
+          if (!line) { refusal = () => badRequest(res, `Purchase order line ${itemId} not found`); break; }
+          taken.set(itemId, (taken.get(itemId) ?? 0) + (qtyReceived ?? qty));
+        }
+        for (const [itemId, n] of refusal ? [] : taken) {
+          const line = itemsById.get(itemId);
+          const outstanding = line.qty_ordered - line.qty_received;
+          if (n > outstanding) {
+            refusal = () => badRequest(res, `Cannot receive ${n} of "${line.product_name}" - only ${outstanding} outstanding`);
+            break;
+          }
+        }
+        if (!refusal) {
+          for (const { itemId, qtyReceived } of asked) {
+            const line = itemsById.get(itemId);
+            await db.prepare('UPDATE purchase_order_items SET qty_received = qty_received + ? WHERE id = ?').run(qtyReceived, line.id);
+            const product = await db.prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING *').get(
+              qtyReceived,
+              nowIso(),
+              line.product_id
+            );
+            await db.prepare(
+              `INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id) VALUES (?, ?, 'po_receipt', ?, ?)`
+            ).run(product.id, qtyReceived, `Booked in from PO #${id}${existing.reference ? ` (${existing.reference})` : ''}`, id);
+            if (product.shopify_inventory_item_id) {
+              shopifyPushes.push({ product, newQty: product.stock_qty });
+            }
+          }
+          for (const { itemId, kind, qty, note } of problems) {
+            await db.prepare(
+              'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, kind, qty, note) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(id, itemId, itemsById.get(itemId).product_id, kind, qty, note);
+          }
+          if (asked.length > 0) {
+            const freshItems = await loadPurchaseOrderItems(id);
+            const allReceived = freshItems.every((it) => it.qty_received >= it.qty_ordered);
+            const newStatus = allReceived ? 'received' : 'partially_received';
+            await db.prepare('UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, nowIso(), id);
+          }
         }
       }
-      const freshItems = await loadPurchaseOrderItems(id);
-      const allReceived = freshItems.every((it) => it.qty_received >= it.qty_ordered);
-      const newStatus = allReceived ? 'received' : 'partially_received';
-      await db.prepare('UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, nowIso(), id);
-      await db.exec('COMMIT');
+      await db.exec(refusal ? 'ROLLBACK' : 'COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK');
       throw err;
     }
+    if (refusal) return refusal();
 
     // After the reply, from a fresh connection; a Shopify hiccup is logged and
     // never fails the receipt (firePendingShopifyPushes).

@@ -10,18 +10,27 @@ import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, order
  * Stockroom › Deliveries and orders (rs-hub, rs-hub-empty, rs-hub-staff in
  * receiving.mjs; openspec/changes/deliveries-orders). For now: the open
  * orders and + New order, for the Owner (decision 4, until "Can order
- * stock"). Receiving a delivery, To return, Products to add and Recent
- * deliveries come with the next piece; the restock list waits for answers.
+ * stock"); "A delivery arrived?" for everyone (openspec/changes/receive-delivery).
+ * To return, Products to add and Recent deliveries come later; the restock
+ * list waits for answers.
  */
 export function DeliveriesPage() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
   const orders = useQuery({ queryKey: ['purchase-orders'], queryFn: () => apiGet<Order[]>('/api/purchase-orders'), enabled: owner });
   if (session.status !== 'signed-in') return null;
-  if (!owner) return <Page><p className="m-0 text-sm text-[var(--wh-muted)]">{ONLY_OWNER}</p></Page>;
+  // Receiving comes first (decision 2), for everyone (decision 4).
+  const arrived = (
+    <Card id="t-a-delivery-arrived" title="A delivery arrived?">
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Scan each item as it comes out of the box.</p>
+      <div><Link to={ROUTES['rs-receive']} className={buttonVariants({ variant: 'accent' })}>Receive a delivery</Link></div>
+    </Card>
+  );
+  if (!owner) return <Page>{arrived}<p className="m-0 text-sm text-[var(--wh-muted)]">{ONLY_OWNER}</p></Page>;
   const open = orders.data?.filter(isOpen);
   return (
     <Page>
+      {arrived}
       <Card id="t-orders" title="Orders" action={<Link to={ROUTES['rs-order']} className={buttonVariants({ variant: 'default' })}>+ New order</Link>}>
         {orders.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the orders. Try again in a moment.</p>
           : !open ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
