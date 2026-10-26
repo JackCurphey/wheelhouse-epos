@@ -4,7 +4,7 @@
 // is collected, for a customer who said yes, at the soonest service's months,
 // when the shop opens; one per bike; checked again and written afresh when it
 // goes. Inside the shop's runWithShop throughout.
-import { pool, prepare } from '../db.js';
+import { prepare } from '../db.js';
 import { LIVE_BOOKING_STATES, effectiveHours, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
 import { channelFor, queueMessage, whyNotQueued } from './engine.js';
@@ -65,7 +65,9 @@ async function reminderVars(jobId, shopId, serviceName) {
        FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id WHERE w.id = ?`
   ).get(jobId);
-  const { rows: [shop] } = await pool.query('SELECT name FROM shops WHERE id = $1', [shopId]);
+  // On the shop's own connection, never a second one from the pool while this
+  // one is held (openspec/changes/server-stays-up-when-busy).
+  const shop = await prepare('SELECT name FROM shops WHERE id = ?').get(shopId);
   return {
     'Customer’s first name': (job?.customer_name ?? '').trim().split(/\s+/)[0],
     Bike: job?.bike_label || null,
@@ -99,7 +101,7 @@ export async function queueServiceReminder(jobId, shopId, base) {
   // The stop link is made now and kept with the message: the timer that sends
   // it has no request to make one from (stop-reminders design 2).
   const link = await messageLink(async () => {
-    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const shop = await prepare('SELECT slug FROM shops WHERE id = ?').get(shopId);
     return stopLink(base, shop.slug, job.customer_id);
   });
   const queued = await queueMessage({

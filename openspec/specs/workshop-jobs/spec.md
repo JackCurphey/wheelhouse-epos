@@ -1069,3 +1069,10 @@ kept when the job's lines are saved again.
 #### Scenario: Finished work
 - **WHEN** someone ticks a line after the work is marked ready
 - **THEN** it is refused: "This work is finished, so its work and parts can’t change. Reopen the work first."
+
+### Requirement: Staff links never wait for a second connection
+Issuing a job's link (Bike ready, booking messages, a sent quote, the private link) and a photo code for Use my phone SHALL read the shop's web address through the request's own connection.
+
+#### Scenario: a burst of private links
+- **WHEN** a shop's staff ask for 12 jobs' private links at the same moment
+- **THEN** every one is answered with a link to that shop's own pages, well within the 5-second wait

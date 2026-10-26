@@ -19,7 +19,7 @@ import {
 } from './lib/sales.js';
 // Tests import these from server.js; it keeps re-exporting them (split plan §4.1).
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
-import { currentSession } from './lib/session.js';
+import { currentSession, rememberSession, rememberCustomerSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
@@ -416,9 +416,31 @@ export async function checkDatabaseHealth(targetPool = pool) {
   }
 }
 
-const server = createServer(async (req, res) => {
+// The dispatcher's own steps (reading the address, finding an online shop or
+// a website's shop, the staff sign-in lookup) sit outside each route's try.
+// One that fails, a refused value or a pool whose 5-second wait ran out,
+// fails this one request, as a route's own error does, rather than reaching
+// the crash guard and stopping every shop (openspec/changes/
+// server-stays-up-when-busy). Nothing is held at that point: runWithShop
+// releases its connection in its own finally before an error gets here.
+const server = createServer((req, res) => {
+  dispatch(req, res).catch((err) => {
+    console.error('Request failed in the dispatcher', err);
+    if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
+    else if (!res.writableEnded) res.destroy();
+  });
+});
+
+async function dispatch(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const pathname = decodeURIComponent(url.pathname);
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    // An address with a broken escape (/%ZZ) is the asker's mistake: 400, and
+    // nothing worth a stack trace in the log.
+    return badRequest(res);
+  }
 
   // Deliberately ahead of every other branch: an orchestrator's health probe
   // must never be mistaken for a shop/storefront route (and must never wait
@@ -573,8 +595,11 @@ const server = createServer(async (req, res) => {
           await r.handler(req, res, params, url.searchParams, till);
         });
       } catch (err) {
+        // The details go to the log; a till, a website visitor and someone
+        // signing in get the same fixed words, never a database's message
+        // (server-stays-up-when-busy). Signed-in staff routes below are as before.
         console.error(err);
-        if (!res.headersSent) sendJson(res, 500, { error: err.message || 'Internal server error' });
+        if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
       }
       return;
     }
@@ -602,7 +627,7 @@ const server = createServer(async (req, res) => {
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
-          sendJson(res, 500, { error: err.message || 'Internal server error' });
+          sendJson(res, 500, { error: 'Internal server error' });
         }
         return;
       }
@@ -611,10 +636,13 @@ const server = createServer(async (req, res) => {
       if (!shop) return notFound(res, 'Shop not found');
 
       try {
+        // Which customer is asking, looked up before runWithShop takes this
+        // request's connection, so a route asking again needs no second one.
+        await rememberCustomerSession(req);
         await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, shop));
       } catch (err) {
         console.error(err);
-        sendJson(res, 500, { error: err.message || 'Internal server error' });
+        sendJson(res, 500, { error: 'Internal server error' });
       }
       return;
     }
@@ -639,13 +667,16 @@ const server = createServer(async (req, res) => {
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
-          sendJson(res, 500, { error: err.message || 'Internal server error' });
+          sendJson(res, 500, { error: 'Internal server error' });
         }
         return;
       }
 
       const ctx = await currentSession(req);
       if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+      // Looked up before runWithShop takes this request's connection; a
+      // handler asking again gets this answer, not a second connection.
+      rememberSession(req, ctx);
 
       // A handler that needs work done AFTER its pooled client goes back to
       // the pool (currently: firing Shopify inventory pushes queued by
@@ -723,7 +754,7 @@ const server = createServer(async (req, res) => {
     console.error(err);
     sendJson(res, 500, { error: 'Internal server error' });
   }
-});
+}
 
 // ---------- Graceful shutdown ----------
 
