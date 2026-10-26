@@ -18,8 +18,13 @@ Unchanged routes, one new field, and the Owner-only check:
   transaction (New order's "Mark as ordered" is one request). Mark-ordered
   and cancel check the status in the `UPDATE` itself and answer 409 when
   nothing changed (mark-ordered: not a draft; cancel: already cancelled, or
-  something booked in). A line over 100000, or a unit cost over
-  99999999.99, is a 400.
+  something booked in). Cancel changes only a draft or an ordered order
+  (`status IN ('draft', 'ordered')`) with no line booked in. The status is
+  what holds when a receipt is booked in at the same moment: the receipt
+  changes the order's row, so the cancel waits for it and re-checks the
+  status on the new row, where a check on the lines alone would be re-run
+  against the old snapshot (second review, 26 Oct). A line over 100000, or
+  a unit cost over 99999999.99, is a 400.
 - `POST /api/purchase-orders/:id/receive` stays open to everyone (decision 4:
   everyone can receive), and goes on the owner-only test's allow-list.
 - `GET /api/suppliers` and `GET /api/products?search=` are read as they are.

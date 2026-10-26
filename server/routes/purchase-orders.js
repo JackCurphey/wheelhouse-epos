@@ -238,14 +238,17 @@ export function register(route) {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
-    // Checked in the UPDATE itself, as mark-ordered is: nothing booked in and
-    // not already cancelled, so a receipt landing between a check and the
-    // cancel can't be dropped (review of 26 Oct). A received order has
-    // something booked in, so it's refused too.
+    // Checked in the UPDATE itself, as mark-ordered is: only a draft or an
+    // ordered order, with nothing booked in, so a receipt landing between a
+    // check and the cancel can't be dropped (review of 26 Oct). The status is
+    // the part that holds under a race: a receipt changes the order's row in
+    // its own transaction, so this UPDATE waits for it and then re-checks the
+    // status on the new row. The NOT EXISTS on the lines alone would be re-run
+    // against the old snapshot and pass (second review, 26 Oct).
     const changed = await db
       .prepare(
         `UPDATE purchase_orders SET status = 'cancelled', updated_at = ?
-         WHERE id = ? AND status <> 'cancelled'
+         WHERE id = ? AND status IN ('draft', 'ordered')
            AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ? AND qty_received > 0)`
       )
       .run(nowIso(), id, id);
