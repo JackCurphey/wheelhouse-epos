@@ -48,7 +48,7 @@ test('her jobs, sales and messages, newest first, each with what its row shows',
   assert.deepEqual([j.id, j.reference, j.title, j.jobDate, j.open], [job.id, job.reference, 'Standard service', '2026-09-17', true]);
   assert.ok('bookingState' in j && 'workState' in j && 'mechanicName' in j);
   const s = items.find((i) => i.kind === 'sale');
-  assert.deepEqual([s.id, s.total, s.what], [sale.id, 10, 'Inner tube × 2']);
+  assert.deepEqual([s.id, s.source, s.total, s.what], [sale.id, 'old', 10, 'Inner tube × 2']);
   const m = items.find((i) => i.kind === 'message');
   assert.deepEqual([m.name, m.channel, m.to], ['Bike ready', 'sms', '07700 900142']);
   const order = items.map((i) => i.kind);
@@ -93,4 +93,20 @@ test('a job never booked in, whose day has gone, isn’t open (review)', async (
   const items = (await history(sam.id)).body.items;
   assert.equal(items.find((i) => i.id === gone.id).open, false, 'a no-show from August');
   assert.equal(items.find((i) => i.id === coming.id).open, true, 'still to come');
+});
+
+// customer-sale-dialog design 1: both sales records, each with its source.
+test('a till sale shows in her history too, with its receipt number', async () => {
+  const sam = (await staff('/api/customers', { method: 'POST', body: { name: 'Sam Reed', phone: '07700 900143' } })).body;
+  await runWithShop(owner.shop.id, async () => {
+    const site = await prepare("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id").get();
+    const till = await prepare('INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?) RETURNING id').get(site.id, 'B1', 'Till 1', randomUUID());
+    const sale = (await prepare(
+      `INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, made_offline, till_clock_at, received_at, total_pence, vat_pence, customer_id)
+       VALUES (?, ?, ?, 12, false, now(), now(), 5000, 833, ?) RETURNING id`
+    ).get(randomUUID(), till.id, site.id, sam.id)).id;
+    await prepare("INSERT INTO till_sale_lines (till_sale_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence) VALUES (?, 'Pump', 2, 2500, 5000, 2000, 833)").run(sale);
+  });
+  const { items } = (await history(sam.id)).body;
+  assert.deepEqual(items.map((i) => [i.kind, i.source, i.receiptNumber, i.total, i.what]), [['sale', 'till', 12, 50, 'Pump × 2']]);
 });

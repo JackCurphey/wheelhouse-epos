@@ -280,10 +280,14 @@ export function register(route) {
               ${JOB_MOMENT} AS at
          FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.customer_id = ?`
     ).all(zone, id);
+    // Both sales records, each with its source, so a sale opens from here
+    // (customer-sale-dialog design 1).
     const sales = await db.prepare(
-      `SELECT s.id, s.created_at, s.total,
-              (SELECT string_agg(CASE WHEN i.qty > 1 THEN i.name || ' × ' || i.qty ELSE i.name END, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = s.id) AS what
-         FROM sales s WHERE s.customer_id = ?`
+      `SELECT v.source, v.id, v.receipt_number, v.made_at AS created_at, v.total_pence,
+              CASE WHEN v.source = 'old'
+                   THEN (SELECT string_agg(CASE WHEN i.qty > 1 THEN i.name || ' × ' || i.qty ELSE i.name END, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
+                   ELSE (SELECT string_agg(CASE WHEN l.qty > 1 THEN l.description || ' × ' || l.qty ELSE l.description END, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
+         FROM all_sales v WHERE v.customer_id = ?`
     ).all(id);
     const messages = await db.prepare(
       `SELECT id, template_key, channel, to_address, coalesce(sent_at, created_at) AS at FROM customer_messages
@@ -296,7 +300,7 @@ export function register(route) {
         open: jobIsOpen(j, today),
         at: iso(j.at),
       })),
-      ...sales.map((x) => ({ kind: 'sale', id: x.id, total: Number(x.total), what: x.what ?? '', at: iso(x.created_at) })),
+      ...sales.map((x) => ({ kind: 'sale', source: x.source, id: x.id, receiptNumber: x.receipt_number ?? null, total: Number(x.total_pence) / 100, what: x.what ?? '', at: iso(x.created_at) })),
       ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
     ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
     sendJson(res, 200, { items });
