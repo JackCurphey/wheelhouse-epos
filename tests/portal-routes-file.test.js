@@ -27,8 +27,10 @@ const ROUTES = [
   "'GET', '/api/portal/:shopSlug/quotes/:id'", "'POST', '/api/portal/:shopSlug/quotes/:id/lines/:lineId/decision'",
   "'POST', '/api/portal/:shopSlug/quotes/:id/approve'", "'POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer'",
 ];
+// setCustomerSessionCookie moved to server/lib/session.js on 26 Oct, shared
+// by sign-in and the 30 days from the last visit (ask-the-shop-server design 6).
 const HELPERS = [
-  'setCustomerSessionCookie', 'clearCustomerSessionCookie', 'portalLoginLimiter', 'portalSignupLimiter',
+  'clearCustomerSessionCookie', 'portalLoginLimiter', 'portalSignupLimiter',
   'portalGuestBookingLimiter', 'bookingLinkLimiter', 'CUSTOMER_ACTIONABLE', 'customerTooLate', 'customerCanAct',
   'serializePortalBooking', 'CUSTOMER_REFUSALS', 'customerActionRefusal', 'bookedServices', 'answerNoteLine',
   'bookingNotes', 'checkCustomerTime', 'REUSED_KEY', 'replayBookingRequest', 'resolveBookingLink',
@@ -42,6 +44,7 @@ test('server/routes/portal.js registers the customer account and read routes', (
   const portal = read(FILE);
   assert.deepEqual(ROUTES.filter((r) => !portal.includes(`route(${r}`)), []);
   assert.deepEqual(HELPERS.filter((name) => !defines(portal, name)), []);
+  assert.ok(defines(read('server/lib/session.js'), 'setCustomerSessionCookie'), 'the customer cookie is set in one place');
 });
 
 test('server/server.js keeps none of them', () => {

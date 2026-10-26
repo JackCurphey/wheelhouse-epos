@@ -18,6 +18,11 @@ import { pool, prepare } from './db.js';
 import { hashPassword, verifyPassword, EMAIL_RE } from './auth.js';
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// Signed in for 30 days from the last visit (Jack, 26 Oct, day answers 2.2;
+// openspec/changes/ask-the-shop-server design 6): a session used with less
+// than this left is renewed to the full 30 days, so a visit writes at most
+// about once a day, not on every request.
+const RENEW_BELOW_MS = 29 * 24 * 60 * 60 * 1000;
 
 export class CustomerAuthError extends Error {}
 
@@ -136,7 +141,8 @@ export async function getCustomerSessionContext(token) {
   if (!token) return null;
   const { rows: [session] } = await pool.query('SELECT * FROM customer_sessions WHERE token = $1', [token]);
   if (!session) return null;
-  if (new Date(session.expires_at).getTime() < Date.now()) {
+  const left = new Date(session.expires_at).getTime() - Date.now();
+  if (left < 0) {
     await pool.query('DELETE FROM customer_sessions WHERE token = $1', [token]);
     return null;
   }
@@ -144,6 +150,11 @@ export async function getCustomerSessionContext(token) {
   if (!login || !login.active) return null;
   const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE id = $1', [login.shop_id]);
   if (!shop) return null;
+  // `renewed`: the caller sets the cookie again, as its own Max-Age counts from sign-in.
+  if (left < RENEW_BELOW_MS) {
+    await pool.query('UPDATE customer_sessions SET expires_at = $2 WHERE token = $1', [token, new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString()]);
+    return { login, shop, renewed: true };
+  }
   return { login, shop };
 }
 

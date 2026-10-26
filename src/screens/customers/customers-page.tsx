@@ -13,7 +13,8 @@ import { ROUTES } from '@/staff/routes.ts';
  * customer.mjs; customer service review 3, 5 and 12;
  * openspec/changes/customers-list): the recent customers, with the header
  * search for anyone else, and Add a customer, which shows a customer who
- * already has the phone or email before anyone is added twice.
+ * already has the phone or email before anyone is added twice. A customer
+ * can be a company or club (cs-add-company; openspec/changes/company-customers).
  */
 type Recent = { id: number; name: string; phone: string | null; email: string | null; bikeLabel: string | null };
 type Group = { id: number; name: string };
@@ -59,6 +60,37 @@ export function OnOff({ on, labelledBy, onChange }: { on: boolean; labelledBy: s
   );
 }
 
+/** "This is" (cs-add-company): a person, or a company or club. */
+export const WHO = [{ value: 'person', label: 'A person' }, { value: 'company', label: 'A company or club' }];
+export type Who = 'person' | 'company';
+
+/** A company's name and contact, in place of Name (cs-add-company). */
+export function CompanyNames({ prefix, name, contact, onName, onContact }: { prefix: string; name: string; contact: string; onName: (v: string) => void; onContact: (v: string) => void }) {
+  return (
+    <>
+      <Field id={`${prefix}-company`} label="Company or club name" value={name} onChange={onName} placeholder="e.g. the club’s name" />
+      <Field id={`${prefix}-contact`} label="Contact name" value={contact} onChange={onContact} placeholder="Who we deal with" />
+    </>
+  );
+}
+/**
+ * A company's VAT number and Send invoices to, after the address
+ * (cs-add-company). `optional` adds "(optional)", as Add labels its optional
+ * boxes and Edit doesn't.
+ */
+export function CompanyInvoice({ prefix, optional, vat, invoice, onVat, onInvoice, className }: { prefix: string; optional: boolean; vat: string; invoice: string; onVat: (v: string) => void; onInvoice: (v: string) => void; className: string }) {
+  const o = optional ? ' (optional)' : '';
+  return (
+    <div className={className}>
+      <Field id={`${prefix}-vat`} label={`VAT number${o}`} value={vat} onChange={onVat} placeholder="For VAT invoices" />
+      <Field id={`${prefix}-invoice`} label={`Send invoices to${o}`} type="email" value={invoice} onChange={onInvoice} placeholder="The contact’s email if blank" />
+    </div>
+  );
+}
+/** What's missing from a company's names, in the pop-up's words, or null. */
+export const companyProblem = (name: string, contact: string) =>
+  !name.trim() ? 'Add the company or club’s name.' : !contact.trim() ? 'Add the contact’s name.' : null;
+
 /** The phone or email typed, once typing pauses, matched against the shop's customers (cs-add-match). */
 function useMatch(phone: string, email: string) {
   const [asked, setAsked] = useState({ phone: '', email: '' });
@@ -79,7 +111,7 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const groups = useQuery({ queryKey: ['customer-groups'], queryFn: () => apiGet<Group[]>('/api/customer-groups') });
-  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', postcode: '', notes: '', group: 'none', offers: false });
+  const [form, setForm] = useState({ who: 'person' as Who, name: '', contactName: '', vatNumber: '', invoiceEmail: '', phone: '', email: '', address: '', postcode: '', notes: '', group: 'none', offers: false });
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -89,7 +121,9 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
   const matchedBy = match && form.email.trim() && match.email?.trim().toLowerCase() === form.email.trim().toLowerCase() ? 'email address' : 'number';
 
   async function add() {
-    if (!form.name.trim()) { setProblem('Add their name.'); return; }
+    const company = form.who === 'company';
+    const missing = company ? companyProblem(form.name, form.contactName) : !form.name.trim() ? 'Add their name.' : null;
+    if (missing) { setProblem(missing); return; }
     if (!form.phone.trim() && !form.email.trim()) { setProblem('A phone number or an email — at least one.'); return; }
     setProblem(null);
     setBusy(true);
@@ -97,6 +131,7 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
       const made = await apiMutate<{ id: number }>('/api/customers', {
         name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(), address: form.address.trim(), postcode: form.postcode.trim(),
         notes: form.notes.trim(), marketingPermission: form.offers, groupIds: form.group === 'none' ? [] : [Number(form.group)],
+        ...(company ? { isCompany: true, contactName: form.contactName.trim(), vatNumber: form.vatNumber.trim(), invoiceEmail: form.invoiceEmail.trim() } : {}),
       });
       void queryClient.invalidateQueries({ queryKey: ['recent-customers'] });
       navigate(customerHref(made.id));
@@ -117,7 +152,10 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
-        <Field id="add-name" label="Name" value={form.name} onChange={set('name')} placeholder="First and last name" />
+        <PillGroup legend="This is" value={form.who} onChange={(v) => setForm((f) => ({ ...f, who: v as Who }))} options={WHO} />
+        {form.who === 'company'
+          ? <CompanyNames prefix="add" name={form.name} contact={form.contactName} onName={set('name')} onContact={set('contactName')} />
+          : <Field id="add-name" label="Name" value={form.name} onChange={set('name')} placeholder="First and last name" />}
         <div className={two}>
           <Field id="add-phone" label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
           <Field id="add-email" label="Email" type="email" value={form.email} onChange={set('email')} />
@@ -136,6 +174,9 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
           <Field id="add-address" label="Address (optional)" value={form.address} onChange={set('address')} />
           <Field id="add-postcode" label="Postcode (optional)" value={form.postcode} onChange={set('postcode')} />
         </div>
+        {form.who === 'company'
+          ? <CompanyInvoice prefix="add" optional className={two} vat={form.vatNumber} invoice={form.invoiceEmail} onVat={set('vatNumber')} onInvoice={set('invoiceEmail')} />
+          : null}
         {groups.data?.length ? (
           <PillGroup legend="Group (optional)" value={form.group} onChange={set('group')}
             options={[{ value: 'none', label: 'None' }, ...groups.data.map((g) => ({ value: String(g.id), label: g.name }))]} />

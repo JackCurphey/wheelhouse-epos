@@ -17,7 +17,10 @@ import type { BookingStage } from './pending-query.ts';
  * docs/decisions/2026-10-26-customer-account.md). Her bikes, her details and
  * how the shop contacts her, and one history: what's on now, then earlier,
  * newest first. A repair opens its own page by her sign-in (job-<id>).
- * Not built yet, so not shown: Ask the shop a question, store credit,
+ * "Ask the shop a question" and the history's one Messages row open her
+ * conversation with the shop (openspec/changes/ask-the-shop-screens design 2;
+ * ac-account-asked).
+ * Not built yet, so not shown: store credit,
  * warranty and next-service lines, adding a bike, changing details, a
  * purchase's receipt, and Your data.
  */
@@ -31,11 +34,14 @@ type Repair = {
   stage: BookingStage; workStarted: boolean; jobDate: string; totalPence: number | null; at: string;
 };
 type Purchase = { kind: 'purchase'; source: string; id: number; receiptNumber: number | null; what: string; totalPence: number; at: string };
-type Item = Repair | Purchase;
+// Her one conversation with the shop (day answers 2.3): one row, by its newest message.
+type Messages = { kind: 'messages'; at: string; shopReplied: boolean };
+type Item = Repair | Purchase | Messages;
 
 const ENDED: BookingStage[] = ['collected', 'cancelled', 'declined', 'request_expired'];
 // Not a type guard: a repair that has ended is still a Repair.
-const isNow = (i: Item) => i.kind === 'repair' && !ENDED.includes(i.stage);
+// Waiting for the shop's reply is "Now"; answered, "Earlier" (history() in account.mjs).
+const isNow = (i: Item) => (i.kind === 'repair' && !ENDED.includes(i.stage)) || (i.kind === 'messages' && !i.shopReplied);
 const EARLIER_SHOWN = 8;
 
 // "Thu 17 Sep", as the drawings and the booking page write a day.
@@ -108,7 +114,10 @@ export function AccountScreen() {
         <span className="text-sm text-[var(--wh-muted)]">
           {me.data.name ? `${me.data.name} · ` : ''}{me.data.email} · <button type="button" disabled={leaving} onClick={() => void signOut()} className="min-h-11 cursor-pointer border-0 bg-transparent p-0 font-semibold text-[var(--wh-ink)] underline">Sign out</button>
         </span>
-        {bookLink}
+        <div className="flex flex-wrap gap-2">
+          <Link to={`${home}/messages`} className={cn(buttonVariants({ variant: 'default' }), 'no-underline')}>Ask the shop a question</Link>
+          {bookLink}
+        </div>
       </div>
       {failed ? <p role="alert" className="m-0 mb-4 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">That didn’t go through. Check your connection and try again.</p> : null}
       {/* On a phone: bikes, history, details (ac-account phone); on a computer, bikes and details on the left, the history on the right. */}
@@ -365,19 +374,22 @@ function HistoryCard({ items, shopSlug, shopName, bookLink }: { items: Item[]; s
       </Card>
     );
   }
-  const shown = items.filter((i) => filter === 'Everything' || (filter === 'Repairs') === (i.kind === 'repair'));
+  // The conversation shows under Everything only, as drawn.
+  const shown = items.filter((i) => filter === 'Everything' || (i.kind !== 'messages' && (filter === 'Repairs') === (i.kind === 'repair')));
   const newest = (a: Item, b: Item) => b.at.localeCompare(a.at);
-  const now = shown.filter((i): i is Repair => isNow(i)).sort(newest);
+  const row = (i: Item) => (i.kind === 'repair' ? <RepairRow key={`r${i.jobId}`} r={i} shopSlug={shopSlug} />
+    : i.kind === 'messages' ? <MessagesRow key="m" m={i} shopSlug={shopSlug} shopName={shopName} /> : <PurchaseRow key={`p${i.source}${i.id}`} p={i} />);
+  const now = shown.filter(isNow).sort(newest);
   const earlier = shown.filter((i) => !isNow(i)).sort(newest);
   const earlierShown = more ? earlier : earlier.slice(0, EARLIER_SHOWN);
   const sub = (t: string) => <h3 className="m-0 pt-3 pb-1 text-size-13 font-bold text-[var(--wh-muted)]">{t}</h3>;
   return (
     <Card id={`${idBase}-history`} title="History" aside={pills}>
       <div className="flex flex-col">
-        {now.length ? <>{sub('Now')}{now.map((r) => <RepairRow key={`r${r.jobId}`} r={r} shopSlug={shopSlug} />)}</> : null}
+        {now.length ? <>{sub('Now')}{now.map(row)}</> : null}
         {/* Not drawn: with nothing earlier yet, no heading over nothing. */}
         {earlier.length ? sub('Earlier, newest first') : null}
-        {earlierShown.map((i) => (i.kind === 'repair' ? <RepairRow key={`r${i.jobId}`} r={i} shopSlug={shopSlug} /> : <PurchaseRow key={`p${i.source}${i.id}`} p={i} />))}
+        {earlierShown.map(row)}
       </div>
       {!more && earlier.length > EARLIER_SHOWN ? (
         <div><button type="button" onClick={() => setMore(true)} className="min-h-11 cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">Show more</button></div>
@@ -403,6 +415,21 @@ function RepairRow({ r, shopSlug }: { r: Repair; shopSlug: string }) {
       {now
         ? <span className="shrink-0 rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">{chip(r)}</span>
         : r.totalPence !== null ? <span className="shrink-0 font-[family-name:var(--wh-font-mono)] text-size-15">{pounds(r.totalPence)}</span> : null}
+      <span aria-hidden="true" className="text-[var(--wh-muted)]">›</span>
+    </Link>
+  );
+}
+
+// The conversation's one row (ac-account-asked): Replied once the shop has answered, Sent while waiting.
+function MessagesRow({ m, shopSlug, shopName }: { m: Messages; shopSlug: string; shopName: string }) {
+  return (
+    <Link to={`/book/${shopSlug}/messages`} className={rowClass}>
+      <span className={kindClass}>Messages</span>
+      <span className="flex min-w-0 grow flex-col gap-0.5">
+        <span className="text-size-15 font-semibold">{`Messages with ${shopName}`}</span>
+        <span className="text-size-15 text-[var(--wh-muted)]"><span className="sm:hidden">Messages · </span>{`${shortDate(londonDate(m.at))} · ${m.shopReplied ? `${shopName} replied` : 'waiting for a reply'}`}</span>
+      </span>
+      <span className={cn('shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold', m.shopReplied ? 'bg-[var(--wh-status-complete-bg)] text-[var(--wh-status-complete-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]')}>{m.shopReplied ? 'Replied' : 'Sent'}</span>
       <span aria-hidden="true" className="text-[var(--wh-muted)]">›</span>
     </Link>
   );

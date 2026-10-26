@@ -44,6 +44,13 @@ export default {
     '[Bike] · Collected Cycle to Work · Quote [quote number] · collected [date] · receipt ›': go('cw-customer-view'),
     'Message Note on WH-1042 [date] · North Street Cycles replied Replied ›': NOTE_ANSWERED,
     'Note on WH-1042 Message · [date] · North Street Cycles replied Replied ›': NOTE_ANSWERED,
+    // One conversation per customer (Jack, 26 Oct, day answers 2.3 and 8): one history row.
+    'Messages Messages with North Street Cycles [date] · North Street Cycles replied Replied ›': QUESTION,
+    'Messages with North Street Cycles Messages · [date] · North Street Cycles replied Replied ›': QUESTION,
+    'Messages Messages with North Street Cycles [date] · waiting for a reply Sent ›': go('ac-account-question-sent'),
+    'Messages with North Street Cycles Messages · [date] · waiting for a reply Sent ›': go('ac-account-question-sent'),
+    // A repair note in the conversation opens its repair (day answers 2.5).
+    'About WH-1042 ›': JOB_IN_SHOP,
     'Message [The first line of Maya’s question] [date] · North Street Cycles replied Replied ›': QUESTION,
     '[The first line of Maya’s question] Message · [date] · North Street Cycles replied Replied ›': QUESTION,
     'Message [The first line of Maya’s question] [date] · waiting for a reply Sent ›': QUESTION_WAITING,
@@ -56,8 +63,8 @@ export default {
     'Open the job': go('job-overview'),
     'Needs a reply: Maya Patel': go('ac-inbox'),
     'Maya Patel': go('ac-inbox-sent'),
-    // Coverage walks, answer 3: Maya's question from her account is a line on Messages.
-    'Needs a reply: Maya Patel · Question from her account': go('ac-inbox', 'Showing Maya’s job note: her question from her account reads the same, with no bike or job, and the reply says “Sent to Maya by text, with a link to her question” (see the lines below).'),
+    // One conversation per customer (day answers 8.2): another customer's message from their account.
+    'Needs a reply: [Another customer]': go('ac-inbox', 'Showing Maya’s conversation: another customer’s reads the same, and a reply to a message from their account says “Sent to [them] by text, with a link to their messages”.'),
     '[Customer name]': notDrawn('Another customer’s answered question, opened in Messages'),
     'Oliver Chen': notDrawn('Oliver Chen’s answered conversation, opened in Messages'),
     'Messages · needs a reply 2': go('ac-inbox-list'),
@@ -84,7 +91,12 @@ export default {
     'Move Safety check — drag, or use the arrow keys': STAY,
     'Sign in to your account': go('cust-signin'),
   },
-  'ac-ask': { 'Send question': go('ac-account-question-sent') },
+  // In the staff inbox, a repair note's "About WH-1042" opens the job (day answers 8.2).
+  'ac-inbox': { 'About WH-1042 ›': go('job-overview') },
+  'ac-inbox-sent': { 'About WH-1042 ›': go('job-overview') },
+  'ac-reply-text': { 'About WH-1042 ›': go('job-overview') },
+  'ac-ask': { 'Send question': go('ac-account-question-sent'), Send: go('ac-account-question-sent') },
+  'ac-account-question-sent': { Send: STAY },
   'ac-question': { Send: STAY },
   'ac-job-note': { 'Send note': go('ac-job-note-sent') },
   'ac-job-note-sent': { Send: STAY },

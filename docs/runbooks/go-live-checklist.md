@@ -153,8 +153,9 @@ Q12: "these are done before switch-over".
   is turned on that morning, `docs/decisions/2026-10-02-ux-walkthrough.md`).
 - [ ] **Equipment**: the Stripe Reader S700 and a phone that can share its
   connection; receipt and label printers through
-  the browser and the existing print agent (the printer half of P00b is
-  still open, `docs/decisions/2026-09-23-p00b-scanner-evidence.md`);
+  the browser only (the print agent was removed on 26 Oct, Jack's decision,
+  `docs/decisions/2026-10-26-day-answers.md` section 5; the printer half of
+  P00b is still open, `docs/decisions/2026-09-23-p00b-scanner-evidence.md`);
   scanners set to a UK keyboard layout.
 - [ ] **The shop's staff ready** (Jack, 16 Oct): before switch-over, they practise on
   the online test copy (North Street Cycles, test data only) from a short

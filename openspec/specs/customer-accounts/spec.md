@@ -65,7 +65,7 @@ A signed-in customer SHALL be able to see their repairs, each with its stage and
 - **THEN** her history lists both, newest first
 
 ### Requirement: The account page
-A signed-in customer SHALL have an account page at their shop, "Your account", showing their name and email with Sign out, their bikes with any repair in now, their details and how the shop contacts them, and their history. Signed out, the page SHALL send the customer to sign in and back.
+A signed-in customer SHALL have an account page at their shop, "Your account", showing their name and email with Sign out, "Ask the shop a question" and "Book a repair", their bikes with any repair in now, their details and how the shop contacts them, and their history. "Ask the shop a question" SHALL open their conversation with the shop. Signed out, the page SHALL send the customer to sign in and back.
 
 #### Scenario: Maya's account
 - **WHEN** Maya, signed in, opens her account with her Trek in the shop
@@ -78,6 +78,10 @@ A signed-in customer SHALL have an account page at their shop, "Your account", s
 #### Scenario: signed out
 - **WHEN** someone not signed in opens the account
 - **THEN** they are taken to sign in, and back to the account after
+
+#### Scenario: asking the shop
+- **WHEN** Maya chooses "Ask the shop a question"
+- **THEN** her conversation, "Messages with North Street Cycles", opens
 
 ### Requirement: The account's history
 The account's history SHALL list the customer's repairs and purchases, filtered by Everything, Repairs or Purchases, with what's open now first and the rest newest first, eight at a time. A repair SHALL open its own page.
@@ -137,3 +141,58 @@ Once something is stopped, the stop page SHALL say "Want to change anything else
 #### Scenario: after stopping reminders
 - **WHEN** Maya stops service reminders from a link
 - **THEN** the page offers "Sign in to your account", which returns her to her account once signed in
+
+### Requirement: A signed-in customer has one conversation with the shop
+A signed-in customer SHALL have one running conversation with the shop, "Messages with [shop]", holding their messages, their notes on each of their repairs (each marked "About [job number]" and opening that repair) and the shop's replies, oldest first. They SHALL be able to send a message of up to 1,000 letters. Only the signed-in customer SHALL read or write their conversation, at their own shop, and a message sent from another website SHALL be refused (day answers 2.1, 2.3, 2.5 and 8.1).
+
+#### Scenario: Maya asks a question
+- **WHEN** Maya, signed in at North Street Cycles, sends a message from "Ask the shop a question"
+- **THEN** it joins her conversation after her note about WH-1042, and the shop sees it needs a reply
+
+#### Scenario: someone else
+- **WHEN** another customer, or a session from another shop, asks for Maya's conversation
+- **THEN** they get only their own, or are told they aren't signed in
+
+#### Scenario: from another website
+- **WHEN** a message is sent to Maya's conversation from another website
+- **THEN** it is refused and nothing is added
+
+### Requirement: The account's history has one row for the conversation
+The account's history SHALL have one "Messages with [shop]" item when the customer has any message or note, dated by the newest message and saying whether the shop has replied (`ac-account-asked`). On the account page it SHALL show under Everything as one row, kind "Messages": "[date] · [shop] replied" with Replied under Earlier, or "[date] · waiting for a reply" with Sent under Now, opening the conversation.
+
+#### Scenario: the shop has replied
+- **WHEN** Jo has answered Maya's newest message
+- **THEN** her history has "Messages with North Street Cycles", "North Street Cycles replied" and Replied, under Earlier, opening her conversation
+
+### Requirement: A customer stays signed in for 30 days from their last visit
+A customer's sign-in SHALL last 30 days from the last time they used it on that phone or computer, not 30 days from signing in (day answers 2.2). Renewing SHALL not write on every request: a session is renewed when used with less than 29 days left. A sign-in unused for 30 days SHALL end.
+
+#### Scenario: a regular customer
+- **WHEN** Maya signed in 10 days ago and opens her account
+- **THEN** she stays signed in for 30 days from today
+
+#### Scenario: away too long
+- **WHEN** Maya hasn't used her sign-in for more than 30 days
+- **THEN** she is asked to sign in again
+
+### Requirement: The conversation page
+A signed-in customer SHALL have a page "Messages with [shop]" at `/book/[shop]/messages`, with "Your account" back and their conversation oldest first: their own on the right, the shop's on the left, each repair note marked "About WH-[n]" and opening that repair. Signed out, it SHALL go to sign in and back (`ac-ask`, `ac-account-question-sent`, `ac-question`; day answers 2 and 8.1).
+
+#### Scenario: signed out
+- **WHEN** Maya opens her messages without being signed in
+- **THEN** she goes to sign in, and comes back to her messages after
+
+#### Scenario: a note on a repair
+- **WHEN** Maya's conversation has her note on WH-1042
+- **THEN** it is marked "About WH-1042 ›", which opens that repair
+
+#### Scenario: too many at once
+- **WHEN** the shop refuses a message because too many were sent at once
+- **THEN** the page shows the shop's words: "That’s a lot of messages at once. Try again in a few minutes."
+
+### Requirement: Sending a message
+The conversation page SHALL have a box with Send and "We'll let you know when [shop] replies." The box SHALL read "Ask the shop a question" while there are no messages and "Your message" after. After sending, the page SHALL say "Sent. We'll let you know when [shop] replies."
+
+#### Scenario: Maya asks a question
+- **WHEN** Maya writes in "Ask the shop a question" and sends it
+- **THEN** her message joins the thread on the right, and "Sent. We'll let you know when North Street Cycles replies." is announced
