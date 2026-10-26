@@ -358,6 +358,7 @@ export function CustomerPage() {
   const customer = useQuery({ queryKey: ['customer', id], queryFn: () => apiGet<Customer>(`/api/customers/${id}`), retry: false, enabled: known });
   const bikes = useQuery({ queryKey: ['customer-bikes', id], queryFn: () => apiGet<Bike[]>(`/api/customers/${id}/bikes`), enabled: known });
   const [editing, setEditing] = useState(false);
+  const [addingBike, setAddingBike] = useState(false);
   const back = <Link to={ROUTES.customers} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Customers</Link>;
   if (!known || customer.isError) {
     return <div className="flex flex-col gap-2.5">{back}<p role="alert" className="m-0 text-sm">{!known || (customer.error instanceof ApiError && customer.error.status === 404) ? 'There’s no such customer.' : 'Wheelhouse couldn’t load this customer. Try again in a moment.'}</p></div>;
@@ -399,7 +400,7 @@ export function CustomerPage() {
               </div>
             ) : null}
           </Section>
-          <Section id="h-bikes" title="Bikes">
+          <Section id="h-bikes" title="Bikes" action={<button type="button" aria-label="Add a bike" onClick={() => setAddingBike(true)} className="min-h-11 px-2 text-sm font-semibold underline">+ Add</button>}>
             {bikes.data?.length ? (
               <ul className="m-0 list-none p-0">
                 {bikes.data.map((b) => (
@@ -424,6 +425,57 @@ export function CustomerPage() {
         <History id={c.id} />
       </div>
       {editing ? <EditCustomer customer={c} onClose={() => setEditing(false)} /> : null}
+      {addingBike ? <AddBike customerId={c.id} onClose={() => setAddingBike(false)} /> : null}
     </div>
+  );
+}
+
+/**
+ * Add a bike from the customer's page (openspec/changes/add-a-bike design 1;
+ * cs-page's "+ Add"; not-drawn pages 17 and 23): the new-job dialog's bike
+ * form, in a box of its own.
+ */
+function AddBike({ customerId, onClose }: { customerId: number; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [bike, setBike] = useState({ make: '', model: '', colour: '', serialNumber: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (key: keyof typeof bike) => (v: string) => setBike((b) => ({ ...b, [key]: v }));
+
+  async function add() {
+    if (!bike.make.trim() && !bike.model.trim()) { setError('Enter a make or a model.'); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await apiMutate(`/api/customers/${customerId}/bikes`, {
+        make: bike.make.trim(), model: bike.model.trim(), colour: bike.colour.trim(), serialNumber: bike.serialNumber.trim(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ['customer-bikes', customerId] });
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Wheelhouse couldn’t add the bike. Try again in a moment.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="add-bike-title" className="md:max-w-[520px]">
+      <DialogHeader><DialogTitle id="add-bike-title">Add a bike</DialogTitle></DialogHeader>
+      <DialogBody className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2.5">
+          <div className="flex-1"><Field id="ab-make" label="Make" placeholder="e.g. Trek" value={bike.make} onChange={set('make')} /></div>
+          <div className="flex-1"><Field id="ab-model" label="Model" placeholder="e.g. FX2" value={bike.model} onChange={set('model')} /></div>
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          <div className="flex-1"><Field id="ab-colour" label="Colour" value={bike.colour} onChange={set('colour')} /></div>
+          <div className="flex-1"><Field id="ab-serial" label="Serial number" value={bike.serialNumber} onChange={set('serialNumber')} /></div>
+        </div>
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="flex justify-end gap-2.5">
+        <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={busy} onClick={() => void add()}>Add bike</Button>
+      </DialogFooter>
+    </Dialog>
   );
 }

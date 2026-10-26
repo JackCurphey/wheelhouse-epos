@@ -961,6 +961,9 @@ export function register(route) {
   });
 
   route('POST', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
+    // An action from another website is refused, as the account's job actions are (add-a-bike design 3).
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
     const ctx = await currentCustomerSession(req);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);

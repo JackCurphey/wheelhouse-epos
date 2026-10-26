@@ -29,10 +29,10 @@ const LINK = {
   services: [{ name: 'Brake service', price: 20 }, { name: 'Gear service', price: 25 }], totalPrice: 45,
 };
 
-const open = async (bookingLink = LINK) => {
+const open = async (bookingLink = LINK, code = CODE) => {
   current = await renderBookScreen({
     file: 'screens/book/pending.js', exportName: 'PendingScreen', at: 'booking/:code',
-    url: `/book/north/booking/${CODE}`, services: SERVICES, bookingLink,
+    url: `/book/north/booking/${code}`, services: SERVICES, bookingLink,
   });
   return current;
 };
@@ -276,3 +276,15 @@ test('a bike in the workshop no longer has the first release’s page (21 Oct, p
   assert.ok(ui.queryByText('Reference') === null);
   assert.ok(ui.queryByText('Booking confirmed') === null);
 });
+
+// A repair opened from the customer's account (job-<id>) works only for them
+// signed in, so there's no link to keep: back to the account instead
+// (customer-account-screens follow-up; not drawn, as qa-question's "Your account").
+test('opened from the account, no link to keep: a way back to the account', async () => {
+  const { ui } = await open(LINK, 'job-42');
+  assert.ok(await oldPage(ui));
+  assert.ok(ui.queryByText('Keep this link to check your booking') === null);
+  assert.ok(ui.queryByRole('button', { name: 'Copy link' }) === null);
+  assert.equal(ui.getByRole('link', { name: 'Your account' }).getAttribute('href'), '/book/north/account');
+});
+
