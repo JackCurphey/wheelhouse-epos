@@ -4,4 +4,4 @@
 - [x] 1.2 `NumberSetting`'s `disabled` prop; both How much boxes pass `saving`
 - [x] 1.3 Broke the fix on purpose: the screen test failed, and the browser test with the answer held back saved `{"depositPercent":15}`; restored
 - [x] 1.4 `tests/browser/deposit-settings.spec.ts` passes 10 runs in a row; lint
-- [ ] 1.5 Self-review; `npm test`, `npm run test:browser`; archive as the last commit
+- [x] 1.5 Self-review; `npm test`, `npm run test:browser`; archive as the last commit
