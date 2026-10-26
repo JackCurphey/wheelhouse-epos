@@ -10,8 +10,10 @@
   multiplied as decimals, so 1 × 10p + 1 × 20p is 30 pence, not
   29.999… (`parseTotal` splits "0.29" at the point rather than working out
   0.29 × 100, which is 28.999… in floating point).
-- `src/components/ui/note-coin-counter.tsx`: `NoteCoinCounter`, beside the
-  other shared parts (the day diary, the month calendar). It has no server
+- `src/screens/till/note-coin-counter.tsx`: `NoteCoinCounter`, with the
+  till's other parts (the pay box, the receipt). Not in `src/components/ui/`:
+  that folder holds only installed copies of the booking pages' registry
+  controls (tests/customer/installed-controls.test.js). It has no server
   and no route; the float check and Close the day place it.
 
 ## The contract (a note for the reader)

@@ -7,7 +7,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 
-const COUNTER = new URL('../../.test-build/components/ui/note-coin-counter.js', import.meta.url).href;
+const COUNTER = new URL('../../.test-build/screens/till/note-coin-counter.js', import.meta.url).href;
 const LABELS = ['£50', '£20', '£10', '£5', '£2', '£1', '50p', '20p', '10p', '5p', '2p', '1p'];
 // The drawing's example count (cashup.mjs EXAMPLE_COUNT): £208.70.
 const DRAWN = { '£20': '6', '£10': '5', '£5': '4', '£2': '3', '£1': '8', '50p': '6', '20p': '5', '10p': '7' };
