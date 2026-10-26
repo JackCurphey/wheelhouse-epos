@@ -48,7 +48,9 @@ async function mayasJob() {
 }
 const note = (code, text) => portal(`/booking-links/${code}/notes`, { method: 'POST', body: { text } });
 const reply = (jobId, text, who) => staff(`/api/workshop-jobs/${jobId}/notes`, { method: 'POST', body: { text } }, who);
-const conversations = async (filter = 'all') => (await staff(`/api/job-notes/conversations?filter=${filter}`)).body;
+// The inbox, one row per customer since ask-the-shop (the old per-job list is gone).
+const conversations = async (filter = 'all') => (await staff(`/api/customer-conversations?filter=${filter}`)).body;
+const mayasRow = async (filter = 'all') => (await conversations(filter)).items.find((c) => c.customerId === maya.id);
 
 test('the customer adds a note from their booking page and reads it back as theirs', async () => {
   const { job, code } = await mayasJob();
@@ -76,16 +78,15 @@ test('an empty note, or one over 1,000 letters, is refused; a wrong code reads n
   assert.equal((await note('c'.repeat(64), 'Hello')).status, 404);
 });
 
-test('the inbox lists a conversation per job, and the customer’s newest note needs a reply', async () => {
+test('the customer’s newest note puts her conversation under Needs a reply, about its job', async () => {
   const { job, code } = await mayasJob();
   await note(code, 'First note');
   await note(code, 'Second note');
-  const row = (await conversations('needs-reply')).items.find((c) => c.jobId === job.id);
+  const row = await mayasRow('needs-reply');
   assert.ok(row, 'listed under Needs a reply');
   assert.equal(row.needsReply, true);
   assert.equal(row.customerName, 'Maya Patel');
-  assert.equal(row.bikeLabel, 'Trek Domane AL 3');
-  assert.equal(row.reference, job.reference);
+  assert.deepEqual(row.about, { jobId: job.id, reference: job.reference, bikeLabel: 'Trek Domane AL 3' });
   assert.equal(row.lastText, 'Second note');
   assert.ok((await conversations('needs-reply')).count >= 1);
 });
@@ -96,8 +97,8 @@ test('a staff reply is saved, takes the conversation out of Needs a reply, and t
   const res = await reply(job.id, ' Yes, we’ll check it. ');
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.equal(res.body.message.status, 'sent');
-  assert.equal((await conversations('needs-reply')).items.some((c) => c.jobId === job.id), false);
-  assert.equal((await conversations('all')).items.find((c) => c.jobId === job.id).needsReply, false);
+  assert.equal(await mayasRow('needs-reply'), undefined);
+  assert.equal((await mayasRow('all')).needsReply, false);
   const told = (await staff(`/api/messages?jobId=${job.id}`)).body.find((m) => m.key === 'shop_reply');
   assert.ok(told, 'a Reply from the shop message');
   assert.match(told.body, /^Notes Cycles[^(]* replied about your Trek Domane AL 3 \(WH-\d+\): Yes, we’ll check it\. Replies to this number aren’t read — reply on your page: /);
@@ -127,7 +128,7 @@ test('a reply to a job with no notes yet starts the conversation; empty replies 
   assert.equal((await reply(job.id, '   ')).status, 400);
   assert.equal((await reply(job.id, 'x'.repeat(1001))).status, 400);
   assert.equal((await reply(job.id, 'We found a worn chain.')).status, 201);
-  assert.equal((await conversations('all')).items.find((c) => c.jobId === job.id).needsReply, false);
+  assert.equal((await mayasRow('all')).needsReply, false);
 });
 
 test('another shop can’t read or answer this shop’s notes', async () => {
@@ -135,7 +136,7 @@ test('another shop can’t read or answer this shop’s notes', async () => {
   await note(code, 'Private to Notes Cycles');
   assert.equal((await staff(`/api/workshop-jobs/${job.id}/notes`, undefined, other)).status, 404);
   assert.equal((await reply(job.id, 'Hello from elsewhere', other)).status, 404);
-  assert.equal((await staff('/api/job-notes/conversations?filter=all', undefined, other)).body.items.some((c) => c.lastText === 'Private to Notes Cycles'), false);
+  assert.equal((await staff('/api/customer-conversations?filter=all', undefined, other)).body.items.some((c) => c.lastText === 'Private to Notes Cycles'), false);
   assert.equal((await portal(`/booking-links/${code}/notes`, {}, other)).status, 404);
 });
 
@@ -195,10 +196,15 @@ test('Settings’ preview of Reply from the shop shows a reply', async () => {
 test('All lists conversations needing a reply first, then the newest', async () => {
   const waiting = await mayasJob();
   await note(waiting.code, 'Older, still waiting');
-  const answered = await mayasJob();
-  await note(answered.code, 'Newer');
-  await reply(answered.job.id, 'Answered just now');
+  const oliver = (await staff('/api/customers', { method: 'POST', body: { name: 'Oliver Chen', phone: '07700 900143' } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-10-28', customerId: oliver.id } })).body;
+  await reply(job.id, 'Answered just now');
   const items = (await conversations('all')).items;
-  const at = (id) => items.findIndex((c) => c.jobId === id);
-  assert.ok(at(waiting.job.id) < at(answered.job.id), 'waiting before the newer answered one');
+  const at = (id) => items.findIndex((c) => c.customerId === id);
+  assert.ok(at(oliver.id) >= 0 && at(maya.id) >= 0);
+  assert.ok(at(maya.id) < at(oliver.id), 'waiting before the newer answered one');
+});
+
+test('the old per-job inbox list is gone', async () => {
+  assert.equal((await staff('/api/job-notes/conversations?filter=all')).status, 404);
 });

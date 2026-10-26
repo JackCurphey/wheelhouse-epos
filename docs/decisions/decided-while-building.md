@@ -2700,6 +2700,90 @@ follows the job checklist, the closest pattern built.
     and Undo puts them back. A line break typed into a company's details
     stays on its line in "Invoice to".
 
+### 26 Oct 2026: the customer's conversation with the shop, the server (`openspec/changes/ask-the-shop-server`, `ac-ask`, `ac-question`, `ac-account-asked`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
+
+1. **Where messages are kept.** A general message sits with the repair notes
+   (`job_notes`), marked with its customer instead of a repair (migration
+   091, numbered 087 until 088 reached main). A repair note's customer is always its repair's, so a repair moved to
+   another customer takes its notes with it. Merging customers moves general
+   messages too, and Undo puts them back.
+2. **A note on a repair with no customer** is in nobody's conversation. It
+   stays on the repair's own page, as now.
+3. **"Needs a reply"** is the inbox's rule as before, across the whole
+   conversation: the customer's message is the newest. A shop reply about
+   anything answers it.
+4. **The staff reply box** replies about the repair of the customer's newest
+   message (a note on that repair, "Reply from the shop", linking to the
+   repair), or as a general message when theirs was general ("Reply to a
+   message", linking to the conversation). The screens follow this.
+5. **"Reply to a message"** is its name in Settings › Messages, "When staff
+   reply to a customer’s message". Its email subject isn't drawn: "[Shop
+   name] replied to your message". While sending is pretend its link reads
+   "[link]", as every message's does. The address is
+   `/book/[shop]/messages`, which asks for sign-in first.
+6. **A message is up to 1,000 letters**, as a repair note is; longer or
+   empty says "Write a message of up to 1,000 letters."
+7. **The conversation holds every repair of the customer's**, however old.
+   "About WH-1042" opens the repair through the account, which works for its
+   signed-in owner after the private link has run out.
+8. **The history's one row** is dated by the newest message, and says the
+   shop replied when the newest message is the shop's.
+9. **30 days from the last visit:** a sign-in used with less than 29 days
+   left is renewed to 30 days, and the browser's cookie with it. So it is
+   written about once a day at most.
+10. **Today's "Customers' messages waiting"** counts customers, as the inbox
+    now does.
+11. **The old inbox list** (`/api/job-notes/conversations`) stays until the
+    inbox screen moves to the new one. The screens change removes it.
+12. **After the review:** a customer can send 30 messages to the shop in
+    15 minutes; after that they're asked to try again in a few minutes, so
+    nobody can flood the inbox. A reply about one repair answers the whole
+    conversation (one conversation per customer), so it leaves "Needs a
+    reply"; a test now pins that down.
+
+
+### 26 Oct 2026: the customer's conversation with the shop, the screens (`openspec/changes/ask-the-shop-screens`, `ac-ask`, `ac-account-question-sent`, `ac-question`, `ac-account-asked`, `ac-inbox*`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
+
+1. **The conversation page's width** is the drawing's 720px column on a
+   computer, between the booking steps' phone width and the account's two
+   columns. "Your account" is the frame's back link, with its own words.
+2. **"About WH-1042 ›"** shows under every message about a repair, the
+   shop's replies about it too, as drawn for Jo's reply.
+3. **An empty box sends nothing**, as on the repair page's notes. A message
+   the shop refuses (too long, or 30 in 15 minutes) shows the shop's own
+   words; a sign-in that has run out says "Please sign in again to send
+   this."; anything else says "Wheelhouse couldn’t send that. Try again in a
+   moment."
+4. **The history's Messages row** shows under Everything only, as drawn.
+   Waiting for a reply it sits under Now, as `history()` draws it; once the
+   shop has replied it moves to Earlier, by its date. Its date reads as the
+   repairs' do ("Fri 18 Sep"). Replied is green, Sent grey, as drawn.
+5. **The inbox, redrawn one row per customer** (Jack approved one
+   conversation per customer, day answers 8.2): a row's second line is the
+   newest message's bike and job number, or "From their account" for a
+   general message. The open conversation shows the customer's name, phone
+   and "Customer page"; "Open the job" and "On the job’s page · started by
+   Maya" go, since each repair note now carries "About WH-1042", which
+   opens the job in the diary.
+6. **The reply box says what the reply is about:** "About WH-1042: goes to
+   Maya the way they chose, with a link to reply on the job’s page.", or
+   "Goes to Maya the way they chose, with a link to their messages." for a
+   general message. After sending, a general reply says "…with a link to
+   their messages.", or "Saved in the conversation, but no text went: …".
+7. **"See the text Maya gets"** for a general reply reads the newest "Reply
+   to a message" from `/api/messages?customerId=`, which gives each
+   message's kind, rather than `/api/customers/:id/texts`, which doesn't.
+8. **The old inbox list `/api/job-notes/conversations` is removed** (236
+   routes). Its tests now read the per-customer list.
+9. **The mockup's coverage checks** for walk 10 M1's "Question from her
+   account" row now check the redrawn row instead, since day answers 8.2
+   replaced it.
+10. **After the review:** the "Sent." and reply status lines are on the page
+    from the start, empty, so screen readers announce them when they fill.
+    A customer whose sign-in runs out after the page has loaded keeps the
+    page and what she's typed; sending then says "Please sign in again to
+    send this." with a "Sign in again" link back to the page.
+
 ### 26 Oct 2026: deliveries and purchase orders (`openspec/changes/deliveries-orders`, `rs-hub`, `rs-order`, `rs-order-ordered`, `rs-order-close`; WP-2.3)
 
 1. **Receiving is left out, not routed nowhere:** "A delivery arrived?" with
