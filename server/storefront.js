@@ -1,4 +1,4 @@
-import { prepare, pool, runWithShop } from './db.js';
+import { dbExec, prepare, pool, runWithShop } from './db.js';
 import { getShopifyConnection } from './shopify.js';
 
 export const THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
@@ -25,11 +25,25 @@ export async function getOrCreateStorefrontSettings() {
 }
 
 export async function updateStorefrontSettings(patch) {
-  const existing = await getOrCreateStorefrontSettings();
-
   if (patch.themePreset !== undefined && !THEME_PRESETS.includes(patch.themePreset)) {
     throw new Error(`Invalid theme preset: must be one of ${THEME_PRESETS.join(', ')}`);
   }
+  await getOrCreateStorefrontSettings();
+  // Read again FOR UPDATE inside a transaction, so two saves of different
+  // fields at the same moment both stay (settings-saves-dont-clash).
+  await dbExec('BEGIN');
+  try {
+    await writeStorefrontSettings(patch);
+    await dbExec('COMMIT');
+  } catch (err) {
+    await dbExec('ROLLBACK');
+    throw err;
+  }
+  return prepare('SELECT * FROM storefront_settings LIMIT 1').get();
+}
+
+async function writeStorefrontSettings(patch) {
+  const existing = await prepare('SELECT * FROM storefront_settings LIMIT 1 FOR UPDATE').get();
 
   const enabled = patch.enabled !== undefined ? Boolean(patch.enabled) : existing.enabled;
   const tagline = patch.tagline !== undefined ? String(patch.tagline) : existing.tagline;
@@ -43,8 +57,6 @@ export async function updateStorefrontSettings(patch) {
      SET enabled = ?, tagline = ?, description = ?, logo_url = ?, hero_image_url = ?, theme_preset = ?, updated_at = ?
      WHERE id = ?`
   ).run(enabled, tagline, description, logoUrl, heroImageUrl, themePreset, new Date().toISOString(), existing.id);
-
-  return prepare('SELECT * FROM storefront_settings LIMIT 1').get();
 }
 
 export const STOREFRONT_BASE_DOMAIN = process.env.STOREFRONT_BASE_DOMAIN || 'wheelhouseepos.com';

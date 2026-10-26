@@ -329,11 +329,13 @@ export function register(route) {
     sendJson(res, 200, serializeWorkshopSettings(row));
   });
 
-  // screens: booking-settings, hours
-  route('PUT', '/api/workshop-settings', async (req, res) => {
-    if (await ownerOnly(req, res)) return;
-    const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-    const body = await readJsonBody(req);
+  // A save: checks what was sent against the stored row and writes the row
+  // back. Called inside the PUT's transaction, with the row read FOR UPDATE,
+  // so a second save waits for this one and then starts from what it wrote:
+  // two saves of different fields at once both stay (settings-saves-dont-clash).
+  // Returns true once written; a refusal has already been sent and wrote nothing.
+  const saveWorkshopSettings = async (res, body) => {
+    const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1 FOR UPDATE').get();
     const openingTime = body.openingTime !== undefined ? String(body.openingTime).trim() : existing.opening_time;
     const closingTime = body.closingTime !== undefined ? String(body.closingTime).trim() : existing.closing_time;
     if (!HOUR_RE.test(openingTime) || !HOUR_RE.test(closingTime)) {
@@ -552,6 +554,24 @@ export function register(route) {
           collectionReminderDays, collectionTodayDays, reviewPageUrl, reviewRequestDays,
           depositOn, depositKind, depositPercent.value, depositFixed.value, depositUnknown.value, depositCancel.value,
           nowIso(), existing.id);
+    return true;
+  };
+
+  // screens: booking-settings, hours
+  route('PUT', '/api/workshop-settings', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
+    // The body is read before the lock, so a slow upload never holds the row.
+    const body = await readJsonBody(req);
+    await db.exec('BEGIN');
+    let saved;
+    try {
+      saved = await saveWorkshopSettings(res, body);
+      await db.exec(saved ? 'COMMIT' : 'ROLLBACK');
+    } catch (err) {
+      await db.exec('ROLLBACK');
+      throw err;
+    }
+    if (!saved) return;
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });
