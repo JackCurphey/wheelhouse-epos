@@ -187,18 +187,38 @@ export function register(route) {
   route('PUT', '/api/employees/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Employee not found');
+    if (!(await db.prepare('SELECT id FROM employees WHERE id = ?').get(id))) return notFound(res, 'Employee not found');
     const body = await readJsonBody(req);
-    const name = body.name !== undefined ? String(body.name).trim() : existing.name;
-    if (!name) return badRequest(res, 'Employee name is required');
-    const isMechanic = body.isMechanic !== undefined ? (body.isMechanic ? 1 : 0) : existing.is_mechanic;
-    const isCashier = body.isCashier !== undefined ? (body.isCashier ? 1 : 0) : existing.is_cashier;
-    const workingDays = resolveWorkingDays(body.workingDays, existing.working_days);
-    if (workingDays === null) return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
-    await db.prepare(
-      'UPDATE employees SET name = ?, is_mechanic = ?, is_cashier = ?, working_days = ?, updated_at = ? WHERE id = ?'
-    ).run(name, isMechanic, isCashier, workingDays, nowIso(), id);
+    // Read again FOR UPDATE inside a transaction, so a new name and new
+    // working days saved at once both stay (owner-saves-dont-clash). The
+    // checks are unchanged; a refusal rolls back, having written nothing.
+    await db.exec('BEGIN');
+    try {
+      const existing = await db.prepare('SELECT * FROM employees WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Employee not found');
+      }
+      const name = body.name !== undefined ? String(body.name).trim() : existing.name;
+      if (!name) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Employee name is required');
+      }
+      const isMechanic = body.isMechanic !== undefined ? (body.isMechanic ? 1 : 0) : existing.is_mechanic;
+      const isCashier = body.isCashier !== undefined ? (body.isCashier ? 1 : 0) : existing.is_cashier;
+      const workingDays = resolveWorkingDays(body.workingDays, existing.working_days);
+      if (workingDays === null) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
+      }
+      await db.prepare(
+        'UPDATE employees SET name = ?, is_mechanic = ?, is_cashier = ?, working_days = ?, updated_at = ? WHERE id = ?'
+      ).run(name, isMechanic, isCashier, workingDays, nowIso(), id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     const row = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
     sendJson(res, 200, serializeEmployee(row));
   });
