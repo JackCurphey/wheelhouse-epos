@@ -110,3 +110,14 @@ export function continueError(data: ServicesResponse, ticked: number[]): string 
   if (totalMinutes(data, ticked) > MAX_MINUTES) return "That's too much work for one visit - please book the jobs separately";
   return null;
 }
+
+/**
+ * The search over many single jobs (openspec/changes/booking-search-unavailable,
+ * design 2): a name matches when it has every word typed, in any order,
+ * ignoring case. Nothing typed matches everything.
+ */
+export function matchesSearch(name: string, text: string): boolean {
+  const have = name.toLowerCase();
+  return text.toLowerCase().split(/\s+/).filter(Boolean).every((word) => have.includes(word));
+}
+

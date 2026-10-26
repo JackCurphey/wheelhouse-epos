@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { Search } from 'lucide-react';
 import { ChoiceCard } from '@/components/ui/choice-card';
 import { cn } from '@/lib/utils';
 import { BookFrame } from './frame.tsx';
 import { useDraft } from './draft.tsx';
 import { useServices, type PortalService, type PortalFullService } from './services-query.ts';
 import {
-  continueError, formatFrom, includesLine, lockedBy, notSurePatch, savedServices, summary, toggle, type Notice,
+  continueError, formatFrom, includesLine, lockedBy, matchesSearch, notSurePatch, savedServices, summary, toggle, type Notice,
 } from './service-selection.ts';
 
 /**
@@ -14,10 +15,16 @@ import {
  * "Other", ticked with a Continue button (Jack, 26 Sep). A ticked full service
  * greys out and locks what it includes (hint and lock). Prices read "From £X"
  * under a parts note when the shop shows prices. ?start=full|individual
- * scrolls to that section on arrival.
- * Spec: docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md
+ * scrolls to that section on arrival. A shop with more than 8 single jobs
+ * gets a search box above them (bk-service-many); it hides cards only, so a
+ * ticked job stays ticked while hidden.
+ * Spec: docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md,
+ * openspec/changes/booking-search-unavailable
  */
 type Section = { key: string; heading: string; services: (PortalService | PortalFullService)[]; individual: boolean };
+
+// More single jobs than this gets the search box (design 1; not drawn, about one phone screen of cards).
+const SEARCH_FROM = 8;
 
 export function ServiceListScreen() {
   const { shopSlug = '' } = useParams();
@@ -33,6 +40,7 @@ export function ServiceListScreen() {
   // only re-announced when its content changes or it's new, and unchanged
   // text otherwise goes unheard the second time (M2).
   const [attempt, setAttempt] = React.useState(0);
+  const [search, setSearch] = React.useState('');
   const fullHeading = React.useRef<HTMLHeadingElement>(null);
   const individualHeading = React.useRef<HTMLHeadingElement>(null);
   const start = params.get('start');
@@ -46,12 +54,31 @@ export function ServiceListScreen() {
 
   if (!data) return <BookFrame step={1} title="Choose your services" back={`/book/${shopSlug}`}>{null}</BookFrame>;
 
-  const sections: Section[] = [
+  const singleCount = data.categories.reduce((n, c) => n + c.services.length, 0) + data.uncategorised.length;
+  const searchable = singleCount > SEARCH_FROM;
+  const allSections: Section[] = [
     { key: 'full', heading: 'Full services', services: data.full, individual: false },
     ...data.categories.map((c) => ({ key: `c${c.id}`, heading: c.name, services: c.services, individual: true })),
     { key: 'other', heading: 'Other', services: data.uncategorised, individual: true },
-  ].filter((s) => s.services.length > 0);
+  ];
+  const sections = allSections
+    .map((s) => (s.individual && searchable ? { ...s, services: s.services.filter((x) => matchesSearch(x.name, search)) } : s))
+    .filter((s) => s.services.length > 0);
   const firstIndividual = sections.find((s) => s.individual)?.key;
+  const noMatch = searchable && search.trim() !== '' && !firstIndividual;
+  const searchBox = searchable ? (
+    <label className="mb-4 flex min-h-12 items-center gap-2 rounded-lg border border-[var(--input)] bg-[var(--wh-panel)] px-3 text-[var(--wh-muted)]">
+      <Search aria-hidden="true" size={16} />
+      <input
+        type="search"
+        aria-label="Search the individual services"
+        placeholder={`Search ${singleCount} individual services — like “brakes” or “puncture”`}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="min-w-0 grow border-0 bg-transparent text-size-15 text-[var(--wh-ink)] outline-none"
+      />
+    </label>
+  ) : null;
 
   const tap = (id: number) => {
     const out = toggle(data, ticked, id);
@@ -94,7 +121,9 @@ export function ServiceListScreen() {
     >
       {data.showPrices && <p className="m-0 mb-3 text-sm text-[var(--wh-muted)]">Prices are for labour. Parts are quoted separately.</p>}
       {sections.map((section) => (
-        <section key={section.key} className="mb-4">
+        <React.Fragment key={section.key}>
+        {section.key === firstIndividual ? searchBox : null}
+        <section className="mb-4">
           <h2
             ref={section.key === 'full' ? fullHeading : section.key === firstIndividual ? individualHeading : undefined}
             className="m-0 mb-2 scroll-mt-4 text-base font-semibold"
@@ -124,7 +153,10 @@ export function ServiceListScreen() {
             })}
           </div>
         </section>
+        </React.Fragment>
       ))}
+      {/* With nothing matching, the box stays where the single jobs were (design 2; not drawn). */}
+      {noMatch ? <>{searchBox}<p className="m-0 mb-4 text-size-15 text-[var(--wh-muted)]">{`No single jobs match “${search.trim()}”.`}</p></> : null}
       <button type="button" className="min-h-11 text-sm text-[var(--accent-dark)] underline" onClick={notSure}>
         Not sure what you need? Describe the problem
       </button>

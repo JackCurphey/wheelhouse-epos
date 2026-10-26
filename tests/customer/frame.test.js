@@ -156,13 +156,14 @@ test('an unknown shop says so, with no shop name', async () => {
   assert.ok(ui.queryByText('Screen body') === null);
 });
 
-test('a failed load offers Try again, which recovers', async () => {
+test('a failed load says online booking is unavailable and offers Try again, which recovers (bk-unavailable)', async () => {
   const { fireEvent } = await import('@testing-library/react');
   let fail = true;
   const ui = await renderFrame({ step: 1, title: 'Tell us about your bike' }, undefined, () => (fail
     ? new Response(JSON.stringify({ error: 'boom' }), { status: 500, headers: { 'content-type': 'application/json' } })
     : new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } })));
-  assert.ok(await ui.findByRole('heading', { level: 1, name: "We couldn't load this shop's services" }));
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Online booking is unavailable just now' }));
+  assert.ok(ui.getByText('Please try again in a little while, or call the shop to book.'));
   fail = false;
   fireEvent.click(ui.getByRole('button', { name: 'Try again' }));
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Tell us about your bike' }));

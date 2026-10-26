@@ -229,3 +229,53 @@ test('the back link returns to the first screen', async () => {
   await click(ui.getByRole('link', { name: /Back/ }));
   assert.ok(await ui.findByText('At /book/north'));
 });
+
+// The search over many single jobs (openspec/changes/booking-search-unavailable; bk-service-many).
+const singles = (n) => Array.from({ length: n }, (_, i) => svc(100 + i, `Job ${i}`));
+const MANY = {
+  ...DATA,
+  categories: [
+    { id: 5, name: 'Brakes', services: [svc(11, 'Brake service', 25), svc(14, 'Brake bleed (hydraulic)', 30)] },
+    { id: 6, name: 'Wheels', services: [svc(13, 'Wheel true', 15), ...singles(5)] },
+  ],
+  uncategorised: [svc(12, 'Gear service', 22.5)],
+};
+const SEARCH = 'Search the individual services';
+
+test('8 single jobs or fewer: no search box', async () => {
+  const { ui } = await open({ services: { ...MANY, categories: [MANY.categories[0], { ...MANY.categories[1], services: MANY.categories[1].services.slice(0, 5) }] } });
+  assert.ok(ui.queryByRole('searchbox', { name: SEARCH }) === null);
+});
+
+test('more than 8: the box, its count, and typing narrows the single jobs only', async () => {
+  const { ui } = await open({ services: MANY });
+  const box = ui.getByRole('searchbox', { name: SEARCH });
+  assert.equal(box.getAttribute('placeholder'), 'Search 9 individual services — like “brakes” or “puncture”');
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.change(box, { target: { value: 'BRAKE' } });
+  assert.deepEqual(ui.getAllByRole('heading', { level: 2 }).map((h) => h.textContent), ['Full services', 'Brakes']);
+  assert.ok(card(ui, 'Brake bleed'));
+  assert.ok(card(ui, 'General service'), 'full services always show');
+  assert.ok(ui.queryByRole('button', { name: /^Wheel true/ }) === null);
+});
+
+test('a ticked job the search hides stays ticked and in the summary', async () => {
+  const { ui } = await open({ services: MANY });
+  await click(card(ui, 'Wheel true'));
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.change(ui.getByRole('searchbox', { name: SEARCH }), { target: { value: 'brake' } });
+  assert.ok(ui.queryByRole('button', { name: /^Wheel true/ }) === null);
+  assert.ok(ui.getByText('1 service · from £15'), 'still in the running summary');
+  fireEvent.change(ui.getByRole('searchbox', { name: SEARCH }), { target: { value: '' } });
+  assert.equal(card(ui, 'Wheel true').getAttribute('aria-pressed'), 'true');
+});
+
+test('nothing matching says so, and Not sure stays', async () => {
+  const { ui } = await open({ services: MANY });
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.change(ui.getByRole('searchbox', { name: SEARCH }), { target: { value: 'zzz' } });
+  assert.ok(ui.getByText('No single jobs match “zzz”.'));
+  assert.ok(ui.getByRole('button', { name: 'Not sure what you need? Describe the problem' }));
+  assert.ok(card(ui, 'General service'));
+});
+

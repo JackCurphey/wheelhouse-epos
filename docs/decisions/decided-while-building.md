@@ -2455,3 +2455,19 @@ follows the job checklist, the closest pattern built.
    Staging Redirects.
 4. **No logo** on these pages: the frame's logo slot shows the word
    Wheelhouse only, as no logo file exists.
+
+### 26 Oct 2026: booking search and "Online booking is unavailable" (`openspec/changes/booking-search-unavailable`, `bk-service-many`, `bk-unavailable`)
+
+1. **The search box shows when a shop has more than 8 single jobs**, about
+   one phone screen of cards. The drawing shows the box but not when it
+   appears.
+2. **A job matches when its name has every word typed**, in any order,
+   ignoring case. Full services always show. A ticked job stays ticked
+   while the search hides it.
+3. **With nothing matching**, a line reads "No single jobs match “[what was
+   typed]”." Not drawn.
+4. **No "Show all [n] individual services" link.** The built list already
+   shows every job, and the search narrows it.
+5. **"Online booking is unavailable just now"** replaces "We couldn't load
+   this shop's services". "Try again" stays. The drawn shop name, address
+   and phone can't show: they come with the services that failed to load.

@@ -102,8 +102,10 @@ export function BookFrame({ step, title, eyebrow, back, action, actionNote, chil
         {services.isError && (
           <>
             <h1 ref={heading} tabIndex={-1} className="m-0 mb-3 text-xl font-semibold focus:outline-none">
-              {notFound ? "We can't find this shop" : "We couldn't load this shop's services"}
+              {notFound ? "We can't find this shop" : 'Online booking is unavailable just now'}
             </h1>
+            {/* bk-unavailable; its shop lines can't show, as they come with the services that failed (booking-search-unavailable design 3). */}
+            {!notFound && <p className="m-0 mb-3 text-size-15 leading-normal">Please try again in a little while, or call the shop to book.</p>}
             {!notFound && (
               <Button variant="accent" onClick={() => services.refetch()}>
                 Try again
