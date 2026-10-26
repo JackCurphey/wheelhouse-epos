@@ -217,6 +217,13 @@ const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: st
 
 async function sendDueForShop(shopId) {
   const now = new Date();
+  // The shop's own messages that have come due, at most once a minute (own-messages-server design 2).
+  // A failure there is logged and never stops the shop's other messages going.
+  try {
+    await runWithShop(shopId, async () => (await import('./own-messages.js')).ownMessagesRound(shopId, now));
+  } catch (err) {
+    console.error(`Messages: the shop's own messages couldn't be checked for shop ${shopId}`, err);
+  }
   const due = await runWithShop(shopId, async () => {
     await prepare(
       `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'
@@ -233,10 +240,17 @@ async function sendDueForShop(shopId) {
     const claimed = await prepare(
       `UPDATE customer_messages SET intent_state = 'sending', claimed_at = ?
        WHERE intent_state = 'intended' AND send_after IS NOT NULL AND send_after <= ?
-       RETURNING id, channel, to_address, subject, body, template_key, job_id, customer_id, ending`
+       RETURNING id, channel, to_address, subject, body, template_key, job_id, customer_id, ending, shop_message_id`
     ).all(now.toISOString(), now.toISOString());
     const sendable = [];
+    const own = await import('./own-messages.js');
     for (const m of claimed) {
+      // A shop's own message: still there and on, and the customer still says
+      // yes and hasn't stopped it (own-messages-server design 5).
+      if (m.template_key === own.KEY && !(await own.ownMessageStillGoes(m))) {
+        await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
+        continue;
+      }
       const stillNeeded = DUE_CHECKS[m.template_key];
       if (stillNeeded && !(await stillNeeded(m.job_id))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
@@ -328,7 +342,7 @@ export function serializeMessage(row) {
     direction: row.direction ?? 'outbound',
     key: row.template_key ?? null,
     // A receipt isn't one of the automatic messages (openspec/changes/receipt-email).
-    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : 'Message'),
+    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : row.template_key === 'own_message' ? 'Your own message' : 'Message'),
     channel: row.channel ?? 'sms',
     to: row.to_address ?? null,
     subject: row.subject ?? null,

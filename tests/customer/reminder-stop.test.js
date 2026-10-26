@@ -94,3 +94,21 @@ test('a review request’s link: the same page, with review requests’ own name
   assert.ok(ui.queryByText('We’ll ask for a review after you collect your bike. Stop them any time with the link at the end of each one.') !== null);
   assert.deepEqual(posts(requests), ['{"stop":true}', '{"stop":false}']);
 });
+
+// A shop's own message (openspec/changes/own-messages-server design 7; Jack's
+// answer 2 of 26 Oct): the same page, stopping just that message, by its name.
+test('a shop’s own message’s link: the same page, stopping just that one, by its name', async () => {
+  let on = true;
+  const { ui, requests } = await open((url, init) => {
+    if (init?.method === 'POST') on = !JSON.parse(init.body).stop;
+    return { status: 200, body: { shopName: 'North Street Cycles', kind: 'own_message', name: 'Spring check', on } };
+  });
+  assert.ok((await ui.findByRole('heading', { name: 'Stop “Spring check”?' })) !== null);
+  assert.ok(ui.queryByText('We’ll stop sending you “Spring check” from North Street Cycles. Job updates about a bike that’s with us still come as usual.') !== null);
+  const { fireEvent } = await rtl();
+  fireEvent.click(ui.getByRole('button', { name: 'Stop “Spring check”' }));
+  assert.ok((await ui.findByRole('heading', { name: '“Spring check” stopped' })) !== null);
+  fireEvent.click(ui.getByRole('button', { name: 'Turn it back on' }));
+  assert.ok((await ui.findByRole('heading', { name: '“Spring check” is on again' })) !== null);
+  assert.deepEqual(posts(requests), ['{"stop":true}', '{"stop":false}']);
+});

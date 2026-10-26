@@ -57,6 +57,10 @@ POST /api/messages/:id/send-now
 GET /api/message-templates
 PUT /api/message-templates/:key
 POST /api/message-templates/:key/preview
+GET /api/own-messages
+POST /api/own-messages
+PUT /api/own-messages/:id
+DELETE /api/own-messages/:id
 POST /api/auth/signup
 POST /api/auth/login
 GET /api/auth/workos/start
