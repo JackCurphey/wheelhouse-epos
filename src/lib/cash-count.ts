@@ -33,26 +33,29 @@ export function countedPence(counts: Record<string, string>): number | null {
     any = true;
     total += Number(n) * d.pence;
   }
-  return any ? total : null;
+  // A count too big to add up exactly is nothing counted (boxes take five digits).
+  return any && Number.isSafeInteger(total) ? total : null;
 }
 
 /**
- * A typed total ("£208.70", "208.7", "150") read as pence by splitting at
- * the point, never by multiplying a decimal (0.29 × 100 is 28.999… in
- * floating point). Empty is null; anything else that isn't pounds and pence
- * is invalid.
+ * A typed total ("£208.70", "208.7", "150", "£1,234.50", "12.") read as
+ * pence by splitting at the point, never by multiplying a decimal (0.29 × 100
+ * is 28.999… in floating point). Empty, or a lone "£", is null; anything else
+ * that isn't pounds and pence is invalid. Commas must group thousands, so
+ * "12,34" is invalid rather than read as £1,234.
  */
 export function parseTotal(text: string): { pence: number } | { invalid: true } | null {
-  const t = text.replace(/\s+/g, '');
+  const t = text.replace(/\s+/g, '').replace(/^£/, '');
   if (t === '') return null;
-  const m = /^£?(\d+)(?:\.(\d{1,2}))?$/.exec(t);
+  const m = /^(\d+|\d{1,3}(?:,\d{3})+)(?:\.(\d{0,2}))?$/.exec(t);
   if (!m) return { invalid: true };
-  const pence = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
+  const pence = Number(m[1].replace(/,/g, '')) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
   return Number.isSafeInteger(pence) ? { pence } : { invalid: true };
 }
 
-/** Pence as pounds: 20870 is "£208.70". */
+/** Pence as pounds: 20870 is "£208.70". Anything not whole pence is "", never "e+" or "NaN". */
 export function penceText(pence: number): string {
+  if (!Number.isSafeInteger(pence) || pence < 0) return '';
   const pounds = Math.floor(pence / 100);
   const rest = String(pence % 100).padStart(2, '0');
   return `£${pounds}.${rest}`;

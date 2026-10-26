@@ -37,16 +37,27 @@ it turns "Done counting" on when it gets a number.
   `consolidate/j10.mjs:11` merges it into `eod-count`, "drawn once", so the
   `eod-count` version is built for both.
 - Colours are the design tokens (`--wh-panel`, `--wh-border`, `--wh-ink`,
-  `--wh-muted`, `--input`, `--wh-danger`); boxes are at least 44px high.
+  `--wh-muted`, `--wh-input-border`, and `--wh-danger-hover` for a wrong
+  total, as the email receipt's wrong address uses); boxes are at least 44px
+  high. Keyboard focus copies the shared Input's outline classes
+  (`src/components/ui/input.tsx`); the component itself isn't used because
+  its class merging drops this part's `text-size-*` classes.
 
 ## Where the drawings are silent (logged in Jack's section of `decided-while-building.md`)
 
-1. What a box does with a letter or minus sign: it keeps only the digits.
+1. What a box does with a letter or minus sign: it keeps only the digits,
+   and a keystroke that changes nothing leaves a typed total alone. A box
+   takes at most five digits, and a count too big to add up exactly is
+   nothing counted.
 2. Changing a box after typing the total: the boxes add up again (the last
-   thing typed wins). Clearing the typed total also goes back to the boxes.
-3. A typed total that isn't pounds and pence ("12.345", "abc"): the box is
-   marked wrong (`aria-invalid`, the red border inputs already use) and the
-   page is told nothing is counted. "£", spaces and one or two pence digits
-   are accepted.
-4. The worth beside each box shows only once that box has a number, as the
-   drawing's filled grid shows.
+   thing typed wins). Emptying the typed total and leaving the box goes back
+   to the boxes; while still typing it stays empty (review, 26 Oct).
+3. A typed total that isn't pounds and pence ("12.345", "abc", "12,34"):
+   the box is marked wrong (`aria-invalid` and the red edge), "Pounds and
+   pence, like 208.70" shows below it in a polite live region, both it and
+   the hint describe the box (`aria-describedby`), and the page is told
+   nothing is counted. "£", spaces, thousands commas ("£1,234.50"), a
+   trailing point ("12.") and one or two pence digits are accepted; a lone
+   "£" is empty.
+4. The worth beside each box shows only once that box has more than 0, as
+   the drawing's filled grid shows.

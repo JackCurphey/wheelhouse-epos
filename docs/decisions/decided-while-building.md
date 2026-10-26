@@ -2844,14 +2844,27 @@ follows the job checklist, the closest pattern built.
    line where `eod-count` has the "Cash counted" box that can be typed over.
    The one-canvas plan merges them ("drawn once", `consolidate/j10.mjs`), and
    decision 3 says the total can be typed over, so both get the box.
-3. **A box keeps only digits**: a letter or minus sign typed into a box is
-   dropped, as nothing can be counted in parts or below none.
+3. **A box keeps only digits, five at most**: a letter or minus sign typed
+   into a box is dropped, as nothing can be counted in parts or below none,
+   and a keystroke that changes nothing leaves a typed total alone. A count
+   too big to add up exactly counts as nothing counted.
 4. **The last thing typed wins**: a typed total takes over from the boxes
-   (decision 3); changing a box after that goes back to adding up the boxes,
-   and clearing the typed total shows the boxes' sum again.
-5. **A total that isn't pounds and pence** (more than two pence digits, or
-   letters) gets the red edge other fields use when they are wrong, and
-   counts as nothing counted, so "Done counting" stays off. "£", spaces and
-   one or two pence digits are fine ("208.7" is £208.70).
+   (decision 3); changing a box after that goes back to adding up the boxes.
+   *Revised after review, 26 Oct:* emptying the typed total no longer snaps
+   straight back to the boxes' sum, which fought anyone retyping it; the sum
+   comes back when they leave the total box empty.
+5. **A total that isn't pounds and pence** (more than two pence digits,
+   letters, or commas that don't group thousands) gets the red edge and the
+   words "Pounds and pence, like 208.70" below it, and counts as nothing
+   counted, so "Done counting" stays off. *Pattern:* the email receipt's
+   wrong address (`src/screens/till/email-receipt.tsx`): `aria-invalid`, the
+   `--wh-danger-hover` edge and words, linked with `aria-describedby` (with
+   the hint too). Unlike it, the words sit in a polite live region rather
+   than an alert, so they don't interrupt someone mid-typing. "£", spaces,
+   thousands commas ("£1,234.50"), a trailing point ("12." is £12.00) and
+   one or two pence digits are fine ("208.7" is £208.70); a lone "£" is
+   empty, not wrong.
 6. **Each box's worth** (the drawing's "£120.00" beside 6 × £20) shows once
-   that box has a number, on a computer or tablet, not a phone, as drawn.
+   that box has more than 0, on a computer or tablet, not a phone, as drawn.
+7. **Keyboard focus** is the shared text box's outline
+   (`src/components/ui/input.tsx`), so it looks like the rest of the app.

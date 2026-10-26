@@ -46,7 +46,7 @@ test('an empty total is nothing typed', () => {
 });
 
 test('a total that isn’t pounds and pence is wrong', () => {
-  for (const bad of ['12.345', 'abc', '-5', '1.2.3', '£', '.5x']) {
+  for (const bad of ['12.345', 'abc', '-5', '1.2.3', '.5x']) {
     assert.deepEqual(parseTotal(bad), { invalid: true }, bad);
   }
 });
@@ -56,4 +56,26 @@ test('pence shown as pounds', () => {
   assert.equal(penceText(0), '£0.00');
   assert.equal(penceText(12000), '£120.00');
   assert.equal(penceText(20870), '£208.70');
+});
+
+// Review fixes, 26 Oct (coordinator's review of jack/note-coin-counter).
+test('a count too big to add up safely is nothing counted', () => {
+  assert.equal(countedPence({ '£50': '9'.repeat(20) }), null);
+  assert.equal(countedPence({ '£50': '2000000000000', '1p': '1' }), null);
+});
+
+test('pounds never print as e+ or NaN', () => {
+  for (const p of [Number.MAX_SAFE_INTEGER + 2, 1e21, NaN, Infinity]) {
+    assert.ok(!/e\+|NaN|Infinity/.test(penceText(p)), `${p} printed ${penceText(p)}`);
+  }
+});
+
+test('half-typed totals: "12." is £12.00 and a lone £ is empty', () => {
+  assert.deepEqual(parseTotal('12.'), { pence: 1200 });
+  assert.equal(parseTotal('£'), null);
+  assert.equal(parseTotal(' £ '), null);
+});
+
+test('thousands commas are fine', () => {
+  assert.deepEqual(parseTotal('£1,234.50'), { pence: 123450 });
 });

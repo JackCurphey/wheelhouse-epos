@@ -33,7 +33,8 @@ async function open() {
   const total = () => ui.getByLabelText('Cash counted, total');
   const type = (el, value) => rtl.fireEvent.change(el, { target: { value } });
   const last = () => told[told.length - 1];
-  return { ui, box, total, type, told, last };
+  const blur = (el) => rtl.fireEvent.blur(el);
+  return { ui, box, total, type, told, last, blur };
 }
 
 test('twelve boxes, £50 down to 1p, in one group, and an empty Cash counted', async () => {
@@ -103,13 +104,26 @@ test('changing a box after typing the total adds up the boxes again', async () =
   assert.equal(total().value, '£130.00');
 });
 
-test('clearing the typed total shows the boxes’ sum again', async () => {
-  const { box, total, type, last } = await open();
+test('clearing the typed total shows the boxes’ sum again once the box is left', async () => {
+  const { box, total, type, last, blur } = await open();
   type(box('£20'), '6');
   type(total(), '150');
   type(total(), '');
+  // Still typing: the box stays empty rather than snapping back.
+  assert.equal(total().value, '');
+  assert.equal(last(), null);
+  blur(total());
   assert.equal(last(), 12000);
   assert.equal(total().value, '£120.00');
+});
+
+test('leaving a total that has a number keeps it', async () => {
+  const { box, total, type, last, blur } = await open();
+  type(box('£20'), '6');
+  type(total(), '150');
+  blur(total());
+  assert.equal(total().value, '150');
+  assert.equal(last(), 15000);
 });
 
 test('a total that isn’t pounds and pence is marked wrong and counts as nothing', async () => {
@@ -121,4 +135,58 @@ test('a total that isn’t pounds and pence is marked wrong and counts as nothin
   type(total(), '12.34');
   assert.ok(total().getAttribute('aria-invalid') === null);
   assert.equal(last(), 1234);
+});
+
+// Review fixes, 26 Oct (coordinator's review of jack/note-coin-counter).
+test('each box takes at most five digits', async () => {
+  const { box } = await open();
+  for (const l of LABELS) assert.equal(box(l).getAttribute('maxlength'), '5');
+});
+
+test('half-typed totals aren’t wrong: "12." is £12.00, a lone £ is empty', async () => {
+  const { box, total, type, last } = await open();
+  type(box('£20'), '6');
+  type(total(), '12.');
+  assert.ok(total().getAttribute('aria-invalid') === null);
+  assert.equal(last(), 1200);
+  type(total(), '£');
+  assert.ok(total().getAttribute('aria-invalid') === null);
+  type(total(), '£1,234.50');
+  assert.equal(last(), 123450);
+});
+
+test('a wrong total says why, politely, and the box points at it and the hint', async () => {
+  const { ui, total, type } = await open();
+  const said = ui.getByText('Adds up from the boxes — or type the total');
+  assert.ok(total().getAttribute('aria-describedby').split(' ').includes(said.id));
+  assert.ok(ui.queryByText('Pounds and pence, like 208.70') === null);
+  type(total(), '12.345');
+  const why = ui.getByText('Pounds and pence, like 208.70');
+  assert.ok(why.closest('[aria-live="polite"]') !== null);
+  const ids = total().getAttribute('aria-describedby').split(' ');
+  assert.ok(ids.includes(said.id) && ids.includes(why.id), ids.join(' '));
+  type(total(), '12.34');
+  assert.ok(ui.queryByText('Pounds and pence, like 208.70') === null);
+});
+
+test('a box set to 0 shows no worth', async () => {
+  const { ui, box, type, last } = await open();
+  type(box('£20'), '0');
+  assert.ok(ui.queryByText('£0.00') === null);
+  assert.equal(last(), 0);
+});
+
+test('a letter typed into a box keeps a typed total', async () => {
+  const { box, total, type, last } = await open();
+  type(box('£20'), '6');
+  type(total(), '150');
+  type(box('£20'), '6a');
+  assert.equal(box('£20').value, '6');
+  assert.equal(total().value, '150');
+  assert.equal(last(), 15000);
+});
+
+test('keyboard focus looks like the rest of the app’s fields', async () => {
+  const { box, total } = await open();
+  for (const el of [box('£50'), total()]) assert.ok(el.className.includes('focus:outline-[var(--accent)]'), el.className);
 });

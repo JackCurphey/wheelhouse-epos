@@ -21,11 +21,18 @@ Each box SHALL take a whole number of that note or coin. Cash counted SHALL show
 - **THEN** the box keeps only the digits
 
 ### Requirement: The total can be typed over
-Staff SHALL be able to type the total into Cash counted instead; a typed total SHALL take over from the boxes (cash-up decision 3). Changing a box again SHALL go back to adding up the boxes, and clearing the typed total SHALL show the boxes' sum again. A total that isn't pounds and pence SHALL be marked as wrong and count as nothing counted.
+Staff SHALL be able to type the total into Cash counted instead; a typed total SHALL take over from the boxes (cash-up decision 3). Changing a box again SHALL go back to adding up the boxes, and leaving the total box empty SHALL show the boxes' sum again (while still typing, it stays empty). "£", thousands commas and a trailing point SHALL be accepted.
+
+#### Scenario: Retyping the total
+- **WHEN** staff delete the typed total to retype it
+- **THEN** the box stays empty until they type again or leave it, when it shows the boxes' sum
 
 #### Scenario: Just typing the total
 - **WHEN** staff type "£150.00" into Cash counted
 - **THEN** the count is £150.00, whatever the boxes say
+
+### Requirement: A wrong total says so
+A total that isn't pounds and pence SHALL be marked as wrong, SHALL say "Pounds and pence, like 208.70" where a screen reader announces it without interrupting, and SHALL count as nothing counted.
 
 #### Scenario: A total with too many pence
 - **WHEN** staff type "12.345" into Cash counted
