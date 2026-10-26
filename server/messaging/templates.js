@@ -53,6 +53,17 @@ export const TEMPLATES = {
     subject: '[Shop name] replied about your repair',
     tapIns: ['Shop name', 'Bike', 'Job number', 'The shop’s reply', 'Link to the job'],
   },
+  // A staff reply to the customer's general message, in their one conversation
+  // with the shop (Jack, 26 Oct, day answers 2.4; openspec/changes/ask-the-shop-server
+  // design 7). The link opens the conversation, after signing in. The email's
+  // subject isn't drawn.
+  message_reply: {
+    name: 'Reply to a message',
+    when: 'When staff reply to a customer’s message',
+    wording: '[Shop name] replied to your message: [Link to your messages]',
+    subject: '[Shop name] replied to your message',
+    tapIns: ['Shop name', 'Link to your messages'],
+  },
   bike_ready: {
     name: 'Bike ready',
     when: 'When a job is marked ready',
@@ -161,8 +172,9 @@ export const TEMPLATES = {
 // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
 // customer's side: Request received and Booking cancelled.
 // The service reminder joined 25 Oct (openspec/changes/service-reminder-send),
-// and the review request (openspec/changes/review-requests).
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request'];
+// and the review request (openspec/changes/review-requests). Reply to a
+// message joined 26 Oct (openspec/changes/ask-the-shop-server).
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

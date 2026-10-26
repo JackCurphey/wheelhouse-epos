@@ -7,7 +7,7 @@ import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
 import { sendJson } from '../lib/http.js';
 import { WORKSHOP_JOB_SELECT } from '../workshop/jobs.js';
-import { conversations } from '../workshop/job-notes.js';
+import { customerConversations } from '../workshop/job-notes.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -28,9 +28,10 @@ async function quotesWithNoAnswer() {
 }
 
 // Customers' messages waiting for a reply: one line, how many and the oldest
-// (ac-today), as Front desk › Messages counts them.
+// (ac-today), as Front desk › Messages counts them: one per customer from 26
+// Oct (day answers 8.2; ask-the-shop-server design 4).
 async function replies() {
-  const { items, count } = await conversations('needs-reply');
+  const { items, count } = await customerConversations('needs-reply');
   if (!count) return [];
   const oldest = items.reduce((a, b) => (a.lastAt <= b.lastAt ? a : b));
   return [{ kind: 'replies', count, oldestName: oldest.customerName, oldestAt: oldest.lastAt }];
