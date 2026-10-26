@@ -52,3 +52,16 @@ payment, and refunds) come later in this list.
    account, each marked with its repair ("About WH-1042") and opening that
    repair (Jack: "Yes, marked with the repair"; decision 3 of the account
    review).
+
+## 3. Company customers
+
+**No accountant check; build now** (Jack: "No check, build now"). His 2 Oct
+answer stands (`2026-10-02-leftover-screens-review.md`: "a generic vat
+invoice for now"). The later note that the VAT invoice "waits on the
+accountant" (`decided-while-building.md`) is overruled.
+
+What it unblocks, as drawn (`cs-add-company`; collect.mjs's VAT invoice):
+- Add a customer gets "This is: A person / A company or club", with company
+  name, contact name, an optional VAT number and "Send invoices to";
+- a company's emailed receipt is headed "VAT invoice", with an "Invoice to"
+  block.
