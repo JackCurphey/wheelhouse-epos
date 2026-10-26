@@ -2580,3 +2580,11 @@ follows the job checklist, the closest pattern built.
    job" is chosen.
 4. **No preview.** None is drawn for this box; the built-in messages' box
    has one.
+
+### 26 Oct 2026: a repair opened from the account (follow-up to `customer-account-screens`)
+
+1. **A repair opened from the customer's account** (`job-<id>`) no longer
+   says "Keep this link to check your booking" or offers Copy link. That
+   link works only for the customer, signed in. It shows "Your account"
+   instead, a way back to the account, as the question page's back link
+   is drawn (`qa-question`).

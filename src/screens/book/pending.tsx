@@ -113,13 +113,23 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   const offered = link.stage === 'time_offered';
   const request = link.stage === 'awaiting_confirmation' || offered;
   const standing = link.stage === 'confirmed' || link.stage === 'change_requested' || request;
+  // Opened from the customer's account (job-<id>), the page works only for
+  // them signed in, so there's no link to keep: back to the account instead
+  // (not drawn; qa-question's "Your account").
+  const fromAccount = code.startsWith('job-');
   const keep = (
     <>
-      <p className="m-0 mb-2">Keep this link to check your booking</p>
-      <Button className="mb-4" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy link'}</Button>
-      {/* The button's own text already changes for a sighted customer; a screen
-          reader user focused elsewhere needs the change announced. */}
-      <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
+      {fromAccount ? (
+        <p className="m-0 mb-4"><Link to={`/book/${shopSlug}/account`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)]">Your account</Link></p>
+      ) : (
+        <>
+          <p className="m-0 mb-2">Keep this link to check your booking</p>
+          <Button className="mb-4" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy link'}</Button>
+          {/* The button's own text already changes for a sighted customer; a screen
+              reader user focused elsewhere needs the change announced. */}
+          <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
+        </>
+      )}
       {/* Once the page offers both, no contact line; with Cancel only, it's about the date. */}
       {!(standing && link.canChange) && <p className="m-0">{standing && link.canCancel ? changeLine(link.shopName) : contactLine(link.shopName)}</p>}
     </>
