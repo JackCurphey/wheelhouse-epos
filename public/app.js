@@ -43,7 +43,6 @@ let salesList = [];
 let viewedSale = null;
 
 let dashboardData = null;
-let printAgents = []; // [{deviceId, deviceName, printers}] currently checked in for this shop (see /api/print-agents)
 
 let customers = [];
 let customerGroups = []; // shop-wide list of groups (e.g. "Blue Light", "ACC") customers can be tagged with
@@ -198,7 +197,6 @@ async function loadSales() {
 
 async function loadDashboard() {
   dashboardData = await api('/api/dashboard');
-  printAgents = await api('/api/print-agents').then((r) => r.agents);
 }
 
 async function loadCustomerGroups() {
@@ -1464,10 +1462,8 @@ function code128Bars(text) {
 // Converts a Code128 module-width sequence into plain mm bar rectangles
 // ({xMm, wMm}, all at y=0 with height=heightMm) - the module width is
 // derived from the total module count so any label size just works without
-// per-size tuning. Shared by barcodeSvg (on-screen/browser-print) and
-// buildStickerPrintJob (print-agent draw primitives) so the bar-position
-// math exists in exactly one place. Returns null if `text` can't be
-// encoded (see code128Bars).
+// per-size tuning. Used by barcodeSvg (on-screen and browser print).
+// Returns null if `text` can't be encoded (see code128Bars).
 function code128Rects(text, widthMm, heightMm) {
   const widths = code128Bars(text);
   if (!widths) return null;
@@ -1507,11 +1503,8 @@ function stickerBarcode(product, widthMm, heightMm) {
   return { code, svg, note: '' };
 }
 
-// Shared between the on-screen/print-preview layout (buildStickerPageHtml's
-// CSS flex) and the print agent's absolute-position draw primitives
-// (buildStickerPrintJob) - just the numbers that need to match between the
-// two, so the barcode's share of the label doesn't drift out of sync if
-// this ratio ever changes.
+// The barcode's share of a sticker, for the on-screen and browser-print
+// layout (buildStickerPageHtml).
 function stickerBarcodeAreaMm(widthMm, heightMm) {
   return { widthMm: Math.max(5, widthMm - 4), heightMm: Math.max(4, heightMm * 0.4) };
 }
@@ -3046,33 +3039,6 @@ async function renderDashboard() {
         </div>
       </div>
     </div>
-    <div class="panel" style="margin-top:16px;">
-      <div class="panel-header"><h2>Connected printers</h2></div>
-      <div class="panel-body">
-        ${
-          printAgents.length
-            ? `<div class="printer-agent-list">
-              ${printAgents
-                .map(
-                  (a) => `
-                <div class="printer-agent">
-                  <div class="printer-agent-name">${esc(a.deviceName)}</div>
-                  <div class="printer-agent-printers">
-                    ${
-                      a.printers.length
-                        ? a.printers.map((p) => `<span class="badge ok">${esc(p)}</span>`).join('')
-                        : `<span class="muted">No printers detected</span>`
-                    }
-                  </div>
-                </div>
-              `
-                )
-                .join('')}
-            </div>`
-            : `<div class="empty-state">No print agents currently online. Install and sign in to one on a shop PC to see it here - see the Print Stickers modal in Stockroom.</div>`
-        }
-      </div>
-    </div>
   `;
 }
 
@@ -3161,13 +3127,6 @@ function renderStickerPrintModal(holder, products) {
             </div>
           </div>
           <p class="muted" style="margin:0 0 12px;">Matches your label printer's roll size - saved as the default for next time.</p>
-          <div class="field" id="sticker-printer-field" style="display:none;">
-            <label for="sticker-printer">Send straight to</label>
-            <select id="sticker-printer">
-              <option value="">Use the browser's print dialog instead</option>
-            </select>
-          </div>
-          <p class="muted" id="sticker-agent-note" style="margin:0 0 12px;">Looking for the print agent…</p>
           <div class="sticker-row-list">${rowsHtml}</div>
         </div>
         <div class="modal-footer">
@@ -3178,32 +3137,6 @@ function renderStickerPrintModal(holder, products) {
     </div>
   `;
   wireModalDismiss();
-
-  api('/api/print-agents')
-    .then(({ agents }) => {
-      const note = document.getElementById('sticker-agent-note');
-      const options = agents.flatMap((a) => a.printers.map((printer) => ({ agent: a, printer })));
-      if (!options.length) {
-        note.textContent = agents.length
-          ? "A print agent is signed in, but isn't reporting any printers."
-          : "No print agent is signed in - printing will use the browser's print dialog.";
-        return;
-      }
-      note.remove();
-      const field = document.getElementById('sticker-printer-field');
-      const select = document.getElementById('sticker-printer');
-      options.forEach(({ agent, printer }) => {
-        const opt = document.createElement('option');
-        opt.value = `${agent.deviceId}::${printer}`;
-        opt.textContent = `${agent.deviceName} — ${printer}`;
-        select.appendChild(opt);
-      });
-      field.style.display = '';
-    })
-    .catch(() => {
-      const note = document.getElementById('sticker-agent-note');
-      if (note) note.textContent = "Couldn't check for print agents - printing will use the browser's print dialog.";
-    });
 
   document.getElementById('sticker-print-btn').addEventListener('click', async () => {
     const widthMm = Number(document.getElementById('sticker-width').value);
@@ -3225,19 +3158,8 @@ function renderStickerPrintModal(holder, products) {
         return;
       }
     }
-    const printerSelect = document.getElementById('sticker-printer');
-    const selected = printerSelect ? printerSelect.value : '';
     closeModal();
-    if (selected) {
-      // indexOf/slice rather than .split('::') - a printer name could
-      // theoretically contain "::" itself, and this stays correct either way.
-      const sep = selected.indexOf('::');
-      const deviceId = selected.slice(0, sep);
-      const printerName = selected.slice(sep + 2);
-      printStickersViaAgent(items, widthMm, heightMm, deviceId, printerName);
-    } else {
-      printStickers(items, widthMm, heightMm);
-    }
+    printStickers(items, widthMm, heightMm);
   });
 }
 
@@ -3290,65 +3212,6 @@ function printStickers(items, widthMm, heightMm) {
   root.innerHTML = items.map((p) => buildStickerPageHtml(p, widthMm, heightMm)).join('');
   setStickerPageSize(widthMm, heightMm);
   window.print();
-}
-
-// ---- Print agents (print-agent/agent.js) - optional. Any shop PC signed
-// into the agent can serve a print job from any browser signed into the
-// same shop, not just its own - both sides only ever talk to this app's
-// own server (GET/POST /api/print-agents*), never to each other directly,
-// so this is a plain same-origin api() call like everything else, no
-// localhost/CORS considerations. See print-agent/README.md. ----
-
-// Builds one label's draw primitives (mm-positioned rectangles + text) for
-// the print agent - it and print-label.ps1 have no barcode or layout logic
-// of their own, so this is the only place deciding where things go for
-// that path. Reuses code128Rects/stickerBarcode/stickerBarcodeAreaMm so the
-// bar geometry can never drift from what barcodeSvg (the on-screen/browser-
-// print path) draws.
-function buildStickerPrintJob(product, widthMm, heightMm) {
-  const barcodeArea = stickerBarcodeAreaMm(widthMm, heightMm);
-  const barcodeX = (widthMm - barcodeArea.widthMm) / 2;
-  const barcodeY = heightMm * 0.42;
-  const { code, svg, note } = stickerBarcode(product, barcodeArea.widthMm, barcodeArea.heightMm);
-  const rects = svg
-    ? code128Rects(code, barcodeArea.widthMm, barcodeArea.heightMm).map((r) => ({
-        xMm: barcodeX + r.xMm,
-        yMm: barcodeY,
-        wMm: r.wMm,
-        hMm: barcodeArea.heightMm,
-      }))
-    : [];
-  return {
-    rects,
-    texts: [
-      { text: product.name, xMm: widthMm / 2, yMm: heightMm * 0.14, sizePt: 8, bold: true, align: 'center' },
-      { text: money(product.price), xMm: widthMm / 2, yMm: heightMm * 0.28, sizePt: 10, bold: true, align: 'center' },
-      { text: code || note, xMm: widthMm / 2, yMm: heightMm * 0.9, sizePt: 6.5, bold: false, align: 'center' },
-    ],
-  };
-}
-
-// `items` is already flattened - one entry per physical label (see
-// printStickers above). Sends everything as one job so the target device
-// runs it as a single multi-page print job, not N separate ones. Queuing
-// is all this can confirm - the actual printing happens whenever that
-// device's next check-in lands (a couple of seconds later at most), so
-// this is honestly "sent," not "done."
-async function printStickersViaAgent(items, widthMm, heightMm, deviceId, printerName) {
-  try {
-    await api(`/api/print-agents/${deviceId}/jobs`, {
-      method: 'POST',
-      body: {
-        printerName,
-        widthMm,
-        heightMm,
-        pages: items.map((p) => buildStickerPrintJob(p, widthMm, heightMm)),
-      },
-    });
-    showToast(`Sent ${items.length} label${items.length === 1 ? '' : 's'} to ${printerName}`);
-  } catch (err) {
-    showToast(`Couldn't send to the print agent: ${err.message}`);
-  }
 }
 
 function renderProductFormModal(holder, product) {
