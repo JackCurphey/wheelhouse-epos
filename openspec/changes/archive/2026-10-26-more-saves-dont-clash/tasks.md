@@ -7,5 +7,5 @@
 - [x] 1.5 Workshop jobs: the merge and the checks on the job read under `withJobBookingLock`
 - [x] 1.6 Break each fix on purpose (drop `FOR UPDATE`; drop the `BEGIN`; for jobs, merge into the copy read before the lock), confirm the edit landed, see the test go red, restore
 - [x] 1.7 A refused save writes nothing and the next save goes through; break each check on purpose and see it go red (the date check stayed green until the test checked the refusal's words)
-- [ ] 1.8 Self-review and `/review` (customer accounts: `email_from_customer`; products set prices)
-- [ ] 1.9 `npm test`, `npm run test:browser` and lint; archive as the last commit
+- [x] 1.8 Self-review and `/review` (customer accounts: `email_from_customer`; products set prices)
+- [x] 1.9 `npm test`, `npm run test:browser` and lint; archive as the last commit
