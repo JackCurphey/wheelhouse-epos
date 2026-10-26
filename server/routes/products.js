@@ -15,6 +15,13 @@ import { deferShopifyPushes } from '../lib/sales.js';
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 
+// An adjustment's reasons follow its sign (stock decisions 6 and 11, UX
+// walk-through 3 L2); migration 093 holds the same list.
+const REASONS_DOWN = ['damaged', 'lost_stolen', 'used_workshop', 'faulty_return', 'other'];
+const REASONS_UP = ['found', 'other'];
+const MAX_CHANGE = 100000;
+const MAX_NOTE = 500;
+
 // A product is only fit to be live on Shopify when it's BOTH marked to show
 // online AND active - `show_online` alone isn't enough, since a deactivated
 // product (DELETE /api/products/:id's soft-delete, or PUT with active:false)
@@ -76,7 +83,8 @@ export function register(route) {
   });
 
   // A product's page (st-product; openspec/changes/stock-list): the product
-  // and every change to its stock, newest first. Read only. Staff see no
+  // and every change to its stock, newest first, with its reason and who
+  // (openspec/changes/adjust-stock). Read only. Staff see no
   // cost (stock decision 11); until roles (WP-1.1) only the Owner does. A
   // product taken off sale still opens: its history stands.
   route('GET', '/api/products/:id', async (req, res, params) => {
@@ -87,12 +95,16 @@ export function register(route) {
     const ctx = await currentSession(req);
     const moves = await db
       // The newest 200: a fast seller's whole history would be thousands of rows (review 2).
-      .prepare('SELECT id, type, change_qty, note, created_at FROM stock_movements WHERE product_id = ? ORDER BY created_at DESC, id DESC LIMIT 200')
+      .prepare(
+        `SELECT m.id, m.type, m.change_qty, m.note, m.reason, l.name AS who, m.created_at
+         FROM stock_movements m LEFT JOIN logins l ON l.id = m.login_id
+         WHERE m.product_id = ? ORDER BY m.created_at DESC, m.id DESC LIMIT 200`
+      )
       .all(id);
     sendJson(res, 200, {
       ...serializeProduct(row),
       cost: ctx?.login.is_owner ? row.cost : null,
-      history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, note: m.note || '', at: m.created_at })),
+      history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
     });
   });
 
@@ -190,26 +202,66 @@ export function register(route) {
     sendJson(res, 200, { ok: true });
   });
 
+  // Adjust stock (st-adjust; openspec/changes/adjust-stock): anyone with the
+  // Stock page, as long as who is recorded (Jack, 26 Oct,
+  // 2026-10-26-day-answers.md section 11; stock decision 6). An adjustment
+  // takes a reason that follows the sign, and Other a note (decision 11);
+  // every change records who made it. The old app's booking in (type
+  // "intake") needs no reason.
   route('POST', '/api/products/:id/stock', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
     const body = await readJsonBody(req);
-    const change = Math.trunc(Number(body.change));
-    if (!Number.isFinite(change) || change === 0) return badRequest(res, 'A non-zero whole-number "change" is required');
-    const type = body.type === 'adjustment' ? 'adjustment' : 'intake';
-    const note = (body.note || '').trim();
+    // A whole number, not 0, at most 100,000 either way: no rounding, no
+    // true as 1, and nothing too big for the column (review, 26 Oct).
+    const change = body.change;
+    if (typeof change !== 'number' || !Number.isInteger(change) || change === 0 || Math.abs(change) > MAX_CHANGE) {
+      return badRequest(res, 'A non-zero whole-number "change" is required');
+    }
+    // An adjustment, or booking stock in, which only adds (decision 6: stock
+    // never goes down without a reason).
+    const type = body.type;
+    if (type !== 'adjustment' && type !== 'intake') return badRequest(res, 'Say whether this is an adjustment or stock received');
+    if (type === 'intake' && change < 0) return badRequest(res, 'Stock received can only add stock; adjust it to take stock away');
+    const note = String(body.note || '').trim();
+    if (note.length > MAX_NOTE) return badRequest(res, 'Keep the note to 500 characters');
+    let reason = null;
+    if (type === 'adjustment') {
+      reason = body.reason ? String(body.reason) : '';
+      if (!reason) return badRequest(res, 'Pick a reason for the adjustment');
+      if (!(change < 0 ? REASONS_DOWN : REASONS_UP).includes(reason)) return badRequest(res, 'That reason doesn’t fit this change');
+      if (reason === 'other' && !note) return badRequest(res, 'Write a note for Other');
+    }
 
-    const newQty = existing.stock_qty + change;
-    if (newQty < 0) return badRequest(res, 'Stock cannot go below zero');
-
-    await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), id);
-    await db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, ?, ?)').run(
-      id,
-      change,
-      type,
-      note
-    );
+    // One atomic update: two adjustments at once both count, and the
+    // below-zero check sees the row as it is when the update runs. Going up
+    // is always allowed, so Found works on a product below zero.
+    await db.exec('BEGIN');
+    let newQty;
+    try {
+      const updated = await db
+        .prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? AND (? > 0 OR stock_qty + ? >= 0) RETURNING stock_qty')
+        .get(change, nowIso(), id, change, change);
+      if (!updated) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Stock cannot go below zero');
+      }
+      newQty = updated.stock_qty;
+      await db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note, reason, login_id) VALUES (?, ?, ?, ?, ?, ?)').run(
+        id,
+        change,
+        type,
+        note,
+        reason,
+        ctx.login.id
+      );
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK');
+      throw err;
+    }
     if (existing.shopify_inventory_item_id) {
       // After the reply, from a fresh connection; a Shopify hiccup is logged
       // and never fails the adjustment (firePendingShopifyPushes).

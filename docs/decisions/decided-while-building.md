@@ -2642,6 +2642,100 @@ follows the job checklist, the closest pattern built.
 2. **No "Show the diary legend" switch on a phone,** where the diary has no
    legend, as with Folded sidebar.
 
+
+
+### 26 Oct 2026: the stock list and product page (`openspec/changes/stock-list`, `st-list`, `st-product`, `st-product-staff`, `st-product-bike`; slice C, WP-2.1, the 26 Oct defaults)
+
+1. **Prices are shown, not edited**, until products move to pence (WP-1.5).
+2. **Left out because they change things:** + Add a product, the tick
+   boxes and their bar, Edit, Adjust stock and Send to another shop. Adjust
+   stock is the next piece, so its button is left out rather than linked to
+   nothing.
+3. **Left out until WP-1.5:** the Category pill, each category's details
+   (the Details box and detail columns), and sizes and colours.
+4. **Who sees what:** everyone signed in sees Stock and a product's page.
+   Margin, Cost and Show on website show to the Owner only, as roles aren't
+   built (stock decision 11 says Owners and Managers). The product page's
+   read sends no cost to anyone else. The list still reads the existing
+   `/api/products`, which sends cost to every signed-in person, as it did
+   before; hiding it there waits for roles (WP-1.1).
+5. **The search** finds a name, barcode, the product's code (`sku`, shown
+   where the drawing has the supplier code) or the supplier. Its
+   placeholder doesn't mention measurements, which can't be searched yet.
+   The scan icon is left out: a scanner types into the box.
+6. **Running low** is the Overview's rule: a low-stock level above 0, and
+   stock at or under it. Below zero is anything under 0.
+7. **Margin** is on the price before VAT, at the product's own VAT rate, as
+   the old app worked it out; rounded to a whole percent. No price shows
+   "—".
+8. **The list shows 50 products**, then "Show all ([n])", as the bike page
+   does with its jobs. Every heading sorts; Product, A to Z, to start.
+9. **Nothing to show:** "Nothing matches “[what was typed]”" with "Check
+   the spelling, or try a supplier code or a supplier."; "No products yet"
+   with no buttons (both drawn buttons add products); "Nothing is running
+   low" and "Nothing is below zero".
+10. **The product's page** follows the bike and customer pages: "‹ Stock",
+    the product's name as the heading, and Stock in the page's title bar
+    (the drawing puts the name there).
+11. **In stock** names the shop, not a site, since stock is one count for
+    the shop. The "held for a job" line is left out: nothing holds stock
+    for a job yet.
+12. **The photo** shows only when there is one. No "[Photo]" box.
+13. **Stock history** names each line by what happened (Sold, Returned,
+    Received, Booked in, Adjusted, or Stock changed), with its note and
+    when. Who did it isn't recorded, so it isn't shown, and no line links
+    anywhere yet (there's no sale, delivery or count page). Price changes
+    aren't recorded, so that filter is left out. Returns count under Sold;
+    Booked in under Received.
+14. **A bike's page** is a product's page: nothing records a stock bike's
+    frame numbers yet, so "Bikes by frame number" is left out.
+15. **A product taken off sale** still opens, with "Taken off sale" under
+    its name.
+16. **After the review:** a product with no cost recorded (saved as 0) shows
+    no margin ("—"), not 100%. A product's page shows its newest 200 stock
+    movements. "%" and "_" in a stock search are searched for as
+    themselves.
+
+### 26 Oct 2026: adjusting stock (`openspec/changes/adjust-stock`, `st-adjust`, `st-adjust-faulty`; slice C, WP-2.1, the 26 Oct defaults)
+
+1. **Who can adjust:** anyone with the Stock page, every adjustment
+   recording who, the reason and when (Jack's answer, 26 Oct:
+   `2026-10-26-day-answers.md` section 11).
+2. **The change starts at −1, as drawn,** and "In stock after" shows the
+   count it leaves; typing either sets the other. − and + step the change.
+3. **Adjust is greyed and says why,** as UX walk-through 3 L4 draws for no
+   reason: "Type the change" (none, or 0), "Stock can’t go below zero",
+   "Pick a reason to adjust", "Write a note for Other", checked in that
+   order.
+4. **A reason that doesn't fit the new sign is unpicked** when the change
+   flips (Damaged going up); Other, which fits both, stays.
+5. **Below zero:** an adjustment can't take stock under 0, as the old
+   route refused. Going up is always allowed, so Found works on a product
+   already below zero.
+6. **Faulty — to return to supplier is recorded as the reason only.** The
+   To return list in Deliveries and orders isn't built, so the box leaves
+   out both lines that promise it (the note under the reasons, and the
+   panel in `st-adjust-faulty`).
+7. **"big changes show on the manager’s Today" is left out** of the last
+   note: it waits until Today's stock warnings are built (section 11 of
+   `2026-10-26-day-answers.md`), with its Settings › Stockroom amount.
+8. **After Adjust** the box closes and the page shows the new stock and
+   the new history line; no toast, as none is drawn.
+9. **History lines:** an adjustment with a reason reads "Adjusted ·
+   Damaged", its note "Note: [note]", then who and when, as `histRow`
+   draws. Lines from before this piece, and sales and till sync (Mark's
+   step C), record no one, so they show no name.
+10. **The old app's booking in** (`type: intake`) through the same route
+    needs no reason and records who, but only adds stock; any other type is
+    refused (review, 26 Oct).
+11. **The change is a whole number up to 100,000 either way**, and a note
+    up to 500 characters (review, 26 Oct). No count in a bike shop comes
+    near 100,000; the cap keeps a mistyped number from reaching the
+    database.
+12. **"In stock after" sends a change, worked out when the box opened.** A
+    sale made while the box is open makes the result one lower than typed.
+    Kept, not built around: sending a change is what lets two adjustments
+    at once both count (review, 26 Oct).
 ### 26 Oct 2026: the print agent removed (`openspec/changes/drop-print-agent`; Jack's decision in `2026-10-26-day-answers.md` section 5)
 
 1. **Removed:** the label printer helper (`print-agent/`), its four
@@ -2783,7 +2877,6 @@ follows the job checklist, the closest pattern built.
     A customer whose sign-in runs out after the page has loaded keeps the
     page and what she's typed; sending then says "Please sign in again to
     send this." with a "Sign in again" link back to the page.
-
 ### 26 Oct 2026: the stock list and product page (`openspec/changes/stock-list`, `st-list`, `st-product`, `st-product-staff`, `st-product-bike`; slice C, WP-2.1, the 26 Oct defaults)
 
 1. **Prices are shown, not edited**, until products move to pence (WP-1.5).
@@ -2955,3 +3048,5 @@ follows the job checklist, the closest pattern built.
      off. No new button or words.
    - **Stock is updated in product order,** as a sale does, so two
      deliveries with the same products can't deadlock.
+
+
