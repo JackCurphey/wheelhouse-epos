@@ -47,7 +47,7 @@ function serializePurchaseOrder(row, items) {
           sku: it.product_sku,
           qtyOrdered: it.qty_ordered,
           qtyReceived: it.qty_received,
-          outstanding: it.qty_ordered - it.qty_received,
+          outstanding: outstanding(it),
           unitCost: it.unit_cost,
         }))
       : undefined,
@@ -57,9 +57,21 @@ function serializePurchaseOrder(row, items) {
 
 const PO_SELECT = `SELECT po.*, s.name AS supplier_name FROM purchase_orders po JOIN suppliers s ON s.id = po.supplier_id`;
 
+// Each line with qty_set_aside: its damaged and wrong items recorded at
+// booking in (receiving decision 9). They go on To return, not back to "to
+// come", so they count against the line as booked-in ones do; a replacement
+// is a new line or a new order (second review, 26 Oct). Missing ones never
+// arrived and stay to come.
 async function loadPurchaseOrderItems(id) {
-  return db.prepare('SELECT * FROM purchase_order_items WHERE purchase_order_id = ? ORDER BY id').all(id);
+  return db.prepare(
+    `SELECT poi.*,
+            COALESCE((SELECT SUM(dp.qty) FROM delivery_problems dp
+                      WHERE dp.purchase_order_id = poi.purchase_order_id AND dp.purchase_order_item_id = poi.id
+                        AND dp.kind IN ('damaged', 'wrong_item')), 0)::int AS qty_set_aside
+     FROM purchase_order_items poi WHERE poi.purchase_order_id = ? ORDER BY poi.id`
+  ).all(id);
 }
+const outstanding = (it) => it.qty_ordered - it.qty_received - (it.qty_set_aside ?? 0);
 
 
 
@@ -309,7 +321,8 @@ export function register(route) {
       } else {
         const itemsById = new Map((await loadPurchaseOrderItems(id)).map((it) => [it.id, it]));
         // What each line takes from what's still to come: booked in, set
-        // aside, or missing.
+        // aside, or missing. Still to come leaves out what earlier bookings
+        // set aside, so the total never passes what was ordered.
         const taken = new Map();
         for (const { itemId, qtyReceived, qty } of [...asked, ...problems]) {
           const line = itemsById.get(itemId);
@@ -318,13 +331,17 @@ export function register(route) {
         }
         for (const [itemId, n] of refusal ? [] : taken) {
           const line = itemsById.get(itemId);
-          const outstanding = line.qty_ordered - line.qty_received;
-          if (n > outstanding) {
-            refusal = () => badRequest(res, `Cannot receive ${n} of "${line.product_name}" - only ${outstanding} outstanding`);
+          const left = outstanding(line);
+          if (n > left) {
+            refusal = () => badRequest(res, `Cannot receive ${n} of "${line.product_name}" - only ${left} outstanding`);
             break;
           }
         }
         if (!refusal) {
+          // Stock is updated in product order, as a sale locks its products
+          // (server/lib/sales.js), so two bookings with the same products in
+          // another order wait for each other instead of deadlocking.
+          asked.sort((x, y) => itemsById.get(x.itemId).product_id - itemsById.get(y.itemId).product_id || x.itemId - y.itemId);
           for (const { itemId, qtyReceived } of asked) {
             const line = itemsById.get(itemId);
             await db.prepare('UPDATE purchase_order_items SET qty_received = qty_received + ? WHERE id = ?').run(qtyReceived, line.id);
@@ -345,10 +362,14 @@ export function register(route) {
               'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, kind, qty, note) VALUES (?, ?, ?, ?, ?, ?)'
             ).run(id, itemId, itemsById.get(itemId).product_id, kind, qty, note);
           }
-          if (asked.length > 0) {
-            const freshItems = await loadPurchaseOrderItems(id);
-            const allReceived = freshItems.every((it) => it.qty_received >= it.qty_ordered);
-            const newStatus = allReceived ? 'received' : 'partially_received';
+          // Received when nothing is left to come (booked in or set aside);
+          // partly delivered once anything is in stock; otherwise, with only
+          // problems marked, as it was.
+          const freshItems = await loadPurchaseOrderItems(id);
+          const newStatus = freshItems.every((it) => outstanding(it) <= 0) ? 'received'
+            : freshItems.some((it) => it.qty_received > 0) ? 'partially_received'
+            : existing.status;
+          if (newStatus !== existing.status) {
             await db.prepare('UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, nowIso(), id);
           }
         }

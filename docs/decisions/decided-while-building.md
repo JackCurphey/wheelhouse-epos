@@ -2736,3 +2736,28 @@ follows the job checklist, the closest pattern built.
 8. **"Receive against this order"** shows on an order still to come, for
    anyone, beside Close the order; "Receive a delivery" is on the hub for
    everyone (decision 4).
+9. **After the review:**
+   - **Damaged and wrong items are off what's to come** (replacing that
+     part of 5, and following decision 9, where they go on "To return to
+     [Supplier]" and only missing ones stay "to come"). What's still to
+     come on a line is what was ordered, less what's booked in, less what's
+     set aside, counting problems marked in earlier deliveries too. So the
+     two together never pass what was ordered, and a line can't be marked
+     damaged again and again. **A replacement for a damaged or wrong item
+     is booked on a new order line or a new order**, not on this line. An
+     order with nothing left to come is received, even if some of it was
+     set aside; one with only problems marked and nothing in stock keeps
+     its status (so it can still be closed).
+   - **An order that isn't waiting** (all in, or `?order=` naming a draft
+     or a received one) shows "This order is all in." (not drawn) and
+     picks nothing in From, so the person chooses; the page no longer
+     moves on to another order by itself. After booking in, the page stays
+     on that order, so booking the last of it says the same.
+   - **A booking the server refuses** fetches the orders again, so the
+     counts shown are the server's.
+   - **A problem marked by mistake is undone with the controls already
+     there:** "Problem?" opens on what's marked for that kind (its count
+     and note), and − at 1 takes it off, as − at 1 takes a scanned line
+     off. No new button or words.
+   - **Stock is updated in product order,** as a sale does, so two
+     deliveries with the same products can't deadlock.

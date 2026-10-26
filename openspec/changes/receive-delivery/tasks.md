@@ -12,5 +12,12 @@
     book them in, at computer and phone widths, nothing scrolling sideways.
 - [x] 1.2 Build the contract, migration and screens 1–8; log the choices in
   `docs/decisions/decided-while-building.md`.
+- [x] 1.2a Second review (26 Oct), tests first, each watched failing:
+  damaged and wrong items set aside in earlier deliveries count against
+  the line, and an order with nothing left to come is received; stock
+  updated in product order (two deliveries in opposite orders both land);
+  "This order is all in." instead of moving to another order; a refused
+  booking refreshes the orders; a problem undone with − at 1 in "Problem?".
+  Logged in `decided-while-building.md` (receiving, item 9).
 - [ ] 1.3 Lint, the touched tests, `/review` (stock, migration), pull
   request, archive.

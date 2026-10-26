@@ -72,7 +72,8 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
 
     await main.getByRole('button', { name: 'Book in 2 items' }).click();
     await expect(main.getByText('2 items booked in · stock updated')).toBeVisible();
-    await expect(main.getByRole('list', { name: 'Still to come on the order' })).toContainText('ordered 3, arrived 2');
+    // 2 booked in and 1 set aside: nothing is left to come (second review, 26 Oct).
+    await expect(main.getByText('This order is all in.')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
 
     const found = await asOwner(`/api/products?search=B05S-RX-${size}`);

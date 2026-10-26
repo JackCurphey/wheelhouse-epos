@@ -65,7 +65,7 @@ test('a staff member books a delivery in: stock and the arrived count go up, and
   assert.equal(await receiptsOf(pads), 2);
 });
 
-test('damaged and wrong items are recorded, not added to stock, and stay to come; missing is recorded too', async () => {
+test('damaged and wrong items are recorded, not added to stock, and set aside, not to come; missing is recorded and stays to come', async () => {
   const thing = await product('[Product]');
   const o = await orderedOrder([[thing, 5]]);
   const line = o.items[0].id;
@@ -79,7 +79,9 @@ test('damaged and wrong items are recorded, not added to stock, and stay to come
   });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.items[0].qtyReceived, 2);
-  assert.equal(res.body.items[0].outstanding, 3, 'the set-aside and missing ones are still to come');
+  // Second review, 26 Oct: the set-aside ones are off the line (a replacement
+  // is a new line or order); only the missing one is to come.
+  assert.equal(res.body.items[0].outstanding, 1, 'set aside is not to come; the missing one is');
   assert.equal(await stockOf(thing), 2);
   assert.deepEqual((await problemsOf(o.id)).map((p) => [p.purchase_order_item_id, p.product_id, p.kind, p.qty, p.note]), [
     [line, thing, 'damaged', 1, 'box crushed'],
@@ -91,9 +93,10 @@ test('damaged and wrong items are recorded, not added to stock, and stay to come
 test('only problems: they are recorded, nothing goes into stock, and an ordered order stays ordered', async () => {
   const thing = await product('[Product]');
   const o = await orderedOrder([[thing, 2]]);
-  const res = await receive(asJo, o.id, { problems: [{ itemId: o.items[0].id, kind: 'damaged', qty: 2 }] });
+  const res = await receive(asJo, o.id, { problems: [{ itemId: o.items[0].id, kind: 'damaged', qty: 1 }] });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.status, 'ordered');
+  assert.equal(res.body.items[0].outstanding, 1);
   assert.equal(await stockOf(thing), 0);
   assert.equal((await problemsOf(o.id)).length, 1);
 });
@@ -144,4 +147,84 @@ test('one product on several orders booked in at once: every unit reaches stock 
   const replies = await Promise.all(orders.map((o) => receive(asJo, o.id, { items: [{ itemId: o.items[0].id, qtyReceived: 1 }] })));
   assert.deepEqual(replies.map((r) => r.status), [200, 200, 200, 200, 200], JSON.stringify(replies.map((r) => r.body)));
   assert.equal(await stockOf(pads), 5);
+});
+
+// Second review, 26 Oct (finding 3): damaged and wrong items recorded in an
+// earlier booking count against the line, so received plus set aside never
+// passes what was ordered. Missing ones never arrived and stay to come.
+test('problems recorded earlier count: a line can’t be set aside or received past what was ordered', async () => {
+  const thing = await product('[Product]');
+  // A second line still to come keeps the order waiting for a delivery.
+  const o = await orderedOrder([[thing, 2], [await product('[Product B]'), 1]]);
+  const line = o.items[0].id;
+  assert.equal((await receive(asJo, o.id, { problems: [{ itemId: line, kind: 'damaged', qty: 1 }] })).status, 200);
+  assert.equal((await receive(asJo, o.id, { problems: [{ itemId: line, kind: 'wrong_item', qty: 1 }] })).status, 200);
+  for (const body of [
+    { problems: [{ itemId: line, kind: 'damaged', qty: 1 }] },
+    { problems: [{ itemId: line, kind: 'wrong_item', qty: 1 }] },
+    { items: [{ itemId: line, qtyReceived: 1 }] },
+  ]) {
+    const res = await receive(asJo, o.id, body);
+    assert.equal(res.status, 400, `${JSON.stringify(body)}: ${JSON.stringify(res.body)}`);
+    assert.match(res.body.error, /only 0 outstanding/);
+  }
+  assert.equal((await problemsOf(o.id)).length, 2);
+  assert.equal(await stockOf(thing), 0);
+});
+
+test('received plus set aside reaching what was ordered makes the order received; nothing more can be set aside', async () => {
+  const thing = await product('[Product]');
+  const o = await orderedOrder([[thing, 3]]);
+  const line = o.items[0].id;
+  const first = await receive(asJo, o.id, { items: [{ itemId: line, qtyReceived: 2 }], problems: [{ itemId: line, kind: 'damaged', qty: 1 }] });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.equal(first.body.items[0].outstanding, 0);
+  assert.equal(first.body.status, 'received');
+  const again = await receive(asJo, o.id, { problems: [{ itemId: line, kind: 'damaged', qty: 1 }] });
+  assert.equal(again.status, 400, JSON.stringify(again.body));
+});
+
+test('a line all set aside makes the order received, with nothing in stock', async () => {
+  const thing = await product('[Product]');
+  const o = await orderedOrder([[thing, 2]]);
+  const res = await receive(asJo, o.id, { problems: [{ itemId: o.items[0].id, kind: 'wrong_item', qty: 2 }] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.status, 'received');
+  assert.equal(await stockOf(thing), 0);
+});
+
+test('missing ones recorded earlier stay to come and can still be booked in', async () => {
+  const thing = await product('[Product]');
+  const o = await orderedOrder([[thing, 2]]);
+  const line = o.items[0].id;
+  assert.equal((await receive(asJo, o.id, { problems: [{ itemId: line, kind: 'missing', qty: 2 }] })).status, 200);
+  const res = await receive(asJo, o.id, { items: [{ itemId: line, qtyReceived: 2 }] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.status, 'received');
+  assert.equal(await stockOf(thing), 2);
+});
+
+test('two people marking the last one damaged at once: one is recorded, the other refused', async () => {
+  const thing = await product('[Product]');
+  const o = await orderedOrder([[thing, 1]]);
+  const mark = () => receive(asJo, o.id, { problems: [{ itemId: o.items[0].id, kind: 'damaged', qty: 1 }] });
+  const replies = await Promise.all([mark(), mark(), mark()]);
+  assert.deepEqual(replies.map((r) => r.status).sort(), [200, 400, 400], JSON.stringify(replies.map((r) => r.body)));
+  assert.equal((await problemsOf(o.id)).length, 1);
+});
+
+// Second review, 26 Oct (finding 2): two bookings with the same products in
+// the opposite order update the products' stock in product order, as a sale
+// does (server/lib/sales.js), so they wait for each other instead of
+// deadlocking.
+test('two deliveries with the same products in opposite orders, booked in at once, both land', async () => {
+  const a = await product('[Product A]');
+  const b = await product('[Product B]');
+  const rounds = 10;
+  const pairs = [];
+  for (let i = 0; i < rounds; i++) pairs.push([await orderedOrder([[a, 1], [b, 1]]), await orderedOrder([[b, 1], [a, 1]])]);
+  const replies = await Promise.all(pairs.flat().map((o) => receive(asJo, o.id, { items: o.items.map((it) => ({ itemId: it.id, qtyReceived: 1 })) })));
+  assert.deepEqual(replies.map((r) => r.status), replies.map(() => 200), JSON.stringify(replies.filter((r) => r.status !== 200).map((r) => r.body)));
+  assert.equal(await stockOf(a), rounds * 2);
+  assert.equal(await stockOf(b), rounds * 2);
 });

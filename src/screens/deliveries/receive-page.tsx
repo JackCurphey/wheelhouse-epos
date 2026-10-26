@@ -56,7 +56,10 @@ export function ReceivePage() {
 
   // Newest first, as the hub lists them.
   const awaiting = (orders.data ?? []).filter((o) => AWAITING.includes(o.status)).sort((a, b) => b.id - a.id);
-  const order = awaiting.find((o) => String(o.id) === picked) ?? awaiting[0];
+  // The newest when none was asked for. One asked for that isn't waiting (all
+  // in, or a draft) picks nothing, so the person chooses (second review).
+  const allIn = picked !== null && !awaiting.some((o) => String(o.id) === picked);
+  const order = allIn ? undefined : awaiting.find((o) => String(o.id) === picked) ?? awaiting[0];
   const twice = (o: Order) => awaiting.filter((x) => x.supplierId === o.supplierId).length > 1;
   const scannedOf = (itemId: number) => scanned.find((s) => s.itemId === itemId);
   const lineOf = (itemId: number) => order?.items.find((it) => it.id === itemId);
@@ -119,12 +122,17 @@ export function ReceivePage() {
         items: scanned.filter((s) => s.qty - setAside(s) > 0).map((s) => ({ itemId: s.itemId, qtyReceived: s.qty - setAside(s) })),
         problems: scanned.flatMap((s) => s.problems.map((p) => ({ itemId: s.itemId, ...p }))),
       });
+      // Stay on this order: once it's all in, the page says so rather than
+      // moving on to the next one.
+      setPicked(String(next.id));
       queryClient.setQueryData(['purchase-order', next.id], next);
       queryClient.setQueryData<Order[]>(['purchase-orders'], (os) => os?.map((o) => (o.id === next.id ? next : o)));
       void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setScanned([]);
       setSaid(`${toBook} items booked in · stock updated`);
     } catch (err) {
+      // A refusal is usually counts that moved on: show the server's.
+      void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t book the delivery in. Try again in a moment.');
     } finally {
       setBusy(false);
@@ -133,20 +141,31 @@ export function ReceivePage() {
 
   const marked = marking === null ? null : scannedOf(marking);
   const markedLine = marking === null ? undefined : lineOf(marking);
+  const from = (value: string | null) => (
+    <div className="flex flex-wrap items-end gap-2">
+      <PillGroup legend="From" value={value} onChange={pick}
+        options={awaiting.map((o) => ({ value: String(o.id), label: twice(o) && o.orderedAt ? `${o.supplierName} · ordered ${day(o.orderedAt)}` : o.supplierName }))} />
+      <span className="pb-3 text-size-13 text-[var(--wh-muted)]">Shows what’s still to come on its orders</span>
+    </div>
+  );
+  const saidLine = <p role="status" className="m-0 min-h-5 text-sm text-[var(--wh-muted)]">{said}</p>;
   return (
     <Page>
       <Back />
       <Card id="t-scan-the-box" title="Scan the box">
         {orders.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the orders. Try again in a moment.</p>
           : !orders.data ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
+          : allIn ? (
+            <>
+              {awaiting.length > 0 ? from(null) : null}
+              <p className="m-0 text-sm text-[var(--wh-muted)]">This order is all in.</p>
+              {saidLine}
+            </>
+          )
           : !order ? <p className="m-0 text-sm text-[var(--wh-muted)]">No orders are waiting for a delivery.</p>
           : (
             <>
-              <div className="flex flex-wrap items-end gap-2">
-                <PillGroup legend="From" value={String(order.id)} onChange={pick}
-                  options={awaiting.map((o) => ({ value: String(o.id), label: twice(o) && o.orderedAt ? `${o.supplierName} · ordered ${day(o.orderedAt)}` : o.supplierName }))} />
-                <span className="pb-3 text-size-13 text-[var(--wh-muted)]">Shows what’s still to come on its orders</span>
-              </div>
+              {from(String(order.id))}
               <div className="relative">
                 <label className="flex min-h-[52px] items-center gap-2.5 rounded-[10px] border-2 border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3.5 text-[var(--wh-muted)]">
                   <NavIcon name="search" size={20} />
@@ -167,7 +186,7 @@ export function ReceivePage() {
                   </ul>
                 ) : null}
               </div>
-              <p role="status" className="m-0 min-h-5 text-sm text-[var(--wh-muted)]">{said}</p>
+              {saidLine}
               {scanned.length > 0 ? (
                 <ul aria-label="Scanned" className="m-0 list-none p-0">
                   {scanned.map((s) => {
@@ -200,6 +219,10 @@ export function ReceivePage() {
           onMark={(p) => {
             setScanned((ss) => ss.map((s) => (s.itemId === marked.itemId ? { ...s, problems: [...s.problems.filter((x) => x.kind !== p.kind), p] } : s)));
             setMarking(null);
+          }}
+          onUnmark={(kind) => {
+            setScanned((ss) => ss.map((s) => (s.itemId === marked.itemId ? { ...s, problems: s.problems.filter((x) => x.kind !== kind) } : s)));
+            setMarking(null);
           }} />
       ) : null}
     </Page>
@@ -228,17 +251,26 @@ function StillToCome({ order, scanned }: { order: Order; scanned: Scanned[] }) {
 /**
  * Something wrong? (rs-problem; decision 9): Damaged, Wrong item or Missing,
  * how many and a note. Damaged and wrong come out of what was scanned;
- * missing ones are on top of it, up to what's still to come.
+ * missing ones are on top of it, up to what's still to come. A kind already
+ * marked opens on its count and note, and − at 1 takes it off, as − at 1
+ * takes a scanned line off (second review: undoing a mistake).
  */
-function SomethingWrong({ line, scanned, onCancel, onMark }: { line: OrderItem; scanned: Scanned; onCancel: () => void; onMark: (p: Problem) => void }) {
-  const [kind, setKind] = useState<Kind>('damaged');
-  const [note, setNote] = useState('');
+function SomethingWrong({ line, scanned, onCancel, onMark, onUnmark }: { line: OrderItem; scanned: Scanned; onCancel: () => void; onMark: (p: Problem) => void; onUnmark: (kind: Kind) => void }) {
+  const markedAs = (k: Kind) => scanned.problems.find((p) => p.kind === k);
+  const [kind, setKindState] = useState<Kind>('damaged');
+  const [note, setNote] = useState(markedAs('damaged')?.note ?? '');
   const others = scanned.problems.filter((p) => p.kind !== kind);
   const max = kind === 'missing'
     ? line.outstanding - scanned.qty - others.filter((p) => p.kind === 'missing').reduce((n, p) => n + p.qty, 0)
     : scanned.qty - others.filter((p) => p.kind !== 'missing').reduce((n, p) => n + p.qty, 0);
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(markedAs('damaged')?.qty ?? 1);
   const n = Math.min(qty, max);
+  function setKind(k: Kind) {
+    setKindState(k);
+    const was = markedAs(k);
+    if (was) { setQty(was.qty); setNote(was.note); }
+  }
+  const already = markedAs(kind);
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onCancel(); }} aria-labelledby="pb-title">
       <DialogHeader>
@@ -251,7 +283,7 @@ function SomethingWrong({ line, scanned, onCancel, onMark }: { line: OrderItem; 
         <PillGroup legend="What’s wrong" value={kind} onChange={(v) => setKind(v as Kind)} options={KINDS} />
         <div className="flex items-center justify-between gap-3">
           <span className="text-size-15 font-semibold">How many</span>
-          {max >= 1 ? <Count name={label(kind).toLowerCase()} value={Math.max(1, n)} max={max} onChange={setQty} /> : <span className="text-sm text-[var(--wh-muted)]">0</span>}
+          {max >= 1 ? <Count name={label(kind).toLowerCase()} value={Math.max(1, n)} max={max} onChange={setQty} onBelowOne={already ? () => onUnmark(kind) : undefined} /> : <span className="text-sm text-[var(--wh-muted)]">0</span>}
         </div>
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
           Note (optional)

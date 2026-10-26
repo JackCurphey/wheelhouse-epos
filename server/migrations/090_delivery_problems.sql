@@ -1,8 +1,9 @@
 -- What was wrong with a delivery (openspec/changes/receive-delivery, the
 -- contract; receiving decision 9; rs-problem): marked at booking in as
 -- damaged, wrong item or missing, how many and an optional note. Damaged and
--- wrong items aren't added to stock and stay to come on the order; To return
--- to [Supplier] and Returned read these later. Additive.
+-- wrong items aren't added to stock and are set aside, off what's still to
+-- come (missing ones stay to come); To return to [Supplier] and Returned read
+-- these later. Additive.
 CREATE TABLE delivery_problems (
   id SERIAL PRIMARY KEY,
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
