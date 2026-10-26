@@ -35,7 +35,7 @@ migration (090, the problems). `/review` before merging.
 - **Server:** the receive route locks the order before it checks what's
   still to come, so two people booking the same line in at once can't count
   it twice, and adds stock with one `stock_qty = stock_qty + n`. It also
-  takes the problems, recorded in a new table (migration 090).
+  takes the problems, recorded in a new table (migration 092).
 
 ## Capabilities
 

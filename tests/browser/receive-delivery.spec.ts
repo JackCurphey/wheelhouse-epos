@@ -52,6 +52,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await page.goto(`${server!.baseUrl}/workshop/deliveries`);
     const main = page.getByRole('main');
     await main.getByRole('link', { name: 'Receive a delivery' }).click();
+    expect(page.url().split('?')[0]).toBe(`${server!.baseUrl}/workshop/deliveries/receive`);
     await main.getByText(supplierName, { exact: true }).click();
     await expect(main.getByRole('radio', { name: supplierName, exact: true })).toBeChecked();
     await expect(main.getByRole('list', { name: 'Still to come on the order' })).toContainText('3 to come');

@@ -2859,7 +2859,7 @@ follows the job checklist, the closest pattern built.
    still to come are counted"); the server refuses more anyway. − at 1
    takes the line off, without the audit's Undo; a line with a problem
    marked can't go below what's set aside.
-5. **Problems:** recorded in a new table (migration 090,
+5. **Problems:** recorded in a new table (migration 092, numbered 090 until 091 reached main,
    `delivery_problems`) with the order line, kind, how many and a note (up
    to 500 characters). Damaged and wrong come out of what was scanned and
    aren't booked in; the line stays to come on the order, as qty_received

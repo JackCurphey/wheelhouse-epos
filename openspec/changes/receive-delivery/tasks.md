@@ -1,7 +1,7 @@
 # Tasks
 
 - [x] 1.1 Tests first, each watched failing:
-  - migration 090 from empty (`tests/migration-090.test.js`);
+  - migration 092 from empty, and again (`tests/migration-092.test.js`);
   - server (`tests/purchase-orders-receive.test.js`): staff can receive;
     stock and arrived counts; problems recorded and not in stock; too many
     refused; two bookings of the last item at once count once;

@@ -1,4 +1,4 @@
-// Migration 090 (openspec/changes/receive-delivery, the contract): what was
+// Migration 092, numbered 090 until 26 Oct (openspec/changes/receive-delivery, the contract): what was
 // wrong with a delivery (receiving decision 9) — damaged, wrong item or
 // missing, how many and a note — kept per shop. Run from empty, then onto a
 // database that already has a shop with an order.
@@ -13,7 +13,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '090_delivery_problems.sql';
+const FILE = '092_delivery_problems.sql';
 
 function adminUrlOrSkip(t) {
   try {
@@ -31,10 +31,10 @@ async function withClient(url, fn) {
 }
 const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8', stdio: 'pipe' });
 
-test('090 adds delivery problems and keeps each shop to its own', async (t) => {
+test('092 adds delivery problems and keeps each shop to its own', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig090_${process.pid}`;
+  const name = `epos_mig092_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));
@@ -70,6 +70,17 @@ test('090 adds delivery problems and keeps each shop to its own', async (t) => {
     // Another shop sees none of it.
     const { rows: [other] } = await c.query("INSERT INTO shops (name, slug) VALUES ('Other Cycles', 'other-cycles') RETURNING id");
     await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(other.id)]);
+    assert.equal((await c.query('SELECT count(*)::int AS n FROM delivery_problems')).rows[0].n, 0);
+  });
+  // Run again on a database that already has it (a shared dev database ran it
+  // as 090 before it was renumbered): it runs without failing, the problems
+  // stay, and each shop still sees only its own.
+  await withClient(url.href, (c) => c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]));
+  assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`));
+  await withClient(url.href, async (c) => {
+    await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.shop)]);
+    assert.equal((await c.query('SELECT count(*)::int AS n FROM delivery_problems')).rows[0].n, 3);
+    await c.query("SELECT set_config('app.current_shop_id', (SELECT id::text FROM shops WHERE slug = 'other-cycles'), false)");
     assert.equal((await c.query('SELECT count(*)::int AS n FROM delivery_problems')).rows[0].n, 0);
   });
 });

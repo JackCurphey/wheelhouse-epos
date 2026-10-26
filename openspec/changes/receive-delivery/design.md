@@ -40,7 +40,7 @@ Cancel (deliveries-orders) changes only a draft or ordered order, and a
 receipt changes the order's row in its transaction, so a close at the same
 moment waits and is then refused.
 
-## Migration 090: `delivery_problems`
+## Migration 092 (numbered 090 until 26 Oct): `delivery_problems`
 
 `id`, `shop_id` (row-level security, like every shop table),
 `purchase_order_id`, `purchase_order_item_id`, `product_id`, `kind`

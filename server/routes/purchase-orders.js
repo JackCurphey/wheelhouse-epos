@@ -21,7 +21,7 @@ const db = { prepare, exec: dbExec };
 // roles bring "Can order stock" (receiving decision 4; WP-1.1); everyone can
 // read orders and receive against them (openspec/changes/deliveries-orders).
 const ORDER_STOCK = "Only the shop's owner can order stock";
-// What can be wrong with a delivered item (receiving decision 9; migration 090).
+// What can be wrong with a delivered item (receiving decision 9; migration 092).
 const PROBLEM_KINDS = ['damaged', 'wrong_item', 'missing'];
 
 // The order's total cost in pounds, as unit_cost is stored (NUMERIC(10,2)),
