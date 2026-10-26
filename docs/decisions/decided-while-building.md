@@ -2658,11 +2658,53 @@ follows the job checklist, the closest pattern built.
    removed. The `job-book-in` drawing still shows "Bike tag sent ·
    Acknowledged"; the built bike tag follows `2026-10-21-bike-tag.md`.
 
+### 26 Oct 2026: company customers (`openspec/changes/company-customers`, `cs-add-company`, the VAT invoice in `collect.mjs`; customer service review 3; leftover screens H2; day answers 26 Oct, 3)
+
+1. **A company's name is the customer's name.** So the customers list, the
+   header search, the customer's page, the till and the diary show the
+   company's name, as they show any customer's, with nothing added. The
+   list has no company drawn; nothing new is shown there.
+2. **The contact name is needed for a company**: it is the one box on the
+   drawn company form not marked "(optional)" beside the name. Missing, it
+   says "Add the contact’s name."; a missing company name says "Add the
+   company or club’s name.", after Add's "Add their name.".
+3. **"Send invoices to" is checked as an email address**, with the
+   receipt's words: "That doesn’t look like an email address — check it".
+   The VAT number is free text up to 30 characters, with no format check,
+   since the invoice is a generic one for any shop.
+4. **Edit** has the same "This is" choice and boxes, with Edit's labels
+   (no "(optional)", as Edit's Address and Note). Choosing "A person" there
+   clears the contact name, VAT number and "Send invoices to".
+5. **The customer's page shows nothing new.** The contact name, VAT number
+   and "Send invoices to" are seen in Edit only; none is drawn on `cs-page`.
+6. **The VAT invoice email** is the built receipt with "VAT invoice" as its
+   first line and subject, and "Invoice to" after the shop's details: the
+   company's name and address (address and postcode joined with a comma,
+   as the merge pop-up joins them), then "VAT number [n]". It still says
+   "Sale [n]" and has no VAT line, as the built receipt does, because the
+   sales it reads have never recorded VAT. The contact name isn't on it
+   (not drawn).
+7. **The till's "Email the receipt"** fills in "Send invoices to" for a
+   company, or its email when that is blank (H2: "default to the
+   contact's email"). Its note names the company in full: "From [Company
+   name]’s customer record."
+8. **Left out:** the printed receipt, the text receipt page and its PDF;
+   finding a company by its contact's name; comparing company details in
+   "The same person?".
+9. **Headed "Invoice", not "VAT invoice", until sales record VAT** (Jack's
+   answer that day, day answers 10): a VAT invoice without its VAT amount
+   isn't one. It becomes "VAT invoice", with its VAT line, once Mark's step C
+   records VAT on each sale.
+10. **After the review:** a merge moves a company's details (company or
+    person, contact name, VAT number, invoice email) together with its name,
+    and Undo puts them back. A line break typed into a company's details
+    stays on its line in "Invoice to".
+
 ### 26 Oct 2026: the customer's conversation with the shop, the server (`openspec/changes/ask-the-shop-server`, `ac-ask`, `ac-question`, `ac-account-asked`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
 
 1. **Where messages are kept.** A general message sits with the repair notes
    (`job_notes`), marked with its customer instead of a repair (migration
-   087). A repair note's customer is always its repair's, so a repair moved to
+   091, numbered 087 until 088 reached main). A repair note's customer is always its repair's, so a repair moved to
    another customer takes its notes with it. Merging customers moves general
    messages too, and Undo puts them back.
 2. **A note on a repair with no customer** is in nobody's conversation. It

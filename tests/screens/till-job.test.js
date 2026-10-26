@@ -75,7 +75,7 @@ function stubServer(employee) {
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
-    if (u.pathname === '/api/customers/5') return reply(200, { id: 5, name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', active: true });
+    if (u.pathname === '/api/customers/5') return reply(200, CUSTOMER_5);
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]' });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], showSignOffToCustomers: SHOW_SIGN_OFF });
@@ -84,7 +84,10 @@ function stubServer(employee) {
   };
 }
 
-async function openJobTill({ jobOver = {}, orderOver = {}, dueOver = {} } = {}) {
+const MAYA_RECORD = { id: 5, name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', active: true };
+let CUSTOMER_5 = MAYA_RECORD;
+async function openJobTill({ jobOver = {}, orderOver = {}, dueOver = {}, customer = MAYA_RECORD } = {}) {
+  CUSTOMER_5 = customer;
   JOB = job(jobOver);
   ORDER = order(orderOver);
   convertReply = null;
@@ -399,6 +402,28 @@ test('Email on a job’s Paid box fills in the customer’s address from their r
   assert.ok(box.queryByRole('checkbox', { name: /Save to a customer record/ }) === null);
   // Read out with the box, for a screen reader (review).
   assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
+});
+
+// A company or club's receipt goes to "Send invoices to", or its email when
+// that is blank (openspec/changes/company-customers design 5; leftover
+// screens H2; the drawn VAT invoice goes to [accounts email]).
+const CLUB_RECORD = { ...MAYA_RECORD, name: '[Company name]', isCompany: true, contactName: '[Contact name]', vatNumber: null, invoiceEmail: 'accounts@example.com' };
+async function emailBox(customer) {
+  const t = await openJobTill({ customer });
+  const pay = await payByCard(t);
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Email' }));
+  return { t, box: t.within(await t.ui.findByRole('dialog', { name: 'Email the receipt' })) };
+}
+
+test('Email for a company fills in Send invoices to, naming the company’s record', async () => {
+  const { t, box } = await emailBox(CLUB_RECORD);
+  await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'accounts@example.com'));
+  assert.ok(Boolean(box.queryByText('From [Company name]’s customer record. A change here is used for this receipt only.')));
+});
+
+test('a company with no Send invoices to uses its email', async () => {
+  const { t, box } = await emailBox({ ...CLUB_RECORD, invoiceEmail: null });
+  await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'maya@example.test'));
 });
 
 // A deposit paid online comes off (Jack, 29 Sep, selling at the till decision

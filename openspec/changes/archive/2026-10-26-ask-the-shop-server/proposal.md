@@ -18,13 +18,13 @@ The drawings are approved: `conversationPage`, `ac-ask`,
 Jack is taking it. This change is the server; the screens follow in their own
 change.
 
-**Risky areas:** a migration (087); customer accounts, sign-in and public
+**Risky areas:** a migration (091); customer accounts, sign-in and public
 routes (`/api/portal/*`); the messaging core (a new template). It needs
 `/review`.
 
 ## What Changes
 
-- **Migration 087.** A message on `job_notes` is either about a repair (a job)
+- **Migration 091.** A message on `job_notes` is either about a repair (a job)
   or a general message to or from a customer: `workshop_job_id` becomes
   optional, `customer_id` is added, and exactly one of the two is set. Every
   existing note stays a repair note and keeps working on the repair page.

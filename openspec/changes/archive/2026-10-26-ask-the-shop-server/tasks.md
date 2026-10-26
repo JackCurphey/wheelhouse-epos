@@ -2,7 +2,7 @@
 
 ## 1. Tests first (each watched failing for the right reason)
 
-- [x] 1.1 `tests/migration-087.test.js`: from an empty scratch database, then
+- [x] 1.1 `tests/migration-091.test.js`: from an empty scratch database, then
   onto one with a repair note; the note keeps its job; a general message
   needs its customer; a row with both or neither is refused; another shop
   sees none.
@@ -27,7 +27,7 @@
 
 ## 2. Build
 
-- [x] 2.1 Migration 087 (design 1); merging customers moves general messages.
+- [x] 2.1 Migration 091 (design 1); merging customers moves general messages.
 - [x] 2.2 `server/workshop/job-notes.js`: general messages, the customer's
   conversation, the per-customer inbox.
 - [x] 2.3 The portal routes and the history item (design 2 and 3).

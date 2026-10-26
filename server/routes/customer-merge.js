@@ -12,7 +12,8 @@ const UNDO_DAYS = 30;
 // A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
 const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes'];
 // The fields that may differ, and the columns each takes.
-const FIELDS = { name: ['name'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
+// A company's details travel with its name (company customers' review 1).
+const FIELDS = { name: ['name', 'is_company', 'contact_name', 'vat_number', 'invoice_email'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
 // The customer's answers to reminders: not a choice, but kept in the merge's
 // before and after so Undo puts them back (merge-keeps-yes).
 const ANSWERS = ['service_reminders', 'review_requests', 'reminders_said_yes_at', 'reminders_said_yes_via'];

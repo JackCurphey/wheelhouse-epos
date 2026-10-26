@@ -5,7 +5,7 @@ approved drawing (`account.mjs`: `conversationPage`, `ac-ask`,
 `ac-account-question-sent`, `ac-question`, `ac-account-asked`; the inbox
 `ac-inbox*` is redrawn by the screens change).
 
-## 1. Storage: `job_notes` holds both kinds (migration 087)
+## 1. Storage: `job_notes` holds both kinds (migration 091)
 
 A message is a row in `job_notes`, as a repair note already is:
 

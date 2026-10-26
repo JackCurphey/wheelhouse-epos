@@ -436,3 +436,22 @@ test('a stop on one of the shop’s own messages moves with a merge, and Undo ta
   assert.equal((await undo(merged.id)).status, 200);
   assert.deepEqual(await stops(kept.id), [], 'Undo takes back what the merge added');
 });
+
+// Company customers' review 1: a company's details travel with its name, so a
+// merge never makes a person called "Riverside CC", or a company called Maya.
+test('choosing the other record’s name brings its company details; keeping this one’s keeps them; Undo puts them back', async () => {
+  const person = await add({ name: 'Maya Patel', phone: '07700 900611' });
+  const company = await add({ isCompany: true, name: 'Riverside CC', contactName: 'Sam Reed', vatNumber: 'GB123', invoiceEmail: 'accounts@riverside.test', phone: '07700 900611' });
+  const merged = await merge(person.id, company.id, { name: 'other' });
+  const kept = await customer(person.id);
+  assert.deepEqual([kept.name, kept.is_company, kept.contact_name, kept.vat_number, kept.invoice_email], ['Riverside CC', true, 'Sam Reed', 'GB123', 'accounts@riverside.test']);
+  assert.equal((await undo(merged.id)).status, 200);
+  const back = await customer(person.id);
+  assert.deepEqual([back.name, back.is_company, back.contact_name], ['Maya Patel', false, null]);
+
+  const company2 = await add({ isCompany: true, name: 'Hill Wheelers', contactName: 'Jo Hill', phone: '07700 900612' });
+  const person2 = await add({ name: 'Jo Hill', phone: '07700 900612' });
+  await merge(company2.id, person2.id, { name: 'this' });
+  const stays = await customer(company2.id);
+  assert.deepEqual([stays.name, stays.is_company, stays.contact_name], ['Hill Wheelers', true, 'Jo Hill']);
+});
