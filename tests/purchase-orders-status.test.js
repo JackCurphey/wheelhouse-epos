@@ -7,6 +7,8 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import pg from 'pg';
+import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
 import '../server/load-env.js';
 import { runWithShop, prepare, pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
@@ -118,4 +120,54 @@ test('an order with something booked in can’t be cancelled: 409, and its statu
   assert.equal(res.status, 409, JSON.stringify(res.body));
   assert.deepEqual(res.body, { error: 'This purchase order already has items booked in and cannot be cancelled' });
   assert.equal((await statusOf(id)).status, 'ordered');
+});
+
+test('a partly arrived order can’t be closed: 409, and its status stays', async () => {
+  const made = await create({ markOrdered: true });
+  const id = made.body.id;
+  await runWithShop(owner.shop.id, () => prepare("UPDATE purchase_orders SET status = 'partially_received' WHERE id = ?").run(id));
+  const res = await as(owner)(`/api/purchase-orders/${id}/cancel`, {});
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal((await statusOf(id)).status, 'partially_received');
+});
+
+// Review of 26 Oct, finding 1: a close that arrives while a delivery is being
+// booked in waits on the order's row, then must see the booking once it
+// commits. Under READ COMMITTED a check on the lines alone is re-run against
+// the old snapshot and lets the close through. An admin connection holds the
+// booking open, as the receive route's transaction would, until the close is
+// seen waiting on it.
+test('a close that waits on a delivery being booked in is refused once the booking commits', async () => {
+  const made = await create({ markOrdered: true });
+  const id = made.body.id;
+  const adminUrl = new URL(adminUrlFrom(process.env));
+  adminUrl.pathname = new URL(process.env.DATABASE_URL).pathname;
+  const admin = new pg.Client({ connectionString: adminUrl.href });
+  await admin.connect();
+  try {
+    await admin.query('BEGIN');
+    await admin.query('UPDATE purchase_order_items SET qty_received = 1 WHERE purchase_order_id = $1', [id]);
+    await admin.query("UPDATE purchase_orders SET status = 'received' WHERE id = $1", [id]);
+    const closing = as(owner)(`/api/purchase-orders/${id}/cancel`, {});
+    // Wait until the close is blocked on the booking's lock. Inside a
+    // transaction pg_stat_activity is a cached snapshot, so it's cleared on
+    // each look.
+    let waiting = false;
+    for (let i = 0; i < 200 && !waiting; i++) {
+      await admin.query('SELECT pg_stat_clear_snapshot()');
+      const { rows } = await admin.query(
+        "SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%status = ''cancelled''%' AND pid <> pg_backend_pid()"
+      );
+      waiting = rows.length > 0;
+      if (!waiting) await new Promise((r) => setTimeout(r, 25));
+    }
+    assert.ok(waiting, 'the close was seen waiting on the booking');
+    await admin.query('COMMIT');
+    const res = await closing;
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.equal((await statusOf(id)).status, 'received', 'the booked-in order is not cancelled');
+  } finally {
+    await admin.query('ROLLBACK').catch(() => {});
+    await admin.end();
+  }
 });
