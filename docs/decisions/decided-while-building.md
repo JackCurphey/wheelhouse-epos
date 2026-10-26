@@ -2642,6 +2642,148 @@ follows the job checklist, the closest pattern built.
 2. **No "Show the diary legend" switch on a phone,** where the diary has no
    legend, as with Folded sidebar.
 
+### 26 Oct 2026: the print agent removed (`openspec/changes/drop-print-agent`; Jack's decision in `2026-10-26-day-answers.md` section 5)
+
+1. **Removed:** the label printer helper (`print-agent/`), its four
+   `/api/print-agents` routes and their test. Nothing was kept in a table,
+   so no migration.
+2. **The old app's stickers** still print, through the browser's print box
+   only: its "Send straight to" printer choice and the dashboard's
+   "Connected printers" panel are gone, as the old app is a placeholder.
+3. **The id check's test** that a non-id param is left alone now uses a
+   message template's name (`shop_reply`), since the print job id it used
+   is gone.
+4. **Kept as history:** decisions, reviews, older plans and the drawings
+   that name the helper. The go-live checklist and both plans say it was
+   removed. The `job-book-in` drawing still shows "Bike tag sent ·
+   Acknowledged"; the built bike tag follows `2026-10-21-bike-tag.md`.
+
+### 26 Oct 2026: company customers (`openspec/changes/company-customers`, `cs-add-company`, the VAT invoice in `collect.mjs`; customer service review 3; leftover screens H2; day answers 26 Oct, 3)
+
+1. **A company's name is the customer's name.** So the customers list, the
+   header search, the customer's page, the till and the diary show the
+   company's name, as they show any customer's, with nothing added. The
+   list has no company drawn; nothing new is shown there.
+2. **The contact name is needed for a company**: it is the one box on the
+   drawn company form not marked "(optional)" beside the name. Missing, it
+   says "Add the contact’s name."; a missing company name says "Add the
+   company or club’s name.", after Add's "Add their name.".
+3. **"Send invoices to" is checked as an email address**, with the
+   receipt's words: "That doesn’t look like an email address — check it".
+   The VAT number is free text up to 30 characters, with no format check,
+   since the invoice is a generic one for any shop.
+4. **Edit** has the same "This is" choice and boxes, with Edit's labels
+   (no "(optional)", as Edit's Address and Note). Choosing "A person" there
+   clears the contact name, VAT number and "Send invoices to".
+5. **The customer's page shows nothing new.** The contact name, VAT number
+   and "Send invoices to" are seen in Edit only; none is drawn on `cs-page`.
+6. **The VAT invoice email** is the built receipt with "VAT invoice" as its
+   first line and subject, and "Invoice to" after the shop's details: the
+   company's name and address (address and postcode joined with a comma,
+   as the merge pop-up joins them), then "VAT number [n]". It still says
+   "Sale [n]" and has no VAT line, as the built receipt does, because the
+   sales it reads have never recorded VAT. The contact name isn't on it
+   (not drawn).
+7. **The till's "Email the receipt"** fills in "Send invoices to" for a
+   company, or its email when that is blank (H2: "default to the
+   contact's email"). Its note names the company in full: "From [Company
+   name]’s customer record."
+8. **Left out:** the printed receipt, the text receipt page and its PDF;
+   finding a company by its contact's name; comparing company details in
+   "The same person?".
+9. **Headed "Invoice", not "VAT invoice", until sales record VAT** (Jack's
+   answer that day, day answers 10): a VAT invoice without its VAT amount
+   isn't one. It becomes "VAT invoice", with its VAT line, once Mark's step C
+   records VAT on each sale.
+10. **After the review:** a merge moves a company's details (company or
+    person, contact name, VAT number, invoice email) together with its name,
+    and Undo puts them back. A line break typed into a company's details
+    stays on its line in "Invoice to".
+
+### 26 Oct 2026: the customer's conversation with the shop, the server (`openspec/changes/ask-the-shop-server`, `ac-ask`, `ac-question`, `ac-account-asked`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
+
+1. **Where messages are kept.** A general message sits with the repair notes
+   (`job_notes`), marked with its customer instead of a repair (migration
+   091, numbered 087 until 088 reached main). A repair note's customer is always its repair's, so a repair moved to
+   another customer takes its notes with it. Merging customers moves general
+   messages too, and Undo puts them back.
+2. **A note on a repair with no customer** is in nobody's conversation. It
+   stays on the repair's own page, as now.
+3. **"Needs a reply"** is the inbox's rule as before, across the whole
+   conversation: the customer's message is the newest. A shop reply about
+   anything answers it.
+4. **The staff reply box** replies about the repair of the customer's newest
+   message (a note on that repair, "Reply from the shop", linking to the
+   repair), or as a general message when theirs was general ("Reply to a
+   message", linking to the conversation). The screens follow this.
+5. **"Reply to a message"** is its name in Settings › Messages, "When staff
+   reply to a customer’s message". Its email subject isn't drawn: "[Shop
+   name] replied to your message". While sending is pretend its link reads
+   "[link]", as every message's does. The address is
+   `/book/[shop]/messages`, which asks for sign-in first.
+6. **A message is up to 1,000 letters**, as a repair note is; longer or
+   empty says "Write a message of up to 1,000 letters."
+7. **The conversation holds every repair of the customer's**, however old.
+   "About WH-1042" opens the repair through the account, which works for its
+   signed-in owner after the private link has run out.
+8. **The history's one row** is dated by the newest message, and says the
+   shop replied when the newest message is the shop's.
+9. **30 days from the last visit:** a sign-in used with less than 29 days
+   left is renewed to 30 days, and the browser's cookie with it. So it is
+   written about once a day at most.
+10. **Today's "Customers' messages waiting"** counts customers, as the inbox
+    now does.
+11. **The old inbox list** (`/api/job-notes/conversations`) stays until the
+    inbox screen moves to the new one. The screens change removes it.
+12. **After the review:** a customer can send 30 messages to the shop in
+    15 minutes; after that they're asked to try again in a few minutes, so
+    nobody can flood the inbox. A reply about one repair answers the whole
+    conversation (one conversation per customer), so it leaves "Needs a
+    reply"; a test now pins that down.
+
+
+### 26 Oct 2026: the customer's conversation with the shop, the screens (`openspec/changes/ask-the-shop-screens`, `ac-ask`, `ac-account-question-sent`, `ac-question`, `ac-account-asked`, `ac-inbox*`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
+
+1. **The conversation page's width** is the drawing's 720px column on a
+   computer, between the booking steps' phone width and the account's two
+   columns. "Your account" is the frame's back link, with its own words.
+2. **"About WH-1042 ›"** shows under every message about a repair, the
+   shop's replies about it too, as drawn for Jo's reply.
+3. **An empty box sends nothing**, as on the repair page's notes. A message
+   the shop refuses (too long, or 30 in 15 minutes) shows the shop's own
+   words; a sign-in that has run out says "Please sign in again to send
+   this."; anything else says "Wheelhouse couldn’t send that. Try again in a
+   moment."
+4. **The history's Messages row** shows under Everything only, as drawn.
+   Waiting for a reply it sits under Now, as `history()` draws it; once the
+   shop has replied it moves to Earlier, by its date. Its date reads as the
+   repairs' do ("Fri 18 Sep"). Replied is green, Sent grey, as drawn.
+5. **The inbox, redrawn one row per customer** (Jack approved one
+   conversation per customer, day answers 8.2): a row's second line is the
+   newest message's bike and job number, or "From their account" for a
+   general message. The open conversation shows the customer's name, phone
+   and "Customer page"; "Open the job" and "On the job’s page · started by
+   Maya" go, since each repair note now carries "About WH-1042", which
+   opens the job in the diary.
+6. **The reply box says what the reply is about:** "About WH-1042: goes to
+   Maya the way they chose, with a link to reply on the job’s page.", or
+   "Goes to Maya the way they chose, with a link to their messages." for a
+   general message. After sending, a general reply says "…with a link to
+   their messages.", or "Saved in the conversation, but no text went: …".
+7. **"See the text Maya gets"** for a general reply reads the newest "Reply
+   to a message" from `/api/messages?customerId=`, which gives each
+   message's kind, rather than `/api/customers/:id/texts`, which doesn't.
+8. **The old inbox list `/api/job-notes/conversations` is removed** (236
+   routes). Its tests now read the per-customer list.
+9. **The mockup's coverage checks** for walk 10 M1's "Question from her
+   account" row now check the redrawn row instead, since day answers 8.2
+   replaced it.
+10. **After the review:** the "Sent." and reply status lines are on the page
+    from the start, empty, so screen readers announce them when they fill.
+    A customer whose sign-in runs out after the page has loaded keeps the
+    page and what she's typed; sending then says "Please sign in again to
+    send this." with a "Sign in again" link back to the page.
+
 ### 26 Oct 2026: deliveries and purchase orders (`openspec/changes/deliveries-orders`, `rs-hub`, `rs-order`, `rs-order-ordered`, `rs-order-close`; WP-2.3)
 
 1. **Receiving is left out, not routed nowhere:** "A delivery arrived?" with

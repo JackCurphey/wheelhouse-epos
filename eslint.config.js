@@ -72,7 +72,6 @@ export default tseslint.config(
       'public-demo/**',
       'public-portal/**',
       'public-storefront/**',
-      'print-agent/**',
       'server/**',
       'tests/**',
       'docker/**',

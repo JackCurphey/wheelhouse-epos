@@ -43,8 +43,10 @@ async function withHistory(body) {
   const tube = (await staff('/api/products', { method: 'POST', body: { name: 'Inner tube', price: 5, sku: `T-${randomUUID().slice(0, 6)}`, stockQty: 10 } })).body;
   const sale = (await staff('/api/sales', { method: 'POST', body: { cashierId, customerId: c.id, items: [{ productId: tube.id, qty: 1 }], cashAmount: 5, cashTendered: 5 } })).body;
   const msg = await inShop(async () => (await prepare("INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address) VALUES (?, 'Hi', 'delivered', 'delivered', 'sms', ?) RETURNING id").get(c.id, body.phone ?? '')).id);
+  // A general message in their conversation with the shop (ask-the-shop-server design 1).
+  const note = await inShop(async () => (await prepare("INSERT INTO job_notes (customer_id, from_customer, body) VALUES (?, true, '[Maya’s message]') RETURNING id").get(c.id)).id);
   n += 1;
-  return { c, bike, job, sale, msg };
+  return { c, bike, job, sale, msg, note };
 }
 const ownerOf = (table, id) => inShop(async () => (await prepare(`SELECT customer_id FROM ${table} WHERE id = ?`).get(id)).customer_id);
 
@@ -75,7 +77,7 @@ test('merging moves every kind of row, keeps the chosen fields, and hides the ot
   const gone = await withHistory({ name: 'Aisha K.', phone: '07700 900300', address: '9 Mill Lane', postcode: 'BL2 2BB' });
   const res = await staff(`/api/customers/${kept.c.id}/merge`, { method: 'POST', body: { otherId: gone.c.id, keep: { name: 'this', email: 'this', address: 'other' } } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  for (const [table, id] of [['customer_bikes', gone.bike], ['workshop_jobs', gone.job.id], ['sales', gone.sale.id], ['customer_messages', gone.msg]]) {
+  for (const [table, id] of [['customer_bikes', gone.bike], ['workshop_jobs', gone.job.id], ['sales', gone.sale.id], ['customer_messages', gone.msg], ['job_notes', gone.note]]) {
     assert.equal(await ownerOf(table, id), kept.c.id, `${table} ${id}`);
   }
   const k = (await staff(`/api/customers/${kept.c.id}`)).body;
@@ -98,7 +100,7 @@ test('Undo the merge puts everything back, and the fields as they were', async (
   const after = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Safety check', jobDate: '2026-09-25', customerId: kept.c.id } })).body;
   const res = await staff(`/api/customer-merges/${merged.id}/undo`, { method: 'POST', body: {} });
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  for (const [table, id] of [['customer_bikes', gone.bike], ['workshop_jobs', gone.job.id], ['sales', gone.sale.id], ['customer_messages', gone.msg]]) {
+  for (const [table, id] of [['customer_bikes', gone.bike], ['workshop_jobs', gone.job.id], ['sales', gone.sale.id], ['customer_messages', gone.msg], ['job_notes', gone.note]]) {
     assert.equal(await ownerOf(table, id), gone.c.id, `${table} ${id} went back`);
   }
   assert.equal(await ownerOf('workshop_jobs', kept.job.id), kept.c.id);
@@ -433,4 +435,23 @@ test('a stop on one of the shop’s own messages moves with a merge, and Undo ta
   assert.deepEqual(await stops(kept.id), [msg], 'the stop went with her');
   assert.equal((await undo(merged.id)).status, 200);
   assert.deepEqual(await stops(kept.id), [], 'Undo takes back what the merge added');
+});
+
+// Company customers' review 1: a company's details travel with its name, so a
+// merge never makes a person called "Riverside CC", or a company called Maya.
+test('choosing the other record’s name brings its company details; keeping this one’s keeps them; Undo puts them back', async () => {
+  const person = await add({ name: 'Maya Patel', phone: '07700 900611' });
+  const company = await add({ isCompany: true, name: 'Riverside CC', contactName: 'Sam Reed', vatNumber: 'GB123', invoiceEmail: 'accounts@riverside.test', phone: '07700 900611' });
+  const merged = await merge(person.id, company.id, { name: 'other' });
+  const kept = await customer(person.id);
+  assert.deepEqual([kept.name, kept.is_company, kept.contact_name, kept.vat_number, kept.invoice_email], ['Riverside CC', true, 'Sam Reed', 'GB123', 'accounts@riverside.test']);
+  assert.equal((await undo(merged.id)).status, 200);
+  const back = await customer(person.id);
+  assert.deepEqual([back.name, back.is_company, back.contact_name], ['Maya Patel', false, null]);
+
+  const company2 = await add({ isCompany: true, name: 'Hill Wheelers', contactName: 'Jo Hill', phone: '07700 900612' });
+  const person2 = await add({ name: 'Jo Hill', phone: '07700 900612' });
+  await merge(company2.id, person2.id, { name: 'this' });
+  const stays = await customer(company2.id);
+  assert.deepEqual([stays.name, stays.is_company, stays.contact_name], ['Hill Wheelers', true, 'Jo Hill']);
 });

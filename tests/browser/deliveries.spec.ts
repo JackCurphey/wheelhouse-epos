@@ -38,6 +38,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await page.goto(`${server!.baseUrl}/workshop/deliveries`);
     const main = page.getByRole('main');
     await main.getByRole('link', { name: '+ New order' }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/deliveries/new-order`);
     // A new shop also has the pretend Madison supplier, so pick ours.
     await main.getByText('[Supplier]', { exact: true }).click();
     await expect(main.getByRole('radio', { name: '[Supplier]', exact: true })).toBeChecked();
@@ -55,6 +56,12 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await expect(main.getByText(/^Total cost/)).toContainText('£56.00');
     await expect(main.getByText('Ordered', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+
+    // The order's own page opened straight from its address, as a saved link would.
+    const orderId = page.url().split('/').pop();
+    await page.goto(`${server!.baseUrl}/workshop/deliveries/orders/${orderId}`);
+    await expect(main.getByRole('heading', { level: 2, name: /^\[Supplier\] · ordered / })).toBeVisible();
+    await expect(main.getByRole('list', { name: 'Lines' })).toContainText('B05S-RX · ordered 2 · arrived 0');
 
     await main.getByRole('link', { name: 'Deliveries and orders' }).click();
     await expect(main.getByRole('list', { name: 'Orders' }).getByRole('link', { name: /^Open the order from \[Supplier\], ordered / }).first()).toBeVisible();
