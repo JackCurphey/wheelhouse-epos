@@ -1,5 +1,34 @@
 # Proposal: Wheelhouse's components in their own repository (component-registry-repo)
 
+> **Status, 26 Oct 2026 (Mark's session).** The repository is called **`react-repo`**
+> (not `wheelhouse-registry`; the name is changed throughout). What was built
+> locally, at `~/Documents/GitHub/react-repo`, differs from this document in
+> scope and in a few places, and is the more recent truth:
+>
+> - **Scope is wider.** Mark asked for the full shadcn range and "everything we
+>   would ever expect": the registry holds all 61 shadcn components shadcn serves
+>   for the style we use, and **93 Wheelhouse pieces** built from the 47 building
+>   blocks (the till, the diary, settings, forms, customer pages, reports), each
+>   with tests, a gallery demo and an accessibility check. See `docs/component-plan.md`
+>   in that repository. This document's "version 1.0.0 is the 15 components as
+>   they are today, byte for byte" was **not** done: the 15 are not carried over
+>   as they were; the app's own `registry/` stays until Jack says it can go.
+> - **Themes.** Eleven themes (Soft sand, shadcn's five base colours, five accent
+>   colours), each light and dark, with a theme switcher, so designs can be tried
+>   on the app. Success, warning and info colours were added (shadcn has none).
+> - **Radix.** Mark approved option 1 (Radix only for menus, pop-overs, hover
+>   previews and tabs, browser controls elsewhere). 37 of shadcn's 61 components use
+>   Radix, so it is in `react-repo`; it reaches the app only when a screen installs
+>   one. **Jack's yes is still needed** (it reverses his 26 Sep choice), as is his yes
+>   to deleting the app's `registry/` later.
+> - **Not done here, and still needs the repository:** the app's sync job
+>   (task groups 4 to 6), the checks that run on GitHub, Pages, and the first
+>   release. Task groups 1 to 3 were done differently (see that repository's README
+>   and `docs/adding-components.md`); `npm run check:consumer` there installs
+>   everything into a fresh app and type-checks it.
+> - **Waiting on Jack:** create the empty repository, add Mark, then the settings
+>   in "Steps for Mark" (#511).
+
 ## Why
 
 Mark, 25 Oct: "we want to use shadcn for react components and tailwind 4 for
@@ -27,7 +56,7 @@ passed.
 
 ## What Changes
 
-- **A new repository, `wheelhouse-registry`**, holding every Wheelhouse
+- **A new repository, `react-repo`**, holding every Wheelhouse
   component, the one tokens file (the colours, fonts, sizes and corners of the
   Soft sand look), the component tests, and pictures of every component
   checked on each change. It is built first as a folder on Mark's computer;
@@ -215,7 +244,7 @@ settings steps below are marked **Jack**, or Mark if Jack makes him an admin
 of that repository first.
 
 1. Say yes to the plan in `design.md` §3 and §4.
-2. Create the empty repository `JackCurphey/wheelhouse-registry` on GitHub
+2. Create the empty repository `JackCurphey/react-repo` on GitHub
    (Jack's account, next to `wheelhouse-epos`; Jack creates it and adds Mark
    as a collaborator, since a collaborator cannot create repositories in
    someone else's personal account). Public is recommended; see `design.md`
@@ -321,10 +350,10 @@ of that repository first.
 
 ## Impact
 
-- **New repository (local folder first):** `~/Documents/GitHub/wheelhouse-registry/`.
+- **New repository (local folder first):** `~/Documents/GitHub/react-repo/`.
 - **App files, when built:** `components.json` (the `@wheelhouse` address),
-  a new `vendor/wheelhouse-registry/` folder (the released registry, copied in
-  by a script, never edited by hand), `wheelhouse-registry.lock.json`, a new
+  a new `vendor/react-repo/` folder (the released registry, copied in
+  by a script, never edited by hand), `react-repo.lock.json`, a new
   script `scripts/registry/sync.mjs`, a new mode in
   `scripts/ci/check-registry-drift.mjs`, a new workflow
   `.github/workflows/registry-sync.yml`, a `workflow_dispatch` trigger added

@@ -3,7 +3,7 @@
 ## Purpose
 
 Where Wheelhouse's screen components and its look come from: a separate
-repository, `wheelhouse-registry`, that the app copies from through a pull
+repository, `react-repo`, that the app copies from through a pull
 request that has to pass every test before it merges.
 
 ## ADDED Requirements
@@ -94,7 +94,7 @@ A new registry release SHALL reach the app only as a pull request on its own bra
 - **THEN** it cannot be merged
 
 ### Requirement: Hand edits to copied files are caught
-The app's CI SHALL fail when a released registry file in `vendor/wheelhouse-registry/` or an installed component differs from the hashes in `wheelhouse-registry.lock.json`, or when a file in `src/components/ui/` did not come from the registry.
+The app's CI SHALL fail when a released registry file in `vendor/react-repo/` or an installed component differs from the hashes in `react-repo.lock.json`, or when a file in `src/components/ui/` did not come from the registry.
 
 #### Scenario: A component edited in the app
 - **WHEN** someone edits `src/components/ui/button.tsx` by hand

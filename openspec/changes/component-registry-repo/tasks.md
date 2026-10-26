@@ -1,8 +1,37 @@
 # Tasks: Wheelhouse's components in their own repository
 
+> **Status, 26 Oct 2026 (Mark's session).** The repository is called **`react-repo`**
+> (not `wheelhouse-registry`; the name is changed throughout). What was built
+> locally, at `~/Documents/GitHub/react-repo`, differs from this document in
+> scope and in a few places, and is the more recent truth:
+>
+> - **Scope is wider.** Mark asked for the full shadcn range and "everything we
+>   would ever expect": the registry holds all 61 shadcn components shadcn serves
+>   for the style we use, and **93 Wheelhouse pieces** built from the 47 building
+>   blocks (the till, the diary, settings, forms, customer pages, reports), each
+>   with tests, a gallery demo and an accessibility check. See `docs/component-plan.md`
+>   in that repository. This document's "version 1.0.0 is the 15 components as
+>   they are today, byte for byte" was **not** done: the 15 are not carried over
+>   as they were; the app's own `registry/` stays until Jack says it can go.
+> - **Themes.** Eleven themes (Soft sand, shadcn's five base colours, five accent
+>   colours), each light and dark, with a theme switcher, so designs can be tried
+>   on the app. Success, warning and info colours were added (shadcn has none).
+> - **Radix.** Mark approved option 1 (Radix only for menus, pop-overs, hover
+>   previews and tabs, browser controls elsewhere). 37 of shadcn's 61 components use
+>   Radix, so it is in `react-repo`; it reaches the app only when a screen installs
+>   one. **Jack's yes is still needed** (it reverses his 26 Sep choice), as is his yes
+>   to deleting the app's `registry/` later.
+> - **Not done here, and still needs the repository:** the app's sync job
+>   (task groups 4 to 6), the checks that run on GitHub, Pages, and the first
+>   release. Task groups 1 to 3 were done differently (see that repository's README
+>   and `docs/adding-components.md`); `npm run check:consumer` there installs
+>   everything into a fresh app and type-checks it.
+> - **Waiting on Jack:** create the empty repository, add Mark, then the settings
+>   in "Steps for Mark" (#511).
+
 Who: Mark (working agreement: either person may pick up any group; take it
 in STATUS first). Groups 1 to 3 are built in the local folder
-`~/Documents/GitHub/wheelhouse-registry/` on branches, with no GitHub remote.
+`~/Documents/GitHub/react-repo/` on branches, with no GitHub remote.
 Group 4 is the real-account steps (Mark's, with the settings steps Jack's or
 Mark's as admin). Groups 5 and 6 are app pull requests. Groups 7 and 8 are
 registry releases, each reaching the app through the sync job. Every test is
@@ -28,9 +57,9 @@ When each group can start:
 ## 1. The registry repository, holding today's 15 components (local)
 
 - [ ] 1.1 Fetch shadcn's list from `https://ui.shadcn.com/r/index.json` (the address the installed CLI 4.19.1 uses) and save it as `upstream/index.snapshot.json`, with the date. For each `registry:ui` name, fetch `https://ui.shadcn.com/r/styles/new-york-v4/<name>.json` and note its `dependencies`, its `registryDependencies`, and whether its files import `radix-ui`, `@radix-ui/*`, `Slot` or `Separator`. Compare the names with `design.md` §1; write each difference into `design.md` §8 (decision log) and correct §1's table and counts. Copy shadcn/ui's MIT licence text from the shadcn repository into `THIRD_PARTY_NOTICES.md`
-- [ ] 1.2 [careful] `git init` the folder with `main`, branch `scaffold`. Add `package.json` (name `wheelhouse-registry`, version `1.0.0`, `"type": "module"`), `components.json` (as the app's, style `new-york`), `tsconfig.json`, `README.md` (what it is; how the app picks it up, `design.md` §3; the push commands for Steps for Mark 3; the fixed port 6107), `CHANGELOG.md` with a `1.0.0` section ("What changes on screens: nothing"), `.gitignore` (`node_modules/`, `.test-build/`, `test-results/`). Install dependency row 1 exactly as listed in the proposal, at those versions, and nothing else
+- [ ] 1.2 [careful] `git init` the folder with `main`, branch `scaffold`. Add `package.json` (name `react-repo`, version `1.0.0`, `"type": "module"`), `components.json` (as the app's, style `new-york`), `tsconfig.json`, `README.md` (what it is; how the app picks it up, `design.md` §3; the push commands for Steps for Mark 3; the fixed port 6107), `CHANGELOG.md` with a `1.0.0` section ("What changes on screens: nothing"), `.gitignore` (`node_modules/`, `.test-build/`, `test-results/`). Install dependency row 1 exactly as listed in the proposal, at those versions, and nothing else
 - [ ] 1.3 [careful] Copy `tests/fixtures/epos-public-r/` from `wheelhouse-epos`'s `public/r/*.json`, and `src/styles/theme.css` to `tests/fixtures/epos-theme.css`, both at one commit, and write `tests/fixtures/epos-public-r/SOURCE.txt` with that commit's sha. Write `tests/identity.test.js` (`design.md` §7) and watch it fail because `public/r/` does not exist yet. (Tagged careful: it pins `money-input`, the money box.)
-- [ ] 1.4 [careful] Copy `registry/registry.json`, `registry/primitives/` and `registry/patterns/` from `wheelhouse-epos` unchanged, with the `homepage` lines pointing at `https://github.com/JackCurphey/wheelhouse-registry`; add `registry.json` at the root including the three sub-registries (theme comes in 2.2). Add scripts `build`, `validate`, `typecheck`. Run `npm run build`; verify 1.3 passes, then change one character in `registry/patterns/money-input.tsx`, rebuild, see 1.3 fail naming `money-input`, and put it back
+- [ ] 1.4 [careful] Copy `registry/registry.json`, `registry/primitives/` and `registry/patterns/` from `wheelhouse-epos` unchanged, with the `homepage` lines pointing at `https://github.com/JackCurphey/react-repo`; add `registry.json` at the root including the three sub-registries (theme comes in 2.2). Add scripts `build`, `validate`, `typecheck`. Run `npm run build`; verify 1.3 passes, then change one character in `registry/patterns/money-input.tsx`, rebuild, see 1.3 fail naming `money-input`, and put it back
 - [ ] 1.5 Copy the app's component tests (`tests/registry/*.test.js`, `tests/helpers/dom.js`, `tests/helpers/css.js`) and a Vite build matching `vite.registry-test.config.ts`, as `pretest`. Adjust only paths; `colours.test.js` reads `tests/fixtures/epos-theme.css` (from 1.3) for its list of defined names until task 2.2 repoints it. Verify `npm test` passes; break `registry/primitives/button.tsx`'s accent class, see `button.test.js` fail, put it back; add `var(--wh-not-a-token)` to one registry file, see `colours.test.js` fail, put it back
 - [ ] 1.6 Port `scripts/ci/check-registry-drift.mjs` with paths for this repo (`registry.json`, `public/r/`). Verify it passes on a fresh build and fails after hand-editing one file in `public/r/`
 - [ ] 1.7 Port the ESLint config with both gates (`eslint.config.js:12-56`): no raw hex colour; Radix only inside `registry/primitives/`. Verify `npm run lint` passes, and fails on a test line holding `bg-[#123456]`
@@ -59,19 +88,19 @@ When each group can start:
 
 - [ ] 4.1 Steps for Mark 1 to 4 in the proposal (repository created by Jack in his account, Mark added, local `main` pushed, `main` protected with the `ci` check required, Pages on if wanted). Watch the first `ci.yml` run go green on GitHub, and see it go red on a throwaway pull request that breaks one token, then close that pull request
 - [ ] 4.2 Steps for Mark 5 only if the repository is private
-- [ ] 4.3 Run `release.yml` with `v1.0.0`; check the release has `wheelhouse-registry-v1.0.0.tar.gz` and `SHA256SUMS`, and (if Pages is on) that `https://jackcurphey.github.io/wheelhouse-registry/r/button.json` opens
+- [ ] 4.3 Run `release.yml` with `v1.0.0`; check the release has `react-repo-v1.0.0.tar.gz` and `SHA256SUMS`, and (if Pages is on) that `https://jackcurphey.github.io/react-repo/r/button.json` opens
 - [ ] 4.4 Steps for Mark 7 and 8 (the check named `test` required on `wheelhouse-epos`'s `main`; GitHub Actions allowed to create pull requests)
-- [ ] 4.5 Prove a pull request with no check cannot merge: in `wheelhouse-epos`, push a throwaway branch whose only commit (a blank line in a doc file) has `[skip ci]` in its message, open a pull request, confirm it shows no `test` result on that commit, and try `gh pr merge --merge`; see GitHub refuse because the required check is missing. Close the pull request and delete the branch. If `[skip ci]` does not stop the Tests run, record it in `design.md` §8 and ask Mark how to make a check-less pull request; this task is not ticked until a refusal has been seen. Repeat for `wheelhouse-registry` with the `ci` check
+- [ ] 4.5 Prove a pull request with no check cannot merge: in `wheelhouse-epos`, push a throwaway branch whose only commit (a blank line in a doc file) has `[skip ci]` in its message, open a pull request, confirm it shows no `test` result on that commit, and try `gh pr merge --merge`; see GitHub refuse because the required check is missing. Close the pull request and delete the branch. If `[skip ci]` does not stop the Tests run, record it in `design.md` §8 and ask Mark how to make a check-less pull request; this task is not ticked until a refusal has been seen. Repeat for `react-repo` with the `ci` check
 
 ## 5. The app copies from the registry (two or three pull requests in `wheelhouse-epos`; the one that commits `vendor/` runs `/review` as a money pull request)
 
 - [ ] 5.1 Write `tests/registry-sync.test.js` for `hashFile`, `readLock`/`writeLock`, `planInstall` (including the "missing from registry" message), `installOrder` (dependencies first, a missing dependency added, both messages from `design.md` §3.6), `missingPackages` (a package `package.json` lacks; a version-suffixed name), `bootstrapLock` (names from a temporary `src/components/ui/`, the "not in registry" and "A lock already exists" refusals), and `syncFrom` with a fake `run` and temporary folders (the `skipVersions` refusal; each `shadcn add` gets a copy with `registryDependencies` emptied; `money-input` planned alone installs `input` first; a fake `run` that edits `package.json` gets it put back and the stop message). Watch each fail because `scripts/registry/sync.mjs` does not exist
 - [ ] 5.2 Write `scripts/registry/sync.mjs` (`design.md` §3.6, §3.7, §7). Verify 5.1 passes
-- [ ] 5.3 Download `v1.0.0` and run `node scripts/registry/sync.mjs --from <folder> --version v1.0.0 --commit <sha> --bootstrap`. Verify the lock lists the 11 installed components, `git diff -- src/components/ui package.json package-lock.json` is empty, and `node scripts/ci/check-registry-drift.mjs` (the old mode) and `tests/customer/installed-controls.test.js` still pass. Commit `vendor/wheelhouse-registry/r/` and `wheelhouse-registry.lock.json`
+- [ ] 5.3 Download `v1.0.0` and run `node scripts/registry/sync.mjs --from <folder> --version v1.0.0 --commit <sha> --bootstrap`. Verify the lock lists the 11 installed components, `git diff -- src/components/ui package.json package-lock.json` is empty, and `node scripts/ci/check-registry-drift.mjs` (the old mode) and `tests/customer/installed-controls.test.js` still pass. Commit `vendor/react-repo/r/` and `react-repo.lock.json`
 - [ ] 5.4 Write `tests/registry-drift-vendored.test.js` against a temporary copy (`--root`): a hand-edited vendored file, a hand-edited installed file, an unlisted file in `src/components/ui/`, each with its message from `design.md` §7, and the OK line. Watch each fail, then add the `--vendored` mode to `scripts/ci/check-registry-drift.mjs`, leaving its default mode unchanged. Verify the existing default mode still passes
 - [ ] 5.5 Write `scripts/registry/capture-css-rules.mjs` and run it against the current `npm run build` before changing anything, writing `tests/fixtures/theme-css-rules-before.json`. Write `tests/theme-split.test.js` (`design.md` §7: no token redefined in `theme.css`; every captured rule still present with the same declarations; nothing switches the dark look on); watch it fail because `src/styles/wheelhouse-tokens.css` is missing, and watch the dark check fail on a temporary `document.documentElement.classList.add('dark')` line in a scratch file under `src/`, then remove it
 - [ ] 5.6 Add `theme` to the lock's `installed` and sync it; cut `src/styles/theme.css` down to `@import "tailwindcss";`, `@import "./wheelhouse-tokens.css";`, the cursor rule, the print rules and the Reduce motion rule. Repoint the four tests that read `theme.css`, paths and messages only, assertions unchanged: `tests/design-sand.test.js:17` reads `src/styles/wheelhouse-tokens.css`; `tests/design-fonts.test.js:27`'s list becomes `['public/tokens.css', 'src/styles/wheelhouse-tokens.css']`; `tests/design-tokens.test.js:120` reads `src/styles/wheelhouse-tokens.css`, and its messages at `:100` and `:116` name that file; `tests/registry/colours.test.js:10` builds `DEFINED` from `src/styles/wheelhouse-tokens.css` and `src/styles/theme.css` together. Verify 5.5 and all four pass, `npm test` passes, and open `http://localhost:8080/` to see the diary and the booking pages look as before
-- [ ] 5.7 Only if Pages is on: point `components.json`'s `@wheelhouse` at `https://jackcurphey.github.io/wheelhouse-registry/r/{name}.json`. Verify `curl https://jackcurphey.github.io/wheelhouse-registry/r/button.json` returns the same bytes as `vendor/wheelhouse-registry/r/button.json` and `node scripts/ci/check-registry-drift.mjs --vendored` still passes
+- [ ] 5.7 Only if Pages is on: point `components.json`'s `@wheelhouse` at `https://jackcurphey.github.io/react-repo/r/{name}.json`. Verify `curl https://jackcurphey.github.io/react-repo/r/button.json` returns the same bytes as `vendor/react-repo/r/button.json` and `node scripts/ci/check-registry-drift.mjs --vendored` still passes
 - [ ] 5.8 [careful] Add `workflow_dispatch:` to `.github/workflows/test.yml`'s triggers and the step "Fail if a registry file was edited by hand" (`node scripts/ci/check-registry-drift.mjs --vendored`) after the existing drift step. Write `.github/workflows/registry-sync.yml` (`design.md` §3.3; `WHEELHOUSE_REGISTRY_TOKEN` read only from secrets and never printed). After merge, release a patch `v1.0.1` (changelog only) and watch: the job opens "Registry v1.0.1" (if it fails to open the pull request, check Steps for Mark 8 and record the real setting name in `design.md` §8), the Tests workflow runs on that branch's last commit and shows on the pull request as the `test` check. If a pull request opened by the job does start Tests by itself, remove step 6 and record it in `design.md` §8. Run the job again and see "Already on" or the open pull request stop it
 - [ ] 5.9 Verify `npm test` and `npm run test:browser` pass, self-review against this change's spec, run `/review` on the pull request that commits `vendor/` (it carries the money box's released file), and open the pull requests
 

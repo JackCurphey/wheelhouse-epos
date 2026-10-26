@@ -339,10 +339,10 @@ Mark asked for a separate repository.
 
 - **The release is the master copy.** Each version is a GitHub release in the
   registry repository, tag `vX.Y.Z`, with two files attached:
-  `wheelhouse-registry-vX.Y.Z.tar.gz` (the `r/` folder of built JSON) and
+  `react-repo-vX.Y.Z.tar.gz` (the `r/` folder of built JSON) and
   `SHA256SUMS`. A release is never edited or deleted after it is published.
 - **GitHub Pages is a convenience, optional.** It serves the latest built
-  files at `https://jackcurphey.github.io/wheelhouse-registry/r/{name}.json`,
+  files at `https://jackcurphey.github.io/react-repo/r/{name}.json`,
   so anyone can try `npx shadcn add @wheelhouse/card` in a scratch project.
   The app's sync job never reads Pages, only releases, and it never lets the
   CLI look up an `@wheelhouse/` name through `components.json` (section 3.6),
@@ -363,7 +363,7 @@ New workflow `.github/workflows/registry-sync.yml`:
   Opening a pull request with the built-in token also needs the repository
   setting that lets GitHub Actions create pull requests (Steps for Mark 8).
 - **Steps:**
-  1. Find the newest release with `gh release view --repo JackCurphey/wheelhouse-registry --json tagName`
+  1. Find the newest release with `gh release view --repo JackCurphey/react-repo --json tagName`
      (token: `secrets.WHEELHOUSE_REGISTRY_TOKEN` if set, else `github.token`).
   2. Stop with "Already on vX.Y.Z" if the lock has it, "vX.Y.Z is in
      skipVersions" if listed there, or if a pull request from
@@ -384,13 +384,13 @@ New workflow `.github/workflows/registry-sync.yml`:
 ### 3.4 Why a registry change can never break the app without a pull request and green tests
 
 1. The app never fetches components when it builds, starts or runs: the
-   released files (`vendor/wheelhouse-registry/r/`) and the installed copies
+   released files (`vendor/react-repo/r/`) and the installed copies
    are in the app's git.
 2. Only `scripts/registry/sync.mjs` writes those, and only the sync job (on
    its own branch) or a person on a branch runs it.
 3. The drift check (`--vendored`, §3.5) fails CI if anything in `vendor/` or
    any installed copy differs from the hashes in
-   `wheelhouse-registry.lock.json`, so a hand edit cannot slip past.
+   `react-repo.lock.json`, so a hand edit cannot slip past.
 4. The sync pull request runs the whole of `test.yml`: type check, lint,
    build, registry checks, `npm test`, `npm run test:browser`.
 5. It merges only after that check is green on its last commit (working
@@ -414,11 +414,11 @@ screen installs it) also gets `/review`, as a money pull request.
 
 ### 3.5 The lock file and the vendored check
 
-`wheelhouse-registry.lock.json` at the app's root:
+`react-repo.lock.json` at the app's root:
 
 ```json
 {
-  "registry": "JackCurphey/wheelhouse-registry",
+  "registry": "JackCurphey/react-repo",
   "version": "v1.0.0",
   "commit": "<registry commit sha>",
   "snapshot": { "button.json": "<sha256>", "…": "…" },
@@ -440,7 +440,7 @@ Three of today's items depend on other items: `money-input` on
 `@wheelhouse/input`, `data-table` on `@wheelhouse/table` and
 `@wheelhouse/button`, `confirm-dialog` on `@wheelhouse/dialog` and
 `@wheelhouse/button` (`registry/patterns/registry.json:13,28,43`). Left to
-itself, `shadcn add ./vendor/wheelhouse-registry/r/money-input.json` looks `@wheelhouse/input`
+itself, `shadcn add ./vendor/react-repo/r/money-input.json` looks `@wheelhouse/input`
 up through `components.json`'s `@wheelhouse` address: today a relative
 `/r/{name}.json` it cannot fetch (`scripts/ci/check-registry-drift.mjs:13-21`),
 later Pages, which serves the newest build rather than the pinned one.
@@ -452,7 +452,7 @@ So `sync.mjs` never lets the CLI resolve a dependency:
    already planned, and orders the list so every dependency comes before
    the item that needs it (`theme` and `utils` first). It throws
    "<item> depends on <dep>, which is not a @wheelhouse item. Rewrite it as
-   @wheelhouse/<name> in wheelhouse-registry." for a bare or other
+   @wheelhouse/<name> in react-repo." for a bare or other
    namespace, and "<item> depends on @wheelhouse/<name>, which is not in
    registry <version>." for a missing one.
 2. For each item, in that order, it writes a copy of the item's JSON with
@@ -490,12 +490,12 @@ refuses when a lock already exists ("A lock already exists; sync without
 
 ### 4.1 Name, place, owner
 
-- **Name:** `wheelhouse-registry`. Says what it is in shadcn's own word; the
+- **Name:** `react-repo`. Says what it is in shadcn's own word; the
   app is `wheelhouse-epos`. Turned down: `wheelhouse-ui` (vaguer).
-- **Built first as a local folder:** `~/Documents/GitHub/wheelhouse-registry/`,
+- **Built first as a local folder:** `~/Documents/GitHub/react-repo/`,
   `git init` with a `main` branch and work on branches, no remote until Steps
   for Mark 3.
-- **On GitHub:** `JackCurphey/wheelhouse-registry`, next to the app, owned by
+- **On GitHub:** `JackCurphey/react-repo`, next to the app, owned by
   Jack like the app (`CLAUDE.md`: Jack owns this project).
 - **Who builds and looks after it:** Mark. Either person can fix anything
   (working agreement). The look stays Jack's: a change to how something looks
@@ -504,7 +504,7 @@ refuses when a lock already exists ("A lock already exists; sync without
 ### 4.2 Layout
 
 ```
-wheelhouse-registry/
+react-repo/
   README.md                  what it is, how to release, how the app picks it up, push commands
   CHANGELOG.md               one section per version, with "What changes on screens"
   THIRD_PARTY_NOTICES.md     shadcn/ui's MIT licence
@@ -696,7 +696,7 @@ the 31 Aug file gets a line pointing to it (task 8.1).
   count.
 - `scripts/release/pack.mjs` exports
   `packRelease({ version: string, outDir: string }): Promise<{ tarball: string, sums: string }>`,
-  writing `wheelhouse-registry-<version>.tar.gz` (containing `r/*.json`) and
+  writing `react-repo-<version>.tar.gz` (containing `r/*.json`) and
   `SHA256SUMS`; refuses with "Version <v> does not match package.json <p>"
   or "CHANGELOG.md has no section for <v>".
 - `tests/identity.test.js`: for each of the 15 items, `name`, `type`,
@@ -781,9 +781,9 @@ the 31 Aug file gets a line pointing to it (task 8.1).
     to `installed`.
 - `scripts/ci/check-registry-drift.mjs --vendored [--root <dir>]`, exit 1 with:
   - "Vendored registry changed by hand: <file>. Run the registry sync instead."
-  - "Installed component edited by hand: <path>. Change it in wheelhouse-registry and sync a new version."
+  - "Installed component edited by hand: <path>. Change it in react-repo and sync a new version."
   - "Not from the registry: <path>. Install it with node scripts/registry/sync.mjs --add <name>, or move it out of src/components/ui."
-  - on success: "Registry check OK - <n> vendored file(s) and <m> installed file(s) match wheelhouse-registry.lock.json (<version>)."
+  - on success: "Registry check OK - <n> vendored file(s) and <m> installed file(s) match react-repo.lock.json (<version>)."
   Without `--vendored` it behaves exactly as today.
 - `.github/workflows/test.yml`: a `workflow_dispatch:` trigger, and a step
   "Fail if a registry file was edited by hand" running the `--vendored` check
@@ -794,7 +794,7 @@ the 31 Aug file gets a line pointing to it (task 8.1).
 - New app tests: `tests/registry-sync.test.js`,
   `tests/registry-drift-vendored.test.js`, `tests/theme-split.test.js`
   (theme.css redefines no token from the tokens file, message
-  "theme.css redefines --<name>, which comes from the registry's tokens file. Change it in wheelhouse-registry instead.";
+  "theme.css redefines --<name>, which comes from the registry's tokens file. Change it in react-repo instead.";
   every rule in `tests/fixtures/theme-css-rules-before.json` is still in the
   built CSS with the same declarations, message
   "The built CSS lost or changed <selector>"; and no file under `src/`, no
