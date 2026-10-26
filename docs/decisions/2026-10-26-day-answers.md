@@ -153,3 +153,14 @@ till). Jack answered the rest:
 exists"), with the company's "Invoice to" block. A document called a VAT
 invoice without its VAT amount isn't a proper one. It becomes "VAT invoice",
 with its VAT line, when Mark's step C records VAT on each sale.
+
+## 11. Who can adjust stock
+
+**Anyone with the Stock page can adjust stock** (Jack: "I think all staff
+members should be able to adjust stock, as long as who adjusts what is all
+recorded, then it shouldnt be an issue."). This is stock decision 6 as
+decided on 1 Oct; the build's first cut had made it Owner only until roles.
+Every adjustment records who made it, the reason and when, and the
+product's stock history shows them. The "big adjustments show on the
+manager's Today" warning from decision 6 waits until Today's stock warnings
+are built (`openspec/changes/adjust-stock`).
