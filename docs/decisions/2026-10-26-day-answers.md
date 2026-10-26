@@ -27,3 +27,13 @@ What it unblocks: paying a repair online (slice A) is built on the current
 sales record now and redone after Mark's step C (Mark's answer 3 in the
 plan). Its smaller questions (who counts as the cashier on an online
 payment, and refunds) come later in this list.
+
+## 2. "Ask the shop a question", and staying signed in
+
+1. **The question's page needs the customer to sign in.** The link in the
+   shop's reply opens sign-in first if they aren't signed in (Jack, asking
+   "a customer logs in once and then it can remember them").
+2. **A customer stays signed in for 30 days from their last visit**, on
+   each phone or computer (Jack: "30 days from last visit"). Every visit
+   renews it, so a regular customer never signs in again on that device.
+   Today it is 30 days from signing in, whatever they do.
