@@ -271,3 +271,34 @@ test('/bikes: the shop’s own date in summer; none for a held, undone or overta
   await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = '2026-10-01T10:00:00Z' WHERE id = ?").run(later.id));
   assert.equal(await due(), null, 'collected again since: this reminder won’t go');
 });
+
+// how-we-contact-you design 1: PUT /me/contact.
+test('how we contact you: each choice saves, a yes from here is recorded as the account’s, and /me gives WhatsApp as WhatsApp', async () => {
+  const put = (body, headers) => portal('/me/contact', { method: 'PUT', body, headers });
+  let res = await put({ updateChannel: 'whatsapp' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.updateChannel, 'whatsapp');
+  assert.equal((await portal('/me')).body.updateChannel, 'whatsapp');
+  res = await put({ serviceReminders: false, reviewRequests: false, marketingPermission: false });
+  assert.deepEqual([res.body.serviceReminders, res.body.reviewRequests, res.body.marketingPermission], [false, false, false]);
+  res = await put({ reviewRequests: true, marketingPermission: true });
+  assert.deepEqual([res.body.reviewRequests, res.body.marketingPermission], [true, true]);
+  const row = await runWithShop(owner.shop.id, () => prepare('SELECT review_requests, reminders_said_yes_via AS via FROM customers WHERE id = ?').get(maya.id));
+  assert.deepEqual([row.review_requests, row.via], [true, 'account']);
+  await put({ updateChannel: 'sms' });
+});
+
+test('how we contact you: refused with no mobile for text, from another website, signed out, or with nonsense', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET phone = NULL WHERE id = ?").run(maya.id));
+  let res = await portal('/me/contact', { method: 'PUT', body: { updateChannel: 'sms' } });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'We don’t have a mobile number for you, so we can’t text you.');
+  assert.equal((await portal('/me/contact', { method: 'PUT', body: { updateChannel: 'email' } })).status, 200);
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET phone = '07700 900142' WHERE id = ?").run(maya.id));
+  res = await portal('/me/contact', { method: 'PUT', body: { marketingPermission: true }, headers: { 'sec-fetch-site': 'cross-site' } });
+  assert.equal(res.status, 403);
+  assert.equal((await portal('/me/contact', { method: 'PUT', body: { marketingPermission: true }, cookie: null })).status, 401);
+  assert.equal((await portal('/me/contact', { method: 'PUT', body: { updateChannel: 'pigeon' } })).status, 400);
+  assert.equal((await portal('/me/contact', { method: 'PUT', body: { serviceReminders: 'yes' } })).status, 400);
+  await portal('/me/contact', { method: 'PUT', body: { updateChannel: 'sms' } });
+});

@@ -23,7 +23,7 @@ import type { BookingStage } from './pending-query.ts';
  */
 type Me = {
   id: number; email: string; name: string | null; phone: string | null; shopName: string; shopSlug: string;
-  updateChannel: 'sms' | 'email'; serviceReminders: boolean; reviewRequests: boolean; marketingPermission: boolean;
+  updateChannel: 'sms' | 'whatsapp' | 'email'; serviceReminders: boolean; reviewRequests: boolean; marketingPermission: boolean;
 };
 type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null };
 type Repair = {
@@ -115,7 +115,7 @@ export function AccountScreen() {
       <div className="grid items-start gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="lg:col-start-1 lg:row-start-1">{bikesCard}</div>
         <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1"><HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} /></div>
-        <div className="lg:col-start-1 lg:row-start-2"><DetailsCard me={me.data} /></div>
+        <div className="lg:col-start-1 lg:row-start-2"><DetailsCard me={me.data} shopSlug={shopSlug} /></div>
       </div>
     </BookFrame>
   );
@@ -229,8 +229,9 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-function DetailsCard({ me }: { me: Me }) {
+function DetailsCard({ me, shopSlug }: { me: Me; shopSlug: string }) {
   const idBase = React.useId();
+  const [changing, setChanging] = React.useState(false);
   const onOff = (on: boolean) => (on ? 'On' : 'Off');
   return (
     <Card id={`${idBase}-details`} title="Your details">
@@ -239,14 +240,99 @@ function DetailsCard({ me }: { me: Me }) {
         <Row k="Mobile" v={<span className="font-[family-name:var(--wh-font-mono)]">{me.phone ?? ''}</span>} />
         <Row k="Email" v={me.email} />
       </div>
-      <h3 className="m-0 pt-2 text-base font-bold">How we contact you</h3>
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <h3 className="m-0 text-base font-bold">How we contact you</h3>
+        <button type="button" aria-label="Change how we contact you" onClick={() => setChanging(true)} className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">Change</button>
+      </div>
       <div>
-        <Row k="Job updates" v={me.updateChannel === 'email' ? 'By email' : 'By text'} />
+        <Row k="Job updates" v={`By ${WAYS[me.updateChannel].toLowerCase()}`} />
         <Row k="Service reminders" v={onOff(me.serviceReminders)} />
         <Row k="Review requests" v={onOff(me.reviewRequests)} />
         <Row k="Offers and news" v={onOff(me.marketingPermission)} />
       </div>
+      {changing ? <ContactBox me={me} shopSlug={shopSlug} onClose={() => setChanging(false)} /> : null}
     </Card>
+  );
+}
+
+const WAYS: Record<Me['updateChannel'], string> = { sms: 'Text', whatsapp: 'WhatsApp', email: 'Email' };
+type Switch = 'serviceReminders' | 'reviewRequests' | 'marketingPermission';
+const SWITCHES: { key: Switch; label: string; sub: string }[] = [
+  { key: 'serviceReminders', label: 'Service reminders', sub: 'When your bike is due its next service' },
+  { key: 'reviewRequests', label: 'Review requests', sub: 'After you collect your bike' },
+  { key: 'marketingPermission', label: 'Offers and news', sub: 'Only if you say yes' },
+];
+
+/**
+ * How we contact you (openspec/changes/how-we-contact-you design 2; drawn as
+ * ac-contact and ac-contact-changed; account and reminders decision 6): the
+ * way job updates go, and three switches, each saved as it's pressed and
+ * said so.
+ */
+function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = React.useState(false);
+  const [said, setSaid] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function save(change: Partial<Pick<Me, 'updateChannel' | Switch>>, done: string) {
+    setBusy(true);
+    setError(null);
+    setSaid(null);
+    try {
+      const saved = await apiMutate<Partial<Me>>(`/api/portal/${encodeURIComponent(shopSlug)}/me/contact`, change, { method: 'PUT' });
+      queryClient.setQueryData<Me>(['account', shopSlug, 'me'], (old) => (old ? { ...old, ...saved } : old));
+      setSaid(done);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 400 && err.hasServerMessage ? err.message : 'That didn’t go through. Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="ct-title" className="md:max-w-[560px]">
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="ct-title">How we contact you</DialogTitle>
+          <span className="text-size-13 text-[var(--wh-muted)]">Changes save straight away</span>
+        </div>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-3">
+        {said ? <p role="status" className="m-0 rounded-lg bg-[var(--wh-status-complete-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-status-complete-ink)]">{said}</p> : null}
+        {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
+        <div className="flex flex-col gap-2">
+          <span className="text-size-15 font-bold">Job updates</span>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">Bookings, quotes, and when your bike is ready. You can change how — they can’t be switched off while a bike is with us.</p>
+          <div role="radiogroup" aria-label="Job updates by" className="flex flex-wrap gap-2">
+            {(Object.keys(WAYS) as Me['updateChannel'][]).map((way) => (
+              <button key={way} type="button" role="radio" aria-checked={me.updateChannel === way} disabled={busy}
+                onClick={() => { if (me.updateChannel !== way) void save({ updateChannel: way }, `Job updates will come by ${WAYS[way].toLowerCase()}`); }}
+                className={cn('min-h-11 cursor-pointer rounded-full border px-4 text-size-15 font-semibold text-[var(--wh-ink)]', me.updateChannel === way ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-[var(--wh-border)] bg-transparent')}>
+                {WAYS[way]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col pt-1.5">
+          {SWITCHES.map(({ key, label, sub }) => (
+            <button key={key} type="button" role="switch" aria-checked={me[key]} aria-labelledby={`ct-${key}`} aria-describedby={`ct-${key}-sub`} disabled={busy}
+              onClick={() => void save({ [key]: !me[key] }, `${label} ${label.endsWith('s') ? 'are' : 'is'} ${me[key] ? 'off' : 'on'}`)}
+              className="flex min-h-[60px] w-full cursor-pointer items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)]">
+              <span className="flex flex-col gap-0.5">
+                <span id={`ct-${key}`} className="text-size-15 font-semibold">{label}</span>
+                <span id={`ct-${key}-sub`} className="text-size-13 text-[var(--wh-muted)]">{sub}</span>
+              </span>
+              <span className="text-sm font-semibold">{me[key] ? 'On' : 'Off'}</span>
+            </button>
+          ))}
+        </div>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Each of these ends with “Stop these”, which switches that one off without signing in.</p>
+      </DialogBody>
+      <DialogFooter className="flex justify-end">
+        <Button variant="accent" onClick={onClose}>Done</Button>
+      </DialogFooter>
+    </Dialog>
   );
 }
 
