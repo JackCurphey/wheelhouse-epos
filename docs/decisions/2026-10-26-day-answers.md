@@ -81,12 +81,21 @@ on the reports, not the lists, and only the Customers list is built. The
 question was also asked again by mistake, since STATUS still listed it as
 open after the 25 Oct answer.
 
-## 5. The label printer helper's own key
+## 5. The label printer helper: dropped, browser printing only
 
-**In Settings › Till, next to Tills, as "Label printers"** (Jack: "Next to
-Till › Tills"). The owner adds a printer there, gets its key, and can remove
-it. Not drawn, so it is drawn first for Jack to approve. Helpers already
-signed in keep working up to 30 days meanwhile.
+**Drop the print agent; print everything through the browser** (Jack: "Drop
+it, browser only"). This follows Jack's 1 Sep answer to Mark
+(`2026-09-01-ownership-signoff.md` PF-3: "you can get rid of the print agent
+if you want and just make it all browser based"). It also matches how
+receipts (`2026-10-18-print-receipt.md`) and bike tags
+(`2026-10-21-bike-tag.md`) already print.
+
+The earlier question, where the owner makes the helper's own key, falls
+away. A "Label printers" page was drawn for it that morning before Jack
+pointed out the 1 Sep answer; it was scrapped, not kept. The helper's code
+and its server routes (`print-agent/`, `server/routes/print-agents.js`) are
+removed in their own pull request; Jack approved the deletion with this
+answer.
 
 ## 6. Discounts at the till
 
