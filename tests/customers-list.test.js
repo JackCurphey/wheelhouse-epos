@@ -100,3 +100,18 @@ test('saving without the new fields keeps them, as the old app saves (review)', 
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual([res.body.address, res.body.postcode, res.body.marketingPermission, res.body.notes], ['1 High Street', 'BL2 3CD', true, 'Rides a Cube']);
 });
+
+// Option 2 (Jack, 26 Oct, docs/decisions/2026-10-26-customer-account.md): only
+// an email the customer gave themselves lets a code sign-in join them, so an
+// email staff type in is marked as theirs, and staff changing one unmarks it.
+const fromCustomer = async (id) => (await runWithShop(owner.shop.id, () => prepare('SELECT email_from_customer AS f FROM customers WHERE id = ?').get(id))).f;
+test('an email staff type in isn’t the customer’s own; staff changing an email makes it theirs again', async () => {
+  const ravi = await add({ name: 'Ravi Shah', phone: '07700 900812', email: 'ravi@example.test' });
+  assert.equal(await fromCustomer(ravi.id), false);
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET email_from_customer = true WHERE id = ?').run(ravi.id));
+  // Saving with the same email (in other case) leaves it the customer's.
+  await staff(`/api/customers/${ravi.id}`, { method: 'PUT', body: { name: 'Ravi Shah', phone: '07700 900812', email: 'Ravi@Example.test' } });
+  assert.equal(await fromCustomer(ravi.id), true);
+  await staff(`/api/customers/${ravi.id}`, { method: 'PUT', body: { name: 'Ravi Shah', phone: '07700 900812', email: 'ravi.s@example.test' } });
+  assert.equal(await fromCustomer(ravi.id), false);
+});

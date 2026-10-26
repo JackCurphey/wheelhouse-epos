@@ -277,3 +277,11 @@ test('the link read-back has a null bike note when none was given', async () => 
   const res = await read(codeOf(booked.privateLink));
   assert.equal(res.body.bikeNote, null);
 });
+
+// Option 2 (Jack, 26 Oct): a guest's own booking marks the email they typed as
+// theirs, so a later sign-in by code can join them.
+test('a guest booking marks the email the guest typed as their own', async () => {
+  await book({}, { guest: true });
+  const row = await runWithShop(owner.shop.id, () => prepare('SELECT email_from_customer AS f FROM customers WHERE email = ? ORDER BY id DESC LIMIT 1').get(GUEST.email));
+  assert.equal(row.f, true);
+});
