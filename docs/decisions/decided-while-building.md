@@ -2704,7 +2704,7 @@ follows the job checklist, the closest pattern built.
 
 1. **Where messages are kept.** A general message sits with the repair notes
    (`job_notes`), marked with its customer instead of a repair (migration
-   087). A repair note's customer is always its repair's, so a repair moved to
+   091, numbered 087 until 088 reached main). A repair note's customer is always its repair's, so a repair moved to
    another customer takes its notes with it. Merging customers moves general
    messages too, and Undo puts them back.
 2. **A note on a repair with no customer** is in nobody's conversation. It
