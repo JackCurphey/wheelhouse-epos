@@ -6,7 +6,7 @@
 // other route sets anything up. Only customers who said yes to offers and
 // news, never one who stopped that message, once per job or sale. Inside
 // the shop's runWithShop throughout.
-import { pool, prepare } from '../db.js';
+import { prepare } from '../db.js';
 import { effectiveHours, openingHoursFor, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
 import { jobMessageVars } from '../workshop/job-messages.js';
@@ -61,9 +61,10 @@ function publicBase() {
   return process.env.APP_PUBLIC_URL;
 }
 
+// On the shop's own connection, never a second one from the pool while the
+// engine's is held (openspec/changes/server-stays-up-when-busy).
 async function shopRow(shopId) {
-  const { rows: [shop] } = await pool.query('SELECT name, slug FROM shops WHERE id = $1', [shopId]);
-  return shop;
+  return prepare('SELECT name, slug FROM shops WHERE id = ?').get(shopId);
 }
 
 // The job's link, issued afresh only once sending is real (messageLink).

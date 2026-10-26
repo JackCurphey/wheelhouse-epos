@@ -196,3 +196,37 @@ The conversation page SHALL have a box with Send and "We'll let you know when [s
 #### Scenario: Maya asks a question
 - **WHEN** Maya writes in "Ask the shop a question" and sends it
 - **THEN** her message joins the thread on the right, and "Sent. We'll let you know when North Street Cycles replies." is announced
+
+### Requirement: A customer's request is looked up once
+The server SHALL look up a customer's sign-in once per request to the shop's website, before it takes that request's database connection, and only when the request carries a sign-in cookie. Every later "who is signed in?" check in the same request SHALL use that answer without taking a second connection. A customer signed in to one shop SHALL still get nothing from another shop.
+
+#### Scenario: many customers check their account at once
+- **WHEN** 12 requests for a customer's own account arrive at the same moment, whether signed in or carrying a cookie that matches no sign-in
+- **THEN** every one is answered (signed in, or "Not signed in") well within the 5-second wait for a connection
+
+#### Scenario: a customer of one shop asks another
+- **WHEN** a customer signed in to North Street Cycles asks Elsewhere Cycles for their account, bikes, bookings, history or a repair by `job-<id>`
+- **THEN** they are refused as not signed in (or "We can't find that booking"), as before
+
+#### Scenario: a public page when the sign-in can't be checked
+- **WHEN** a page that needs no sign-in, such as the shop's services or terms, is opened with a cookie that can't be looked up
+- **THEN** the page still answers as normal
+
+### Requirement: The shop's website never stops the server
+When the server can't find the shop a website request names (the database is too busy to answer in time, or the shop's name in the address is one it can't look up), or a website request fails for any other reason, it SHALL answer that request with "Internal server error", never the database's own words, and SHALL go on answering every other request, for every shop. An address it can't read at all SHALL get "Bad request".
+
+#### Scenario: a shop name the database refuses
+- **WHEN** a request to the shop's website names a shop the database can't look up
+- **THEN** that request gets "Internal server error", saying nothing about the database
+- **AND** the next request, from anyone, is answered as normal
+
+#### Scenario: an address that can't be read
+- **WHEN** a request arrives for an address with a broken escape, such as `/%ZZ`
+- **THEN** it gets "Bad request", and the next request is answered as normal
+
+### Requirement: Many customers can sign in by code at once
+Signing a customer in by an emailed code SHALL make the customer's sign-in on the request's own database connection, so that many customers signing in at the same moment are all answered.
+
+#### Scenario: 12 customers enter their codes at the same moment
+- **WHEN** 12 customers of North Street Cycles each enter their correct emailed code at the same moment
+- **THEN** every one is signed in well within the 5-second wait for a connection, and each sign-in opens that customer's own account

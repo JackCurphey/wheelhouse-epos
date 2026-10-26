@@ -1,7 +1,7 @@
 // What a job's messages are filled in with (the messages engine, Jack 20 Oct:
 // pretend for now; openspec/changes/messages-engine/design.md "Triggers").
 // Inside the shop's runWithShop.
-import { prepare, pool } from '../db.js';
+import { prepare } from '../db.js';
 import { openingHoursFor, modeForDate } from '../capacity.js';
 import { toCapacitySettings, addMinutesToTime, timeToMinutes } from './jobs.js';
 import { formatOpeningHours } from '../messaging/templates.js';
@@ -55,7 +55,8 @@ export async function jobMessageVars(jobId, shopId, link) {
        LEFT JOIN sale_documents d ON d.workshop_job_id = w.id AND d.kind = 'order' AND d.status <> 'cancelled'
       WHERE w.id = ? ORDER BY d.id DESC LIMIT 1`
   ).get(jobId);
-  const { rows: [shop] } = await pool.query('SELECT name FROM shops WHERE id = $1', [shopId]);
+  // The request's own connection, not a second one (portal-connection-per-request).
+  const shop = await prepare('SELECT name FROM shops WHERE id = ?').get(shopId);
   const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   // Paid already, or nothing on the order: "Nothing to pay on collection".
   // What the till would charge: the same sum as the amount due (group discount included).
