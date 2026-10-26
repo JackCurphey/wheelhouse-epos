@@ -25,4 +25,4 @@
   refresh; a problem's count capped at 100000 (400). Also: no supplier with
   an order line says "Pick the supplier this order is from." Logged in
   `decided-while-building.md` (item 8).
-- [ ] 1.6 Pull request, archive.
+- [x] 1.6 Pull request, archive.
