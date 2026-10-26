@@ -105,19 +105,30 @@ export function register(route) {
 
   route('PUT', '/api/label-settings', async (req, res) => {
     if (await ownerOnly(req, res)) return;
-    const existing = await getOrCreateLabelSettings();
     const body = await readJsonBody(req);
-    const widthMm = body.widthMm !== undefined ? Number(body.widthMm) : Number(existing.width_mm);
-    const heightMm = body.heightMm !== undefined ? Number(body.heightMm) : Number(existing.height_mm);
-    if (!Number.isFinite(widthMm) || widthMm < 10 || widthMm > 150 || !Number.isFinite(heightMm) || heightMm < 10 || heightMm > 150) {
-      return badRequest(res, 'Label width and height must both be between 10mm and 150mm');
+    await getOrCreateLabelSettings();
+    // Read again FOR UPDATE inside a transaction, so a width and a height
+    // saved at the same moment both stay (settings-saves-dont-clash).
+    await db.exec('BEGIN');
+    try {
+      const existing = await db.prepare('SELECT * FROM label_settings LIMIT 1 FOR UPDATE').get();
+      const widthMm = body.widthMm !== undefined ? Number(body.widthMm) : Number(existing.width_mm);
+      const heightMm = body.heightMm !== undefined ? Number(body.heightMm) : Number(existing.height_mm);
+      if (!Number.isFinite(widthMm) || widthMm < 10 || widthMm > 150 || !Number.isFinite(heightMm) || heightMm < 10 || heightMm > 150) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Label width and height must both be between 10mm and 150mm');
+      }
+      await db.prepare('UPDATE label_settings SET width_mm = ?, height_mm = ?, updated_at = ? WHERE id = ?').run(
+        widthMm,
+        heightMm,
+        nowIso(),
+        existing.id
+      );
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK');
+      throw err;
     }
-    await db.prepare('UPDATE label_settings SET width_mm = ?, height_mm = ?, updated_at = ? WHERE id = ?').run(
-      widthMm,
-      heightMm,
-      nowIso(),
-      existing.id
-    );
     sendJson(res, 200, serializeLabelSettings(await db.prepare('SELECT * FROM label_settings LIMIT 1').get()));
   });
 
