@@ -2610,3 +2610,6 @@ follows the job checklist, the closest pattern built.
    months away.
 3. **Nothing shows while the customer's service reminders are off.** The
    server sends no date then either.
+4. **After the review:** no date shows for a reminder the sender will undo
+   when its day comes, because the bike has been booked or collected again
+   since.

@@ -22,7 +22,7 @@ import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from '../customer-auth.js';
-import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate, openingHoursFor } from '../capacity.js';
+import { LIVE_BOOKING_STATES, MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate, openingHoursFor } from '../capacity.js';
 import { formatOpeningHours } from '../messaging/templates.js';
 import { computeOrderTotals } from '../lib/sales.js';
 import { currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime } from '../clock.js';
@@ -959,15 +959,19 @@ export function register(route) {
       .all(ctx.login.customer_id);
     // Each bike's next service: the day its waiting service reminder goes, in
     // the shop's time; none while the customer's reminders are off
-    // (next-service-due design 1 and 2).
+    // (next-service-due design 1 and 2). Not one the sender will undo as it
+    // comes due because the bike has been back since (serviceReminderNow; review).
     const due = await db.prepare(
       `SELECT w.bike_id, to_char(min(m.send_after) AT TIME ZONE coalesce((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS day
          FROM customer_messages m JOIN workshop_jobs w ON w.id = m.job_id
          JOIN customers c ON c.id = ? AND c.service_reminders
         WHERE m.template_key = 'service_reminder' AND m.intent_state = 'intended'
           AND m.send_after <> 'infinity'::timestamptz AND w.customer_id = c.id AND w.bike_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM workshop_jobs l WHERE l.bike_id = w.bike_id AND l.id <> w.id
+                AND ((l.collected_at IS NOT NULL AND l.collected_at > w.collected_at)
+                  OR (l.booking_state = ANY(?::text[]) AND l.custody_state <> 'collected')))
         GROUP BY w.bike_id`
-    ).all(ctx.login.customer_id);
+    ).all(ctx.login.customer_id, LIVE_BOOKING_STATES);
     const dueFor = new Map(due.map((d) => [d.bike_id, d.day]));
     sendJson(res, 200, rows.map((r) => ({ ...serializeBike(r), nextServiceDue: dueFor.get(r.id) ?? null })));
   });
