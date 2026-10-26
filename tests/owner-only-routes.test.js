@@ -73,6 +73,13 @@ const ROUTES = [
   ['POST', '/api/tills', {}],
   ['POST', `/api/tills/${MISSING}/deactivate`, {}],
   ['PUT', `/api/employees/${MISSING}/pin`, {}],
+  // Purchase orders: making, changing, ordering and closing one is for the
+  // Owner until "Can order stock" comes with roles (receiving decision 4,
+  // openspec/changes/deliveries-orders).
+  ['POST', '/api/purchase-orders', {}],
+  ['PUT', `/api/purchase-orders/${MISSING}`, {}],
+  ['POST', `/api/purchase-orders/${MISSING}/mark-ordered`, {}],
+  ['POST', `/api/purchase-orders/${MISSING}/cancel`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
@@ -86,6 +93,13 @@ for (const [method, path, body] of ROUTES) {
   });
 }
 
+// A purchase order's refusal says what it's for, not "settings": the old app
+// shows the server's words to whoever tried.
+test('a staff member refused a purchase order is told it is for the owner, to order stock', async () => {
+  const refused = await as(jo)('/api/purchase-orders', { method: 'POST', body: {} });
+  assert.deepEqual(refused.body, { error: "Only the shop's owner can order stock", code: 'owner_only' });
+});
+
 // ---- Structural check ----
 // Changing routes not owner-only, each with its reason. The 19 Oct decision
 // covers settings and the team; the day-to-day ones are outside it, not
@@ -96,15 +110,16 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/message-templates/:key/preview', 'changes nothing: fills in the wording being typed'],
   ['POST /api/till/:shopSlug/sync', "a till's own sync, signed in with its token, not a staff session"],
   ['POST /api/till-attention/:id/resolve', 'day-to-day: clearing a till sale that needs attention'],
+  ['POST /api/purchase-orders/:id/receive', 'day-to-day: everyone can receive deliveries (receiving decision 4)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.
 const withoutComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-const GUARD = /ownerOnly\(req, res\)|login\.is_owner/;
+const GUARD = /ownerOnly\(req, res[,)]|login\.is_owner/;
 
 function unguardedRoutes(source, file) {
   const code = withoutComments(source);
