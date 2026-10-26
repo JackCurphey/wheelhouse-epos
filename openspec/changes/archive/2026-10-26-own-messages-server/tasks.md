@@ -10,5 +10,5 @@
     ones; the check before sending.
 - [x] 1.2 Build design 1 to 7; update `tests/fixtures/route-list.txt`; log
   design 8 in `decided-while-building.md`.
-- [ ] 1.3 `/review` (migration, messaging core); lint, `npm test`,
+- [x] 1.3 `/review` (migration, messaging core); lint, `npm test`,
   `npm run test:browser`; pull request; archive as the last commit.
