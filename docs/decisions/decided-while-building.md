@@ -2835,3 +2835,23 @@ follows the job checklist, the closest pattern built.
     no margin ("—"), not 100%. A product's page shows its newest 200 stock
     movements. "%" and "_" in a stock search are searched for as
     themselves.
+
+### 26 Oct 2026: the note-and-coin counter (`openspec/changes/note-coin-counter`, block 18, `eod-count` and `op-float-count`; cash-up decisions 2 and 3, opening the shop 2)
+
+1. **Built on its own**, with no server and no page: the float check and
+   Close the day each place it when they are built.
+2. **One counter for both**: `op-float-count` draws a read-only "Counted"
+   line where `eod-count` has the "Cash counted" box that can be typed over.
+   The one-canvas plan merges them ("drawn once", `consolidate/j10.mjs`), and
+   decision 3 says the total can be typed over, so both get the box.
+3. **A box keeps only digits**: a letter or minus sign typed into a box is
+   dropped, as nothing can be counted in parts or below none.
+4. **The last thing typed wins**: a typed total takes over from the boxes
+   (decision 3); changing a box after that goes back to adding up the boxes,
+   and clearing the typed total shows the boxes' sum again.
+5. **A total that isn't pounds and pence** (more than two pence digits, or
+   letters) gets the red edge other fields use when they are wrong, and
+   counts as nothing counted, so "Done counting" stays off. "£", spaces and
+   one or two pence digits are fine ("208.7" is £208.70).
+6. **Each box's worth** (the drawing's "£120.00" beside 6 × £20) shows once
+   that box has a number, on a computer or tablet, not a phone, as drawn.
