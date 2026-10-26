@@ -19,5 +19,5 @@
   "This order is all in." instead of moving to another order; a refused
   booking refreshes the orders; a problem undone with − at 1 in "Problem?".
   Logged in `decided-while-building.md` (receiving, item 9).
-- [ ] 1.3 Lint, the touched tests, `/review` (stock, migration), pull
+- [x] 1.3 Lint, the touched tests, `/review` (stock, migration), pull
   request, archive.
