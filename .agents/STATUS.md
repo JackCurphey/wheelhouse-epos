@@ -25,11 +25,20 @@ here before starting it, so two people never build the same one):
   3.6, taken from Mark); tests on pull requests and once a day, not after a
   merge (#509, Jack's option 3; the copy updates about a minute after a merge);
   print jobs reach only their own shop's helper (#510); the old app's Log in
-  leads to the new sign-in (#512). Next, each waiting on an answer from Jack or Mark: paying a
-  repair online (how it becomes a sale; Jack asked Mark on #199); the
-  customer's account page (whose history a new code sign-in sees, and opening
-  a job from it); the label printer helper's own key (where the owner makes
-  it isn't drawn; a helper already signed in keeps its 30-day session).
+  leads to the new sign-in (#512). Merged 26 Oct, overnight: the customer's
+  account page, its server (#514, migration 084: a first code sign-in joins
+  only a customer whose email they gave themselves, Jack's option 2; a
+  signed-in customer opens their own repairs, Jack's option 1) and its
+  screens (#515); a sale opens from a customer's history, from either sales
+  record (#516, WP-3.2); customer groups in Settings › Payments (#517,
+  WP-5.1); booking's search over many single jobs and "Online booking is
+  unavailable just now" (#518). Next, each waiting on an answer from Jack or
+  Mark: the text receipt and its page (whether it waits for Mark's step C,
+  which makes the till's receipt numbers); a shop's own automatic messages
+  (which customer "yes" lets them go, and what Stop stops); paying a repair
+  online (how it becomes a sale; Jack asked Mark on #199); the label printer
+  helper's own key (where the owner makes it isn't drawn; a helper already
+  signed in keeps its 30-day session).
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
@@ -56,9 +65,14 @@ here before starting it, so two people never build the same one):
   spreadsheet download's one file or several. Refunds wait for Mark's steps
   B and C. For him to overrule: the 24 and 25 Oct `decided-while-building.md`
   sections. From 25 Oct evening: where the owner makes the label printer
-  helper's key; paying a repair online (with Mark, #199); the customer
-  account's history and job links; Google's official "G" logo file for the
-  sign-in button; the hosted server's "System restart required".
+  helper's key; paying a repair online (with Mark, #199); Google's official
+  "G" logo file for the sign-in button; the hosted server's "System restart
+  required". From 26 Oct overnight: the text receipt (wait for step C or show
+  "Sale [n]"; the PDF; the barcode); a shop's own messages (which yes
+  counts, what Stop stops, "After a sale" only with a customer, Remove, the
+  email subject); and to overrule, the 26 Oct `decided-while-building.md`
+  sections (no "are you sure?" when removing a customer group; the search
+  box from 9 single jobs).
 
 **Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and

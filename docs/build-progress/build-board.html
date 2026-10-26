@@ -252,7 +252,7 @@ const BOARD = {
         ] },
         { name: "Stage 3 — The till and the shop day", packages: [
           { id: "WP-3.1", what: "The till, complete", status: "part", detail: "Sale and payment (#111), paying a job (#267), receipts (#269), sign-off at the till (#273); no discounts, refunds or card machine yet" },
-          { id: "WP-3.2", what: "Customers", status: "part", detail: "The list (#449), a customer's page and Edit (#450), Merge with Undo (#451); the old screen removed (#465); a bike's own page (#497) and Find a bike in the header search (#498)" },
+          { id: "WP-3.2", what: "Customers", status: "part", detail: "The list (#449), a customer's page and Edit (#450), Merge with Undo (#451); the old screen removed (#465); a bike's own page (#497) and Find a bike in the header search (#498); a sale opens from the history (#516)" },
           { id: "WP-3.3", what: "Opening the shop", status: "todo", detail: "Not built" },
           { id: "WP-3.4", what: "End-of-day cash-up", status: "todo", detail: "Not built" },
         ] },
@@ -264,7 +264,7 @@ const BOARD = {
           { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); service reminders: the yes when booking (#483), each service's months (#485), sending them (#488), Stop these (#489), the in-shop ready page's tick (#491), a merge keeping a yes (#493); review requests (#494, #495); not yet: the customer's account (waits for the emailed-code sign-in)" },
         ] },
         { name: "Stage 5 — The office", packages: [
-          { id: "WP-5.1", what: "Owner setup, the rooms", status: "part", detail: "Shop details, hours, receipt words, the sign-off switch (#275 to #281), Workshop › Services (#484, merging); not yet: staff and roles, payments, end of day" },
+          { id: "WP-5.1", what: "Owner setup, the rooms", status: "part", detail: "Shop details, hours, receipt words, the sign-off switch (#275 to #281), Workshop › Services (#484), customer groups in Payments (#517); not yet: staff and roles, ways to pay, end of day" },
           { id: "WP-5.2", what: "Multiple sites, the screens", status: "todo", detail: "Not built" },
           { id: "WP-5.3", what: "Reports and accounts", status: "todo", detail: "Old app's sales history only" },
           { id: "WP-5.4", what: "Management oversight", status: "todo", detail: "Not built" },
@@ -297,7 +297,7 @@ const BOARD = {
         { done: true, what: 'Stage check: walk booking, the till and the diary in the real app', detail: 'You, 25 Oct' },
       ],
     },
-    now: 'Stage 0 is closed. On 25 Oct, evening: staff sign in through WorkOS only, with Wheelhouse\'s own sign-in screen and Continue with Google (#504, #505, #508); customers sign in with an emailed code (#500, #502); the test copy runs the drawings\' North Street Cycles with you as owner (#506); tests run on pull requests and once a day, so a merge is on the test copy in about a minute (#509); print jobs stay with their own shop (#510); the old app\'s Log in leads to the new sign-in (#512).',
+    now: 'Stage 0 is closed. Overnight, 26 Oct: the customer\'s account page, its server and screens (#514, #515); a sale opens from a customer\'s history (#516); customer groups in Settings › Payments (#517); booking\'s search over many single jobs and "Online booking is unavailable" (#518).',
     next: {
       Mark: [
         { what: 'Sales in pence step C', detail: 'The new till records through sync instead of POST /api/sales; the first piece of "a shop day" (replan slice B)' },
@@ -306,11 +306,13 @@ const BOARD = {
       ],
       Jack: [
         { what: 'Paying a repair online', detail: 'Waits on how the payment becomes a sale (your question to Mark on #199) and his till-deposit design' },
-        { what: 'The customer\'s account page', detail: 'Waits on your answer: a new code sign-in starts an empty customer, so whose history does it show, and how does it open a job?' },
+        { what: 'The text receipt and its page', detail: 'Waits on your answer: wait for Mark\'s step C (the till\'s receipt numbers), or show "Sale [n]" first?' },
+        { what: 'A shop\'s own automatic messages', detail: 'Waits on your answers: which customer yes lets them go, and what Stop stops' },
         { what: 'Waiting on groundwork', detail: 'I\'ll do this and Who did what wait for who\'s at the device and the activity record (your answer, 22 Oct)' },
       ],
     },
     waiting: [
+      { what: 'From overnight, 26 Oct', detail: 'The text receipt: wait for step C or show "Sale [n]"; the PDF and the barcode now or later. A shop\'s own messages: which yes counts (suggested: offers and news), what Stop stops (suggested: that message), After a sale only with a customer, a Remove button, the message\'s name as the email subject. To overrule: no "are you sure?" when removing a customer group; the search box from 9 single jobs.' },
       { what: 'From the evening', detail: 'Where the owner makes the label printer helper\'s key (not drawn; a helper already signed in keeps working up to 30 days). Google\'s official G logo file for the sign-in button. The test server\'s "System restart required". Customer sign-in through real WorkOS would send real emails, which the test copy forbids: keep the pretend one?' },
       { what: 'The replan', detail: 'Playable slices A to F (#499): the shop day (sign-in, PINs, opening, cash-up) before stock. Mark has answered its four questions; it is yours to accept or change.' },
       { what: 'Small questions left', detail: 'Discounts: build now on the old sales record (redone at Mark\'s step C), or wait for it? The spreadsheet download: one file or several, and only once all four lists can be made?' },
@@ -325,9 +327,9 @@ const BOARD = {
       { what: 'Still his from before', detail: 'When the front page switches to the new app.' },
     ],
   },
-  updated: '25 October 2026, evening',
-  lead: 'Staff now sign in through WorkOS, with Continue with Google on Wheelhouse\'s own screen, and the test copy runs the drawings\' North Street Cycles with you as owner. Customers sign in with an emailed code. Tests now run on pull requests and once a day, so a merge reaches the test copy in about a minute.',
-  sub: 'Merged 25 Oct: #478 to #512, Jack\'s pieces and Mark\'s #492, #496, #503 and #507. Open: Mark\'s #490 and the replan, #499.',
+  updated: '26 October 2026, early morning',
+  lead: 'Customers now have their account page: their bikes, details and one history of repairs and purchases, with each repair opening its own page. Staff can open a sale from a customer\'s history and set up customer groups with a discount. Booking has a search for shops with many single jobs.',
+  sub: 'Merged 26 Oct overnight: #514 to #518, all Jack\'s. Open: Mark\'s #490, #499 (the replan) and #511 (the component registry).',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -546,6 +548,10 @@ const BOARD = {
     { status: 'done', what: 'Tests on pull requests and once a day', detail: 'No second run after a merge, so the copy updates about a minute after merging (#509)', pr: 509 },
     { status: 'done', what: 'Print jobs per shop', detail: 'A job reaches only its own shop\'s label printer helper', pr: 510 },
     { status: 'done', what: 'The old app\'s Log in', detail: 'Leads to the new sign-in screen', pr: 512 },
+    { status: 'done', what: 'The customer\'s account page', detail: 'A first code sign-in joins only a customer whose email they gave themselves (#514, migration 084); Your account with bikes, details, how we contact you and one history; a repair opens its own page by sign-in (#515)', pr: 515 },
+    { status: 'done', what: 'A sale from a customer\'s history', detail: 'Opens the drawn pop-up from either sales record; Refund at the till waits for refunds', pr: 516 },
+    { status: 'done', what: 'Customer groups', detail: 'Settings › Front desk › Payments: each group with its customers and % off; add, edit and remove', pr: 517 },
+    { status: 'done', what: 'Booking search and "unavailable"', detail: 'A search box over more than 8 single jobs; Online booking is unavailable just now when booking can\'t load', pr: 518 },
     { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock (a proposal for you, #499)', pr: 499 },
   ],
   asks: [
