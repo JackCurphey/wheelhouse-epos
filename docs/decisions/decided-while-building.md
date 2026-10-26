@@ -2514,3 +2514,14 @@ follows the job checklist, the closest pattern built.
    exists (step C); its pop-up shows the lines, total and how it was paid.
 4. **The history lists till sales too**, with their receipt number ("Sale 12"),
    alongside the old record's ("Sale [id]").
+
+### 26 Oct 2026: customer groups in Settings (`openspec/changes/customer-groups-settings`, `cs-groups`)
+
+1. **Settings › Front desk › Payments shows only Customer groups** for now
+   (stage 1 drawing gaps decision 6, "show only what works"): the card
+   machine and ways to pay come with their pieces.
+2. **The group's box isn't drawn**: Name and "% off", Save, and "Remove
+   group" for an existing one, following the Services box.
+3. **Removing a group** leaves its customers in no group, as the server
+   already did; no confirmation step, as Services' Remove has none.
+4. **With no groups** the fold's summary reads "No groups yet".

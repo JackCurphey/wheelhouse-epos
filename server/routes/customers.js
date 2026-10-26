@@ -18,11 +18,16 @@ const db = { prepare, exec: dbExec };
 // ---------- Customers ----------
 
 function serializeCustomerGroup(row) {
-  return { id: row.id, name: row.name, discountPercent: row.discount_percent };
+  const group = { id: row.id, name: row.name, discountPercent: row.discount_percent };
+  // Only on the list Settings reads (customer-groups-settings design 1).
+  if (row.customer_count !== undefined) group.customerCount = Number(row.customer_count);
+  return group;
 }
 
 function resolveDiscountPercent(raw, existing) {
   if (raw === undefined) return existing !== undefined ? existing : 0;
+  // Nothing typed isn't 0: Number(null) and Number('') would read as 0 (review).
+  if (raw === null || (typeof raw === 'string' && raw.trim() === '')) return null;
   const pct = Number(raw);
   if (!Number.isFinite(pct) || pct < 0 || pct > 100) return null;
   return pct;
@@ -157,7 +162,12 @@ export function register(route) {
   // ---------- Customer groups ----------
 
   route('GET', '/api/customer-groups', async (req, res) => {
-    const rows = await db.prepare('SELECT * FROM customer_groups ORDER BY name').all();
+    // Each group's current customers, for Settings › Payments › Customer groups.
+    const rows = await db.prepare(
+      `SELECT g.*, (SELECT count(*) FROM customer_group_members m JOIN customers c ON c.id = m.customer_id
+                     WHERE m.group_id = g.id AND c.active = 1 AND c.merged_into_id IS NULL) AS customer_count
+         FROM customer_groups g ORDER BY g.name`
+    ).all();
     sendJson(res, 200, rows.map(serializeCustomerGroup));
   });
 
