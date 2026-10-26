@@ -9,5 +9,5 @@
 - [x] 1.7 Break each fix on purpose (drop `FOR UPDATE`; for the order, drop the draft check under the lock), confirm the edit landed, see the test go red, restore
 - [x] 1.8 A refused save writes nothing, leaves no transaction open and the next save goes through; break a refusal's `ROLLBACK` on purpose and see it go red
 - [x] 1.9 The existing tests for each changed route, `tests/route-list.test.js`, `tests/owner-only-routes.test.js`, and lint
-- [ ] 1.10 Self-review and `/review` (stock ordering: the order save)
-- [ ] 1.11 `npm test`, `npm run test:browser`; archive as the last commit
+- [x] 1.10 Self-review and `/review` (stock ordering: the order save)
+- [x] 1.11 `npm test`, `npm run test:browser`; archive as the last commit
