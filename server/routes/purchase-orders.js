@@ -6,6 +6,7 @@
 import { prepare, dbExec } from '../db.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso, ValidationError } from '../lib/http.js';
+import { ownerOnly } from '../lib/owner-only.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -15,6 +16,15 @@ const db = { prepare, exec: dbExec };
 // tracks qty_ordered vs qty_received and can be booked in more than once.
 // Step one of eventually importing orders straight from a B2B distributor -
 // not built here, this is the manual-entry version.
+//
+// Making, changing, ordering and closing an order is for the Owner until
+// roles bring "Can order stock" (receiving decision 4; WP-1.1); everyone can
+// read orders and receive against them (openspec/changes/deliveries-orders).
+const ORDER_STOCK = "Only the shop's owner can order stock";
+
+// The order's total cost in pounds, as unit_cost is stored (NUMERIC(10,2)),
+// rounded to the penny so floating-point sums don't show (3 x 1.10).
+const totalCost = (items) => Math.round(items.reduce((sum, it) => sum + it.qty_ordered * it.unit_cost * 100, 0)) / 100;
 
 function serializePurchaseOrder(row, items) {
   return {
@@ -39,6 +49,7 @@ function serializePurchaseOrder(row, items) {
           unitCost: it.unit_cost,
         }))
       : undefined,
+    totalCost: items ? totalCost(items) : undefined,
   };
 }
 
@@ -100,8 +111,10 @@ export function register(route) {
   });
 
   route('POST', '/api/purchase-orders', async (req, res) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const body = await readJsonBody(req);
     const supplierId = Number(body.supplierId);
+    if (!Number.isInteger(supplierId)) return badRequest(res, 'Supplier not found');
     const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(supplierId);
     if (!supplier) return badRequest(res, 'Supplier not found');
     const items = Array.isArray(body.items) ? body.items : [];
@@ -139,6 +152,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/purchase-orders/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
@@ -191,6 +205,7 @@ export function register(route) {
   });
 
   route('POST', '/api/purchase-orders/:id/mark-ordered', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
@@ -205,6 +220,7 @@ export function register(route) {
   });
 
   route('POST', '/api/purchase-orders/:id/cancel', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');

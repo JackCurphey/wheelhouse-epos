@@ -69,3 +69,16 @@ test('editing a draft with a bad line is a 400 with its message, and the order i
     prepare('SELECT qty_ordered, unit_cost FROM purchase_order_items WHERE purchase_order_id = ?').all(id));
   assert.deepEqual(lines.map((l) => [l.qty_ordered, Number(l.unit_cost)]), [[2, 2]]);
 });
+
+// The order's total cost, in pounds as stored (openspec/changes/deliveries-orders
+// contract): the screens show it as the server gives it. 3 × £1.10 + £0.20
+// is 3.5000000000000004 in floating point, so the sum is rounded to the penny.
+test('an order gives its total cost, in pounds, rounded to the penny', async () => {
+  const made = await create([{ productId, qty: 3, unitCost: 1.1 }, { productId, qty: 1, unitCost: 0.2 }]);
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  assert.equal(made.body.totalCost, 3.5);
+  const one = await staffRequest(server.baseUrl, owner.cookie, `/api/purchase-orders/${made.body.id}`);
+  assert.equal(one.body.totalCost, 3.5);
+  const all = await staffRequest(server.baseUrl, owner.cookie, '/api/purchase-orders');
+  assert.equal(all.body.find((o) => o.id === made.body.id).totalCost, 3.5);
+});

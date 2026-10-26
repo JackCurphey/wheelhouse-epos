@@ -2641,3 +2641,47 @@ follows the job checklist, the closest pattern built.
    It isn't at the bottom of the diary any more.
 2. **No "Show the diary legend" switch on a phone,** where the diary has no
    legend, as with Folded sidebar.
+
+### 26 Oct 2026: deliveries and purchase orders (`openspec/changes/deliveries-orders`, `rs-hub`, `rs-order`, `rs-order-ordered`, `rs-order-close`; WP-2.3)
+
+1. **Receiving is left out, not routed nowhere:** "A delivery arrived?" with
+   "Receive a delivery", "Receive against this order", To return, Products to
+   add and Recent deliveries come with the next piece (`rs-receive`,
+   `rs-problem`).
+2. **Who, before roles:** everyone signed in opens Deliveries and orders;
+   only the Owner sees Orders and New order, and only the Owner can make,
+   change, mark as ordered or close an order (the server refuses anyone else,
+   "Only the shop's owner can order stock"). "Can order stock" waits for
+   WP-1.1 roles (receiving decision 4). Anyone can still read an order and
+   receive against it. Staff see "Orders are for the shop’s owner for now."
+   on the page, which the drawing (`rs-hub-staff`) doesn't have.
+3. **The restock list is left out** (`rs-restock` and the hub's Restock list
+   section): it needs answers on "selling fast", the suggested count, the
+   basket file's format, matching a product's typed supplier name to a
+   supplier, and where "For customers" comes from.
+4. **Orders lists open orders only:** drafts, ordered and partly delivered,
+   newest first. Delivered and closed ones leave it.
+5. **Suppliers as pills:** the one ordered from last first, then by name;
+   three, then "Other…" shows the rest. The built pill group stands in for
+   the drawing's dark pills. With no suppliers, "No suppliers yet." (adding
+   one waits for the Suppliers screen, receiving later change of 2 Oct).
+6. **Adding a product:** Enter adds an exact barcode or code match, or the
+   only match; a click adds any match; a product already on the order goes
+   up by one. An unknown barcode adds nothing ("Add this product" comes with
+   receiving).
+7. **A line's cost** is its count × the product's cost (a product with no
+   cost counts as £0.00); the total is summed in whole pence on New order.
+   Once saved, the order shows the server's `totalCost`, in pounds, as
+   stored. Nothing converted.
+8. **"for job WH-1042"** isn't on order lines: they don't record a job yet.
+9. **Close the order always asks first,** since no job link exists to decide
+   when to ask; the note under the order loses "If a job is waiting for any
+   of it, you’re asked first." An order something has arrived from has no
+   Close: the server refuses to cancel it, and dropping what's still to come
+   needs a new write.
+10. **A draft's page** (not drawn) shows "[Supplier] · draft", the Draft tag,
+    Close the order and Mark as ordered. Editing a draft isn't drawn and
+    isn't built.
+11. **The header** keeps "Deliveries and orders" on New order and an order,
+    as a customer's page keeps "Customers"; each sub-page has the drawn way
+    back and its own heading.
