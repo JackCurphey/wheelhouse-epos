@@ -45,21 +45,28 @@ here before starting it, so two people never build the same one):
   "continue to workos.com" until there's a domain ($99 a month, waits for
   revenue).
 - **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Merged
-  25 Oct: step B, reports read both records (#492, migration 083), audit
-  items 12, 20 and 24 (#496), a declined date change's message as the
-  second box of Date change answered (audit item 23, #507), and local
+  25 and 26 Oct: step B, reports read both records (#492, migration 083),
+  audit items 12, 20 and 24 (#496), a declined date change's message as the
+  second box of Date change answered (audit item 23, #507), local
   development without signing in (#503, `WHEELHOUSE_DEV_AUTOLOGIN`, off
-  unless asked, refused in production and on the hosted copy). Open: the
-  overnight runner (#490) and a replan into playable slices (#499; Mark
-  answered its four questions: the shop day before stock). Written, waiting
-  for Mark's yes before anything is built: `till-job-deposit` (a deposit at
-  the till on the current sales path, branch `mark/till-job-deposit`, money
-  questions for Jack inside) and `component-registry-repo` (Wheelhouse's
-  components in their own repository, branch `mark/component-registry-spec`;
-  needs Jack's yes on Radix and on creating the repository). Next: step C
-  (the new till on sync; the browser's offline copy and send queue are not
-  built, so it is large and has no spec yet), then the shop day (roles on the
-  server, the settings store and activity log, sign-in and PINs).
+  unless asked, refused in production and on the hosted copy), and the
+  overnight runner (#490): the agent runs with no git credentials, the runner
+  scans every commit for secrets and pushes one scanned commit from a clean
+  clone. It is not a sandbox (the header says what it does not contain); keep
+  branch protection on `main`. Open: a replan into playable slices (#499;
+  Mark answered its four questions: the shop day before stock). **The
+  component registry is built, locally**: `~/Documents/GitHub/react-repo`
+  (61 shadcn components, 93 Wheelhouse pieces, 11 themes with a switcher; all
+  tests pass; not on GitHub). It waits for Jack to create the repository
+  (#511, which carries the spec, `openspec/changes/component-registry-repo`,
+  and his checklist; Mark approved Radix as recommended and later deleting
+  `registry/`, both still Jack's by the project rules). Written, waiting for
+  Mark's yes before anything is built: `till-job-deposit` (a deposit at the
+  till on the current sales path, branch `mark/till-job-deposit`, money
+  questions for Jack inside). Next: step C (the new till on sync; the
+  browser's offline copy and send queue are not built, so it is large and has
+  no spec yet), then the shop day (roles on the server, the settings store
+  and activity log, sign-in and PINs).
 - **Waiting on Jack:** accepting or changing the replan (#499). Also:
   discounts now on the old sales record or after Mark's step C; the
   spreadsheet download's one file or several. Refunds wait for Mark's steps
