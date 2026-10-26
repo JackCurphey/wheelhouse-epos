@@ -25,7 +25,7 @@ type Me = {
   id: number; email: string; name: string | null; phone: string | null; shopName: string; shopSlug: string;
   updateChannel: 'sms' | 'email'; serviceReminders: boolean; reviewRequests: boolean; marketingPermission: boolean;
 };
-type Bike = { id: number; make: string; model: string; colour: string | null };
+type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null };
 type Repair = {
   kind: 'repair'; jobId: number; reference: string; title: string; bikeLabel: string | null; bikeId: number | null;
   stage: BookingStage; workStarted: boolean; jobDate: string; totalPence: number | null; at: string;
@@ -45,6 +45,8 @@ const shortDate = (date: string) => {
   const [y, m, d] = date.split('-').map(Number);
   return `${SHORT_DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${SHORT_MONTHS[m - 1]}`;
 };
+// "Wed 17 Mar 2027": a next service is months off, so the year always shows.
+const longDate = (date: string) => `${shortDate(date)} ${date.slice(0, 4)}`;
 const londonDate = (iso: string) => {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/London' }).formatToParts(new Date(iso)).map((p) => [p.type, p.value]));
   return `${parts.year}-${parts.month}-${parts.day}`;
@@ -99,7 +101,7 @@ export function AccountScreen() {
 
   const items = history.data;
   const bookLink = <Link to={home} className={cn(buttonVariants({ variant: 'accent' }), 'no-underline')}>Book a repair</Link>;
-  const bikesCard = <BikesCard bikes={bikes.data} items={items} bookLink={bookLink} shopSlug={shopSlug} />;
+  const bikesCard = <BikesCard bikes={bikes.data} items={items} bookLink={bookLink} shopSlug={shopSlug} reminders={me.data.serviceReminders} />;
   return (
     <BookFrame title="Your account" wide>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -131,7 +133,7 @@ function Card({ id, title, aside, children }: { id: string; title: string; aside
   );
 }
 
-function BikesCard({ bikes, items, bookLink, shopSlug }: { bikes: Bike[]; items: Item[]; bookLink: React.ReactNode; shopSlug: string }) {
+function BikesCard({ bikes, items, bookLink, shopSlug, reminders }: { bikes: Bike[]; items: Item[]; bookLink: React.ReactNode; shopSlug: string; reminders: boolean }) {
   const idBase = React.useId();
   const [adding, setAdding] = React.useState(false);
   // "+ Add a bike": a button on the empty card, a link-style one under the bikes, as drawn (add-a-bike design 2).
@@ -153,7 +155,12 @@ function BikesCard({ bikes, items, bookLink, shopSlug }: { bikes: Bike[]; items:
         return (
           <div key={b.id} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] pt-2.5">
             <span className="text-base font-bold">{[[b.make, b.model].filter(Boolean).join(' '), b.colour].filter(Boolean).join(' · ')}</span>
-            {inShop ? <span className="text-size-13 text-[var(--wh-muted)]">{`In the shop now · ${inShop.reference}`}</span> : null}
+            {/* "next service due [date]", only while reminders are on (audit L10; next-service-due design 3). */}
+            {(() => {
+              const due = reminders && b.nextServiceDue ? `next service due ${longDate(b.nextServiceDue)}` : null;
+              const line = inShop ? [`In the shop now · ${inShop.reference}`, due].filter(Boolean).join(' · ') : due ? `N${due.slice(1)}` : null;
+              return line ? <span className="text-size-13 text-[var(--wh-muted)]">{line}</span> : null;
+            })()}
             <div className="pt-1">{bookLink}</div>
           </div>
         );

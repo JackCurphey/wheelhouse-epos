@@ -2600,6 +2600,20 @@ follows the job checklist, the closest pattern built.
 3. **The account's add-bike route** refuses another website, as the
    account's job actions do.
 
+### 26 Oct 2026: next service due on the account (`openspec/changes/next-service-due`, `ac-account`, audit L10)
+
+1. **The date shown** is the day the bike's waiting service reminder goes:
+   its collection date plus the service's months, moved to the first open
+   day, in the shop's time zone. If a bike has more than one waiting, the
+   soonest is shown.
+2. **The year always shows** ("Wed 17 Mar 2027"), since a next service is
+   months away.
+3. **Nothing shows while the customer's service reminders are off.** The
+   server sends no date then either.
+4. **After the review:** no date shows for a reminder the sender will undo
+   when its day comes, because the bike has been booked or collected again
+   since.
+
 ### 26 Oct 2026: the diary's legend as a box (`openspec/changes/diary-legend-box`; Jack's option 2, "Legend", per person)
 
 1. **Below 1024px wide,** where the left-hand column is folded away (an
