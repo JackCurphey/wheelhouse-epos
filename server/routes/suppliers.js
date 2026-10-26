@@ -76,28 +76,42 @@ export function register(route) {
 
   route('PUT', '/api/suppliers/:id', async (req, res, params) => {
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Supplier not found');
+    if (!(await db.prepare('SELECT id FROM suppliers WHERE id = ?').get(id))) return notFound(res, 'Supplier not found');
     const body = await readJsonBody(req);
-    const name = body.name !== undefined ? String(body.name).trim() : existing.name;
-    if (!name) return badRequest(res, 'Supplier name is required');
-    const contactName = body.contactName !== undefined ? String(body.contactName).trim() : existing.contact_name;
-    const email = body.email !== undefined ? String(body.email).trim() : existing.email;
-    const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
-    const accountNumber = body.accountNumber !== undefined ? String(body.accountNumber).trim() : existing.account_number;
-    const address = body.address !== undefined ? String(body.address).trim() : existing.address;
-
+    // Read again FOR UPDATE inside a transaction, so a new contact and a new
+    // phone number saved at once both stay (owner-saves-dont-clash). A name
+    // another supplier has fails the UPDATE, which rolls back; the 400 is the
+    // same as before.
+    let name;
+    await db.exec('BEGIN');
     try {
+      const existing = await db.prepare('SELECT * FROM suppliers WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Supplier not found');
+      }
+      name = body.name !== undefined ? String(body.name).trim() : existing.name;
+      if (!name) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Supplier name is required');
+      }
+      const contactName = body.contactName !== undefined ? String(body.contactName).trim() : existing.contact_name;
+      const email = body.email !== undefined ? String(body.email).trim() : existing.email;
+      const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
+      const accountNumber = body.accountNumber !== undefined ? String(body.accountNumber).trim() : existing.account_number;
+      const address = body.address !== undefined ? String(body.address).trim() : existing.address;
       await db.prepare(
         `UPDATE suppliers SET name = ?, contact_name = ?, email = ?, phone = ?, account_number = ?, address = ?, updated_at = ?
          WHERE id = ?`
       ).run(name, contactName, email, phone, accountNumber, address, nowIso(), id);
-      const row = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
-      sendJson(res, 200, serializeSupplier(row));
+      await db.exec('COMMIT');
     } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
       if (err.code === '23505') return badRequest(res, `A supplier named "${name}" already exists`);
       throw err;
     }
+    const row = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
+    sendJson(res, 200, serializeSupplier(row));
   });
 
   route('POST', '/api/suppliers/:id/sync', async (req, res, params) => {

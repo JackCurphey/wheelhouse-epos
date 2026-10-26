@@ -312,34 +312,58 @@ export function register(route) {
   route('PUT', '/api/purchase-orders/:id', async (req, res, params) => {
     if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Purchase order not found');
-    if (existing.status !== 'draft') return badRequest(res, 'Only a draft purchase order can be edited');
+    const found = await db.prepare('SELECT status FROM purchase_orders WHERE id = ?').get(id);
+    if (!found) return notFound(res, 'Purchase order not found');
+    if (found.status !== 'draft') return badRequest(res, 'Only a draft purchase order can be edited');
     const body = await readJsonBody(req);
 
-    let supplierId = existing.supplier_id;
-    if (body.supplierId !== undefined) {
-      supplierId = Number(body.supplierId);
-      const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(supplierId);
-      if (!supplier) return badRequest(res, 'Supplier not found');
-    }
-    const reference = body.reference !== undefined ? String(body.reference).trim() : existing.reference;
-    const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
-    const items = Array.isArray(body.items) ? body.items : null;
-
-    let loaded = null;
-    if (items) {
-      if (items.length === 0) return badRequest(res, 'A purchase order must include at least one item');
-      try {
-        loaded = await loadPoLineItems(items);
-      } catch (err) {
-        if (err instanceof ValidationError) return badRequest(res, err.message);
-        throw err;
-      }
-    }
-
+    // The order is read again FOR UPDATE inside the transaction, so a second
+    // save waits for this one and starts from what it wrote, and the draft
+    // check is made on the order as it is now: one marked as ordered while
+    // this save waited is refused (owner-saves-dont-clash). Booking in locks
+    // orders the same way before their lines and products, and refuses a
+    // draft, so the two can't wait on each other. The checks, their order and
+    // their words are unchanged; a refusal rolls back, having written nothing.
     await db.exec('BEGIN');
     try {
+      const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Purchase order not found');
+      }
+      if (existing.status !== 'draft') {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Only a draft purchase order can be edited');
+      }
+
+      let supplierId = existing.supplier_id;
+      if (body.supplierId !== undefined) {
+        supplierId = Number(body.supplierId);
+        const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(supplierId);
+        if (!supplier) {
+          await db.exec('ROLLBACK');
+          return badRequest(res, 'Supplier not found');
+        }
+      }
+      const reference = body.reference !== undefined ? String(body.reference).trim() : existing.reference;
+      const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
+      const items = Array.isArray(body.items) ? body.items : null;
+
+      let loaded = null;
+      if (items) {
+        if (items.length === 0) {
+          await db.exec('ROLLBACK');
+          return badRequest(res, 'A purchase order must include at least one item');
+        }
+        try {
+          loaded = await loadPoLineItems(items);
+        } catch (err) {
+          if (!(err instanceof ValidationError)) throw err;
+          await db.exec('ROLLBACK');
+          return badRequest(res, err.message);
+        }
+      }
+
       await db.prepare(
         'UPDATE purchase_orders SET supplier_id = ?, reference = ?, notes = ?, updated_at = ? WHERE id = ?'
       ).run(supplierId, reference, notes, nowIso(), id);
@@ -354,7 +378,7 @@ export function register(route) {
       }
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
 

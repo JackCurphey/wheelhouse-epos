@@ -612,19 +612,40 @@ export function register(route) {
   // screens: hours
   route('PUT', '/api/workshop-unavailability/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
-    const row = await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
-    if (!row) return notFound(res, 'Block not found');
+    const id = Number(params.id);
+    if (!(await db.prepare('SELECT id FROM workshop_unavailability WHERE id = ?').get(id))) return notFound(res, 'Block not found');
     const body = await readJsonBody(req);
-    const checked = validateBlock({ ...toBlock(row), ...body });
-    if (checked.error) return badRequest(res, checked.error);
-    const b = checked.block;
-    if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
-    await db.prepare(
-      `UPDATE workshop_unavailability SET employee_id = ?, kind = ?, weekdays = ?, start_date = ?, end_date = ?,
-         start_time = ?, end_time = ?, reason = ?, updated_at = now() WHERE id = ?`
-    ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
-          b.startDate, b.endDate, b.startTime, b.endTime, b.reason, row.id);
-    const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(row.id));
+    // Read again FOR UPDATE inside a transaction, so a new reason and a new
+    // end time saved at once both stay (owner-saves-dont-clash). The clashes
+    // are worked out after COMMIT, as before.
+    await db.exec('BEGIN');
+    try {
+      const row = await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ? FOR UPDATE').get(id);
+      if (!row) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Block not found');
+      }
+      const checked = validateBlock({ ...toBlock(row), ...body });
+      if (checked.error) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, checked.error);
+      }
+      const b = checked.block;
+      if (!(await blockMechanicExists(b.mechanicId))) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Mechanic not found');
+      }
+      await db.prepare(
+        `UPDATE workshop_unavailability SET employee_id = ?, kind = ?, weekdays = ?, start_date = ?, end_date = ?,
+           start_time = ?, end_time = ?, reason = ?, updated_at = now() WHERE id = ?`
+      ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
+            b.startDate, b.endDate, b.startTime, b.endTime, b.reason, id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(id));
     sendJson(res, 200, { block, clashes: await clashesFor(block) });
   });
 
@@ -784,18 +805,32 @@ export function register(route) {
   route('PUT', '/api/workshop-service-categories/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Not found');
+    if (!(await db.prepare('SELECT id FROM workshop_service_categories WHERE id = ?').get(id))) return notFound(res, 'Not found');
     const body = await readJsonBody(req);
-    let fields;
+    // Read again FOR UPDATE inside a transaction, so a new name and a new
+    // place saved at once both stay (owner-saves-dont-clash).
+    await db.exec('BEGIN');
     try {
-      fields = readCategoryBody(body, existing);
+      const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Not found');
+      }
+      let fields;
+      try {
+        fields = readCategoryBody(body, existing);
+      } catch (err) {
+        if (!(err instanceof ValidationError)) throw err;
+        await db.exec('ROLLBACK');
+        return badRequest(res, err.message);
+      }
+      await db.prepare('UPDATE workshop_service_categories SET name = ?, position = ?, updated_at = ? WHERE id = ?')
+        .run(fields.name, fields.position, nowIso(), id);
+      await db.exec('COMMIT');
     } catch (err) {
-      if (err instanceof ValidationError) return badRequest(res, err.message);
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
-    await db.prepare('UPDATE workshop_service_categories SET name = ?, position = ?, updated_at = ? WHERE id = ?')
-      .run(fields.name, fields.position, nowIso(), id);
     const row = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
     sendJson(res, 200, serializeServiceCategory(row));
   });
@@ -857,38 +892,48 @@ export function register(route) {
   route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Not found');
+    if (!(await db.prepare('SELECT id FROM workshop_services WHERE id = ?').get(id))) return notFound(res, 'Not found');
     const body = await readJsonBody(req);
-    let fields;
-    let placement;
-    let questions;
+    // The service is read again FOR UPDATE inside a transaction, so a second
+    // save waits for this one and starts from what it wrote: the Services box
+    // leaves out what it doesn't show, and those fields are kept from this row
+    // (owner-saves-dont-clash). The checks are unchanged; a refusal rolls
+    // back, having written nothing. The 200 is sent after COMMIT.
     let includes;
-    try {
-      fields = readServiceBody(body);
-      fields.reminderMonths = readReminderMonths(body, existing);
-      placement = await readServicePlacement(body, existing);
-      questions = readQuestionsOrKeep(body, existing.questions ?? []);
-      const stored = (await db.prepare(
-        'SELECT included_service_id FROM workshop_service_includes WHERE service_id = ? ORDER BY position'
-      ).all(id)).map((r) => r.included_service_id);
-      includes = await readIncludes(body, placement.kind, stored, id, fields.name);
-      if (existing.kind === 'individual' && placement.kind === 'full') {
-        const holder = await db.prepare(
-          `SELECT f.name FROM workshop_service_includes i JOIN workshop_services f ON f.id = i.service_id
-           WHERE i.included_service_id = ? ORDER BY f.name LIMIT 1`
-        ).get(id);
-        if (holder) throw new ValidationError(`${fields.name} is part of ${holder.name} - take it out of that first`);
-      }
-    } catch (err) {
-      if (err instanceof ValidationError) return badRequest(res, err.message);
-      throw err;
-    }
-    const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
-    const bookableOnline = body.bookableOnline === undefined
-      ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
     await db.exec('BEGIN');
     try {
+      const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Not found');
+      }
+      let fields;
+      let placement;
+      let questions;
+      try {
+        fields = readServiceBody(body);
+        fields.reminderMonths = readReminderMonths(body, existing);
+        placement = await readServicePlacement(body, existing);
+        questions = readQuestionsOrKeep(body, existing.questions ?? []);
+        const stored = (await db.prepare(
+          'SELECT included_service_id FROM workshop_service_includes WHERE service_id = ? ORDER BY position'
+        ).all(id)).map((r) => r.included_service_id);
+        includes = await readIncludes(body, placement.kind, stored, id, fields.name);
+        if (existing.kind === 'individual' && placement.kind === 'full') {
+          const holder = await db.prepare(
+            `SELECT f.name FROM workshop_service_includes i JOIN workshop_services f ON f.id = i.service_id
+             WHERE i.included_service_id = ? ORDER BY f.name LIMIT 1`
+          ).get(id);
+          if (holder) throw new ValidationError(`${fields.name} is part of ${holder.name} - take it out of that first`);
+        }
+      } catch (err) {
+        if (!(err instanceof ValidationError)) throw err;
+        await db.exec('ROLLBACK');
+        return badRequest(res, err.message);
+      }
+      const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
+      const bookableOnline = body.bookableOnline === undefined
+        ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
       await db.prepare(
         'UPDATE workshop_services SET name = ?, price = ?, price_pence = ROUND(CAST(? AS numeric) * 100)::int, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), reminder_months = ?, updated_at = ? WHERE id = ?'
       ).run(fields.name, fields.price, fields.price, fields.minutes, active, bookableOnline,
@@ -903,7 +948,7 @@ export function register(route) {
       }
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
     const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
