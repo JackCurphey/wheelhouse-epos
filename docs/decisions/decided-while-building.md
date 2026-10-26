@@ -2642,6 +2642,100 @@ follows the job checklist, the closest pattern built.
 2. **No "Show the diary legend" switch on a phone,** where the diary has no
    legend, as with Folded sidebar.
 
+
+
+### 26 Oct 2026: the stock list and product page (`openspec/changes/stock-list`, `st-list`, `st-product`, `st-product-staff`, `st-product-bike`; slice C, WP-2.1, the 26 Oct defaults)
+
+1. **Prices are shown, not edited**, until products move to pence (WP-1.5).
+2. **Left out because they change things:** + Add a product, the tick
+   boxes and their bar, Edit, Adjust stock and Send to another shop. Adjust
+   stock is the next piece, so its button is left out rather than linked to
+   nothing.
+3. **Left out until WP-1.5:** the Category pill, each category's details
+   (the Details box and detail columns), and sizes and colours.
+4. **Who sees what:** everyone signed in sees Stock and a product's page.
+   Margin, Cost and Show on website show to the Owner only, as roles aren't
+   built (stock decision 11 says Owners and Managers). The product page's
+   read sends no cost to anyone else. The list still reads the existing
+   `/api/products`, which sends cost to every signed-in person, as it did
+   before; hiding it there waits for roles (WP-1.1).
+5. **The search** finds a name, barcode, the product's code (`sku`, shown
+   where the drawing has the supplier code) or the supplier. Its
+   placeholder doesn't mention measurements, which can't be searched yet.
+   The scan icon is left out: a scanner types into the box.
+6. **Running low** is the Overview's rule: a low-stock level above 0, and
+   stock at or under it. Below zero is anything under 0.
+7. **Margin** is on the price before VAT, at the product's own VAT rate, as
+   the old app worked it out; rounded to a whole percent. No price shows
+   "—".
+8. **The list shows 50 products**, then "Show all ([n])", as the bike page
+   does with its jobs. Every heading sorts; Product, A to Z, to start.
+9. **Nothing to show:** "Nothing matches “[what was typed]”" with "Check
+   the spelling, or try a supplier code or a supplier."; "No products yet"
+   with no buttons (both drawn buttons add products); "Nothing is running
+   low" and "Nothing is below zero".
+10. **The product's page** follows the bike and customer pages: "‹ Stock",
+    the product's name as the heading, and Stock in the page's title bar
+    (the drawing puts the name there).
+11. **In stock** names the shop, not a site, since stock is one count for
+    the shop. The "held for a job" line is left out: nothing holds stock
+    for a job yet.
+12. **The photo** shows only when there is one. No "[Photo]" box.
+13. **Stock history** names each line by what happened (Sold, Returned,
+    Received, Booked in, Adjusted, or Stock changed), with its note and
+    when. Who did it isn't recorded, so it isn't shown, and no line links
+    anywhere yet (there's no sale, delivery or count page). Price changes
+    aren't recorded, so that filter is left out. Returns count under Sold;
+    Booked in under Received.
+14. **A bike's page** is a product's page: nothing records a stock bike's
+    frame numbers yet, so "Bikes by frame number" is left out.
+15. **A product taken off sale** still opens, with "Taken off sale" under
+    its name.
+16. **After the review:** a product with no cost recorded (saved as 0) shows
+    no margin ("—"), not 100%. A product's page shows its newest 200 stock
+    movements. "%" and "_" in a stock search are searched for as
+    themselves.
+
+### 26 Oct 2026: adjusting stock (`openspec/changes/adjust-stock`, `st-adjust`, `st-adjust-faulty`; slice C, WP-2.1, the 26 Oct defaults)
+
+1. **Who can adjust:** anyone with the Stock page, every adjustment
+   recording who, the reason and when (Jack's answer, 26 Oct:
+   `2026-10-26-day-answers.md` section 11).
+2. **The change starts at −1, as drawn,** and "In stock after" shows the
+   count it leaves; typing either sets the other. − and + step the change.
+3. **Adjust is greyed and says why,** as UX walk-through 3 L4 draws for no
+   reason: "Type the change" (none, or 0), "Stock can’t go below zero",
+   "Pick a reason to adjust", "Write a note for Other", checked in that
+   order.
+4. **A reason that doesn't fit the new sign is unpicked** when the change
+   flips (Damaged going up); Other, which fits both, stays.
+5. **Below zero:** an adjustment can't take stock under 0, as the old
+   route refused. Going up is always allowed, so Found works on a product
+   already below zero.
+6. **Faulty — to return to supplier is recorded as the reason only.** The
+   To return list in Deliveries and orders isn't built, so the box leaves
+   out both lines that promise it (the note under the reasons, and the
+   panel in `st-adjust-faulty`).
+7. **"big changes show on the manager’s Today" is left out** of the last
+   note: it waits until Today's stock warnings are built (section 11 of
+   `2026-10-26-day-answers.md`), with its Settings › Stockroom amount.
+8. **After Adjust** the box closes and the page shows the new stock and
+   the new history line; no toast, as none is drawn.
+9. **History lines:** an adjustment with a reason reads "Adjusted ·
+   Damaged", its note "Note: [note]", then who and when, as `histRow`
+   draws. Lines from before this piece, and sales and till sync (Mark's
+   step C), record no one, so they show no name.
+10. **The old app's booking in** (`type: intake`) through the same route
+    needs no reason and records who, but only adds stock; any other type is
+    refused (review, 26 Oct).
+11. **The change is a whole number up to 100,000 either way**, and a note
+    up to 500 characters (review, 26 Oct). No count in a bike shop comes
+    near 100,000; the cap keeps a mistyped number from reaching the
+    database.
+12. **"In stock after" sends a change, worked out when the box opened.** A
+    sale made while the box is open makes the result one lower than typed.
+    Kept, not built around: sending a change is what lets two adjustments
+    at once both count (review, 26 Oct).
 ### 26 Oct 2026: the print agent removed (`openspec/changes/drop-print-agent`; Jack's decision in `2026-10-26-day-answers.md` section 5)
 
 1. **Removed:** the label printer helper (`print-agent/`), its four
@@ -2783,7 +2877,6 @@ follows the job checklist, the closest pattern built.
     A customer whose sign-in runs out after the page has loaded keeps the
     page and what she's typed; sending then says "Please sign in again to
     send this." with a "Sign in again" link back to the page.
-
 ### 26 Oct 2026: the stock list and product page (`openspec/changes/stock-list`, `st-list`, `st-product`, `st-product-staff`, `st-product-bike`; slice C, WP-2.1, the 26 Oct defaults)
 
 1. **Prices are shown, not edited**, until products move to pence (WP-1.5).
@@ -2835,3 +2928,125 @@ follows the job checklist, the closest pattern built.
     no margin ("—"), not 100%. A product's page shows its newest 200 stock
     movements. "%" and "_" in a stock search are searched for as
     themselves.
+
+### 26 Oct 2026: deliveries and purchase orders (`openspec/changes/deliveries-orders`, `rs-hub`, `rs-order`, `rs-order-ordered`, `rs-order-close`; WP-2.3)
+
+1. **Receiving is left out, not routed nowhere:** "A delivery arrived?" with
+   "Receive a delivery", "Receive against this order", To return, Products to
+   add and Recent deliveries come with the next piece (`rs-receive`,
+   `rs-problem`).
+2. **Who, before roles:** everyone signed in opens Deliveries and orders;
+   only the Owner sees Orders and New order, and only the Owner can make,
+   change, mark as ordered or close an order (the server refuses anyone else,
+   "Only the shop's owner can order stock"). "Can order stock" waits for
+   WP-1.1 roles (receiving decision 4). Anyone can still read an order and
+   receive against it. Staff see "Orders are for the shop’s owner for now."
+   on the page, which the drawing (`rs-hub-staff`) doesn't have.
+3. **The restock list is left out** (`rs-restock` and the hub's Restock list
+   section): it needs answers on "selling fast", the suggested count, the
+   basket file's format, matching a product's typed supplier name to a
+   supplier, and where "For customers" comes from.
+4. **Orders lists open orders only:** drafts, ordered and partly delivered,
+   newest first. Delivered and closed ones leave it.
+5. **Suppliers as pills:** the one ordered from last first, then by name;
+   three, then "Other…" shows the rest. The built pill group stands in for
+   the drawing's dark pills. With no suppliers, "No suppliers yet." (adding
+   one waits for the Suppliers screen, receiving later change of 2 Oct).
+6. **Adding a product:** Enter adds an exact barcode or code match, or the
+   only match; a click adds any match; a product already on the order goes
+   up by one. An unknown barcode adds nothing ("Add this product" comes with
+   receiving).
+7. **A line's cost** is its count × the product's cost (a product with no
+   cost counts as £0.00); the total is summed in whole pence on New order.
+   Once saved, the order shows the server's `totalCost`, in pounds, as
+   stored. Nothing converted.
+8. **"for job WH-1042"** isn't on order lines: they don't record a job yet.
+9. **Close the order always asks first,** since no job link exists to decide
+   when to ask; the note under the order loses "If a job is waiting for any
+   of it, you’re asked first." An order something has arrived from has no
+   Close: the server refuses to cancel it, and dropping what's still to come
+   needs a new write.
+10. **A draft's page** (not drawn) shows "[Supplier] · draft", the Draft tag,
+    Close the order and Mark as ordered. Editing a draft isn't drawn and
+    isn't built.
+11. **The header** keeps "Deliveries and orders" on New order and an order,
+    as a customer's page keeps "Customers"; each sub-page has the drawn way
+    back and its own heading.
+12. **After the review:** a product with no cost recorded (none, or 0 as the
+    old app saves it) is no cost, following the stock list's "no cost is no
+    margin": on New order its line shows "No cost recorded" and a box to
+    type one, instead of counting as £0.00 (replacing that part of 7).
+    "Mark as ordered" says "Type a cost for every line first." until every
+    line has one; "Save as draft" still saves, at £0.00. A count stops at
+    100000.
+
+### 26 Oct 2026: receiving a delivery (`openspec/changes/receive-delivery`, `rs-receive`, `rs-problem`; WP-2.3)
+
+1. **Against an order only, for now:** the receive route books in against
+   one order, so "From" lists the orders still to come (ordered or partly
+   delivered), newest first, named by supplier ("[Supplier] · ordered
+   [date]" when a supplier has two). The drawing's supplier pills and "Works
+   with or without an order" wait for a write that adds stock without an
+   order; the hub's note says only "Scan each item as it comes out of the
+   box." With none: "No orders are waiting for a delivery." (not drawn).
+2. **Left out, as asked:** frame numbers (`rs-frame`) and a part a job is
+   waiting for ("Job WH-1042 is waiting for 1", holding it): order lines
+   and stock record neither a job nor a frame. Also left out: Add this
+   product (an unknown barcode says "Nothing in Wheelhouse has the barcode
+   [code]"), the booked-in board and labels (`rs-booked`, `rs-labels`),
+   and the hub's To return, Products to add and Recent deliveries.
+3. **Scanning** follows New order's box: Enter looks the code up itself (a
+   scanner presses Enter before any search comes back), taking an exact
+   barcode or code, or the only match; a click takes any match. Not on the
+   order: "[name] isn’t on this order". Each scan says "Added [name] · 1"
+   (the drawing's announcement, without the job).
+4. **A count stops at what's still to come** on its line ("All [n] [name]
+   still to come are counted"); the server refuses more anyway. − at 1
+   takes the line off, without the audit's Undo; a line with a problem
+   marked can't go below what's set aside.
+5. **Problems:** recorded in a new table (migration 092, numbered 090 until 091 reached main,
+   `delivery_problems`) with the order line, kind, how many and a note (up
+   to 500 characters). Damaged and wrong come out of what was scanned and
+   aren't booked in; the line stays to come on the order, as qty_received
+   counts only what went into stock. Missing is on top of what was scanned,
+   up to what's still to come, and changes no count. Marking the same kind
+   again replaces it. A missing one reads "Missing · [n]" on the line (not
+   drawn). Who marked it isn't recorded yet.
+6. **Book in** sends one request; the page then says "[n] items booked in ·
+   stock updated" (the booked-in board's words), empties the list and
+   refreshes the order. Changing From empties the list.
+7. **Atomic and counted once:** the order is locked while what's still to
+   come is checked, and stock is added in the update itself, so two people
+   booking the same line at once can't both get it, and bookings of one
+   product on two orders both land. An order with only problems marked
+   keeps its status.
+8. **"Receive against this order"** shows on an order still to come, for
+   anyone, beside Close the order; "Receive a delivery" is on the hub for
+   everyone (decision 4).
+9. **After the review:**
+   - **Damaged and wrong items are off what's to come** (replacing that
+     part of 5, and following decision 9, where they go on "To return to
+     [Supplier]" and only missing ones stay "to come"). What's still to
+     come on a line is what was ordered, less what's booked in, less what's
+     set aside, counting problems marked in earlier deliveries too. So the
+     two together never pass what was ordered, and a line can't be marked
+     damaged again and again. **A replacement for a damaged or wrong item
+     is booked on a new order line or a new order**, not on this line. An
+     order with nothing left to come is received, even if some of it was
+     set aside; one with only problems marked and nothing in stock keeps
+     its status (so it can still be closed).
+   - **An order that isn't waiting** (all in, or `?order=` naming a draft
+     or a received one) shows "This order is all in." (not drawn) and
+     picks nothing in From, so the person chooses; the page no longer
+     moves on to another order by itself. After booking in, the page stays
+     on that order, so booking the last of it says the same.
+   - **A booking the server refuses** fetches the orders again, so the
+     counts shown are the server's.
+   - **A problem marked by mistake is undone with the controls already
+     there:** "Problem?" opens on what's marked for that kind (its count
+     and note), and − at 1 takes it off, as − at 1 takes a scanned line
+     off. No new button or words.
+   - **Stock is updated in product order,** as a sale does, so two
+     deliveries with the same products can't deadlock.
+
+

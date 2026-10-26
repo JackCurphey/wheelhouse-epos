@@ -48,6 +48,23 @@ test('a line with no quantity, a bad cost or an unknown product is a 400 with it
   }
 });
 
+// A count over 100000 or a cost over £99,999,999.99 (the NUMERIC(10,2)
+// column's most) is a 400 with its message, not a 500 from the database
+// (review of 26 Oct); the most itself is allowed.
+test('a huge count or cost is a 400 with its message; the most is allowed', async () => {
+  for (const [line, message] of [
+    [{ productId, qty: 100001, unitCost: 2 }, 'A line can order at most 100000'],
+    [{ productId, qty: 1e20, unitCost: 2 }, 'A line can order at most 100000'],
+    [{ productId, qty: 1, unitCost: 100000000 }, 'A unit cost can be at most £99,999,999.99'],
+  ]) {
+    const res = await create([line]);
+    assert.equal(res.status, 400, `${JSON.stringify(line)}: ${JSON.stringify(res.body)}`);
+    assert.deepEqual(res.body, { error: message });
+  }
+  const most = await create([{ productId, qty: 100000, unitCost: 99999999.99 }]);
+  assert.equal(most.status, 201, JSON.stringify(most.body));
+});
+
 // The edit route shares the create route's ValidationError handling, and no
 // test reached it (#151 follow-up, Jack, 7 Oct), so a break there would have
 // been a silent 500.
@@ -68,4 +85,17 @@ test('editing a draft with a bad line is a 400 with its message, and the order i
   const lines = await runWithShop(owner.shop.id, () =>
     prepare('SELECT qty_ordered, unit_cost FROM purchase_order_items WHERE purchase_order_id = ?').all(id));
   assert.deepEqual(lines.map((l) => [l.qty_ordered, Number(l.unit_cost)]), [[2, 2]]);
+});
+
+// The order's total cost, in pounds as stored (openspec/changes/deliveries-orders
+// contract): the screens show it as the server gives it. 3 × £1.10 + £0.20
+// is 3.5000000000000004 in floating point, so the sum is rounded to the penny.
+test('an order gives its total cost, in pounds, rounded to the penny', async () => {
+  const made = await create([{ productId, qty: 3, unitCost: 1.1 }, { productId, qty: 1, unitCost: 0.2 }]);
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  assert.equal(made.body.totalCost, 3.5);
+  const one = await staffRequest(server.baseUrl, owner.cookie, `/api/purchase-orders/${made.body.id}`);
+  assert.equal(one.body.totalCost, 3.5);
+  const all = await staffRequest(server.baseUrl, owner.cookie, '/api/purchase-orders');
+  assert.equal(all.body.find((o) => o.id === made.body.id).totalCost, 3.5);
 });
