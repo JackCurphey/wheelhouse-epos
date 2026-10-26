@@ -2641,3 +2641,51 @@ follows the job checklist, the closest pattern built.
    It isn't at the bottom of the diary any more.
 2. **No "Show the diary legend" switch on a phone,** where the diary has no
    legend, as with Folded sidebar.
+
+### 26 Oct 2026: the stock list and product page (`openspec/changes/stock-list`, `st-list`, `st-product`, `st-product-staff`, `st-product-bike`; slice C, WP-2.1, the 26 Oct defaults)
+
+1. **Prices are shown, not edited**, until products move to pence (WP-1.5).
+2. **Left out because they change things:** + Add a product, the tick
+   boxes and their bar, Edit, Adjust stock and Send to another shop. Adjust
+   stock is the next piece, so its button is left out rather than linked to
+   nothing.
+3. **Left out until WP-1.5:** the Category pill, each category's details
+   (the Details box and detail columns), and sizes and colours.
+4. **Who sees what:** everyone signed in sees Stock and a product's page.
+   Margin, Cost and Show on website show to the Owner only, as roles aren't
+   built (stock decision 11 says Owners and Managers). The product page's
+   read sends no cost to anyone else. The list still reads the existing
+   `/api/products`, which sends cost to every signed-in person, as it did
+   before; hiding it there waits for roles (WP-1.1).
+5. **The search** finds a name, barcode, the product's code (`sku`, shown
+   where the drawing has the supplier code) or the supplier. Its
+   placeholder doesn't mention measurements, which can't be searched yet.
+   The scan icon is left out: a scanner types into the box.
+6. **Running low** is the Overview's rule: a low-stock level above 0, and
+   stock at or under it. Below zero is anything under 0.
+7. **Margin** is on the price before VAT, at the product's own VAT rate, as
+   the old app worked it out; rounded to a whole percent. No price shows
+   "—".
+8. **The list shows 50 products**, then "Show all ([n])", as the bike page
+   does with its jobs. Every heading sorts; Product, A to Z, to start.
+9. **Nothing to show:** "Nothing matches “[what was typed]”" with "Check
+   the spelling, or try a supplier code or a supplier."; "No products yet"
+   with no buttons (both drawn buttons add products); "Nothing is running
+   low" and "Nothing is below zero".
+10. **The product's page** follows the bike and customer pages: "‹ Stock",
+    the product's name as the heading, and Stock in the page's title bar
+    (the drawing puts the name there).
+11. **In stock** names the shop, not a site, since stock is one count for
+    the shop. The "held for a job" line is left out: nothing holds stock
+    for a job yet.
+12. **The photo** shows only when there is one. No "[Photo]" box.
+13. **Stock history** names each line by what happened (Sold, Returned,
+    Received, Booked in, Adjusted, or Stock changed), with its note and
+    when. Who did it isn't recorded, so it isn't shown, and no line links
+    anywhere yet (there's no sale, delivery or count page). Price changes
+    aren't recorded, so that filter is left out. Returns count under Sold;
+    Booked in under Received.
+14. **A bike's page** is a product's page: nothing records a stock bike's
+    frame numbers yet, so "Bikes by frame number" is left out.
+15. **A product taken off sale** still opens, with "Taken off sale" under
+    its name.

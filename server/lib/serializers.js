@@ -20,6 +20,9 @@ export function serializeProduct(row) {
     showOnline: !!row.show_online,
     description: row.description || '',
     photoUrl: row.photo_url || null,
+    // The product's VAT rate in basis points (2000 = 20%), for its margin
+    // before VAT on Stock (openspec/changes/stock-list).
+    vatRateBp: row.vat_rate_bp ?? null,
   };
 }
 
