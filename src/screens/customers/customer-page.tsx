@@ -10,7 +10,7 @@ import { STATE_LABEL, diaryState, shortDay } from '@/screens/diary/rules.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { shortDate } from '@/screens/diary/when.ts';
 import { ROUTES } from '@/staff/routes.ts';
-import { Field, OnOff, initials } from './customers-page.tsx';
+import { CompanyInvoice, CompanyNames, Field, OnOff, WHO, companyProblem, initials, type Who } from './customers-page.tsx';
 import { SaleDialog } from './sale-dialog.tsx';
 
 /**
@@ -23,6 +23,8 @@ type Customer = {
   createdAt?: string;
   id: number; name: string; phone: string | null; email: string | null; notes: string | null;
   address: string | null; postcode: string | null; marketingPermission: boolean;
+  // A company or club (cs-add-company; openspec/changes/company-customers).
+  isCompany?: boolean; contactName?: string | null; vatNumber?: string | null; invoiceEmail?: string | null;
   groups: { id: number; name: string; discountPercent: number }[];
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
@@ -158,6 +160,7 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
   const groups = useQuery({ queryKey: ['customer-groups'], queryFn: () => apiGet<{ id: number; name: string }[]>('/api/customer-groups') });
   const isPhone = useMedia('(max-width: 767px)');
   const [form, setForm] = useState({
+    who: (customer.isCompany ? 'company' : 'person') as Who, contactName: customer.contactName ?? '', vatNumber: customer.vatNumber ?? '', invoiceEmail: customer.invoiceEmail ?? '',
     name: customer.name, phone: customer.phone ?? '', email: customer.email ?? '', address: customer.address ?? '', postcode: customer.postcode ?? '',
     notes: customer.notes ?? '', group: customer.groups[0] ? String(customer.groups[0].id) : 'none', offers: customer.marketingPermission,
   });
@@ -168,12 +171,15 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
 
   async function save() {
-    if (!form.name.trim()) { setProblem('Add their name.'); return; }
+    const company = form.who === 'company';
+    const missing = company ? companyProblem(form.name, form.contactName) : !form.name.trim() ? 'Add their name.' : null;
+    if (missing) { setProblem(missing); return; }
     if (!form.phone.trim() && !form.email.trim()) { setProblem('A phone number or an email — at least one.'); return; }
     setProblem(null);
     setBusy(true);
     try {
       const saved = await apiMutate<Customer>(`/api/customers/${customer.id}`, {
+        isCompany: company, ...(company ? { contactName: form.contactName.trim(), vatNumber: form.vatNumber.trim(), invoiceEmail: form.invoiceEmail.trim() } : {}),
         name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(), address: form.address.trim(), postcode: form.postcode.trim(),
         notes: form.notes.trim(), marketingPermission: form.offers,
         ...(groupTouched ? { groupIds: form.group === 'none' ? [] : [Number(form.group)] } : {}),
@@ -199,7 +205,10 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
-        <Field id="edit-name" label="Name" value={form.name} onChange={set('name')} />
+        <PillGroup legend="This is" value={form.who} onChange={(v) => setForm((f) => ({ ...f, who: v as Who }))} options={WHO} />
+        {form.who === 'company'
+          ? <CompanyNames prefix="edit" name={form.name} contact={form.contactName} onName={set('name')} onContact={set('contactName')} />
+          : <Field id="edit-name" label="Name" value={form.name} onChange={set('name')} />}
         <div className={two}>
           <Field id="edit-phone" label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
           <Field id="edit-email" label="Email" type="email" value={form.email} onChange={set('email')} />
@@ -208,6 +217,9 @@ function EditCustomer({ customer, onClose }: { customer: Customer; onClose: () =
           <Field id="edit-address" label="Address" value={form.address} onChange={set('address')} />
           <Field id="edit-postcode" label="Postcode" value={form.postcode} onChange={set('postcode')} />
         </div>
+        {form.who === 'company'
+          ? <CompanyInvoice prefix="edit" optional={false} className={two} vat={form.vatNumber} invoice={form.invoiceEmail} onVat={set('vatNumber')} onInvoice={set('invoiceEmail')} />
+          : null}
         {groups.data?.length ? (
           <PillGroup legend="Group" value={form.group} onChange={(v) => { setGroupTouched(true); set('group')(v); }}
             options={[{ value: 'none', label: 'None' }, ...groups.data.map((g) => ({ value: String(g.id), label: g.name }))]} />

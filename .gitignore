@@ -1,6 +1,5 @@
 node_modules/
 .DS_Store
-print-agent/dist/
 .env
 data/*.db
 data/*.db-shm
