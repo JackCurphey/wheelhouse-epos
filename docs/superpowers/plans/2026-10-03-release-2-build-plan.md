@@ -150,7 +150,7 @@ of them blocks building; all of them block going live.
 | Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Stripe Terminal first, then SumUp, then Paymentsense (Ingenico Move/5000, #138), each its own connection behind the same adapter (Jack, 5 Oct; `docs/decisions/2026-10-05-card-payments-provider.md`) |
 | Online payments (PAY-05) | fake provider with test outcomes | Stripe (payment links and checkout), the same company as the card reader (Jack, 5 Oct); Mark sets the account up, with Jack's yes (Q10; project rules) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
-| Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
+| Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Done: Jack made the WorkOS account, Staging set up (25 Oct, changing Q10; `docs/decisions/2026-10-25-workos-account.md`) |
 | Text messages (Twilio) | already real; fake in tests | keys exist in Jack's set-up |
 | Xero and QuickBooks | spreadsheet downloads first, then a fake connector | developer accounts (Q10) |
 | Citrus Lime import | Excel files laid out by the real Cloud Reports column names (`specs/2026-10-05-citrus-lime-exports.md`, #136) | Jack's real export files, and Citrus Lime's full export |
@@ -305,8 +305,9 @@ later packages.
 *Building blocks built here:* 13 Shop switcher; 22 Status line (no board of its own); 26 "Working: [name] · Switch" bar for a shared workshop computer (no board of its own); 40 Message or outcome page; 42 Emailed-code sign-in; 43 PIN pad.
 *Reused, already built:* 1 Settings page (WP-1.3).
 
-*Screens it builds (8) and the situations it covers:*
+*Screens it builds (9) and the situations it covers:*
 
+- **`staff-signin`** (block 42, Emailed-code sign-in) — no other situations. Wheelhouse's own sign-in with Continue with Google (Jack, 25 Oct; built by the OpenSpec change staff-signin-google).
 - **`workos-signin`** (block 42, Emailed-code sign-in) — no other situations.
 - **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
 - **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.

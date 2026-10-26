@@ -85,7 +85,7 @@ export function register(route) {
       `SELECT c.id, c.name, c.phone, c.email, c.address, c.postcode, c.notes, c.created_at,
               CASE WHEN ?::text <> '' AND ${UK_NUMBER_SQL} = ?::text THEN 'phone' ELSE 'email' END AS reason,
               (SELECT count(*)::int FROM workshop_jobs w WHERE w.customer_id = c.id) AS jobs,
-              (SELECT count(*)::int FROM sales s WHERE s.customer_id = c.id) AS sales
+              (SELECT count(*)::int FROM all_sales s WHERE s.customer_id = c.id) AS sales
          FROM customers c
         WHERE c.id <> ? AND c.active = 1
           AND ((?::text <> '' AND ${UK_NUMBER_SQL} = ?::text) OR (?::text <> '' AND lower(trim(coalesce(c.email, ''))) = ?::text))
@@ -144,6 +144,12 @@ export function register(route) {
       const moved = { before: {}, rows: {}, groups: [], logins: [] };
       for (const cols of Object.values(FIELDS)) for (const col of cols) moved.before[col] = kept[col] ?? null;
       for (const col of ANSWERS) moved.before[col] = kept[col] ?? null;
+      // Taking the other record's email takes an email staff may have typed,
+      // so it isn't the customer's own any more and a sign-in by code never
+      // joins it (customer-account-server, review of 26 Oct); Undo restores it.
+      const norm = (e) => String(e ?? '').trim().toLowerCase();
+      const emailMoves = keep.email === 'other' && norm(other.email) !== norm(kept.email);
+      moved.before.email_from_customer = kept.email_from_customer ?? false;
       for (const table of MOVED) {
         moved.rows[table] = (await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? RETURNING id`).all(id, otherId)).map((r) => r.id);
       }
@@ -167,6 +173,8 @@ export function register(route) {
         'UPDATE customers SET service_reminders = ?, review_requests = ?, reminders_said_yes_at = ?, reminders_said_yes_via = ? WHERE id = ?'
       ).run(answers.service_reminders, answers.review_requests, answers.reminders_said_yes_at, answers.reminders_said_yes_via, id);
       for (const col of ANSWERS) moved.after[col] = answers[col] ?? null;
+      if (emailMoves) await prepare('UPDATE customers SET email_from_customer = false WHERE id = ?').run(id);
+      moved.after.email_from_customer = emailMoves ? false : (kept.email_from_customer ?? false);
       await prepare('UPDATE customers SET active = 0, merged_into_id = ?, updated_at = now() WHERE id = ?').run(id, otherId);
       const row = await prepare(
         'INSERT INTO customer_merges (kept_id, other_id, other_was_id, other_client_id, other_name, moved, merged_by_login_id) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?) RETURNING id'

@@ -18,17 +18,21 @@ const OOPS = 'That didn’t go through. Check your connection and try again.';
 // The server's own words for a refusal, or for sign-in not being switched on (503).
 const said = (err: unknown) => (err instanceof ApiError && (err.status < 500 || err.status === 503) && err.hasServerMessage ? err.message : OOPS);
 
-/** Where sign-in returns to: `from` when it is this shop's own page, else its booking page (design 4). */
+/**
+ * Where sign-in returns to: `from` when it is this shop's own page, else the
+ * customer's account (design 4; customer-account-screens design 3).
+ */
 export function returnTo(from: string | null, shopSlug: string, origin = window.location.origin) {
   const home = `/book/${shopSlug}`;
-  if (!from) return home;
+  const account = `${home}/account`;
+  if (!from) return account;
   try {
     const u = new URL(from, origin);
     if (u.origin === origin && (u.pathname === home || u.pathname.startsWith(`${home}/`))) return `${u.pathname}${u.search}${u.hash}`;
   } catch {
-    // Not an address: the booking page.
+    // Not an address: the account.
   }
-  return home;
+  return account;
 }
 
 export function SignInScreen() {

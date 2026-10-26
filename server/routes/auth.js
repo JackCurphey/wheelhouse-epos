@@ -8,6 +8,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, createShop, destroySession, getSessionContext, loginForWorkosUser } from '../auth.js';
 import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
+import { devAutologinOn, DEV_SIGNED_OUT_COOKIE } from '../lib/dev-autologin.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { staffSigninProvider } from '../staff-signin/provider.js';
 
@@ -19,8 +20,11 @@ function sessionCookie(req, token) {
   return `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${secure}`;
 }
 
+// Signing in ends a local sign-out (dev-autologin.js): the mark goes.
+const devSignedOutExpired = () => (devAutologinOn() ? [`${DEV_SIGNED_OUT_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`] : []);
+
 function setSessionCookie(req, res, token) {
-  res.setHeader('Set-Cookie', sessionCookie(req, token));
+  res.setHeader('Set-Cookie', [sessionCookie(req, token), ...devSignedOutExpired()]);
 }
 
 // The state a WorkOS sign-in started with, kept by this browser for 10
@@ -68,7 +72,10 @@ const signinFailed = (req, res, reason) =>
   redirect(res, `/workshop?signin=${reason}`, [stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE)]);
 
 function clearSessionCookie(res) {
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+  const cookies = [`${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`];
+  // With the local sign-in skip on, signing out has to stick (dev-autologin.js).
+  if (devAutologinOn()) cookies.push(`${DEV_SIGNED_OUT_COOKIE}=1; HttpOnly; Path=/; SameSite=Lax`);
+  res.setHeader('Set-Cookie', cookies);
 }
 
 const callbackLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
@@ -128,7 +135,10 @@ export function register(route) {
     if (!provider) return signinFailed(req, res, 'off');
     const state = randomBytes(24).toString('hex');
     const from = staffAppPage(query.get('from'));
-    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri() }), [
+    // "Continue with Google" goes straight to Google's chooser; anything else
+    // to WorkOS's own page (staff-signin-google design 3).
+    const via = query.get('provider') === 'google' ? 'GoogleOAuth' : 'authkit';
+    redirect(res, provider.authorizeUrl({ state, redirectUri: provider.redirectUri(), provider: via }), [
       stateCookie(req, state, 600),
       stateCookie(req, from ? encodeURIComponent(from) : '', from ? 600 : 0, FROM_COOKIE),
     ]);
@@ -139,7 +149,7 @@ export function register(route) {
     const provider = staffSigninProvider();
     if (provider?.name !== 'pretend') return notFound(res);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(provider.page({ state: query.get('state') || '' }));
+    res.end(provider.page({ state: query.get('state') || '', provider: query.get('provider') || '' }));
   });
   route('POST', '/api/auth/workos/pretend', async (req, res) => {
     const provider = staffSigninProvider();
@@ -170,7 +180,7 @@ export function register(route) {
     const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
     // parseCookies has already decoded it (review: not twice).
     const back = staffAppPage(from) ?? '/workshop';
-    redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE)]);
+    redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE), ...devSignedOutExpired()]);
   });
 
   route('POST', '/api/auth/logout', async (req, res) => {

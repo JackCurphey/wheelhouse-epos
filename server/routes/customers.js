@@ -18,11 +18,16 @@ const db = { prepare, exec: dbExec };
 // ---------- Customers ----------
 
 function serializeCustomerGroup(row) {
-  return { id: row.id, name: row.name, discountPercent: row.discount_percent };
+  const group = { id: row.id, name: row.name, discountPercent: row.discount_percent };
+  // Only on the list Settings reads (customer-groups-settings design 1).
+  if (row.customer_count !== undefined) group.customerCount = Number(row.customer_count);
+  return group;
 }
 
 function resolveDiscountPercent(raw, existing) {
   if (raw === undefined) return existing !== undefined ? existing : 0;
+  // Nothing typed isn't 0: Number(null) and Number('') would read as 0 (review).
+  if (raw === null || (typeof raw === 'string' && raw.trim() === '')) return null;
   const pct = Number(raw);
   if (!Number.isFinite(pct) || pct < 0 || pct > 100) return null;
   return pct;
@@ -157,7 +162,12 @@ export function register(route) {
   // ---------- Customer groups ----------
 
   route('GET', '/api/customer-groups', async (req, res) => {
-    const rows = await db.prepare('SELECT * FROM customer_groups ORDER BY name').all();
+    // Each group's current customers, for Settings › Payments › Customer groups.
+    const rows = await db.prepare(
+      `SELECT g.*, (SELECT count(*) FROM customer_group_members m JOIN customers c ON c.id = m.customer_id
+                     WHERE m.group_id = g.id AND c.active = 1 AND c.merged_into_id IS NULL) AS customer_count
+         FROM customer_groups g ORDER BY g.name`
+    ).all();
     sendJson(res, 200, rows.map(serializeCustomerGroup));
   });
 
@@ -280,10 +290,14 @@ export function register(route) {
               ${JOB_MOMENT} AS at
          FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.customer_id = ?`
     ).all(zone, id);
+    // Both sales records, each with its source, so a sale opens from here
+    // (customer-sale-dialog design 1).
     const sales = await db.prepare(
-      `SELECT s.id, s.created_at, s.total,
-              (SELECT string_agg(CASE WHEN i.qty > 1 THEN i.name || ' × ' || i.qty ELSE i.name END, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = s.id) AS what
-         FROM sales s WHERE s.customer_id = ?`
+      `SELECT v.source, v.id, v.receipt_number, v.made_at AS created_at, v.total_pence,
+              CASE WHEN v.source = 'old'
+                   THEN (SELECT string_agg(CASE WHEN i.qty > 1 THEN i.name || ' × ' || i.qty ELSE i.name END, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
+                   ELSE (SELECT string_agg(CASE WHEN l.qty > 1 THEN l.description || ' × ' || l.qty ELSE l.description END, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
+         FROM all_sales v WHERE v.customer_id = ?`
     ).all(id);
     const messages = await db.prepare(
       `SELECT id, template_key, channel, to_address, coalesce(sent_at, created_at) AS at FROM customer_messages
@@ -296,7 +310,7 @@ export function register(route) {
         open: jobIsOpen(j, today),
         at: iso(j.at),
       })),
-      ...sales.map((x) => ({ kind: 'sale', id: x.id, total: Number(x.total), what: x.what ?? '', at: iso(x.created_at) })),
+      ...sales.map((x) => ({ kind: 'sale', source: x.source, id: x.id, receiptNumber: x.receipt_number ?? null, total: Number(x.total_pence) / 100, what: x.what ?? '', at: iso(x.created_at) })),
       ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
     ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
     sendJson(res, 200, { items });
@@ -352,9 +366,14 @@ export function register(route) {
     const groups = await resolveGroupIds(body.groupIds);
     if (groups && groups.error) return badRequest(res, groups.error);
 
+    // Staff changing an email makes it one they typed in, which a sign-in by
+    // code never joins (option 2, 26 Oct); the same email, in any case, stays
+    // the customer's own.
     await db.prepare(
-      'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ? WHERE id = ?'
-    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), id);
+      `UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ?,
+              email_from_customer = email_from_customer AND lower(trim(coalesce(email, ''))) = lower(trim(coalesce(?, '')))
+        WHERE id = ?`
+    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), email, id);
     if (groups) await setCustomerGroups(id, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));

@@ -15,7 +15,11 @@ const MAYA = {
 const BIKES = [{ id: 7, customerId: 5, make: 'Trek', model: 'Domane AL 3', colour: 'Green', notes: null }];
 const JOB = { kind: 'job', id: 42, reference: 'WH-1042', title: 'Standard service', jobDate: '2026-09-17', startTime: '11:30', bookingState: 'scheduled', custodyState: 'in_shop', workState: 'in_progress', mechanicName: 'Alex Morgan', open: true, at: '2026-09-17T11:30:00.000Z' };
 const OLD_JOB = { ...JOB, id: 30, reference: 'WH-1030', title: 'Gear tune', jobDate: '2026-06-02', custodyState: 'collected', workState: 'complete', open: false, at: '2026-06-02T10:00:00.000Z' };
-const SALE = { kind: 'sale', id: 41, total: 10, what: 'Inner tube × 2', at: '2026-08-20T14:00:00.000Z' };
+const SALE = { kind: 'sale', source: 'old', id: 41, receiptNumber: null, total: 10, what: 'Inner tube × 2', at: '2026-08-20T14:00:00.000Z' };
+const TILL_SALE = { kind: 'sale', source: 'till', id: 9, receiptNumber: 12, total: 50, what: 'Pump × 2', at: '2026-08-21T10:00:00.000Z' };
+// GET /api/sales/:id's reply, as serializeAnySale gives it (customer-sale-dialog).
+const SALE_41 = { id: 41, source: 'old', createdAt: '2026-08-20T14:00:00.000Z', customerName: 'Maya Patel', cashierName: 'Jo Taylor', items: [{ id: 1, name: 'Inner tube', qty: 2, unitPrice: 5, lineTotal: 10 }], discount: 0, groupDiscountAmount: 0, groupDiscountName: null, total: 10, cashAmount: 10, cardAmount: 0, paymentMethod: 'Cash' };
+const SALE_T9 = { id: 9, source: 'till', receiptNumber: 12, createdAt: '2026-08-21T10:00:00.000Z', customerName: 'Maya Patel', cashierName: null, items: [{ id: 3, name: 'Pump', qty: 2, unitPrice: 25, lineTotal: 50 }], discount: 0, total: 50, cashAmount: 0, cardAmount: 50, paymentMethod: 'Card' };
 const TEXT = { kind: 'message', id: 9, name: 'Bike ready', channel: 'sms', to: '07700 900142', at: '2026-07-01T09:00:00.000Z' };
 
 const realFetch = globalThis.fetch;
@@ -58,6 +62,9 @@ async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = n
     if (u.pathname === '/api/customer-merges/77/undo' && method === 'POST') { merges = []; return reply(200, { ok: true }); }
     if (u.pathname === '/api/customer-groups') return reply(200, [{ id: 3, name: 'Club members', discountPercent: 10 }]);
     if (u.pathname === '/api/customers/404') return reply(404, { error: 'Customer not found' });
+    if (u.pathname === '/api/sales/41' && u.searchParams.get('source') === 'old') return reply(200, SALE_41);
+    if (u.pathname === '/api/sales/9' && u.searchParams.get('source') === 'till') return reply(200, SALE_T9);
+    if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });
   };
@@ -264,4 +271,31 @@ test('a name that differs only in capitals is offered too (review)', async () =>
 test('each bike on the page links to its own page', async () => {
   const { ui } = await open();
   assert.equal((await ui.findByRole('link', { name: /Trek Domane AL 3/ })).getAttribute('href'), '/workshop/bikes/7');
+});
+
+// customer-sale-dialog (cs-sale): a sale in the history opens.
+test('choosing a sale opens it: its lines, the total and how it was paid, with Print the receipt', async () => {
+  const { ui, fireEvent, within } = await open({ items: [SALE] });
+  fireEvent.click(await ui.findByRole('button', { name: /Sale 41/ }));
+  const dialog = await ui.findByRole('dialog', { name: 'Sale 41' });
+  const d = within(dialog);
+  assert.ok(await d.findByText('Inner tube'));
+  assert.ok(d.getByText('× 2'));
+  assert.ok(d.getByText('Total'));
+  assert.ok(d.getAllByText('£10.00').length >= 2, 'the line and the total');
+  assert.ok(d.getByText('Paid by'));
+  assert.ok(d.getByText('Cash'));
+  assert.ok(d.getByText(/, 15:00 · served by Jo Taylor · Maya Patel/));
+  assert.ok(d.getByRole('button', { name: 'Print the receipt' }));
+  assert.equal(d.queryByRole('button', { name: 'Refund at the till' }) === null, true, 'refunds aren’t built');
+});
+
+test('a till sale opens with its receipt number, and no Print until its receipt exists', async () => {
+  const { ui, fireEvent, within } = await open({ items: [TILL_SALE] });
+  fireEvent.click(await ui.findByRole('button', { name: /Sale 12/ }));
+  const dialog = await ui.findByRole('dialog', { name: 'Sale 12' });
+  const d = within(dialog);
+  assert.ok(await d.findByText('Pump'));
+  assert.ok(d.getByText('Card'));
+  assert.equal(d.queryByRole('button', { name: 'Print the receipt' }) === null, true);
 });

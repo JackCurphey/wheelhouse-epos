@@ -12,6 +12,7 @@ import { ChecklistsSettings, useChecklistsSummary } from './checklists-settings.
 import { ServicesSettings, SERVICES_SUMMARY } from './services-settings.tsx';
 import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
+import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
@@ -944,6 +945,7 @@ function OwnerSettings() {
   const checklists = useChecklistsSummary();
   const diaryBlocks = useDiaryBlocksSummary();
   const storageSlots = useStorageSlotsSummary();
+  const customerGroups = useCustomerGroupsSummary();
   const collection = useCollectionSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
@@ -954,6 +956,10 @@ function OwnerSettings() {
       areas: [
         { key: 'till', title: 'Till', intro: 'What staff see and use at the till.', folds: [
           { key: 'receipts', title: 'Receipts', summary: details.data ? (details.data.receiptFooter ? 'Words at the bottom' : 'Nothing at the bottom yet') : '', body: <ReceiptsBox /> },
+        ] },
+        // After Till, as drawn (settings-frame.mjs); only Customer groups works yet (cs-groups).
+        { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [
+          { key: 'customer-groups', title: 'Customer groups', summary: customerGroups, body: <CustomerGroupsSettings /> },
         ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },

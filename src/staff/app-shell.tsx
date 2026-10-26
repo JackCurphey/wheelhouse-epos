@@ -33,10 +33,10 @@ function SignedInAlready() {
   return <Navigate to="/workshop" replace />;
 }
 
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'cs-page', 'cs-bike', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 

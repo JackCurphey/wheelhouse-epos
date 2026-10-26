@@ -114,6 +114,20 @@ day's capacity check) is left: the offer design makes it a staff choice.
 3. **The offer's message must be text**: "The message must be text".
    *Pattern:* decline's message.
 
+### 25 Oct 2026: a declined date change sends its message (`openspec/changes/date-change-declined-message`; audit item 23; Mark's answer, 25 Oct)
+
+1. **The declined wording is the second box of the Date change answered
+   row, as drawn (`bk-msg-change`), not a row of its own.** One On/Off covers
+   both wordings, and the row's subject is shared. *Pattern:* the drawing.
+2. **[New day and time] in the declined wording is the day the customer asked
+   for**, read before the decline clears the request. *Pattern:* Offer
+   another time's "the time the customer asked for".
+3. **The Settings box's two wordings are labelled "If the shop accepts" and
+   "If the shop can't"** as drawn; the preview shows the first wording only,
+   as the drawing's one example does.
+4. **`decline-change` was missing the shop id the other answers pass**; it
+   is passed now (a message needs it).
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
@@ -2441,3 +2455,89 @@ follows the job checklist, the closest pattern built.
    Staging Redirects.
 4. **No logo** on these pages: the frame's logo slot shows the word
    Wheelhouse only, as no logo file exists.
+
+### 26 Oct 2026: the customer's account, the server (`openspec/changes/customer-account-server`; Jack's answers in `2026-10-26-customer-account.md`)
+
+1. **A repair opened from the account doesn't expire for its owner.** The
+   private link stops working 30 days after collection; a signed-in customer
+   can still open their own past repairs from the account.
+2. **Cancelling from the account links the cancellation message to the
+   account** (`/book/[shop]/account`), not to the job, since a job's
+   account address only opens for its signed-in owner. While sending is
+   pretend, every message's link reads "[link]".
+3. **A repair's total in the history** is what was paid, or else Work
+   agreed's total; with Show prices off it is left out, as on the repair page.
+4. **Purchases** list what was bought, comma-separated, from either sales
+   record; a till sale carries its receipt number, an old sale none.
+5. **After the review:** an action through the account (not a page load) from
+   another website is refused; account answers are never kept by the
+   browser; loading one's own repairs doesn't count toward the private links'
+   "too many attempts" limit. An email staff type in, or change, is marked
+   as not the customer's own (Jack's option 2), so a code sign-in never joins
+   that customer.
+
+### 26 Oct 2026: the customer's account, the screens (`openspec/changes/customer-account-screens`, `ac-account`, `ac-account-repairs`, `ac-account-new`)
+
+1. **Left out until their pieces are built:**
+   - "Ask the shop a question";
+   - store credit;
+   - the warranty and "next service due" lines;
+   - "+ Add a bike";
+   - Edit and Change for details and contact choices;
+   - a purchase's receipt;
+   - Your data.
+
+   Each part shows only when its server work exists, so nothing on the page
+   is a button that does nothing.
+2. **A purchase's number** is the till's receipt number, or "No. [id]" for
+   an old sale. The drawn "B1-[0000]" waits for till receipt codes.
+3. **A repair's chip** is the tracker's current step: Booked, In the shop,
+   Being worked on or Ready. Its past line is "[date] · collected", or
+   cancelled, declined or request expired.
+4. **Signing in with no page to return to** now lands on the account
+   rather than the booking page.
+5. **The account is the only customer page wider than a phone.** It has two
+   columns from 1024px, as drawn. Every other customer page stays
+   phone-width.
+6. **With nothing earlier yet**, the history leaves out the "Earlier, newest
+   first" heading. An empty name or mobile shows as a blank row.
+7. **Still to do:** a repair opened from the account still says "Keep this
+   link to check your booking" with Copy link. That link only works for the
+   signed-in owner.
+
+### 26 Oct 2026: a sale from a customer's history (`openspec/changes/customer-sale-dialog`, `cs-sale`)
+
+1. **"Refund at the till" is left out** until refunds exist; Close stands in.
+2. **"Till B1"** isn't on the pop-up: neither sales record holds which till
+   a sale was on yet.
+3. **A till sale has no "Print the receipt"** until the new record's receipt
+   exists (step C); its pop-up shows the lines, total and how it was paid.
+4. **The history lists till sales too**, with their receipt number ("Sale 12"),
+   alongside the old record's ("Sale [id]").
+
+### 26 Oct 2026: customer groups in Settings (`openspec/changes/customer-groups-settings`, `cs-groups`)
+
+1. **Settings › Front desk › Payments shows only Customer groups** for now
+   (stage 1 drawing gaps decision 6, "show only what works"): the card
+   machine and ways to pay come with their pieces.
+2. **The group's box isn't drawn**: Name and "% off", Save, and "Remove
+   group" for an existing one, following the Services box.
+3. **Removing a group** leaves its customers in no group, as the server
+   already did; no confirmation step, as Services' Remove has none.
+4. **With no groups** the fold's summary reads "No groups yet".
+
+### 26 Oct 2026: booking search and "Online booking is unavailable" (`openspec/changes/booking-search-unavailable`, `bk-service-many`, `bk-unavailable`)
+
+1. **The search box shows when a shop has more than 8 single jobs**, about
+   one phone screen of cards. The drawing shows the box but not when it
+   appears.
+2. **A job matches when its name has every word typed**, in any order,
+   ignoring case. Full services always show. A ticked job stays ticked
+   while the search hides it.
+3. **With nothing matching**, a line reads "No single jobs match “[what was
+   typed]”." Not drawn.
+4. **No "Show all [n] individual services" link.** The built list already
+   shows every job, and the search narrows it.
+5. **"Online booking is unavailable just now"** replaces "We couldn't load
+   this shop's services". "Try again" stays. The drawn shop name, address
+   and phone can't show: they come with the services that failed to load.

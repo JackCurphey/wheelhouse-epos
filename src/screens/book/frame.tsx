@@ -36,10 +36,12 @@ export type BookFrameProps = {
   back?: string;
   action?: { label: string; onClick: () => void; disabled?: boolean };
   actionNote?: React.ReactNode;
+  /** The account's two columns on a computer (customer-account-screens design 2); every other page stays phone-width. */
+  wide?: boolean;
   children: React.ReactNode;
 };
 
-export function BookFrame({ step, title, eyebrow, back, action, actionNote, children }: BookFrameProps) {
+export function BookFrame({ step, title, eyebrow, back, action, actionNote, wide, children }: BookFrameProps) {
   const { shopSlug = '' } = useParams();
   const services = useServices(shopSlug);
   const booking = useOptionalDraft();
@@ -93,7 +95,7 @@ export function BookFrame({ step, title, eyebrow, back, action, actionNote, chil
   }, [pinned, room]);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-[var(--wh-panel)] px-4 text-[var(--wh-ink)]">
+    <div className={`mx-auto flex min-h-dvh ${wide ? 'max-w-5xl' : 'max-w-md'} flex-col bg-[var(--wh-panel)] px-4 text-[var(--wh-ink)]`}>
       <header className="flex min-h-11 items-center border-b border-[var(--wh-border)] py-2 font-semibold">
         {services.data?.shopName ?? ''}
       </header>
@@ -102,8 +104,10 @@ export function BookFrame({ step, title, eyebrow, back, action, actionNote, chil
         {services.isError && (
           <>
             <h1 ref={heading} tabIndex={-1} className="m-0 mb-3 text-xl font-semibold focus:outline-none">
-              {notFound ? "We can't find this shop" : "We couldn't load this shop's services"}
+              {notFound ? "We can't find this shop" : 'Online booking is unavailable just now'}
             </h1>
+            {/* bk-unavailable; its shop lines can't show, as they come with the services that failed (booking-search-unavailable design 3). */}
+            {!notFound && <p className="m-0 mb-3 text-size-15 leading-normal">Please try again in a little while, or call the shop to book.</p>}
             {!notFound && (
               <Button variant="accent" onClick={() => services.refetch()}>
                 Try again

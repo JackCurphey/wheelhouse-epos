@@ -16,6 +16,8 @@ type Template = {
   changed: boolean; tapIns: string[]; live: boolean;
   /** 'booking' for the booking messages, listed under their own heading. */
   group?: string | null;
+  /** A second wording shown in another message's box, not as a row (Date change answered's "If the shop can't"). */
+  partOf?: string | null;
 };
 type Preview = { text: string; email: { subject: string; body: string } };
 
@@ -27,7 +29,7 @@ export function useMessagesSummary(): string {
   const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
   if (!templates.data) return '';
   // The reminder sits under Quote to approve, so it isn't counted on its own.
-  return `${templates.data.filter((t) => t.live && t.enabled && t.key !== 'quote_reminder').length} on`;
+  return `${templates.data.filter((t) => t.live && !t.partOf && t.enabled && t.key !== 'quote_reminder').length} on`;
 }
 
 /** Front desk › Messages › Automatic messages, inside its fold. */
@@ -68,7 +70,7 @@ export function AutomaticMessages() {
     setTimeout(() => document.querySelector<HTMLButtonElement>(`[aria-label="Edit the wording of ${name}"]`)?.focus(), 0);
   }
 
-  const live = templates.data?.filter((t) => t.live) ?? [];
+  const live = templates.data?.filter((t) => t.live && !t.partOf) ?? [];
   // The quote reminder sits under Quote to approve, not as a row of its own (setup.mjs).
   const reminder = live.find((t) => t.key === 'quote_reminder');
   const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.key !== 'quote_reminder');
@@ -115,8 +117,9 @@ export function AutomaticMessages() {
       ) : editing ? (
         <EditMessage
           template={withDays(templates.data?.find((t) => t.key === editing.key) ?? editing, ' — set in Settings › Workshop › Collection')}
+          second={templates.data?.find((t) => t.partOf === editing.key)}
           error={error}
-          onSave={(body) => change(editing.key, body)}
+          onSave={(key, body) => change(key, body)}
           onClose={closeEdit}
         />
       ) : null}
@@ -193,12 +196,15 @@ function OnOff({ name, on, disabled, onChange }: { name: string; on: boolean; di
   );
 }
 
-function EditMessage({ template, error, onSave, onClose }: { template: Template; error: string | null; onSave: (body: object) => Promise<Template | null>; onClose: () => void }) {
+function EditMessage({ template, second, error, onSave, onClose }: { template: Template; second?: Template; error: string | null; onSave: (key: string, body: object) => Promise<Template | null>; onClose: () => void }) {
   const [words, setWords] = useState(template.wording);
+  // A message with a second wording (Date change answered: "If the shop can't") shows both, as drawn.
+  const [words2, setWords2] = useState(second?.wording ?? '');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
+  const box2 = useRef<HTMLTextAreaElement>(null);
 
   // The preview follows the words as they're typed, filled in by the server
   // with the drawings' example (Maya Patel's Trek Domane AL 3, WH-1042).
@@ -213,29 +219,47 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
   }, [template.key, words]);
 
   // A tap-in goes in where the cursor is.
-  function putIn(name: string) {
-    const el = box.current;
-    const at = el ? el.selectionStart : words.length;
-    const end = el ? el.selectionEnd : words.length;
+  function putIn(name: string, which: 1 | 2 = 1) {
+    const el = (which === 1 ? box : box2).current;
+    const text = which === 1 ? words : words2;
+    const set = which === 1 ? setWords : setWords2;
+    const at = el ? el.selectionStart : text.length;
+    const end = el ? el.selectionEnd : text.length;
     const tag = `[${name}]`;
-    setWords(words.slice(0, at) + tag + words.slice(end));
+    set(text.slice(0, at) + tag + text.slice(end));
     setTimeout(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); }, 0);
   }
 
   async function done() {
-    if (words === template.wording) return onClose();
+    const first = words !== template.wording;
+    const other = second !== undefined && words2 !== second.wording;
+    if (!first && !other) return onClose();
     setBusy(true);
-    const saved = await onSave({ wording: words });
+    const saved = first ? await onSave(template.key, { wording: words }) : true;
+    const saved2 = saved && other && second ? await onSave(second.key, { wording: words2 }) : saved;
     setBusy(false);
-    if (saved) onClose();
+    if (saved && saved2) onClose();
   }
 
   async function goBack() {
     setBusy(true);
-    const saved = await onSave({ wording: null });
-    setBusy(false);
+    const saved = await onSave(template.key, { wording: null });
     if (saved) setWords(saved.wording);
+    if (second) {
+      const saved2 = await onSave(second.key, { wording: null });
+      if (saved2) setWords2(saved2.wording);
+    }
+    setBusy(false);
   }
+
+  const chips = (t: Template, which: 1 | 2) => (
+    <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
+      {t.tapIns.map((name) => (
+        <button key={name} type="button" onClick={() => putIn(name, which)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
+      ))}
+    </div>
+  );
+  const area = 'resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal';
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="msg-title" className="md:max-w-[620px]">
@@ -249,16 +273,16 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
       <DialogBody className="flex flex-col gap-3.5">
         <p className="m-0 text-size-15">Sent the way each customer chose: text, WhatsApp or email.</p>
         <div className="flex flex-col gap-2">
-          <label htmlFor="msg-words" className="text-size-15 font-semibold">Wording</label>
-          <textarea
-            id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)}
-            className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal"
-          />
-          <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
-            {template.tapIns.map((name) => (
-              <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
-            ))}
-          </div>
+          <label htmlFor="msg-words" className="text-size-15 font-semibold">{second ? 'If the shop accepts' : 'Wording'}</label>
+          <textarea id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)} className={area} />
+          {chips(template, 1)}
+          {second ? (
+            <>
+              <label htmlFor="msg-words-2" className="mt-1 text-size-15 font-semibold">If the shop can’t</label>
+              <textarea id="msg-words-2" ref={box2} rows={4} maxLength={2000} value={words2} onChange={(e) => setWords2(e.target.value)} className={area} />
+              {chips(second, 2)}
+            </>
+          ) : null}
           {/* The service reminder's fixed ending (ac-reminder-wording, audit M8). */}
           {template.key === 'service_reminder' ? (
             <p className="m-0 rounded-md bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>

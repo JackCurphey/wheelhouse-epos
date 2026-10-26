@@ -133,3 +133,12 @@ test('the notice names a ticked include no longer on the individual list, withou
     { id: 999, text: "Retired add-on is part of your General service, so we've taken it off" },
   ]);
 });
+
+// The search over many single jobs (openspec/changes/booking-search-unavailable, design 2).
+test('a job matches when its name has every word typed, in any order, ignoring case', () => {
+  assert.equal(r.matchesSearch('Brake bleed (hydraulic)', 'brake'), true);
+  assert.equal(r.matchesSearch('Brake bleed (hydraulic)', '  HYDRAULIC   brake '), true);
+  assert.equal(r.matchesSearch('Brake bleed (hydraulic)', 'brake gear'), false);
+  assert.equal(r.matchesSearch('Puncture repair', ''), true, 'nothing typed matches everything');
+});
+

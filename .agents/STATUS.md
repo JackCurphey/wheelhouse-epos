@@ -12,34 +12,67 @@ here before starting it, so two people never build the same one):
   finished, the test copy's review fixes and test shop, Done ticks and staff
   notes per line, the till's Email receipt and Save to a customer record, an
   online deposit off at the till, an unfinished booking coming back).
-  Overnight into 25 Oct, on Jack's word: the workshop's amounts in whole
-  pence (#478 to #481, migrations 075 and 076; #482 labour needs more than 0);
-  service reminders begun (WP-4.5): the yes when booking (#483, migration
-  077), Settings › Workshop › Services (#484, WP-5.1, which also closes the
-  gap of choosing which services can be booked online), and each service's
-  reminder months (#485, migration 078). Next: the WP-0.5 drills with Jack
-  today, then the stage 0 walkthrough; then sending service reminders, once
-  Jack answers the questions below. Still waiting: "I'll do this" and "Who
-  did what" (WP-1.7, WP-1.2, WP-1.9); the customer's account page (the
-  emailed-code sign-in, WP-1.7).
-- **Mark:** merged 24 Oct: #402 (held work can't resume on an ended booking)
-  and #404 (sales in pence step A, migration 073). Next: step B of sales in
-  pence (reports read both records). Taking a deposit at the till
-  (`till-job-deposit`, paying an order in parts) is left to his design
-  decision 8, after step B; Jack answered its open question (#475). WP-0.5
-  is now Jack's (above). Still open from the audit: items 12, 20, 23 and 24
-  (`docs/reviews/2026-10-22-flagged-merges-audit.md`).
-- **Waiting on Jack:** the WP-0.5 drills and the stage 0 walkthrough
-  (today). Before sending service reminders is built: when the wording is
-  filled in (queued or sent), whose months count on a job with several
-  services, one reminder per bike and whether a new booking cancels it,
-  opening hours only, and whether Stop these stops on opening the link. Also:
-  the reminder tick on the in-shop ready page (drawn only on pay-online);
-  does a merge carry a yes over; discounts now on the old sales record or
-  after Mark's step C; the spreadsheet download's one file or several.
-  Waiting on Mark too: paying a repair online (how it becomes a sale, his
-  decisions 4 and 8); refunds (his steps B and C). For him to overrule: the
-  24 and 25 Oct `decided-while-building.md` sections.
+  Merged 25 Oct: the workshop's amounts in whole pence (#478 to #482);
+  service reminders from the tick when booking to Stop these (#483, #485,
+  #488, #489, #491, #493), Settings › Workshop › Services (#484), review
+  requests (#494, #495), a bike's own page and Find a bike (#497, #498).
+  Stage 0 is closed: the WP-0.5 drills and the walkthrough are done (Mark, 25
+  Oct). Merged 25 Oct, evening: customer sign-in by emailed code (#500,
+  #502); staff sign-in through WorkOS only, Jack's test account (#504), its
+  pages (#505) and Wheelhouse's own sign-in screen with Continue with Google
+  (#508); the test copy's remove-a-shop and add-a-login commands (#506), its
+  test shop loaded with Jack as owner and connected to WorkOS (add-hosted-copy
+  3.6, taken from Mark); tests on pull requests and once a day, not after a
+  merge (#509, Jack's option 3; the copy updates about a minute after a merge);
+  print jobs reach only their own shop's helper (#510); the old app's Log in
+  leads to the new sign-in (#512). Merged 26 Oct, overnight: the customer's
+  account page, its server (#514, migration 084: a first code sign-in joins
+  only a customer whose email they gave themselves, Jack's option 2; a
+  signed-in customer opens their own repairs, Jack's option 1) and its
+  screens (#515); a sale opens from a customer's history, from either sales
+  record (#516, WP-3.2); customer groups in Settings › Payments (#517,
+  WP-5.1); booking's search over many single jobs and "Online booking is
+  unavailable just now" (#518). Next, each waiting on an answer from Jack or
+  Mark: the text receipt and its page (whether it waits for Mark's step C,
+  which makes the till's receipt numbers); a shop's own automatic messages
+  (which customer "yes" lets them go, and what Stop stops); paying a repair
+  online (how it becomes a sale; Jack asked Mark on #199); the label printer
+  helper's own key (where the owner makes it isn't drawn; a helper already
+  signed in keeps its 30-day session).
+  Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
+  WorkOS: Jack's account, Staging only
+  (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
+  "continue to workos.com" until there's a domain ($99 a month, waits for
+  revenue).
+- **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Merged
+  25 Oct: step B, reports read both records (#492, migration 083), audit
+  items 12, 20 and 24 (#496), a declined date change's message as the
+  second box of Date change answered (audit item 23, #507), and local
+  development without signing in (#503, `WHEELHOUSE_DEV_AUTOLOGIN`, off
+  unless asked, refused in production and on the hosted copy). Open: the
+  overnight runner (#490) and a replan into playable slices (#499; Mark
+  answered its four questions: the shop day before stock). Written, waiting
+  for Mark's yes before anything is built: `till-job-deposit` (a deposit at
+  the till on the current sales path, branch `mark/till-job-deposit`, money
+  questions for Jack inside) and `component-registry-repo` (Wheelhouse's
+  components in their own repository, branch `mark/component-registry-spec`;
+  needs Jack's yes on Radix and on creating the repository). Next: step C
+  (the new till on sync; the browser's offline copy and send queue are not
+  built, so it is large and has no spec yet), then the shop day (roles on the
+  server, the settings store and activity log, sign-in and PINs).
+- **Waiting on Jack:** accepting or changing the replan (#499). Also:
+  discounts now on the old sales record or after Mark's step C; the
+  spreadsheet download's one file or several. Refunds wait for Mark's steps
+  B and C. For him to overrule: the 24 and 25 Oct `decided-while-building.md`
+  sections. From 25 Oct evening: where the owner makes the label printer
+  helper's key; paying a repair online (with Mark, #199); Google's official
+  "G" logo file for the sign-in button; the hosted server's "System restart
+  required". From 26 Oct overnight: the text receipt (wait for step C or show
+  "Sale [n]"; the PDF; the barcode); a shop's own messages (which yes
+  counts, what Stop stops, "After a sale" only with a customer, Remove, the
+  email subject); and to overrule, the 26 Oct `decided-while-building.md`
+  sections (no "are you sure?" when removing a customer group; the search
+  box from 9 single jobs).
 
 **Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and

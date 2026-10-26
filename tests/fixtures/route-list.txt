@@ -164,6 +164,7 @@ POST /api/portal/:shopSlug/quotes/:id/lines/:lineId/decision
 POST /api/portal/:shopSlug/quotes/:id/approve
 POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 GET /api/portal/:shopSlug/bookings
+GET /api/portal/:shopSlug/history
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/photo-codes/:code
 POST /api/portal/:shopSlug/photo-codes/:code
