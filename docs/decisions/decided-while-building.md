@@ -2783,3 +2783,10 @@ follows the job checklist, the closest pattern built.
     A customer whose sign-in runs out after the page has loaded keeps the
     page and what she's typed; sending then says "Please sign in again to
     send this." with a "Sign in again" link back to the page.
+
+### 26 Oct 2026: How much waits while the kind of deposit is saving (`openspec/changes/deposit-amount-waits`, `bk-settings-deposits`)
+
+1. **While the deposit switch or the kind is saving, "How much" is greyed
+   out**, as the switch and the two kind buttons beside it already are. The
+   drawing doesn't show a saving state; this follows theirs. Without it, a
+   pick of "A fixed amount" followed at once by typing 15 saved 15%.
