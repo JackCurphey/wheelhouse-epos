@@ -798,6 +798,12 @@ export function register(route) {
       name: customer ? customer.name : '',
       shopName: ctx.shop.name,
       shopSlug: ctx.shop.slug,
+      // The account's Your details and How we contact you (customer-account-screens design 1).
+      phone: customer?.phone || null,
+      updateChannel: customer?.update_channel === 'email' ? 'email' : 'sms',
+      serviceReminders: Boolean(customer?.service_reminders),
+      reviewRequests: Boolean(customer?.review_requests),
+      marketingPermission: Boolean(customer?.marketing_permission),
     });
   });
 
@@ -1061,7 +1067,7 @@ export function register(route) {
     const customerId = ctx.login.customer_id;
     const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
     const jobs = await db.prepare(
-      `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state,
+      `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
               NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike_label,
               CASE WHEN w.job_date IS NULL THEN w.created_at
                    ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
@@ -1076,6 +1082,8 @@ export function register(route) {
       repairs.push({
         kind: 'repair', jobId: j.id, reference: j.reference, title: j.title, bikeLabel: j.bike_label,
         stage: bookingStage(j), jobDate: j.job_date, totalPence: totalPence ?? null, at: new Date(j.at).toISOString(),
+        // For the bike's "In the shop now" and the tracker's chip (customer-account-screens design 1).
+        bikeId: j.bike_id ?? null, workStarted: j.work_state !== 'not_started' && j.work_state != null,
       });
     }
     const sales = await db.prepare(
