@@ -73,11 +73,53 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
 
     await main.getByRole('button', { name: 'Book in 2 items' }).click();
     await expect(main.getByText('2 items booked in · stock updated')).toBeVisible();
-    // 2 booked in and 1 set aside: nothing is left to come (second review, 26 Oct).
-    await expect(main.getByText('This order is all in.')).toBeVisible();
+    // 2 booked in and 1 set aside: nothing is left to come (second review, 26
+    // Oct); the supplier stays picked (receive-without-order).
+    await expect(main.getByRole('list', { name: 'Still to come on the order' })).toHaveCount(0);
+    await expect(main.getByRole('radio', { name: supplierName, exact: true })).toBeChecked();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
 
     const found = await asOwner(`/api/products?search=B05S-RX-${size}`);
     expect(found.body.find((p: { id: number }) => p.id === pads.body.id).stockQty).toBe(2);
+  });
+}
+
+// Without an order (openspec/changes/receive-without-order; receiving
+// decision 2): a shop that orders on the supplier's website picks the
+// supplier, scans a product it has no order for, and books it in.
+for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`at ${size} width: a staff member books in a delivery with no order`, async ({ page, context }) => {
+    const supplierName = `[Supplier 2] ${size}`;
+    const supplier = await asOwner('/api/suppliers', { name: supplierName, adapterType: 'mock_csv' });
+    expect(supplier.status).toBe(201);
+    const thing = await asOwner('/api/products', { name: `[Product] ${size}`, sku: `[Supplier code]-${size}`, price: 28, cost: 28 });
+    expect(thing.status).toBe(201);
+
+    await page.setViewportSize(viewport);
+    const [name, value] = jo.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/deliveries`);
+    const main = page.getByRole('main');
+    await expect(main.getByText('Scan each item as it comes out of the box. Works with or without an order.')).toBeVisible();
+    await main.getByRole('link', { name: 'Receive a delivery' }).click();
+    const pill = main.getByRole('radio', { name: supplierName, exact: true });
+    if (!(await pill.count())) await main.getByRole('button', { name: 'Other…' }).click();
+    await main.getByText(supplierName, { exact: true }).click();
+    await expect(pill).toBeChecked();
+
+    const box = main.getByRole('searchbox', { name: 'Scan a barcode, or type to search' });
+    for (let i = 0; i < 2; i++) {
+      await box.fill(`[Supplier code]-${size}`);
+      await box.press('Enter');
+      await expect(main.getByRole('textbox', { name: `How many: [Product] ${size}` })).toHaveValue(String(i + 1));
+    }
+    await expect(main.getByRole('list', { name: 'Scanned' })).toContainText(`[Supplier code]-${size} · not on an order`);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+    await main.getByRole('button', { name: 'Book in 2 items' }).click();
+    await expect(main.getByText('2 items booked in · stock updated')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+
+    const found = await asOwner(`/api/products?search=${encodeURIComponent(`[Supplier code]-${size}`)}`);
+    expect(found.body.find((p: { id: number }) => p.id === thing.body.id).stockQty).toBe(2);
   });
 }

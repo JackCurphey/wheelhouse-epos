@@ -6,6 +6,7 @@ import '../server/load-env.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
@@ -14,6 +15,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
 const FILE = '092_delivery_problems.sql';
+const LATER = readdirSync(path.join(ROOT, 'server/migrations')).filter((f) => f.endsWith('.sql') && f >= FILE);
 
 function adminUrlOrSkip(t) {
   try {
@@ -42,7 +44,8 @@ test('092 adds delivery problems and keeps each shop to its own', async (t) => {
   const env = { ...process.env, DATABASE_URL: url.href };
   await withClient(url.href, async (c) => {
     await c.query('CREATE TABLE schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
-    await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [FILE]);
+    // 092 and every migration after it wait, since later ones (094) build on it.
+    for (const f of LATER) await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [f]);
   });
   migrate(env);
   let ids;
@@ -54,7 +57,7 @@ test('092 adds delivery problems and keeps each shop to its own', async (t) => {
     const { rows: [o] } = await c.query("INSERT INTO purchase_orders (supplier_id, status) VALUES ($1, 'ordered') RETURNING id", [s.id]);
     const { rows: [i] } = await c.query("INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, product_sku, qty_ordered) VALUES ($1, $2, 'Shimano brake pads', 'B05S-RX', 2) RETURNING id", [o.id, p.id]);
     ids = { shop: shop.id, product: p.id, order: o.id, item: i.id };
-    await c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]);
+    await c.query('DELETE FROM schema_migrations WHERE filename = ANY($1)', [LATER]);
   });
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`));
   await withClient(url.href, async (c) => {

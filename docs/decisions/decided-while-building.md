@@ -3090,3 +3090,67 @@ follows the job checklist, the closest pattern built.
    out**, as the switch and the two kind buttons beside it already are. The
    drawing doesn't show a saving state; this follows theirs. Without it, a
    pick of "A fixed amount" followed at once by typing 15 saved 15%.
+
+### 26 Oct 2026: receiving a delivery without an order (`openspec/changes/receive-without-order`, `rs-receive`, `rs-problem`, `rs-hub`; WP-2.3)
+
+Replaces item 1 of "receiving a delivery" above: the drawing's supplier
+pills and "Works with or without an order" are built.
+
+1. **From is the supplier, as drawn.** The supplier with the newest order
+   still to come first, then by name; three, then "Other…" (New order's
+   pills). The drawing's "the one used last" would be the last delivery, which
+   isn't recorded, so the newest order still to come stands in. With no order
+   asked for, the first pill is picked only when it has an order still to
+   come; otherwise none ("pick the supplier if you like", decision 3). Once
+   picked, a pill can't be un-picked (the built pill group has no "none");
+   a supplier with nothing on order books in the same way. No suppliers:
+   "No suppliers yet." (New order's words) and scanning still works.
+2. **A supplier with more than one order still to come:** its orders are
+   received together. A scan counts against the order asked for
+   (`?order=`) first, then the oldest; "Still to come on the order" lists
+   every line of them, under the drawn heading.
+3. **Not on an order** is any product with no line still to come on the
+   picked supplier's orders, or any product when no supplier is picked:
+   "[code] · not on an order", one per scan, a count with no top. A product
+   whose order lines are all counted still says "All [n] [name] still to
+   come are counted" and adds nothing (item 4 above), rather than adding an
+   extra not on an order: a double scan is likelier than an over-delivery,
+   and − and + still change it.
+4. **Problem? not on an order** offers Damaged and Wrong item only (the
+   drawing's note: Missing is "offered only when there's an order"). They're
+   kept with the supplier, or with none when none was picked, for To return
+   later; the job's Missing with no order (`rs-problem-missing`) waits for
+   jobs waiting for parts.
+5. **One Book in for the whole delivery:** a new route,
+   `POST /api/deliveries/receive`, books order lines and lines not on an
+   order in one transaction; the order route keeps working for the old app
+   and shares its code. Stock not on an order is recorded as "Booked in" on
+   the product's history (the existing `intake` type), noted "Delivery from
+   [Supplier], not on an order".
+6. **Who booked it in** is recorded on every stock movement from a delivery,
+   on an order or not (migration 094 adds `stock_movements.login_id` the same
+   way `jack/adjust-stock`'s 093 does, so either can run first). It isn't
+   shown yet. The route reads who is signed in with `currentSession`, which
+   relies on main's `rememberSession` (the session the dispatcher found for
+   the request), so it takes no second database connection.
+7. **After Book in** the supplier stays picked; when its orders are all in,
+   "Still to come on the order" goes (replacing "This order is all in."
+   after booking, item 9 above). "This order is all in." stays for
+   `?order=` naming an order that isn't waiting, and scanning still works
+   there.
+8. **After the review (26 Oct):**
+   - **From is set once,** when the suppliers and orders first load, so a
+     refresh of the orders (window focus, or after a refused booking) can't
+     move it to another supplier mid-delivery.
+   - **A scanned line whose order line has gone** (its order all in, or
+     nothing left to come on that line, booked in elsewhere) becomes a line
+     not on an order when the orders refresh, keeping its count and its
+     Damaged and Wrong item marks; a Missing mark goes, as Missing is only for
+     an order. Merged with any line for the same product. Without this, Book
+     in was refused on every retry.
+   - **A problem's count has the same top as a line's** (100000); past it,
+     "A problem needs how many, a whole number above 0".
+   - **An order line sent with no supplier picked** is refused with "Pick
+     the supplier this order is from." (was "That line is on another
+     supplier’s order"). The screen doesn't send one; the old wording was
+     wrong for it.
