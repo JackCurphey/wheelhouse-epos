@@ -85,6 +85,8 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// A customer's messages to the shop: 30 in 15 minutes each, so nobody can flood the inbox (ask-the-shop-server review 1).
+const messageLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
 // network and by the shop's email address; codes checked, by network.
 const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
@@ -1180,6 +1182,7 @@ export function register(route) {
     const body = await readJsonBody(req).catch(() => null);
     const text = cleanNote(body?.text);
     if (!text) return badRequest(res, MESSAGE_WORDS);
+    if (!messageLimiter.check(`${ctx.shop.id}:${ctx.login.id}`)) return sendJson(res, 429, { error: 'That’s a lot of messages at once. Try again in a few minutes.' });
     await addNote({ customerId: ctx.login.customer_id, fromCustomer: true, text });
     sendJson(res, 201, await customerConversation(ctx.login.customer_id, { forCustomer: true }));
   });
