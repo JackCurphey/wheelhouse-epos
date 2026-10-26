@@ -183,6 +183,8 @@ screens['till-search-paid'] = { desktop: tillRail(false, 'maya', true) };
 export function yourSettingsDialog(size = 'desktop', { graphs = false, pin = true, help = true } = {}) {
   const P = size === 'phone';
   const rows = [
+    // Jack, 26 Oct: the diary's legend sits at the top; each person can switch it off.
+    a11ySettingRow('ys-legend', 'Show the diary legend', 'The key to what each colour means, beside the Workshop diary. Switch it off once you know them.', true),
     a11ySettingRow('ys-symbols', 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview(size)),
     a11ySettingRow('ys-motion', 'Reduce motion', 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.', false),
     // UX walk-through 1 L6: things on a timer wait for a key press instead.

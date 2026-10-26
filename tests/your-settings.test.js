@@ -24,9 +24,10 @@ after(async () => {
 });
 
 const call = (who, options) => staffRequest(server.baseUrl, who.cookie, '/api/your-settings', options);
-const ALL_OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+// Show the diary legend starts on (diary-legend-box design 1); every other switch starts off.
+const ALL_OFF = { showLegend: true, statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
 
-test('every switch starts off', async () => {
+test('every switch starts off, but Show the diary legend, which starts on', async () => {
   const res = await call(owner);
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(res.body, { accessibility: ALL_OFF });
@@ -57,4 +58,12 @@ test('an unknown switch, a value that isn’t on or off, or no switches is refus
 test('signed out is refused', async () => {
   const res = await fetch(`${server.baseUrl}/api/your-settings`);
   assert.equal(res.status, 401);
+});
+
+test('Show the diary legend switches off for this login, and back on', async () => {
+  const off = await call(owner, { method: 'PUT', body: { accessibility: { showLegend: false } } });
+  assert.equal(off.body.accessibility.showLegend, false);
+  assert.equal((await call(owner)).body.accessibility.showLegend, false);
+  assert.equal((await call(other)).body.accessibility.showLegend, true, 'nobody else’s');
+  assert.equal((await call(owner, { method: 'PUT', body: { accessibility: { showLegend: true } } })).body.accessibility.showLegend, true);
 });

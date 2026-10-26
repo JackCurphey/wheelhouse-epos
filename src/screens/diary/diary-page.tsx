@@ -21,6 +21,7 @@ import { Column, Grid, NewOnlineMark } from './diary-tiles.tsx';
 import { useDiaryExtras } from './use-diary-extras.tsx';
 import { useDiaryMoves } from './use-diary-moves.ts';
 import { StatusShape, useStatusSymbols } from './status-shape.tsx';
+import { useYourSettings } from '@/lib/your-settings.ts';
 import {
   LEGEND, LEGEND_LABEL, addDays, addMonths, dropStart, monthLabel, monthOf, dayLabel, diaryState, gridRange, hhmm, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
@@ -42,7 +43,20 @@ export function DiaryPage() {
   const isNarrow = useIsNarrow();
   // Show status symbols in the legend too, so it stays a key to what's drawn (Your settings).
   const statusSymbols = useStatusSymbols();
+  // Show the diary legend, on unless this person switched it off (diary-legend-box design 1).
+  const showLegend = useYourSettings().data?.accessibility?.showLegend !== false;
   const today = todayIso();
+  // The legend's colours (diaryLegend): a line each in the box, along one line under the toolbar.
+  const legendList = (inBox: boolean) => (
+    <ul aria-label="Legend" className={`m-0 list-none p-0 ${inBox ? 'flex flex-col gap-1.5' : 'flex flex-wrap gap-3'}`}>
+        {LEGEND.map((s) => (
+          <li key={s} className="inline-flex items-center gap-1.5 text-xs">
+            <span aria-hidden="true" className={`relative inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`}>{statusSymbols ? <StatusShape state={s} size={11} inset={1.5} /> : null}</span>
+            {LEGEND_LABEL[s]}
+          </li>
+        ))}
+    </ul>
+  );
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
   // On a phone the diary is always one day (decision 68); the week is the strip of days.
   const askedView = params.get('view');
@@ -664,11 +678,21 @@ export function DiaryPage() {
         </div>
       </div>
       {isNarrow ? null : floating}
+      {/* Where the left-hand column is folded away, the legend sits under the toolbar (diary-legend-box design 3). */}
+      {showLegend && isNarrow ? <div className="mb-2.5">{legendList(false)}</div> : null}
 
       <div className="flex items-start gap-4">
+        <div className="hidden w-[184px] shrink-0 flex-col gap-3 lg:flex lg:w-[224px]">
+        {/* The legend, a box headed Legend above Waiting for you (Jack, 26 Oct, option 2; diary.mjs legendBox). */}
+        {showLegend && !isNarrow ? (
+          <section aria-labelledby="legend-heading" className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-2.5">
+            <h2 id="legend-heading" className="m-0 text-sm font-bold">Legend</h2>
+            {legendList(true)}
+          </section>
+        ) : null}
         {/* Waiting for you (decision 14). */}
         {/* Boxed in as a panel, its count a badge (Jack, 16 Oct; the layout review, pull request 238). */}
-        <section aria-labelledby="waiting-heading" className="hidden w-[184px] shrink-0 flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-2.5 lg:flex lg:w-[224px]">
+        <section aria-labelledby="waiting-heading" className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-2.5">
           <h2 id="waiting-heading" className="m-0 flex items-center gap-2 text-sm font-bold">
             {/* Screen readers hear the name in one piece: "Waiting for you (2)". */}
             <span aria-hidden="true">Waiting for you</span>
@@ -726,20 +750,13 @@ export function DiaryPage() {
             <p className="m-0 text-xs text-[var(--wh-muted)]">{chosenByTouch ? 'Tap the card again to open it.' : 'Double-click a card to open it.'}</p>
           ) : null}
         </section>
+        </div>
 
         <div className="flex min-w-0 grow flex-col gap-2.5">
           <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
           <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
           <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</ExtrasContext.Provider></MoveContext.Provider></PickContext.Provider></div>
           {jobs.isError ? <p role="alert">Wheelhouse couldn&apos;t load the diary. Try again in a moment.</p> : null}
-          <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
-            {LEGEND.map((s) => (
-              <li key={s} className="inline-flex items-center gap-1.5 text-xs">
-                <span aria-hidden="true" className={`relative inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`}>{statusSymbols ? <StatusShape state={s} size={11} inset={1.5} /> : null}</span>
-                {LEGEND_LABEL[s]}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
       {isNarrow ? (

@@ -6,7 +6,7 @@ import { apiGet, apiMutate } from '@/lib/api/client.ts';
  * Each person's own settings (Your settings; workshop day 57; Jack, 23 Oct:
  * saved on the signed-in account until PINs). openspec/changes/your-settings-accessibility.
  */
-export type Accessibility = { statusSymbols: boolean; reduceMotion: boolean; noAutoClose: boolean; largerText: boolean; foldedSidebar: boolean };
+export type Accessibility = { showLegend: boolean; statusSymbols: boolean; reduceMotion: boolean; noAutoClose: boolean; largerText: boolean; foldedSidebar: boolean };
 const KEY = ['your-settings'];
 
 export function useYourSettings(enabled = true) {

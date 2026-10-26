@@ -90,3 +90,11 @@ text. It is the person's own setting, off by default.
 #### Scenario: Switched on
 - **WHEN** Jo switches Don't close things by themselves on
 - **THEN** it is saved with her other switches, and Bike ready and the till's Paid box wait for her
+
+### Requirement: Each person can switch off the diary's legend
+
+Your settings › Accessibility SHALL have "Show the diary legend" as its first switch, on to start, saved for that person only. It SHALL not be offered on a phone.
+
+#### Scenario: switching it off
+- **WHEN** Jo switches off "Show the diary legend"
+- **THEN** it saves at once, the diary shows no legend for Jo, and nobody else's diary changes
