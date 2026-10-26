@@ -2685,3 +2685,10 @@ follows the job checklist, the closest pattern built.
 11. **The header** keeps "Deliveries and orders" on New order and an order,
     as a customer's page keeps "Customers"; each sub-page has the drawn way
     back and its own heading.
+12. **After the review:** a product with no cost recorded (none, or 0 as the
+    old app saves it) is no cost, following the stock list's "no cost is no
+    margin": on New order its line shows "No cost recorded" and a box to
+    type one, instead of counting as £0.00 (replacing that part of 7).
+    "Mark as ordered" says "Type a cost for every line first." until every
+    line has one; "Save as draft" still saves, at £0.00. A count stops at
+    100000.

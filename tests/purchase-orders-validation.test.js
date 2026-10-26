@@ -48,6 +48,23 @@ test('a line with no quantity, a bad cost or an unknown product is a 400 with it
   }
 });
 
+// A count over 100000 or a cost over £99,999,999.99 (the NUMERIC(10,2)
+// column's most) is a 400 with its message, not a 500 from the database
+// (review of 26 Oct); the most itself is allowed.
+test('a huge count or cost is a 400 with its message; the most is allowed', async () => {
+  for (const [line, message] of [
+    [{ productId, qty: 100001, unitCost: 2 }, 'A line can order at most 100000'],
+    [{ productId, qty: 1e20, unitCost: 2 }, 'A line can order at most 100000'],
+    [{ productId, qty: 1, unitCost: 100000000 }, 'A unit cost can be at most £99,999,999.99'],
+  ]) {
+    const res = await create([line]);
+    assert.equal(res.status, 400, `${JSON.stringify(line)}: ${JSON.stringify(res.body)}`);
+    assert.deepEqual(res.body, { error: message });
+  }
+  const most = await create([{ productId, qty: 100000, unitCost: 99999999.99 }]);
+  assert.equal(most.status, 201, JSON.stringify(most.body));
+});
+
 // The edit route shares the create route's ValidationError handling, and no
 // test reached it (#151 follow-up, Jack, 7 Oct), so a break there would have
 // been a silent 500.

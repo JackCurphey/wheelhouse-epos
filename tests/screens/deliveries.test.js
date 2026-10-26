@@ -13,6 +13,10 @@ const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwne
 const SUPPLIERS = [{ id: 1, name: '[Supplier]' }, { id: 2, name: '[Supplier 2]' }, { id: 3, name: '[Supplier 3]' }, { id: 4, name: '[Supplier 4]' }];
 const PADS = { id: 11, sku: 'B05S-RX', barcode: '4524667000001', name: 'Shimano brake pads', cost: 28, stockQty: 0 };
 const TUBE = { id: 12, sku: '[Supplier code]', barcode: null, name: '[Product]', cost: 1.1, stockQty: 0 };
+// No cost recorded: null, or 0 as the old app saves it (the stock list's rule).
+const NOCOST = { id: 13, sku: '[Supplier code 2]', barcode: null, name: '[Uncosted product]', cost: null, stockQty: 0 };
+const ZEROCOST = { id: 14, sku: '[Supplier code 3]', barcode: null, name: '[Zero-cost product]', cost: 0, stockQty: 0 };
+const PRODUCTS = [PADS, TUBE, NOCOST, ZEROCOST];
 const item = (p, ordered, received, id = p.id + 100) => ({ id, productId: p.id, name: p.name, sku: p.sku, qtyOrdered: ordered, qtyReceived: received, outstanding: ordered - received, unitCost: p.cost });
 const order = (over) => ({ id: 7, supplierId: 1, supplierName: '[Supplier]', status: 'partially_received', reference: '', notes: '', orderedAt: '2026-09-01T10:00:00.000Z', createdAt: '2026-09-01T09:00:00.000Z', items: [item(PADS, 1, 0), item(TUBE, 3, 1)], totalCost: 31.3, ...over });
 
@@ -33,7 +37,7 @@ afterEach(async () => {
   rendered = false;
 });
 
-async function open(path, { me = OWNER, orders = [order(), order({ id: 8, supplierName: '[Supplier 2]', status: 'draft', orderedAt: null, items: [item(TUBE, 2, 0)] })], phone = false } = {}) {
+async function open(path, { me = OWNER, orders = [order(), order({ id: 8, supplierName: '[Supplier 2]', status: 'draft', orderedAt: null, items: [item(TUBE, 2, 0)] })], phone = false, failOrdering = false } = {}) {
   calls = [];
   const byId = new Map(orders.map((o) => [o.id, o]));
   globalThis.fetch = async (url, init = {}) => {
@@ -46,11 +50,14 @@ async function open(path, { me = OWNER, orders = [order(), order({ id: 8, suppli
     if (u.pathname === '/api/suppliers') return reply(200, SUPPLIERS);
     if (u.pathname === '/api/products') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
-      return reply(200, [PADS, TUBE].filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))));
+      return reply(200, PRODUCTS.filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))));
     }
     if (u.pathname === '/api/purchase-orders' && method === 'GET') return reply(200, orders);
     if (u.pathname === '/api/purchase-orders' && method === 'POST') {
-      const made = order({ id: 9, supplierId: body.supplierId, status: 'draft', orderedAt: null, items: body.items.map((it, i) => item([PADS, TUBE].find((p) => p.id === it.productId), it.qty, 0, 200 + i)), totalCost: 56 });
+      // Ordering fails, however it's asked for; a plain draft would save.
+      if (failOrdering && body.markOrdered === true) return reply(500, { error: 'Internal server error' });
+      const ordered = body.markOrdered === true;
+      const made = order({ id: 9, supplierId: body.supplierId, status: ordered ? 'ordered' : 'draft', orderedAt: ordered ? '2026-09-01T10:00:00.000Z' : null, items: body.items.map((it, i) => item(PRODUCTS.find((p) => p.id === it.productId), it.qty, 0, 200 + i)), totalCost: 56 });
       byId.set(9, made);
       return reply(201, made);
     }
@@ -58,6 +65,7 @@ async function open(path, { me = OWNER, orders = [order(), order({ id: 8, suppli
     if (m) {
       const o = byId.get(Number(m[1]));
       if (!o) return reply(404, { error: 'Purchase order not found' });
+      if (failOrdering && m[2] === 'mark-ordered') return reply(500, { error: 'Internal server error' });
       if (m[2] === 'mark-ordered') byId.set(o.id, { ...o, status: 'ordered', orderedAt: '2026-09-01T10:00:00.000Z' });
       if (m[2] === 'cancel') byId.set(o.id, { ...o, status: 'cancelled' });
       return reply(200, byId.get(o.id));
@@ -161,19 +169,86 @@ test('a click adds a match from the search; its count sets the total (3 × £1.1
   assert.ok(ui.queryByRole('list', { name: 'Lines' }) === null);
 });
 
-test('Mark as ordered makes the order with the picked supplier, marks it ordered and opens it', async () => {
+async function addByCode(ui, fireEvent, code, name) {
+  const box = ui.getByRole('searchbox', { name: 'Add a product: scan, or type to search' });
+  fireEvent.change(box, { target: { value: code } });
+  await ui.findByRole('option', { name: new RegExp(name.replace(/[[\]]/g, '\\$&')) });
+  fireEvent.keyDown(box, { key: 'Enter' });
+  await ui.findByRole('textbox', { name: `How many: ${name}` });
+}
+
+// One request, made already ordered (review of 26 Oct): two requests left a
+// draft behind when the second failed, and a retry made the order twice.
+test('Mark as ordered makes the order already ordered, with the picked supplier, in one request, and opens it', async () => {
   const { ui, fireEvent } = await newOrder();
   fireEvent.click(ui.getByRole('radio', { name: '[Supplier 2]' }));
-  const box = ui.getByRole('searchbox', { name: 'Add a product: scan, or type to search' });
-  fireEvent.change(box, { target: { value: 'B05S-RX' } });
-  await ui.findByRole('option', { name: /Shimano brake pads/ });
-  fireEvent.keyDown(box, { key: 'Enter' });
-  await ui.findByRole('list', { name: 'Lines' });
+  await addByCode(ui, fireEvent, 'B05S-RX', 'Shimano brake pads');
   fireEvent.click(ui.getByRole('button', { name: 'Mark as ordered' }));
   await ui.findByRole('heading', { level: 2, name: /^\[Supplier\] · ordered/ });
-  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body), [{ supplierId: 2, items: [{ productId: 11, qty: 1, unitCost: 28 }] }]);
-  assert.equal(posts('/api/purchase-orders/9/mark-ordered').length, 1);
+  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body), [{ supplierId: 2, items: [{ productId: 11, qty: 1, unitCost: 28 }], markOrdered: true }]);
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 1, 'one request, no separate mark-ordered');
   assert.equal(window.location.pathname, '/workshop/deliveries/orders/9');
+});
+
+test('when Mark as ordered fails it says so, having made one request and no draft to retry into a second order', async () => {
+  const { ui, fireEvent } = await newOrder({ failOrdering: true });
+  await addByCode(ui, fireEvent, 'B05S-RX', 'Shimano brake pads');
+  fireEvent.click(ui.getByRole('button', { name: 'Mark as ordered' }));
+  assert.ok((await ui.findByRole('alert')).textContent.includes('Wheelhouse couldn’t save the order. Try again in a moment.'));
+  // Two requests made a draft here, then failed to order it.
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 1);
+  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body.markOrdered), [true]);
+  assert.equal(window.location.pathname, '/workshop/deliveries/new-order');
+});
+
+// No cost is no margin, as on the stock list (review of 26 Oct): a line with
+// no cost (null, or 0 as the old app saves it) says so and takes one; the
+// order can't be marked ordered until every line has one, but a draft saves.
+test('a line with no cost says No cost recorded with a box for one; Mark as ordered waits for it; a draft still saves', async () => {
+  const { ui, fireEvent, within } = await newOrder();
+  await addByCode(ui, fireEvent, '[Supplier code 2]', '[Uncosted product]');
+  await addByCode(ui, fireEvent, '[Supplier code 3]', '[Zero-cost product]');
+  const rows = within(ui.getByRole('list', { name: 'Lines' })).getAllByRole('listitem');
+  for (const [row, name] of [[rows[0], '[Uncosted product]'], [rows[1], '[Zero-cost product]']]) {
+    assert.ok(row.textContent.includes('No cost recorded'), row.textContent);
+    assert.ok(!row.textContent.includes('£0.00'), row.textContent);
+    assert.equal(within(row).getByRole('textbox', { name: `Cost each: ${name}` }).value, '');
+  }
+  fireEvent.click(ui.getByRole('button', { name: 'Mark as ordered' }));
+  assert.ok((await ui.findByRole('alert')).textContent.includes('Type a cost for every line first.'));
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+  fireEvent.click(ui.getByRole('button', { name: 'Save as draft' }));
+  await ui.findByRole('heading', { level: 2, name: '[Supplier] · draft' });
+  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body), [{ supplierId: 1, items: [{ productId: 13, qty: 1, unitCost: 0 }, { productId: 14, qty: 1, unitCost: 0 }] }]);
+});
+
+test('typing a cost prices the line and the total, and Mark as ordered sends it', async () => {
+  const { ui, fireEvent, within } = await newOrder();
+  await addByCode(ui, fireEvent, 'B05S-RX', 'Shimano brake pads');
+  await addByCode(ui, fireEvent, '[Supplier code 2]', '[Uncosted product]');
+  const lines = within(ui.getByRole('list', { name: 'Lines' }));
+  assert.ok(lines.queryByRole('textbox', { name: 'Cost each: Shimano brake pads' }) === null, 'a line with a cost has no box');
+  fireEvent.change(lines.getByRole('textbox', { name: 'How many: [Uncosted product]' }), { target: { value: '2' } });
+  fireEvent.change(lines.getByRole('textbox', { name: 'Cost each: [Uncosted product]' }), { target: { value: '4.50' } });
+  const row = lines.getAllByRole('listitem')[1];
+  assert.ok(!row.textContent.includes('No cost recorded'), row.textContent);
+  assert.ok(row.textContent.includes('£9.00'), row.textContent);
+  assert.ok(ui.getByText(/Total cost/).textContent.includes('£37.00'), ui.getByText(/Total cost/).textContent);
+  fireEvent.click(ui.getByRole('button', { name: 'Mark as ordered' }));
+  await ui.findByRole('heading', { level: 2, name: /^\[Supplier\] · ordered/ });
+  assert.deepEqual(posts('/api/purchase-orders')[0].body.items, [{ productId: 11, qty: 1, unitCost: 28 }, { productId: 13, qty: 2, unitCost: 4.5 }]);
+});
+
+// The server refuses a line over 100000 (review of 26 Oct), so the box stops there.
+test('a count stops at 100000, typed or stepped', async () => {
+  const { ui, fireEvent, within } = await newOrder();
+  await addByCode(ui, fireEvent, 'B05S-RX', 'Shimano brake pads');
+  const lines = within(ui.getByRole('list', { name: 'Lines' }));
+  const count = lines.getByRole('textbox', { name: 'How many: Shimano brake pads' });
+  fireEvent.change(count, { target: { value: '250000' } });
+  assert.equal(count.value, '100000');
+  fireEvent.click(lines.getByRole('button', { name: 'One more: Shimano brake pads' }));
+  assert.equal(count.value, '100000');
 });
 
 test('Save as draft makes the order and does not mark it ordered; with no lines it says so and makes nothing', async () => {
@@ -189,6 +264,7 @@ test('Save as draft makes the order and does not mark it ordered; with no lines 
   fireEvent.click(ui.getByRole('button', { name: 'Save as draft' }));
   await ui.findByRole('heading', { level: 2, name: '[Supplier] · draft' });
   assert.equal(posts('/api/purchase-orders').length, 1);
+  assert.ok(posts('/api/purchase-orders')[0].body.markOrdered !== true, 'a draft is not made ordered');
   assert.equal(calls.filter((c) => c.url.includes('mark-ordered')).length, 0);
 });
 

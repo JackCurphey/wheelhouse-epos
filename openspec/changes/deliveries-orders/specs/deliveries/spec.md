@@ -31,6 +31,10 @@ New order SHALL let the Owner pick a supplier, add products by scanning or searc
 - **WHEN** the Owner picks [Supplier], scans B05S-RX (Shimano brake pads, cost £28.00), sets the count to 2 and presses "Mark as ordered"
 - **THEN** the order is made with 2 Shimano brake pads at £28.00, marked as ordered, and its page opens showing a total cost of £56.00
 
+#### Scenario: A product with no cost recorded
+- **WHEN** the Owner adds a product with no cost recorded
+- **THEN** its line says "No cost recorded" with a box to type a cost, "Mark as ordered" says to type a cost for every line first, and "Save as draft" still saves it
+
 ### Requirement: An order shows what has arrived and can be closed
 An order's page SHALL show its supplier, when it was ordered, its status, each line's ordered and arrived counts with "All arrived" or "[n] to come", and the total cost the server gives. While nothing has arrived, the Owner SHALL be able to close it after confirming, which cancels it.
 
