@@ -28,10 +28,9 @@ WP-2.3, slice C, Jack's lane. Third piece of WP-2.3, built on
 - `rs-hub`: "Scan each item as it comes out of the box. Works with or without
   an order."
 
-**Risky areas:** money and stock (receiving raises `stock_qty`), a
-migration (094), and sign-in: `server/lib/session.js` keeps the staff
-session found for a request, so a handler asking again needs no second
-database connection (design, "Who's asking"). `/review` before merging.
+**Risky areas:** money and stock (receiving raises `stock_qty`) and a
+migration (094). `/review` before merging. Who booked it in is read through
+main's `rememberSession` (design, "Who's asking"); sign-in isn't changed.
 
 ## What Changes
 

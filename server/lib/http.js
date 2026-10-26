@@ -11,9 +11,21 @@ export function parseCookies(req) {
     if (idx === -1) continue;
     const key = part.slice(0, idx).trim();
     const value = part.slice(idx + 1).trim();
-    if (key) cookies[key] = decodeURIComponent(value);
+    if (key) cookies[key] = decodeCookieValue(value);
   }
   return cookies;
+}
+
+// A cookie that is not a valid escape (another app on the same domain may set
+// `promo=50%off`) keeps its raw value, as the `cookie` package does, rather
+// than failing every request from that browser
+// (openspec/changes/server-stays-up-when-busy).
+function decodeCookieValue(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export function makeRateLimiter(max, windowMs) {

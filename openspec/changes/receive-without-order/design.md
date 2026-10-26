@@ -40,11 +40,10 @@ the same code, limited to that order.
   "Delivery, not on an order") otherwise;
 - row-level security per shop on every table written.
 
-**Who's asking** (`server/lib/session.js`): the staff session the
-dispatcher finds is kept for that request, so a handler asking again (who
-booked it in) takes no second pooled connection while holding its own;
-without this, ten or more bookings at once waited on a full pool. Only a
-session found is kept.
+**Who's asking:** the route reads who booked it in with `currentSession`,
+which relies on main's `rememberSession` (the dispatcher keeps the session
+it found for the request), so it takes no second pooled connection while
+holding its own.
 
 ## Migration 094: who, and problems without an order
 

@@ -2995,13 +2995,11 @@ pills and "Works with or without an order" are built.
 6. **Who booked it in** is recorded on every stock movement from a delivery,
    on an order or not (migration 094 adds `stock_movements.login_id` the same
    way `jack/adjust-stock`'s 093 does, so either can run first). It isn't
-   shown yet.
+   shown yet. The route reads who is signed in with `currentSession`, which
+   relies on main's `rememberSession` (the session the dispatcher found for
+   the request), so it takes no second database connection.
 7. **After Book in** the supplier stays picked; when its orders are all in,
    "Still to come on the order" goes (replacing "This order is all in."
    after booking, item 9 above). "This order is all in." stays for
    `?order=` naming an order that isn't waiting, and scanning still works
    there.
-8. **Who's asking is looked up once per request.** A handler asking who is
-   signed in took a second database connection while holding its own; with
-   ten or more deliveries at once that waited on a full pool. The session
-   the dispatcher finds is now kept for that request (`server/lib/session.js`).
