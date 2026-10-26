@@ -703,6 +703,14 @@ async function sendLinkMessage(key, jobId, shopId, privateLink) {
   }
 }
 
+// How the shop contacts a customer, as the account shows it (how-we-contact-you design 1).
+const contactOf = (customer) => ({
+  updateChannel: customer?.update_channel === 'email' ? 'email' : customer?.update_channel === 'whatsapp' ? 'whatsapp' : 'sms',
+  serviceReminders: Boolean(customer?.service_reminders),
+  reviewRequests: Boolean(customer?.review_requests),
+  marketingPermission: Boolean(customer?.marketing_permission),
+});
+
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
     const ip = clientIp(req);
@@ -800,11 +808,44 @@ export function register(route) {
       shopSlug: ctx.shop.slug,
       // The account's Your details and How we contact you (customer-account-screens design 1).
       phone: customer?.phone || null,
-      updateChannel: customer?.update_channel === 'email' ? 'email' : 'sms',
-      serviceReminders: Boolean(customer?.service_reminders),
-      reviewRequests: Boolean(customer?.review_requests),
-      marketingPermission: Boolean(customer?.marketing_permission),
+      ...contactOf(customer),
     });
+  });
+
+  // How we contact you (openspec/changes/how-we-contact-you design 1; account
+  // and reminders decision 6): any of the way job updates go and the three
+  // switches, each saved as sent. A yes to reminders or review requests from
+  // here is recorded as the account's.
+  route('PUT', '/api/portal/:shopSlug/me/contact', async (req, res, params) => {
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the changes as an object');
+    const sets = [];
+    const args = [];
+    if (body.updateChannel !== undefined) {
+      if (!['sms', 'whatsapp', 'email'].includes(body.updateChannel)) return badRequest(res, 'Choose text, WhatsApp or email');
+      const customer = await db.prepare('SELECT phone FROM customers WHERE id = ?').get(ctx.login.customer_id);
+      if (body.updateChannel !== 'email' && !customer?.phone) return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
+      sets.push('update_channel = ?');
+      args.push(body.updateChannel);
+    }
+    for (const [key, column] of [['serviceReminders', 'service_reminders'], ['reviewRequests', 'review_requests'], ['marketingPermission', 'marketing_permission']]) {
+      if (body[key] === undefined) continue;
+      if (typeof body[key] !== 'boolean') return badRequest(res, `${key} must be true or false`);
+      sets.push(`${column} = ?`);
+      args.push(body[key]);
+    }
+    // Stamped only for a new yes (both were off), so an earlier yes keeps when and where it was given (review).
+    if (body.serviceReminders === true || body.reviewRequests === true) {
+      sets.push("reminders_said_yes_at = CASE WHEN service_reminders OR review_requests THEN reminders_said_yes_at ELSE now() END",
+        "reminders_said_yes_via = CASE WHEN service_reminders OR review_requests THEN reminders_said_yes_via ELSE 'account' END");
+    }
+    if (!sets.length) return badRequest(res, 'Nothing to change');
+    const customer = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING *`).get(...args, ctx.login.customer_id);
+    sendJson(res, 200, contactOf(customer));
   });
 
   // Public - no login required to see what's open, only to actually book.

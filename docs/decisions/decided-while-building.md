@@ -2587,7 +2587,7 @@ follows the job checklist, the closest pattern built.
    says "Keep this link to check your booking" or offers Copy link. That
    link works only for the customer, signed in. It shows "Your account"
    instead, a way back to the account, as the question page's back link
-   is drawn (`qa-question`).
+   is drawn (`ac-question`).
 
 ### 26 Oct 2026: adding a bike (`openspec/changes/add-a-bike`, `cs-page`, `ac-account`; not-drawn pages 16, 17 and 23)
 
@@ -2613,6 +2613,26 @@ follows the job checklist, the closest pattern built.
 4. **After the review:** no date shows for a reminder the sender will undo
    when its day comes, because the bike has been booked or collected again
    since.
+
+### 26 Oct 2026: how we contact you (`openspec/changes/how-we-contact-you`, `ac-contact`, `ac-contact-changed`; account and reminders decision 6)
+
+1. **Text or WhatsApp with no mobile on record** is refused: "We don’t
+   have a mobile number for you, so we can’t text you." The account can't
+   add a mobile yet, as editing details isn't built.
+2. **The status line** after each change says what changed. "Service
+   reminders are off" is drawn. "… are on" and "Job updates will come by
+   email" follow it.
+3. **Saying yes to reminders or review requests here** is recorded as a yes
+   from the account (migration 086).
+4. **The stop page's "Sign in to your account" line** shows once anything
+   is stopped: service reminders, review requests, or one of the shop's own
+   messages.
+5. **After the review:**
+   - "WhatsApp" keeps its capital in a sentence;
+   - a yes is stamped only when both switches were off, so an earlier yes
+     keeps when and where it was given;
+   - the buttons stay focusable while a change saves;
+   - a sign-in that has run out says "Please sign in again to change this."
 
 ### 26 Oct 2026: the diary's legend as a box (`openspec/changes/diary-legend-box`; Jack's option 2, "Legend", per person)
 
