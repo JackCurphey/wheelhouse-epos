@@ -36,6 +36,8 @@ export const ROUTES = {
   'cs-page': '/workshop/customers/:id',
   // A bike's own page (cs-bike), from a customer's page and the header search.
   'cs-bike': '/workshop/bikes/:id',
+  // A product's page (st-product), from Stock (openspec/changes/stock-list).
+  'st-product': '/workshop/stock/:id',
   // "You've signed out" (auth-signedout), where Sign out and WorkOS's sign-out
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.
