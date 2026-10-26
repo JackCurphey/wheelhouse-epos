@@ -2567,3 +2567,16 @@ follows the job checklist, the closest pattern built.
    - a change that leaves out On or Off keeps it as it was;
    - once sending is real, the job's link is made only after the message is
      saved.
+
+### 26 Oct 2026: a shop's own automatic messages, the screens (`openspec/changes/own-messages-screens`, `set-msg-new`)
+
+1. **Each own message is a row under "Your own messages"**, after the
+   built-in ones. The row reads like this: "6 months after a job is
+   collected · by email". It has Edit and On or Off, as the built-in rows
+   do.
+2. **Edit opens the drawn box again,** with Remove, Cancel and Save (Jack's
+   answer 4). The drawing shows only adding.
+3. **The number's label** reads "How long before" when "Before a booked
+   job" is chosen.
+4. **No preview.** None is drawn for this box; the built-in messages' box
+   has one.
