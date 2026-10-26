@@ -1076,3 +1076,14 @@ Issuing a job's link (Bike ready, booking messages, a sent quote, the private li
 #### Scenario: a burst of private links
 - **WHEN** a shop's staff ask for 12 jobs' private links at the same moment
 - **THEN** every one is answered with a link to that shop's own pages, well within the 5-second wait
+
+### Requirement: A job's details saved twice at once both stay
+When two saves of different details of the same job arrive at the same moment without the version they were made from, each SHALL be kept: the second save SHALL start from what the first wrote, never from what was stored before it. A save that sends a version that is no longer current SHALL still be refused as changed while it was being looked at. The checks on what is sent (a title, a real date, a time on offer, finished work), and which shop's jobs a save can reach, SHALL be unchanged.
+
+#### Scenario: A title and a note at once
+- **WHEN** a job's new title and a new note save at the same moment, neither sending a version
+- **THEN** both are stored
+
+#### Scenario: A refused save
+- **WHEN** a job save is refused because the date isn't a date
+- **THEN** nothing it sent is stored, and the next save goes straight through

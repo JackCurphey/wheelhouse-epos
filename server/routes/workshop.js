@@ -761,28 +761,54 @@ export function register(route) {
     // Optional, so a caller that doesn't send one keeps the old behaviour.
     if (body.version !== undefined && !Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
 
-    const title = body.title !== undefined ? String(body.title).trim() : existing.title;
-    if (!title) return badRequest(res, 'Job title is required');
-    const jobDate = body.jobDate !== undefined ? String(body.jobDate).trim() : existing.job_date;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
-    const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
+    // Every day the job touches is locked - the one it leaves, the one it
+    // joins, and the day a customer asked to move to (piece 12) - and the job
+    // is read again FOR UPDATE under the lock (withJobBookingLock). The fields
+    // sent are merged into that row, not into one read before the lock, so a
+    // title and a note saved at once without a version both stay
+    // (more-saves-dont-clash). The checks are unchanged and run in the same
+    // order; a refusal writes nothing. The UPDATE and its hold commit or roll
+    // back together.
+    const sentDate = body.jobDate !== undefined ? String(body.jobDate).trim() : null;
+    const movingTo = sentDate && /^\d{4}-\d{2}-\d{2}$/.test(sentDate) ? [sentDate] : [];
+    let out;
+    try {
+      out = await withJobBookingLock(id, movingTo, (current) => saveJob(current, body));
+    } catch (err) {
+      // Only a stale pre-2b hold can trip the 024 index for staff.
+      if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+      else throw err;
+    }
+    if (out.gone) return notFound(res, 'Job not found');
+    sendJson(res, out.status, out.body);
+  });
 
-    const startTimeInput = body.startTime !== undefined ? String(body.startTime).trim() : existing.start_time;
-    const endTimeInput = body.endTime !== undefined ? String(body.endTime).trim() : existing.end_time;
+  // PUT /api/workshop-jobs/:id under the booking lock, `current` read FOR
+  // UPDATE. Returns { status, body }: a refusal, or the saved job.
+  async function saveJob(current, body) {
+    const id = current.id;
+    const title = body.title !== undefined ? String(body.title).trim() : current.title;
+    if (!title) return refusal('Job title is required');
+    const jobDate = body.jobDate !== undefined ? String(body.jobDate).trim() : current.job_date;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return refusal('A valid date is required');
+    const notes = body.notes !== undefined ? String(body.notes).trim() : current.notes;
+
+    const startTimeInput = body.startTime !== undefined ? String(body.startTime).trim() : current.start_time;
+    const endTimeInput = body.endTime !== undefined ? String(body.endTime).trim() : current.end_time;
     const times = resolveJobTimes(startTimeInput, endTimeInput);
-    if (times.error) return badRequest(res, times.error);
+    if (times.error) return refusal(times.error);
 
-    const resolved = await resolveJobCustomerId(body.customerId, existing.customer_id);
-    if (!resolved.ok) return badRequest(res, 'Customer not found or inactive');
+    const resolved = await resolveJobCustomerId(body.customerId, current.customer_id);
+    if (!resolved.ok) return refusal('Customer not found or inactive');
 
-    const bikeResolved = await resolveJobBikeId(body.bikeId, existing.bike_id, resolved.customerId);
-    if (!bikeResolved.ok) return badRequest(res, bikeResolved.error);
+    const bikeResolved = await resolveJobBikeId(body.bikeId, current.bike_id, resolved.customerId);
+    if (!bikeResolved.ok) return refusal(bikeResolved.error);
 
-    const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
-    if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
+    const mechResolved = await resolveJobMechanicId(body.mechanicId, current.mechanic_id);
+    if (!mechResolved.ok) return refusal('Mechanic not found or inactive');
 
-    const planned = resolvePlannedMinutes(body.plannedMinutes, existing.planned_minutes);
-    if (planned.error) return badRequest(res, planned.error);
+    const planned = resolvePlannedMinutes(body.plannedMinutes, current.planned_minutes);
+    if (planned.error) return refusal(planned.error);
     // A timed job's length is its times; planned_minutes only speaks for untimed work.
     const plannedMinutes = times.startTime
       ? Math.max(0, timeToMinutes(times.endTime) - timeToMinutes(times.startTime))
@@ -793,19 +819,19 @@ export function register(route) {
     // state columns directly - finishing without a sign-off, un-cancelling a
     // booking - and nothing sends it any more, so it is refused rather than obeyed.
     if (body.status !== undefined) {
-      return badRequest(res, "A job's status can't be changed by saving it. Use the job's own actions instead: book in, start, hold, finish, reopen or cancel.");
+      return refusal("A job's status can't be changed by saving it. Use the job's own actions instead: book in, start, hold, finish, reopen or cancel.");
     }
 
     // A time on offer to the customer stays where it is until they answer, so
     // they can never accept a time they weren't shown; staff offer again
     // instead (Jack, 22 Oct, Mark's audit P2 2).
-    if (existing.booking_state === 'offered' && (
-      jobDate !== existing.job_date
-      || (times.startTime || '') !== (existing.start_time || '')
-      || (times.endTime || '') !== (existing.end_time || '')
-      || mechResolved.mechanicId !== existing.mechanic_id
+    if (current.booking_state === 'offered' && (
+      jobDate !== current.job_date
+      || (times.startTime || '') !== (current.start_time || '')
+      || (times.endTime || '') !== (current.end_time || '')
+      || mechResolved.mechanicId !== current.mechanic_id
     )) {
-      return sendJson(res, 409, { error: 'This time is on offer to the customer. To change it, use Offer another time.', code: 'illegal' });
+      return { status: 409, body: { error: 'This time is on offer to the customer. To change it, use Offer another time.', code: 'illegal' } };
     }
 
     // A complete job is a record of work already done, so its details are
@@ -815,86 +841,72 @@ export function register(route) {
     // 'complete' for a cancelled, declined or expired booking, and freezing those
     // against edits is a behaviour change nobody asked for. This guard was always
     // about finished work.
-    if (existing.work_state === 'complete') {
+    if (current.work_state === 'complete') {
       const changesBeyondStatus =
-        title !== existing.title ||
-        jobDate !== existing.job_date ||
-        notes !== existing.notes ||
-        times.startTime !== existing.start_time ||
-        times.endTime !== existing.end_time ||
-        resolved.customerId !== existing.customer_id ||
-        bikeResolved.bikeId !== existing.bike_id ||
-        mechResolved.mechanicId !== existing.mechanic_id;
+        title !== current.title ||
+        jobDate !== current.job_date ||
+        notes !== current.notes ||
+        times.startTime !== current.start_time ||
+        times.endTime !== current.end_time ||
+        resolved.customerId !== current.customer_id ||
+        bikeResolved.bikeId !== current.bike_id ||
+        mechResolved.mechanicId !== current.mechanic_id;
       if (changesBeyondStatus) {
-        return badRequest(res, 'This job is complete - reopen it before making changes.');
+        return refusal('This job is complete - reopen it before making changes.');
       }
     }
 
-    // Both days are locked: the one the job leaves and the one it joins, and the
-    // day a customer asked to move to (piece 12). The UPDATE and its hold commit
-    // or roll back together.
-    let out;
-    try {
-      out = await withBookingLock([existing.job_date, jobDate, existing.requested_job_date].filter(Boolean), async () => {
-        // A customer's change request (piece 12), read again under the lock.
-        // An ordinary save keeps it; dropping the job onto exactly the requested
-        // time answers it - the change is accepted. Request columns left on a job
-        // that is no longer a request are cleared on any save.
-        const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
-        if (body.version !== undefined && current && current.version !== body.version) return staleRefusal;
-        const slotError = await checkJobSlot({
-          jobDate,
-          startTime: times.startTime,
-          endTime: times.endTime,
-          mechanicId: mechResolved.mechanicId,
-          ignoreJobId: id,
-        });
-        if (slotError) return refusal(slotError.error);
+    // A customer's change request (piece 12). An ordinary save keeps it;
+    // dropping the job onto exactly the requested time answers it - the change
+    // is accepted. Request columns left on a job that is no longer a request
+    // are cleared on any save.
+    if (body.version !== undefined && current.version !== body.version) return staleRefusal;
+    const slotError = await checkJobSlot({
+      jobDate,
+      startTime: times.startTime,
+      endTime: times.endTime,
+      mechanicId: mechResolved.mechanicId,
+      ignoreJobId: id,
+    });
+    if (slotError) return refusal(slotError.error);
 
-        const request = current ? requestedOf(current) : null;
-        let bookingState = null;
-        let clearRequest = Boolean(current?.requested_job_date) && !request;
-        if (request) {
-          // Same day, start and mechanic answers the request whatever the
-          // length (staff diary piece): the drop is the staff member's answer.
-          const onRequested = jobDate === request.jobDate && times.startTime === request.startTime
-            && mechResolved.mechanicId === request.mechanicId;
-          if (onRequested) {
-            bookingState = 'scheduled';
-            clearRequest = true;
-          }
-        }
-
-        await db.prepare(
-          `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
-           version = version + 1,
-           booking_state = COALESCE(?, booking_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
-         WHERE id = ?`
-        ).run(
-          title,
-          resolved.customerId,
-          bikeResolved.bikeId,
-          mechResolved.mechanicId,
-          jobDate,
-          times.startTime,
-          times.endTime,
-          notes,
-          plannedMinutes,
-          nowIso(),
-          bookingState,
-          id
-        );
-        await syncJobHold(id);
-        const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-        return { status: 200, body: serializeWorkshopJob(row) };
-      });
-    } catch (err) {
-      // Only a stale pre-2b hold can trip the 024 index for staff.
-      if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
-      else throw err;
+    const request = requestedOf(current);
+    let bookingState = null;
+    let clearRequest = Boolean(current.requested_job_date) && !request;
+    if (request) {
+      // Same day, start and mechanic answers the request whatever the
+      // length (staff diary piece): the drop is the staff member's answer.
+      const onRequested = jobDate === request.jobDate && times.startTime === request.startTime
+        && mechResolved.mechanicId === request.mechanicId;
+      if (onRequested) {
+        bookingState = 'scheduled';
+        clearRequest = true;
+      }
     }
-    sendJson(res, out.status, out.body);
-  });
+
+    await db.prepare(
+      `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
+       version = version + 1,
+       booking_state = COALESCE(?, booking_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
+     WHERE id = ?`
+    ).run(
+      title,
+      resolved.customerId,
+      bikeResolved.bikeId,
+      mechResolved.mechanicId,
+      jobDate,
+      times.startTime,
+      times.endTime,
+      notes,
+      plannedMinutes,
+      nowIso(),
+      bookingState,
+      id
+    );
+    await syncJobHold(id);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    return { status: 200, body: serializeWorkshopJob(row) };
+  }
 
   // ---------- Workshop job actions ----------
   //

@@ -74,6 +74,43 @@ async function setCustomerGroups(customerId, groupIds) {
   for (const groupId of groupIds) await insert.run(customerId, groupId);
 }
 
+// PUT /api/customers/:id, inside its transaction: reads the customer FOR
+// UPDATE, merges in the fields sent, checks them and writes. Returns a
+// { status, body } refusal, or nothing once written.
+async function saveCustomer(id, body) {
+  const existing = await db.prepare('SELECT * FROM customers WHERE id = ? FOR UPDATE').get(id);
+  if (!existing) return { status: 404, body: { error: 'Customer not found' } };
+  const refuse = (error) => ({ status: 400, body: { error } });
+
+  const name = body.name !== undefined ? String(body.name).trim() : existing.name;
+  const email = body.email !== undefined ? String(body.email).trim() : existing.email;
+  const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
+  const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
+  const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+  // A record merged into another comes back only through Undo the merge (customer-merge design 3).
+  if (existing.merged_into_id && active !== existing.active) return { status: 409, body: { error: 'This customer was merged into another. Undo the merge to bring them back.', code: 'merged' } };
+
+  if (!name) return refuse('Customer name is required');
+  const extra = customerExtras(body, existing);
+  if (extra.error) return refuse(extra.error);
+
+  const groups = await resolveGroupIds(body.groupIds);
+  if (groups && groups.error) return refuse(groups.error);
+
+  // Staff changing an email makes it one they typed in, which a sign-in by
+  // code never joins (option 2, 26 Oct); the same email, in any case, stays
+  // the customer's own.
+  await db.prepare(
+    `UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ?,
+            is_company = ?, contact_name = ?, vat_number = ?, invoice_email = ?,
+            email_from_customer = email_from_customer AND lower(trim(coalesce(email, ''))) = lower(trim(coalesce(?, '')))
+      WHERE id = ?`
+  ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(),
+    extra.isCompany, extra.contactName, extra.vatNumber, extra.invoiceEmail, email, id);
+  if (groups) await setCustomerGroups(id, groups.ids);
+  return null;
+}
+
 // Validates a raw groupIds array against real, existing groups. Returns null
 // (rather than throwing) for an absent field so callers can tell "not
 // supplied - leave unchanged" apart from "supplied as an empty list".
@@ -378,33 +415,22 @@ export function register(route) {
     const existing = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Customer not found');
     const body = await readJsonBody(req);
-
-    const name = body.name !== undefined ? String(body.name).trim() : existing.name;
-    const email = body.email !== undefined ? String(body.email).trim() : existing.email;
-    const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
-    const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
-    const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
-    // A record merged into another comes back only through Undo the merge (customer-merge design 3).
-    if (existing.merged_into_id && active !== existing.active) return sendJson(res, 409, { error: 'This customer was merged into another. Undo the merge to bring them back.', code: 'merged' });
-
-    if (!name) return badRequest(res, 'Customer name is required');
-    const extra = customerExtras(body, existing);
-    if (extra.error) return badRequest(res, extra.error);
-
-    const groups = await resolveGroupIds(body.groupIds);
-    if (groups && groups.error) return badRequest(res, groups.error);
-
-    // Staff changing an email makes it one they typed in, which a sign-in by
-    // code never joins (option 2, 26 Oct); the same email, in any case, stays
-    // the customer's own.
-    await db.prepare(
-      `UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ?,
-              is_company = ?, contact_name = ?, vat_number = ?, invoice_email = ?,
-              email_from_customer = email_from_customer AND lower(trim(coalesce(email, ''))) = lower(trim(coalesce(?, '')))
-        WHERE id = ?`
-    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(),
-      extra.isCompany, extra.contactName, extra.vatNumber, extra.invoiceEmail, email, id);
-    if (groups) await setCustomerGroups(id, groups.ids);
+    // The customer is read again FOR UPDATE inside a transaction, so a second
+    // save waits for this one and starts from what it wrote: a phone number
+    // and a note saved at once both stay (more-saves-dont-clash). The checks
+    // are unchanged; a refusal rolls back, having written nothing.
+    await db.exec('BEGIN');
+    try {
+      const refused = await saveCustomer(id, body);
+      if (refused) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, refused.status, refused.body);
+      }
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
   });
@@ -459,18 +485,35 @@ export function register(route) {
     if (!existing) return notFound(res, 'Bike not found');
     const body = await readJsonBody(req);
 
-    const make = body.make !== undefined ? String(body.make).trim() : existing.make;
-    const model = body.model !== undefined ? String(body.model).trim() : existing.model;
-    if (!make && !model) return badRequest(res, 'Make or model is required');
-    const colour = body.colour !== undefined ? String(body.colour).trim() : existing.colour;
-    const serialNumber = body.serialNumber !== undefined ? String(body.serialNumber).trim() : existing.serial_number;
-    const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
-    const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+    // Read again FOR UPDATE inside a transaction, so a colour and a frame
+    // number saved at once both stay (more-saves-dont-clash).
+    await db.exec('BEGIN');
+    try {
+      const current = await db.prepare('SELECT * FROM customer_bikes WHERE id = ? FOR UPDATE').get(id);
+      if (!current) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Bike not found');
+      }
+      const make = body.make !== undefined ? String(body.make).trim() : current.make;
+      const model = body.model !== undefined ? String(body.model).trim() : current.model;
+      if (!make && !model) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Make or model is required');
+      }
+      const colour = body.colour !== undefined ? String(body.colour).trim() : current.colour;
+      const serialNumber = body.serialNumber !== undefined ? String(body.serialNumber).trim() : current.serial_number;
+      const notes = body.notes !== undefined ? String(body.notes).trim() : current.notes;
+      const active = body.active !== undefined ? (body.active ? 1 : 0) : current.active;
 
-    await db.prepare(
-      `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?, updated_at = ?
-       WHERE id = ?`
-    ).run(make, model, colour, serialNumber, notes, active, nowIso(), id);
+      await db.prepare(
+        `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?, updated_at = ?
+         WHERE id = ?`
+      ).run(make, model, colour, serialNumber, notes, active, nowIso(), id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
     sendJson(res, 200, serializeBike(row));
   });
