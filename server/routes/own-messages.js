@@ -66,7 +66,8 @@ export function register(route) {
   });
 
   // A new time, or switching back on, starts the count again (design 2), so
-  // no backlog of past collections, days or sales goes at once.
+  // no backlog of past collections, days or sales goes at once. Leaving out
+  // `enabled` keeps it as it was (review 3).
   // screens: settings
   route('PUT', '/api/own-messages/:id', async (req, res, params) => {
     if (await ownerOnly(req, res)) return;
@@ -81,9 +82,9 @@ export function register(route) {
     const row = await prepare(
       `UPDATE shop_messages SET
          active_from = CASE WHEN send_when <> ? OR amount <> ? OR unit <> ? OR (NOT enabled AND ?) THEN now() ELSE active_from END,
-         name = ?, send_when = ?, amount = ?, unit = ?, by_text = ?, by_email = ?, wording = ?, enabled = ?, updated_at = now()
+         name = ?, send_when = ?, amount = ?, unit = ?, by_text = ?, by_email = ?, wording = ?, enabled = COALESCE(?, enabled), updated_at = now()
        WHERE id = ? RETURNING *`
-    ).get(m.sendWhen, m.amount, m.unit, m.enabled ?? true, m.name, m.sendWhen, m.amount, m.unit, m.byText, m.byEmail, m.wording, m.enabled ?? true, id);
+    ).get(m.sendWhen, m.amount, m.unit, m.enabled === true, m.name, m.sendWhen, m.amount, m.unit, m.byText, m.byEmail, m.wording, m.enabled ?? null, id);
     if (!row) return notFound(res, 'No such message');
     sendJson(res, 200, asJson(row));
   });

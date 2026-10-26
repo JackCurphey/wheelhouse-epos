@@ -278,3 +278,27 @@ test('checked again as it goes: a customer who took back their yes gets nothing'
   } while (!['undone', 'delivered', 'failed'].includes(state) && Date.now() < end);
   assert.equal(state, 'undone');
 });
+
+// Review findings 2 and 3.
+test('before a booked job: a booking made after the message was set up still gets it, inside the time', async () => {
+  const m = await add({ ...SPRING, name: 'See you Monday', sendWhen: 'before_booked', amount: 7, unit: 'days' });
+  // Set up yesterday: a booking made today for five days' time is inside the seven days.
+  await inShop(() => prepare('UPDATE shop_messages SET active_from = ? WHERE id = ?').run(londonInstant('2026-09-01', '12:00').toISOString(), m.id));
+  const c = await customer();
+  const late = await job(c, { jobDate: '2026-09-07' });
+  await inShop(() => prepare('UPDATE workshop_jobs SET created_at = ? WHERE id = ?').run(londonInstant('2026-09-02', '10:00').toISOString(), late));
+  const before = await job(c, { jobDate: '2026-09-06' });
+  await inShop(() => prepare('UPDATE workshop_jobs SET created_at = ? WHERE id = ?').run(londonInstant('2026-08-20', '10:00').toISOString(), before));
+  await run();
+  const jobs = (await queued(m.id)).map((r) => r.job_id);
+  assert.equal(jobs.includes(late), true, 'booked after it was set up');
+  assert.equal(jobs.includes(before), false, 'booked before, and its seven days began before it was set up');
+});
+
+test('a change that leaves out On or Off keeps it as it was', async () => {
+  const m = await add({ ...SPRING, name: 'Stays off' });
+  await staff(`/api/own-messages/${m.id}`, { method: 'PUT', body: { ...SPRING, name: 'Stays off', enabled: false } });
+  const res = await staff(`/api/own-messages/${m.id}`, { method: 'PUT', body: { ...SPRING, name: 'Stays off, new words', wording: 'New.' } });
+  assert.equal(res.body.enabled, false);
+});
+
