@@ -8,7 +8,7 @@ import { installDom, importFresh } from '../helpers/dom.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const JO = { id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false, shopName: 'North Street Cycles', shopSlug: 'north-street' };
-const OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+const OFF = { showLegend: true, statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
 
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -67,7 +67,9 @@ test('Your settings, as drawn: whose they are, the switch built, off, and change
   // Larger text after Reduce motion (larger-text design 3).
   const switches = dialog.getAllByRole('switch').map((el) => el.getAttribute('aria-label'));
   // Don't close things by themselves between them (app-map.mjs ys-wait; dont-close-screens).
-  assert.deepEqual(switches, ['Show status symbols', 'Reduce motion', 'Don’t close things by themselves', 'Larger text', 'Folded sidebar']);
+  // Show the diary legend first, on (diary-legend-box; app-map.mjs ys-legend).
+  assert.deepEqual(switches, ['Show the diary legend', 'Show status symbols', 'Reduce motion', 'Don’t close things by themselves', 'Larger text', 'Folded sidebar']);
+  assert.ok(dialog.queryByText('The key to what each colour means, beside the Workshop diary. Switch it off once you know them.') !== null);
   assert.ok(dialog.queryByText('Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.') !== null);
   assert.ok(dialog.queryByText('Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.') !== null);
   // Standard service is in Larger text's preview too.

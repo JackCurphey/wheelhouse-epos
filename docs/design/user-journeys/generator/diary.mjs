@@ -108,6 +108,12 @@ const STATUS_SHAPE = {
 // reuses jobBlock/weekGrid for its before/after boards) sees the same
 // default rather than diverging from it.
 export const SHOW_STATUS_SYMBOLS = false;
+// Your settings' "Show the diary legend" (Jack, 26 Oct): on unless switched off.
+export let SHOW_LEGEND = true;
+// Jack, 26 Oct (option 2 of two drawn): the legend is a box headed "Legend"
+// at the top of the Waiting column. Views with no Waiting column (the
+// mechanic's, the upright tablet) have it under the toolbar.
+const LEGEND_IN_COLUMN = true;
 function statusDot(key, size = 13) {
   const [, ink] = ST[key];
   return `<svg width="${size}" height="${size}" viewBox="0 0 10 10" aria-hidden="true" style="position: absolute; top: 4px; right: 4px; flex-shrink: 0; filter: drop-shadow(0 0 1px rgba(255,255,255,0.9))">${STATUS_SHAPE[key](ink)}</svg>`;
@@ -548,8 +554,11 @@ function waitingCard(w, size, selected = false) {
   const selectHref = w.kind === 'Change request' ? `change-selected-${size}.dc.html` : `waiting-open-${size}.dc.html`;
   return `<a href="${selectHref}" style="display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}">${inner}</a>`;
 }
+// The legend as a box, one colour a line, for the Waiting column (LEGEND_IN_COLUMN).
+const legendBox = () => card(`<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px"><h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 14px; font-weight: 700">Legend</h2>${diaryLegendItems().join('')}</div>`);
 function waitingColumn(size, selectedIdx = -1, width = 224, hint = false) {
   return `<div style="display: flex; flex-direction: column; gap: 8px; width: ${width}px; flex-shrink: 0">
+${LEGEND_IN_COLUMN && SHOW_LEGEND ? `${legendBox()}<div style="height: 4px"></div>` : ''}
 <h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 14px; font-weight: 700">Waiting for you (${WAITING.length})</h2>
 ${WAITING.map((w, i) => waitingCard(w, size, i === selectedIdx)).join('')}
 ${hint ? note(size === 'desktop' ? 'Double-click a card to open it.' : 'Tap the card again to open it.') : ''}
@@ -1324,7 +1333,9 @@ function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeVie
 // SHOW_STATUS_SYMBOLS is on (the same flag jobBlock/pendingBlock use), in
 // which case the swatch carries the same shape as the grid's blocks so the
 // legend stays a literal key to what's drawn.
-const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, answer: ST.answer, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => [k, [bg, ink, k === 'scheduled' ? 'Expected, booked in or in the workshop' : label]]).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${SHOW_STATUS_SYMBOLS ? statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;') : ''}</span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
+const diaryLegendItems = () => Object.entries({ scheduled: ST.scheduled, pending: ST.pending, answer: ST.answer, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => [k, [bg, ink, k === 'scheduled' ? 'Expected, booked in or in the workshop' : label]]).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${SHOW_STATUS_SYMBOLS ? statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;') : ''}</span>${label}</span>`);
+// Under the toolbar, unless it's in the Waiting column (LEGEND_IN_COLUMN) on a view that has one.
+const diaryLegend = (hasColumn = true) => (LEGEND_IN_COLUMN && hasColumn ? '' : row(diaryLegendItems().join(''), 16, 'flex-wrap: wrap'));
 // Decision 13: the mechanic's diary is the standard diary filtered to that
 // mechanic, with one Me / Everyone switch in the normal toolbar position.
 // Mechanics can't accept bookings, but they can create a walk-in job (chosen
@@ -1547,9 +1558,10 @@ function tabletDiaryContent({ mechFilter = 'Everyone', activeView = 'Week', sele
     ? dayMechGrid({ dayIdx: TODAY, size, slotH: 30, highlightJob })
     : weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size, slotH: 30, mechFilter: mechanic ? 'Alex' : mechFilter, highlightJob, pickMode, selectSlot, forceExpandStack, overlayFor });
   const body = mechanic ? row(grid, 14, 'align-items: flex-start') : row(`${waitingColumn(size, selectedIdx, T_WAIT_W, hint)}${grid}`, 14, 'align-items: flex-start');
-  return stack(`${toolbar}${pickMode ? pickInstructionBar(size) : ''}
-${body}
-${legend && !pickMode ? diaryLegend() : ''}`, pickMode ? 8 : 12);
+  // Jack, 26 Oct: the legend sits at the top, under the toolbar, and each
+  // person can switch it off in Your settings (ys-legend).
+  return stack(`${toolbar}${pickMode ? pickInstructionBar(size) : ''}${legend && !pickMode && SHOW_LEGEND ? `\n${diaryLegend(!mechanic)}` : ''}
+${body}`, pickMode ? 8 : 12);
 }
 export const tabletDiary = (opts = {}, shellOpts = {}) => shellTablet('diary', 'Workshop diary', tabletDiaryContent(opts), shellOpts);
 const MECH_SHELL = { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' };
@@ -1570,8 +1582,8 @@ export function uprightTabletDiary() {
   const grid = weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size, slotH: 30, mechFilter: 'Everyone' });
   return shellTablet('diary', 'Workshop diary', stack(`${top}
 ${second}
-${row(grid, 0, 'align-items: flex-start')}
-${diaryLegend()}`, 12), { width: PW_UP, height: PH_UP });
+${SHOW_LEGEND ? diaryLegend(false) : ''}
+${row(grid, 0, 'align-items: flex-start')}`, 12), { width: PW_UP, height: PH_UP });
 }
 
 // ---------- Phone diary (one day down a time line) ----------
@@ -1689,8 +1701,8 @@ export const screens = {};
 // instead of a redrawn approximation.
 export function buildDiaryDesktopBoard(overlapStyle = 'stacked') {
   return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
-${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', overlapStyle })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12));
+${SHOW_LEGEND ? diaryLegend() : ''}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', overlapStyle })}`, 16, 'align-items: flex-start')}`, 12));
 }
 screens.diary = {
   desktop: buildDiaryDesktopBoard(),
@@ -1712,8 +1724,8 @@ export function diaryWithJobState(jobNum, key) {
 // 2. diary-mechanic (Mechanic, Alex Morgan) — opens on Me; no Waiting column
 screens['diary-mechanic'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${mechToolbar(true, 'desktop', { newJob: 'new-job-desktop.dc.html' })}
-${row(weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Alex' }), 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12), { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' }),
+${SHOW_LEGEND ? diaryLegend(false) : ''}
+${row(weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Alex' }), 16, 'align-items: flex-start')}`, 12), { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' }),
   tablet: tabletDiary({ mechanic: true, newJob: 'new-job-tablet.dc.html' }, MECH_SHELL),
   phone: phoneDiary({ day: TODAY, mode: 'mechanic' }, { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' }),
 };
@@ -1727,8 +1739,8 @@ keepDesktopSeq('diary-mechanic');
 // view has jumped to Friday, and a bar is pinned at the bottom.
 screens['waiting-open'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
-${row(`${waitingColumn('desktop', 0, 224, true)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'pending' } })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
+${SHOW_LEGEND ? diaryLegend() : ''}
+${row(`${waitingColumn('desktop', 0, 224, true)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'pending' } })}`, 16, 'align-items: flex-start')}`, 12)),
   tablet: tabletDiary({ selectedIdx: 0, hint: true, highlightJob: { type: 'pending' } }),
   // Phone: the Waiting sheet is open and Sam Reed's card has been tapped once
   // — it's highlighted with Open, and the diary behind has jumped to Friday
@@ -1747,8 +1759,8 @@ keepDesktopSeq('waiting-open');
 // two columns on a phone).
 screens['diary-day'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { activeView: 'Day', newJob: 'new-job-day-desktop.dc.html' })}
-${row(`${waitingColumn('desktop', -1)}${dayMechGrid({ dayIdx: TODAY, size: 'desktop' })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
+${SHOW_LEGEND ? diaryLegend() : ''}
+${row(`${waitingColumn('desktop', -1)}${dayMechGrid({ dayIdx: TODAY, size: 'desktop' })}`, 16, 'align-items: flex-start')}`, 12)),
   tablet: tabletDiary({ activeView: 'Day', newJob: 'new-job-day-tablet.dc.html' }),
   // Phone: the Day view is one column per mechanic (decision 18's "Jo's
   // side"), chosen from the people chip ("By mechanic").
@@ -1865,8 +1877,8 @@ export function largerTextPreview(dev = 'desktop') {
 // the current 10:00 booking (WH-1052) is only lightly marked.
 screens['change-selected'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
-${row(`${waitingColumn('desktop', 1, 224, true)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'outline', dim: 'WH-1052' } })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
+${SHOW_LEGEND ? diaryLegend() : ''}
+${row(`${waitingColumn('desktop', 1, 224, true)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'outline', dim: 'WH-1052' } })}`, 16, 'align-items: flex-start')}`, 12)),
   tablet: tabletDiary({ selectedIdx: 1, hint: true, highlightJob: { type: 'outline', dim: 'WH-1052' } }),
   // Phone (decision 68): no curved arrow in a one-column day list — the move
   // is spelled out in the selected-card bar and the requested 14:00 is the
@@ -3100,8 +3112,8 @@ const STACK_EXAMPLE = { day: TODAY, start: 9 * 60 };
 // in a still render.
 screens['diary-stack-hover'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
-${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', forceExpandStack: STACK_EXAMPLE })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
+${SHOW_LEGEND ? diaryLegend() : ''}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', forceExpandStack: STACK_EXAMPLE })}`, 16, 'align-items: flex-start')}`, 12)),
   // Tablet/phone: hover becomes press-and-hold (decision 68) — the stack's
   // jobs fan out in place, centred on it, two per row (decision 61).
   tablet: tabletDiary({ forceExpandStack: STACK_EXAMPLE }),
@@ -3455,8 +3467,8 @@ export const requestAnsweredAt = (size) => withSite('Bolton', () => {
   WAITING.unshift(MAYA_ANSWERED);
   try {
     if (size === 'desktop') return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
-${row(`<div style="display: flex; flex-direction: column; gap: 8px">${waitingColumn('desktop', 0, 224)}<div style="width: 224px">${note(ANSWER_NOTE, 12)}</div></div>${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone' })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12));
+${SHOW_LEGEND ? diaryLegend() : ''}
+${row(`<div style="display: flex; flex-direction: column; gap: 8px">${waitingColumn('desktop', 0, 224)}<div style="width: 224px">${note(ANSWER_NOTE, 12)}</div></div>${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone' })}`, 16, 'align-items: flex-start')}`, 12));
     if (size === 'tablet') return tabletDiary({ selectedIdx: 0 }).replace(`Waiting for you (${WAITING.length})</h2>`, `Waiting for you (${WAITING.length})</h2>${note(ANSWER_NOTE, 12)}`);
     return phoneDiary({ day: TODAY }, {
       overlay: phoneSheet({ id: 'waiting-sheet-title', title: `Waiting for you (${WAITING.length})`, closeHref: 'diary-phone.dc.html', maxH: 560,

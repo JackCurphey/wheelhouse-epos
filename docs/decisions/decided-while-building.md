@@ -2634,6 +2634,14 @@ follows the job checklist, the closest pattern built.
    - the buttons stay focusable while a change saves;
    - a sign-in that has run out says "Please sign in again to change this."
 
+### 26 Oct 2026: the diary's legend as a box (`openspec/changes/diary-legend-box`; Jack's option 2, "Legend", per person)
+
+1. **Below 1024px wide,** where the left-hand column is folded away (an
+   upright tablet), the legend sits under the toolbar, along a line or two.
+   It isn't at the bottom of the diary any more.
+2. **No "Show the diary legend" switch on a phone,** where the diary has no
+   legend, as with Folded sidebar.
+
 ### 26 Oct 2026: company customers (`openspec/changes/company-customers`, `cs-add-company`, the VAT invoice in `collect.mjs`; customer service review 3; leftover screens H2; day answers 26 Oct, 3)
 
 1. **A company's name is the customer's name.** So the customers list, the
