@@ -10,5 +10,5 @@
   "Connected printers".
 - [x] 1.4 Docs: go-live checklist, the two plans' top notes,
   `decided-while-building.md`.
-- [ ] 1.5 Review; lint, `npm test`, `npm run test:browser`; pull request;
+- [x] 1.5 Review; lint, `npm test`, `npm run test:browser`; pull request;
   archive as the last commit.
