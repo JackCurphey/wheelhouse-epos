@@ -50,7 +50,7 @@ const WAITING = {
 // What Waiting for you returns; a test may swap it, and puts it back.
 let waitingReply = WAITING;
 // The person's own switches (Your settings); a test may turn Show status symbols on, and puts it back.
-const A11Y_OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+const A11Y_OFF = { showLegend: true, statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
 let a11yReply = { accessibility: A11Y_OFF };
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -312,7 +312,7 @@ test('choosing a waiting card moves the diary to its week and marks its job', as
 
 test('the legend names each colour', async () => {
   const { ui, within } = await openDiary();
-  const legend = within(ui.getByRole('list', { name: 'What the colours mean' }));
+  const legend = within(ui.getByRole('list', { name: 'Legend' }));
   for (const label of ['Expected, booked in or in the workshop', 'Pending', 'Quoting', 'Change requested', 'Waiting for parts', 'Finished', 'Cancelled']) assert.ok(has(legend.queryByText(label)), label);
 });
 
@@ -485,7 +485,7 @@ test('with Show status symbols on, each week block and the legend carry the stat
   try {
     const { ui, waitFor } = await openDiary();
     await waitFor(() => assert.equal(shapeIn(blockOf(ui, 'Trek Domane')), 'scheduled'));
-    const legend = ui.getByRole('list', { name: 'What the colours mean' });
+    const legend = ui.getByRole('list', { name: 'Legend' });
     assert.deepEqual([...legend.querySelectorAll('li')].map(shapeIn), ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled']);
     assert.ok([...document.querySelectorAll('[data-status-shape]')].every((el) => el.getAttribute('aria-hidden') === 'true'), 'the shapes are hidden from screen readers, which hear the word');
   } finally {
@@ -501,3 +501,36 @@ test('with Show status symbols off, the diary is colour alone, as before', async
   assert.ok(blockOf(ui, 'Trek Domane'), 'the block is there');
   assert.equal(document.querySelectorAll('[data-status-shape]').length, 0);
 });
+
+// The legend as a box headed Legend above Waiting for you (Jack, 26 Oct,
+// option 2; openspec/changes/diary-legend-box); under the toolbar where that
+// column is folded away; none for someone who switched it off.
+test('the legend is a box headed Legend, above Waiting for you', async () => {
+  const { ui } = await openDiary();
+  const box = ui.getByRole('region', { name: 'Legend' });
+  const waiting = ui.getByRole('region', { name: 'Waiting for you (2)' });
+  assert.ok(box.compareDocumentPosition(waiting) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'the legend comes first');
+  assert.equal(box.parentElement, waiting.parentElement, 'in the same column');
+  assert.ok(box.querySelector('ul') !== null);
+});
+
+test('where the column is folded away, the legend sits under the toolbar', async () => {
+  const narrow = (q) => ({ matches: q.includes('1023px'), media: q, addEventListener() {}, removeEventListener() {} });
+  const { ui } = await openDiary('?date=2026-10-05', 'Trek Domane', narrow);
+  const list = ui.getByRole('list', { name: 'Legend' });
+  assert.ok(ui.queryByRole('region', { name: 'Legend' }) === null, 'no box');
+  const grid = document.querySelector('.overflow-x-auto');
+  assert.ok(list.compareDocumentPosition(grid) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'above the diary, not below it');
+});
+
+test('switched off in Your settings, the diary has no legend', async () => {
+  a11yReply = { accessibility: { ...A11Y_OFF, showLegend: false } };
+  try {
+    const { ui, waitFor } = await openDiary();
+    await waitFor(() => assert.ok(ui.queryByRole('list', { name: 'Legend' }) === null));
+    assert.ok(ui.getByRole('region', { name: 'Waiting for you (2)' }));
+  } finally {
+    a11yReply = { accessibility: A11Y_OFF };
+  }
+});
+
