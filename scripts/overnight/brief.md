@@ -22,7 +22,7 @@ owns the screens and the workshop screens; do not touch his files.
 6. Tick the task boxes you finished in the change's `tasks.md`.
 
 The runner, not you, pushes your branch and opens a draft pull request after you
-finish. Do not run git push or gh yourself.
+finish. Do not run git push or gh yourself. You are run without any git credentials on purpose: do not look for any (no `security`, no ssh keys, no tokens), and do not change git config.
 
 ## Hard limits (a breach is a failure, whatever else you achieved)
 - NEVER push, merge, rebase, reset --hard, force anything, delete branches, or
