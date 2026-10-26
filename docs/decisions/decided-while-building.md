@@ -2456,6 +2456,26 @@ follows the job checklist, the closest pattern built.
 4. **No logo** on these pages: the frame's logo slot shows the word
    Wheelhouse only, as no logo file exists.
 
+### 26 Oct 2026: the customer's account, the server (`openspec/changes/customer-account-server`; Jack's answers in `2026-10-26-customer-account.md`)
+
+1. **A repair opened from the account doesn't expire for its owner.** The
+   private link stops working 30 days after collection; a signed-in customer
+   can still open their own past repairs from the account.
+2. **Cancelling from the account links the cancellation message to the
+   account** (`/book/[shop]/account`), not to the job, since a job's
+   account address only opens for its signed-in owner. While sending is
+   pretend, every message's link reads "[link]".
+3. **A repair's total in the history** is what was paid, or else Work
+   agreed's total; with Show prices off it is left out, as on the repair page.
+4. **Purchases** list what was bought, comma-separated, from either sales
+   record; a till sale carries its receipt number, an old sale none.
+5. **After the review:** an action through the account (not a page load) from
+   another website is refused; account answers are never kept by the
+   browser; loading one's own repairs doesn't count toward the private links'
+   "too many attempts" limit. An email staff type in, or change, is marked
+   as not the customer's own (Jack's option 2), so a code sign-in never joins
+   that customer.
+
 ### 26 Oct 2026: customer groups in Settings (`openspec/changes/customer-groups-settings`, `cs-groups`)
 
 1. **Settings › Front desk › Payments shows only Customer groups** for now

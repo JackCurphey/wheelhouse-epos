@@ -144,6 +144,12 @@ export function register(route) {
       const moved = { before: {}, rows: {}, groups: [], logins: [] };
       for (const cols of Object.values(FIELDS)) for (const col of cols) moved.before[col] = kept[col] ?? null;
       for (const col of ANSWERS) moved.before[col] = kept[col] ?? null;
+      // Taking the other record's email takes an email staff may have typed,
+      // so it isn't the customer's own any more and a sign-in by code never
+      // joins it (customer-account-server, review of 26 Oct); Undo restores it.
+      const norm = (e) => String(e ?? '').trim().toLowerCase();
+      const emailMoves = keep.email === 'other' && norm(other.email) !== norm(kept.email);
+      moved.before.email_from_customer = kept.email_from_customer ?? false;
       for (const table of MOVED) {
         moved.rows[table] = (await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? RETURNING id`).all(id, otherId)).map((r) => r.id);
       }
@@ -167,6 +173,8 @@ export function register(route) {
         'UPDATE customers SET service_reminders = ?, review_requests = ?, reminders_said_yes_at = ?, reminders_said_yes_via = ? WHERE id = ?'
       ).run(answers.service_reminders, answers.review_requests, answers.reminders_said_yes_at, answers.reminders_said_yes_via, id);
       for (const col of ANSWERS) moved.after[col] = answers[col] ?? null;
+      if (emailMoves) await prepare('UPDATE customers SET email_from_customer = false WHERE id = ?').run(id);
+      moved.after.email_from_customer = emailMoves ? false : (kept.email_from_customer ?? false);
       await prepare('UPDATE customers SET active = 0, merged_into_id = ?, updated_at = now() WHERE id = ?').run(id, otherId);
       const row = await prepare(
         'INSERT INTO customer_merges (kept_id, other_id, other_was_id, other_client_id, other_name, moved, merged_by_login_id) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?) RETURNING id'
