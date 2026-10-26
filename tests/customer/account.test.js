@@ -28,6 +28,12 @@ const accountServer = ({ me = ME, bikes = BIKES, history = [NOW, BUY, OLD_BUY, P
   const { pathname } = new URL(url, 'http://localhost');
   if (pathname.endsWith('/logout')) return { status: 200, body: { ok: true } };
   if (!me) return { status: 401, body: { error: 'Not signed in' } };
+  if (pathname.endsWith('/me/contact')) {
+    const body = JSON.parse(init.body);
+    if (body.updateChannel === 'whatsapp' && !me.phone) return { status: 400, body: { error: 'We don’t have a mobile number for you, so we can’t text you.' } };
+    me = { ...me, ...body };
+    return { status: 200, body: me };
+  }
   if (pathname.endsWith('/me')) return { status: 200, body: me };
   if (pathname.endsWith('/bikes') && init?.method === 'POST') {
     const made = { id: 70, ...JSON.parse(init.body) };
@@ -190,4 +196,72 @@ test('each bike says when its next service is due, joined to In the shop now; no
   bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
   await bikes.findByText('Brompton C Line · Black');
   assert.ok(bikes.queryByText(/next service due/i) === null);
+});
+
+
+
+// How we contact you (openspec/changes/how-we-contact-you; ac-contact, ac-contact-changed; decision 6).
+test('Change opens the drawn box; a switch saves at once and says so; the way saves; the account follows', async () => {
+  const { ui, requests } = await open();
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const details = w(await ui.findByRole('region', { name: 'Your details' }));
+  fireEvent.click(details.getByRole('button', { name: 'Change how we contact you' }));
+  const box = w(await ui.findByRole('dialog', { name: 'How we contact you' }));
+  assert.ok(box.getByText('Changes save straight away'));
+  assert.ok(box.getByText('Bookings, quotes, and when your bike is ready. You can change how — they can’t be switched off while a bike is with us.'));
+  assert.equal(box.getByRole('radio', { name: 'Text' }).getAttribute('aria-checked'), 'true');
+  assert.ok(box.getByRole('radio', { name: 'WhatsApp' }));
+  const reminders = box.getByRole('switch', { name: 'Service reminders' });
+  assert.equal(reminders.getAttribute('aria-checked'), 'true');
+  assert.equal(box.getByRole('switch', { name: 'Offers and news' }).getAttribute('aria-checked'), 'false');
+  assert.ok(box.getByText('Each of these ends with “Stop these”, which switches that one off without signing in.'));
+  fireEvent.click(reminders);
+  assert.equal((await box.findByRole('status')).textContent, 'Service reminders are off');
+  assert.equal(reminders.getAttribute('aria-checked'), 'false');
+  fireEvent.click(box.getByRole('radio', { name: 'Email' }));
+  await box.findByText('Job updates will come by email');
+  assert.equal(box.getByRole('radio', { name: 'Email' }).getAttribute('aria-checked'), 'true');
+  const puts = requests.filter((r) => r.method === 'PUT').map((r) => r.body);
+  assert.deepEqual(puts, [{ serviceReminders: false }, { updateChannel: 'email' }]);
+  fireEvent.click(box.getByRole('button', { name: 'Done' }));
+  assert.equal(details.getByText('Service reminders').parentElement.textContent, 'Service remindersOff');
+  assert.equal(details.getByText('Job updates').parentElement.textContent, 'Job updatesBy email');
+});
+
+test('a choice the shop refuses says why, and nothing changes', async () => {
+  const { ui } = await open({ me: { ...ME, phone: null } });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const details = w(await ui.findByRole('region', { name: 'Your details' }));
+  fireEvent.click(details.getByRole('button', { name: 'Change how we contact you' }));
+  const box = w(await ui.findByRole('dialog', { name: 'How we contact you' }));
+  fireEvent.click(box.getByRole('radio', { name: 'WhatsApp' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'We don’t have a mobile number for you, so we can’t text you.');
+  assert.equal(box.getByRole('radio', { name: 'WhatsApp' }).getAttribute('aria-checked'), 'false');
+});
+
+// Review of how-we-contact-you, 1 and 4: WhatsApp keeps its capital; a sign-in that ran out says so.
+test('WhatsApp is written WhatsApp; a sign-in that ran out says to sign in again', async () => {
+  const { ui } = await open({ me: { ...ME, updateChannel: 'whatsapp' } });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const details = w(await ui.findByRole('region', { name: 'Your details' }));
+  assert.equal(details.getByText('Job updates').parentElement.textContent, 'Job updatesBy WhatsApp');
+  fireEvent.click(details.getByRole('button', { name: 'Change how we contact you' }));
+  const box = w(await ui.findByRole('dialog', { name: 'How we contact you' }));
+  fireEvent.click(box.getByRole('radio', { name: 'Text' }));
+  await box.findByText('Job updates will come by text');
+  fireEvent.click(box.getByRole('radio', { name: 'WhatsApp' }));
+  await box.findByText('Job updates will come by WhatsApp');
+});
+
+test('a change after the sign-in ran out says to sign in again', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/account.js', exportName: 'AccountScreen', at: 'account', url: '/book/north/account', services: SERVICES,
+    account: (url, init) => (new URL(url, 'http://localhost').pathname.endsWith('/me/contact') ? { status: 401, body: { error: 'Not signed in' } } : accountServer()(url, init)),
+  });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const details = w(await current.ui.findByRole('region', { name: 'Your details' }));
+  fireEvent.click(details.getByRole('button', { name: 'Change how we contact you' }));
+  const box = w(await current.ui.findByRole('dialog', { name: 'How we contact you' }));
+  fireEvent.click(box.getByRole('switch', { name: 'Offers and news' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Please sign in again to change this.');
 });

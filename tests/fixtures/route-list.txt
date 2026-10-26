@@ -157,6 +157,7 @@ POST /api/portal/:shopSlug/sign-in/code
 POST /api/portal/:shopSlug/sign-in/check
 POST /api/portal/:shopSlug/logout
 GET /api/portal/:shopSlug/me
+PUT /api/portal/:shopSlug/me/contact
 GET /api/portal/:shopSlug/mechanics
 GET /api/portal/:shopSlug/services
 GET /api/portal/:shopSlug/terms

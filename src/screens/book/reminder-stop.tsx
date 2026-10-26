@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -118,6 +118,12 @@ export function ReminderStopScreen() {
         <p role="status" className="m-0">{w.stoppedBody}</p>
         {oops}
         <div><Button disabled={busy} onClick={() => void press(false)}>{w.again}</Button></div>
+        {/* The drawn way to everything else (ac-stopped; how-we-contact-you design 3). */}
+        <p className="m-0 text-sm text-[var(--wh-muted)]">
+          Want to change anything else?{' '}
+          <Link to={`/book/${shopSlug}/sign-in?from=${encodeURIComponent(`/book/${shopSlug}/account`)}`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)]">Sign in to your account</Link>
+          {' '}and go to “How we contact you”.
+        </p>
       </BookFrame>
     );
   }

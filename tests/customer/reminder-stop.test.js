@@ -112,3 +112,18 @@ test('a shop’s own message’s link: the same page, stopping just that one, by
   assert.ok((await ui.findByRole('heading', { name: '“Spring check” is on again' })) !== null);
   assert.deepEqual(posts(requests), ['{"stop":true}', '{"stop":false}']);
 });
+
+// how-we-contact-you design 3: once stopped, the drawn way to everything else.
+test('once stopped, it points to the account’s How we contact you', async () => {
+  let on = true;
+  const { ui } = await open((url, init) => {
+    if (init?.method === 'POST') on = !JSON.parse(init.body).stop;
+    return { status: 200, body: { shopName: 'North Street Cycles', kind: 'service_reminders', on } };
+  });
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('button', { name: 'Stop service reminders' }));
+  await ui.findByRole('heading', { name: 'Service reminders stopped' });
+  const link = ui.getByRole('link', { name: 'Sign in to your account' });
+  assert.equal(link.getAttribute('href'), `/book/north/sign-in?from=${encodeURIComponent('/book/north/account')}`);
+  assert.ok(ui.getByText(/Want to change anything else\?/));
+});
