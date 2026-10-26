@@ -162,6 +162,20 @@ test('+ Add a bike opens Add a bike with the booking’s bike fields; the bike s
   assert.deepEqual(post.body, { make: 'Brompton C Line', model: '', colour: 'Black' });
 });
 
+// Review of add-a-bike: the link-style "+ Add a bike" under existing bikes, and the box closes once added.
+test('with bikes already, + Add a bike under them adds another and the box closes', async () => {
+  const { ui } = await open();
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
+  await bikes.findByText('Trek Domane AL 3 · Green');
+  fireEvent.click(bikes.getByRole('button', { name: '+ Add a bike' }));
+  const box = w(await ui.findByRole('dialog', { name: 'Add a bike' }));
+  fireEvent.change(box.getByLabelText('Make and model'), { target: { value: 'Brompton C Line' } });
+  fireEvent.click(box.getByRole('button', { name: 'Add bike' }));
+  assert.ok(await bikes.findByText('Brompton C Line'));
+  assert.ok(ui.queryByRole('dialog') === null, 'the box closes');
+});
+
 // next-service-due design 3 (ac-account, audit L10): the reminder's day, only while reminders are on.
 test('each bike says when its next service is due, joined to In the shop now; nothing with reminders off', async () => {
   const bikesDue = [{ ...BIKES[0], nextServiceDue: '2027-03-17' }, { id: 8, make: 'Brompton', model: 'C Line', colour: 'Black', nextServiceDue: '2027-05-04' }];
@@ -177,4 +191,3 @@ test('each bike says when its next service is due, joined to In the shop now; no
   await bikes.findByText('Brompton C Line · Black');
   assert.ok(bikes.queryByText(/next service due/i) === null);
 });
-
