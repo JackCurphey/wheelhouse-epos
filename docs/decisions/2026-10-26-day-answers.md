@@ -65,3 +65,16 @@ What it unblocks, as drawn (`cs-add-company`; collect.mjs's VAT invoice):
   name, contact name, an optional VAT number and "Send invoices to";
 - a company's emailed receipt is headed "VAT invoice", with an "Invoice to"
   block.
+
+## 4. Spreadsheet downloads
+
+**Both** (Jack: "Both"):
+- **A Download button on each list now:** customers, workshop jobs and
+  sales each give their own spreadsheet file, as the reports drawings show
+  "Download (a spreadsheet)" on each (`2026-10-01-reports-and-accounts-review.md`).
+- **"Download everything" stays as decided on 25 Oct**
+  (`2026-10-25-morning-questions.md` answer 10): one zip of all four
+  spreadsheets, once stock exists.
+
+(The question was asked again by mistake: STATUS still listed it as open
+after the 25 Oct answer. Jack confirmed the 25 Oct answer stands alongside.)
