@@ -44,6 +44,13 @@ export default {
     '[Bike] · Collected Cycle to Work · Quote [quote number] · collected [date] · receipt ›': go('cw-customer-view'),
     'Message Note on WH-1042 [date] · North Street Cycles replied Replied ›': NOTE_ANSWERED,
     'Note on WH-1042 Message · [date] · North Street Cycles replied Replied ›': NOTE_ANSWERED,
+    // One conversation per customer (Jack, 26 Oct, day answers 2.3 and 8): one history row.
+    'Messages Messages with North Street Cycles [date] · North Street Cycles replied Replied ›': QUESTION,
+    'Messages with North Street Cycles Messages · [date] · North Street Cycles replied Replied ›': QUESTION,
+    'Messages Messages with North Street Cycles [date] · waiting for a reply Sent ›': go('ac-account-question-sent'),
+    'Messages with North Street Cycles Messages · [date] · waiting for a reply Sent ›': go('ac-account-question-sent'),
+    // A repair note in the conversation opens its repair (day answers 2.5).
+    'About WH-1042 ›': JOB_IN_SHOP,
     'Message [The first line of Maya’s question] [date] · North Street Cycles replied Replied ›': QUESTION,
     '[The first line of Maya’s question] Message · [date] · North Street Cycles replied Replied ›': QUESTION,
     'Message [The first line of Maya’s question] [date] · waiting for a reply Sent ›': QUESTION_WAITING,
@@ -84,7 +91,8 @@ export default {
     'Move Safety check — drag, or use the arrow keys': STAY,
     'Sign in to your account': go('cust-signin'),
   },
-  'ac-ask': { 'Send question': go('ac-account-question-sent') },
+  'ac-ask': { 'Send question': go('ac-account-question-sent'), Send: go('ac-account-question-sent') },
+  'ac-account-question-sent': { Send: STAY },
   'ac-question': { Send: STAY },
   'ac-job-note': { 'Send note': go('ac-job-note-sent') },
   'ac-job-note-sent': { Send: STAY },
