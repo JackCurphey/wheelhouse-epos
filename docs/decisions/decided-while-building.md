@@ -2641,3 +2641,19 @@ follows the job checklist, the closest pattern built.
    It isn't at the bottom of the diary any more.
 2. **No "Show the diary legend" switch on a phone,** where the diary has no
    legend, as with Folded sidebar.
+
+### 26 Oct 2026: the print agent removed (`openspec/changes/drop-print-agent`; Jack's decision in `2026-10-26-day-answers.md` section 5)
+
+1. **Removed:** the label printer helper (`print-agent/`), its four
+   `/api/print-agents` routes and their test. Nothing was kept in a table,
+   so no migration.
+2. **The old app's stickers** still print, through the browser's print box
+   only: its "Send straight to" printer choice and the dashboard's
+   "Connected printers" panel are gone, as the old app is a placeholder.
+3. **The id check's test** that a non-id param is left alone now uses a
+   message template's name (`shop_reply`), since the print job id it used
+   is gone.
+4. **Kept as history:** decisions, reviews, older plans and the drawings
+   that name the helper. The go-live checklist and both plans say it was
+   removed. The `job-book-in` drawing still shows "Bike tag sent ·
+   Acknowledged"; the built bike tag follows `2026-10-21-bike-tag.md`.

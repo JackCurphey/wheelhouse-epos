@@ -70,14 +70,15 @@ test('a well-formed id that does not exist still answers the route\'s own 404', 
   assert.equal(res.status, 404);
 });
 
-test('a param that is not a row id is left alone: a print job id is hex', async () => {
-  // POST /api/print-agents/:deviceId/jobs mints randomBytes(8).toString('hex').
-  const res = await staffRequest(server.baseUrl, staff.cookie, '/api/print-agents/jobs/9f2c4a1b7e3d5c60/complete', {
+test('a param that is not a row id is left alone: a message template key is a word', async () => {
+  // /api/message-templates/:key takes a name like shop_reply, never a number,
+  // so the id check must leave :key alone. (This used the print job's hex id
+  // until the print agent was removed, 26 Oct.)
+  const res = await staffRequest(server.baseUrl, staff.cookie, '/api/message-templates/shop_reply/preview', {
     method: 'POST',
-    body: { ok: true },
+    body: {},
   });
-  // It reaches the handler, which knows no such job (print jobs are per shop
-  // since 25 Oct), not the id check's own Not found.
-  assert.equal(res.status, 404, JSON.stringify(res.body));
-  assert.deepEqual(res.body, { error: 'No such print job' });
+  // It reaches the handler and gets the preview, not the id check's Not found.
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(typeof res.body.text, 'string');
 });

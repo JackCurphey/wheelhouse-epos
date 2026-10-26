@@ -45,10 +45,6 @@ POST /api/team/logins/:loginId/reactivate
 DELETE /api/employees/:id/permanent
 GET /api/employees
 PUT /api/employees/:id
-POST /api/print-agents/checkin
-GET /api/print-agents
-POST /api/print-agents/:deviceId/jobs
-POST /api/print-agents/jobs/:printJobId/complete
 GET /api/customers/:id/texts
 POST /api/customers/:id/texts
 GET /api/messages
