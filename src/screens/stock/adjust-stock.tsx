@@ -34,7 +34,7 @@ function whole(text: string): number | null {
 const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t adjust the stock. Try again in a moment.');
 const pillClass = (on: boolean) =>
   `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${on ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--input)] bg-[var(--wh-panel)]'}`;
-const field = 'min-h-11 rounded-md border border-[var(--input)] bg-white px-2.5 text-size-15 text-[var(--wh-ink)]';
+const field = 'min-h-11 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-size-15 text-[var(--wh-ink)]';
 const stepBtn = 'size-11 border-0 bg-[var(--wh-panel)] text-xl text-[var(--wh-ink)]';
 
 export function AdjustStock({ product, shopName, onClose }: { product: Product; shopName: string; onClose: () => void }) {
@@ -107,7 +107,7 @@ export function AdjustStock({ product, shopName, onClose }: { product: Product; 
             <span role="group" aria-label="Change in stock" className="inline-flex shrink-0 items-center self-start overflow-hidden rounded-lg border border-[var(--wh-border)]">
               <button type="button" aria-label="One fewer" className={stepBtn} onClick={() => step(-1)}>−</button>
               <input inputMode="numeric" aria-label="How many" value={changeText} onChange={(e) => typeChange(e.target.value)}
-                className={`h-11 w-[52px] border-x border-y-0 border-[var(--wh-border)] bg-white text-center text-size-15 text-[var(--wh-ink)] ${mono}`} />
+                className={`h-11 w-[52px] border-x border-y-0 border-[var(--wh-border)] bg-[var(--wh-panel)] text-center text-size-15 text-[var(--wh-ink)] ${mono}`} />
               <button type="button" aria-label="One more" className={stepBtn} onClick={() => step(1)}>+</button>
             </span>
           </div>
