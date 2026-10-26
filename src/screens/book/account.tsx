@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { BookFrame } from './frame.tsx';
 import { pounds } from './money.ts';
 import { STAGE_TEXT } from './pending-rules.ts';
@@ -98,7 +99,7 @@ export function AccountScreen() {
 
   const items = history.data;
   const bookLink = <Link to={home} className={cn(buttonVariants({ variant: 'accent' }), 'no-underline')}>Book a repair</Link>;
-  const bikesCard = <BikesCard bikes={bikes.data} items={items} bookLink={bookLink} />;
+  const bikesCard = <BikesCard bikes={bikes.data} items={items} bookLink={bookLink} shopSlug={shopSlug} />;
   return (
     <BookFrame title="Your account" wide>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -130,10 +131,19 @@ function Card({ id, title, aside, children }: { id: string; title: string; aside
   );
 }
 
-function BikesCard({ bikes, items, bookLink }: { bikes: Bike[]; items: Item[]; bookLink: React.ReactNode }) {
+function BikesCard({ bikes, items, bookLink, shopSlug }: { bikes: Bike[]; items: Item[]; bookLink: React.ReactNode; shopSlug: string }) {
   const idBase = React.useId();
+  const [adding, setAdding] = React.useState(false);
+  // "+ Add a bike": a button on the empty card, a link-style one under the bikes, as drawn (add-a-bike design 2).
+  const addBox = adding ? <AddBike shopSlug={shopSlug} onClose={() => setAdding(false)} /> : null;
   if (!bikes.length) {
-    return <Card id={`${idBase}-bikes`} title="Your bikes"><p className="m-0 text-size-15 text-[var(--wh-muted)]">No bikes yet. Add one to book it in faster.</p></Card>;
+    return (
+      <Card id={`${idBase}-bikes`} title="Your bikes">
+        <p className="m-0 text-size-15 text-[var(--wh-muted)]">No bikes yet. Add one to book it in faster.</p>
+        <div><Button onClick={() => setAdding(true)}>+ Add a bike</Button></div>
+        {addBox}
+      </Card>
+    );
   }
   return (
     <Card id={`${idBase}-bikes`} title="Your bikes">
@@ -148,7 +158,58 @@ function BikesCard({ bikes, items, bookLink }: { bikes: Bike[]; items: Item[]; b
           </div>
         );
       })}
+      <div><button type="button" onClick={() => setAdding(true)} className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">+ Add a bike</button></div>
+      {addBox}
     </Card>
+  );
+}
+
+/**
+ * Add a bike from the account (openspec/changes/add-a-bike design 2; not-drawn
+ * pages 16): the booking's bike fields ("A different bike" on bk-bike). The
+ * make and model go in as one, as the booking's guest bike does.
+ */
+function AddBike({ shopSlug, onClose }: { shopSlug: string; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = React.useState('');
+  const [colour, setColour] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const field = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-size-15';
+
+  async function add() {
+    if (!name.trim()) { setError('Enter its make and model.'); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await apiMutate(`/api/portal/${encodeURIComponent(shopSlug)}/bikes`, { make: name.trim(), model: '', colour: colour.trim() }, { method: 'POST' });
+      await queryClient.invalidateQueries({ queryKey: ['account', shopSlug, 'bikes'] });
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 400 ? 'Enter its make and model.' : 'That didn’t go through. Check your connection and try again.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="acc-add-bike" className="md:max-w-[520px]">
+      <DialogHeader><DialogTitle id="acc-add-bike">Add a bike</DialogTitle></DialogHeader>
+      <DialogBody className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="acc-bike-name" className="text-sm font-semibold">Make and model</label>
+          <input id="acc-bike-name" autoComplete="off" className={field} value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="acc-bike-colour" className="text-sm font-semibold">Colour, or anything that helps us spot it</label>
+          <input id="acc-bike-colour" autoComplete="off" className={field} value={colour} onChange={(e) => setColour(e.target.value)} />
+        </div>
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="flex justify-end gap-2.5">
+        <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant="accent" disabled={busy} onClick={() => void add()}>Add bike</Button>
+      </DialogFooter>
+    </Dialog>
   );
 }
 

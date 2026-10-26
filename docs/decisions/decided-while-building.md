@@ -2580,3 +2580,22 @@ follows the job checklist, the closest pattern built.
    job" is chosen.
 4. **No preview.** None is drawn for this box; the built-in messages' box
    has one.
+
+### 26 Oct 2026: a repair opened from the account (follow-up to `customer-account-screens`)
+
+1. **A repair opened from the customer's account** (`job-<id>`) no longer
+   says "Keep this link to check your booking" or offers Copy link. That
+   link works only for the customer, signed in. It shows "Your account"
+   instead, a way back to the account, as the question page's back link
+   is drawn (`qa-question`).
+
+### 26 Oct 2026: adding a bike (`openspec/changes/add-a-bike`, `cs-page`, `ac-account`; not-drawn pages 16, 17 and 23)
+
+1. **Staff "+ Add" beside Bikes** opens "Add a bike". It has the new-job
+   dialog's fields (Make, Model, Colour, Serial number), with Cancel and Add
+   bike.
+2. **The account's "+ Add a bike"** opens "Add a bike". It has the booking's
+   fields ("Make and model", "Colour, or anything that helps us spot it").
+   The make and model are saved as one, as the booking's guest bike is.
+3. **The account's add-bike route** refuses another website, as the
+   account's job actions do.
