@@ -2476,6 +2476,35 @@ follows the job checklist, the closest pattern built.
    as not the customer's own (Jack's option 2), so a code sign-in never joins
    that customer.
 
+### 26 Oct 2026: the customer's account, the screens (`openspec/changes/customer-account-screens`, `ac-account`, `ac-account-repairs`, `ac-account-new`)
+
+1. **Left out until their pieces are built:**
+   - "Ask the shop a question";
+   - store credit;
+   - the warranty and "next service due" lines;
+   - "+ Add a bike";
+   - Edit and Change for details and contact choices;
+   - a purchase's receipt;
+   - Your data.
+
+   Each part shows only when its server work exists, so nothing on the page
+   is a button that does nothing.
+2. **A purchase's number** is the till's receipt number, or "No. [id]" for
+   an old sale. The drawn "B1-[0000]" waits for till receipt codes.
+3. **A repair's chip** is the tracker's current step: Booked, In the shop,
+   Being worked on or Ready. Its past line is "[date] · collected", or
+   cancelled, declined or request expired.
+4. **Signing in with no page to return to** now lands on the account
+   rather than the booking page.
+5. **The account is the only customer page wider than a phone.** It has two
+   columns from 1024px, as drawn. Every other customer page stays
+   phone-width.
+6. **With nothing earlier yet**, the history leaves out the "Earlier, newest
+   first" heading. An empty name or mobile shows as a blank row.
+7. **Still to do:** a repair opened from the account still says "Keep this
+   link to check your booking" with Copy link. That link only works for the
+   signed-in owner.
+
 ### 26 Oct 2026: customer groups in Settings (`openspec/changes/customer-groups-settings`, `cs-groups`)
 
 1. **Settings › Front desk › Payments shows only Customer groups** for now

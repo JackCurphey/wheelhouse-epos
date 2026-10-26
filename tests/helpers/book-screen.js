@@ -44,6 +44,8 @@ export async function renderBookScreen({
   file, exportName, at, url, services, draft, mechanics = NO_MECHANICS, availability = NO_AVAILABILITY,
   terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state, real = {}, strict = false,
   media, photoCode = NO_LINK, depositHold = NO_LINK, card = NO_LINK, later, stopCode = NO_LINK, signIn = NO_LINK,
+  // The account's /me, /bikes, /history and /logout (customer-account-screens).
+  account = () => ({ status: 401, body: { error: 'Not signed in' } }),
 }) {
   const uninstall = installDom(`http://localhost${url}`);
   // A pretend screen: media(query) says which media queries match, as a phone
@@ -83,6 +85,7 @@ export async function renderBookScreen({
             : pathname.includes('/photo-codes/') ? photoCode
             : pathname.includes('/reminder-stops/') ? stopCode
             : pathname.includes('/sign-in/') ? signIn
+            : /\/(me|bikes|history|logout)$/.test(pathname) ? account
             : pathname.endsWith('/deposit-holds') ? depositHold
             : pathname.includes('/pretend-payments/') ? card
             : pathname.endsWith('/bookings') ? booking
@@ -127,7 +130,7 @@ export async function renderBookScreen({
   for (const [path, name] of Object.entries(real)) {
     realScreens[path] = (await importFresh(new URL(`screens/book/${path}.js`, BUILD).href))[name];
   }
-  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code', 'stop/:code', 'sign-in']
+  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code', 'stop/:code', 'sign-in', 'account']
     .map((p) => ({ ...child(p), Component: p === at ? Screen : realScreens[p] ?? Where }));
   const start = new URL(url, 'http://localhost');
   const entry = state ? { pathname: start.pathname, search: start.search, state } : url;
