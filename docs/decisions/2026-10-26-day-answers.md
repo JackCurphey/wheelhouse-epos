@@ -85,3 +85,9 @@ after the 25 Oct answer. Jack confirmed the 25 Oct answer stands alongside.)
 Till › Tills"). The owner adds a printer there, gets its key, and can remove
 it. Not drawn, so it is drawn first for Jack to approve. Helpers already
 signed in keep working up to 30 days meanwhile.
+
+## 6. Discounts at the till
+
+**Wait for Mark's step C** (Jack: "Wait for step C"). They come in slice B,
+on the new till, so the money part is built once. Customer group discounts
+already work at the till meanwhile.
