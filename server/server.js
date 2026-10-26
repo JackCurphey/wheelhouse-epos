@@ -433,7 +433,14 @@ const server = createServer((req, res) => {
 
 async function dispatch(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const pathname = decodeURIComponent(url.pathname);
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    // An address with a broken escape (/%ZZ) is the asker's mistake: 400, and
+    // nothing worth a stack trace in the log.
+    return badRequest(res);
+  }
 
   // Deliberately ahead of every other branch: an orchestrator's health probe
   // must never be mistaken for a shop/storefront route (and must never wait
@@ -588,8 +595,11 @@ async function dispatch(req, res) {
           await r.handler(req, res, params, url.searchParams, till);
         });
       } catch (err) {
+        // The details go to the log; a till, a website visitor and someone
+        // signing in get the same fixed words, never a database's message
+        // (server-stays-up-when-busy). Signed-in staff routes below are as before.
         console.error(err);
-        if (!res.headersSent) sendJson(res, 500, { error: err.message || 'Internal server error' });
+        if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
       }
       return;
     }
@@ -617,7 +627,7 @@ async function dispatch(req, res) {
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
-          sendJson(res, 500, { error: err.message || 'Internal server error' });
+          sendJson(res, 500, { error: 'Internal server error' });
         }
         return;
       }
@@ -632,7 +642,7 @@ async function dispatch(req, res) {
         await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, shop));
       } catch (err) {
         console.error(err);
-        sendJson(res, 500, { error: err.message || 'Internal server error' });
+        sendJson(res, 500, { error: 'Internal server error' });
       }
       return;
     }
@@ -657,7 +667,7 @@ async function dispatch(req, res) {
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
-          sendJson(res, 500, { error: err.message || 'Internal server error' });
+          sendJson(res, 500, { error: 'Internal server error' });
         }
         return;
       }

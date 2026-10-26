@@ -36,6 +36,11 @@
 - Sign-in by emailed code makes the customer's session on the request's own
   connection. Sign-up and log-in with a password (which run outside any
   shop's connection) are unchanged.
+- After review (26 Oct): a cookie that isn't a valid escape, such as another
+  app's `promo=50%off`, is kept as it is rather than failing every request;
+  a person who isn't signed in never sees the database's words in an error,
+  only "Internal server error"; and an address that can't be read gets 400
+  "Bad request".
 - No other behaviour changes: same answers, same shop for each request, same
   row-level security.
 
@@ -64,4 +69,5 @@ touched.
 - `validateNewLogin` (`server/auth.js:74`), reached when the Owner adds a team
   member, inside the shop's connection: the same second connection, on an
   Owner-only screen. Noted in design.md, not changed here.
-- Answering an address that can't be read with 400 rather than 500.
+- The signed-in staff routes' error answers, which still carry the error's
+  own words.

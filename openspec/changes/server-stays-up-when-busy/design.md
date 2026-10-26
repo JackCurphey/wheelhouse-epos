@@ -59,10 +59,27 @@ Follows `server-connection-per-request` and `portal-connection-per-request`
    ?').get(shopId)`, as `workshop.js` and `job-messages.js` already do. `pool`
    is no longer imported by those three files, so a new `pool.query` there
    would need a new import.
-3. `createCustomerSession(loginId, { onShopConnection: true })` from sign-in
-   by code: the row goes on the request's own connection
-   (`prepare(...).get`). Without the option it uses the pool exactly as before,
-   for sign-up and log-in.
+3. `createCustomerSession(loginId)` puts the row on the request's own
+   connection (`prepare(...).get`) when it is called inside a shop's scope
+   (`dbContext.getStore()`), which is sign-in by code. Outside one (sign-up and
+   log-in) it uses the pool exactly as before. (First built as an
+   `onShopConnection` option; the review suggested deciding from the scope.)
+
+### Review follow-ups (26 Oct)
+
+4. `parseCookies` (`server/lib/http.js`): a cookie value that is not a valid
+   escape keeps its raw value, as the `cookie` package does. Before, one such
+   cookie from another app on the same domain (`promo=50%off`) made every
+   request from that browser fail with 500. A `wh_session=%ZZ` is now simply a
+   sign-in that isn't there (401).
+5. The inner catches that answer people who aren't signed in (the till branch,
+   the website's sign-up/log-in/log-out, the website's routes, and
+   `/api/auth/*`) answer the same fixed `{ error: 'Internal server error' }`
+   and log the details. Before, they sent `err.message`, so a visitor could
+   read Postgres's or the pool's words. The signed-in staff branch still
+   sends `err.message`, unchanged: only staff of that shop can reach it.
+6. An address with a broken escape (`/%ZZ`) answers 400
+   `{ error: 'Bad request' }` and logs nothing.
 
 ## Why shop isolation is unchanged
 
@@ -92,9 +109,19 @@ Follows `server-connection-per-request` and `portal-connection-per-request`
 ## Tests
 
 - `tests/server-stays-up.test.js`, each case on its own server: a staff
-  cookie `%00` and `%ZZ`, `/api/portal/%00/services`, `/?storefrontSlug=%00`
-  and `/%ZZ` each get 500 `{ error: 'Internal server error' }`, then
-  `/healthz` answers 200.
+  cookie `%00`, `/api/portal/%00/services` and `/?storefrontSlug=%00` each get
+  500 `{ error: 'Internal server error' }`, then `/healthz` answers 200.
+  (A staff cookie `%ZZ` and `/%ZZ` were here too; after the follow-ups they
+  are a 401 and a 400, tested below.)
+- The same file, review follow-ups, on one server with a shop: `/%ZZ` gets
+  400 `{ error: 'Bad request' }`, nothing like a stack trace reaches the log,
+  and the next request is answered; `promo=50%off` beside the Owner's cookie
+  gets 200, and `wh_session=%ZZ` gets 401; and five unsigned-in failures (the
+  website before its shop is found, a till at `/api/till/%00/snapshot`, the
+  website's log-out and `/api/auth/me` with a `%00` cookie, and the website's
+  `/me` on a real shop with a `%00` cookie) each get exactly the fixed body,
+  with no "UTF8" or "byte sequence" in it, while the server's log has the
+  Postgres error.
 - `tests/messaging-connection-per-request.test.js`: after a warm-up burst, 12
   collections at once all answer 200 in under 4 seconds and each job has its
   service reminder and review request waiting. Then, in this test's own
@@ -132,6 +159,22 @@ back a saved copy and checked byte for byte with `cmp`):
 5. Sign-in by code with `onShopConnection: false`: test 10 failed with the
    timeouts at `customer-auth.js`.
 
+Review follow-ups, before the fix: the garbled address got 500 (not 400);
+the `promo=50%off` request got 500; the till, log-out, `/api/auth/me` and
+website `/me` cases each answered `invalid byte sequence for encoding "UTF8":
+0x00`. The website-before-its-shop case already passed: the outer catch
+answers it with the fixed words. Mutation checks, done the same way:
+
+6. The cookie decode rethrows: only the `promo=50%off` test failed.
+7. The address decode rethrows: only the garbled-address test failed.
+8. 400 answered but a `URIError` logged: the garbled-address test failed on
+   the log.
+9. to 12. Each of the four inner catches back to `err.message`, one at a
+   time: only its own case failed (till; log-out; website `/me`;
+   `/api/auth/me`).
+13. `createCustomerSession` ignoring the scope (`if (false && ...)`): test 10
+    failed with the timeouts, 5.7 seconds.
+
 Not seen red: the two stop-link lookups (`service-reminders.js:104`,
 `review-requests.js:49`) and own messages' job-link `shopRow` call. No test
 can reach them while sending is pretend.
@@ -141,7 +184,7 @@ can reach them while sending is pretend.
 1. `validateNewLogin` (`server/auth.js:74`, `pool.query` on `logins`) runs
    from the Owner adding a team member (`server/team.js`), inside the shop's
    connection: the same second connection, on an Owner-only screen.
-2. An address with a bad escape now gets 500; 400 would be more exact.
+2. The signed-in staff branch's 500 still carries `err.message` (see 5).
 3. A pool that is really exhausted at the dispatcher is not tested directly
    (the server's pool lives in another process); the refused values above
    reach the same code paths.
