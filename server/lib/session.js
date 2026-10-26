@@ -8,10 +8,20 @@ import { isHttpsRequest } from '../proxy-trust.js';
 import { parseCookies } from './http.js';
 import { devSession } from './dev-autologin.js';
 
+// The staff session found for a request, kept for that request only. The
+// dispatcher looks it up before the handler runs; a handler asking again
+// (who booked a delivery in) then needs no second pooled connection while
+// its own is held, which under load would wait on a full pool
+// (openspec/changes/receive-without-order).
+const found = new WeakMap();
+
 export async function currentSession(req) {
+  if (found.has(req)) return found.get(req);
   const { [SESSION_COOKIE]: token } = parseCookies(req);
   // A real session wins; with none, local development may sign in by itself (dev-autologin.js).
-  return (await getSessionContext(token)) ?? (await devSession(req));
+  const ctx = (await getSessionContext(token)) ?? (await devSession(req));
+  if (ctx) found.set(req, ctx);
+  return ctx;
 }
 
 /** The customer's session cookie, for the full 30 days from now. */

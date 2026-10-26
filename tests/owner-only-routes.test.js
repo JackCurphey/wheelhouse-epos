@@ -111,6 +111,7 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/till/:shopSlug/sync', "a till's own sync, signed in with its token, not a staff session"],
   ['POST /api/till-attention/:id/resolve', 'day-to-day: clearing a till sale that needs attention'],
   ['POST /api/purchase-orders/:id/receive', 'day-to-day: everyone can receive deliveries (receiving decision 4)'],
+  ['POST /api/deliveries/receive', 'day-to-day: everyone can receive deliveries, with or without an order (receiving decisions 2 and 4)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
