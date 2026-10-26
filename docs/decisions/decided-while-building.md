@@ -3083,3 +3083,10 @@ follows the job checklist, the closest pattern built.
    that box has more than 0, on a computer or tablet, not a phone, as drawn.
 7. **Keyboard focus** is the shared text box's outline
    (`src/components/ui/input.tsx`), so it looks like the rest of the app.
+
+### 26 Oct 2026: How much waits while the kind of deposit is saving (`openspec/changes/deposit-amount-waits`, `bk-settings-deposits`)
+
+1. **While the deposit switch or the kind is saving, "How much" is greyed
+   out**, as the switch and the two kind buttons beside it already are. The
+   drawing doesn't show a saving state; this follows theirs. Without it, a
+   pick of "A fixed amount" followed at once by typing 15 saved 15%.
