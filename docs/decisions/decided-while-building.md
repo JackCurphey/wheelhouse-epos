@@ -2669,3 +2669,8 @@ follows the job checklist, the closest pattern built.
     now does.
 11. **The old inbox list** (`/api/job-notes/conversations`) stays until the
     inbox screen moves to the new one. The screens change removes it.
+12. **After the review:** a customer can send 30 messages to the shop in
+    15 minutes; after that they're asked to try again in a few minutes, so
+    nobody can flood the inbox. A reply about one repair answers the whole
+    conversation (one conversation per customer), so it leaves "Needs a
+    reply"; a test now pins that down.

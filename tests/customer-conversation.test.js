@@ -245,3 +245,25 @@ test('Today counts customers waiting, as the inbox does', async () => {
   const line = (await staff('/api/needs-attention')).body.items.find((i) => i.kind === 'replies');
   assert.equal(line.count, count);
 });
+
+// Review 1: a customer can't flood the shop's inbox: 30 messages in 15 minutes, then refused.
+test('more than 30 messages in 15 minutes from one customer are refused, and the 31st isn’t added', async () => {
+  const sam = await customer('Sam Reed');
+  for (let i = 1; i <= 30; i++) assert.equal((await ask(sam, `Message ${i}`)).status, 201, `message ${i}`);
+  const over = await ask(sam, 'One too many');
+  assert.equal(over.status, 429);
+  assert.equal((await read(sam)).body.items.length, 30);
+  const other = await customer('Lena Fox');
+  assert.equal((await ask(other, 'Someone else is fine')).status, 201, 'counted per customer');
+});
+
+// Review 3: one conversation, so a reply about another repair answers her too (day answers 2.3).
+test('a staff reply on one repair answers her note on another: she no longer needs a reply', async () => {
+  const jo = await customer('Jo Hill');
+  const a = await jobFor(jo);
+  const b = await jobFor(jo);
+  await jobNote(a.code, 'About the first repair');
+  assert.equal((await inbox('needs-reply')).items.some((r) => r.customerId === jo.id), true);
+  assert.equal((await staffReply(jo, { text: 'On the second', jobId: b.job.id })).status, 201);
+  assert.equal((await inbox('needs-reply')).items.some((r) => r.customerId === jo.id), false);
+});
