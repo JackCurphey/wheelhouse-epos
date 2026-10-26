@@ -11,5 +11,5 @@
 
   Watch each one fail.
 - [x] 1.2 Build design 1 to 3; log design 4.
-- [ ] 1.3 `/review`, lint, `npm test`, `npm run test:browser`, pull request,
+- [x] 1.3 `/review`, lint, `npm test`, `npm run test:browser`, pull request,
   archive as the last commit (after `customer-account-server` merges).
