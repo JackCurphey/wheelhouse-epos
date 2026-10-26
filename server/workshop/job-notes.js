@@ -57,32 +57,6 @@ export async function jobNotes(jobId, { forCustomer = false } = {}) {
   }));
 }
 
-/** One row per job with notes, newest note first; `needsReply` while the customer spoke last. */
-export async function conversations(filter) {
-  const rows = await prepare(
-    `SELECT DISTINCT ON (n.workshop_job_id) n.workshop_job_id, n.from_customer, n.body, n.created_at,
-            j.reference, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label
-       FROM job_notes n
-       JOIN workshop_jobs j ON j.id = n.workshop_job_id
-       LEFT JOIN customers c ON c.id = j.customer_id
-       LEFT JOIN customer_bikes b ON b.id = j.bike_id
-      ORDER BY n.workshop_job_id, n.id DESC`
-  ).all();
-  const items = rows
-    .map((r) => ({
-      jobId: r.workshop_job_id,
-      customerName: r.customer_name ?? null,
-      bikeLabel: r.bike_label || null,
-      reference: r.reference ?? null,
-      lastText: r.body,
-      lastAt: new Date(r.created_at).toISOString(),
-      needsReply: r.from_customer,
-    }))
-    .sort((a, b) => Number(b.needsReply) - Number(a.needsReply) || b.lastAt.localeCompare(a.lastAt)); // waiting first (decision 7), then newest
-  const needing = items.filter((i) => i.needsReply);
-  return { items: filter === 'needs-reply' ? needing : items, count: needing.length };
-}
-
 // A row's customer: its own for a general message, its job's for a repair note.
 const WITH_CUSTOMER = `SELECT n.*, coalesce(n.customer_id, j.customer_id) AS conversation_customer_id
   FROM job_notes n LEFT JOIN workshop_jobs j ON j.id = n.workshop_job_id`;

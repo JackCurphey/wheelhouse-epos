@@ -1,6 +1,6 @@
 # Design: "Ask the shop a question", the screens
 
-Follows `openspec/changes/ask-the-shop-server/design.md` (the routes and
+Follows `openspec/changes/archive/2026-10-26-ask-the-shop-server/design.md` (the routes and
 their answers; section 5 is this change's list) and the drawings in
 `account.mjs`.
 

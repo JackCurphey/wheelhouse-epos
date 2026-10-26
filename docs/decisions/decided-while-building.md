@@ -2682,3 +2682,40 @@ follows the job checklist, the closest pattern built.
     nobody can flood the inbox. A reply about one repair answers the whole
     conversation (one conversation per customer), so it leaves "Needs a
     reply"; a test now pins that down.
+
+### 26 Oct 2026: the customer's conversation with the shop, the screens (`openspec/changes/ask-the-shop-screens`, `ac-ask`, `ac-account-question-sent`, `ac-question`, `ac-account-asked`, `ac-inbox*`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
+
+1. **The conversation page's width** is the drawing's 720px column on a
+   computer, between the booking steps' phone width and the account's two
+   columns. "Your account" is the frame's back link, with its own words.
+2. **"About WH-1042 ›"** shows under every message about a repair, the
+   shop's replies about it too, as drawn for Jo's reply.
+3. **An empty box sends nothing**, as on the repair page's notes. A message
+   the shop refuses (too long, or 30 in 15 minutes) shows the shop's own
+   words; a sign-in that has run out says "Please sign in again to send
+   this."; anything else says "Wheelhouse couldn’t send that. Try again in a
+   moment."
+4. **The history's Messages row** shows under Everything only, as drawn.
+   Waiting for a reply it sits under Now, as `history()` draws it; once the
+   shop has replied it moves to Earlier, by its date. Its date reads as the
+   repairs' do ("Fri 18 Sep"). Replied is green, Sent grey, as drawn.
+5. **The inbox, redrawn one row per customer** (Jack approved one
+   conversation per customer, day answers 8.2): a row's second line is the
+   newest message's bike and job number, or "From their account" for a
+   general message. The open conversation shows the customer's name, phone
+   and "Customer page"; "Open the job" and "On the job’s page · started by
+   Maya" go, since each repair note now carries "About WH-1042", which
+   opens the job in the diary.
+6. **The reply box says what the reply is about:** "About WH-1042: goes to
+   Maya the way they chose, with a link to reply on the job’s page.", or
+   "Goes to Maya the way they chose, with a link to their messages." for a
+   general message. After sending, a general reply says "…with a link to
+   their messages.", or "Saved in the conversation, but no text went: …".
+7. **"See the text Maya gets"** for a general reply reads the newest "Reply
+   to a message" from `/api/messages?customerId=`, which gives each
+   message's kind, rather than `/api/customers/:id/texts`, which doesn't.
+8. **The old inbox list `/api/job-notes/conversations` is removed** (236
+   routes). Its tests now read the per-customer list.
+9. **The mockup's coverage checks** for walk 10 M1's "Question from her
+   account" row now check the redrawn row instead, since day answers 8.2
+   replaced it.

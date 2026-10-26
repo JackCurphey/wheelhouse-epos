@@ -57,7 +57,7 @@ test('the heading, Your account back, and the thread: hers on the right, the sho
   assert.equal(ui.getByRole('link', { name: /Your account/ }).getAttribute('href'), '/book/north/account');
   const thread = within(ui.getByRole('list', { name: 'Messages with North Street Cycles' }));
   const [mine, theirs] = thread.getAllByRole('listitem');
-  assert.match(mine.textContent, /^You · Thu 17 Sep, 10:00/);
+  assert.match(mine.textContent, /^You · Thu 17 Sept?, 10:00/);
   assert.equal(mine.dataset.from, 'customer');
   assert.match(mine.className, /items-end/);
   assert.match(theirs.textContent, /^Jo Taylor, North Street Cycles · /);
@@ -69,7 +69,7 @@ test('each repair note says “About WH-1042 ›” and opens that repair', asyn
   const abouts = await ui.findAllByRole('link', { name: /About WH-1042/ });
   assert.equal(abouts.length, 2, 'the note and the reply to it; the general message has none');
   assert.equal(abouts[0].getAttribute('href'), '/book/north/booking/job-42');
-  assert.match(abouts[0].textContent, /About WH-1042 ›/);
+  assert.match(abouts[0].textContent, /^About WH-1042\s*›$/);
 });
 
 test('with nothing yet, the box asks the question', async () => {

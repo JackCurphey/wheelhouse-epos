@@ -19,16 +19,12 @@ A signed-in customer SHALL have an account page at their shop, "Your account", s
 - **WHEN** Maya chooses "Ask the shop a question"
 - **THEN** her conversation, "Messages with North Street Cycles", opens
 
-### Requirement: The account's history
-The account's history SHALL list the customer's repairs and purchases, filtered by Everything, Repairs or Purchases, with what's open now first and the rest newest first, eight at a time. A repair SHALL open its own page. Under Everything, the history SHALL have one row "Messages with [shop]" when the customer has any message, saying "[date] · [shop] replied" (Replied, under Earlier) or "[date] · waiting for a reply" (Sent, under Now), opening the conversation (`ac-account-asked`).
-
-#### Scenario: a repair in the shop
-- **WHEN** Maya's repair is in the shop
-- **THEN** it is under Now, and choosing it opens its page
+### Requirement: The account's history has one row for the conversation
+The account's history SHALL have one "Messages with [shop]" item when the customer has any message or note, dated by the newest message and saying whether the shop has replied (`ac-account-asked`). On the account page it SHALL show under Everything as one row, kind "Messages": "[date] · [shop] replied" with Replied under Earlier, or "[date] · waiting for a reply" with Sent under Now, opening the conversation.
 
 #### Scenario: the shop has replied
 - **WHEN** Jo has answered Maya's newest message
-- **THEN** her history has "Messages with North Street Cycles", "North Street Cycles replied" and Replied, under Earlier
+- **THEN** her history has "Messages with North Street Cycles", "North Street Cycles replied" and Replied, under Earlier, opening her conversation
 
 ## ADDED Requirements
 

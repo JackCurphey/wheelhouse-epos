@@ -7,7 +7,7 @@ and 8) that each customer has **one running conversation** with the shop,
 "Messages with [shop]", on their account, with their notes on a repair in it,
 each marked with the repair; and that the staff Messages inbox shows one
 conversation per customer too. The server is built
-(`openspec/changes/ask-the-shop-server`, branch `jack/ask-the-shop-server`);
+(`openspec/changes/archive/2026-10-26-ask-the-shop-server`, branch `jack/ask-the-shop-server`);
 its `design.md` section 5 lists what the screens must change. This change is
 the screens.
 

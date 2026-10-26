@@ -34,14 +34,19 @@ export type BookFrameProps = {
   /** A small line above the heading, as the booking page's "Your repair · WH-1042" (bk-page). */
   eyebrow?: string;
   back?: string;
+  /** The back link's words, "Back" unless given (the conversation's "Your account", ac-ask). */
+  backLabel?: string;
   action?: { label: string; onClick: () => void; disabled?: boolean };
   actionNote?: React.ReactNode;
-  /** The account's two columns on a computer (customer-account-screens design 2); every other page stays phone-width. */
-  wide?: boolean;
+  /**
+   * The account's two columns on a computer (customer-account-screens design 2);
+   * 'medium' is the conversation's 720px column (ac-ask). Every other page stays phone-width.
+   */
+  wide?: boolean | 'medium';
   children: React.ReactNode;
 };
 
-export function BookFrame({ step, title, eyebrow, back, action, actionNote, wide, children }: BookFrameProps) {
+export function BookFrame({ step, title, eyebrow, back, backLabel = 'Back', action, actionNote, wide, children }: BookFrameProps) {
   const { shopSlug = '' } = useParams();
   const services = useServices(shopSlug);
   const booking = useOptionalDraft();
@@ -95,7 +100,7 @@ export function BookFrame({ step, title, eyebrow, back, action, actionNote, wide
   }, [pinned, room]);
 
   return (
-    <div className={`mx-auto flex min-h-dvh ${wide ? 'max-w-5xl' : 'max-w-md'} flex-col bg-[var(--wh-panel)] px-4 text-[var(--wh-ink)]`}>
+    <div className={`mx-auto flex min-h-dvh ${wide === 'medium' ? 'max-w-[720px]' : wide ? 'max-w-5xl' : 'max-w-md'} flex-col bg-[var(--wh-panel)] px-4 text-[var(--wh-ink)]`}>
       <header className="flex min-h-11 items-center border-b border-[var(--wh-border)] py-2 font-semibold">
         {services.data?.shopName ?? ''}
       </header>
@@ -127,7 +132,7 @@ export function BookFrame({ step, title, eyebrow, back, action, actionNote, wide
             )}
             {back && (
               <Link to={back} className="mb-1 inline-flex min-h-11 items-center text-sm text-[var(--accent-dark)]">
-                <span aria-hidden="true">←</span> Back
+                <span aria-hidden="true">←</span> {backLabel}
               </Link>
             )}
             {step && (
