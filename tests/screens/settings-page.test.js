@@ -16,6 +16,7 @@ let putFails;
 let details;
 let detailsFail;
 let holdDetails = null;
+let holdSettings = null;
 let refuseHours = null;
 let termsFail = false;
 const STANDARD_TERMS = '1. Your booking is a request.\n2. Payment is due when you collect your bike.';
@@ -67,7 +68,9 @@ async function openSettings({ me = OWNER, room = 'workshop', open = room === 'wo
       if (refuseHours && body.bookingTerms !== undefined) return reply(400, { error: refuseHours });
       if (body.depositOn === true && !settings.paymentsConnected) return reply(409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
       settings = { ...settings, ...body };
-      return reply(200, settings);
+      const answer = reply(200, { ...settings });
+      if (holdSettings) { const wait = holdSettings; holdSettings = null; await wait; }
+      return answer;
     }
     if (u.pathname === '/api/portal/north-street/terms' && termsFail) return reply(500, { error: 'Internal error' });
     if (u.pathname === '/api/portal/north-street/terms') return reply(200, { title: 'Booking terms', text: STANDARD_TERMS, standard: true });
@@ -825,6 +828,27 @@ test('a fixed amount is typed in pounds and saved in pence; the fold says it', a
   await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositFixedPence: 1500 }));
   await waitFor(() => assert.equal(box.value, '15.00'));
   assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· deposit £15\.00 ·/);
+});
+
+// Saved but not yet answered (a slow connection): the box on screen is still
+// the percentage one, so it can't be typed in until the fixed amount's box
+// replaces it, or the pounds typed would save as a percentage.
+test('while A fixed amount is saving, How much waits for the fixed amount’s box', async () => {
+  const { ui, fireEvent, waitFor, within } = await withDeposits({ depositOn: true });
+  let answer;
+  holdSettings = new Promise((ok) => { answer = ok; });
+  fireEvent.click(within(await ui.findByRole('radiogroup', { name: 'Deposit' })).getByRole('radio', { name: 'A fixed amount' }));
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositKind: 'fixed' }));
+  assert.equal(ui.getByLabelText('How much').id, 'dep-pc', 'still the percentage box while the save is answered');
+  assert.equal(ui.getByLabelText('How much').disabled, true);
+  answer();
+  await waitFor(() => assert.equal(ui.getByLabelText('How much').id, 'dep-fixed'));
+  await waitFor(() => assert.equal(ui.getByLabelText('How much').disabled, false));
+  const box = ui.getByLabelText('How much');
+  fireEvent.change(box, { target: { value: '15' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositFixedPence: 1500 }));
+  assert.ok(!depositPuts().some((b) => 'depositPercent' in b), 'nothing saved as a percentage');
 });
 
 test('the amount for a price not known can be emptied, and Free to cancel until saves its hours', async () => {

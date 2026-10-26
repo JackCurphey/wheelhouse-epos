@@ -3084,6 +3084,13 @@ follows the job checklist, the closest pattern built.
 7. **Keyboard focus** is the shared text box's outline
    (`src/components/ui/input.tsx`), so it looks like the rest of the app.
 
+### 26 Oct 2026: How much waits while the kind of deposit is saving (`openspec/changes/deposit-amount-waits`, `bk-settings-deposits`)
+
+1. **While the deposit switch or the kind is saving, "How much" is greyed
+   out**, as the switch and the two kind buttons beside it already are. The
+   drawing doesn't show a saving state; this follows theirs. Without it, a
+   pick of "A fixed amount" followed at once by typing 15 saved 15%.
+
 ### 26 Oct 2026: receiving a delivery without an order (`openspec/changes/receive-without-order`, `rs-receive`, `rs-problem`, `rs-hub`; WP-2.3)
 
 Replaces item 1 of "receiving a delivery" above: the drawing's supplier

@@ -88,6 +88,10 @@ start, and SHALL only switch on while a payment provider is connected.
 - **WHEN** no payment provider is connected and the Owner switches deposits on
 - **THEN** it is refused, saying to connect one first, and deposits stay off
 
+#### Scenario: Picking the kind and typing straight away
+- **WHEN** the Owner picks "A fixed amount" and the answer hasn't come back yet
+- **THEN** How much is greyed out until it comes back as the £ box, so what's typed is saved as pounds, never as a percentage
+
 ### Requirement: A booking's deposit is worked out from the price shown
 
 A booking's deposit SHALL be that percentage

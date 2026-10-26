@@ -254,11 +254,13 @@ type NumberField = 'fullDayThresholdMinutes' | 'timedLeadMinutes' | 'depositPerc
  * it changed: shown in the box's own unit, refused in the screen when it
  * isn't allowed, a server refusal shown in its words.
  */
-function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, invalid, emptyIsNone = false }: {
+function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, invalid, emptyIsNone = false, disabled = false }: {
   id: string; label: string; hint: string; unit: string; prefix?: string; field: NumberField;
   toBox: (stored: number) => string; fromBox: (typed: number) => number | null; invalid: string;
   // An empty box saves "none" (null), as "If the price isn't known" (deposit-settings design 5).
   emptyIsNone?: boolean;
+  // Held while a setting it depends on is saving, as the switches beside it are.
+  disabled?: boolean;
 }) {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
@@ -299,7 +301,7 @@ function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, i
             aria-describedby={hint ? `${id}-h` : undefined}
             inputMode="decimal"
             value={shown}
-            disabled={!settings.data}
+            disabled={!settings.data || disabled}
             onChange={(e) => setTyped(e.target.value)}
             onBlur={() => void save()}
             className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-size-15"
@@ -638,12 +640,12 @@ function DepositSetting() {
           </div>
           {kind === 'percent' ? (
             <NumberSetting
-              key="percent" id="dep-pc" label="How much" hint="" unit="%" field="depositPercent" toBox={(n) => String(n)}
+              key="percent" id="dep-pc" label="How much" hint="" unit="%" field="depositPercent" toBox={(n) => String(n)} disabled={saving}
               fromBox={(n) => (Number.isInteger(n) && n >= 1 && n <= 100 ? n : null)} invalid="Enter a whole percentage from 1 to 100"
             />
           ) : (
             <NumberSetting
-              key="fixed" id="dep-fixed" label="How much" hint="" unit="" prefix="£" field="depositFixedPence" toBox={poundsBox}
+              key="fixed" id="dep-fixed" label="How much" hint="" unit="" prefix="£" field="depositFixedPence" toBox={poundsBox} disabled={saving}
               fromBox={penceFromPounds} invalid={AMOUNT_INVALID}
             />
           )}
