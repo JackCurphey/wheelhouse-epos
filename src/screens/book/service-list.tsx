@@ -103,6 +103,38 @@ export function ServiceListScreen() {
     navigate(`/book/${shopSlug}/problem`);
   };
 
+  const renderSection = (section: Section) => (
+      <section key={section.key} className="mb-4">
+        <h2
+          ref={section.key === 'full' ? fullHeading : section.key === firstIndividual ? individualHeading : undefined}
+          className="m-0 mb-2 scroll-mt-4 text-base font-semibold"
+        >
+          {section.heading}
+        </h2>
+        <div className="flex flex-col gap-2">
+          {section.services.map((s) => {
+            const lock = lockedBy(data, ticked, s.id);
+            const notice = notices.find((n) => n.id === s.id);
+            const includes = 'includes' in s ? includesLine(s) : null;
+            // A "taken off" notice shows on its row until the next tap, even
+            // though that row is now locked; after that the lock text shows.
+            const detail = notice ? notice.text : lock ? `Included in your ${lock.name}` : includes;
+            return (
+              <ChoiceCard
+                key={s.id}
+                title={s.name}
+                detail={detail ?? undefined}
+                price={s.price === null ? undefined : formatFrom(s.price)}
+                selected={ticked.includes(s.id)}
+                aria-disabled={lock ? true : undefined}
+                className={cn(lock && 'cursor-not-allowed bg-[var(--wh-hover)] opacity-60')}
+                onClick={() => tap(s.id)}
+              />
+            );
+          })}
+        </div>
+      </section>
+  );
   const line = summary(data, ticked);
   return (
     <BookFrame
@@ -120,43 +152,11 @@ export function ServiceListScreen() {
       }
     >
       {data.showPrices && <p className="m-0 mb-3 text-sm text-[var(--wh-muted)]">Prices are for labour. Parts are quoted separately.</p>}
-      {sections.map((section) => (
-        <React.Fragment key={section.key}>
-        {section.key === firstIndividual ? searchBox : null}
-        <section className="mb-4">
-          <h2
-            ref={section.key === 'full' ? fullHeading : section.key === firstIndividual ? individualHeading : undefined}
-            className="m-0 mb-2 scroll-mt-4 text-base font-semibold"
-          >
-            {section.heading}
-          </h2>
-          <div className="flex flex-col gap-2">
-            {section.services.map((s) => {
-              const lock = lockedBy(data, ticked, s.id);
-              const notice = notices.find((n) => n.id === s.id);
-              const includes = 'includes' in s ? includesLine(s) : null;
-              // A "taken off" notice shows on its row until the next tap, even
-              // though that row is now locked; after that the lock text shows.
-              const detail = notice ? notice.text : lock ? `Included in your ${lock.name}` : includes;
-              return (
-                <ChoiceCard
-                  key={s.id}
-                  title={s.name}
-                  detail={detail ?? undefined}
-                  price={s.price === null ? undefined : formatFrom(s.price)}
-                  selected={ticked.includes(s.id)}
-                  aria-disabled={lock ? true : undefined}
-                  className={cn(lock && 'cursor-not-allowed bg-[var(--wh-hover)] opacity-60')}
-                  onClick={() => tap(s.id)}
-                />
-              );
-            })}
-          </div>
-        </section>
-        </React.Fragment>
-      ))}
-      {/* With nothing matching, the box stays where the single jobs were (design 2; not drawn). */}
-      {noMatch ? <>{searchBox}<p className="m-0 mb-4 text-size-15 text-[var(--wh-muted)]">{`No single jobs match “${search.trim()}”.`}</p></> : null}
+      {sections.filter((x) => !x.individual).map(renderSection)}
+      {/* One fixed place, so typing never moves the box and the cursor stays in it. */}
+      {searchBox}
+      {sections.filter((x) => x.individual).map(renderSection)}
+      {noMatch ? <p className="m-0 mb-4 text-size-15 text-[var(--wh-muted)]">{`No single jobs match “${search.trim()}”.`}</p> : null}
       <button type="button" className="min-h-11 text-sm text-[var(--accent-dark)] underline" onClick={notSure}>
         Not sure what you need? Describe the problem
       </button>

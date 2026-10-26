@@ -279,3 +279,13 @@ test('nothing matching says so, and Not sure stays', async () => {
   assert.ok(card(ui, 'General service'));
 });
 
+
+test('the box stays put while typing, even when nothing matches, so the cursor stays in it', async () => {
+  const { ui } = await open({ services: MANY });
+  const { fireEvent } = await import('@testing-library/react');
+  const box = ui.getByRole('searchbox', { name: SEARCH });
+  box.focus();
+  fireEvent.change(box, { target: { value: 'zz' } });
+  assert.ok(ui.getByRole('searchbox', { name: SEARCH }) === box, 'the same box, not a new one');
+  assert.ok(document.activeElement === box, 'the cursor is still in the box');
+});
