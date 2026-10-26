@@ -20,7 +20,7 @@ test.beforeAll(async () => {
   const staff = (path: string, options?: object) => staffRequest(server!.baseUrl, owner.cookie, path, options);
   // Shimano brake pads B05S-RX £28.00 as drawn; everything else bracketed.
   pads = (await staff('/api/products', { method: 'POST', body: { name: 'Shimano brake pads', sku: 'B05S-RX', barcode: '[barcode]', category: '[Category]', supplier: '[Supplier]', price: 28, cost: 14, stockQty: 6 } })).body;
-  await staff(`/api/products/${pads.id}/stock`, { method: 'POST', body: { change: -1, type: 'adjustment', note: 'Damaged' } });
+  await staff(`/api/products/${pads.id}/stock`, { method: 'POST', body: { change: -1, type: 'adjustment', reason: 'damaged', note: 'Damaged' } });
   await staff('/api/products', { method: 'POST', body: { name: '[Product with a long name that has to wrap on a phone]', sku: '[Supplier code]', category: '[Category]', supplier: '[Supplier]', price: 10, cost: 5, stockQty: 2 } });
 });
 
