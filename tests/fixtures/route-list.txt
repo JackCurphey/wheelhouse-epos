@@ -117,7 +117,6 @@ POST /api/quotes/:id/send
 POST /api/quotes/:id/within-limit
 POST /api/quotes/:id/withdraw
 POST /api/quotes/:id/answer
-GET /api/job-notes/conversations
 GET /api/workshop-jobs/:id/notes
 POST /api/workshop-jobs/:id/notes
 GET /api/customer-conversations

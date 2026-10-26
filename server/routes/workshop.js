@@ -30,7 +30,7 @@ import { applyEvent } from '../workshop/transitions.js';
 import { shopNow } from '../clock.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
-import { addNote, cleanNote, conversations as noteConversations, customerConversation, customerConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
+import { addNote, cleanNote, customerConversation, customerConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { removePhotoDetails } from '../photo-metadata.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
 import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
@@ -1604,11 +1604,7 @@ export function register(route) {
   });
 
   // ---------- Notes with the shop (decisions 3 and 7; ac-inbox) ----------
-  // screens: diary
-  route('GET', '/api/job-notes/conversations', async (req, res, params, query) => {
-    sendJson(res, 200, await noteConversations(query.get('filter') === 'needs-reply' ? 'needs-reply' : 'all'));
-  });
-
+  // The inbox lists one conversation per customer (/api/customer-conversations, below).
   // screens: diary
   route('GET', '/api/workshop-jobs/:id/notes', async (req, res, params) => {
     const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));

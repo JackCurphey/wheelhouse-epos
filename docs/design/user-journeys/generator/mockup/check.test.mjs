@@ -180,7 +180,9 @@ const COVERAGE_LINKS = [
   ['cp-receipt-address-save', 'Add the customer', 'till-empty'], ['cp-receipt-address-save', 'Not now', 'till-empty'],
   ['cp-receipt-address-offline', 'Send when back online', 'till-empty'],
   ['staff-app-menu', 'Messages', 'ac-inbox-list'],
-  ['ac-inbox', 'Needs a reply: Maya Patel · Question from her account', 'ac-inbox', 'question from her account'],
+  // Day answers 8.2 (26 Oct) replaced walk 10 M1's question row: one row per customer.
+  ['ac-inbox', 'Needs a reply: [Another customer]', 'ac-inbox', 'with a link to their messages'],
+  ['ac-inbox', 'About WH-1042 ›', 'job-overview'],
   ['set-msg-list', 'Edit the wording of Review request', 'ac-review-first'],
   ['set-msg-list', 'Edit the wording of Service reminder', 'ac-reminder-wording'],
   ['set-msg-list', 'Edit the wording of Bike still waiting', 'cp-message-wording'],
@@ -223,7 +225,9 @@ test('the coverage walks’ wording is in the drawings', () => {
     'answer 4: ac-delete-blocked says it waits': has('ac-delete-blocked', /We’ll delete your account once your bike has been collected/),
     'answer 4: ac-delete-blocked keeps Ask to delete': has('ac-delete-blocked', />Ask to delete</),
     'answer 4: ac-delete-blocked has no "Ask again"': lacks('ac-delete-blocked', /Ask again after that/),
-    'walk 10 M1: the question row names Maya': has('ac-inbox', /Question from her account/, 'desktop'),
+    // Day answers 8.2 replaced walk 10 M1's "Question from her account" row: one row per customer.
+    'day answers 8.2: a general message’s row says From their account': has('ac-inbox', /From their account/, 'desktop'),
+    'day answers 8.2: no separate question row': lacks('ac-inbox', /Question from her account/),
     'walk 5 M2: payments not counted on ws-page-moving': lacks('ws-page-moving', /Payments connected, and the test payment worked/),
     'walk 5 M2: ws-pay-tested-moving drops "counts towards"': lacks('ws-pay-tested-moving', /counts towards/),
     'walk 7 M2: ws-pay-none names deposits': has('ws-pay-none', /deposits/),
