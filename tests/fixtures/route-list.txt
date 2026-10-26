@@ -66,6 +66,7 @@ GET /api/auth/workos/callback
 POST /api/auth/logout
 GET /api/auth/me
 GET /api/products
+GET /api/products/:id
 POST /api/products
 PUT /api/products/:id
 DELETE /api/products/:id
