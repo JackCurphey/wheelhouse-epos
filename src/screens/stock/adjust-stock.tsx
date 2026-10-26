@@ -124,7 +124,7 @@ export function AdjustStock({ product, shopName, onClose }: { product: Product; 
         </RadioPillGroup>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="adj-note" className="text-sm font-semibold">Note (needed for Other)</label>
-          <input id="adj-note" value={note} onChange={(e) => setNote(e.target.value)} className={`${field} w-full`} />
+          <input id="adj-note" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} className={`${field} w-full`} />
         </div>
         <p className="m-0 text-size-13 text-[var(--wh-muted)]">Going up instead? The reasons become Found and Other. It goes into the stock history with your name.</p>
         {error ? <p role="alert" className="m-0 text-sm">{error}</p> : null}

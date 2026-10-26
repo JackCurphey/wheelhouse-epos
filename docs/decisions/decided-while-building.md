@@ -2724,7 +2724,16 @@ follows the job checklist, the closest pattern built.
    draws. Lines from before this piece, and sales and till sync (Mark's
    step C), record no one, so they show no name.
 10. **The old app's booking in** (`type: intake`) through the same route
-    needs no reason and records who.
+    needs no reason and records who, but only adds stock; any other type is
+    refused (review, 26 Oct).
+11. **The change is a whole number up to 100,000 either way**, and a note
+    up to 500 characters (review, 26 Oct). No count in a bike shop comes
+    near 100,000; the cap keeps a mistyped number from reaching the
+    database.
+12. **"In stock after" sends a change, worked out when the box opened.** A
+    sale made while the box is open makes the result one lower than typed.
+    Kept, not built around: sending a change is what lets two adjustments
+    at once both count (review, 26 Oct).
 
 ### 26 Oct 2026: the print agent removed (`openspec/changes/drop-print-agent`; Jack's decision in `2026-10-26-day-answers.md` section 5)
 

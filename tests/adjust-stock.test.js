@@ -122,3 +122,39 @@ test('booking stock in (the old app) needs no reason, and records who', async ()
   const [line] = (await staff(`/api/products/${p.id}`)).body.history;
   assert.deepEqual([line.type, line.change, line.reason, line.who], ['intake', 3, null, 'Jack Lewis']);
 });
+
+// The review of adjust-stock (26 Oct): the input checks tightened.
+const WHOLE = 'A non-zero whole-number "change" is required';
+test('only an adjustment or booking in; booking in only adds', async () => {
+  const p = await pads();
+  const post = (body) => staff(`/api/products/${p.id}/stock`, { method: 'POST', body });
+  for (const body of [{ change: -5 }, { change: -5, type: 'sale' }, { change: 2, type: 'bogus' }]) {
+    const res = await post(body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+  const down = await post({ change: -5, type: 'intake' });
+  assert.equal(down.status, 400);
+  assert.equal(await stockOf(p.id), 6, 'nothing changed');
+  assert.equal((await post({ change: 4, type: 'intake' })).status, 200, 'the old app’s Stock received still works');
+  assert.equal(await stockOf(p.id), 10);
+});
+
+test('the change is a whole number of at most 100,000 either way', async () => {
+  const p = await pads();
+  for (const change of [1.9, true, '3', 1e12, 100001, -100001, null, 0]) {
+    const res = await staff(`/api/products/${p.id}/stock`, { method: 'POST', body: { change, type: 'intake' } });
+    assert.equal(res.status, 400, `change ${JSON.stringify(change)}`);
+    assert.equal(res.body.error, WHOLE, `change ${JSON.stringify(change)}`);
+  }
+  assert.equal(await stockOf(p.id), 6);
+  assert.equal((await staff(`/api/products/${p.id}/stock`, { method: 'POST', body: { change: 100000, type: 'intake' } })).status, 200);
+});
+
+test('a note is at most 500 characters', async () => {
+  const p = await pads();
+  const long = await adjust(p.id, { change: -1, reason: 'other', note: 'x'.repeat(501) });
+  assert.equal(long.status, 400);
+  assert.equal(long.body.error, 'Keep the note to 500 characters');
+  assert.equal(await stockOf(p.id), 6);
+  assert.equal((await adjust(p.id, { change: -1, reason: 'other', note: 'x'.repeat(500) })).status, 200);
+});

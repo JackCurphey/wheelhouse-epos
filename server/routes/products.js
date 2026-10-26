@@ -19,6 +19,8 @@ const db = { prepare, exec: dbExec };
 // walk-through 3 L2); migration 093 holds the same list.
 const REASONS_DOWN = ['damaged', 'lost_stolen', 'used_workshop', 'faulty_return', 'other'];
 const REASONS_UP = ['found', 'other'];
+const MAX_CHANGE = 100000;
+const MAX_NOTE = 500;
 
 // A product is only fit to be live on Shopify when it's BOTH marked to show
 // online AND active - `show_online` alone isn't enough, since a deactivated
@@ -212,10 +214,19 @@ export function register(route) {
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
     const body = await readJsonBody(req);
-    const change = Math.trunc(Number(body.change));
-    if (!Number.isFinite(change) || change === 0) return badRequest(res, 'A non-zero whole-number "change" is required');
-    const type = body.type === 'adjustment' ? 'adjustment' : 'intake';
+    // A whole number, not 0, at most 100,000 either way: no rounding, no
+    // true as 1, and nothing too big for the column (review, 26 Oct).
+    const change = body.change;
+    if (typeof change !== 'number' || !Number.isInteger(change) || change === 0 || Math.abs(change) > MAX_CHANGE) {
+      return badRequest(res, 'A non-zero whole-number "change" is required');
+    }
+    // An adjustment, or booking stock in, which only adds (decision 6: stock
+    // never goes down without a reason).
+    const type = body.type;
+    if (type !== 'adjustment' && type !== 'intake') return badRequest(res, 'Say whether this is an adjustment or stock received');
+    if (type === 'intake' && change < 0) return badRequest(res, 'Stock received can only add stock; adjust it to take stock away');
     const note = String(body.note || '').trim();
+    if (note.length > MAX_NOTE) return badRequest(res, 'Keep the note to 500 characters');
     let reason = null;
     if (type === 'adjustment') {
       reason = body.reason ? String(body.reason) : '';

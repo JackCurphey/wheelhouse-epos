@@ -99,7 +99,7 @@ test('the box as drawn: −1, the count after it, no reason picked, Adjust greye
   assert.equal(box.getByRole('textbox', { name: 'In stock after' }).value, '5');
   assert.deepEqual(reasons(box), ['Damaged', 'Lost or stolen', 'Used in the workshop', 'Faulty — to return to supplier', 'Other']);
   assert.ok(box.getAllByRole('radio').every((r) => r.getAttribute('aria-checked') === 'false'), 'no reason picked until one is');
-  assert.ok(box.getByRole('textbox', { name: 'Note (needed for Other)' }));
+  assert.equal(box.getByRole('textbox', { name: 'Note (needed for Other)' }).getAttribute('maxlength'), '500', 'the server’s cap (review, 26 Oct)');
   assert.equal(why(box), 'Pick a reason to adjust');
   assert.ok(box.getByRole('button', { name: 'Cancel' }));
 });

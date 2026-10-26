@@ -38,7 +38,9 @@
 ## Contract
 
 `POST /api/products/:id/stock` `{ change, type: 'adjustment', reason, note }`
-→ 200 the product; 400 `{ error }`.
+→ 200 the product; 400 `{ error }`. `change` is a whole number, not 0,
+at most 100,000 either way; `type` is `adjustment` or `intake` (which only
+adds); `note` is at most 500 characters (review, 26 Oct).
 
 `GET /api/products/:id` → history lines
 `{ id, type, change, reason: string | null, note, who: string | null, at }`.

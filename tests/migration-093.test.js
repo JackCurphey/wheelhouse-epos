@@ -66,12 +66,20 @@ test('093 adds a reason and who to stock movements, and keeps older lines', asyn
     }
     await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, reason) VALUES ($1, -1, 'adjustment', 'bored')", [p.id]), /check/i, 'only the drawn reasons');
     await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, login_id) VALUES ($1, -1, 'adjustment', 999999)", [p.id]), /foreign key/i, 'who is a real login');
-    // Run again: the shared dev database already ran it as 089.
+    // Run again: the shared dev database already ran it as 089, maybe with
+    // an older list of reasons, which the run brings up to date.
+    await c.query('ALTER TABLE stock_movements DROP CONSTRAINT stock_movements_reason_check');
+    await c.query("DELETE FROM stock_movements WHERE reason IS NOT NULL AND reason <> 'damaged'");
+    await c.query("ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_reason_check CHECK (reason IN ('damaged'))");
     await c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]);
   });
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`), 'safe to run twice');
   await withClient(url.href, async (c) => {
     const { rows } = await c.query("SELECT conname FROM pg_constraint WHERE conrelid = 'stock_movements'::regclass AND (conname LIKE '%reason%' OR conname LIKE '%login_id%')");
     assert.equal(rows.length, 2, `one check and one foreign key, not doubled: ${rows.map((r) => r.conname)}`);
+    const { rows: [shop] } = await c.query('SELECT id FROM shops LIMIT 1');
+    await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shop.id)]);
+    const { rows: [p] } = await c.query('SELECT id FROM products LIMIT 1');
+    await c.query("INSERT INTO stock_movements (product_id, change_qty, type, reason) VALUES ($1, 1, 'adjustment', 'found')", [p.id]);
   });
 });

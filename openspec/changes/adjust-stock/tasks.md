@@ -5,6 +5,7 @@
 - [x] 1.3 The button and the Adjust stock box
 - [x] 1.4 A browser test at computer and phone widths, nothing scrolling sideways
 - [x] 1.5 Log choices in `decided-while-building.md`; break each key rule on purpose and watch its test fail; lint and the touched tests
-- [ ] 1.6 Self-review and `/review` (stock, a migration); archive as the last commit
+- [x] 1.6 Self-review and `/review` (stock, a migration): /review 26 Oct: no serious findings; input checks tightened
+- [ ] 1.8 Archive as the last commit
 - Note: the delta MODIFIES "A product's page", so `stock-list` must be archived first.
 - [x] 1.7 Jack's answer (26 Oct, day answers section 11): Staff adjust too; the Owner-only limit removed, with a Staff test on the server and the page
