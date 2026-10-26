@@ -12,7 +12,7 @@ import { installDom, importFresh } from '../helpers/dom.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
-const OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+const OFF = { showLegend: true, statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
 
 const realFetch = globalThis.fetch;
 let uninstall;

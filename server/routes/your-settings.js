@@ -6,10 +6,14 @@ import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
 import { readJsonBody, sendJson } from '../lib/http.js';
 
-// Every switch the drawing has, off to start; the screens show the ones built.
-const SWITCHES = ['statusSymbols', 'reduceMotion', 'noAutoClose', 'largerText', 'foldedSidebar'];
+// Every switch the drawing has, off to start, but Show the diary legend, on
+// to start (diary-legend-box design 1); the screens show the ones built.
+const SWITCHES = ['showLegend', 'statusSymbols', 'reduceMotion', 'noAutoClose', 'largerText', 'foldedSidebar'];
+const DEFAULT_ON = ['showLegend'];
 
-const whole = (stored = {}) => ({ accessibility: Object.fromEntries(SWITCHES.map((k) => [k, stored[k] === true])) });
+const whole = (stored = {}) => ({
+  accessibility: Object.fromEntries(SWITCHES.map((k) => [k, typeof stored[k] === 'boolean' ? stored[k] : DEFAULT_ON.includes(k)])),
+});
 
 export function register(route) {
   // screens: your-settings

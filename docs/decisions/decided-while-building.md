@@ -2580,3 +2580,11 @@ follows the job checklist, the closest pattern built.
    job" is chosen.
 4. **No preview.** None is drawn for this box; the built-in messages' box
    has one.
+
+### 26 Oct 2026: the diary's legend as a box (`openspec/changes/diary-legend-box`; Jack's option 2, "Legend", per person)
+
+1. **Below 1024px wide,** where the left-hand column is folded away (an
+   upright tablet), the legend sits under the toolbar, along a line or two.
+   It isn't at the bottom of the diary any more.
+2. **No "Show the diary legend" switch on a phone,** where the diary has no
+   legend, as with Folded sidebar.
