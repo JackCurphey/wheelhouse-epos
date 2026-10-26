@@ -78,3 +78,10 @@ What it unblocks, as drawn (`cs-add-company`; collect.mjs's VAT invoice):
 
 (The question was asked again by mistake: STATUS still listed it as open
 after the 25 Oct answer. Jack confirmed the 25 Oct answer stands alongside.)
+
+## 5. The label printer helper's own key
+
+**In Settings › Till, next to Tills, as "Label printers"** (Jack: "Next to
+Till › Tills"). The owner adds a printer there, gets its key, and can remove
+it. Not drawn, so it is drawn first for Jack to approve. Helpers already
+signed in keep working up to 30 days meanwhile.
