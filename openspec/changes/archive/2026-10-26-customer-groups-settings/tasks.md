@@ -7,4 +7,4 @@
 
   Watch each one fail.
 - [x] 1.2 Build design 1 and 2; log design 3.
-- [ ] 1.3 Lint, `npm test`, `npm run test:browser`, review, pull request, archive.
+- [x] 1.3 Lint, `npm test`, `npm run test:browser`, review, pull request, archive.
