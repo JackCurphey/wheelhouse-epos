@@ -202,3 +202,24 @@ test('signed out is refused', async () => {
   const res = await staffRequest(server.baseUrl, '', '/api/deliveries/receive', { method: 'POST', body: { supplierId, items: [] } });
   assert.equal(res.status, 401, JSON.stringify(res.body));
 });
+
+// Review, 26 Oct: a problem not on an order has the same top as a count, so
+// a huge one is refused with 400, not a database error.
+test('a problem past the most a line can take is refused with 400, changing nothing', async () => {
+  const thing = await product();
+  for (const qty of [100001, 1e12]) {
+    const res = await deliver(asJo, { supplierId, items: [{ productId: thing, qty: 1 }], problems: [{ productId: thing, kind: 'damaged', qty }] });
+    assert.equal(res.status, 400, `${qty}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.error, 'A problem needs how many, a whole number above 0');
+  }
+  assert.equal(await stockOf(thing), 0);
+  assert.equal((await problemsFor(thing)).length, 0);
+});
+
+test('an order line with no supplier picked is refused: pick the supplier it is from', async () => {
+  const thing = await product();
+  const o = await orderedOrder([[thing, 1]]);
+  const res = await deliver(asJo, { supplierId: null, items: [{ productId: thing, itemId: o.items[0].id, qty: 1 }] });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal(res.body.error, 'Pick the supplier this order is from.');
+});

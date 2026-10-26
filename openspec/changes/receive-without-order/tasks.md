@@ -19,4 +19,10 @@
   `docs/decisions/decided-while-building.md`.
 - [x] 1.4 Break each stock rule on purpose and watch its test fail; lint,
   `npx tsc --noEmit`, the touched tests.
-- [ ] 1.5 `/review` (stock, migration), pull request, archive.
+- [x] 1.5 `/review` 26 Oct: nothing serious for stock; three fixes done (tests
+  first, each watched failing): From set once when suppliers and orders load;
+  a scanned line whose order line has gone becomes not on an order on a
+  refresh; a problem's count capped at 100000 (400). Also: no supplier with
+  an order line says "Pick the supplier this order is from." Logged in
+  `decided-while-building.md` (item 8).
+- [ ] 1.6 Pull request, archive.

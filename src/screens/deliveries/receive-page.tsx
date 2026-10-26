@@ -52,8 +52,10 @@ export function ReceivePage() {
   const orders = useQuery({ queryKey: ['purchase-orders'], queryFn: () => apiGet<Order[]>('/api/purchase-orders') });
   const suppliers = useQuery({ queryKey: ['suppliers'], queryFn: () => apiGet<Supplier[]>('/api/suppliers') });
   const asked = params.get('order');
-  // undefined until the person picks: then the page's own choice stands.
+  // The supplier: undefined until suppliers and orders first load, then set
+  // once, so a refresh of the orders can't move it mid-delivery (review, 26 Oct).
   const [chosen, setChosen] = useState<string | null | undefined>(undefined);
+  const [allIn, setAllIn] = useState(false);
   const [allSuppliers, setAllSuppliers] = useState(false);
   const [text, setText] = useState('');
   const [scanned, setScanned] = useState<Scanned[]>([]);
@@ -65,13 +67,20 @@ export function ReceivePage() {
 
   const awaiting = (orders.data ?? []).filter((o) => AWAITING.includes(o.status));
   const askedOrder = asked === null ? undefined : awaiting.find((o) => String(o.id) === asked);
-  // An order asked for that isn't waiting (all in, or a draft) picks nothing,
-  // so the person chooses (receive-delivery's second review).
-  const allIn = chosen === undefined && asked !== null && !askedOrder;
-  // The asked order's supplier, or the supplier with the newest order still
-  // to come; with none, no supplier ("pick the supplier if you like").
-  const newest = [...awaiting].sort((a, b) => b.id - a.id)[0];
-  const supplierId = chosen !== undefined ? chosen : allIn ? null : askedOrder ? String(askedOrder.supplierId) : newest ? String(newest.supplierId) : null;
+  // Set during render, React's pattern for state that follows loaded data.
+  if (chosen === undefined && orders.data && suppliers.data) {
+    const waiting = orders.data.filter((o) => AWAITING.includes(o.status));
+    const wanted = asked === null ? undefined : waiting.find((o) => String(o.id) === asked);
+    // An order asked for that isn't waiting (all in, or a draft) picks
+    // nothing, so the person chooses (receive-delivery's second review).
+    // Otherwise the asked order's supplier, or the supplier with the newest
+    // order still to come; with none, none ("pick the supplier if you like").
+    const newest = [...waiting].sort((a, b) => b.id - a.id)[0];
+    const notWaiting = asked !== null && !wanted;
+    setAllIn(notWaiting);
+    setChosen(notWaiting ? null : wanted ? String(wanted.supplierId) : newest ? String(newest.supplierId) : null);
+  }
+  const supplierId = chosen ?? null;
   // The supplier's orders still to come: the one asked for first, then oldest first.
   const supplierOrders = awaiting.filter((o) => String(o.supplierId) === supplierId)
     .sort((a, b) => (askedOrder?.id === b.id ? 1 : 0) - (askedOrder?.id === a.id ? 1 : 0) || a.id - b.id);
@@ -83,10 +92,22 @@ export function ReceivePage() {
   const shown = allSuppliers || sorted.findIndex((s) => String(s.id) === supplierId) >= PILLS ? sorted : sorted.slice(0, PILLS);
   const scannedOf = (key: string) => scanned.find((s) => s.key === key);
   const lineOf = (itemId: number | undefined) => (itemId === undefined ? undefined : orderLines.find((it) => it.id === itemId));
+  // A refresh that finds a scanned line's order all in, or the line with
+  // nothing left to come (booked in elsewhere), turns it into a line not on
+  // an order, keeping its count and problems, so Book in isn't refused
+  // again and again (review, 26 Oct).
+  // Checked whenever the orders come back, during render as above.
+  const [seenOrders, setSeenOrders] = useState(orders.data);
+  if (orders.data !== seenOrders) {
+    setSeenOrders(orders.data);
+    const next = offOrder(scanned, new Map(orderLines.map((it) => [it.id, it.outstanding])));
+    if (next !== scanned) setScanned(next);
+  }
 
   function pick(id: string) {
     // The list belongs to one supplier's delivery (logged: changing From clears it).
     setChosen(id);
+    setAllIn(false);
     setScanned([]);
     setSaid('');
     setProblem(null);
@@ -176,7 +197,7 @@ export function ReceivePage() {
       <Back />
       <Card id="t-scan-the-box" title="Scan the box">
         {failed ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the suppliers and orders. Try again in a moment.</p>
-          : !orders.data || !suppliers.data ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
+          : !orders.data || !suppliers.data || chosen === undefined ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
           : (
             <>
               {sorted.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">No suppliers yet.</p> : (
@@ -248,6 +269,32 @@ export function ReceivePage() {
       ) : null}
     </Page>
   );
+}
+
+/**
+ * Scanned lines with their order line gone from what's still to come (the
+ * order all in) or with nothing left to come on it become lines not on an
+ * order, merged with any for the same product; Missing goes, as it's only
+ * for an order. Returns the same list when nothing changes.
+ */
+function offOrder(ss: Scanned[], open: Map<number, number>): Scanned[] {
+  const gone = (s: Scanned) => s.itemId !== undefined && !((open.get(s.itemId) ?? 0) > 0);
+  if (!ss.some(gone)) return ss;
+  const out: Scanned[] = [];
+  for (const s of ss) {
+    const moved = gone(s) ? { ...s, key: `p${s.productId}`, itemId: undefined, problems: s.problems.filter((p) => p.kind !== 'missing') } : s;
+    const i = out.findIndex((x) => x.key === moved.key);
+    if (i < 0) { out.push(moved); continue; }
+    const same = out[i];
+    const problems = [...same.problems];
+    for (const p of moved.problems) {
+      const j = problems.findIndex((x) => x.kind === p.kind);
+      if (j < 0) problems.push(p);
+      else problems[j] = { ...problems[j], qty: problems[j].qty + p.qty, note: problems[j].note || p.note };
+    }
+    out[i] = { ...same, qty: same.qty + moved.qty, problems };
+  }
+  return out;
 }
 
 /** Still to come on the order: each line of the supplier's orders with something not yet scanned. */

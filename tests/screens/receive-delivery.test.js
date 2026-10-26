@@ -418,3 +418,42 @@ test('changing the supplier empties the list', async () => {
   fireEvent.click(ui.getByRole('radio', { name: '[Supplier 2]' }));
   assert.ok(ui.queryByRole('list', { name: 'Scanned' }) === null);
 });
+
+// ---- Review, 26 Oct ----
+
+// New orders arriving with a refresh (window focus, or after a refusal).
+const refreshOrders = (r, orders) => r.act(async () => { shell.queryClient.setQueryData(['purchase-orders'], orders); });
+
+test('a refresh of the orders doesn’t move From, or the list, mid-delivery', async () => {
+  const r = await receivePage({}, '/workshop/deliveries/receive');
+  const { ui, within } = r;
+  assert.equal(ui.getByRole('radio', { name: '[Supplier 2]' }).checked, true);
+  await pick(r, '[Prod', /^\[Product\]/);
+  await ui.findByRole('list', { name: 'Scanned' });
+  // A newer order from [Supplier] comes in with the refresh.
+  await refreshOrders(r, [...ORDERS, order({ id: 20, status: 'ordered' })]);
+  // The page has the refresh once [Supplier]'s newer order puts it first.
+  await r.waitFor(() => assert.equal(ui.getAllByRole('radio')[0].closest('label').textContent, '[Supplier]'));
+  assert.equal(ui.getByRole('radio', { name: '[Supplier 2]' }).checked, true, 'From stays put');
+  assert.equal(ui.getByRole('radio', { name: '[Supplier]' }).checked, false);
+  const line = within(ui.getByRole('list', { name: 'Scanned' })).getAllByRole('listitem')[0];
+  assert.ok(line.textContent.includes('[Supplier code] · on your order: 2'), line.textContent);
+});
+
+test('a line whose order was all received elsewhere becomes “not on an order” on a refresh, keeping its count and problems', async () => {
+  const r = await receivePage({}, '/workshop/deliveries/receive?order=8');
+  const { ui, within, fireEvent } = r;
+  await pick(r, '[Prod', /^\[Product\]/);
+  const scanned = within(await ui.findByRole('list', { name: 'Scanned' }));
+  fireEvent.click(scanned.getByRole('button', { name: 'One more: [Product]' }));
+  fireEvent.click(scanned.getByRole('button', { name: 'Problem with [Product]' }));
+  fireEvent.click(within(await ui.findByRole('dialog', { name: 'Something wrong?' })).getByRole('button', { name: 'Mark as damaged' }));
+  // Someone else booked order 8 in on another till.
+  await refreshOrders(r, ORDERS.map((o) => (o.id === 8 ? { ...o, status: 'received', items: o.items.map((it) => ({ ...it, qtyReceived: it.qtyOrdered, outstanding: 0 })) } : o)));
+  await r.waitFor(() => assert.ok(scanned.getAllByRole('listitem')[0].textContent.includes('[Supplier code] · not on an order'), scanned.getAllByRole('listitem')[0].textContent));
+  assert.ok(scanned.getAllByRole('listitem')[0].textContent.includes('Damaged · 1, set aside'));
+  assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '2');
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await r.waitFor(() => assert.equal(receives().length, 1));
+  assert.deepEqual(receives()[0].body, { supplierId: 2, items: [{ productId: 12, qty: 1 }], problems: [{ productId: 12, kind: 'damaged', qty: 1, note: '' }] });
+});

@@ -3003,3 +3003,19 @@ pills and "Works with or without an order" are built.
    after booking, item 9 above). "This order is all in." stays for
    `?order=` naming an order that isn't waiting, and scanning still works
    there.
+8. **After the review (26 Oct):**
+   - **From is set once,** when the suppliers and orders first load, so a
+     refresh of the orders (window focus, or after a refused booking) can't
+     move it to another supplier mid-delivery.
+   - **A scanned line whose order line has gone** (its order all in, or
+     nothing left to come on that line, booked in elsewhere) becomes a line
+     not on an order when the orders refresh, keeping its count and its
+     Damaged and Wrong item marks; a Missing mark goes, as Missing is only for
+     an order. Merged with any line for the same product. Without this, Book
+     in was refused on every retry.
+   - **A problem's count has the same top as a line's** (100000); past it,
+     "A problem needs how many, a whole number above 0".
+   - **An order line sent with no supplier picked** is refused with "Pick
+     the supplier this order is from." (was "That line is on another
+     supplier’s order"). The screen doesn't send one; the old wording was
+     wrong for it.

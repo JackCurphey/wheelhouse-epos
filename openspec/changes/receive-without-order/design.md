@@ -10,7 +10,8 @@ the owner-only test's allow-list). Body:
   `itemId` the line is an order line, booked in as the order route does
   (stock, the line's `qty_received`, the order's status). Without it the
   product (active) is added to stock, not on an order.
-- `problems: [{ kind, qty, note, itemId?, productId? }]`: on an order line
+- `problems: [{ kind, qty, note, itemId?, productId? }]`: `qty` a whole
+  number from 1 to 100000 (else 400); on an order line
   (`itemId`) `kind` is `damaged`, `wrong_item` or `missing`, as before. Not
   on an order (`productId`, no `itemId`) only `damaged` or `wrong_item`
   (`rs-problem`: Missing is offered only when there's an order); recorded
@@ -62,7 +63,11 @@ Safe to run twice, and in either order with `jack/adjust-stock`'s 093:
    order's pattern). `?order=` picks that order's supplier and its lines come
    first; otherwise the first pill is picked when it has an order still to
    come, else none ("pick the supplier if you like"). Changing it empties the
-   list. After Book in the supplier stays picked. No suppliers: "No suppliers yet." and scanning still works.
+   list. After Book in the supplier stays picked. The default is set once,
+   when suppliers and orders first load; a refresh never moves it. A
+   scanned line whose order line has gone (all in, or nothing left to come)
+   becomes a line not on an order on a refresh, keeping its count and its
+   Damaged and Wrong item marks. No suppliers: "No suppliers yet." and scanning still works.
 2. **Scan**: a product with a line still to come on the supplier's orders
    counts against it (`?order=`'s order first, then oldest first), as
    before; one whose lines are all counted says so, as before; any other is

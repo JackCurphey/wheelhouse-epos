@@ -107,7 +107,8 @@ async function loadPoLineItems(items) {
 function readProblem(p) {
   const qty = Number(p.qty);
   if (!PROBLEM_KINDS.includes(p.kind)) return 'A problem is damaged, wrong_item or missing';
-  if (!Number.isInteger(qty) || qty <= 0) return 'A problem needs how many, a whole number above 0';
+  // Up to the most a line can take (review, 26 Oct: past it was a 500).
+  if (!Number.isInteger(qty) || qty <= 0 || qty > MAX_QTY) return 'A problem needs how many, a whole number above 0';
   return { kind: p.kind, qty, note: String(p.note ?? '').trim().slice(0, 500) };
 }
 
@@ -162,7 +163,7 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
     const order = await db.prepare('SELECT * FROM purchase_orders WHERE id = ? FOR UPDATE').get(id);
     if (!order) return { refusal: (res) => notFound(res, 'Purchase order not found') };
     if (!['ordered', 'partially_received'].includes(order.status)) return refuse('This purchase order is not awaiting delivery');
-    if (orderId === null && order.supplier_id !== supplier?.id) return refuse('That line is on another supplier’s order');
+    if (orderId === null && order.supplier_id !== supplier?.id) return refuse(supplier ? 'That line is on another supplier’s order' : 'Pick the supplier this order is from.');
     orders.set(id, order);
     for (const it of await loadPurchaseOrderItems(id)) itemsById.set(it.id, it);
   }
