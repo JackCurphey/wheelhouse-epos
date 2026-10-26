@@ -2667,3 +2667,7 @@ follows the job checklist, the closest pattern built.
 8. **Left out:** the printed receipt, the text receipt page and its PDF;
    finding a company by its contact's name; comparing company details in
    "The same person?".
+9. **Headed "Invoice", not "VAT invoice", until sales record VAT** (Jack's
+   answer that day, day answers 10): a VAT invoice without its VAT amount
+   isn't one. It becomes "VAT invoice", with its VAT line, once Mark's step C
+   records VAT on each sale.

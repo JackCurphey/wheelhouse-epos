@@ -56,3 +56,8 @@ them (`serializeCustomer`).
 `EmailReceiptDialog` fills the box with the company's "Send invoices to",
 or else the customer's email. Its note names the company in full ("From
 [Company name]’s customer record."), not a first name.
+
+## Later: "VAT invoice"
+A company's receipt is headed "Invoice" until sales record VAT (Jack, day
+answers 26 Oct, 10). When Mark's step C records VAT on each sale, it becomes
+"VAT invoice" with its VAT line; that is not built here.

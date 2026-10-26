@@ -20,13 +20,15 @@ export async function receiptEmail(saleId, shopId) {
   const items = await prepare('SELECT name, qty, unit_price, line_total FROM sale_items WHERE sale_id = ? ORDER BY id').all(saleId);
   const extra = await prepare('SELECT tender_type, amount FROM sale_payments WHERE sale_id = ? ORDER BY id').all(saleId);
   const shop = await prepare('SELECT name, address, phone, vat_number, receipt_footer FROM shops WHERE id = ?').get(shopId);
-  // A company or club's receipt is a VAT invoice, with an "Invoice to" block
+  // A company or club's receipt is an invoice, with an "Invoice to" block
   // from its record, a blank line left out (openspec/changes/company-customers
   // design 4; collect.mjs receiptBody with invoice; leftover screens H2).
   const company = sale.customer_id
     ? await prepare('SELECT name, address, postcode, vat_number FROM customers WHERE id = ? AND is_company').get(sale.customer_id)
     : null;
-  const heading = company ? 'VAT invoice' : 'Your receipt';
+  // "Invoice", not the drawn "VAT invoice", until sales record VAT: a VAT
+  // invoice without its VAT amount isn't one (Jack, day answers 26 Oct, 10).
+  const heading = company ? 'Invoice' : 'Your receipt';
   const invoiceTo = company
     ? ['Invoice to', [company.name, [company.address, company.postcode].filter(Boolean).join(', ')].filter(Boolean).join(' · '),
       ...(company.vat_number ? [`VAT number ${company.vat_number}`] : []), '']

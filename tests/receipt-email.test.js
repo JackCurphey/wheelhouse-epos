@@ -114,10 +114,11 @@ test('one sale’s receipt can be sent five times in an hour, not more (review)'
   assert.equal((await receiptsFor(fresh.id)).length, 5);
 });
 
-// A company's receipt is a VAT invoice (openspec/changes/company-customers
+// A company's receipt is an invoice (openspec/changes/company-customers
 // design 4; collect.mjs receiptBody with invoice; leftover screens H2 and
-// Jack's generic VAT invoice, 2 Oct; day answers 26 Oct, 3). Example details
-// are the drawing's placeholders.
+// Jack's generic VAT invoice, 2 Oct; day answers 26 Oct, 3). Headed "Invoice",
+// not the drawn "VAT invoice", until sales record VAT (day answers 26 Oct,
+// 10). Example details are the drawing's placeholders.
 async function companySale(details) {
   const club = (await staff('/api/customers', { method: 'POST', body: { isCompany: true, name: '[Company name]', contactName: '[Contact name]', phone: '07700 900777', ...details } })).body;
   const cashier = (await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
@@ -127,12 +128,13 @@ async function companySale(details) {
   return made.body;
 }
 
-test('a company’s receipt is headed VAT invoice, with Invoice to from its record', async () => {
+test('a company’s receipt is headed Invoice, not VAT invoice, until VAT is recorded, with Invoice to from its record', async () => {
   const s = await companySale({ address: '[Company address]', postcode: '[postcode]', vatNumber: '[Company VAT number]', invoiceEmail: 'accounts@example.com' });
   assert.equal((await send(s.id, 'accounts@example.com')).status, 200);
   const [m] = await receiptsFor(s.id);
-  assert.match(m.subject, /^VAT invoice — Receipt Cycles/);
-  assert.match(m.body, /^VAT invoice\n/);
+  assert.match(m.subject, /^Invoice — Receipt Cycles/);
+  assert.match(m.body, /^Invoice\n/);
+  assert.doesNotMatch(m.body, /VAT invoice/, 'no VAT invoice without its VAT amount');
   assert.doesNotMatch(m.body, /Your receipt/);
   assert.match(m.body, /\n\nInvoice to\n\[Company name\] · \[Company address\], \[postcode\]\nVAT number \[Company VAT number\]\n\nSale /);
   assert.match(m.body, /\nInner tube +£5\.00\n/);
