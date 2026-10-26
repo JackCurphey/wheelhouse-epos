@@ -2699,6 +2699,7 @@ follows the job checklist, the closest pattern built.
     conversation (one conversation per customer), so it leaves "Needs a
     reply"; a test now pins that down.
 
+
 ### 26 Oct 2026: the customer's conversation with the shop, the screens (`openspec/changes/ask-the-shop-screens`, `ac-ask`, `ac-account-question-sent`, `ac-question`, `ac-account-asked`, `ac-inbox*`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
 
 1. **The conversation page's width** is the drawing's 720px column on a
