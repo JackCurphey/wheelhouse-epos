@@ -49,6 +49,10 @@ const ROUTES = [
   ['DELETE', `/api/workshop-checklists/${MISSING}`],
   // Website settings and the Shopify connection (Jack, 22 Oct, Mark's audit P2 1).
   ['PUT', '/api/storefront-settings', {}],
+  // A shop's own automatic messages (openspec/changes/own-messages-server design 6).
+  ['POST', '/api/own-messages', {}],
+  ['PUT', `/api/own-messages/${MISSING}`, {}],
+  ['DELETE', `/api/own-messages/${MISSING}`],
   ['POST', '/api/shopify/connection', {}],
   ['POST', '/api/storefront-settings/logo', {}],
   ['POST', '/api/storefront-settings/hero', {}],

@@ -16,12 +16,14 @@ import { RoundIcon } from './round-icon.tsx';
  * back on, and on again. A code that doesn't work says so and nothing more.
  * The drawn "Sign in to your account" line waits for the customer's account.
  */
-type Kind = 'service_reminders' | 'review_requests';
-type View = { shopName: string; kind?: Kind; on: boolean };
+type Kind = 'service_reminders' | 'review_requests' | 'own_message';
+// An own message carries its name (openspec/changes/own-messages-server design 7).
+type View = { shopName: string; kind?: Kind; name?: string; on: boolean };
+type Words = { ask: string; askBody: (shop: string) => string; button: string; stopped: string; stoppedBody: string; on: string; onBody: string; again: string };
 
 // The same page for each kind, with its own name (audit M5; review-requests design 6).
 // Service reminders' words are drawn (ac-stopped, ac-stopped-on); review requests' follow them.
-const WORDS: Record<Kind, { ask: string; askBody: (shop: string) => string; button: string; stopped: string; stoppedBody: string; on: string; onBody: string }> = {
+const WORDS: Record<Exclude<Kind, 'own_message'>, Words> = {
   service_reminders: {
     ask: 'Stop service reminders?',
     askBody: (shop) => `We’ll stop sending you service reminders from ${shop}. Job updates about a bike that’s with us still come as usual.`,
@@ -30,6 +32,7 @@ const WORDS: Record<Kind, { ask: string; askBody: (shop: string) => string; butt
     stoppedBody: 'We won’t send you service reminders any more. Job updates about a bike that’s with us still come as usual.',
     on: 'Service reminders are on again',
     onBody: 'We’ll remind you when your bike is due its next service. Stop them any time with the link at the end of each one.',
+    again: 'Turn them back on',
   },
   review_requests: {
     ask: 'Stop review requests?',
@@ -39,8 +42,22 @@ const WORDS: Record<Kind, { ask: string; askBody: (shop: string) => string; butt
     stoppedBody: 'We won’t ask you for reviews any more. Job updates about a bike that’s with us still come as usual.',
     on: 'Review requests are on again',
     onBody: 'We’ll ask for a review after you collect your bike. Stop them any time with the link at the end of each one.',
+    again: 'Turn them back on',
   },
 };
+
+// One of the shop's own messages, by its name: stops just that one (Jack's
+// answer 2 of 26 Oct). Not drawn; the same page as the review request's.
+const ownWords = (name: string): Words => ({
+  ask: `Stop “${name}”?`,
+  askBody: (shop) => `We’ll stop sending you “${name}” from ${shop}. Job updates about a bike that’s with us still come as usual.`,
+  button: `Stop “${name}”`,
+  stopped: `“${name}” stopped`,
+  stoppedBody: `We won’t send you “${name}” any more. Job updates about a bike that’s with us still come as usual.`,
+  on: `“${name}” is on again`,
+  onBody: `We’ll send you “${name}” again. Stop it any time with the link at the end of each one.`,
+  again: 'Turn it back on',
+});
 
 const isGone = (err: unknown) => err instanceof ApiError && err.status === 404;
 
@@ -82,7 +99,8 @@ export function ReminderStopScreen() {
       </BookFrame>
     );
   }
-  const w = WORDS[view.data.kind ?? 'service_reminders'];
+  const kind = view.data.kind ?? 'service_reminders';
+  const w = kind === 'own_message' ? ownWords(view.data.name ?? 'these messages') : WORDS[kind];
   const oops = failed ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">That didn’t go through. Check your connection and try again.</p> : null;
 
   if (done === 'on') {
@@ -99,7 +117,7 @@ export function ReminderStopScreen() {
         <RoundIcon tone="ok" size="size-11"><Check size={22} aria-hidden="true" /></RoundIcon>
         <p role="status" className="m-0">{w.stoppedBody}</p>
         {oops}
-        <div><Button disabled={busy} onClick={() => void press(false)}>Turn them back on</Button></div>
+        <div><Button disabled={busy} onClick={() => void press(false)}>{w.again}</Button></div>
       </BookFrame>
     );
   }

@@ -2541,3 +2541,22 @@ follows the job checklist, the closest pattern built.
 5. **"Online booking is unavailable just now"** replaces "We couldn't load
    this shop's services". "Try again" stays. The drawn shop name, address
    and phone can't show: they come with the services that failed to load.
+
+### 26 Oct 2026: a shop's own automatic messages, the server (`openspec/changes/own-messages-server`, `set-msg-new`; Jack's answers in `2026-10-26-receipt-and-own-messages.md`)
+
+1. **They only go while the shop is open.** Anything that comes due
+   overnight goes when the shop opens, as service reminders do.
+2. **Only things that happen after a message is set up count.** The same
+   goes after its timing changes or it's switched back on. Otherwise a new
+   "6 months after collection" message would go to everyone from the last
+   six months at once. New words alone don't restart the count.
+3. **Which way it goes:**
+   - the customer's own way, if the message goes that way (text covers
+     WhatsApp);
+   - otherwise the message's other way, if the customer has it;
+   - otherwise not at all.
+4. **"Before a booked job"** counts only confirmed bookings and ones waiting
+   on a date change, and only while the bike isn't collected.
+5. **The limits:** 1 to 365 days, or 1 to 24 months.
+6. **The stop page,** for one of these messages, reads "Stop “[name]”?",
+   following the review request's page; its button is "Turn it back on".
