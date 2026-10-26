@@ -60,7 +60,7 @@ export async function signupCustomer({ shopSlug, email, password, name }) {
     // as with guest bookings (resolveGuestCustomer, DS-7). Matching an existing
     // customer waits for email verification.
     const { rows: [customer] } = await client.query(
-      'INSERT INTO customers (name, email, updated_at) VALUES ($1, $2, now()) RETURNING *',
+      'INSERT INTO customers (name, email, email_from_customer, updated_at) VALUES ($1, $2, true, now()) RETURNING *',
       [name, email]
     );
 
