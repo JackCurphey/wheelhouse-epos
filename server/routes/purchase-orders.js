@@ -63,6 +63,12 @@ async function loadPurchaseOrderItems(id) {
 
 
 
+// The most a line can order, and the most a unit cost can be: the
+// NUMERIC(10,2) column's largest. Past these the database answered 500
+// (review of 26 Oct).
+const MAX_QTY = 100000;
+const MAX_UNIT_COST = 99999999.99;
+
 async function loadPoLineItems(items) {
   const loaded = [];
   for (const it of items) {
@@ -75,6 +81,8 @@ async function loadPoLineItems(items) {
     if (!Number.isFinite(unitCost) || unitCost < 0) {
       throw new ValidationError('Each item needs a valid unit cost');
     }
+    if (qty > MAX_QTY) throw new ValidationError(`A line can order at most ${MAX_QTY}`);
+    if (unitCost > MAX_UNIT_COST) throw new ValidationError('A unit cost can be at most £99,999,999.99');
     const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
     loaded.push({ product, qty, unitCost });
@@ -123,6 +131,10 @@ export function register(route) {
     if (items.length === 0) return badRequest(res, 'A purchase order must include at least one item');
     const reference = (body.reference || '').trim();
     const notes = (body.notes || '').trim();
+    // New order's Mark as ordered: made already ordered in this one
+    // transaction, so a failed second request can't leave a draft behind
+    // for a retry to duplicate (review of 26 Oct).
+    const ordered = body.markOrdered === true;
 
     let loaded;
     try {
@@ -135,8 +147,8 @@ export function register(route) {
     await db.exec('BEGIN');
     try {
       const info = await db
-        .prepare('INSERT INTO purchase_orders (supplier_id, reference, notes, updated_at) VALUES (?, ?, ?, ?)')
-        .run(supplierId, reference, notes, nowIso());
+        .prepare('INSERT INTO purchase_orders (supplier_id, reference, notes, status, ordered_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(supplierId, reference, notes, ordered ? 'ordered' : 'draft', ordered ? nowIso() : null, nowIso());
       const poId = info.lastInsertRowid;
       for (const { product, qty, unitCost } of loaded) {
         await db.prepare(
@@ -209,14 +221,14 @@ export function register(route) {
   route('POST', '/api/purchase-orders/:id/mark-ordered', async (req, res, params) => {
     if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
+    const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
-    if (existing.status !== 'draft') return badRequest(res, 'Only a draft purchase order can be marked as ordered');
-    await db.prepare(`UPDATE purchase_orders SET status = 'ordered', ordered_at = ?, updated_at = ? WHERE id = ?`).run(
-      nowIso(),
-      nowIso(),
-      id
-    );
+    // The status is checked in the UPDATE itself, so two requests at once
+    // can't both pass a check made beforehand (review of 26 Oct).
+    const changed = await db
+      .prepare(`UPDATE purchase_orders SET status = 'ordered', ordered_at = ?, updated_at = ? WHERE id = ? AND status = 'draft'`)
+      .run(nowIso(), nowIso(), id);
+    if (changed.changes === 0) return sendJson(res, 409, { error: 'Only a draft purchase order can be marked as ordered' });
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
     sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
   });
@@ -224,16 +236,29 @@ export function register(route) {
   route('POST', '/api/purchase-orders/:id/cancel', async (req, res, params) => {
     if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
+    const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
-    if (!['draft', 'ordered'].includes(existing.status)) return badRequest(res, `This purchase order is already ${existing.status}`);
-    const items = await loadPurchaseOrderItems(id);
-    if (items.some((it) => it.qty_received > 0)) {
-      return badRequest(res, 'This purchase order already has items booked in and cannot be cancelled');
+    // Checked in the UPDATE itself, as mark-ordered is: nothing booked in and
+    // not already cancelled, so a receipt landing between a check and the
+    // cancel can't be dropped (review of 26 Oct). A received order has
+    // something booked in, so it's refused too.
+    const changed = await db
+      .prepare(
+        `UPDATE purchase_orders SET status = 'cancelled', updated_at = ?
+         WHERE id = ? AND status <> 'cancelled'
+           AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ? AND qty_received > 0)`
+      )
+      .run(nowIso(), id, id);
+    if (changed.changes === 0) {
+      const now = await db.prepare('SELECT status FROM purchase_orders WHERE id = ?').get(id);
+      return sendJson(res, 409, {
+        error: now?.status === 'cancelled'
+          ? 'This purchase order is already cancelled'
+          : 'This purchase order already has items booked in and cannot be cancelled',
+      });
     }
-    await db.prepare(`UPDATE purchase_orders SET status = 'cancelled', updated_at = ? WHERE id = ?`).run(nowIso(), id);
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, items));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
   });
 
   // Booking a delivery in (openspec/changes/receive-delivery, the contract):

@@ -16,22 +16,34 @@ import { Back, Card, ONLY_OWNER, Page, money, mono, orderHref, type Order } from
  */
 type Supplier = { id: number; name: string };
 type Product = { id: number; sku: string | null; barcode: string | null; name: string; cost: number | null };
-type Line = { product: Product; qty: number };
+// `typed` is a cost typed for a product with none recorded.
+type Line = { product: Product; qty: number; typed: string };
 const PILLS = 3;
+// The most a line can order: the server refuses more (review of 26 Oct).
+const MAX_COUNT = 100000;
 // Whole pence, so 3 × £1.10 is £3.30 and not £3.3000000000000003.
-const pence = (pounds: number | null) => Math.round((pounds ?? 0) * 100);
+const pence = (pounds: number) => Math.round(pounds * 100);
+// No cost recorded (null, or 0 as the old app saves it) is no cost, as on the
+// stock list (review of 26 Oct): the line takes a typed one instead.
+const recorded = (p: Product) => (p.cost !== null && p.cost > 0 ? p.cost : null);
+const typedCost = (typed: string) => {
+  const n = Number(typed.trim());
+  return typed.trim() !== '' && Number.isFinite(n) && n > 0 ? n : null;
+};
+/** The line's cost each: the product's, else a good typed one, else none. */
+const costOf = (l: Line) => recorded(l.product) ?? typedCost(l.typed);
 
 /**
  * A count: type it, or step it with − and + (audit H2). Repeated buttons name their row.
  * `max` caps it (receiving: what's still to come); `onBelowOne` lets − at 1 take the line off.
  */
-export function Count({ name, value, onChange, max = Infinity, onBelowOne }: { name: string; value: number; onChange: (n: number) => void; max?: number; onBelowOne?: () => void }) {
+export function Count({ name, value, onChange, max = MAX_COUNT, onBelowOne }: { name: string; value: number; onChange: (n: number) => void; max?: number; onBelowOne?: () => void }) {
   const step = 'size-11 shrink-0 border-0 bg-[var(--wh-panel)] text-xl text-[var(--wh-ink)]';
   return (
     <span role="group" aria-label={name} className="inline-flex shrink-0 items-center overflow-hidden rounded-lg border border-[var(--wh-border)]">
       <button type="button" aria-label={`One fewer: ${name}`} className={step} onClick={() => (value <= 1 && onBelowOne ? onBelowOne() : onChange(Math.max(1, value - 1)))}>−</button>
       <input inputMode="numeric" aria-label={`How many: ${name}`} value={String(value)}
-        onChange={(e) => { const n = Math.trunc(Number(e.target.value)); if (n >= 1 && n <= max) onChange(n); }}
+        onChange={(e) => { const n = Math.trunc(Number(e.target.value)); if (n >= 1) onChange(Math.min(max, n)); }}
         className={`h-11 w-[52px] border-x border-y-0 border-[var(--wh-border)] bg-[var(--wh-panel)] text-center text-size-15 ${mono}`} />
       <button type="button" aria-label={`One more: ${name}`} className={step} onClick={() => onChange(Math.min(max, value + 1))}>+</button>
     </span>
@@ -73,30 +85,35 @@ export function NewOrderPage() {
   const shown = allSuppliers || sorted.findIndex((s) => String(s.id) === supplierId) >= PILLS ? sorted : sorted.slice(0, PILLS);
 
   const add = (p: Product) => {
-    setLines((ls) => (ls.some((l) => l.product.id === p.id) ? ls.map((l) => (l.product.id === p.id ? { ...l, qty: l.qty + 1 } : l)) : [...ls, { product: p, qty: 1 }]));
+    setLines((ls) => (ls.some((l) => l.product.id === p.id) ? ls.map((l) => (l.product.id === p.id ? { ...l, qty: Math.min(MAX_COUNT, l.qty + 1) } : l)) : [...ls, { product: p, qty: 1, typed: '' }]));
     setText('');
     setProblem(null);
   };
   const setQty = (id: number, qty: number) => setLines((ls) => ls.map((l) => (l.product.id === id ? { ...l, qty } : l)));
+  const setTyped = (id: number, typed: string) => setLines((ls) => ls.map((l) => (l.product.id === id ? { ...l, typed } : l)));
   const onEnter = () => {
     const typed = text.trim().toLowerCase();
     const exact = matches.find((p) => [p.barcode, p.sku].some((v) => v && v.toLowerCase() === typed));
     const only = matches.length === 1 ? matches[0] : undefined;
     if (exact ?? only) add((exact ?? only)!);
   };
-  const total = lines.reduce((sum, l) => sum + pence(l.product.cost) * l.qty, 0) / 100;
+  const total = lines.reduce((sum, l) => sum + pence(costOf(l) ?? 0) * l.qty, 0) / 100;
 
   async function save(ordered: boolean) {
     if (!supplierId) { setProblem('Pick a supplier first.'); return; }
     if (lines.length === 0) { setProblem('Add a product first.'); return; }
+    // A draft can wait for its costs; an order can't (review of 26 Oct).
+    if (ordered && lines.some((l) => costOf(l) === null)) { setProblem('Type a cost for every line first.'); return; }
     setProblem(null);
     setBusy(true);
     try {
-      let made = await apiMutate<Order>('/api/purchase-orders', {
+      // Made already ordered in one request, so a failure can't leave a
+      // draft behind for a retry to duplicate (review of 26 Oct).
+      const made = await apiMutate<Order>('/api/purchase-orders', {
         supplierId: Number(supplierId),
-        items: lines.map((l) => ({ productId: l.product.id, qty: l.qty, unitCost: l.product.cost ?? 0 })),
+        items: lines.map((l) => ({ productId: l.product.id, qty: l.qty, unitCost: costOf(l) ?? 0 })),
+        ...(ordered ? { markOrdered: true } : {}),
       });
-      if (ordered) made = await apiMutate<Order>(`/api/purchase-orders/${made.id}/mark-ordered`, {});
       queryClient.setQueryData(['purchase-order', made.id], made);
       void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       navigate(orderHref(made.id));
@@ -141,18 +158,26 @@ export function NewOrderPage() {
         </div>
         {lines.length > 0 ? (
           <ul aria-label="Lines" className="m-0 list-none p-0">
-            {lines.map(({ product: p, qty }) => (
+            {lines.map((l) => { const { product: p, qty } = l; const cost = costOf(l); return (
               <li key={p.id} className="flex min-h-14 flex-wrap items-center gap-3 border-t border-[var(--wh-border)] py-1.5">
                 <span className="flex min-w-0 flex-[1_1_180px] flex-col gap-0.5">
                   <span className="text-size-15 font-semibold">{p.name}</span>
                   {p.sku ? <span className="text-size-13 text-[var(--wh-muted)]">{p.sku}</span> : null}
                 </span>
                 <Count name={p.name} value={qty} onChange={(n) => setQty(p.id, n)} />
-                <span className={`min-w-[72px] text-right text-size-15 ${mono}`}>{money((pence(p.cost) * qty) / 100)}</span>
+                {recorded(p) === null ? (
+                  <label className="inline-flex shrink-0 items-center gap-1.5 text-size-13 text-[var(--wh-muted)]">
+                    {cost === null ? 'No cost recorded' : null}
+                    <span className="inline-flex items-center gap-1">£<input inputMode="decimal" aria-label={`Cost each: ${p.name}`} value={l.typed}
+                      onChange={(e) => setTyped(p.id, e.target.value)}
+                      className={`h-11 w-[80px] rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-2 text-right text-size-15 text-[var(--wh-ink)] ${mono}`} /></span>
+                  </label>
+                ) : null}
+                {cost === null ? null : <span className={`min-w-[72px] text-right text-size-15 ${mono}`}>{money((pence(cost) * qty) / 100)}</span>}
                 <button type="button" aria-label={`Remove ${p.name}`} onClick={() => setLines((ls) => ls.filter((l) => l.product.id !== p.id))}
                   className="inline-flex size-11 items-center justify-center border-0 bg-transparent text-[var(--wh-muted)]"><NavIcon name="close" size={18} /></button>
               </li>
-            ))}
+            ); })}
           </ul>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1.5">

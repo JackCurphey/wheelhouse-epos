@@ -173,9 +173,10 @@ test('a count can be typed up to what is to come, stepped with + and âˆ’, and âˆ
   fireEvent.click(await ui.findByRole('option', { name: /^\[Product\]/ }));
   const scanned = within(await ui.findByRole('list', { name: 'Scanned' }));
   fireEvent.change(scanned.getByRole('textbox', { name: 'How many: [Product]' }), { target: { value: '5' } });
-  assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '1', 'more than the 2 to come is not taken');
+  assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '2', 'a typed count stops at the 2 to come');
+  fireEvent.click(scanned.getByRole('button', { name: 'One fewer: [Product]' }));
+  assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '1');
   fireEvent.click(scanned.getByRole('button', { name: 'One more: [Product]' }));
-  assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '2');
   fireEvent.click(scanned.getByRole('button', { name: 'One more: [Product]' }));
   assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '2', '+ stops at what is to come');
   fireEvent.click(scanned.getByRole('button', { name: 'One fewer: [Product]' }));

@@ -13,6 +13,13 @@ Unchanged routes, one new field, and the Owner-only check:
   and `POST /api/purchase-orders/:id/cancel`: the Owner only. Anyone else gets
   403 `{ code: 'owner_only', error: "Only the shop's owner can order stock" }`
   before any lookup.
+- After the review (26 Oct): `POST /api/purchase-orders` also takes
+  `markOrdered: true`, which makes the order already ordered in the same
+  transaction (New order's "Mark as ordered" is one request). Mark-ordered
+  and cancel check the status in the `UPDATE` itself and answer 409 when
+  nothing changed (mark-ordered: not a draft; cancel: already cancelled, or
+  something booked in). A line over 100000, or a unit cost over
+  99999999.99, is a 400.
 - `POST /api/purchase-orders/:id/receive` stays open to everyone (decision 4:
   everyone can receive), and goes on the owner-only test's allow-list.
 - `GET /api/suppliers` and `GET /api/products?search=` are read as they are.
@@ -47,8 +54,12 @@ is still the settings one.
      sum, worked out in whole pence on the screen so it doesn't drift, and
      shown in pounds. Once saved, the order page shows the server's
      `totalCost`;
-   - "Save as draft" makes the order; "Mark as ordered" makes it and marks
-     it ordered; both open the order page.
+   - "Save as draft" makes the order; "Mark as ordered" makes it already
+     ordered, in one request; both open the order page;
+   - a line with no cost (none recorded, or 0 as the old app saves it)
+     shows "No cost recorded" and a box to type one; "Mark as ordered"
+     waits until every line has a cost, a draft saves without; a count
+     stops at 100000 (after the review, 26 Oct).
 4. **An order** (`order-page.tsx`):
    - heading "[Supplier] · ordered [date]" (a draft: "[Supplier] · draft");
      the status tag; each line "[code] · ordered [n] · arrived [n]" with
