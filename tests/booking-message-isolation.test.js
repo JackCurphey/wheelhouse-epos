@@ -21,6 +21,17 @@ let sam;
 let types;
 let customer;
 const nextDay = dayMaker();
+// This server runs with DB_TENANT_SCOPE 'transaction', where a request's
+// commit lands just after its reply goes (server/db.js), so a read straight
+// after can come before it on a slow machine. Ask again for up to 2 seconds.
+async function eventually(read, ok) {
+  const end = Date.now() + 2000;
+  for (;;) {
+    const value = await read();
+    if (ok(value) || Date.now() > end) return value;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
 
 before(async () => {
   server = await startLiveServer({ env: { DB_TENANT_SCOPE: 'transaction' } });
@@ -55,7 +66,7 @@ test('accepting a request stands when its confirmation message can’t be queued
   const res = await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.bookingState, 'scheduled');
-  const row = await jobRow(owner.shop.id, booked.id);
+  const row = await eventually(() => jobRow(owner.shop.id, booked.id), (r) => r.booking_state === 'scheduled');
   assert.equal(row.booking_state, 'scheduled', 'the answer was rolled back with the failed message');
 });
 
@@ -65,6 +76,6 @@ test('a customer’s booking stands when its Request received message can’t be
   const booked = await bookOnline(server.baseUrl, customer.cookie, owner.shop.slug, {
     mechanicId: sam, jobDate: nextDay(), startTime: '14:00', serviceIds: [types.repair],
   });
-  const read = await staff(`/api/workshop-jobs/${booked.id}`);
+  const read = await eventually(() => staff(`/api/workshop-jobs/${booked.id}`), (r) => r.status === 200);
   assert.equal(read.status, 200, JSON.stringify(read.body));
 });

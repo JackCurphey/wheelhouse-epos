@@ -156,3 +156,52 @@ test('an email that’s already a customer’s says “this email address”', a
   fireEvent.change(dialog.getByLabelText('Email'), { target: { value: 'sam@example.com' } });
   assert.ok((await dialog.findByText('Sam Reed already has this email address')) !== null);
 });
+
+// A company or club (openspec/changes/company-customers; cs-add-company;
+// customer service review 3; leftover screens H2). Example details are the
+// drawing's placeholders.
+async function addCompany() {
+  const r = await open();
+  r.fireEvent.click(r.ui.getByRole('button', { name: '+ Add a customer' }));
+  const dialog = r.within(await r.ui.findByRole('dialog', { name: 'Add a customer' }));
+  const who = r.within(dialog.getByRole('group', { name: 'This is' }));
+  assert.equal(who.getByRole('radio', { name: 'A person' }).checked, true, 'a person to start');
+  r.fireEvent.click(who.getByRole('radio', { name: 'A company or club' }));
+  return { ...r, dialog };
+}
+
+test('This is: a company or club asks for its name, a contact, and the VAT number and Send invoices to, as drawn', async () => {
+  const { dialog } = await addCompany();
+  assert.ok(dialog.queryByLabelText('Name') === null, 'Name gives way to the company’s');
+  assert.equal(dialog.getByLabelText('Company or club name').getAttribute('placeholder'), 'e.g. the club’s name');
+  assert.equal(dialog.getByLabelText('Contact name').getAttribute('placeholder'), 'Who we deal with');
+  assert.equal(dialog.getByLabelText('VAT number (optional)').getAttribute('placeholder'), 'For VAT invoices');
+  const to = dialog.getByLabelText('Send invoices to (optional)');
+  assert.equal(to.getAttribute('type'), 'email');
+  assert.equal(to.getAttribute('placeholder'), 'The contact’s email if blank');
+});
+
+test('a person’s Add has no company boxes', async () => {
+  const { ui, fireEvent, within } = await open();
+  fireEvent.click(ui.getByRole('button', { name: '+ Add a customer' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Add a customer' }));
+  for (const label of ['Company or club name', 'Contact name', 'VAT number (optional)', 'Send invoices to (optional)']) assert.ok(dialog.queryByLabelText(label) === null, label);
+});
+
+test('a company needs its name and a contact, and adds with its details', async () => {
+  const { dialog, fireEvent, waitFor } = await addCompany();
+  fireEvent.change(dialog.getByLabelText('Phone'), { target: { value: '07700 900777' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Add the customer' }));
+  assert.ok((await dialog.findByRole('alert')).textContent.includes('Add the company or club’s name.'));
+  fireEvent.change(dialog.getByLabelText('Company or club name'), { target: { value: '[Company name]' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Add the customer' }));
+  await waitFor(() => assert.ok(dialog.getByRole('alert').textContent.includes('Add the contact’s name.')));
+  assert.deepEqual(posts(), []);
+  fireEvent.change(dialog.getByLabelText('Contact name'), { target: { value: '[Contact name]' } });
+  fireEvent.change(dialog.getByLabelText('VAT number (optional)'), { target: { value: '[Company VAT number]' } });
+  fireEvent.change(dialog.getByLabelText('Send invoices to (optional)'), { target: { value: 'accounts@example.com' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Add the customer' }));
+  await waitFor(() => assert.equal(posts().length, 1));
+  const sent = posts()[0];
+  assert.deepEqual([sent.isCompany, sent.name, sent.contactName, sent.vatNumber, sent.invoiceEmail], [true, '[Company name]', '[Contact name]', '[Company VAT number]', 'accounts@example.com']);
+});
