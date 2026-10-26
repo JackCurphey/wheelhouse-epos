@@ -20,10 +20,10 @@ let mayaCookie;
 let samCookie;
 
 const staff = (path, options, who = owner) => staffRequest(server.baseUrl, who.cookie, path, options);
-async function portal(path, { cookie = mayaCookie, method = 'GET', body, shop = owner } = {}) {
+async function portal(path, { cookie = mayaCookie, method = 'GET', body, shop = owner, headers = {} } = {}) {
   const res = await fetch(`${server.baseUrl}/api/portal/${shop.shop.slug}${path}`, {
     method,
-    headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+    headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, body: await res.json().catch(() => null) };
@@ -214,4 +214,15 @@ test('/me gives her mobile and how the shop contacts her; /history each repairâ€
   assert.equal(repair.workStarted, false);
   await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET work_state = 'in_progress' WHERE id = ?").run(job.id));
   assert.equal((await portal('/history')).body.find((h) => h.jobId === job.id).workStarted, true, 'once work has begun');
+});
+
+// add-a-bike design 3: adding a bike from another website is refused, as the account's job actions are.
+test('adding a bike from another website is refused, and no bike is added', async () => {
+  const count = async () => (await portal('/bikes')).body.length;
+  const before = await count();
+  const res = await portal('/bikes', { method: 'POST', body: { make: 'Stolen', model: 'Bike' }, headers: { 'sec-fetch-site': 'cross-site' } });
+  assert.equal(res.status, 403);
+  assert.equal(await count(), before);
+  const ok = await portal('/bikes', { method: 'POST', body: { make: 'Brompton', model: 'C Line' }, headers: { 'sec-fetch-site': 'same-origin' } });
+  assert.equal(ok.status, 201);
 });

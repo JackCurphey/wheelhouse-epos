@@ -29,6 +29,11 @@ const accountServer = ({ me = ME, bikes = BIKES, history = [NOW, BUY, OLD_BUY, P
   if (pathname.endsWith('/logout')) return { status: 200, body: { ok: true } };
   if (!me) return { status: 401, body: { error: 'Not signed in' } };
   if (pathname.endsWith('/me')) return { status: 200, body: me };
+  if (pathname.endsWith('/bikes') && init?.method === 'POST') {
+    const made = { id: 70, ...JSON.parse(init.body) };
+    bikes = [...bikes, made];
+    return { status: 201, body: made };
+  }
   if (pathname.endsWith('/bikes')) return { status: 200, body: bikes };
   return { status: 200, body: history };
 };
@@ -139,4 +144,20 @@ test('when Sign out doesn’t go through, it says so and she can press it again'
   assert.equal((await current.ui.findByRole('alert')).textContent, 'That didn’t go through. Check your connection and try again.');
   assert.equal(current.ui.getByRole('button', { name: 'Sign out' }).disabled, false);
   assert.ok(current.ui.getByRole('heading', { level: 1, name: 'Your account' }), 'still on the account');
+});
+
+// Adding a bike (openspec/changes/add-a-bike; ac-account's "+ Add a bike";
+// not-drawn pages 16: "A different bike" on the booking's bike step).
+test('+ Add a bike opens Add a bike with the booking’s bike fields; the bike shows at once', async () => {
+  const { ui, requests } = await open({ bikes: [] });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
+  fireEvent.click(bikes.getByRole('button', { name: '+ Add a bike' }));
+  const box = w(await ui.findByRole('dialog', { name: 'Add a bike' }));
+  fireEvent.change(box.getByLabelText('Make and model'), { target: { value: 'Brompton C Line' } });
+  fireEvent.change(box.getByLabelText('Colour, or anything that helps us spot it'), { target: { value: 'Black' } });
+  fireEvent.click(box.getByRole('button', { name: 'Add bike' }));
+  assert.ok(await bikes.findByText('Brompton C Line · Black'));
+  const post = requests.find((r) => r.method === 'POST' && r.url.endsWith('/api/portal/north/bikes'));
+  assert.deepEqual(post.body, { make: 'Brompton C Line', model: '', colour: 'Black' });
 });

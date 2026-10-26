@@ -28,6 +28,7 @@ let shell;
 let calls;
 let customer;
 let history;
+let bikes;
 let duplicates;
 let merges;
 afterEach(async () => {
@@ -44,6 +45,7 @@ async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = n
   merges = undoable;
   customer = { ...who };
   history = items;
+  bikes = [...BIKES];
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -53,7 +55,13 @@ async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = n
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/customers/5' && method === 'PUT') { customer = { ...customer, ...body, groups: customer.groups }; return reply(200, customer); }
     if (u.pathname === '/api/customers/5') return reply(200, customer);
-    if (u.pathname === '/api/customers/5/bikes') return reply(200, BIKES);
+    if (u.pathname === '/api/customers/5/bikes' && method === 'POST') {
+      if (!body.make && !body.model) return reply(400, { error: 'Make or model is required' });
+      const made = { id: 90, customerId: 5, ...body };
+      bikes = [...bikes, made];
+      return reply(201, made);
+    }
+    if (u.pathname === '/api/customers/5/bikes') return reply(200, bikes);
     if (u.pathname === '/api/customers/5/history') return reply(200, { items: history });
     if (u.pathname === '/api/customers/5/possible-duplicates') return reply(200, duplicates);
     if (u.pathname === '/api/customers/5/merges') return reply(200, merges);
@@ -298,4 +306,24 @@ test('a till sale opens with its receipt number, and no Print until its receipt 
   assert.ok(await d.findByText('Pump'));
   assert.ok(d.getByText('Card'));
   assert.equal(d.queryByRole('button', { name: 'Print the receipt' }) === null, true);
+});
+
+// Adding a bike (openspec/changes/add-a-bike; cs-page's "+ Add"; not-drawn
+// pages 17 and 23: the new-job dialog's bike form).
+test('+ Add beside Bikes opens Add a bike; adding lists it; nothing typed is refused', async () => {
+  const { ui, fireEvent, within } = await open();
+  const section = within(await ui.findByRole('region', { name: 'Bikes' }));
+  fireEvent.click(section.getByRole('button', { name: 'Add a bike' }));
+  const box = within(await ui.findByRole('dialog', { name: 'Add a bike' }));
+  fireEvent.click(box.getByRole('button', { name: 'Add bike' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Enter a make or a model.');
+  assert.equal(box.getByLabelText('Make').getAttribute('placeholder'), 'e.g. Trek');
+  fireEvent.change(box.getByLabelText('Make'), { target: { value: 'Specialized' } });
+  fireEvent.change(box.getByLabelText('Model'), { target: { value: 'Allez' } });
+  fireEvent.change(box.getByLabelText('Colour'), { target: { value: 'Red' } });
+  fireEvent.click(box.getByRole('button', { name: 'Add bike' }));
+  assert.ok(await section.findByText('Specialized Allez'));
+  assert.ok(ui.queryByRole('dialog') === null, 'the box closes');
+  const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/api/customers/5/bikes'));
+  assert.deepEqual(post.body, { make: 'Specialized', model: 'Allez', colour: 'Red', serialNumber: '' });
 });
