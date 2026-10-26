@@ -28,6 +28,7 @@ const EXAMPLE = {
   'Link to the booking': '[link]',
   'Link to book': '[link]',
   'Link to review': '[link]',
+  'Link to your messages': '[link]',
   'Opening hours': '[opening hours]',
   Service: 'Standard service',
   'Booked day and time': 'Thu 17 Sep, 11:30',

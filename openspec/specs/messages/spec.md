@@ -115,18 +115,30 @@ When staff record a customer's quote answer taken by phone, the customer SHALL b
 - **THEN** Maya is sent "Going ahead: Shimano brake pads and Fit and adjust brakes, £46.00. No thanks: Replace gear cable."
 
 ### Requirement: Staff answer customers' notes from one inbox
-Staff SHALL see a conversation per job with notes, newest first, marked "Needs a reply" while the customer's note is the newest; a staff reply SHALL be saved on the job and the customer told with "Reply from the shop", the way they chose (decisions 3 and 7).
+Staff SHALL see one conversation per customer, holding the customer's general messages, their notes on each repair (each marked with its repair) and the shop's replies, newest conversation first and marked "Needs a reply" while the customer's message is the newest (decisions 3 and 7; day answers 2.3 and 8.2). A staff reply about a repair SHALL be saved on the repair and the customer told with "Reply from the shop"; a reply to a general message SHALL be saved in the conversation and the customer told with "Reply to a message"; each the way the customer chose.
 
 #### Scenario: Replying
-- **WHEN** Jo replies "Yes, we'll check it" to Maya's note
+- **WHEN** Jo replies "Yes, we'll check it" to Maya's note on WH-1042
 - **THEN** the conversation no longer needs a reply, and Maya is sent "North Street Cycles replied about your Trek Domane AL 3 (WH-1042): Yes, we'll check it. Replies to this number aren’t read — reply on your page: [link]"
 
+#### Scenario: One row for Maya
+- **WHEN** Maya has written a note on WH-1042 and asked the shop a question from her account
+- **THEN** the inbox has one conversation for Maya Patel, with both in it
+
 ### Requirement: Staff read and answer customers' notes in the Messages inbox
-Front desk › Messages SHALL list a conversation per job with notes, "Needs a reply" first with its count, and open one beside the list (on a phone, on its own with a way back) with the customer, the job, the thread and a reply box; sending SHALL say how the reply went (decision 7; ac-inbox).
+Front desk › Messages SHALL list one conversation per customer, "Needs a reply" first with its count, and open one beside the list (on a phone, on its own with a way back) with the customer, their phone, the thread with each repair note marked with its repair, and a reply box; the address SHALL say which customer is open. A reply SHALL be about the repair of the customer's newest message, or general when that message was general, and the box SHALL say which. Sending SHALL say how the reply went (decision 7; day answers 8.2; ac-inbox).
 
 #### Scenario: Answering Maya
-- **WHEN** Jo opens Messages, chooses Maya Patel's conversation and sends "Yes, we’ll check it"
-- **THEN** the reply joins the thread, the page says "Sent to Maya by text, with a link to reply on the job’s page.", and Maya's conversation leaves Needs a reply
+- **WHEN** Jo opens Messages, chooses Maya Patel's conversation, whose newest message is her note on WH-1042, and sends "Yes, we’ll check it"
+- **THEN** the reply joins the thread as a note on WH-1042, the page says "Sent to Maya by text, with a link to reply on the job’s page.", and Maya's conversation leaves Needs a reply
+
+#### Scenario: Answering a general message
+- **WHEN** a customer's newest message came from their account and Jo replies
+- **THEN** the page says the reply went with a link to their messages
+
+#### Scenario: One row for Maya
+- **WHEN** Maya has a note on WH-1042 and a message from her account
+- **THEN** the inbox has one row for Maya Patel, and her conversation shows both, the note marked "About WH-1042"
 
 ### Requirement: Bike ready waits for Send now when Don't close things by themselves is on
 
@@ -230,3 +242,14 @@ The link at the end of a shop's own message SHALL stop that message for that cus
 #### Scenario: stopping one of two
 - **WHEN** Maya stops "Spring check" from its link
 - **THEN** she gets no more "Spring check", and still gets the shop's other own messages
+
+### Requirement: The customer is told when the shop replies to their message
+When staff reply to a customer's general message, the customer SHALL be sent "Reply to a message", reading "[Shop name] replied to your message: [Link to your messages]", the way they chose; the link opens their conversation, after signing in. The shop SHALL be able to reword or switch it off in Settings › Messages (day answers 2.4).
+
+#### Scenario: Jo answers Maya's question
+- **WHEN** Jo replies to Maya's question from her account
+- **THEN** Maya is sent "North Street Cycles replied to your message: [link]"
+
+#### Scenario: switched off
+- **WHEN** the shop has switched Reply to a message off and Jo replies
+- **THEN** the reply is saved, and Jo is told no message went because it is switched off

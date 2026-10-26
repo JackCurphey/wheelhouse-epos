@@ -65,13 +65,14 @@ test('signed out on any one of its three reads, it still goes to sign in', async
   assert.ok(await current.ui.findByText(`At /book/north/sign-in?from=${encodeURIComponent('/book/north/account')}`));
 });
 
-test('the head: Your account, her name and email with Sign out, and Book a repair', async () => {
+test('the head: Your account, her name and email with Sign out, Ask the shop a question and Book a repair', async () => {
   const { ui } = await open();
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Your account' }));
   assert.ok(await ui.findByText(/Maya Patel · maya@example\.test/));
   assert.ok(ui.getByRole('button', { name: 'Sign out' }));
   assert.ok(ui.getAllByRole('link', { name: 'Book a repair' }).length >= 1);
-  assert.equal(ui.queryByRole('button', { name: 'Ask the shop a question' }) === null, true, 'not built yet');
+  // ask-the-shop-screens design 2 (ac-account): it opens her conversation.
+  assert.equal(ui.getByRole('link', { name: 'Ask the shop a question' }).getAttribute('href'), '/book/north/messages');
 });
 
 test('her bike, with the repair in now; her details; how the shop contacts her', async () => {
@@ -113,6 +114,47 @@ test('the history: Now first, then Earlier, newest first; each row as drawn; a r
   fireEvent.click(history.getByRole('button', { name: 'Repairs' }));
   assert.equal(history.queryByText(/12 · Pump/) === null, true);
   assert.ok(history.getByRole('link', { name: /WH-1042/ }));
+});
+
+// ask-the-shop-screens design 2 (ac-account-asked; day answers 2.3): one row for the conversation.
+const REPLIED = { kind: 'messages', at: '2026-09-18T09:00:00.000Z', shopReplied: true };
+const WAITING = { kind: 'messages', at: '2026-09-18T09:00:00.000Z', shopReplied: false };
+
+test('the shop replied: one Messages row under Earlier, by its date, Replied, opening the conversation', async () => {
+  const { ui } = await open({ history: [NOW, REPLIED, BUY, OLD_BUY, PAST] });
+  const { within: w } = await import('@testing-library/react');
+  const history = w(await ui.findByRole('region', { name: 'History' }));
+  const row = await history.findByRole('link', { name: /Messages with North Street Cycles/ });
+  assert.equal(row.getAttribute('href'), '/book/north/messages');
+  assert.match(row.textContent, /Fri 18 Sep · North Street Cycles replied/);
+  assert.match(row.textContent, /Replied/);
+  assert.ok(w(row).getByText('Messages', { exact: true }), 'its kind');
+  const order = history.getAllByRole('heading').map((h) => h.textContent);
+  assert.deepEqual(order, ['History', 'Now', 'Earlier, newest first']);
+  assert.ok(history.getByRole('heading', { name: 'Earlier, newest first' }).nextElementSibling === row, 'first under Earlier, as the newest');
+});
+
+test('waiting for a reply: the row is under Now, Sent', async () => {
+  const { ui } = await open({ history: [WAITING, PAST] });
+  const { within: w } = await import('@testing-library/react');
+  const history = w(await ui.findByRole('region', { name: 'History' }));
+  const row = await history.findByRole('link', { name: /Messages with North Street Cycles/ });
+  assert.match(row.textContent, /Fri 18 Sep · waiting for a reply/);
+  assert.match(row.textContent, /Sent/);
+  const headings = history.getAllByRole('heading').map((h) => h.textContent);
+  assert.deepEqual(headings, ['History', 'Now', 'Earlier, newest first']);
+  assert.ok(history.getByRole('heading', { name: 'Now' }).nextElementSibling === row, 'straight under Now');
+});
+
+test('the Messages row shows under Everything only, as drawn', async () => {
+  const { ui } = await open({ history: [REPLIED, BUY, PAST] });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const history = w(await ui.findByRole('region', { name: 'History' }));
+  await history.findByRole('link', { name: /Messages with/ });
+  fireEvent.click(history.getByRole('button', { name: 'Purchases' }));
+  assert.ok(history.queryByRole('link', { name: /Messages with/ }) === null);
+  fireEvent.click(history.getByRole('button', { name: 'Repairs' }));
+  assert.ok(history.queryByRole('link', { name: /Messages with/ }) === null);
 });
 
 test('more than eight earlier: Show more shows the rest', async () => {

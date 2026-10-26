@@ -50,3 +50,10 @@ export const SIGNIN_ROUTE = '/book/:shopSlug/sign-in';
  * booking steps, as the sign-in page is.
  */
 export const ACCOUNT_ROUTE = '/book/:shopSlug/account';
+
+/**
+ * "Ask the shop a question" (openspec/changes/ask-the-shop-screens; ac-ask,
+ * ac-account-question-sent, ac-question): the customer's one conversation with
+ * the shop, by her sign-in. The shop's "Reply to a message" links here.
+ */
+export const MESSAGES_ROUTE = '/book/:shopSlug/messages';

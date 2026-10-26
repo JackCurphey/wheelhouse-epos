@@ -176,17 +176,25 @@ const phoneText = (body) => `<div style="display: flex; flex-direction: column; 
 // ---------- The staff Messages inbox (decision 7) ----------
 // Left: conversations, "Needs a reply" first. Right: the open one, and a
 // reply box that says how the reply goes. Audit M7: "Needs a reply" in words.
-// Coverage walk 10 M1: a row may add what it is to its name (`kind`), so
-// Maya's job note and her account question aren't both just "Maya Patel".
+// Coverage walk 10 M1 gave a row a `kind` so Maya's job note and her account
+// question weren't both "Maya Patel"; with one row per customer (day answers
+// 8.2) no row needs it.
 const convRow = ({ who, about, last, when, open = false, waiting = false, kind = '' }) => `<a href="#"${open ? ' aria-current="true"' : ''} aria-label="${waiting ? 'Needs a reply: ' : ''}${esc(who)}${kind ? ` · ${esc(kind)}` : ''}" style="display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 8px; border: 1px solid ${open ? C.ink : 'transparent'}; background: ${open ? C.mutedBg : 'transparent'}; text-decoration: none; color: ${C.ink}"><span style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 700">${who}</span><span style="font-size: 12px; color: ${C.muted}; white-space: nowrap">${when}</span></span><span style="font-size: 13px; color: ${C.muted}">${about}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px">${waiting ? `<span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: ${C.purpleInk}; white-space: nowrap"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: ${C.purpleInk}"></span>Needs a reply</span>` : ''}<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${last}</span></span></a>`;
+// Jack, 26 Oct (day answers 8.2): one row per customer, holding their notes
+// on each repair and their messages from their account. A row's second line
+// is what the newest message is about: a repair, or "From their account".
 const CONVS = {
   maya: { who: MAYA.name, about: `${MAYA.bike} · ${mono('WH-1042')}`, last: '[Maya’s note to the shop]', when: '[time]' },
-  // Coverage walks, answer 3 (Jack, 4 Oct): Maya's question from her account.
-  q: { who: MAYA.name, about: 'Question from her account', kind: 'Question from her account', last: '[Maya’s question]', when: '[time]' },
+  // Another customer's message from their account, waiting.
+  q: { who: '[Another customer]', about: 'From their account', last: '[Their message]', when: '[time]' },
   done1: { who: 'Oliver Chen', about: `Brompton C Line · ${mono('WH-1068')}`, last: 'You: [the last reply]', when: '[day]' },
-  done2: { who: '[Customer name]', about: 'Question from their account', last: 'You: [the last reply]', when: '[day]' },
+  done2: { who: '[Customer name]', about: 'From their account', last: 'You: [the last reply]', when: '[day]' },
 };
 const SENT_HOW = 'Sent to Maya by text, with a link to reply on the job’s page.';
+// The reply is about the repair of her newest message, and says so (ask-the-shop-screens design 3).
+const REPLY_HOW = `About ${mono('WH-1042')}: goes to Maya the way they chose, with a link to reply on the job’s page.`;
+// A repair note in the staff conversation, marked with its repair (day answers 8.2).
+const staffTagged = (mine, who, when, text, ref) => msg(mine, who, when, text).replace('</li>', `${aboutJob(ref)}</li>`);
 const INBOX_NOTE = 'Messages from customers — from a job’s page, or their account. Replies go the way each customer chose, with a link back.';
 function inbox({ sent = false, filter = 'Needs a reply', empty = false, listOnly = false } = {}) {
   const maya = convRow({ ...CONVS.maya, last: sent ? 'You: [Jo’s reply]' : CONVS.maya.last, waiting: !sent, open: !empty });
@@ -201,12 +209,14 @@ function inbox({ sent = false, filter = 'Needs a reply', empty = false, listOnly
 ${card(`<nav aria-label="Conversations" style="padding: 6px; display: flex; flex-direction: column; gap: 2px">${listBody}</nav>`)}</div>`;
   const wrap = (inner) => page('messages', 'Messages', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note(INBOX_NOTE)}${inner}</div>`, STAFF);
   if (empty || (listOnly && isPhone())) return isPhone() ? wrap(list) : wrap(`<div style="display: flex; gap: 16px; align-items: flex-start">${list}${card(`<p style="margin: 0; padding: 40px 20px; text-align: center; font-size: 15px; color: ${C.muted}">Choose a conversation to read it.</p>`, 'flex-grow: 1; min-width: 0')}</div>`);
-  const items = sent ? [msg(false, 'Maya Patel', '[day, time]', '[Maya’s note to the shop]'), msg(true, 'You (Jo Taylor)', 'just now', '[Jo’s reply]')] : [msg(false, 'Maya Patel', '[day, time]', '[Maya’s note to the shop]')];
+  // Her one conversation (day answers 8.2): her message from her account and
+  // its answer, then her note on WH-1042, marked with its repair, which opens the job.
+  const items = [msg(false, 'Maya Patel', '[day, time]', '[Maya’s message]'), msg(true, 'You (Jo Taylor)', '[day, time]', '[Jo’s answer]'), staffTagged(false, 'Maya Patel', '[day, time]', '[Maya’s note to the shop]', 'WH-1042')];
+  if (sent) items.push(staffTagged(true, 'You (Jo Taylor)', 'just now', '[Jo’s reply]', 'WH-1042'));
   // Audit L7: after sending, "See the text Maya gets", and a box to reply again.
-  const after = sent ? `${statusBar(`${SENT_HOW} <a href="#" style="color: inherit">See the text Maya gets</a>`)}${writeBox('reply', 'Reply again', '', 'Send reply', SENT_HOW)}` : writeBox('reply', 'Reply', '[Jo’s reply]', 'Send reply', SENT_HOW);
+  const after = sent ? `${statusBar(`${SENT_HOW} <a href="#" style="color: inherit">See the text Maya gets</a>`)}${writeBox('reply', 'Reply again', '', 'Send reply', REPLY_HOW)}` : writeBox('reply', 'Reply', '[Jo’s reply]', 'Send reply', REPLY_HOW);
   const conv = card(`<div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 700">${MAYA.name}</span><span style="font-size: 13px; color: ${C.muted}">${MAYA.bikeLong} · ${mono('WH-1042')} · <a href="tel:07700900142" style="color: inherit">${mono(MAYA.phone)}</a></span></span><span style="display: flex; gap: 16px">${link('Open the job')}${link('Customer page')}</span></div>
-${p('On the job’s page · started by Maya', `font-size: 13px; color: ${C.muted}`)}
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 700">${MAYA.name}</span><span style="font-size: 13px; color: ${C.muted}"><a href="tel:07700900142" style="color: inherit">${mono(MAYA.phone)}</a></span></span><span style="display: flex; gap: 16px">${link('Customer page')}</span></div>
 ${thread(items, 'Conversation with Maya Patel')}${after}</div>`, 'flex-grow: 1; min-width: 0');
   // Decision 7: on a phone, the list, then the conversation with a way back.
   if (isPhone()) return wrap(`${backTo(`Messages · needs a reply ${count}`)}${conv}`);
@@ -376,7 +386,7 @@ export const TITLES = {
   'ac-account-question-sent': 'Sent: we’ll let you know when the shop replies',
   'ac-question': 'The conversation with the shop’s answer',
   'ac-account-asked': 'The history once answered: one row for the conversation',
-  'ac-inbox': 'Staff Messages: needs a reply, and the open conversation',
+  'ac-inbox': 'Staff Messages: one conversation per customer, needs a reply, and the open one',
   'ac-inbox-sent': 'Reply sent the way Maya chose; reply again',
   'ac-inbox-all': 'All conversations, “Needs a reply” in words',
   'ac-inbox-list': 'On a phone: the list first',
