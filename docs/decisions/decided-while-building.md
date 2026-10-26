@@ -2634,6 +2634,14 @@ follows the job checklist, the closest pattern built.
    - the buttons stay focusable while a change saves;
    - a sign-in that has run out says "Please sign in again to change this."
 
+### 26 Oct 2026: the diary's legend as a box (`openspec/changes/diary-legend-box`; Jack's option 2, "Legend", per person)
+
+1. **Below 1024px wide,** where the left-hand column is folded away (an
+   upright tablet), the legend sits under the toolbar, along a line or two.
+   It isn't at the bottom of the diary any more.
+2. **No "Show the diary legend" switch on a phone,** where the diary has no
+   legend, as with Folded sidebar.
+
 ### 26 Oct 2026: the customer's conversation with the shop, the server (`openspec/changes/ask-the-shop-server`, `ac-ask`, `ac-question`, `ac-account-asked`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
 
 1. **Where messages are kept.** A general message sits with the repair notes
