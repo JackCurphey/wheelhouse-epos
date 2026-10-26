@@ -226,3 +226,19 @@ test('adding a bike from another website is refused, and no bike is added', asyn
   const ok = await portal('/bikes', { method: 'POST', body: { make: 'Brompton', model: 'C Line' }, headers: { 'sec-fetch-site': 'same-origin' } });
   assert.equal(ok.status, 201);
 });
+
+// next-service-due design 1 and 2: each bike's waiting service reminder's day, in the shop's time; none with reminders off.
+test('/bikes gives each bike the day its service reminder is waiting for, and none with reminders off', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET service_reminders = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'booking' WHERE id = ?").run(maya.id));
+  const { job } = await mayasJob();
+  await runWithShop(owner.shop.id, () => prepare(
+    `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, to_address, send_after)
+     VALUES (?, ?, 'Time for a service', 'queued', 'intended', 'sms', 'service_reminder', '07700 900142', '2027-03-17T09:00:00Z')`
+  ).run(maya.id, job.id));
+  const trek = (await portal('/bikes')).body.find((b) => b.id === mayaBike.id);
+  assert.equal(trek.nextServiceDue, '2027-03-17');
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET service_reminders = false WHERE id = ?').run(maya.id));
+  assert.equal((await portal('/bikes')).body.find((b) => b.id === mayaBike.id).nextServiceDue, null);
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET service_reminders = true WHERE id = ?').run(maya.id));
+});
+

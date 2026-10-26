@@ -957,7 +957,19 @@ export function register(route) {
     const rows = await db
       .prepare('SELECT * FROM customer_bikes WHERE customer_id = ? AND active = 1 ORDER BY make, model')
       .all(ctx.login.customer_id);
-    sendJson(res, 200, rows.map(serializeBike));
+    // Each bike's next service: the day its waiting service reminder goes, in
+    // the shop's time; none while the customer's reminders are off
+    // (next-service-due design 1 and 2).
+    const due = await db.prepare(
+      `SELECT w.bike_id, to_char(min(m.send_after) AT TIME ZONE coalesce((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS day
+         FROM customer_messages m JOIN workshop_jobs w ON w.id = m.job_id
+         JOIN customers c ON c.id = ? AND c.service_reminders
+        WHERE m.template_key = 'service_reminder' AND m.intent_state = 'intended'
+          AND m.send_after <> 'infinity'::timestamptz AND w.customer_id = c.id AND w.bike_id IS NOT NULL
+        GROUP BY w.bike_id`
+    ).all(ctx.login.customer_id);
+    const dueFor = new Map(due.map((d) => [d.bike_id, d.day]));
+    sendJson(res, 200, rows.map((r) => ({ ...serializeBike(r), nextServiceDue: dueFor.get(r.id) ?? null })));
   });
 
   route('POST', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
