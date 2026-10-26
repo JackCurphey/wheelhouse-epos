@@ -8,7 +8,6 @@ import * as shopSettings from './shop-settings.js';
 import * as shopWebsite from './website.js';
 import * as sitesTills from './sites-tills.js';
 import * as team from './team.js';
-import * as printAgents from './print-agents.js';
 import * as customerMessages from './customer-messages.js';
 import * as messages from './messages.js';
 import * as ownMessages from './own-messages.js';
@@ -27,4 +26,4 @@ import * as search from './search.js';
 import * as customerMerge from './customer-merge.js';
 import * as depositPayments from './deposit-payments.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments];
