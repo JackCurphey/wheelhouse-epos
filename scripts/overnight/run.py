@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Unattended, time-boxed loop: one fresh Claude Code session per queue item.
 
-Works in its own git worktree (your checkout is never touched), one stacked
-branch per item. The AGENT has no way to push or merge: it runs without any git
+Works in its own git worktree (your checkout's files are never touched, but the
+worktree SHARES your checkout's .git: config, hooks and branches the agent writes
+there outlive the run, so the runner fingerprints them and stops if they changed),
+one stacked branch per item. The AGENT has no way to push or merge: it runs without any git
 credentials (see agent_env) as well as with deny rules. The RUNNER, after each
 item, runs `npm test` itself (a report never rests on the agent's word), scans
 what the agent committed for secrets, and only then pushes that one
@@ -138,7 +140,8 @@ def agent_env(base, empty_gitconfig):
         env.pop(k)
     env.pop('SSH_AUTH_SOCK', None)
     hooks = [('remote.origin.pushurl', 'disabled://overnight-no-push'), ('credential.helper', ''),
-             ('commit.gpgsign', 'false'), ('core.hooksPath', '/dev/null')]
+             ('commit.gpgsign', 'false'), ('core.hooksPath', '/dev/null'),
+             ('core.fsmonitor', 'false'), ('log.showSignature', 'false')]
     env.update(
         GIT_SSH_COMMAND='false', GIT_TERMINAL_PROMPT='0', GIT_ASKPASS='false',
         GIT_CONFIG_GLOBAL=str(empty_gitconfig), GIT_CONFIG_NOSYSTEM='1',
@@ -151,6 +154,21 @@ def agent_env(base, empty_gitconfig):
         env[f'GIT_CONFIG_KEY_{i}'] = k
         env[f'GIT_CONFIG_VALUE_{i}'] = v
     return env
+
+
+def git_state_fingerprint(git_dir):
+    """A hash of the shared .git's config and hooks. A session has no reason to change either, and a change
+    would run in your own terminal long after the run ends."""
+    import hashlib
+    h = hashlib.sha256()
+    git_dir = Path(git_dir)
+    cfg = git_dir / 'config'
+    h.update(cfg.read_bytes() if cfg.exists() else b'')
+    hooks = git_dir / 'hooks'
+    for f in sorted(hooks.iterdir()) if hooks.exists() else []:
+        if f.is_file():
+            h.update(f.name.encode() + b'\0' + f.read_bytes() + b'\0')
+    return h.hexdigest()
 
 
 def push_command(url, sha, branch):
@@ -275,6 +293,10 @@ def main():
         with report.open('a') as f:
             f.write(s + '\n')
 
+    empty_gitconfig = run / 'empty.gitconfig'
+    empty_gitconfig.write_text('')
+    env = agent_env(os.environ, empty_gitconfig)  # every git command the runner runs in the worktree uses it too
+
     items = parse_queue(queue)
     log(f'# Overnight run {stamp}\nDeadline {dt.datetime.fromtimestamp(deadline):%a %H:%M}. '
         f'Run dir: {run}\nItems: ' + ', '.join(i['id'] for i in items) + '\n')
@@ -302,9 +324,9 @@ def main():
 
     if not WORKTREE.exists():
         sh(['git', 'worktree', 'add', '--detach', str(WORKTREE), base_sha], cwd=REPO)
-    elif sh(['git', 'status', '--porcelain'], cwd=WORKTREE).stdout.strip():
+    elif sh(['git', 'status', '--porcelain'], cwd=WORKTREE, env=env).stdout.strip():
         sys.exit(f'{WORKTREE} has uncommitted files from an earlier run. Look at them, then clean it before running again.')
-    excl = Path(sh(['git', 'rev-parse', '--git-path', 'info/exclude'], cwd=WORKTREE).stdout.strip())
+    excl = Path(sh(['git', 'rev-parse', '--git-path', 'info/exclude'], cwd=WORKTREE, env=env).stdout.strip())
     excl = excl if excl.is_absolute() else WORKTREE / excl
     excl.parent.mkdir(parents=True, exist_ok=True)
     lines = (excl.read_text() if excl.exists() else '').splitlines()
@@ -317,9 +339,8 @@ def main():
     if not (WORKTREE / 'node_modules').exists():
         os.symlink(REPO / 'node_modules', WORKTREE / 'node_modules')
 
-    empty_gitconfig = run / 'empty.gitconfig'
-    empty_gitconfig.write_text('')
-    env = agent_env(os.environ, empty_gitconfig)
+    gitdir = Path(sh(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO).stdout.strip())
+    fingerprint = git_state_fingerprint(gitdir)
 
     prev_commit = base_sha
     prev_pr_base = base_branch
@@ -334,14 +355,14 @@ def main():
             break
         item = todo[0]
         branch = branch_name(stamp, item['id'])
-        if sh(['git', 'rev-parse', '--verify', '--quiet', f'refs/heads/{branch}'], cwd=WORKTREE, check=False).returncode == 0:
+        if sh(['git', 'rev-parse', '--verify', '--quiet', f'refs/heads/{branch}'], cwd=WORKTREE, env=env, check=False).returncode == 0:
             log(f'\n## {item["id"]}: branch {branch} already exists; not overwriting it. Stopping.')
             break
         if sh(['git', 'status', '--porcelain'], cwd=WORKTREE, env=env).stdout.strip():
             log(f'\n## {item["id"]}: the worktree has uncommitted files; stopping so they are not swept into a commit.')
             break
         sh(['git', 'switch', '-c', branch, prev_commit], cwd=WORKTREE, env=env)
-        head0 = sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE).stdout.strip()
+        head0 = sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE, env=env).stdout.strip()
         log(f"\n## {item['id']} — {item['title']}  (branch {branch}, "
             f"{dt.datetime.now():%H:%M}, {remaining/3600:.1f} h left)")
 
@@ -388,7 +409,7 @@ def main():
         # --- the runner's own check, not the agent's word ----------------------
         sh('git add -A && git diff --cached --quiet || git commit -qm "WIP: uncommitted work left by the overnight session"',
            cwd=WORKTREE, check=False, env=env)
-        head1 = sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE).stdout.strip()
+        head1 = sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE, env=env).stdout.strip()
         changed = head1 != head0
         moved = []
         tests = 'not run (no commits)'
@@ -405,21 +426,25 @@ def main():
             except subprocess.TimeoutExpired:
                 tests = 'RED (npm test timed out)'
             # The tests run scripts the agent wrote. They must not have added commits or moved anything.
-            if sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE).stdout.strip() != head1 \
-                    or sh(['git', 'status', '--porcelain'], cwd=WORKTREE).stdout.strip():
+            if sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE, env=env).stdout.strip() != head1 \
+                    or sh(['git', 'status', '--porcelain'], cwd=WORKTREE, env=env).stdout.strip():
                 moved.append('the tests changed the branch or left files behind')
 
         # --- nothing leaves the machine with a secret in it -------------------
         leaks = []
+        stop_run = False
         if changed:
             # Every commit that will be pushed, not just the overall change: a file added and then deleted is still in history.
-            names = sh(['git', 'log', '--name-only', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE).stdout.split()
+            names = sh(['git', 'log', '--name-only', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE, env=env).stdout.split()
             leaks += [f'{n}: a file that is never committed' for n in set(names) if forbidden_file(n)]
-            numstat = sh(['git', 'log', '--numstat', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE).stdout
+            numstat = sh(['git', 'log', '--numstat', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE, env=env).stdout
             leaks += [f'{n}: a binary file nobody can scan' for n in binary_files_to_look_at(numstat)]
-            history = sh(['git', 'log', '-p', '--no-ext-diff', '--no-textconv', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE).stdout
+            history = sh(['git', 'log', '-p', '--no-ext-diff', '--no-textconv', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE, env=env).stdout
             leaks += scan_for_secrets(history, secrets)
             leaks += moved
+        if git_state_fingerprint(gitdir) != fingerprint:
+            leaks.append('the shared .git config or hooks changed during the session (this runs in your own terminal later): stopping the run')
+            stop_run = True
             if leaks:
                 log('- **SECRET SCAN FAILED, nothing pushed:** ' + '; '.join(sorted(set(leaks))[:10]))
                 green = False
@@ -427,7 +452,7 @@ def main():
 
         state = 'x' if (verdict == 'done' and green) or (verdict == 'done' and not changed) else '!'
         set_state(queue, item['id'], state, f'{verdict}; tests {tests}')
-        commits = sh(['git', 'log', '--oneline', f'{head0}..{head1}'], cwd=WORKTREE).stdout.strip()
+        commits = sh(['git', 'log', '--oneline', f'{head0}..{head1}'], cwd=WORKTREE, env=env).stdout.strip()
         log(f"- agent said: **{verdict}**; runner's `npm test`: **{tests}**\n"
             f"- commits:\n```\n{commits or '(none)'}\n```\n- agent's last message:\n\n"
             + '\n'.join('  > ' + l for l in last.strip().splitlines()[-12:]))
@@ -438,6 +463,9 @@ def main():
             pushed = pr.startswith('http') or pr == 'pushed'
         prev_commit, prev_pr_base = next_bases(prev_commit, prev_pr_base, branch, head1, green, pushed)
         results.append((item['id'], verdict, tests, branch if changed else '-', pr))
+        if stop_run:
+            log('\n**Stopped: the shared .git changed. Check .git/config and .git/hooks before using this checkout.**')
+            break
 
     sh(['git', 'switch', '--detach', prev_commit], cwd=WORKTREE, check=False, env=env)
     log(f'\n## Summary (spent about ${spent:.2f} of ${a.max_usd:.0f})\n| item | agent | npm test | branch | pull request |\n|---|---|---|---|---|\n'

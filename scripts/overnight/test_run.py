@@ -207,6 +207,42 @@ class CleanClonePush(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+class SharedGitFolder(unittest.TestCase):
+    """The worktree shares .git with your checkout, so what the agent writes there outlives the run."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.repo = self.tmp / 'repo'
+        git('init', '-q', '-b', 'main', str(self.repo), cwd=self.tmp)
+        (self.repo / 'a.txt').write_text('a\n')
+        self.marker = self.tmp / 'ran'
+
+    def test_a_planted_fsmonitor_does_not_run_under_the_runners_settings(self):
+        git('config', 'core.fsmonitor', f'touch {self.marker}; echo', cwd=self.repo)
+        empty = self.tmp / 'empty'
+        empty.write_text('')
+        env = run.agent_env({'PATH': os.environ['PATH'], 'HOME': str(self.tmp)}, empty)
+        subprocess.run(['git', 'status', '--porcelain'], cwd=self.repo, env=env, capture_output=True, text=True)
+        self.assertFalse(self.marker.exists(), 'core.fsmonitor ran under the runner\'s settings')
+        # and the plant is real: with plain settings the same command does run it
+        plain = {**os.environ, 'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1'}
+        subprocess.run(['git', 'status', '--porcelain'], cwd=self.repo, env=plain, capture_output=True, text=True)
+        self.assertTrue(self.marker.exists(), 'the test\'s own plant is not working')
+
+    def test_a_changed_config_or_hook_is_noticed(self):
+        before = run.git_state_fingerprint(self.repo / '.git')
+        self.assertEqual(before, run.git_state_fingerprint(self.repo / '.git'), 'stable when nothing changed')
+        git('config', 'alias.st', 'status', cwd=self.repo)
+        after_config = run.git_state_fingerprint(self.repo / '.git')
+        self.assertNotEqual(before, after_config)
+        hook = self.repo / '.git' / 'hooks' / 'post-checkout'
+        hook.write_text('#!/bin/sh\ntrue\n')
+        self.assertNotEqual(after_config, run.git_state_fingerprint(self.repo / '.git'))
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+
 class StackedPullRequests(unittest.TestCase):
     def test_a_red_commit_is_not_built_on_and_its_branch_is_not_a_base(self):
         self.assertEqual(run.next_bases('c1', 'b1', 'b2', 'c2', green=False, pushed=True), ('c1', 'b1'))
