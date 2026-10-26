@@ -14,7 +14,7 @@
 // touch afterward (customers, customer_bikes, workshop_jobs) is RLS-scoped
 // exactly like it already is for staff.
 import { randomBytes } from 'node:crypto';
-import { pool, prepare } from './db.js';
+import { pool, prepare, dbContext } from './db.js';
 import { hashPassword, verifyPassword, EMAIL_RE } from './auth.js';
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -122,9 +122,19 @@ export async function verifyCustomerLogin(shopSlug, email, password) {
   return login;
 }
 
+// Inside a shop's runWithShop (sign-in by code), the row goes on that
+// request's own connection rather than a second one from the pool while it
+// holds the first (openspec/changes/server-stays-up-when-busy).
+// customer_sessions has no row-level security, so the row is the same either
+// way. Sign-up and log-in run outside any shop's connection and use the pool,
+// as before.
 export async function createCustomerSession(customerLoginId) {
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
+  if (dbContext.getStore()) {
+    await prepare('INSERT INTO customer_sessions (token, customer_login_id, expires_at) VALUES (?, ?, ?) RETURNING token').get(token, customerLoginId, expiresAt);
+    return token;
+  }
   await pool.query(
     'INSERT INTO customer_sessions (token, customer_login_id, expires_at) VALUES ($1, $2, $3)',
     [token, customerLoginId, expiresAt]

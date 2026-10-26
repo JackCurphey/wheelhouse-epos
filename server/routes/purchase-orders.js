@@ -6,6 +6,7 @@
 import { prepare, dbExec } from '../db.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso, ValidationError } from '../lib/http.js';
+import { ownerOnly } from '../lib/owner-only.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -15,6 +16,17 @@ const db = { prepare, exec: dbExec };
 // tracks qty_ordered vs qty_received and can be booked in more than once.
 // Step one of eventually importing orders straight from a B2B distributor -
 // not built here, this is the manual-entry version.
+//
+// Making, changing, ordering and closing an order is for the Owner until
+// roles bring "Can order stock" (receiving decision 4; WP-1.1); everyone can
+// read orders and receive against them (openspec/changes/deliveries-orders).
+const ORDER_STOCK = "Only the shop's owner can order stock";
+// What can be wrong with a delivered item (receiving decision 9; migration 092).
+const PROBLEM_KINDS = ['damaged', 'wrong_item', 'missing'];
+
+// The order's total cost in pounds, as unit_cost is stored (NUMERIC(10,2)),
+// rounded to the penny so floating-point sums don't show (3 x 1.10).
+const totalCost = (items) => Math.round(items.reduce((sum, it) => sum + it.qty_ordered * it.unit_cost * 100, 0)) / 100;
 
 function serializePurchaseOrder(row, items) {
   return {
@@ -35,20 +47,39 @@ function serializePurchaseOrder(row, items) {
           sku: it.product_sku,
           qtyOrdered: it.qty_ordered,
           qtyReceived: it.qty_received,
-          outstanding: it.qty_ordered - it.qty_received,
+          outstanding: outstanding(it),
           unitCost: it.unit_cost,
         }))
       : undefined,
+    totalCost: items ? totalCost(items) : undefined,
   };
 }
 
 const PO_SELECT = `SELECT po.*, s.name AS supplier_name FROM purchase_orders po JOIN suppliers s ON s.id = po.supplier_id`;
 
+// Each line with qty_set_aside: its damaged and wrong items recorded at
+// booking in (receiving decision 9). They go on To return, not back to "to
+// come", so they count against the line as booked-in ones do; a replacement
+// is a new line or a new order (second review, 26 Oct). Missing ones never
+// arrived and stay to come.
 async function loadPurchaseOrderItems(id) {
-  return db.prepare('SELECT * FROM purchase_order_items WHERE purchase_order_id = ? ORDER BY id').all(id);
+  return db.prepare(
+    `SELECT poi.*,
+            COALESCE((SELECT SUM(dp.qty) FROM delivery_problems dp
+                      WHERE dp.purchase_order_id = poi.purchase_order_id AND dp.purchase_order_item_id = poi.id
+                        AND dp.kind IN ('damaged', 'wrong_item')), 0)::int AS qty_set_aside
+     FROM purchase_order_items poi WHERE poi.purchase_order_id = ? ORDER BY poi.id`
+  ).all(id);
 }
+const outstanding = (it) => it.qty_ordered - it.qty_received - (it.qty_set_aside ?? 0);
 
 
+
+// The most a line can order, and the most a unit cost can be: the
+// NUMERIC(10,2) column's largest. Past these the database answered 500
+// (review of 26 Oct).
+const MAX_QTY = 100000;
+const MAX_UNIT_COST = 99999999.99;
 
 async function loadPoLineItems(items) {
   const loaded = [];
@@ -62,6 +93,8 @@ async function loadPoLineItems(items) {
     if (!Number.isFinite(unitCost) || unitCost < 0) {
       throw new ValidationError('Each item needs a valid unit cost');
     }
+    if (qty > MAX_QTY) throw new ValidationError(`A line can order at most ${MAX_QTY}`);
+    if (unitCost > MAX_UNIT_COST) throw new ValidationError('A unit cost can be at most £99,999,999.99');
     const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
     loaded.push({ product, qty, unitCost });
@@ -100,14 +133,20 @@ export function register(route) {
   });
 
   route('POST', '/api/purchase-orders', async (req, res) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const body = await readJsonBody(req);
     const supplierId = Number(body.supplierId);
+    if (!Number.isInteger(supplierId)) return badRequest(res, 'Supplier not found');
     const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(supplierId);
     if (!supplier) return badRequest(res, 'Supplier not found');
     const items = Array.isArray(body.items) ? body.items : [];
     if (items.length === 0) return badRequest(res, 'A purchase order must include at least one item');
     const reference = (body.reference || '').trim();
     const notes = (body.notes || '').trim();
+    // New order's Mark as ordered: made already ordered in this one
+    // transaction, so a failed second request can't leave a draft behind
+    // for a retry to duplicate (review of 26 Oct).
+    const ordered = body.markOrdered === true;
 
     let loaded;
     try {
@@ -120,8 +159,8 @@ export function register(route) {
     await db.exec('BEGIN');
     try {
       const info = await db
-        .prepare('INSERT INTO purchase_orders (supplier_id, reference, notes, updated_at) VALUES (?, ?, ?, ?)')
-        .run(supplierId, reference, notes, nowIso());
+        .prepare('INSERT INTO purchase_orders (supplier_id, reference, notes, status, ordered_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(supplierId, reference, notes, ordered ? 'ordered' : 'draft', ordered ? nowIso() : null, nowIso());
       const poId = info.lastInsertRowid;
       for (const { product, qty, unitCost } of loaded) {
         await db.prepare(
@@ -139,6 +178,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/purchase-orders/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
@@ -191,96 +231,155 @@ export function register(route) {
   });
 
   route('POST', '/api/purchase-orders/:id/mark-ordered', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
+    const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
-    if (existing.status !== 'draft') return badRequest(res, 'Only a draft purchase order can be marked as ordered');
-    await db.prepare(`UPDATE purchase_orders SET status = 'ordered', ordered_at = ?, updated_at = ? WHERE id = ?`).run(
-      nowIso(),
-      nowIso(),
-      id
-    );
+    // The status is checked in the UPDATE itself, so two requests at once
+    // can't both pass a check made beforehand (review of 26 Oct).
+    const changed = await db
+      .prepare(`UPDATE purchase_orders SET status = 'ordered', ordered_at = ?, updated_at = ? WHERE id = ? AND status = 'draft'`)
+      .run(nowIso(), nowIso(), id);
+    if (changed.changes === 0) return sendJson(res, 409, { error: 'Only a draft purchase order can be marked as ordered' });
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
     sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
   });
 
   route('POST', '/api/purchase-orders/:id/cancel', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
+    const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
-    if (!['draft', 'ordered'].includes(existing.status)) return badRequest(res, `This purchase order is already ${existing.status}`);
-    const items = await loadPurchaseOrderItems(id);
-    if (items.some((it) => it.qty_received > 0)) {
-      return badRequest(res, 'This purchase order already has items booked in and cannot be cancelled');
+    // Checked in the UPDATE itself, as mark-ordered is: only a draft or an
+    // ordered order, with nothing booked in, so a receipt landing between a
+    // check and the cancel can't be dropped (review of 26 Oct). The status is
+    // the part that holds under a race: a receipt changes the order's row in
+    // its own transaction, so this UPDATE waits for it and then re-checks the
+    // status on the new row. The NOT EXISTS on the lines alone would be re-run
+    // against the old snapshot and pass (second review, 26 Oct).
+    const changed = await db
+      .prepare(
+        `UPDATE purchase_orders SET status = 'cancelled', updated_at = ?
+         WHERE id = ? AND status IN ('draft', 'ordered')
+           AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ? AND qty_received > 0)`
+      )
+      .run(nowIso(), id, id);
+    if (changed.changes === 0) {
+      const now = await db.prepare('SELECT status FROM purchase_orders WHERE id = ?').get(id);
+      return sendJson(res, 409, {
+        error: now?.status === 'cancelled'
+          ? 'This purchase order is already cancelled'
+          : 'This purchase order already has items booked in and cannot be cancelled',
+      });
     }
-    await db.prepare(`UPDATE purchase_orders SET status = 'cancelled', updated_at = ? WHERE id = ?`).run(nowIso(), id);
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, items));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
   });
 
+  // Booking a delivery in (openspec/changes/receive-delivery, the contract):
+  // open to everyone (receiving decision 4). `items` go into stock and the
+  // line's qty_received; `problems` (decision 9: damaged, wrong item or
+  // missing) are recorded and go into neither, so they stay to come.
+  // Atomic and counted once: the order is locked before its lines are read
+  // and checked, so a second booking of the same order waits, then sees the
+  // first one's counts; stock is added in the UPDATE itself, never from a
+  // value read earlier, so bookings of one product on two orders both land.
   route('POST', '/api/purchase-orders/:id/receive', async (req, res, params, query, afterRelease, shopId) => {
     const id = Number(params.id);
-    const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id);
-    if (!existing) return notFound(res, 'Purchase order not found');
-    if (!['ordered', 'partially_received'].includes(existing.status)) {
-      return badRequest(res, 'This purchase order is not awaiting delivery');
-    }
     const body = await readJsonBody(req);
     const receipts = Array.isArray(body.items) ? body.items : [];
-    const existingItems = await loadPurchaseOrderItems(id);
-    const itemsById = new Map(existingItems.map((it) => [it.id, it]));
+    const problemsIn = Array.isArray(body.problems) ? body.problems : [];
 
-    const toApply = [];
+    const asked = [];
     for (const r of receipts) {
-      const itemId = Number(r.itemId);
       const qtyReceived = Math.trunc(Number(r.qtyReceived));
       if (!qtyReceived || qtyReceived <= 0) continue;
-      const line = itemsById.get(itemId);
-      if (!line) return badRequest(res, `Purchase order line ${itemId} not found`);
-      const outstanding = line.qty_ordered - line.qty_received;
-      if (qtyReceived > outstanding) {
-        return badRequest(res, `Cannot receive ${qtyReceived} of "${line.product_name}" - only ${outstanding} outstanding`);
-      }
-      toApply.push({ line, qtyReceived });
+      asked.push({ itemId: Number(r.itemId), qtyReceived });
     }
-    if (toApply.length === 0) return badRequest(res, 'No quantities to receive were provided');
+    const problems = [];
+    for (const p of problemsIn) {
+      const qty = Number(p.qty);
+      if (!PROBLEM_KINDS.includes(p.kind)) return badRequest(res, 'A problem is damaged, wrong_item or missing');
+      if (!Number.isInteger(qty) || qty <= 0) return badRequest(res, 'A problem needs how many, a whole number above 0');
+      problems.push({ itemId: Number(p.itemId), kind: p.kind, qty, note: String(p.note ?? '').trim().slice(0, 500) });
+    }
+    if (asked.length === 0 && problems.length === 0) return badRequest(res, 'No quantities to receive were provided');
 
     // Same reasoning as createSale's shopifyPushes: the HTTP calls wait until
     // after COMMIT and after the request releases its pooled connection, so
     // they hold neither this receipt's row locks nor a connection for the
     // duration of a retried Shopify request.
     const shopifyPushes = [];
+    let refusal = null;
 
     await db.exec('BEGIN');
     try {
-      for (const { line, qtyReceived } of toApply) {
-        await db.prepare('UPDATE purchase_order_items SET qty_received = qty_received + ? WHERE id = ?').run(
-          qtyReceived,
-          line.id
-        );
-        const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(line.product_id);
-        const newQty = product.stock_qty + qtyReceived;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(
-          newQty,
-          nowIso(),
-          product.id
-        );
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id) VALUES (?, ?, 'po_receipt', ?, ?)`
-        ).run(product.id, qtyReceived, `Booked in from PO #${id}${existing.reference ? ` (${existing.reference})` : ''}`, id);
-        if (product.shopify_inventory_item_id) {
-          shopifyPushes.push({ product, newQty });
+      const existing = await db.prepare('SELECT * FROM purchase_orders WHERE id = ? FOR UPDATE').get(id);
+      if (!existing) refusal = () => notFound(res, 'Purchase order not found');
+      else if (!['ordered', 'partially_received'].includes(existing.status)) {
+        refusal = () => badRequest(res, 'This purchase order is not awaiting delivery');
+      } else {
+        const itemsById = new Map((await loadPurchaseOrderItems(id)).map((it) => [it.id, it]));
+        // What each line takes from what's still to come: booked in, set
+        // aside, or missing. Still to come leaves out what earlier bookings
+        // set aside, so the total never passes what was ordered.
+        const taken = new Map();
+        for (const { itemId, qtyReceived, qty } of [...asked, ...problems]) {
+          const line = itemsById.get(itemId);
+          if (!line) { refusal = () => badRequest(res, `Purchase order line ${itemId} not found`); break; }
+          taken.set(itemId, (taken.get(itemId) ?? 0) + (qtyReceived ?? qty));
+        }
+        for (const [itemId, n] of refusal ? [] : taken) {
+          const line = itemsById.get(itemId);
+          const left = outstanding(line);
+          if (n > left) {
+            refusal = () => badRequest(res, `Cannot receive ${n} of "${line.product_name}" - only ${left} outstanding`);
+            break;
+          }
+        }
+        if (!refusal) {
+          // Stock is updated in product order, as a sale locks its products
+          // (server/lib/sales.js), so two bookings with the same products in
+          // another order wait for each other instead of deadlocking.
+          asked.sort((x, y) => itemsById.get(x.itemId).product_id - itemsById.get(y.itemId).product_id || x.itemId - y.itemId);
+          for (const { itemId, qtyReceived } of asked) {
+            const line = itemsById.get(itemId);
+            await db.prepare('UPDATE purchase_order_items SET qty_received = qty_received + ? WHERE id = ?').run(qtyReceived, line.id);
+            const product = await db.prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING *').get(
+              qtyReceived,
+              nowIso(),
+              line.product_id
+            );
+            await db.prepare(
+              `INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id) VALUES (?, ?, 'po_receipt', ?, ?)`
+            ).run(product.id, qtyReceived, `Booked in from PO #${id}${existing.reference ? ` (${existing.reference})` : ''}`, id);
+            if (product.shopify_inventory_item_id) {
+              shopifyPushes.push({ product, newQty: product.stock_qty });
+            }
+          }
+          for (const { itemId, kind, qty, note } of problems) {
+            await db.prepare(
+              'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, kind, qty, note) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(id, itemId, itemsById.get(itemId).product_id, kind, qty, note);
+          }
+          // Received when nothing is left to come (booked in or set aside);
+          // partly delivered once anything is in stock; otherwise, with only
+          // problems marked, as it was.
+          const freshItems = await loadPurchaseOrderItems(id);
+          const newStatus = freshItems.every((it) => outstanding(it) <= 0) ? 'received'
+            : freshItems.some((it) => it.qty_received > 0) ? 'partially_received'
+            : existing.status;
+          if (newStatus !== existing.status) {
+            await db.prepare('UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, nowIso(), id);
+          }
         }
       }
-      const freshItems = await loadPurchaseOrderItems(id);
-      const allReceived = freshItems.every((it) => it.qty_received >= it.qty_ordered);
-      const newStatus = allReceived ? 'received' : 'partially_received';
-      await db.prepare('UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, nowIso(), id);
-      await db.exec('COMMIT');
+      await db.exec(refusal ? 'ROLLBACK' : 'COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK');
       throw err;
     }
+    if (refusal) return refusal();
 
     // After the reply, from a fresh connection; a Shopify hiccup is logged and
     // never fails the receipt (firePendingShopifyPushes).

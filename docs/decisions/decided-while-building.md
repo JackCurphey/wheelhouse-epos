@@ -2836,6 +2836,126 @@ follows the job checklist, the closest pattern built.
     movements. "%" and "_" in a stock search are searched for as
     themselves.
 
+### 26 Oct 2026: deliveries and purchase orders (`openspec/changes/deliveries-orders`, `rs-hub`, `rs-order`, `rs-order-ordered`, `rs-order-close`; WP-2.3)
+
+1. **Receiving is left out, not routed nowhere:** "A delivery arrived?" with
+   "Receive a delivery", "Receive against this order", To return, Products to
+   add and Recent deliveries come with the next piece (`rs-receive`,
+   `rs-problem`).
+2. **Who, before roles:** everyone signed in opens Deliveries and orders;
+   only the Owner sees Orders and New order, and only the Owner can make,
+   change, mark as ordered or close an order (the server refuses anyone else,
+   "Only the shop's owner can order stock"). "Can order stock" waits for
+   WP-1.1 roles (receiving decision 4). Anyone can still read an order and
+   receive against it. Staff see "Orders are for the shop’s owner for now."
+   on the page, which the drawing (`rs-hub-staff`) doesn't have.
+3. **The restock list is left out** (`rs-restock` and the hub's Restock list
+   section): it needs answers on "selling fast", the suggested count, the
+   basket file's format, matching a product's typed supplier name to a
+   supplier, and where "For customers" comes from.
+4. **Orders lists open orders only:** drafts, ordered and partly delivered,
+   newest first. Delivered and closed ones leave it.
+5. **Suppliers as pills:** the one ordered from last first, then by name;
+   three, then "Other…" shows the rest. The built pill group stands in for
+   the drawing's dark pills. With no suppliers, "No suppliers yet." (adding
+   one waits for the Suppliers screen, receiving later change of 2 Oct).
+6. **Adding a product:** Enter adds an exact barcode or code match, or the
+   only match; a click adds any match; a product already on the order goes
+   up by one. An unknown barcode adds nothing ("Add this product" comes with
+   receiving).
+7. **A line's cost** is its count × the product's cost (a product with no
+   cost counts as £0.00); the total is summed in whole pence on New order.
+   Once saved, the order shows the server's `totalCost`, in pounds, as
+   stored. Nothing converted.
+8. **"for job WH-1042"** isn't on order lines: they don't record a job yet.
+9. **Close the order always asks first,** since no job link exists to decide
+   when to ask; the note under the order loses "If a job is waiting for any
+   of it, you’re asked first." An order something has arrived from has no
+   Close: the server refuses to cancel it, and dropping what's still to come
+   needs a new write.
+10. **A draft's page** (not drawn) shows "[Supplier] · draft", the Draft tag,
+    Close the order and Mark as ordered. Editing a draft isn't drawn and
+    isn't built.
+11. **The header** keeps "Deliveries and orders" on New order and an order,
+    as a customer's page keeps "Customers"; each sub-page has the drawn way
+    back and its own heading.
+12. **After the review:** a product with no cost recorded (none, or 0 as the
+    old app saves it) is no cost, following the stock list's "no cost is no
+    margin": on New order its line shows "No cost recorded" and a box to
+    type one, instead of counting as £0.00 (replacing that part of 7).
+    "Mark as ordered" says "Type a cost for every line first." until every
+    line has one; "Save as draft" still saves, at £0.00. A count stops at
+    100000.
+
+### 26 Oct 2026: receiving a delivery (`openspec/changes/receive-delivery`, `rs-receive`, `rs-problem`; WP-2.3)
+
+1. **Against an order only, for now:** the receive route books in against
+   one order, so "From" lists the orders still to come (ordered or partly
+   delivered), newest first, named by supplier ("[Supplier] · ordered
+   [date]" when a supplier has two). The drawing's supplier pills and "Works
+   with or without an order" wait for a write that adds stock without an
+   order; the hub's note says only "Scan each item as it comes out of the
+   box." With none: "No orders are waiting for a delivery." (not drawn).
+2. **Left out, as asked:** frame numbers (`rs-frame`) and a part a job is
+   waiting for ("Job WH-1042 is waiting for 1", holding it): order lines
+   and stock record neither a job nor a frame. Also left out: Add this
+   product (an unknown barcode says "Nothing in Wheelhouse has the barcode
+   [code]"), the booked-in board and labels (`rs-booked`, `rs-labels`),
+   and the hub's To return, Products to add and Recent deliveries.
+3. **Scanning** follows New order's box: Enter looks the code up itself (a
+   scanner presses Enter before any search comes back), taking an exact
+   barcode or code, or the only match; a click takes any match. Not on the
+   order: "[name] isn’t on this order". Each scan says "Added [name] · 1"
+   (the drawing's announcement, without the job).
+4. **A count stops at what's still to come** on its line ("All [n] [name]
+   still to come are counted"); the server refuses more anyway. − at 1
+   takes the line off, without the audit's Undo; a line with a problem
+   marked can't go below what's set aside.
+5. **Problems:** recorded in a new table (migration 092, numbered 090 until 091 reached main,
+   `delivery_problems`) with the order line, kind, how many and a note (up
+   to 500 characters). Damaged and wrong come out of what was scanned and
+   aren't booked in; the line stays to come on the order, as qty_received
+   counts only what went into stock. Missing is on top of what was scanned,
+   up to what's still to come, and changes no count. Marking the same kind
+   again replaces it. A missing one reads "Missing · [n]" on the line (not
+   drawn). Who marked it isn't recorded yet.
+6. **Book in** sends one request; the page then says "[n] items booked in ·
+   stock updated" (the booked-in board's words), empties the list and
+   refreshes the order. Changing From empties the list.
+7. **Atomic and counted once:** the order is locked while what's still to
+   come is checked, and stock is added in the update itself, so two people
+   booking the same line at once can't both get it, and bookings of one
+   product on two orders both land. An order with only problems marked
+   keeps its status.
+8. **"Receive against this order"** shows on an order still to come, for
+   anyone, beside Close the order; "Receive a delivery" is on the hub for
+   everyone (decision 4).
+9. **After the review:**
+   - **Damaged and wrong items are off what's to come** (replacing that
+     part of 5, and following decision 9, where they go on "To return to
+     [Supplier]" and only missing ones stay "to come"). What's still to
+     come on a line is what was ordered, less what's booked in, less what's
+     set aside, counting problems marked in earlier deliveries too. So the
+     two together never pass what was ordered, and a line can't be marked
+     damaged again and again. **A replacement for a damaged or wrong item
+     is booked on a new order line or a new order**, not on this line. An
+     order with nothing left to come is received, even if some of it was
+     set aside; one with only problems marked and nothing in stock keeps
+     its status (so it can still be closed).
+   - **An order that isn't waiting** (all in, or `?order=` naming a draft
+     or a received one) shows "This order is all in." (not drawn) and
+     picks nothing in From, so the person chooses; the page no longer
+     moves on to another order by itself. After booking in, the page stays
+     on that order, so booking the last of it says the same.
+   - **A booking the server refuses** fetches the orders again, so the
+     counts shown are the server's.
+   - **A problem marked by mistake is undone with the controls already
+     there:** "Problem?" opens on what's marked for that kind (its count
+     and note), and − at 1 takes it off, as − at 1 takes a scanned line
+     off. No new button or words.
+   - **Stock is updated in product order,** as a sale does, so two
+     deliveries with the same products can't deadlock.
+
 ### 26 Oct 2026: How much waits while the kind of deposit is saving (`openspec/changes/deposit-amount-waits`, `bk-settings-deposits`)
 
 1. **While the deposit switch or the kind is saving, "How much" is greyed
