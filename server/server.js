@@ -19,7 +19,7 @@ import {
 } from './lib/sales.js';
 // Tests import these from server.js; it keeps re-exporting them (split plan §4.1).
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
-import { currentSession } from './lib/session.js';
+import { currentSession, rememberSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
@@ -646,6 +646,9 @@ const server = createServer(async (req, res) => {
 
       const ctx = await currentSession(req);
       if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+      // Looked up before runWithShop takes this request's connection; a
+      // handler asking again gets this answer, not a second connection.
+      rememberSession(req, ctx);
 
       // A handler that needs work done AFTER its pooled client goes back to
       // the pool (currently: firing Shopify inventory pushes queued by
