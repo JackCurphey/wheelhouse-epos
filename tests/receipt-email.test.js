@@ -157,3 +157,12 @@ test('a person’s receipt has no Invoice to', async () => {
   assert.match(m.body, /^Your receipt\n/);
   assert.doesNotMatch(m.body, /Invoice to|VAT invoice/);
 });
+
+// Company customers' review 3: a line break typed into a company's details
+// stays on its line in Invoice to.
+test('a line break in a company’s address or VAT number doesn’t break Invoice to', async () => {
+  const s = await companySale({ address: '[Unit 4]\n[Mill Lane]', postcode: '[postcode]', vatNumber: 'GB\n123' });
+  assert.equal((await send(s.id, 'accounts@example.com')).status, 200);
+  const [m] = await receiptsFor(s.id);
+  assert.match(m.body, /\n\nInvoice to\n\[Company name\] · \[Unit 4\] \[Mill Lane\], \[postcode\]\nVAT number GB 123\n\nSale /);
+});

@@ -2671,3 +2671,7 @@ follows the job checklist, the closest pattern built.
    answer that day, day answers 10): a VAT invoice without its VAT amount
    isn't one. It becomes "VAT invoice", with its VAT line, once Mark's step C
    records VAT on each sale.
+10. **After the review:** a merge moves a company's details (company or
+    person, contact name, VAT number, invoice email) together with its name,
+    and Undo puts them back. A line break typed into a company's details
+    stays on its line in "Invoice to".

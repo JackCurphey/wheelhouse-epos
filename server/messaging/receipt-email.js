@@ -29,9 +29,11 @@ export async function receiptEmail(saleId, shopId) {
   // "Invoice", not the drawn "VAT invoice", until sales record VAT: a VAT
   // invoice without its VAT amount isn't one (Jack, day answers 26 Oct, 10).
   const heading = company ? 'Invoice' : 'Your receipt';
+  // A line break typed into a detail stays on its line (company customers' review 3).
+  const oneLine = (v) => (v ? String(v).replace(/\s*[\r\n]+\s*/g, ' ').trim() : v);
   const invoiceTo = company
-    ? ['Invoice to', [company.name, [company.address, company.postcode].filter(Boolean).join(', ')].filter(Boolean).join(' · '),
-      ...(company.vat_number ? [`VAT number ${company.vat_number}`] : []), '']
+    ? ['Invoice to', [oneLine(company.name), [oneLine(company.address), oneLine(company.postcode)].filter(Boolean).join(', ')].filter(Boolean).join(' · '),
+      ...(company.vat_number ? [`VAT number ${oneLine(company.vat_number)}`] : []), '']
     : [];
   const lines = [
     heading,

@@ -53,6 +53,14 @@ test('088 gives every customer a person-or-company flag, off to start, and the t
     assert.deepEqual([club.is_company, club.contact_name, club.vat_number, club.invoice_email], [true, '[Contact name]', '[Company VAT number]', '[accounts email]']);
     await assert.rejects(c.query('UPDATE customers SET is_company = NULL WHERE id = $1', [maya.id]), /null/i);
   });
-  // Running again changes nothing (the runner records what it ran).
-  migrate(env);
+  // Run again on a database that already has the columns (the shared dev
+  // database ran it once as 087; review 2): forgetting it ran, the file itself
+  // runs again without failing, and the rows keep their details.
+  await withClient(url.href, (c) => c.query("DELETE FROM schema_migrations WHERE filename = '088_company_customers.sql'"));
+  assert.match(migrate(env), /Applied migration: 088_company_customers\.sql/);
+  await withClient(url.href, async (c) => {
+    await c.query("SELECT set_config('app.current_shop_id', (SELECT id::text FROM shops LIMIT 1), false)");
+    const { rows: [club] } = await c.query("SELECT contact_name FROM customers WHERE is_company");
+    assert.equal(club.contact_name, '[Contact name]');
+  });
 });
