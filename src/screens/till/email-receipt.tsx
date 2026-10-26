@@ -27,10 +27,13 @@ export function EmailReceiptDialog({ saleId, customer, onClose, onSent }: {
 }) {
   const record = useQuery({
     queryKey: ['customer', customer?.id],
-    queryFn: () => apiGet<{ email: string | null }>(`/api/customers/${customer!.id}`),
+    queryFn: () => apiGet<{ name: string; email: string | null; isCompany?: boolean; invoiceEmail?: string | null }>(`/api/customers/${customer!.id}`),
     enabled: Boolean(customer),
   });
-  const onFile = record.data?.email?.trim() || '';
+  // A company or club's receipt goes to Send invoices to, or else its email
+  // (openspec/changes/company-customers design 5; leftover screens H2).
+  const company = record.data?.isCompany === true;
+  const onFile = (company && record.data?.invoiceEmail?.trim()) || record.data?.email?.trim() || '';
   const [typed, setTyped] = useState<string | null>(null);
   const address = typed ?? onFile;
   const [sending, setSending] = useState(false);
@@ -41,7 +44,7 @@ export function EmailReceiptDialog({ saleId, customer, onClose, onSent }: {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const box = useRef<HTMLInputElement>(null);
   useEffect(() => { box.current?.focus(); }, []);
-  const first = customer?.name.trim().split(/\s+/)[0] ?? '';
+  const first = company ? record.data?.name ?? '' : customer?.name.trim().split(/\s+/)[0] ?? '';
 
   async function send(e: FormEvent) {
     e.preventDefault();

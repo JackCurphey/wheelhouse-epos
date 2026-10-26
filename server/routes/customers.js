@@ -11,6 +11,7 @@ import { ALL_SALES_SELECT, serializeAnySale } from '../lib/sales.js';
 import { serializeWorkshopJob } from '../workshop/jobs.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { shopToday } from '../clock.js';
+import { EMAIL_RE } from '../auth.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -109,7 +110,28 @@ function customerExtras(body, existing) {
   for (const r of [address, postcode]) if (r.error) return { error: r.error };
   if (body.marketingPermission !== undefined && typeof body.marketingPermission !== 'boolean') return { error: 'marketingPermission must be true or false' };
   const marketing = body.marketingPermission === undefined ? (existing.marketing_permission ? 1 : 0) : (body.marketingPermission ? 1 : 0);
-  return { address: address.value, postcode: postcode.value, marketing };
+  const company = companyDetails(body, existing, text);
+  if (company.error) return { error: company.error };
+  return { address: address.value, postcode: postcode.value, marketing, ...company };
+}
+
+// A company or club (openspec/changes/company-customers design 2;
+// cs-add-company): its name is the customer's name; it needs a contact name,
+// and may have a VAT number and an address to send invoices to. A person
+// keeps none of the three.
+const BAD_ADDRESS = 'That doesn’t look like an email address — check it';
+function companyDetails(body, existing, text) {
+  if (body.isCompany !== undefined && typeof body.isCompany !== 'boolean') return { error: 'isCompany must be true or false' };
+  const isCompany = body.isCompany === undefined ? !!existing.is_company : body.isCompany;
+  if (!isCompany) return { isCompany: false, contactName: null, vatNumber: null, invoiceEmail: null };
+  if (body.invoiceEmail !== undefined && body.invoiceEmail !== null && typeof body.invoiceEmail !== 'string') return { error: BAD_ADDRESS };
+  const contact = text('contactName', 'contact_name', 120);
+  const vat = text('vatNumber', 'vat_number', 30);
+  const invoice = text('invoiceEmail', 'invoice_email', 254);
+  for (const r of [contact, vat, invoice]) if (r.error) return { error: r.error };
+  if (!contact.value) return { error: 'Add the contact’s name.' };
+  if (invoice.value && !EMAIL_RE.test(invoice.value)) return { error: BAD_ADDRESS };
+  return { isCompany: true, contactName: contact.value, vatNumber: vat.value, invoiceEmail: invoice.value };
 }
 
 function serializeCustomer(row, groups) {
@@ -123,6 +145,11 @@ function serializeCustomer(row, groups) {
     address: row.address ?? null,
     postcode: row.postcode ?? null,
     marketingPermission: row.marketing_permission === 1 || row.marketing_permission === true,
+    // A company or club (cs-add-company; migration 088).
+    isCompany: row.is_company === true,
+    contactName: row.contact_name ?? null,
+    vatNumber: row.vat_number ?? null,
+    invoiceEmail: row.invoice_email ?? null,
     active: !!row.active,
     groups: groups || [],
     createdAt: row.created_at,
@@ -338,8 +365,9 @@ export function register(route) {
     if (groups && groups.error) return badRequest(res, groups.error);
 
     const info = await db
-      .prepare('INSERT INTO customers (name, email, phone, notes, address, postcode, marketing_permission, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, nowIso());
+      .prepare(`INSERT INTO customers (name, email, phone, notes, address, postcode, marketing_permission, is_company, contact_name, vat_number, invoice_email, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, extra.isCompany, extra.contactName, extra.vatNumber, extra.invoiceEmail, nowIso());
     if (groups) await setCustomerGroups(info.lastInsertRowid, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeCustomer(row, await groupsForCustomer(row.id)));
@@ -371,9 +399,11 @@ export function register(route) {
     // the customer's own.
     await db.prepare(
       `UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, address = ?, postcode = ?, marketing_permission = ?, active = ?, updated_at = ?,
+              is_company = ?, contact_name = ?, vat_number = ?, invoice_email = ?,
               email_from_customer = email_from_customer AND lower(trim(coalesce(email, ''))) = lower(trim(coalesce(?, '')))
         WHERE id = ?`
-    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(), email, id);
+    ).run(name, email, phone, notes, extra.address, extra.postcode, extra.marketing, active, nowIso(),
+      extra.isCompany, extra.contactName, extra.vatNumber, extra.invoiceEmail, email, id);
     if (groups) await setCustomerGroups(id, groups.ids);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
