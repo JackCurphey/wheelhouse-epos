@@ -838,7 +838,11 @@ export function register(route) {
       sets.push(`${column} = ?`);
       args.push(body[key]);
     }
-    if (body.serviceReminders === true || body.reviewRequests === true) sets.push("reminders_said_yes_at = now(), reminders_said_yes_via = 'account'");
+    // Stamped only for a new yes (both were off), so an earlier yes keeps when and where it was given (review).
+    if (body.serviceReminders === true || body.reviewRequests === true) {
+      sets.push("reminders_said_yes_at = CASE WHEN service_reminders OR review_requests THEN reminders_said_yes_at ELSE now() END",
+        "reminders_said_yes_via = CASE WHEN service_reminders OR review_requests THEN reminders_said_yes_via ELSE 'account' END");
+    }
     if (!sets.length) return badRequest(res, 'Nothing to change');
     const customer = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING *`).get(...args, ctx.login.customer_id);
     sendJson(res, 200, contactOf(customer));

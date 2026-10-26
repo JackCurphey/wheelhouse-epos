@@ -302,3 +302,20 @@ test('how we contact you: refused with no mobile for text, from another website,
   assert.equal((await portal('/me/contact', { method: 'PUT', body: { serviceReminders: 'yes' } })).status, 400);
   await portal('/me/contact', { method: 'PUT', body: { updateChannel: 'sms' } });
 });
+
+// Review of how-we-contact-you, 2: a yes is stamped only when a switch goes from off to on, so an earlier yes keeps its record.
+test('how we contact you: an earlier yes keeps when and where it was given', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET service_reminders = true, review_requests = false, reminders_said_yes_at = '2026-09-01T10:00:00Z', reminders_said_yes_via = 'booking' WHERE id = ?").run(maya.id));
+  const record = () => runWithShop(owner.shop.id, () => prepare('SELECT reminders_said_yes_at AS at, reminders_said_yes_via AS via FROM customers WHERE id = ?').get(maya.id));
+  await portal('/me/contact', { method: 'PUT', body: { serviceReminders: true, marketingPermission: true } });
+  let r = await record();
+  assert.deepEqual([r.at.toISOString(), r.via], ['2026-09-01T10:00:00.000Z', 'booking'], 'already on, and offers: nothing re-stamped');
+  await portal('/me/contact', { method: 'PUT', body: { reviewRequests: true } });
+  r = await record();
+  assert.deepEqual([r.at.toISOString(), r.via], ['2026-09-01T10:00:00.000Z', 'booking'], 'a yes already on record keeps its record');
+  await portal('/me/contact', { method: 'PUT', body: { serviceReminders: false, reviewRequests: false } });
+  await portal('/me/contact', { method: 'PUT', body: { reviewRequests: true } });
+  r = await record();
+  assert.equal(r.via, 'account', 'a new yes after both were off is the account’s');
+  assert.ok(r.at.getTime() > Date.parse('2026-09-02T00:00:00Z'));
+});

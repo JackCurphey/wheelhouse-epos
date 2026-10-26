@@ -245,7 +245,7 @@ function DetailsCard({ me, shopSlug }: { me: Me; shopSlug: string }) {
         <button type="button" aria-label="Change how we contact you" onClick={() => setChanging(true)} className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">Change</button>
       </div>
       <div>
-        <Row k="Job updates" v={`By ${WAYS[me.updateChannel].toLowerCase()}`} />
+        <Row k="Job updates" v={`By ${wayWord(me.updateChannel)}`} />
         <Row k="Service reminders" v={onOff(me.serviceReminders)} />
         <Row k="Review requests" v={onOff(me.reviewRequests)} />
         <Row k="Offers and news" v={onOff(me.marketingPermission)} />
@@ -256,6 +256,8 @@ function DetailsCard({ me, shopSlug }: { me: Me; shopSlug: string }) {
 }
 
 const WAYS: Record<Me['updateChannel'], string> = { sms: 'Text', whatsapp: 'WhatsApp', email: 'Email' };
+// In a sentence: "by text", "by email", but "by WhatsApp", a name (review).
+const wayWord = (way: Me['updateChannel']) => (way === 'whatsapp' ? WAYS[way] : WAYS[way].toLowerCase());
 type Switch = 'serviceReminders' | 'reviewRequests' | 'marketingPermission';
 const SWITCHES: { key: Switch; label: string; sub: string }[] = [
   { key: 'serviceReminders', label: 'Service reminders', sub: 'When your bike is due its next service' },
@@ -276,6 +278,9 @@ function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClo
   const [error, setError] = React.useState<string | null>(null);
 
   async function save(change: Partial<Pick<Me, 'updateChannel' | Switch>>, done: string) {
+    // Pressed while a change is saving: ignored. The buttons stay focusable, so
+    // a keyboard user keeps their place (aria-disabled, not disabled; review).
+    if (busy) return;
     setBusy(true);
     setError(null);
     setSaid(null);
@@ -284,7 +289,8 @@ function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClo
       queryClient.setQueryData<Me>(['account', shopSlug, 'me'], (old) => (old ? { ...old, ...saved } : old));
       setSaid(done);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 400 && err.hasServerMessage ? err.message : 'That didn’t go through. Check your connection and try again.');
+      setError(err instanceof ApiError && err.status === 401 ? 'Please sign in again to change this.'
+        : err instanceof ApiError && err.status === 400 && err.hasServerMessage ? err.message : 'That didn’t go through. Check your connection and try again.');
     } finally {
       setBusy(false);
     }
@@ -306,8 +312,8 @@ function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClo
           <p className="m-0 text-sm text-[var(--wh-muted)]">Bookings, quotes, and when your bike is ready. You can change how — they can’t be switched off while a bike is with us.</p>
           <div role="radiogroup" aria-label="Job updates by" className="flex flex-wrap gap-2">
             {(Object.keys(WAYS) as Me['updateChannel'][]).map((way) => (
-              <button key={way} type="button" role="radio" aria-checked={me.updateChannel === way} disabled={busy}
-                onClick={() => { if (me.updateChannel !== way) void save({ updateChannel: way }, `Job updates will come by ${WAYS[way].toLowerCase()}`); }}
+              <button key={way} type="button" role="radio" aria-checked={me.updateChannel === way} aria-disabled={busy}
+                onClick={() => { if (me.updateChannel !== way) void save({ updateChannel: way }, `Job updates will come by ${wayWord(way)}`); }}
                 className={cn('min-h-11 cursor-pointer rounded-full border px-4 text-size-15 font-semibold text-[var(--wh-ink)]', me.updateChannel === way ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-[var(--wh-border)] bg-transparent')}>
                 {WAYS[way]}
               </button>
@@ -316,7 +322,7 @@ function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClo
         </div>
         <div className="flex flex-col pt-1.5">
           {SWITCHES.map(({ key, label, sub }) => (
-            <button key={key} type="button" role="switch" aria-checked={me[key]} aria-labelledby={`ct-${key}`} aria-describedby={`ct-${key}-sub`} disabled={busy}
+            <button key={key} type="button" role="switch" aria-checked={me[key]} aria-labelledby={`ct-${key}`} aria-describedby={`ct-${key}-sub`} aria-disabled={busy}
               onClick={() => void save({ [key]: !me[key] }, `${label} ${label.endsWith('s') ? 'are' : 'is'} ${me[key] ? 'off' : 'on'}`)}
               className="flex min-h-[60px] w-full cursor-pointer items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)]">
               <span className="flex flex-col gap-0.5">

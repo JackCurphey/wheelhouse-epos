@@ -2587,7 +2587,7 @@ follows the job checklist, the closest pattern built.
    says "Keep this link to check your booking" or offers Copy link. That
    link works only for the customer, signed in. It shows "Your account"
    instead, a way back to the account, as the question page's back link
-   is drawn (`qa-question`).
+   is drawn (`ac-question`).
 
 ### 26 Oct 2026: adding a bike (`openspec/changes/add-a-bike`, `cs-page`, `ac-account`; not-drawn pages 16, 17 and 23)
 
@@ -2627,3 +2627,9 @@ follows the job checklist, the closest pattern built.
 4. **The stop page's "Sign in to your account" line** shows once anything
    is stopped: service reminders, review requests, or one of the shop's own
    messages.
+5. **After the review:**
+   - "WhatsApp" keeps its capital in a sentence;
+   - a yes is stamped only when both switches were off, so an earlier yes
+     keeps when and where it was given;
+   - the buttons stay focusable while a change saves;
+   - a sign-in that has run out says "Please sign in again to change this."

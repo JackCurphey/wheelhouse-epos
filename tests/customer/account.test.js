@@ -222,3 +222,31 @@ test('a choice the shop refuses says why, and nothing changes', async () => {
   assert.equal((await box.findByRole('alert')).textContent, 'We don’t have a mobile number for you, so we can’t text you.');
   assert.equal(box.getByRole('radio', { name: 'WhatsApp' }).getAttribute('aria-checked'), 'false');
 });
+
+// Review of how-we-contact-you, 1 and 4: WhatsApp keeps its capital; a sign-in that ran out says so.
+test('WhatsApp is written WhatsApp; a sign-in that ran out says to sign in again', async () => {
+  const { ui } = await open({ me: { ...ME, updateChannel: 'whatsapp' } });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const details = w(await ui.findByRole('region', { name: 'Your details' }));
+  assert.equal(details.getByText('Job updates').parentElement.textContent, 'Job updatesBy WhatsApp');
+  fireEvent.click(details.getByRole('button', { name: 'Change how we contact you' }));
+  const box = w(await ui.findByRole('dialog', { name: 'How we contact you' }));
+  fireEvent.click(box.getByRole('radio', { name: 'Text' }));
+  await box.findByText('Job updates will come by text');
+  fireEvent.click(box.getByRole('radio', { name: 'WhatsApp' }));
+  await box.findByText('Job updates will come by WhatsApp');
+});
+
+test('a change after the sign-in ran out says to sign in again', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/account.js', exportName: 'AccountScreen', at: 'account', url: '/book/north/account', services: SERVICES,
+    account: (url, init) => (new URL(url, 'http://localhost').pathname.endsWith('/me/contact') ? { status: 401, body: { error: 'Not signed in' } } : accountServer()(url, init)),
+  });
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const details = w(await current.ui.findByRole('region', { name: 'Your details' }));
+  fireEvent.click(details.getByRole('button', { name: 'Change how we contact you' }));
+  const box = w(await current.ui.findByRole('dialog', { name: 'How we contact you' }));
+  fireEvent.click(box.getByRole('switch', { name: 'Offers and news' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Please sign in again to change this.');
+});
+

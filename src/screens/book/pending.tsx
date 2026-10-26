@@ -115,7 +115,7 @@ function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: st
   const standing = link.stage === 'confirmed' || link.stage === 'change_requested' || request;
   // Opened from the customer's account (job-<id>), the page works only for
   // them signed in, so there's no link to keep: back to the account instead
-  // (not drawn; qa-question's "Your account").
+  // (not drawn; ac-question's "Your account").
   const fromAccount = code.startsWith('job-');
   const keep = (
     <>
