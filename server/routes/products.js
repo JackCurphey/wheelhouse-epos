@@ -72,6 +72,40 @@ async function listProducts({ search, category, activeOnly }) {
 
 const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
 
+// PUT /api/products/:id, inside its transaction: the fields sent merged into
+// the row read FOR UPDATE, checked and written. Returns a refusal's message,
+// or nothing once written; a refused write leaves the transaction to roll back.
+async function saveProduct(id, existing, body) {
+  const name = body.name !== undefined ? String(body.name).trim() : existing.name;
+  const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
+  const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
+  const category = body.category !== undefined ? String(body.category).trim() || 'Uncategorised' : existing.category;
+  const price = body.price !== undefined ? Number(body.price) || 0 : existing.price;
+  const cost = body.cost !== undefined ? Number(body.cost) || 0 : existing.cost;
+  const lowStockThreshold =
+    body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
+  const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
+  const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+  const showOnline = body.showOnline !== undefined ? Boolean(body.showOnline) : existing.show_online;
+  const description = body.description !== undefined ? String(body.description).trim() : existing.description;
+  const photoUrl = body.photoUrl !== undefined ? (body.photoUrl || null) : existing.photo_url;
+
+  if (!name) return 'Product name is required';
+
+  try {
+    await db.prepare(
+      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, show_online = ?, description = ?, photo_url = ?, updated_at = ?
+       WHERE id = ?`
+    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
+  } catch (err) {
+    if (err.code === '23505') {
+      return err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`;
+    }
+    throw err;
+  }
+  return null;
+}
+
 export function register(route) {
   route('GET', '/api/products', async (req, res, params, query) => {
     const products = await listProducts({
@@ -155,36 +189,30 @@ export function register(route) {
     if (!existing) return notFound(res, 'Product not found');
     const body = await readJsonBody(req);
 
-    const name = body.name !== undefined ? String(body.name).trim() : existing.name;
-    const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
-    const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
-    const category = body.category !== undefined ? String(body.category).trim() || 'Uncategorised' : existing.category;
-    const price = body.price !== undefined ? Number(body.price) || 0 : existing.price;
-    const cost = body.cost !== undefined ? Number(body.cost) || 0 : existing.cost;
-    const lowStockThreshold =
-      body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
-    const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
-    const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
-    const showOnline = body.showOnline !== undefined ? Boolean(body.showOnline) : existing.show_online;
-    const description = body.description !== undefined ? String(body.description).trim() : existing.description;
-    const photoUrl = body.photoUrl !== undefined ? (body.photoUrl || null) : existing.photo_url;
-
-    if (!name) return badRequest(res, 'Product name is required');
-
+    // Read again FOR UPDATE inside a transaction, so a price and a description
+    // saved at once both stay (more-saves-dont-clash). The Shopify sync runs
+    // after COMMIT, so the lock is never held while it waits on the network.
+    let locked;
+    await db.exec('BEGIN');
     try {
-      await db.prepare(
-        `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, show_online = ?, description = ?, photo_url = ?, updated_at = ?
-         WHERE id = ?`
-      ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
-      const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-      await syncProductWithShopifyIfNeeded(existing, row);
-      sendJson(res, 200, serializeProduct(row));
-    } catch (err) {
-      if (err.code === '23505') {
-        return badRequest(res, err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
+      locked = await db.prepare('SELECT * FROM products WHERE id = ? FOR UPDATE').get(id);
+      if (!locked) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Product not found');
       }
+      const refused = await saveProduct(id, locked, body);
+      if (refused) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, refused);
+      }
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK');
       throw err;
     }
+    const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    await syncProductWithShopifyIfNeeded(locked, row);
+    sendJson(res, 200, serializeProduct(row));
   });
 
   route('DELETE', '/api/products/:id', async (req, res, params) => {
