@@ -44,6 +44,16 @@ statement, so two saves at once can't undo each other:
 - `PUT /api/own-messages/:id`: the screen sends the whole message each time,
   in one statement.
 
+Checked and left: the label size and shop theme rows are made on first use
+too (`getOrCreateLabelSettings`, `getOrCreateShopTheme`), with a plain
+`INSERT`, but they can't race the way the website row did: signing up makes
+both rows in the same transaction as the shop (`createShop`,
+`server/auth.js:151-152`), and the test shop loader makes them too
+(`scripts/dev/load-test-shop.mjs:105-106`). Only a shop made some other way
+would reach the insert: one made before migrations 006 and 009, which added
+the tables without filling them in, or by the old
+`server/scripts/migrate-to-postgres.js`.
+
 Not looked at in this change: the other read-then-write saves outside these
 settings, such as `PUT /api/workshop-services/:id` and
 `PUT /api/customer-groups/:id`.
