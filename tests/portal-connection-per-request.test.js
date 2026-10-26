@@ -159,6 +159,39 @@ test(`${AT_ONCE} quotes sent at once each hand staff a link quickly (issueJobLin
   assert.ok(took < QUICKLY_MS, `took ${took}ms`);
 });
 
+// Sign-in by code made the customer's session with pool.query from inside the
+// shop's connection (openspec/changes/server-stays-up-when-busy).
+test(`${AT_ONCE} customers entering their emailed codes at once are all signed in quickly, each to their own account`, async () => {
+  const people = [];
+  for (let i = 0; i < AT_ONCE; i++) {
+    const email = `rider-${i}-${randomUUID().slice(0, 8)}@example.test`;
+    const ip = `192.0.2.${++network % 250}`;
+    const asked = await fetch(`${server.baseUrl}/api/portal/${northStreet.shop.slug}/sign-in/code`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ email }),
+    });
+    assert.equal(asked.status, 200, await asked.text());
+    const { code } = await runWithShop(northStreet.shop.id, () => prepare('SELECT code FROM pretend_signin_codes WHERE email = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(email));
+    people.push({ email, code, ip });
+  }
+  const warm = await burst(() => staff('/api/label-settings'));
+  assert.deepEqual(statuses(warm.answers), Array(AT_ONCE).fill(200));
+
+  const { answers, took } = await burst(async (i) => {
+    const { email, code, ip } = people[i];
+    const res = await fetch(`${server.baseUrl}/api/portal/${northStreet.shop.slug}/sign-in/check`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ email, code }),
+    });
+    return { status: res.status, body: await res.json().catch(() => null), cookie: res.headers.get('set-cookie')?.split(';')[0] };
+  });
+  assert.deepEqual(statuses(answers), Array(AT_ONCE).fill(200), JSON.stringify(answers.map((a) => a.body)));
+  assert.ok(took < QUICKLY_MS, `took ${took}ms`);
+  for (const [i, a] of answers.entries()) {
+    const me = await portal('/me', { cookie: a.cookie });
+    assert.equal(me.status, 200, JSON.stringify(me.body));
+    assert.equal(me.body.email, people[i].email);
+  }
+});
+
 // A cookie that decodes to a NUL character: Postgres refuses it in a text
 // parameter, so the dispatcher's early lookup fails for this one request.
 const LOOKUP_FAILS = 'wh_customer_session=%00';

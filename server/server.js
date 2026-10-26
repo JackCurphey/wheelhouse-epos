@@ -416,7 +416,22 @@ export async function checkDatabaseHealth(targetPool = pool) {
   }
 }
 
-const server = createServer(async (req, res) => {
+// The dispatcher's own steps (reading the address, finding an online shop or
+// a website's shop, the staff sign-in lookup) sit outside each route's try.
+// One that fails, a refused value or a pool whose 5-second wait ran out,
+// fails this one request, as a route's own error does, rather than reaching
+// the crash guard and stopping every shop (openspec/changes/
+// server-stays-up-when-busy). Nothing is held at that point: runWithShop
+// releases its connection in its own finally before an error gets here.
+const server = createServer((req, res) => {
+  dispatch(req, res).catch((err) => {
+    console.error('Request failed in the dispatcher', err);
+    if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
+    else if (!res.writableEnded) res.destroy();
+  });
+});
+
+async function dispatch(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
 
@@ -729,7 +744,7 @@ const server = createServer(async (req, res) => {
     console.error(err);
     sendJson(res, 500, { error: 'Internal server error' });
   }
-});
+}
 
 // ---------- Graceful shutdown ----------
 

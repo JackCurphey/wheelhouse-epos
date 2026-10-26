@@ -122,9 +122,19 @@ export async function verifyCustomerLogin(shopSlug, email, password) {
   return login;
 }
 
-export async function createCustomerSession(customerLoginId) {
+// onShopConnection: the caller runs inside the shop's runWithShop (sign-in by
+// code), so the row goes on that request's own connection rather than a second
+// one from the pool while it holds the first (openspec/changes/
+// server-stays-up-when-busy). customer_sessions has no row-level security, so
+// the row is the same either way. Sign-up and log-in run outside any shop's
+// connection and use the pool, as before.
+export async function createCustomerSession(customerLoginId, { onShopConnection = false } = {}) {
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
+  if (onShopConnection) {
+    await prepare('INSERT INTO customer_sessions (token, customer_login_id, expires_at) VALUES (?, ?, ?) RETURNING token').get(token, customerLoginId, expiresAt);
+    return token;
+  }
   await pool.query(
     'INSERT INTO customer_sessions (token, customer_login_id, expires_at) VALUES ($1, $2, $3)',
     [token, customerLoginId, expiresAt]

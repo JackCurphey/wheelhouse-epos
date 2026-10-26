@@ -778,7 +778,7 @@ export function register(route) {
     const login = await loginForSignedInEmail(shop.id, email);
     if (!login.active) return sendJson(res, 403, { error: 'This account can’t sign in. Ask the shop' });
     const customer = await db.prepare('SELECT name FROM customers WHERE id = ?').get(login.customer_id);
-    const token = await createCustomerSession(login.id);
+    const token = await createCustomerSession(login.id, { onShopConnection: true });
     setCustomerSessionCookie(req, res, token);
     sendJson(res, 200, { id: login.id, email: login.email, name: customer?.name ?? '', shopName: shop.name, shopSlug: shop.slug });
   });
