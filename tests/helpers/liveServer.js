@@ -69,7 +69,12 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
       WHEELHOUSE_DEV_AUTOLOGIN: '', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));
+  // Kept as well as shown, for a test that checks what the server logged.
+  let stderr = '';
+  child.stderr.on('data', (d) => {
+    stderr += d;
+    process.stderr.write(`[server] ${d}`);
+  });
 
   try {
     await waitForServer(child, baseUrl, timeoutMs);
@@ -80,6 +85,10 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
 
   return {
     baseUrl,
+    /** Everything the server has written to stderr so far. */
+    get stderr() {
+      return stderr;
+    },
     async stop() {
       if (child.exitCode !== null) return;
       child.kill('SIGTERM');

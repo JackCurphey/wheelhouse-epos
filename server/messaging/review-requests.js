@@ -4,7 +4,7 @@
 // page; at the shop's days after collection, when the shop opens; checked
 // again and written afresh when it goes, as the service reminder is. Inside
 // the shop's runWithShop throughout.
-import { pool, prepare } from '../db.js';
+import { prepare } from '../db.js';
 import { channelFor, queueMessage, whyNotQueued } from './engine.js';
 import { render, templateFor } from './templates.js';
 import { dueAt, stopLine, STOP_LINE } from './service-reminders.js';
@@ -21,7 +21,9 @@ async function reviewVars(jobId, shopId, page) {
   const job = await prepare(
     'SELECT c.name AS customer_name FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?'
   ).get(jobId);
-  const { rows: [shop] } = await pool.query('SELECT name FROM shops WHERE id = $1', [shopId]);
+  // On the shop's own connection, never a second one from the pool while this
+  // one is held (openspec/changes/server-stays-up-when-busy).
+  const shop = await prepare('SELECT name FROM shops WHERE id = ?').get(shopId);
   return {
     'Customer’s first name': (job?.customer_name ?? '').trim().split(/\s+/)[0],
     'Shop name': shop.name,
@@ -44,7 +46,7 @@ export async function queueReviewRequest(jobId, shopId, base) {
   await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE template_key = 'review_request' AND intent_state = 'intended' AND job_id = ?").run(jobId);
   const at = await dueAt(jobId, { days });
   const link = await messageLink(async () => {
-    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const shop = await prepare('SELECT slug FROM shops WHERE id = ?').get(shopId);
     return stopLink(base, shop.slug, job.customer_id, 'review_requests');
   });
   const queued = await queueMessage({ customerId: job.customer_id, jobId, key: KEY, vars: await reviewVars(jobId, shopId, page), at, ending: stopLine(link) });
