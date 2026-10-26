@@ -30,7 +30,7 @@ import { applyEvent } from '../workshop/transitions.js';
 import { shopNow } from '../clock.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
 import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
-import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
+import { addNote, cleanNote, conversations as noteConversations, customerConversation, customerConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { removePhotoDetails } from '../photo-metadata.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
 import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
@@ -370,6 +370,62 @@ async function sendBookingMessage(req, jobId, shopId, key, extraVars = {}) {
     console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
   return undefined;
+}
+
+// A job for a staff reply on it: its customer, and whether its page has closed.
+async function jobForReply(jobId) {
+  return db.prepare(
+    `SELECT w.id, w.customer_id, w.job_date, w.custody_state, c.name AS customer_name,
+            to_char(w.collected_at AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS collected_on
+       FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?`
+  ).get(jobId);
+}
+
+// A staff reply saved on the job, and Reply from the shop for the customer
+// (decision 3). Returns how the message went, for the person who sent it.
+async function replyOnJob(req, job, text, shopId) {
+  const ctx = await currentSession(req);
+  await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
+  try {
+    // A page that has closed (fresh review): no text with a link that doesn't work.
+    const closed = linkExpiry({ jobDate: job.job_date, custodyState: job.custody_state, collectedOn: job.collected_on }, await currentShopToday()).expired;
+    const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
+    if (why) {
+      const who = job.customer_name ?? 'The customer';
+      return { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed.` : notSent(why, 'Reply from the shop', who) };
+    }
+    const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
+    const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
+    // The drawn text puts its own full stop after the reply, so the reply's own goes.
+    vars['The shop’s reply'] = text.replace(/\.+$/, '');
+    const queued = await queueMessage({ customerId, jobId: job.id, key: 'shop_reply', vars, loginId: ctx?.login?.id ?? null });
+    return queued.skipped
+      ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply from the shop', customerName) }
+      : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+  } catch (err) {
+    console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
+    return { status: 'not_sent', reason: 'The message could not be queued.' };
+  }
+}
+
+// A staff reply to a customer's general message, saved in their conversation;
+// they are told with Reply to a message, linking to the conversation page
+// (/book/:shopSlug/messages, which asks them to sign in; ask-the-shop-server design 7).
+async function replyInConversation(req, customer, text, shopId, loginId) {
+  await addNote({ customerId: customer.id, fromCustomer: false, loginId, text });
+  try {
+    const why = await whyNotQueued('message_reply', customer.id);
+    if (why) return { status: 'not_sent', reason: notSent(why, 'Reply to a message', customer.name) };
+    const { rows: [shop] } = await pool.query('SELECT name, slug FROM shops WHERE id = $1', [shopId]);
+    const link = await messageLink(async () => `${publicBase(req)}/book/${shop.slug}/messages`);
+    const queued = await queueMessage({ customerId: customer.id, key: 'message_reply', vars: { 'Shop name': shop.name, 'Link to your messages': link }, loginId });
+    return queued.skipped
+      ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply to a message', customer.name) }
+      : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+  } catch (err) {
+    console.error(`A reply to customer ${customer.id} was saved but its message couldn't be queued`, err);
+    return { status: 'not_sent', reason: 'The message could not be queued.' };
+  }
 }
 
 // Why a job's message didn't go, for the person who pressed the button.
@@ -1565,40 +1621,44 @@ export function register(route) {
   // keeps the link they have, as Bike ready.
   // screens: diary
   route('POST', '/api/workshop-jobs/:id/notes', async (req, res, params, query, afterRelease, shopId) => {
-    const ctx = await currentSession(req);
-    const job = await db.prepare(
-      `SELECT w.id, w.customer_id, w.job_date, w.custody_state, c.name AS customer_name,
-              to_char(w.collected_at AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS collected_on
-         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?`
-    ).get(Number(params.id));
+    const job = await jobForReply(Number(params.id));
     if (!job) return notFound(res, 'Job not found');
     const body = await readJsonBody(req);
     const text = cleanNote(body?.text);
     if (!text) return badRequest(res, NOTE_WORDS);
-    await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
-    let message;
-    try {
-      // A page that has closed (fresh review): no text with a link that doesn't work.
-      const closed = linkExpiry({ jobDate: job.job_date, custodyState: job.custody_state, collectedOn: job.collected_on }, await currentShopToday()).expired;
-      const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
-      if (why) {
-        const who = job.customer_name ?? 'The customer';
-        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed.` : notSent(why, 'Reply from the shop', who) };
-      } else {
-        const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
-        const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
-        // The drawn text puts its own full stop after the reply, so the reply's own goes.
-        vars['The shop’s reply'] = text.replace(/\.+$/, '');
-        const queued = await queueMessage({ customerId, jobId: job.id, key: 'shop_reply', vars, loginId: ctx?.login?.id ?? null });
-        message = queued.skipped
-          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply from the shop', customerName) }
-          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
-      }
-    } catch (err) {
-      console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
-      message = { status: 'not_sent', reason: 'The message could not be queued.' };
-    }
+    const message = await replyOnJob(req, job, text, shopId);
     sendJson(res, 201, { notes: await jobNotes(job.id), message });
+  });
+
+  // ---------- A customer's one conversation (ask-the-shop-server design 4) ----------
+  // The staff inbox, one row per customer (Jack, 26 Oct, day answers 8.2).
+  // screens: ac-inbox, ac-inbox-all, ac-inbox-list, ac-inbox-empty
+  route('GET', '/api/customer-conversations', async (req, res, params, query) => {
+    sendJson(res, 200, await customerConversations(query.get('filter') === 'needs-reply' ? 'needs-reply' : 'all'));
+  });
+
+  // screens: ac-inbox, ac-inbox-sent
+  route('GET', '/api/customer-conversations/:id', async (req, res, params) => {
+    const customer = await db.prepare('SELECT id, name, phone FROM customers WHERE id = ?').get(Number(params.id));
+    if (!customer) return notFound(res, 'Customer not found');
+    sendJson(res, 200, { customerId: customer.id, customerName: customer.name, phone: customer.phone || null, items: await customerConversation(customer.id) });
+  });
+
+  // A reply: about one of the customer's repairs (`jobId`), exactly as on the
+  // job, or a general message, told with Reply to a message (day answers 2.4).
+  // screens: ac-inbox, ac-inbox-sent, ac-reply-text
+  route('POST', '/api/customer-conversations/:id/messages', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const customer = await db.prepare('SELECT id, name FROM customers WHERE id = ?').get(Number(params.id));
+    if (!customer) return notFound(res, 'Customer not found');
+    const body = await readJsonBody(req).catch(() => null);
+    const jobId = body?.jobId ?? null;
+    const job = jobId === null ? null : Number.isInteger(jobId) ? await jobForReply(jobId) : null;
+    if (jobId !== null && job?.customer_id !== customer.id) return notFound(res, 'Job not found');
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    const message = job ? await replyOnJob(req, job, text, shopId) : await replyInConversation(req, customer, text, shopId, ctx?.login?.id ?? null);
+    sendJson(res, 201, { items: await customerConversation(customer.id), message });
   });
 
   // ---------- Deleting a job, and its attachments ----------

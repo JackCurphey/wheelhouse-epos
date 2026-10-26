@@ -2699,3 +2699,44 @@ follows the job checklist, the closest pattern built.
     person, contact name, VAT number, invoice email) together with its name,
     and Undo puts them back. A line break typed into a company's details
     stays on its line in "Invoice to".
+
+### 26 Oct 2026: the customer's conversation with the shop, the server (`openspec/changes/ask-the-shop-server`, `ac-ask`, `ac-question`, `ac-account-asked`; Jack's answers in `2026-10-26-day-answers.md` 2 and 8)
+
+1. **Where messages are kept.** A general message sits with the repair notes
+   (`job_notes`), marked with its customer instead of a repair (migration
+   091, numbered 087 until 088 reached main). A repair note's customer is always its repair's, so a repair moved to
+   another customer takes its notes with it. Merging customers moves general
+   messages too, and Undo puts them back.
+2. **A note on a repair with no customer** is in nobody's conversation. It
+   stays on the repair's own page, as now.
+3. **"Needs a reply"** is the inbox's rule as before, across the whole
+   conversation: the customer's message is the newest. A shop reply about
+   anything answers it.
+4. **The staff reply box** replies about the repair of the customer's newest
+   message (a note on that repair, "Reply from the shop", linking to the
+   repair), or as a general message when theirs was general ("Reply to a
+   message", linking to the conversation). The screens follow this.
+5. **"Reply to a message"** is its name in Settings › Messages, "When staff
+   reply to a customer’s message". Its email subject isn't drawn: "[Shop
+   name] replied to your message". While sending is pretend its link reads
+   "[link]", as every message's does. The address is
+   `/book/[shop]/messages`, which asks for sign-in first.
+6. **A message is up to 1,000 letters**, as a repair note is; longer or
+   empty says "Write a message of up to 1,000 letters."
+7. **The conversation holds every repair of the customer's**, however old.
+   "About WH-1042" opens the repair through the account, which works for its
+   signed-in owner after the private link has run out.
+8. **The history's one row** is dated by the newest message, and says the
+   shop replied when the newest message is the shop's.
+9. **30 days from the last visit:** a sign-in used with less than 29 days
+   left is renewed to 30 days, and the browser's cookie with it. So it is
+   written about once a day at most.
+10. **Today's "Customers' messages waiting"** counts customers, as the inbox
+    now does.
+11. **The old inbox list** (`/api/job-notes/conversations`) stays until the
+    inbox screen moves to the new one. The screens change removes it.
+12. **After the review:** a customer can send 30 messages to the shop in
+    15 minutes; after that they're asked to try again in a few minutes, so
+    nobody can flood the inbox. A reply about one repair answers the whole
+    conversation (one conversation per customer), so it leaves "Needs a
+    reply"; a test now pins that down.

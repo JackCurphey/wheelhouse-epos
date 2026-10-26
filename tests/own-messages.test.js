@@ -251,9 +251,9 @@ test('removing a message stops any of its messages still waiting', async () => {
   const m = await add({ ...SPRING, name: 'Removed' });
   const c = await customer();
   const j = await job(c, { collectedAt: londonInstant('2026-03-01', '12:00').toISOString() });
-  await run();
+  // Queued for a day far ahead, so the server's sender can't send it first (26 Oct).
+  await run(londonInstant('2099-09-02', '11:00'));
   const [row] = (await queued(m.id)).filter((r) => r.job_id === j);
-  await inShop(() => prepare("UPDATE customer_messages SET send_after = 'infinity' WHERE id = ?").run(row.id));
   await staff(`/api/own-messages/${m.id}`, { method: 'DELETE', body: {} });
   const after = await inShop(() => prepare('SELECT intent_state, shop_message_id FROM customer_messages WHERE id = ?').get(row.id));
   assert.equal(after.intent_state, 'undone');
@@ -264,10 +264,11 @@ test('checked again as it goes: a customer who took back their yes gets nothing'
   const c = await customer();
   const j = await job(c, { collectedAt: londonInstant('2026-03-01', '12:00').toISOString() });
   await inShop(() => prepare("UPDATE shop_messages SET active_from = ? WHERE id = ?").run(LONG_AGO, m.id));
-  // Queue it held, take the yes back, then let it come due.
-  await run();
+  // Queue it for a day far ahead, so the server's sender can't take it before
+  // the yes is taken back (it raced on a quick machine; 26 Oct), then let it come due.
+  // Wednesday 2 Sep 2099, 11:00: the shop is open.
+  await run(londonInstant('2099-09-02', '11:00'));
   const [row] = (await queued(m.id)).filter((r) => r.job_id === j);
-  await inShop(() => prepare("UPDATE customer_messages SET send_after = 'infinity' WHERE id = ?").run(row.id));
   await inShop(() => prepare('UPDATE customers SET marketing_permission = false WHERE id = ?').run(c.id));
   await inShop(() => prepare("UPDATE customer_messages SET send_after = now() - interval '1 second' WHERE id = ?").run(row.id));
   const end = Date.now() + 8000;
