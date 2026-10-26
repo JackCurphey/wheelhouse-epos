@@ -12,5 +12,5 @@
     it ordered, at computer and phone widths, nothing scrolling sideways.
 - [x] 1.2 Build the contract and design 1–4 and 6; log the choices in
   `docs/decisions/decided-while-building.md`.
-- [ ] 1.3 Lint, `npm test`, `npm run test:browser`, `/review` (money and
+- [x] 1.3 Lint, `npm test`, `npm run test:browser`, `/review` (money and
   stock), pull request, archive.
