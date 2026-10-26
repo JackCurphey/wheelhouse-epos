@@ -85,7 +85,7 @@ export async function renderBookScreen({
             : pathname.includes('/photo-codes/') ? photoCode
             : pathname.includes('/reminder-stops/') ? stopCode
             : pathname.includes('/sign-in/') ? signIn
-            : /\/(me|bikes|history|logout)$/.test(pathname) ? account
+            : /\/(me|me\/contact|bikes|history|logout)$/.test(pathname) ? account
             : pathname.endsWith('/deposit-holds') ? depositHold
             : pathname.includes('/pretend-payments/') ? card
             : pathname.endsWith('/bookings') ? booking
