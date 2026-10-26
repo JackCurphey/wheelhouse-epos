@@ -133,7 +133,7 @@ test('signed out while writing: says to sign in again', async () => {
   const { fireEvent } = await import('@testing-library/react');
   fireEvent.change(await ui.findByRole('textbox', { name: 'Your message' }), { target: { value: 'Hello' } });
   fireEvent.click(ui.getByRole('button', { name: 'Send' }));
-  assert.equal((await ui.findByRole('alert')).textContent, 'Please sign in again to send this.');
+  assert.equal((await ui.findByRole('alert')).textContent, 'Please sign in again to send this. Sign in again');
 });
 
 test('a server failure on sending gets the general line, not its words', async () => {
@@ -142,4 +142,34 @@ test('a server failure on sending gets the general line, not its words', async (
   fireEvent.change(await ui.findByRole('textbox', { name: 'Your message' }), { target: { value: 'Hello' } });
   fireEvent.click(ui.getByRole('button', { name: 'Send' }));
   assert.equal((await ui.findByRole('alert')).textContent, 'Wheelhouse couldn’t send that. Try again in a moment.');
+});
+
+// The review of ask-the-shop-screens (26 Oct).
+// 1. The status line is on the page before anything is sent, so "Sent." is announced.
+test('the status line is on the page, empty, before sending, so Sent. is announced', async () => {
+  const { ui } = await open();
+  await ui.findByRole('heading', { level: 1, name: 'Messages with North Street Cycles' });
+  const status = ui.getByRole('status');
+  assert.equal(status.textContent, '');
+  assert.equal(status.className.includes('empty:hidden'), false, 'not hidden while empty');
+});
+
+// 2. Her sign-in running out mid-message: the page stays, with what she typed.
+test('signed out after the page loaded: her typing stays, and the alert offers Sign in again', async () => {
+  let signedIn = true;
+  const base = server();
+  current = await renderBookScreen({ file: 'screens/book/conversation.js', exportName: 'ConversationScreen', at: 'messages', url: '/book/north/messages', services: SERVICES,
+    messages: (url, init) => (signedIn ? base(url, init) : { status: 401, body: { error: 'Not signed in' } }) });
+  const { ui } = current;
+  const { fireEvent, act } = await import('@testing-library/react');
+  const box = await ui.findByLabelText('Your message');
+  fireEvent.change(box, { target: { value: 'Half a message' } });
+  signedIn = false;
+  await act(async () => { await current.client.refetchQueries(); });
+  assert.equal(ui.getByLabelText('Your message').value, 'Half a message', 'still here, with her words');
+  fireEvent.click(ui.getByRole('button', { name: 'Send' }));
+  const alert = await ui.findByRole('alert');
+  // 3. The alert says so, and links to sign in, coming back here.
+  const link = (await import('@testing-library/react')).within(alert).getByRole('link', { name: 'Sign in again' });
+  assert.equal(link.getAttribute('href'), `/book/north/sign-in?from=${encodeURIComponent('/book/north/messages')}`);
 });

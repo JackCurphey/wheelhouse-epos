@@ -218,7 +218,7 @@ function Conversation({ customerId, drafts, focusOnOpen }: { customerId: number;
         })}
       </ol>
       {/* The drawn bar after sending (statusBar): green with a tick when the text went; amber when it didn't. */}
-      <p role="status" className={`m-0 flex items-start gap-2 rounded-md text-size-15 font-semibold empty:hidden ${told ? 'px-3 py-2.5' : ''} ${told?.status === 'sent' ? 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]' : told ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : ''}`}>
+      <p role="status" className={`m-0 flex items-start gap-2 rounded-md text-size-15 font-semibold ${told ? 'px-3 py-2.5' : ''} ${told?.status === 'sent' ? 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]' : told ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : ''}`}>
         {told?.status === 'sent' ? <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : null}
         {sentHow ? <span>{sentHow}{told?.status === 'sent' ? <> <button type="button" onClick={() => setShowText(true)} className="font-semibold text-inherit underline">{`See the text ${first} gets`}</button></> : null}</span> : null}
       </p>

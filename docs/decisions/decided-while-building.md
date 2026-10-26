@@ -2735,3 +2735,8 @@ follows the job checklist, the closest pattern built.
 9. **The mockup's coverage checks** for walk 10 M1's "Question from her
    account" row now check the redrawn row instead, since day answers 8.2
    replaced it.
+10. **After the review:** the "Sent." and reply status lines are on the page
+    from the start, empty, so screen readers announce them when they fill.
+    A customer whose sign-in runs out after the page has loaded keeps the
+    page and what she's typed; sending then says "Please sign in again to
+    send this." with a "Sign in again" link back to the page.

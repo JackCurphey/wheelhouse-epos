@@ -37,11 +37,13 @@ export function ConversationScreen() {
   const thread = useQuery({ queryKey: key, queryFn: () => apiGet<Conversation>(url), retry: false, refetchOnWindowFocus: false, refetchInterval: 30_000 });
   const [text, setText] = React.useState('');
   const [sending, setSending] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<React.ReactNode>(null);
   // Filled after a send, in a region already on the page, so it's announced (audit M10).
   const [said, setSaid] = React.useState('');
 
-  if (thread.error instanceof ApiError && thread.error.status === 401) {
+  // Signed out before the thread loads: to sign in. After it has loaded, the page
+  // stays with what she's typed, and sending says to sign in again (review 2).
+  if (!thread.data && thread.error instanceof ApiError && thread.error.status === 401) {
     return <Navigate replace to={`${home}/sign-in?from=${encodeURIComponent(`${home}/messages`)}`} />;
   }
   if (thread.isPending) return <BookFrame title="Loading…">{null}</BookFrame>;
@@ -70,7 +72,9 @@ export function ConversationScreen() {
       setSaid(`Sent. ${letYouKnow}`);
     } catch (err) {
       // Too long, or too many at once: the shop's own words. Anything else, a general line.
-      setError(err instanceof ApiError && err.status === 401 ? 'Please sign in again to send this.'
+      // Signed out: a link to sign in, back to this page (review 3).
+      setError(err instanceof ApiError && err.status === 401
+        ? <>Please sign in again to send this. <Link to={`${home}/sign-in?from=${encodeURIComponent(`${home}/messages`)}`} className="font-semibold text-inherit underline">Sign in again</Link></>
         : err instanceof ApiError && (err.status === 400 || err.status === 429) && err.hasServerMessage ? err.message
           : 'Wheelhouse couldn’t send that. Try again in a moment.');
     } finally {
@@ -99,7 +103,8 @@ export function ConversationScreen() {
             ))}
           </ol>
         ) : null}
-        <p role="status" className="m-0 text-sm text-[var(--wh-muted)] empty:hidden">{said}</p>
+        {/* On the page from the start, empty, so "Sent." is announced when it fills (review 1). */}
+        <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{said}</p>
         <div className="flex flex-col gap-2">
           <label htmlFor={BOX_ID} className="text-size-15 font-semibold">{items.length ? 'Your message' : 'Ask the shop a question'}</label>
           <Textarea id={BOX_ID} rows={3} placeholder="Type here" maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
