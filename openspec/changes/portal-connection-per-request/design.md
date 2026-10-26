@@ -31,12 +31,15 @@ Follows `openspec/changes/server-connection-per-request` (the staff
 1. `server/lib/session.js`: a second `WeakMap` keyed by the request object.
    `rememberCustomerSession(req)` reads the customer cookie and, only when it
    is there, stores `getCustomerSessionContext`'s answer (a session or null).
+   A lookup that fails is logged and stores nothing (review, 26 Oct): a route
+   that needs the customer then looks them up itself as before, and a public
+   page that never asks (`/services`, `/terms`) is not failed by it.
    `currentCustomerSession(req)` returns the stored answer when there is one;
    with none it does exactly what it did before (with no cookie that is an
    early `null`, no query).
 2. `server/server.js`, the portal branch: `await rememberCustomerSession(req)`
-   just before `runWithShop`, inside the existing `try`, so a database fault
-   there is a 500 for that request, as a fault in the handler already is.
+   just before `runWithShop`, inside the existing `try` (it does not throw;
+   see 1).
    Sign-up, log-in and log-out run before this and are unchanged.
 3. `server/routes/workshop.js` (`issueJobLink`, private link, photo codes) and
    `server/workshop/job-messages.js` (`jobMessageVars`): the same lookup
@@ -87,6 +90,11 @@ burst out and hides the stall). Then, 12 at once each:
 6. 12 photo codes: all 201, each on North Street's pages.
 7. 12 quotes sent for a customer with no contact (so Send returns the link
    from `issueJobLink`): all 200, each link on North Street's pages.
+8. A public page (`/services`, `/terms`) opened with a cookie whose lookup
+   fails (`wh_customer_session=%00`: it decodes to a NUL character, which
+   Postgres refuses) still answers 200.
+9. An expired sign-in (Maya's second session aged past `expires_at`) gets 401
+   on `/me` through the early lookup, and its session row is deleted.
 
 Before the fix: tests 1, 2, 3, 5 and 6 failed with 500 "timeout exceeded when
 trying to connect" after about 5 seconds. In the whole-file run the server
@@ -111,6 +119,13 @@ restore checked byte for byte against a saved copy):
 5. The private link back on `pool.query`: test 5 failed.
 6. Photo codes back on `pool.query`: test 6 failed.
 7. `jobMessageVars` back on `pool.query`: test 7 failed.
+8. The early lookup's error rethrown: test 8 failed (`/services` 500,
+   "invalid byte sequence for encoding UTF8: 0x00"). Before the catch was
+   added, test 8 failed the same way.
+9. The expiry check skipped (`customer-auth.js`): test 9 failed, `/me` gave
+   Maya's account. Test 9 passed before any change, as it guards behaviour
+   `getCustomerSessionContext` already had; this is how it was seen red.
+10. The expired row not deleted: test 9 failed on the row check (1, not 0).
 
 ## Not covered (left alone to keep this small)
 
@@ -127,3 +142,6 @@ restore checked byte for byte against a saved copy):
    workshop routes), and `server/messaging/own-messages.js:65` (the messages
    engine, one shop at a time). These are the messaging core, a separate
    risky area.
+3. `server/routes/portal.js:787`: sign-in/check calls `createCustomerSession`
+   (`pool.query`, `server/customer-auth.js`) inside `runWithShop`. Low risk:
+   it needs a correct emailed code, and code checks are limited per network.

@@ -41,9 +41,16 @@ export async function currentSession(req) {
 // belongs to the shop it asked.
 const rememberedCustomers = new WeakMap();
 
+// A lookup that fails stores nothing: a route that needs the customer looks
+// them up itself as before, and a public page (/services, /terms) that never
+// asks is not failed by a lookup it didn't need (review, 26 Oct).
 export async function rememberCustomerSession(req) {
-  const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
-  if (token) rememberedCustomers.set(req, await getCustomerSessionContext(token));
+  try {
+    const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
+    if (token) rememberedCustomers.set(req, await getCustomerSessionContext(token));
+  } catch (err) {
+    console.error('The customer sign-in lookup failed; the route will look again if it needs it', err);
+  }
 }
 
 export async function currentCustomerSession(req) {

@@ -158,3 +158,25 @@ test(`${AT_ONCE} quotes sent at once each hand staff a link quickly (issueJobLin
   for (const a of answers) assert.match(a.body.link, new RegExp(`^https://wh\\.test/book/${northStreet.shop.slug}/booking/[0-9a-f]{64}$`), JSON.stringify(a.body));
   assert.ok(took < QUICKLY_MS, `took ${took}ms`);
 });
+
+// A cookie that decodes to a NUL character: Postgres refuses it in a text
+// parameter, so the dispatcher's early lookup fails for this one request.
+const LOOKUP_FAILS = 'wh_customer_session=%00';
+
+test('a public page opened with a cookie whose lookup fails still answers', async () => {
+  for (const path of ['/services', '/terms']) {
+    const got = await portal(path, { cookie: LOOKUP_FAILS });
+    assert.equal(got.status, 200, `${path}: ${JSON.stringify(got.body)}`);
+  }
+});
+
+test('an expired sign-in is refused through the early lookup, and its session goes', async () => {
+  const cookie = await signIn(maya.email, northStreet);
+  const token = decodeURIComponent(cookie.split('=')[1]);
+  const aged = await pool.query("UPDATE customer_sessions SET expires_at = '2026-01-01T00:00:00Z' WHERE token = $1", [token]);
+  assert.equal(aged.rowCount, 1);
+  const got = await portal('/me', { cookie });
+  assert.equal(got.status, 401, JSON.stringify(got.body));
+  const { rows } = await pool.query('SELECT 1 FROM customer_sessions WHERE token = $1', [token]);
+  assert.equal(rows.length, 0);
+});

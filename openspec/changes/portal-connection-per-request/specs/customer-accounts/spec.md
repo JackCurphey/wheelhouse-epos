@@ -12,3 +12,7 @@ The server SHALL look up a customer's sign-in once per request to the shop's web
 #### Scenario: a customer of one shop asks another
 - **WHEN** a customer signed in to North Street Cycles asks Elsewhere Cycles for their account, bikes, bookings, history or a repair by `job-<id>`
 - **THEN** they are refused as not signed in (or "We can't find that booking"), as before
+
+#### Scenario: a public page when the sign-in can't be checked
+- **WHEN** a page that needs no sign-in, such as the shop's services or terms, is opened with a cookie that can't be looked up
+- **THEN** the page still answers as normal
