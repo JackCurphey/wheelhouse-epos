@@ -123,3 +123,23 @@ Workshop buttons stay as they are until then.
    messages are together, each repair note marked with its repair, instead
    of a row per repair's notes and a row per question. The inbox drawings
    (`ac-inbox*`) are updated to match as part of the build.
+
+## 9. Paying a repair online: the three open points
+
+Most of it is settled already: where it is paid (`2026-09-30-collect-and-pay-review.md`),
+the drawings (`cp-pay`, `cp-pay-failed`, `cp-pay-balance`, `cp-paid`), and
+Mark's rules for the balance (his till-deposit design, decision 12: charge
+what's left to pay, take the order's lock first, count deposits held at the
+till). Jack answered the rest:
+
+1. **The cashier on an online payment is nobody: the sale shows "Paid
+   online"** (Jack: "Nobody"). It needs a server change so a sale can have no
+   cashier, since Mark ruled out a pretend online till (sales-in-pence
+   decision 4).
+2. **While the till has the bike's order open, the customer's page hides Pay**
+   and says it's being paid at the counter, as drawn (audit H3). A short
+   "till has it open" marker, which clears itself after a few minutes
+   (Jack: "Hide Pay while the till has it").
+3. **Refunds of an online repair payment wait for the till's refunds**
+   (slice B), built once for both. Until then a refund is made in the
+   payment provider's own dashboard (Jack: "Wait for till refunds").
