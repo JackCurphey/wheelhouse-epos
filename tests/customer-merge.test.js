@@ -419,3 +419,18 @@ test('taking the other record’s email in a merge unmarks it as the customer’
   await staff(`/api/customers/${kept.id}/merge`, { method: 'POST', body: { otherId: again.id, keep: { email: 'this' } } });
   assert.equal(await ownEmail(kept.id), true, 'keeping her own email keeps the mark');
 });
+
+// Review of own-messages-server, finding 1: a customer who stopped one of the
+// shop's own messages keeps that stop when merged; Undo takes back only what
+// the merge added.
+test('a stop on one of the shop’s own messages moves with a merge, and Undo takes it back', async () => {
+  const kept = await add({ name: 'Ravi Shah', phone: '07700 900660' });
+  const other = await add({ name: 'Ravi Shah', phone: '07700 900660' });
+  const stops = (id) => inShop(async () => (await prepare('SELECT shop_message_id AS m FROM shop_message_stops WHERE customer_id = ? ORDER BY 1').all(id)).map((r) => r.m));
+  const { id: msg } = await inShop(() => prepare("INSERT INTO shop_messages (name, send_when, amount, unit, by_text, by_email, wording) VALUES ('Spring check', 'after_collected', 6, 'months', true, false, 'Hi') RETURNING id").get());
+  await inShop(() => prepare('INSERT INTO shop_message_stops (shop_message_id, customer_id) VALUES (?, ?) RETURNING customer_id').get(msg, other.id));
+  const merged = await merge(kept.id, other.id);
+  assert.deepEqual(await stops(kept.id), [msg], 'the stop went with her');
+  assert.equal((await undo(merged.id)).status, 200);
+  assert.deepEqual(await stops(kept.id), [], 'Undo takes back what the merge added');
+});

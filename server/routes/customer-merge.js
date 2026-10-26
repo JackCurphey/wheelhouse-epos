@@ -158,6 +158,11 @@ export function register(route) {
         `INSERT INTO customer_group_members (group_id, customer_id)
            SELECT group_id, ? FROM customer_group_members WHERE customer_id = ? ON CONFLICT DO NOTHING RETURNING group_id`
       ).all(id, otherId)).map((r) => r.group_id);
+      // Stops on the shop's own messages go with her (own-messages-server review 1).
+      moved.ownStops = (await prepare(
+        `INSERT INTO shop_message_stops (shop_message_id, customer_id)
+           SELECT shop_message_id, ? FROM shop_message_stops WHERE customer_id = ? ON CONFLICT DO NOTHING RETURNING shop_message_id`
+      ).all(id, otherId)).map((r) => r.shop_message_id);
       const sets = [];
       const args = [];
       for (const [field, cols] of Object.entries(FIELDS)) {
@@ -250,6 +255,7 @@ export function register(route) {
       }
       if (moved.logins?.length) await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ? AND id = ANY(?::int[])').run(m.other_id, shopId, m.kept_id, moved.logins);
       if (moved.groups?.length) await prepare('DELETE FROM customer_group_members WHERE customer_id = ? AND group_id = ANY(?::int[])').run(m.kept_id, moved.groups);
+      if (moved.ownStops?.length) await prepare('DELETE FROM shop_message_stops WHERE customer_id = ? AND shop_message_id = ANY(?::int[])').run(m.kept_id, moved.ownStops);
       // Only what the merge changed, and only where nobody has changed it since.
       // A date read back is a Date; the merge's record keeps it as text (merge-keeps-yes).
       const plain = (v) => (v instanceof Date ? v.toISOString() : v ?? null);

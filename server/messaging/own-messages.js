@@ -9,7 +9,8 @@
 import { pool, prepare } from '../db.js';
 import { effectiveHours, openingHoursFor, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
-import { jobMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobMessageVars } from '../workshop/job-messages.js';
+import { isPretend } from './senders/index.js';
 import { formatOpeningHours, render } from './templates.js';
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
 import { stopLink } from './stop-codes.js';
@@ -72,12 +73,9 @@ async function issueJobLink(jobId, shopId) {
   return `${publicBase()}${linkPath((await shopRow(shopId)).slug, code)}`;
 }
 
-/** The tap-ins (design 4): the job's, as Bike ready's; a sale has the customer's name, the shop's and its hours. */
-async function varsFor(candidate, shopId, settings) {
-  if (candidate.job_id) {
-    const link = await messageLink(() => issueJobLink(candidate.job_id, shopId));
-    return (await jobMessageVars(candidate.job_id, shopId, link)).vars;
-  }
+/** The tap-ins (design 4), given the job's link: the job's, as Bike ready's; a sale has the customer's name, the shop's and its hours. */
+async function varsFor(candidate, shopId, settings, link) {
+  if (candidate.job_id) return (await jobMessageVars(candidate.job_id, shopId, link)).vars;
   return {
     'Customer’s first name': (candidate.customer_name ?? '').trim().split(/\s+/)[0],
     'Shop name': (await shopRow(shopId)).name,
@@ -106,10 +104,11 @@ function candidates(m, now, tz, today) {
          FROM workshop_jobs w JOIN customers c ON c.id = w.customer_id
         WHERE w.booking_state IN ${BOOKED} AND w.custody_state <> 'collected'
           AND w.job_date::date >= ?::date
+          -- Its days began after the message was set up, or it was booked after (review 2).
           AND (w.job_date::date - ${span})::date <= ?::date
-          AND (w.job_date::date - ${span})::date >= (?::timestamptz AT TIME ZONE ?)::date
+          AND ((w.job_date::date - ${span})::date >= (?::timestamptz AT TIME ZONE ?)::date OR w.created_at >= ?)
           AND ${ELIGIBLE} AND ${notYet}'job:' || w.id)`
-    ).all(today, months, days, today, months, days, m.active_from, tz, m.id, m.id);
+    ).all(today, months, days, today, months, days, m.active_from, tz, m.active_from, m.id, m.id);
   }
   return prepare(
     `SELECT NULL::int AS job_id, 'sale:' || s.source || ':' || s.id AS event_key, c.id AS customer_id, c.name AS customer_name, c.phone, c.email, c.update_channel
@@ -133,9 +132,11 @@ export async function queueOwnMessages(shopId, now = new Date()) {
     for (const cand of await candidates(m, now, tz, date)) {
       const how = ownChannel(m, cand);
       if (!how) continue;
-      const vars = await varsFor(cand, shopId, settings);
-      const link = await messageLink(async () => stopLink(publicBase(), (await shopRow(shopId)).slug, cand.customer_id, 'own_message', m.id));
-      const ending = stopLine(link);
+      // Written with "[link]" first; the real links are made only once the row
+      // is in, so a second server finding the same job never replaces a link
+      // a message already carries (review 4).
+      const vars = await varsFor(cand, shopId, settings, '[link]');
+      const ending = stopLine('[link]');
       const body = `${render(m.wording, vars)} ${ending}`;
       // One per job or sale, even with two servers (the unique index).
       const row = await prepare(
@@ -144,7 +145,13 @@ export async function queueOwnMessages(shopId, now = new Date()) {
          ON CONFLICT (shop_message_id, event_key) WHERE shop_message_id IS NOT NULL AND event_key IS NOT NULL DO NOTHING
          RETURNING id`
       ).get(cand.customer_id, cand.job_id, body, how.channel, KEY, how.channel === 'email' ? m.name : null, how.to, now.toISOString(), ending, m.id, cand.event_key);
-      if (row) count += 1;
+      if (!row) continue;
+      count += 1;
+      if (!isPretend()) {
+        const link = await stopLink(publicBase(), (await shopRow(shopId)).slug, cand.customer_id, 'own_message', m.id);
+        const real = await varsFor(cand, shopId, settings, cand.job_id ? await issueJobLink(cand.job_id, shopId) : null);
+        await prepare('UPDATE customer_messages SET body = ?, ending = ? WHERE id = ?').run(`${render(m.wording, real)} ${stopLine(link)}`, stopLine(link), row.id);
+      }
     }
   }
   return count;

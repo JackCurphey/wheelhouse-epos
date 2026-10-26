@@ -2560,3 +2560,10 @@ follows the job checklist, the closest pattern built.
 5. **The limits:** 1 to 365 days, or 1 to 24 months.
 6. **The stop page,** for one of these messages, reads "Stop “[name]”?",
    following the review request's page; its button is "Turn it back on".
+7. **After the review:**
+   - a stop moves with a customer merge, and Undo takes it back;
+   - "Before a booked job" also reaches a booking made after the message was
+     set up;
+   - a change that leaves out On or Off keeps it as it was;
+   - once sending is real, the job's link is made only after the message is
+     saved.
