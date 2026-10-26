@@ -44,6 +44,6 @@
   expiry.
 - [x] 3.2 The touched tests, the route list, owner-only, the portal, messages
   and inbox tests, and `npm run lint` pass.
-- [ ] 3.3 The full `npm test` and `npm run test:browser` before the pull
+- [x] 3.3 The full `npm test` and `npm run test:browser` before the pull
   request, with `/review` (migration, sign-in and public routes, messaging
   core).
