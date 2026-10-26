@@ -33,6 +33,6 @@
 
 ## 3. Check
 
-- [ ] 3.1 `/review` (customer accounts and public routes); lint, `npm test`
+- [x] 3.1 `/review` (customer accounts and public routes); lint, `npm test`
   and `npm run test:browser` locally; the pull request; archive as the last
   commit.
