@@ -25,7 +25,10 @@
    still created on first touch (`getOrCreate…`) before the transaction;
    `updateStorefrontSettings` checks the theme first, then locks, writes and
    returns the stored row, so the logo and hero uploads that call it are
-   covered too.
+   covered too. The row is made with
+   `INSERT … ON CONFLICT (shop_id) DO NOTHING` and then read, so two first
+   saves at once share the one row instead of the second failing on the
+   one-row-per-shop rule (`/review`, 26 Oct).
 
 ## Not covered
 

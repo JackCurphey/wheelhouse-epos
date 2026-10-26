@@ -5,7 +5,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
-import { pool } from '../server/db.js';
+import { pool, prepare, runWithShop } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -95,4 +95,31 @@ test('website settings: the tagline and the description saved at once both stay'
   );
   assert.deepEqual(lost, [], `a change was lost in ${lost.length} of ${ROUNDS} rounds`);
   assert.deepEqual((await call('/api/storefront-settings', undefined, otherShop)).body, theirsBefore);
+});
+
+// A shop's website settings row is made on first use. Two first saves at
+// once used to both find no row and both insert it; one hit the one-row-per-
+// shop rule and got a 500.
+test('website settings: two first-ever saves at once both work and both stay', async () => {
+  const lost = [];
+  const fresh = [];
+  try {
+    for (let i = 0; i < 10; i += 1) {
+      const shop = await staffSignup(server.baseUrl);
+      fresh.push(shop);
+      const rows = await runWithShop(shop.shop.id, () => prepare('SELECT id FROM storefront_settings').all());
+      assert.equal(rows.length, 0, 'a new shop starts with no website settings row');
+      const [a, b] = await Promise.all([
+        call('/api/storefront-settings', { tagline: '[tagline]' }, shop),
+        call('/api/storefront-settings', { description: '[description]' }, shop),
+      ]);
+      assert.equal(a.status, 200, JSON.stringify(a.body));
+      assert.equal(b.status, 200, JSON.stringify(b.body));
+      const stored = (await call('/api/storefront-settings', undefined, shop)).body;
+      if (stored.tagline !== '[tagline]' || stored.description !== '[description]') lost.push(i);
+    }
+  } finally {
+    for (const s of fresh) await deleteTestShop(s.shop.id);
+  }
+  assert.deepEqual(lost, [], `a change was lost in ${lost.length} of 10 rounds`);
 });

@@ -17,6 +17,10 @@ When two saves of different settings for the same shop arrive at the same moment
 - **WHEN** a new tagline and a new description save at the same moment
 - **THEN** both are stored
 
+#### Scenario: A shop's first two website saves at once
+- **WHEN** a shop that has never saved its website settings saves two of them at the same moment
+- **THEN** both saves work and both are stored
+
 #### Scenario: A refused save
 - **WHEN** a save is refused because something sent isn't allowed
 - **THEN** nothing it sent is stored, and the next save goes straight through

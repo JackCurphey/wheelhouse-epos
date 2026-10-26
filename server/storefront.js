@@ -18,7 +18,9 @@ export function serializeStorefrontSettings(row) {
 export async function getOrCreateStorefrontSettings() {
   let row = await prepare('SELECT * FROM storefront_settings LIMIT 1').get();
   if (!row) {
-    await prepare('INSERT INTO storefront_settings DEFAULT VALUES').run();
+    // Two first saves at once can both get here; the second's insert does
+    // nothing and it reads the row the first made (settings-saves-dont-clash).
+    await prepare('INSERT INTO storefront_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING').run();
     row = await prepare('SELECT * FROM storefront_settings LIMIT 1').get();
   }
   return row;
