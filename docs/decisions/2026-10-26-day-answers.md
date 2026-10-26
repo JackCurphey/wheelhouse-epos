@@ -97,3 +97,18 @@ already work at the till meanwhile.
 **Wait for slice B** (Jack: "Wait for slice B"). They are built with the new
 till after Mark's step C, so the till screen changes once. Today's automatic
 Workshop buttons stay as they are until then.
+
+## 8. The conversation, drawn and approved
+
+1. **The redrawn account screens are approved** (Jack: "Approve").
+   `account.mjs` now draws:
+   - `ac-ask`: "Ask the shop a question" opens "Messages with North Street
+     Cycles", one thread, with repair notes marked "About WH-1042" (opening
+     that repair) and "We'll let you know when North Street Cycles replies";
+   - `ac-account-question-sent` and `ac-question`;
+   - `ac-account-asked`: one "Messages" row in the history.
+2. **The staff Messages inbox shows one conversation per customer too**
+   (Jack: "Yes, one per customer"). A customer's repair notes and general
+   messages are together, each repair note marked with its repair, instead
+   of a row per repair's notes and a row per question. The inbox drawings
+   (`ac-inbox*`) are updated to match as part of the build.
