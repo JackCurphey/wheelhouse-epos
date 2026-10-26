@@ -8,6 +8,7 @@ import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { readUploadedImage } from '../lib/uploads.js';
 import { serializeProduct } from '../lib/serializers.js';
+import { currentSession } from '../lib/session.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 
@@ -48,10 +49,12 @@ async function listProducts({ search, category, activeOnly }) {
     params.push(category);
   }
   if (search) {
-    // ILIKE: staff type "brake" and expect "Brake pads".
-    sql += ' AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?)';
-    const like = `%${search}%`;
-    params.push(like, like, like);
+    // ILIKE: staff type "brake" and expect "Brake pads". Stock's one search
+    // box finds a supplier too (stock decision 2).
+    // % and _ are searched for as themselves, not as wildcards (review 3).
+    sql += " AND (name ILIKE ? ESCAPE '\\' OR sku ILIKE ? ESCAPE '\\' OR barcode ILIKE ? ESCAPE '\\' OR supplier ILIKE ? ESCAPE '\\')";
+    const like = `%${String(search).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    params.push(like, like, like, like);
   }
   sql += ' ORDER BY category, name';
   const rows = await db.prepare(sql).all(...params);
@@ -70,6 +73,27 @@ export function register(route) {
       activeOnly: query.get('all') !== '1',
     });
     sendJson(res, 200, products);
+  });
+
+  // A product's page (st-product; openspec/changes/stock-list): the product
+  // and every change to its stock, newest first. Read only. Staff see no
+  // cost (stock decision 11); until roles (WP-1.1) only the Owner does. A
+  // product taken off sale still opens: its history stands.
+  route('GET', '/api/products/:id', async (req, res, params) => {
+    const id = Number(params.id);
+    if (!Number.isInteger(id)) return notFound(res, 'Product not found');
+    const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    if (!row) return notFound(res, 'Product not found');
+    const ctx = await currentSession(req);
+    const moves = await db
+      // The newest 200: a fast seller's whole history would be thousands of rows (review 2).
+      .prepare('SELECT id, type, change_qty, note, created_at FROM stock_movements WHERE product_id = ? ORDER BY created_at DESC, id DESC LIMIT 200')
+      .all(id);
+    sendJson(res, 200, {
+      ...serializeProduct(row),
+      cost: ctx?.login.is_owner ? row.cost : null,
+      history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, note: m.note || '', at: m.created_at })),
+    });
   });
 
   route('POST', '/api/products', async (req, res) => {
