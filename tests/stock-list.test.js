@@ -86,3 +86,22 @@ test('the list’s search finds a supplier, and each product carries its VAT rat
   assert.deepEqual(res.body.map((p) => p.supplier), ['[Second supplier]']);
   assert.equal(res.body[0].vatRateBp, 2000);
 });
+
+// The review of stock-list (26 Oct).
+test('a product’s page sends its newest 200 stock movements, not every one ever', async () => {
+  const p = await pads();
+  await runWithShop(owner.shop.id, () => prepare(
+    "INSERT INTO stock_movements (product_id, type, change_qty, note, created_at) SELECT ?, 'sale', -1, '', now() - (g || ' minutes')::interval FROM generate_series(1, 250) g RETURNING id"
+  ).all(p.id));
+  const page = (await staff(`/api/products/${p.id}`)).body;
+  assert.equal(page.history.length, 200);
+});
+
+test('% and _ in a search are plain characters, not wildcards', async () => {
+  const plain = await pads({ name: 'Plain tube' });
+  const odd = await pads({ name: 'Tube 50% off' });
+  const found = async (q) => (await staff(`/api/products?search=${encodeURIComponent(q)}`)).body.map((x) => x.id);
+  assert.equal((await found('_')).includes(plain.id), false, '_ matches only an underscore');
+  assert.equal((await found('50%')).includes(odd.id), true);
+  assert.equal((await found('%')).includes(plain.id), false, '% matches only a percent sign');
+});

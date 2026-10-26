@@ -51,8 +51,9 @@ async function listProducts({ search, category, activeOnly }) {
   if (search) {
     // ILIKE: staff type "brake" and expect "Brake pads". Stock's one search
     // box finds a supplier too (stock decision 2).
-    sql += ' AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ? OR supplier ILIKE ?)';
-    const like = `%${search}%`;
+    // % and _ are searched for as themselves, not as wildcards (review 3).
+    sql += " AND (name ILIKE ? ESCAPE '\\' OR sku ILIKE ? ESCAPE '\\' OR barcode ILIKE ? ESCAPE '\\' OR supplier ILIKE ? ESCAPE '\\')";
+    const like = `%${String(search).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
     params.push(like, like, like, like);
   }
   sql += ' ORDER BY category, name';
@@ -85,7 +86,8 @@ export function register(route) {
     if (!row) return notFound(res, 'Product not found');
     const ctx = await currentSession(req);
     const moves = await db
-      .prepare('SELECT id, type, change_qty, note, created_at FROM stock_movements WHERE product_id = ? ORDER BY created_at DESC, id DESC')
+      // The newest 200: a fast seller's whole history would be thousands of rows (review 2).
+      .prepare('SELECT id, type, change_qty, note, created_at FROM stock_movements WHERE product_id = ? ORDER BY created_at DESC, id DESC LIMIT 200')
       .all(id);
     sendJson(res, 200, {
       ...serializeProduct(row),

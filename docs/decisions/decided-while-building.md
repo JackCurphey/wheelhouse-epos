@@ -2689,3 +2689,7 @@ follows the job checklist, the closest pattern built.
     frame numbers yet, so "Bikes by frame number" is left out.
 15. **A product taken off sale** still opens, with "Taken off sale" under
     its name.
+16. **After the review:** a product with no cost recorded (saved as 0) shows
+    no margin ("—"), not 100%. A product's page shows its newest 200 stock
+    movements. "%" and "_" in a stock search are searched for as
+    themselves.

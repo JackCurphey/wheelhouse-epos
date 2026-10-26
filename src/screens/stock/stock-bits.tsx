@@ -27,7 +27,8 @@ export function stockState(p: Pick<Product, 'stockQty' | 'lowStockThreshold'>): 
 
 /** Margin on the price before VAT, as the old app works it out, with the product's own rate. */
 export function margin(p: Pick<Product, 'price' | 'cost' | 'vatRateBp'>): number | null {
-  if (p.cost === null) return null;
+  // No cost recorded (the old app saves 0) is no margin, not 100% (review 1).
+  if (p.cost === null || p.cost === 0) return null;
   const net = p.price / (1 + (p.vatRateBp ?? 0) / 10000);
   return net > 0 ? Math.round(((net - p.cost) / net) * 100) : null;
 }
