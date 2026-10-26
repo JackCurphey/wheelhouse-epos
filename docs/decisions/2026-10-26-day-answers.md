@@ -37,3 +37,18 @@ payment, and refunds) come later in this list.
    each phone or computer (Jack: "30 days from last visit"). Every visit
    renews it, so a regular customer never signs in again on that device.
    Today it is 30 days from signing in, whatever they do.
+3. **One running conversation per customer**, not a page per question
+   (Jack: "One per customer"). This changes the drawings (`ac-ask`,
+   `ac-question`, `ac-account-asked`, the inbox's "Question from her
+   account" rows), so they are redrawn for Jack to approve before building.
+   The conversation never closes. It leaves the shop's "Needs a reply" list
+   once answered, as the inbox already does, so the earlier question "should
+   a question ever close?" falls away.
+4. **The reply message** reads "[Shop] replied to your message: [link]"
+   (the shop can reword it in Settings › Messages). The account says "we'll
+   let you know when they reply" rather than the drawn "we'll text you",
+   since customers may choose email (Jack: "Yes to both").
+5. **Notes on a repair also show in the customer's conversation** on their
+   account, each marked with its repair ("About WH-1042") and opening that
+   repair (Jack: "Yes, marked with the repair"; decision 3 of the account
+   review).
