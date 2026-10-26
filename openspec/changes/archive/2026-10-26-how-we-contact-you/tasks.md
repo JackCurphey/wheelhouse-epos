@@ -8,5 +8,5 @@
     saves, a refusal shows;
   - the stop page's line.
 - [x] 1.2 Build design 1 to 3; update `route-list.txt`; log design 4.
-- [ ] 1.3 `/review`; lint, `npm test`, `npm run test:browser`; pull request
+- [x] 1.3 `/review`; lint, `npm test`, `npm run test:browser`; pull request
   after next-service-due merges; archive as the last commit.
