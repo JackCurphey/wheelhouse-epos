@@ -143,3 +143,6 @@ till). Jack answered the rest:
 3. **Refunds of an online repair payment wait for the till's refunds**
    (slice B), built once for both. Until then a refund is made in the
    payment provider's own dashboard (Jack: "Wait for till refunds").
+4. **Built after Mark's till-deposit piece is merged** (Jack: "After Mark's
+   till deposit"), so it uses his "what's left to pay" and deposit rules
+   directly, in slice A, rather than being built now and redone.
