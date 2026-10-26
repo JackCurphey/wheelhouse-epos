@@ -75,9 +75,15 @@ const why = (box) => {
   return adjust.getAttribute('aria-disabled') === 'true' ? document.getElementById(adjust.getAttribute('aria-describedby'))?.textContent : null;
 };
 
-test('Staff see no Adjust stock (Owner only, until roles)', async () => {
-  const { ui } = await open({ me: JO });
-  assert.ok(ui.queryByRole('button', { name: 'Adjust stock' }) === null);
+// Anyone with the Stock page adjusts (Jack, 26 Oct: 2026-10-26-day-answers.md section 11).
+test('Staff see Adjust stock, enabled, and can adjust', async () => {
+  const { box, fireEvent, ui, waitFor } = await openBox({ me: JO });
+  const button = ui.getByRole('button', { name: 'Adjust stock' });
+  assert.ok(button.getAttribute('aria-disabled') !== 'true' && !button.disabled);
+  fireEvent.click(box.getByRole('radio', { name: 'Damaged' }));
+  fireEvent.click(box.getByRole('button', { name: 'Adjust' }));
+  await waitFor(() => assert.equal(posts.length, 1));
+  assert.deepEqual(posts[0], { change: -1, type: 'adjustment', reason: 'damaged', note: '' });
 });
 
 test('the Owner sees Adjust stock in the In stock box', async () => {

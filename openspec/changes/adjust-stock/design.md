@@ -2,11 +2,13 @@
 
 ## Decisions
 
-1. **Migration 089** adds `stock_movements.reason TEXT` (null, or one of
+1. **Migration 093** adds `stock_movements.reason TEXT` (null, or one of
    `damaged`, `lost_stolen`, `used_workshop`, `faulty_return`, `found`,
    `other`, held by a check) and `stock_movements.login_id INTEGER
    REFERENCES logins(id)` (null for lines before it, and for sales and till
-   sync, which this piece doesn't touch). `note` already exists.
+   sync, which this piece doesn't touch). `note` already exists. Each
+   column is added only when it isn't there, so it is safe to run twice
+   (the shared dev database ran it once as 089).
 2. **The reasons follow the sign.** Going down: Damaged, Lost or stolen,
    Used in the workshop, Faulty — to return to supplier, Other. Going up:
    Found, Other. A reason that doesn't fit the sign, an unknown one, none,
@@ -17,8 +19,10 @@
    both count, and the below-zero check is made on the row as it is when
    the update runs. Going down below zero is refused, as before; going up
    is always allowed, so Found works on a product that's below zero.
-4. **Owner only** (`ownerOnly`) until roles (WP-1.1); the button shows to
-   the Owner only. The old app's "intake" (booking stock in) through the
+4. **Anyone with the Stock page adjusts** (Jack, 26 Oct, day answers
+   section 11; stock decision 6), and the button shows to everyone who sees
+   the page. Every adjustment records who (`login_id`), the reason and when
+   (`created_at`). The old app's "intake" (booking stock in) through the
    same route needs no reason; it records who too.
 5. **The box** (`st-adjust`): the change, with − and +, starting at −1 as
    drawn, and "In stock after" joined to it (typing either sets the other);
@@ -34,7 +38,7 @@
 ## Contract
 
 `POST /api/products/:id/stock` `{ change, type: 'adjustment', reason, note }`
-→ 200 the product; 400 `{ error }`; 403 for anyone but the Owner.
+→ 200 the product; 400 `{ error }`.
 
 `GET /api/products/:id` → history lines
 `{ id, type, change, reason: string | null, note, who: string | null, at }`.

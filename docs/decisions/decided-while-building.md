@@ -2696,10 +2696,9 @@ follows the job checklist, the closest pattern built.
 
 ### 26 Oct 2026: adjusting stock (`openspec/changes/adjust-stock`, `st-adjust`, `st-adjust-faulty`; slice C, WP-2.1, the 26 Oct defaults)
 
-1. **Owner only, until roles.** Stock decisions 6 and 11 say anyone,
-   Staff included, can adjust; until roles (WP-1.1) the button shows to the
-   Owner only and the server refuses anyone else (`ownerOnly`), as the 26
-   Oct defaults set. Its refusal reads as the settings one does.
+1. **Who can adjust:** anyone with the Stock page, every adjustment
+   recording who, the reason and when (Jack's answer, 26 Oct:
+   `2026-10-26-day-answers.md` section 11).
 2. **The change starts at −1, as drawn,** and "In stock after" shows the
    count it leaves; typing either sets the other. − and + step the change.
 3. **Adjust is greyed and says why,** as UX walk-through 3 L4 draws for no
@@ -2716,8 +2715,8 @@ follows the job checklist, the closest pattern built.
    out both lines that promise it (the note under the reasons, and the
    panel in `st-adjust-faulty`).
 7. **"big changes show on the manager’s Today" is left out** of the last
-   note: Today's adjustment line and its Settings › Stockroom amount aren't
-   built.
+   note: it waits until Today's stock warnings are built (section 11 of
+   `2026-10-26-day-answers.md`), with its Settings › Stockroom amount.
 8. **After Adjust** the box closes and the page shows the new stock and
    the new history line; no toast, as none is drawn.
 9. **History lines:** an adjustment with a reason reads "Adjusted ·
@@ -2725,7 +2724,7 @@ follows the job checklist, the closest pattern built.
    draws. Lines from before this piece, and sales and till sync (Mark's
    step C), record no one, so they show no name.
 10. **The old app's booking in** (`type: intake`) through the same route
-    needs no reason, records who, and is Owner only too.
+    needs no reason and records who.
 
 ### 26 Oct 2026: the print agent removed (`openspec/changes/drop-print-agent`; Jack's decision in `2026-10-26-day-answers.md` section 5)
 

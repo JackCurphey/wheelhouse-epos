@@ -1,4 +1,4 @@
-// Migration 089 (openspec/changes/adjust-stock design 1): a stock movement
+// Migration 093 (openspec/changes/adjust-stock design 1): a stock movement
 // records its reason and who made it. Run from empty, then onto a database
 // that already has a product and a stock movement, which keep as they were.
 import '../server/load-env.js';
@@ -12,7 +12,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '089_stock_movement_reason.sql';
+const FILE = '093_stock_movement_reason.sql';
 
 function adminUrlOrSkip(t) {
   try {
@@ -30,16 +30,16 @@ async function withClient(url, fn) {
 }
 const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8', stdio: 'pipe' });
 
-test('089 adds a reason and who to stock movements, and keeps older lines', async (t) => {
+test('093 adds a reason and who to stock movements, and keeps older lines', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig089_${process.pid}`;
+  const name = `epos_mig093_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));
   t.after(() => dropDatabase(admin, name));
   const env = { ...process.env, DATABASE_URL: url.href };
-  // Everything up to 089, then a product with a stock movement, then 089.
+  // Everything up to 093, then a product with a stock movement, then 093.
   await withClient(url.href, async (c) => {
     await c.query('CREATE TABLE schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
     await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [FILE]);
@@ -66,5 +66,12 @@ test('089 adds a reason and who to stock movements, and keeps older lines', asyn
     }
     await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, reason) VALUES ($1, -1, 'adjustment', 'bored')", [p.id]), /check/i, 'only the drawn reasons');
     await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, login_id) VALUES ($1, -1, 'adjustment', 999999)", [p.id]), /foreign key/i, 'who is a real login');
+    // Run again: the shared dev database already ran it as 089.
+    await c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]);
+  });
+  assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`), 'safe to run twice');
+  await withClient(url.href, async (c) => {
+    const { rows } = await c.query("SELECT conname FROM pg_constraint WHERE conrelid = 'stock_movements'::regclass AND (conname LIKE '%reason%' OR conname LIKE '%login_id%')");
+    assert.equal(rows.length, 2, `one check and one foreign key, not doubled: ${rows.map((r) => r.conname)}`);
   });
 });

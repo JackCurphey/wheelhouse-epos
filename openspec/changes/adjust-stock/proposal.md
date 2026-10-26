@@ -16,17 +16,19 @@ touched (`server/till/sync.js`, `server/lib/sales.js`: Mark's step C).
 
 ## What Changes
 
-- **Migration 089:** `stock_movements` gains `reason` (one of the drawn
+- **Migration 093:** `stock_movements` gains `reason` (one of the drawn
   reasons, or empty for older lines and other kinds of movement) and
-  `login_id` (who made it). Additive; the note column already exists.
-- **`POST /api/products/:id/stock`:** Owner only (`ownerOnly`). An
+  `login_id` (who made it). Additive and safe to run twice; the note column
+  already exists.
+- **`POST /api/products/:id/stock`:** anyone with the Stock page (Jack's
+  answer, `docs/decisions/2026-10-26-day-answers.md` section 11). An
   adjustment needs a reason that fits the sign, and Other needs a note. It
   records who. Stock changes in one atomic update
   (`stock_qty = stock_qty + change`), so two adjustments at once both count.
 - **`GET /api/products/:id`:** each history line carries its `reason` and
   `who` (the login's name).
-- **A product's page:** "Adjust stock" in the In stock box, for the Owner
-  only, opens the Adjust stock box (`st-adjust`, `st-adjust-faulty`); the
+- **A product's page:** "Adjust stock" in the In stock box, for everyone
+  who sees the page, opens the Adjust stock box (`st-adjust`, `st-adjust-faulty`); the
   history says "Adjusted · [reason]", the note, and who.
 
 ## Drawings and decisions
@@ -35,7 +37,8 @@ touched (`server/till/sync.js`, `server/lib/sales.js`: Mark's step C).
   history lines of `st-product`
   (`docs/design/user-journeys/generator/stock.mjs`, `summary`, `histRow`,
   `adjustPopup`).
-- Decisions: stock control 6 and 11; UX walk-through 3 L2 and L4 (Faulty —
+- Decisions: stock control 6 and 11; Jack's 26 Oct answer on who adjusts
+  (`2026-10-26-day-answers.md` section 11); UX walk-through 3 L2 and L4 (Faulty —
   to return to supplier; the greyed Adjust says why).
 
 ## Out of scope
@@ -43,8 +46,8 @@ touched (`server/till/sync.js`, `server/lib/sales.js`: Mark's step C).
 - The To return list in Deliveries and orders: Faulty is recorded as the
   reason, but nothing puts it on a list yet, so the box doesn't promise it.
 - Big adjustments on the manager's Today, and its Settings › Stockroom
-  amount (`st-today-adjust`, `st-setting-adjust`).
-- Staff adjusting: until roles (WP-1.1) only the Owner adjusts.
+  amount (`st-today-adjust`, `st-setting-adjust`): they wait until Today's
+  stock warnings are built (day answers section 11).
 - Send to another shop, Edit, and the stock take.
 
 ## Capabilities

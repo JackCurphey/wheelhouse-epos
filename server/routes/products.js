@@ -9,7 +9,6 @@ import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError }
 import { readUploadedImage } from '../lib/uploads.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { currentSession } from '../lib/session.js';
-import { ownerOnly } from '../lib/owner-only.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 
@@ -17,7 +16,7 @@ import { deferShopifyPushes } from '../lib/sales.js';
 const db = { prepare, exec: dbExec };
 
 // An adjustment's reasons follow its sign (stock decisions 6 and 11, UX
-// walk-through 3 L2); migration 089 holds the same list.
+// walk-through 3 L2); migration 093 holds the same list.
 const REASONS_DOWN = ['damaged', 'lost_stolen', 'used_workshop', 'faulty_return', 'other'];
 const REASONS_UP = ['found', 'other'];
 
@@ -201,12 +200,13 @@ export function register(route) {
     sendJson(res, 200, { ok: true });
   });
 
-  // Adjust stock (st-adjust; openspec/changes/adjust-stock): Owner only until
-  // roles (WP-1.1). An adjustment takes a reason that follows the sign, and
-  // Other a note (stock decisions 6 and 11); every change records who made
-  // it. The old app's booking in (type "intake") needs no reason.
+  // Adjust stock (st-adjust; openspec/changes/adjust-stock): anyone with the
+  // Stock page, as long as who is recorded (Jack, 26 Oct,
+  // 2026-10-26-day-answers.md section 11; stock decision 6). An adjustment
+  // takes a reason that follows the sign, and Other a note (decision 11);
+  // every change records who made it. The old app's booking in (type
+  // "intake") needs no reason.
   route('POST', '/api/products/:id/stock', async (req, res, params, query, afterRelease, shopId) => {
-    if (await ownerOnly(req, res)) return;
     const ctx = await currentSession(req);
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);

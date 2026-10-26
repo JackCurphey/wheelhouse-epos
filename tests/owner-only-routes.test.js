@@ -73,8 +73,6 @@ const ROUTES = [
   ['POST', '/api/tills', {}],
   ['POST', `/api/tills/${MISSING}/deactivate`, {}],
   ['PUT', `/api/employees/${MISSING}/pin`, {}],
-  // Adjusting stock, until roles (openspec/changes/adjust-stock design 4).
-  ['POST', `/api/products/${MISSING}/stock`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {

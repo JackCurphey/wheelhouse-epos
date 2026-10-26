@@ -101,11 +101,18 @@ test('two adjustments at once never take stock below zero', async () => {
   assert.equal((await staff(`/api/products/${p.id}`)).body.history.filter((h) => h.type === 'adjustment').length, 1);
 });
 
-test('only the Owner adjusts, until roles', async () => {
+// Anyone with the Stock page adjusts, as long as who is recorded (Jack, 26 Oct:
+// docs/decisions/2026-10-26-day-answers.md section 11; stock decision 6).
+test('Staff can adjust, and the history records their name, the reason and when', async () => {
   const p = await pads();
-  const res = await adjust(p.id, { change: -1, reason: 'damaged' }, jo);
-  assert.equal(res.status, 403);
-  assert.equal(await stockOf(p.id), 6);
+  const before = Date.now();
+  const res = await adjust(p.id, { change: -1, reason: 'lost_stolen' }, jo);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(await stockOf(p.id), 5);
+  const [line] = (await staff(`/api/products/${p.id}`, {}, jo)).body.history;
+  assert.deepEqual([line.type, line.change, line.reason, line.who], ['adjustment', -1, 'lost_stolen', 'Staff']);
+  const at = Date.parse(line.at);
+  assert.ok(at >= before - 60_000 && at <= Date.now() + 60_000, `when it was made: ${line.at}`);
 });
 
 test('booking stock in (the old app) needs no reason, and records who', async () => {

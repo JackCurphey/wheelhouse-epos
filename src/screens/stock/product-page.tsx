@@ -17,7 +17,7 @@ import { count, marginText, money, mono, stockState, StateTag, type Product } fr
  * back to Stock and the product's name; on the left its codes, In stock,
  * then Price (and for the Owner, cost and margin); on the right one stock
  * history, newest first, each line with its reason and who where recorded.
- * The Owner can Adjust stock (st-adjust; openspec/changes/adjust-stock);
+ * Anyone with the page can Adjust stock (st-adjust; openspec/changes/adjust-stock);
  * Edit and sending to another shop come with later pieces, and a stock
  * bike's frame numbers aren't recorded yet.
  */
@@ -89,7 +89,8 @@ export function ProductPage() {
           <Box id="h-in-stock" title="In stock">
             {kv(here, <><StateTag state={stockState(p)} /><span className={mono}>{count(p.stockQty)}</span></>)}
             {kv('Low-stock level', <span className={mono}>{p.lowStockThreshold}</span>)}
-            {owner ? <div className="flex flex-wrap gap-2 pt-1"><Button onClick={() => setAdjusting(true)}>Adjust stock</Button></div> : null}
+            {/* Anyone with the Stock page adjusts (2026-10-26-day-answers.md section 11). */}
+            <div className="flex flex-wrap gap-2 pt-1"><Button onClick={() => setAdjusting(true)}>Adjust stock</Button></div>
           </Box>
           <Box id="h-price" title={owner ? 'Price and cost' : 'Price'}>
             {kv('Price', <span className={mono}>{money(p.price)}</span>)}
