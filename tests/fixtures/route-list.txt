@@ -124,6 +124,9 @@ POST /api/quotes/:id/answer
 GET /api/job-notes/conversations
 GET /api/workshop-jobs/:id/notes
 POST /api/workshop-jobs/:id/notes
+GET /api/customer-conversations
+GET /api/customer-conversations/:id
+POST /api/customer-conversations/:id/messages
 DELETE /api/workshop-jobs/:id
 GET /api/workshop-jobs/:jobId/attachments
 POST /api/workshop-jobs/:jobId/attachments
@@ -170,6 +173,8 @@ POST /api/portal/:shopSlug/quotes/:id/approve
 POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 GET /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/history
+GET /api/portal/:shopSlug/messages
+POST /api/portal/:shopSlug/messages
 POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/photo-codes/:code
 POST /api/portal/:shopSlug/photo-codes/:code

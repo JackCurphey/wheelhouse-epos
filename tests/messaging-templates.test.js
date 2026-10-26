@@ -25,7 +25,10 @@ test('the approved booking wording and the first live messages', () => {
   // Work added within your limit, Quote reminder and Your answers joined 22 Oct (openspec/changes/spend-limit-within, quote-reminder, your-answers-message).
   // Bike still waiting joined 23 Oct, in the words drawn on cp-setting's pop-up (openspec/changes/uncollected-bike).
   // The service reminder joined 25 Oct, in the words drawn on ac-reminder-wording (openspec/changes/service-reminder-send).
-  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request']);
+  // Reply to a message joined 26 Oct (openspec/changes/ask-the-shop-server; day answers 2.4).
+  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request']);
+  assert.equal(TEMPLATES.message_reply.wording, '[Shop name] replied to your message: [Link to your messages]');
+  assert.equal(TEMPLATES.message_reply.name, 'Reply to a message');
   // The declined wording is the second box of Date change answered, not a row of its own (Mark, 25 Oct).
   assert.equal(TEMPLATES.date_change_declined.partOf, 'date_change_answered');
   assert.equal(TEMPLATES.date_change_declined.wording,

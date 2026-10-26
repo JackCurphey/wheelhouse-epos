@@ -13,14 +13,14 @@ import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
-import { currentCustomerSession } from '../lib/session.js';
-import { clientIp, isHttpsRequest } from '../proxy-trust.js';
+import { currentCustomerSession, setCustomerSessionCookie } from '../lib/session.js';
+import { clientIp } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import { jobChecklistCopy } from '../workshop/checklists.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
-  serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
+  serializeCustomerLogin, CUSTOMER_SESSION_COOKIE,
 } from '../customer-auth.js';
 import { LIVE_BOOKING_STATES, MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate, openingHoursFor } from '../capacity.js';
 import { formatOpeningHours } from '../messaging/templates.js';
@@ -40,7 +40,7 @@ import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
 import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
 import { setStopped, stopView } from '../messaging/stop-codes.js';
-import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
+import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
@@ -60,14 +60,6 @@ const db = { prepare, exec: dbExec };
 // Parallel to the staff ones (server/routes/auth.js) but on their own cookie name, so a
 // customer session and a staff session can coexist in the same browser
 // without either one clobbering the other.
-
-function setCustomerSessionCookie(req, res, token) {
-  const secure = isHttpsRequest(req) ? '; Secure' : '';
-  res.setHeader(
-    'Set-Cookie',
-    `${CUSTOMER_SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${CUSTOMER_SESSION_MAX_AGE_SECONDS}${secure}`
-  );
-}
 
 function clearCustomerSessionCookie(res) {
   res.setHeader('Set-Cookie', `${CUSTOMER_SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
@@ -360,7 +352,7 @@ async function resolveBookingLink(req, res, code) {
       sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
       return null;
     }
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     // The shop the dispatcher bound from :shopSlug, not the address re-read (review).
     const here = await db.prepare("SELECT current_setting('app.current_shop_id', true) AS id").get();
     const own = ctx && String(ctx.shop.id) === String(here?.id)
@@ -797,7 +789,7 @@ export function register(route) {
   });
 
   route('GET', '/api/portal/:shopSlug/me', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(ctx.login.customer_id);
     sendJson(res, 200, {
@@ -819,7 +811,7 @@ export function register(route) {
   route('PUT', '/api/portal/:shopSlug/me/contact', async (req, res, params) => {
     const site = req.headers['sec-fetch-site'];
     if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
     if (!body || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the changes as an object');
@@ -993,7 +985,7 @@ export function register(route) {
   });
 
   route('GET', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const rows = await db
       .prepare('SELECT * FROM customer_bikes WHERE customer_id = ? AND active = 1 ORDER BY make, model')
@@ -1021,7 +1013,7 @@ export function register(route) {
     // An action from another website is refused, as the account's job actions are (add-a-bike design 3).
     const site = req.headers['sec-fetch-site'];
     if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
     const make = (body.make || '').trim();
@@ -1047,7 +1039,7 @@ export function register(route) {
   // each revision is its own row (createRevision(), quotes.js), and there is
   // only ever one row here to look at.
   route('GET', '/api/portal/:shopSlug/quotes/:id', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const result = await readQuoteForCustomer({
       quoteId: Number(params.id),
@@ -1062,7 +1054,7 @@ export function register(route) {
   // authenticated as a customer - not as staff. Resolved exactly the way every
   // other portal route does it.
   route('POST', '/api/portal/:shopSlug/quotes/:id/lines/:lineId/decision', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
     sendQuoteResult(res, await recordLineDecision({
@@ -1075,7 +1067,7 @@ export function register(route) {
 
   // screens: approval-done, approved, stale
   route('POST', '/api/portal/:shopSlug/quotes/:id/approve', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
     // The revision the customer's link was issued for. Required, never defaulted
@@ -1110,7 +1102,7 @@ export function register(route) {
   });
 
   route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const rows = await db
       .prepare(WORKSHOP_JOB_SELECT + ' WHERE w.customer_id = ? ORDER BY w.job_date DESC, w.start_time DESC')
@@ -1121,8 +1113,9 @@ export function register(route) {
   // The account's history (ac-account; customer-account-server design 3): the
   // signed-in customer's repairs, each with its stage and total, and their
   // purchases from both sales records, newest first.
+  // screens: ac-account, ac-account-asked
   route('GET', '/api/portal/:shopSlug/history', async (req, res, params) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const customerId = ctx.login.customer_id;
     const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
@@ -1157,11 +1150,42 @@ export function register(route) {
       kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
       what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
     }));
-    sendJson(res, 200, [...repairs, ...purchases].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
+    // One "Messages with [shop]" row for the conversation (ac-account-asked;
+    // ask-the-shop-server design 3): its newest message, and whether it's the shop's.
+    const newest = (await customerConversation(customerId)).at(-1);
+    const messages = newest ? [{ kind: 'messages', at: newest.at, shopReplied: !newest.fromCustomer }] : [];
+    sendJson(res, 200, [...repairs, ...purchases, ...messages].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
+  });
+
+  // "Ask the shop a question": the signed-in customer's one conversation with
+  // the shop (Jack, 26 Oct, day answers 2 and 8; ask-the-shop-server design 2):
+  // their messages, their notes on each repair, marked with it, and the shop's
+  // replies. Never kept by the browser, as it is theirs alone.
+  // screens: ac-ask, ac-account-question-sent, ac-question
+  route('GET', '/api/portal/:shopSlug/messages', async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    sendJson(res, 200, await customerConversation(ctx.login.customer_id, { forCustomer: true }));
+  });
+
+  // A message sent from another website is refused, as the account's other actions are.
+  // screens: ac-ask, ac-account-question-sent
+  route('POST', '/api/portal/:shopSlug/messages', async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req).catch(() => null);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, MESSAGE_WORDS);
+    await addNote({ customerId: ctx.login.customer_id, fromCustomer: true, text });
+    sendJson(res, 201, await customerConversation(ctx.login.customer_id, { forCustomer: true }));
   });
 
   route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params, query, shop) => {
-    const ctx = await currentCustomerSession(req);
+    const ctx = await currentCustomerSession(req, res);
     const signedIn = ctx && ctx.shop.slug === params.shopSlug;
     let body;
     try {
