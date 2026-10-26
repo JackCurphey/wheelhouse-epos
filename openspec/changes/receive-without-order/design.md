@@ -40,6 +40,12 @@ the same code, limited to that order.
   "Delivery, not on an order") otherwise;
 - row-level security per shop on every table written.
 
+**Who's asking** (`server/lib/session.js`): the staff session the
+dispatcher finds is kept for that request, so a handler asking again (who
+booked it in) takes no second pooled connection while holding its own;
+without this, ten or more bookings at once waited on a full pool. Only a
+session found is kept.
+
 ## Migration 094: who, and problems without an order
 
 Safe to run twice, and in either order with `jack/adjust-stock`'s 093:
@@ -57,7 +63,7 @@ Safe to run twice, and in either order with `jack/adjust-stock`'s 093:
    order's pattern). `?order=` picks that order's supplier and its lines come
    first; otherwise the first pill is picked when it has an order still to
    come, else none ("pick the supplier if you like"). Changing it empties the
-   list. No suppliers: "No suppliers yet." and scanning still works.
+   list. After Book in the supplier stays picked. No suppliers: "No suppliers yet." and scanning still works.
 2. **Scan**: a product with a line still to come on the supplier's orders
    counts against it (`?order=`'s order first, then oldest first), as
    before; one whose lines are all counted says so, as before; any other is

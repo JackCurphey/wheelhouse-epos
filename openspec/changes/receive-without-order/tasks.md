@@ -1,6 +1,6 @@
 # Tasks
 
-- [ ] 1.1 Tests first, each watched failing:
+- [x] 1.1 Tests first, each watched failing:
   - migration 094 from empty, and again (`tests/migration-094.test.js`);
   - server (`tests/deliveries-receive.test.js`): staff receive with no
     order and with no supplier; who is recorded; a delivery mixing an
@@ -13,10 +13,10 @@
     scan not on an order, Problem? without Missing, one Book in for both;
   - browser (`tests/browser/receive-delivery.spec.ts`): a delivery with no
     order booked in, at computer and phone widths.
-- [ ] 1.2 Migration 094, the shared booking code and the new route; route
+- [x] 1.2 Migration 094, the shared booking code and the new route; route
   list snapshot and owner-only allow-list.
-- [ ] 1.3 The screen (design 1–7); log the choices in
+- [x] 1.3 The screen (design 1–7); log the choices in
   `docs/decisions/decided-while-building.md`.
-- [ ] 1.4 Break each stock rule on purpose and watch its test fail; lint,
+- [x] 1.4 Break each stock rule on purpose and watch its test fail; lint,
   `npx tsc --noEmit`, the touched tests.
 - [ ] 1.5 `/review` (stock, migration), pull request, archive.

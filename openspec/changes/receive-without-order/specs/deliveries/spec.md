@@ -13,6 +13,13 @@ Receive a delivery SHALL let anyone signed in pick the supplier it's from, if th
 - **WHEN** the scanned count would be more than is still to come on the line
 - **THEN** the count stops at what is to come and nothing extra is booked in
 
+### Requirement: An order that is all in is said, not swapped
+When the order asked for is not waiting for a delivery, Receive a delivery SHALL say "This order is all in." and pick no supplier until the person chooses one; a delivery not on an order can still be scanned. After booking in, the supplier SHALL stay picked, and another supplier's orders SHALL NOT be picked in its place.
+
+#### Scenario: the last of an order booked in
+- **WHEN** the last items still to come on [Supplier 2]'s order are booked in, and [Supplier] has an order waiting
+- **THEN** [Supplier 2] stays picked, nothing is listed as still to come, and [Supplier] is not picked
+
 ## ADDED Requirements
 
 ### Requirement: A delivery is received without an order
@@ -20,7 +27,7 @@ Receive a delivery SHALL book in items that are on no order still to come from t
 
 #### Scenario: a shop that orders on the supplier's website
 - **WHEN** [Supplier] has no order in Wheelhouse, a staff member picks [Supplier], scans [Product] twice and presses "Book in 2 items"
-- **THEN** the line reads "[Supplier code] · not on an order", [Product]'s stock goes up by 2, and its history says it was booked in by that staff member
+- **THEN** the line reads "[Supplier code] · not on an order", [Product]'s stock goes up by 2, and the stock movement records that staff member as who booked it in
 
 #### Scenario: part of the delivery on an order
 - **WHEN** an order from [Supplier] has Shimano brake pads to come, and the delivery also holds [Product], which is on no order

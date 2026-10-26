@@ -10,7 +10,8 @@ import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, order
  * Stockroom › Deliveries and orders (rs-hub, rs-hub-empty, rs-hub-staff in
  * receiving.mjs; openspec/changes/deliveries-orders). For now: the open
  * orders and + New order, for the Owner (decision 4, until "Can order
- * stock"); "A delivery arrived?" for everyone (openspec/changes/receive-delivery).
+ * stock"); "A delivery arrived?" for everyone, with or without an order
+ * (openspec/changes/receive-delivery and receive-without-order).
  * To return, Products to add and Recent deliveries come later; the restock
  * list waits for answers.
  */
@@ -22,7 +23,7 @@ export function DeliveriesPage() {
   // Receiving comes first (decision 2), for everyone (decision 4).
   const arrived = (
     <Card id="t-a-delivery-arrived" title="A delivery arrived?">
-      <p className="m-0 text-sm text-[var(--wh-muted)]">Scan each item as it comes out of the box.</p>
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Scan each item as it comes out of the box. Works with or without an order.</p>
       <div><Link to={ROUTES['rs-receive']} className={buttonVariants({ variant: 'accent' })}>Receive a delivery</Link></div>
     </Card>
   );
