@@ -207,7 +207,7 @@ export function register(route) {
       }
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);

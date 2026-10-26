@@ -428,7 +428,7 @@ export function register(route) {
       }
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
@@ -511,7 +511,7 @@ export function register(route) {
       ).run(make, model, colour, serialNumber, notes, active, nowIso(), id);
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
     const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
