@@ -91,13 +91,10 @@ export default {
     'Move Safety check — drag, or use the arrow keys': STAY,
     'Sign in to your account': go('cust-signin'),
   },
-<<<<<<< HEAD
   // In the staff inbox, a repair note's "About WH-1042" opens the job (day answers 8.2).
   'ac-inbox': { 'About WH-1042 ›': go('job-overview') },
   'ac-inbox-sent': { 'About WH-1042 ›': go('job-overview') },
   'ac-reply-text': { 'About WH-1042 ›': go('job-overview') },
-=======
->>>>>>> origin/main
   'ac-ask': { 'Send question': go('ac-account-question-sent'), Send: go('ac-account-question-sent') },
   'ac-account-question-sent': { Send: STAY },
   'ac-question': { Send: STAY },
