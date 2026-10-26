@@ -42,7 +42,7 @@ async function pads(over = {}) {
 
 test('a product’s page: the product and its stock history, newest first', async () => {
   const p = await pads();
-  await staff(`/api/products/${p.id}/stock`, { method: 'POST', body: { change: -1, type: 'adjustment', note: 'Damaged' } });
+  await staff(`/api/products/${p.id}/stock`, { method: 'POST', body: { change: -1, type: 'adjustment', reason: 'damaged', note: 'Damaged' } });
   await runWithShop(owner.shop.id, () => prepare("INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, -2, 'till_sale', 'Till sale B1-[0000]')").run(p.id));
   const res = await staff(`/api/products/${p.id}`);
   assert.equal(res.status, 200, JSON.stringify(res.body));

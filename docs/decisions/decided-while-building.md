@@ -2693,3 +2693,36 @@ follows the job checklist, the closest pattern built.
     no margin ("—"), not 100%. A product's page shows its newest 200 stock
     movements. "%" and "_" in a stock search are searched for as
     themselves.
+
+### 26 Oct 2026: adjusting stock (`openspec/changes/adjust-stock`, `st-adjust`, `st-adjust-faulty`; slice C, WP-2.1, the 26 Oct defaults)
+
+1. **Owner only, until roles.** Stock decisions 6 and 11 say anyone,
+   Staff included, can adjust; until roles (WP-1.1) the button shows to the
+   Owner only and the server refuses anyone else (`ownerOnly`), as the 26
+   Oct defaults set. Its refusal reads as the settings one does.
+2. **The change starts at −1, as drawn,** and "In stock after" shows the
+   count it leaves; typing either sets the other. − and + step the change.
+3. **Adjust is greyed and says why,** as UX walk-through 3 L4 draws for no
+   reason: "Type the change" (none, or 0), "Stock can’t go below zero",
+   "Pick a reason to adjust", "Write a note for Other", checked in that
+   order.
+4. **A reason that doesn't fit the new sign is unpicked** when the change
+   flips (Damaged going up); Other, which fits both, stays.
+5. **Below zero:** an adjustment can't take stock under 0, as the old
+   route refused. Going up is always allowed, so Found works on a product
+   already below zero.
+6. **Faulty — to return to supplier is recorded as the reason only.** The
+   To return list in Deliveries and orders isn't built, so the box leaves
+   out both lines that promise it (the note under the reasons, and the
+   panel in `st-adjust-faulty`).
+7. **"big changes show on the manager’s Today" is left out** of the last
+   note: Today's adjustment line and its Settings › Stockroom amount aren't
+   built.
+8. **After Adjust** the box closes and the page shows the new stock and
+   the new history line; no toast, as none is drawn.
+9. **History lines:** an adjustment with a reason reads "Adjusted ·
+   Damaged", its note "Note: [note]", then who and when, as `histRow`
+   draws. Lines from before this piece, and sales and till sync (Mark's
+   step C), record no one, so they show no name.
+10. **The old app's booking in** (`type: intake`) through the same route
+    needs no reason, records who, and is Owner only too.
