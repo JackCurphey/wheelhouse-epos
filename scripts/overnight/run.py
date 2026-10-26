@@ -13,10 +13,19 @@ what the agent committed for secrets, and only then pushes that one
 
 The deny rules are a second line, not the first: they match the start of a
 command, so a determined session can get round them. What actually stops a push
-is that the session has nothing to push with. Real containment would be a
-container or a sandbox; this is not one. Keep branch protection on `main`.
+is that the session is started with nothing to push with, and that the runner
+pushes from a throwaway clone the agent never touched, one commit it has just
+scanned, to one branch name.
+
+NOT contained, because this is not a sandbox: the agent runs as you, so it can
+still read files you can read (~/.ssh, the keychain, ~/.config/gh, the real .env
+in your checkout, the claude CLI's own login), reach the network by a program
+other than curl, and change your real node_modules (the worktree links to it).
+It is told not to and the common routes are denied, but nothing stops a session
+that tries. Keep branch protection on `main`, and for a run you do not want to
+watch, use a virtual machine or container with no home folder mounted.
 """
-import argparse, datetime as dt, json, os, re, shutil, subprocess, sys, time
+import argparse, datetime as dt, json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -30,6 +39,7 @@ DENY = [
     'Bash(gh:*)', 'Bash(doctl:*)', 'Bash(docker rm:*)', 'Bash(docker system:*)',
     'Bash(docker compose down:*)', 'Bash(sudo:*)', 'Bash(rm -rf /:*)', 'Bash(rm -rf ~:*)',
     'Bash(curl:*)', 'Bash(wget:*)', 'Bash(ssh:*)', 'Bash(scp:*)', 'Bash(security:*)',
+    'Read(**/.env)', 'Read(~/.ssh/**)', 'Read(~/.config/gh/**)', 'Read(~/.git-credentials)', 'Read(~/.netrc)',
     'Bash(npm install:*)', 'Bash(npm i:*)',
     'Bash(npm uninstall:*)', 'Bash(npm publish:*)', 'Bash(npx playwright install:*)',
     'Read(.env)', 'Edit(.env)', 'Write(.env)', 'Edit(.github/**)', 'Write(.github/**)',
@@ -56,7 +66,10 @@ def env_pairs(text):
     for line in text.splitlines():
         m = re.match(r'\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$', line)
         if m and not line.lstrip().startswith('#'):
-            yield m[1], m[2].strip('\'"')
+            value = m[2]
+            if value[:1] not in ('"', "'"):
+                value = re.sub(r'\s+#.*$', '', value)  # KEY=value # a note
+            yield m[1], value.strip('\'"')
 
 
 def safe_env_text(text):
@@ -96,6 +109,19 @@ def scan_for_secrets(diff_text, secrets):
     return found
 
 
+BINARY_OK = ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.svg', '.pdf')
+
+
+def binary_files_to_look_at(numstat):
+    """Paths git calls binary ('-\t-\tpath') that aren't pictures or fonts: a scan can't read them, so a person must."""
+    out = []
+    for line in numstat.splitlines():
+        parts = line.split('\t')
+        if len(parts) == 3 and parts[0] == '-' and parts[1] == '-' and not parts[2].lower().endswith(BINARY_OK):
+            out.append(parts[2])
+    return out
+
+
 def forbidden_file(path):
     name = Path(path).name
     if name.startswith('.env') and not name.endswith(('.example', '.sample')):
@@ -127,21 +153,49 @@ def agent_env(base, empty_gitconfig):
     return env
 
 
-def push_command(url, branch):
-    """Push exactly one overnight branch to the address recorded before the agent ran. No hooks."""
+def push_command(url, sha, branch):
+    """Push one scanned commit to one overnight branch at the address recorded before the agent ran. No hooks."""
     if not re.fullmatch(r'overnight/[A-Za-z0-9._-]+', branch or '') or '..' in branch:
         raise ValueError(f'will only push an overnight/... branch, not {branch!r}')
-    return ['git', 'push', '--no-verify', '-u', url, f'HEAD:refs/heads/{branch}']
+    if not re.fullmatch(r'[0-9a-f]{40}', sha or ''):
+        raise ValueError(f'will only push a full commit id, not {sha!r}')
+    return ['git', 'push', '--no-verify', '-u', url, f'{sha}:refs/heads/{branch}']
+
+
+def repo_slug(url):
+    """owner/name from a GitHub address, for `gh --repo`."""
+    m = re.search(r'github\.com[:/]([^/]+/[^/]+?)(?:\.git)?/?$', url)
+    if not m:
+        raise ValueError(f'not a GitHub address: {url}')
+    return m[1]
+
+
+def publish_env(base):
+    """For the runner's own git and gh: your real login, none of the repository's settings."""
+    return {k: v for k, v in base.items() if not k.startswith(('GIT_',) + SERVICE_PREFIXES)}
+
+
+def push_from_clean_clone(source_repo, sha, branch, url, env):
+    """Copy the scanned commit into a brand-new empty repository and push from there, so nothing the agent wrote
+    into the shared .git (config, hooks, remotes) can act on the push. Returns the temp folder (for the pull request)."""
+    tmp = tempfile.mkdtemp(prefix='overnight-push-')
+    sh(['git', 'init', '--bare', '-q', tmp], env=env)
+    sh(['git', '-C', tmp, 'fetch', '-q', '--no-tags', str(source_repo), f'refs/heads/{branch}:refs/heads/{branch}'], env=env, timeout=300)
+    got = sh(['git', '-C', tmp, 'rev-parse', f'refs/heads/{branch}'], env=env).stdout.strip()
+    if got != sha:
+        raise RuntimeError(f'the branch is at {got[:10]}, not the scanned commit {sha[:10]}; not pushing')
+    sh(push_command(url, sha, branch), cwd=tmp, env=env, timeout=300)
+    return tmp
 
 
 def branch_name(stamp, item_id):
     return f'overnight/{stamp}-{item_id}'
 
 
-def next_bases(prev_branch, prev_pr_base, branch, green, pushed):
-    """Which branch the next item is built on, and which the next pull request targets.
-    Only a green branch is built on; only a pushed one can be a pull request's base."""
-    return (branch if green else prev_branch, branch if (green and pushed) else prev_pr_base)
+def next_bases(prev_commit, prev_pr_base, branch, commit, green, pushed):
+    """Which COMMIT the next item is built on (an id, so a branch the agent moved changes nothing), and which
+    branch the next pull request targets. Only a green commit is built on; only a pushed branch is a base."""
+    return (commit if green else prev_commit, branch if (green and pushed) else prev_pr_base)
 
 
 # --- the queue -----------------------------------------------------------------
@@ -167,21 +221,23 @@ def set_state(path, item_id, state, note=''):
     path.write_text('\n'.join(out) + '\n')
 
 
-def open_pr(origin_url, branch, base, item, verdict, tests, last, commits, log):
-    """Push the one branch and open a DRAFT pull request against the branch before it. Never merges."""
-    clean = {k: v for k, v in os.environ.items() if not k.startswith(('GIT_CONFIG',) + SERVICE_PREFIXES)}
+def open_pr(origin_url, branch, sha, base, item, verdict, tests, last, commits, log):
+    """Push the one scanned commit from a clean clone and open a DRAFT pull request against the branch before it.
+    Never merges."""
+    clean = publish_env(os.environ)
     try:
-        sh(push_command(origin_url, branch), cwd=WORKTREE, env=clean, timeout=300)
+        tmp = push_from_clean_clone(WORKTREE, sha, branch, origin_url, clean)
     except Exception as e:
         log(f'- push failed: {str(e)[:300]}')
         return 'push failed'
     body = (f"Written unattended by the overnight loop (`scripts/overnight/`). **Draft: needs a human review before it merges.**\n\n"
             f"- Queue item: `{item['id']}` — {item['title']}\n- Agent said: {verdict}\n"
             f"- Runner's own `npm test`: **{tests}**\n- Stacked: targets `{base}`; merge in order.\n"
-            f"- The runner scanned the commits for secrets before pushing and found none.\n\n"
+            f"- The runner scanned every commit for secrets before pushing and found none.\n\n"
             f"Commits:\n```\n{commits}\n```\n\nAgent's closing message:\n\n" + '\n'.join('> ' + l for l in last.strip().splitlines()[-12:]))
-    r = sh(['gh', 'pr', 'create', '--draft', '--base', base, '--head', branch,
-            '--title', f"[overnight] {item['title']}", '--body', body], cwd=WORKTREE, env=clean, check=False, timeout=120)
+    r = sh(['gh', 'pr', 'create', '--repo', repo_slug(origin_url), '--draft', '--base', base, '--head', branch,
+            '--title', f"[overnight] {item['title']}", '--body', body], cwd=tmp, env=clean, check=False, timeout=120)
+    shutil.rmtree(tmp, ignore_errors=True)
     if r.returncode:
         log(f'- branch pushed; pull request not opened: {r.stderr.strip()[:300]}')
         return 'pushed'
@@ -265,7 +321,7 @@ def main():
     empty_gitconfig.write_text('')
     env = agent_env(os.environ, empty_gitconfig)
 
-    prev_branch = base_sha
+    prev_commit = base_sha
     prev_pr_base = base_branch
     spent = 0.0
     results = []
@@ -284,7 +340,7 @@ def main():
         if sh(['git', 'status', '--porcelain'], cwd=WORKTREE, env=env).stdout.strip():
             log(f'\n## {item["id"]}: the worktree has uncommitted files; stopping so they are not swept into a commit.')
             break
-        sh(['git', 'switch', '-c', branch, prev_branch], cwd=WORKTREE, env=env)
+        sh(['git', 'switch', '-c', branch, prev_commit], cwd=WORKTREE, env=env)
         head0 = sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE).stdout.strip()
         log(f"\n## {item['id']} — {item['title']}  (branch {branch}, "
             f"{dt.datetime.now():%H:%M}, {remaining/3600:.1f} h left)")
@@ -334,6 +390,7 @@ def main():
            cwd=WORKTREE, check=False, env=env)
         head1 = sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE).stdout.strip()
         changed = head1 != head0
+        moved = []
         tests = 'not run (no commits)'
         green = False
         if changed:
@@ -347,13 +404,22 @@ def main():
                 green = t.returncode == 0
             except subprocess.TimeoutExpired:
                 tests = 'RED (npm test timed out)'
+            # The tests run scripts the agent wrote. They must not have added commits or moved anything.
+            if sh(['git', 'rev-parse', 'HEAD'], cwd=WORKTREE).stdout.strip() != head1 \
+                    or sh(['git', 'status', '--porcelain'], cwd=WORKTREE).stdout.strip():
+                moved.append('the tests changed the branch or left files behind')
 
         # --- nothing leaves the machine with a secret in it -------------------
         leaks = []
         if changed:
-            names = sh(['git', 'diff', '--name-only', f'{head0}..{head1}'], cwd=WORKTREE).stdout.split()
-            leaks += [f'{n}: a file that is never committed' for n in names if forbidden_file(n)]
-            leaks += scan_for_secrets(sh(['git', 'diff', f'{head0}..{head1}'], cwd=WORKTREE).stdout, secrets)
+            # Every commit that will be pushed, not just the overall change: a file added and then deleted is still in history.
+            names = sh(['git', 'log', '--name-only', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE).stdout.split()
+            leaks += [f'{n}: a file that is never committed' for n in set(names) if forbidden_file(n)]
+            numstat = sh(['git', 'log', '--numstat', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE).stdout
+            leaks += [f'{n}: a binary file nobody can scan' for n in binary_files_to_look_at(numstat)]
+            history = sh(['git', 'log', '-p', '--no-ext-diff', '--no-textconv', '--pretty=format:', f'{head0}..{head1}'], cwd=WORKTREE).stdout
+            leaks += scan_for_secrets(history, secrets)
+            leaks += moved
             if leaks:
                 log('- **SECRET SCAN FAILED, nothing pushed:** ' + '; '.join(sorted(set(leaks))[:10]))
                 green = False
@@ -368,12 +434,12 @@ def main():
         pr = '-'
         pushed = False
         if changed and not a.no_push and not leaks:
-            pr = open_pr(origin_url, branch, prev_pr_base, item, verdict, tests, last, commits, log)
+            pr = open_pr(origin_url, branch, head1, prev_pr_base, item, verdict, tests, last, commits, log)
             pushed = pr.startswith('http') or pr == 'pushed'
-        prev_branch, prev_pr_base = next_bases(prev_branch, prev_pr_base, branch, green, pushed)
+        prev_commit, prev_pr_base = next_bases(prev_commit, prev_pr_base, branch, head1, green, pushed)
         results.append((item['id'], verdict, tests, branch if changed else '-', pr))
 
-    sh(['git', 'switch', '--detach', prev_branch], cwd=WORKTREE, check=False, env=env)
+    sh(['git', 'switch', '--detach', prev_commit], cwd=WORKTREE, check=False, env=env)
     log(f'\n## Summary (spent about ${spent:.2f} of ${a.max_usd:.0f})\n| item | agent | npm test | branch | pull request |\n|---|---|---|---|---|\n'
         + '\n'.join(f'| {i} | {v} | {t} | {b} | {p} |' for i, v, t, b, p in results))
     log('\nNothing was merged. Pull requests are stacked: each targets the branch before it, '

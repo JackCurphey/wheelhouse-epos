@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 
 const python = spawnSync('python3', ['--version']);
+// Skipping is fine on a machine without Python, never in CI: a skip reads as a pass.
+if (process.env.CI && python.status !== 0) throw new Error('python3 is needed to test the overnight runner');
 
 test('the overnight runner\'s own tests pass', { skip: python.status !== 0 && 'python3 is not installed' }, () => {
   const run = spawnSync('python3', ['-m', 'unittest', 'scripts/overnight/test_run.py'], { encoding: 'utf8', cwd: new URL('..', import.meta.url).pathname });
