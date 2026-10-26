@@ -161,3 +161,17 @@ test('+ Add a bike opens Add a bike with the booking’s bike fields; the bike s
   const post = requests.find((r) => r.method === 'POST' && r.url.endsWith('/api/portal/north/bikes'));
   assert.deepEqual(post.body, { make: 'Brompton C Line', model: '', colour: 'Black' });
 });
+
+// Review of add-a-bike: the link-style "+ Add a bike" under existing bikes, and the box closes once added.
+test('with bikes already, + Add a bike under them adds another and the box closes', async () => {
+  const { ui } = await open();
+  const { within: w, fireEvent } = await import('@testing-library/react');
+  const bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
+  await bikes.findByText('Trek Domane AL 3 · Green');
+  fireEvent.click(bikes.getByRole('button', { name: '+ Add a bike' }));
+  const box = w(await ui.findByRole('dialog', { name: 'Add a bike' }));
+  fireEvent.change(box.getByLabelText('Make and model'), { target: { value: 'Brompton C Line' } });
+  fireEvent.click(box.getByRole('button', { name: 'Add bike' }));
+  assert.ok(await bikes.findByText('Brompton C Line'));
+  assert.ok(ui.queryByRole('dialog') === null, 'the box closes');
+});

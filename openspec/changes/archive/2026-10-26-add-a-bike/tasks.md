@@ -6,5 +6,5 @@
   - the account route refusing another website;
   - the repair page's "Your account".
 - [x] 1.2 Build design 1 to 4; log design 5.
-- [ ] 1.3 `/review` (customer accounts); lint, `npm test`,
+- [x] 1.3 `/review` (customer accounts); lint, `npm test`,
   `npm run test:browser`; pull request; archive as the last commit.
