@@ -46,6 +46,14 @@ test('signed out, it goes to sign in, and back here after', async () => {
   assert.ok(await ui.findByText(`At /book/north/sign-in?from=${encodeURIComponent('/book/north/account')}`));
 });
 
+test('signed out on any one of its three reads, it still goes to sign in', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/account.js', exportName: 'AccountScreen', at: 'account', url: '/book/north/account', services: SERVICES,
+    account: (url, init) => (new URL(url, 'http://localhost').pathname.endsWith('/history') ? { status: 401, body: { error: 'Not signed in' } } : accountServer()(url, init)),
+  });
+  assert.ok(await current.ui.findByText(`At /book/north/sign-in?from=${encodeURIComponent('/book/north/account')}`));
+});
+
 test('the head: Your account, her name and email with Sign out, and Book a repair', async () => {
   const { ui } = await open();
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Your account' }));
@@ -62,9 +70,9 @@ test('her bike, with the repair in now; her details; how the shop contacts her',
   assert.ok(await bikes.findByText('Trek Domane AL 3 · Green'));
   assert.ok(bikes.getByText(/In the shop now · WH-1042/));
   const details = w(ui.getByRole('region', { name: 'Your details' }));
+  // Each value on its own row, beside its label.
   for (const [k, v] of [['Name', 'Maya Patel'], ['Mobile', '07700 900142'], ['Email', 'maya@example.test'], ['Job updates', 'By text'], ['Service reminders', 'On'], ['Review requests', 'On'], ['Offers and news', 'Off']]) {
-    assert.ok(details.getByText(k), k);
-    assert.ok(details.getAllByText(v).length >= 1, `${k}: ${v}`);
+    assert.equal(details.getByText(k).parentElement.textContent, `${k}${v}`, k);
   }
   assert.ok(details.getByRole('heading', { name: 'How we contact you' }));
   assert.equal(ui.queryByText('Store credit') === null, true, 'not built yet');
@@ -119,4 +127,16 @@ test('Sign out signs her out and goes to the shop’s booking page', async () =>
   fireEvent.click(await ui.findByRole('button', { name: 'Sign out' }));
   assert.ok(await ui.findByText('At /book/north'));
   assert.ok(requests.some((r) => r.method === 'POST' && r.url.endsWith('/api/portal/north/logout')));
+});
+
+test('when Sign out doesn’t go through, it says so and she can press it again', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/account.js', exportName: 'AccountScreen', at: 'account', url: '/book/north/account', services: SERVICES,
+    account: (url, init) => (new URL(url, 'http://localhost').pathname.endsWith('/logout') ? { status: 500, body: { error: 'down' } } : accountServer()(url, init)),
+  });
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.click(await current.ui.findByRole('button', { name: 'Sign out' }));
+  assert.equal((await current.ui.findByRole('alert')).textContent, 'That didn’t go through. Check your connection and try again.');
+  assert.equal(current.ui.getByRole('button', { name: 'Sign out' }).disabled, false);
+  assert.ok(current.ui.getByRole('heading', { level: 1, name: 'Your account' }), 'still on the account');
 });

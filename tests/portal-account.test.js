@@ -212,4 +212,6 @@ test('/me gives her mobile and how the shop contacts her; /history each repairâ€
   const repair = (await portal('/history')).body.find((h) => h.jobId === job.id);
   assert.equal(repair.bikeId, mayaBike.id);
   assert.equal(repair.workStarted, false);
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET work_state = 'in_progress' WHERE id = ?").run(job.id));
+  assert.equal((await portal('/history')).body.find((h) => h.jobId === job.id).workStarted, true, 'once work has begun');
 });

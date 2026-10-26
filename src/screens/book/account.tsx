@@ -143,7 +143,7 @@ function BikesCard({ bikes, items, bookLink }: { bikes: Bike[]; items: Item[]; b
         return (
           <div key={b.id} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] pt-2.5">
             <span className="text-base font-bold">{[[b.make, b.model].filter(Boolean).join(' '), b.colour].filter(Boolean).join(' · ')}</span>
-            {inShop ? <span className="text-[13px] text-[var(--wh-muted)]">{`In the shop now · ${inShop.reference}`}</span> : null}
+            {inShop ? <span className="text-size-13 text-[var(--wh-muted)]">{`In the shop now · ${inShop.reference}`}</span> : null}
             <div className="pt-1">{bookLink}</div>
           </div>
         );
@@ -210,7 +210,7 @@ function HistoryCard({ items, shopSlug, shopName, bookLink }: { items: Item[]; s
   const now = shown.filter((i): i is Repair => isNow(i)).sort(newest);
   const earlier = shown.filter((i) => !isNow(i)).sort(newest);
   const earlierShown = more ? earlier : earlier.slice(0, EARLIER_SHOWN);
-  const sub = (t: string) => <h3 className="m-0 pt-3 pb-1 text-[13px] font-bold text-[var(--wh-muted)]">{t}</h3>;
+  const sub = (t: string) => <h3 className="m-0 pt-3 pb-1 text-size-13 font-bold text-[var(--wh-muted)]">{t}</h3>;
   return (
     <Card id={`${idBase}-history`} title="History" aside={pills}>
       <div className="flex flex-col">
@@ -227,7 +227,7 @@ function HistoryCard({ items, shopSlug, shopName, bookLink }: { items: Item[]; s
 }
 
 const rowClass = 'flex min-h-[60px] items-center gap-2 border-t border-[var(--wh-border)] py-1.5 text-[var(--wh-ink)] no-underline sm:gap-3';
-const kindClass = 'hidden w-[76px] shrink-0 text-[13px] font-bold text-[var(--wh-muted)] sm:inline';
+const kindClass = 'hidden w-[76px] shrink-0 text-size-13 font-bold text-[var(--wh-muted)] sm:inline';
 
 function RepairRow({ r, shopSlug }: { r: Repair; shopSlug: string }) {
   const now = isNow(r);

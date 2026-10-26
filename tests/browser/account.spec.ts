@@ -58,7 +58,7 @@ for (const [size, viewport] of [['a computer', { width: 1440, height: 900 }], ['
     await expect(bikes.getByText('Trek Domane AL 3 · Green')).toBeVisible();
     const row = history.getByRole('link', { name: /Trek Domane AL 3 · Standard service/ });
     await expect(row).toContainText('Booked in Thu 17 Sep');
-    await expect(row).toContainText('Booked');
+    await expect(row.getByText('Booked', { exact: true })).toBeVisible();
     await expect(details.getByText('How we contact you')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
