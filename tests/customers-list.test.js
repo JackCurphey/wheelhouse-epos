@@ -115,3 +115,50 @@ test('an email staff type in isn’t the customer’s own; staff changing an ema
   await staff(`/api/customers/${ravi.id}`, { method: 'PUT', body: { name: 'Ravi Shah', phone: '07700 900812', email: 'ravi.s@example.test' } });
   assert.equal(await fromCustomer(ravi.id), false);
 });
+
+// A company or club (openspec/changes/company-customers; cs-add-company;
+// customer service review 3; leftover screens H2). Example details are the
+// drawing's placeholders.
+const COMPANY = { isCompany: true, name: '[Company name]', contactName: '[Contact name]', phone: '07700 900777', address: '[Company address]', vatNumber: '[Company VAT number]', invoiceEmail: 'accounts@example.com' };
+
+test('a company or club keeps its contact, VAT number and “Send invoices to”, and reads them back', async () => {
+  const club = await add(COMPANY);
+  assert.equal(club.name, '[Company name]');
+  assert.deepEqual([club.isCompany, club.contactName, club.vatNumber, club.invoiceEmail], [true, '[Contact name]', '[Company VAT number]', 'accounts@example.com']);
+  const read = (await staff(`/api/customers/${club.id}`)).body;
+  assert.deepEqual([read.isCompany, read.contactName, read.vatNumber, read.invoiceEmail], [true, '[Contact name]', '[Company VAT number]', 'accounts@example.com']);
+  const person = await add({ name: 'Maya Patel', phone: '07700 900142' });
+  assert.deepEqual([person.isCompany, person.contactName, person.vatNumber, person.invoiceEmail], [false, null, null, null], 'a person unless chosen');
+});
+
+test('a company needs a contact name; VAT number and “Send invoices to” are optional', async () => {
+  const res = await staff('/api/customers', { method: 'POST', body: { ...COMPANY, contactName: '  ' } });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'Add the contact’s name.');
+  const bare = await add({ ...COMPANY, vatNumber: '', invoiceEmail: '' });
+  assert.deepEqual([bare.isCompany, bare.vatNumber, bare.invoiceEmail], [true, null, null]);
+});
+
+test('“Send invoices to” must be an email address', async () => {
+  for (const invoiceEmail of ['accounts@example', 'accounts example.com', 42]) {
+    const res = await staff('/api/customers', { method: 'POST', body: { ...COMPANY, invoiceEmail } });
+    assert.equal(res.status, 400, JSON.stringify(invoiceEmail));
+    assert.equal(res.body.error, 'That doesn’t look like an email address — check it');
+  }
+  const club = await add(COMPANY);
+  const put = await staff(`/api/customers/${club.id}`, { method: 'PUT', body: { invoiceEmail: 'nope' } });
+  assert.equal(put.status, 400);
+});
+
+test('editing keeps the company details unless changed; a company made a person keeps none', async () => {
+  const club = await add(COMPANY);
+  const kept = (await staff(`/api/customers/${club.id}`, { method: 'PUT', body: { phone: '07700 900778' } })).body;
+  assert.deepEqual([kept.isCompany, kept.contactName, kept.vatNumber, kept.invoiceEmail], [true, '[Contact name]', '[Company VAT number]', 'accounts@example.com']);
+  const changed = (await staff(`/api/customers/${club.id}`, { method: 'PUT', body: { vatNumber: '[new VAT number]' } })).body;
+  assert.equal(changed.vatNumber, '[new VAT number]');
+  const person = (await staff(`/api/customers/${club.id}`, { method: 'PUT', body: { isCompany: false } })).body;
+  assert.deepEqual([person.isCompany, person.contactName, person.vatNumber, person.invoiceEmail], [false, null, null, null]);
+  const maya = await add({ name: 'Maya Patel', phone: '07700 900142' });
+  const nowCompany = await staff(`/api/customers/${maya.id}`, { method: 'PUT', body: { isCompany: true } });
+  assert.equal(nowCompany.status, 400, 'a company needs a contact name');
+});

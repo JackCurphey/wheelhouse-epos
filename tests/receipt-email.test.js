@@ -113,3 +113,45 @@ test('one sale’s receipt can be sent five times in an hour, not more (review)'
   assert.equal(sixth.body.error, 'This receipt has been sent five times in the last hour. Try again later.');
   assert.equal((await receiptsFor(fresh.id)).length, 5);
 });
+
+// A company's receipt is a VAT invoice (openspec/changes/company-customers
+// design 4; collect.mjs receiptBody with invoice; leftover screens H2 and
+// Jack's generic VAT invoice, 2 Oct; day answers 26 Oct, 3). Example details
+// are the drawing's placeholders.
+async function companySale(details) {
+  const club = (await staff('/api/customers', { method: 'POST', body: { isCompany: true, name: '[Company name]', contactName: '[Contact name]', phone: '07700 900777', ...details } })).body;
+  const cashier = (await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
+  const tube = (await staff('/api/products', { method: 'POST', body: { name: 'Inner tube', price: 5, sku: `TUBE-${randomUUID().slice(0, 6)}`, stockQty: 10 } })).body;
+  const made = await staff('/api/sales', { method: 'POST', body: { cashierId: cashier.employeeId, customerId: club.id, items: [{ productId: tube.id, qty: 1 }], cardAmount: 5 } });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  return made.body;
+}
+
+test('a company’s receipt is headed VAT invoice, with Invoice to from its record', async () => {
+  const s = await companySale({ address: '[Company address]', postcode: '[postcode]', vatNumber: '[Company VAT number]', invoiceEmail: 'accounts@example.com' });
+  assert.equal((await send(s.id, 'accounts@example.com')).status, 200);
+  const [m] = await receiptsFor(s.id);
+  assert.match(m.subject, /^VAT invoice — Receipt Cycles/);
+  assert.match(m.body, /^VAT invoice\n/);
+  assert.doesNotMatch(m.body, /Your receipt/);
+  assert.match(m.body, /\n\nInvoice to\n\[Company name\] · \[Company address\], \[postcode\]\nVAT number \[Company VAT number\]\n\nSale /);
+  assert.match(m.body, /\nInner tube +£5\.00\n/);
+});
+
+test('a blank line in Invoice to is left out', async () => {
+  const s = await companySale({});
+  assert.equal((await send(s.id, 'accounts@example.com')).status, 200);
+  const [m] = await receiptsFor(s.id);
+  assert.match(m.body, /\n\nInvoice to\n\[Company name\]\n\nSale /);
+  assert.doesNotMatch(m.body, /VAT number \[/);
+});
+
+test('a person’s receipt has no Invoice to', async () => {
+  const s = (await staff(`/api/customers/${maya.id}`)).body;
+  assert.equal(s.isCompany, false);
+  const before = (await receiptsFor(sale.id)).length;
+  await send(sale.id, 'maya@example.com');
+  const m = (await receiptsFor(sale.id))[before];
+  assert.match(m.body, /^Your receipt\n/);
+  assert.doesNotMatch(m.body, /Invoice to|VAT invoice/);
+});
