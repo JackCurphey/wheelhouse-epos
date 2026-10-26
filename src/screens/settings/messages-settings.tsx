@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
 import { RowSwitch } from './row-switch.tsx';
+import { OwnMessages } from './own-messages.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 
@@ -112,6 +113,8 @@ export function AutomaticMessages() {
         {bringBack.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </div>
+      {/* The shop's own messages, last, with their add button (stage 1 drawing gaps 7; own-messages-screens). */}
+      <OwnMessages />
       {editing?.key === 'review_request' ? (
         <ReviewRequestBox template={templates.data?.find((t) => t.key === editing.key) ?? editing} onClose={closeEdit} />
       ) : editing ? (
