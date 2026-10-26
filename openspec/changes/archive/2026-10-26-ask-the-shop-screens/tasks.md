@@ -36,5 +36,5 @@
 - [x] 3.1 Break each key behaviour on purpose and watch its test fail.
 - [x] 3.2 The touched tests, the route list, the new browser spec, and
   `npm run lint` pass.
-- [ ] 3.3 The full `npm test` and `npm run test:browser` before the pull
+- [x] 3.3 The full `npm test` and `npm run test:browser` before the pull
   request, with `/review`.
