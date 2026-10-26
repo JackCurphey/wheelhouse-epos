@@ -1,4 +1,4 @@
-// Migration 087 (openspec/changes/company-customers design 1): a customer can
+// Migration 088 (openspec/changes/company-customers design 1): a customer can
 // be a company or club, with a contact name, a VAT number and an address to
 // send invoices to. Run from an empty scratch database.
 import '../server/load-env.js';
@@ -29,10 +29,10 @@ async function withClient(url, fn) {
 }
 const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8', stdio: 'pipe' });
 
-test('087 gives every customer a person-or-company flag, off to start, and the three company details', async (t) => {
+test('088 gives every customer a person-or-company flag, off to start, and the three company details', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig087_${process.pid}`;
+  const name = `epos_mig088_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));

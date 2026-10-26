@@ -1,6 +1,6 @@
 # Tasks
 
-- [ ] 1.1 Tests first, each watched failing: migration 087 from an empty
+- [ ] 1.1 Tests first, each watched failing: migration 088 from an empty
   database; the server keeps, returns and checks the company details and
   clears them for a person; the VAT invoice email and a person's receipt
   unchanged; Add and Edit as drawn; the till fills "Send invoices to".

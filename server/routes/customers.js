@@ -145,7 +145,7 @@ function serializeCustomer(row, groups) {
     address: row.address ?? null,
     postcode: row.postcode ?? null,
     marketingPermission: row.marketing_permission === 1 || row.marketing_permission === true,
-    // A company or club (cs-add-company; migration 087).
+    // A company or club (cs-add-company; migration 088).
     isCompany: row.is_company === true,
     contactName: row.contact_name ?? null,
     vatNumber: row.vat_number ?? null,

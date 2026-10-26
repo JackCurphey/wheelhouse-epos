@@ -1,6 +1,6 @@
 # Design: company customers
 
-## 1. The record (migration 087)
+## 1. The record (migration 088)
 
 Four columns on `customers`, all additive:
 

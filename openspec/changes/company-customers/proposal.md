@@ -14,7 +14,7 @@ later change). The earlier note that the invoice "waits on the accountant"
 build now" (`docs/decisions/2026-10-26-day-answers.md` section 3).
 
 **Work package:** customers (WP-5 area), Jack's lane. **Risky area:** a
-migration (087, columns on `customers`). It doesn't touch money, stock,
+migration (088, columns on `customers`). It doesn't touch money, stock,
 sign-in or public routes.
 
 ## What changes
