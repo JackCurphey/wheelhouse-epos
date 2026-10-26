@@ -181,6 +181,44 @@ test('Edit keeps Add’s rules: a name, and a phone or an email', async () => {
   assert.deepEqual(puts(), []);
 });
 
+// Edit works as Add does for a company or club (openspec/changes/company-customers;
+// cs-add-company). Example details are the drawing's placeholders.
+const CLUB = { ...MAYA, name: '[Company name]', isCompany: true, contactName: '[Contact name]', vatNumber: '[Company VAT number]', invoiceEmail: 'accounts@example.com', groups: [] };
+
+test('Edit for a company shows its name, contact, VAT number and Send invoices to, and saves them', async () => {
+  const { ui, fireEvent, within, waitFor } = await open({ who: CLUB });
+  fireEvent.click(ui.getByRole('button', { name: 'Edit' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Edit [Company name]’s details' }));
+  assert.equal(within(dialog.getByRole('group', { name: 'This is' })).getByRole('radio', { name: 'A company or club' }).checked, true);
+  assert.ok(dialog.queryByLabelText('Name') === null);
+  assert.equal(dialog.getByLabelText('Company or club name').value, '[Company name]');
+  assert.equal(dialog.getByLabelText('Contact name').value, '[Contact name]');
+  assert.equal(dialog.getByLabelText('VAT number').value, '[Company VAT number]');
+  assert.equal(dialog.getByLabelText('Send invoices to').value, 'accounts@example.com');
+  fireEvent.change(dialog.getByLabelText('VAT number'), { target: { value: '[new VAT number]' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => assert.equal(puts().length, 1));
+  const sent = puts()[0];
+  assert.deepEqual([sent.isCompany, sent.name, sent.contactName, sent.vatNumber, sent.invoiceEmail], [true, '[Company name]', '[Contact name]', '[new VAT number]', 'accounts@example.com']);
+});
+
+test('Edit can make a person a company, which then needs a contact name', async () => {
+  const { ui, fireEvent, within, waitFor } = await open();
+  fireEvent.click(ui.getByRole('button', { name: 'Edit' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Edit Maya Patel’s details' }));
+  const who = within(dialog.getByRole('group', { name: 'This is' }));
+  assert.equal(who.getByRole('radio', { name: 'A person' }).checked, true);
+  assert.ok(dialog.queryByLabelText('VAT number') === null, 'a person has no company boxes');
+  fireEvent.click(who.getByRole('radio', { name: 'A company or club' }));
+  fireEvent.click(dialog.getByRole('button', { name: 'Save changes' }));
+  assert.ok((await dialog.findByRole('alert')).textContent.includes('Add the contact’s name.'));
+  assert.deepEqual(puts(), []);
+  fireEvent.click(who.getByRole('radio', { name: 'A person' }));
+  fireEvent.click(dialog.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => assert.equal(puts().length, 1));
+  assert.equal(puts()[0].isCompany, false);
+});
+
 test('a customer who isn’t there says so', async () => {
   const { ui } = await open({ who: { ...MAYA, id: 404, name: 'Nobody' }, expect: 'There’s no such customer.' });
   assert.ok(ui.queryByRole('heading', { level: 2, name: 'Nobody' }) === null);
