@@ -4,4 +4,4 @@
 - [x] 1.2 The sums (`src/lib/cash-count.ts`) and the counter (`src/screens/till/note-coin-counter.tsx`)
 - [x] 1.3 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck and the touched tests
-- [ ] 1.5 Self-review and `/review` (money); a pull request, with `/opsx:archive` as its last commit
+- [x] 1.5 Self-review and `/review` (money); a pull request, with `/opsx:archive` as its last commit
