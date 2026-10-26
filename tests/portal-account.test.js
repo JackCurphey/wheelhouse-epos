@@ -202,3 +202,16 @@ test('the history leaves a repair’s total out when the shop hides prices, as t
   await staff('/api/workshop-settings', { method: 'PUT', body: { showPricesOnline: false } });
   assert.equal(await totalFor(), null);
 });
+
+// customer-account-screens design 1: what the account page reads.
+test('/me gives her mobile and how the shop contacts her; /history each repair’s bike and whether work has begun', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET update_channel = 'email', marketing_permission = true, service_reminders = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'booking' WHERE id = ?").run(maya.id));
+  const me = (await portal('/me')).body;
+  assert.deepEqual([me.phone, me.updateChannel, me.serviceReminders, me.reviewRequests, me.marketingPermission], ['07700 900142', 'email', true, false, true]);
+  const { job } = await mayasJob();
+  const repair = (await portal('/history')).body.find((h) => h.jobId === job.id);
+  assert.equal(repair.bikeId, mayaBike.id);
+  assert.equal(repair.workStarted, false);
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET work_state = 'in_progress' WHERE id = ?").run(job.id));
+  assert.equal((await portal('/history')).body.find((h) => h.jobId === job.id).workStarted, true, 'once work has begun');
+});

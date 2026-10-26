@@ -43,3 +43,10 @@ export const STOP_ROUTE = '/book/:shopSlug/stop/:code';
  * steps, as the photo and stop pages are. `?from=` is where it returns to.
  */
 export const SIGNIN_ROUTE = '/book/:shopSlug/sign-in';
+
+/**
+ * The customer's account (openspec/changes/customer-account-screens;
+ * ac-account): her bikes, details and history, by her sign-in. Apart from the
+ * booking steps, as the sign-in page is.
+ */
+export const ACCOUNT_ROUTE = '/book/:shopSlug/account';
