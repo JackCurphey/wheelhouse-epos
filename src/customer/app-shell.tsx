@@ -13,7 +13,8 @@ import { PendingScreen } from '@/screens/book/pending.tsx';
 import { PhotoStepScreen } from '@/screens/book/photo-step.tsx';
 import { ReminderStopScreen } from '@/screens/book/reminder-stop.tsx';
 import { SignInScreen } from '@/screens/book/sign-in.tsx';
-import { CUSTOMER_ROUTES, PHOTO_STEP_ROUTE, SIGNIN_ROUTE, STOP_ROUTE, type CustomerScreenId } from './routes.ts';
+import { AccountScreen } from '@/screens/book/account.tsx';
+import { ACCOUNT_ROUTE, CUSTOMER_ROUTES, PHOTO_STEP_ROUTE, SIGNIN_ROUTE, STOP_ROUTE, type CustomerScreenId } from './routes.ts';
 
 /**
  * The customer app's frame: query client, router, error boundary. The same
@@ -86,7 +87,7 @@ const router = createBrowserRouter([
           const rest = path.slice(BOOK_BASE.length).replace(/^\//, '');
           const Component = SCREENS[id] ?? notBuilt(id);
           return rest ? { path: rest, Component } : { index: true, Component };
-        }).concat({ path: PHOTO_STEP_ROUTE.slice(BOOK_BASE.length + 1), Component: PhotoStepScreen }, { path: STOP_ROUTE.slice(BOOK_BASE.length + 1), Component: ReminderStopScreen }, { path: SIGNIN_ROUTE.slice(BOOK_BASE.length + 1), Component: SignInScreen }),
+        }).concat({ path: PHOTO_STEP_ROUTE.slice(BOOK_BASE.length + 1), Component: PhotoStepScreen }, { path: STOP_ROUTE.slice(BOOK_BASE.length + 1), Component: ReminderStopScreen }, { path: SIGNIN_ROUTE.slice(BOOK_BASE.length + 1), Component: SignInScreen }, { path: ACCOUNT_ROUTE.slice(BOOK_BASE.length + 1), Component: AccountScreen }),
       },
       { path: '/book/*', Component: NoSuchScreen },
     ],
