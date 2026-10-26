@@ -419,7 +419,8 @@ async function replyInConversation(req, customer, text, shopId, loginId) {
   try {
     const why = await whyNotQueued('message_reply', customer.id);
     if (why) return { status: 'not_sent', reason: notSent(why, 'Reply to a message', customer.name) };
-    const { rows: [shop] } = await pool.query('SELECT name, slug FROM shops WHERE id = $1', [shopId]);
+    // On the request's own connection, as issueJobLink (portal-connection-per-request).
+    const shop = await db.prepare('SELECT name, slug FROM shops WHERE id = ?').get(shopId);
     const link = await messageLink(async () => `${publicBase(req)}/book/${shop.slug}/messages`);
     const queued = await queueMessage({ customerId: customer.id, key: 'message_reply', vars: { 'Shop name': shop.name, 'Link to your messages': link }, loginId });
     return queued.skipped
