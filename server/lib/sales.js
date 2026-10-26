@@ -245,6 +245,68 @@ export function serializeSale(row, items, payments) {
 
 export const SALE_SELECT = `SELECT s.*, c.name AS customer_name, ca.name AS cashier_name FROM sales s LEFT JOIN customers c ON c.id = s.customer_id LEFT JOIN employees ca ON ca.id = s.cashier_id`;
 
+// ---------- Both records at once (step B of sales in pence) ----------
+// The all_sales view gives one row per sale from the old record and from the
+// new till (migration 083). A row is told apart by `source` ('old' or
+// 'till') and its own id; an id with no source means 'old' so old links keep
+// working (openspec/changes/wp-1-6-sales-in-pence, design.md Decision 3).
+export const SALE_SOURCES = ['old', 'till'];
+
+export const ALL_SALES_SELECT = `SELECT v.source, v.id, v.made_at, v.customer_id, v.employee_id AS cashier_id, v.total_pence, v.vat_pence, v.receipt_number,
+       c.name AS customer_name, ca.name AS cashier_name,
+       s.subtotal, s.discount, s.total, s.group_discount_amount, s.group_discount_name, s.payment_method,
+       s.cash_amount, s.card_amount, s.cash_tendered, s.note,
+       (SELECT string_agg(DISTINCT p.method, ',' ORDER BY p.method) FROM till_sale_payments p WHERE v.source = 'till' AND p.till_sale_id = v.id) AS till_methods
+  FROM all_sales v
+  LEFT JOIN sales s ON v.source = 'old' AND s.id = v.id
+  LEFT JOIN customers c ON c.id = v.customer_id
+  LEFT JOIN employees ca ON ca.id = v.employee_id`;
+
+// What the old app's badge shows for a till sale: Cash, Card, or Split.
+function tillPaymentLabel(methods) {
+  if (!methods) return null;
+  const list = methods.split(',');
+  if (list.length > 1) return 'Split';
+  return list[0].charAt(0).toUpperCase() + list[0].slice(1);
+}
+
+// A row of ALL_SALES_SELECT, as the API sends it. Old sales keep every pound
+// field the old app reads (serializeSale) and gain `source` and `totalPence`;
+// a till sale is sent in pence with the pound total beside it.
+export function serializeAnySale(row, items, payments) {
+  if (row.source === 'till') {
+    return {
+      id: row.id,
+      source: 'till',
+      createdAt: row.made_at,
+      customerId: row.customer_id,
+      customerName: row.customer_name,
+      cashierId: row.cashier_id,
+      cashierName: row.cashier_name,
+      // Pound fields the old app's receipt window reads. A till sale has no
+      // discount (its lines add up to its total); cash and card come from its
+      // payments, any other method is listed as an extra payment.
+      subtotal: row.total_pence / 100,
+      discount: 0,
+      total: row.total_pence / 100,
+      totalPence: row.total_pence,
+      cashAmount: (payments || []).filter((p) => p.method === 'cash').reduce((n, p) => n + p.amountPence, 0) / 100,
+      cardAmount: (payments || []).filter((p) => p.method === 'card').reduce((n, p) => n + p.amountPence, 0) / 100,
+      extraPayments: payments ? payments.filter((p) => p.method !== 'cash' && p.method !== 'card').map((p) => ({ tenderType: p.method, amount: p.amountPence / 100 })) : undefined,
+      vatPence: row.vat_pence,
+      receiptNumber: row.receipt_number,
+      paymentMethod: tillPaymentLabel(row.till_methods),
+      items,
+      payments,
+    };
+  }
+  return {
+    ...serializeSale({ ...row, created_at: row.made_at }, items, payments),
+    source: 'old',
+    totalPence: row.total_pence,
+  };
+}
+
 export async function resolveCashierId(rawId) {
   if (rawId === undefined || rawId === null || rawId === '') return { ok: true, cashierId: null };
   const cashierId = Number(rawId);
@@ -273,6 +335,18 @@ export async function resolveGroupDiscount(customerId, subtotal) {
 }
 
 const toPence = (n) => Math.round(n * 100) / 100;
+
+// A pounds amount as whole pence: the money contract's ROUND(x * 100)
+// (openspec/changes/wp-1-6-sales-in-pence/design.md Decision 6).
+export const poundsToPence = (n) => Math.round(Number(n) * 100);
+
+// An order's totals worked out in whole pence from its loaded lines: the
+// lines added up, less the discount, never below 0 (design.md Decision 1).
+export function documentTotalsPence(lines, discount) {
+  const subtotalPence = lines.reduce((sum, line) => sum + line.lineTotalPence, 0);
+  const discountPence = poundsToPence(discount);
+  return { subtotalPence, discountPence, totalPence: Math.max(0, subtotalPence - discountPence) };
+}
 
 // The one amount-due calculation: createSale charges it, GET
 // /api/sale-documents/:id/due shows it and the Bike ready message quotes it, so
@@ -308,7 +382,8 @@ export async function loadDocumentLine(it, { checkStock }) {
       const service = await db.prepare('SELECT * FROM workshop_services WHERE id = ? AND active = 1').get(serviceId);
       if (!service) throw new ValidationError(`Service ${serviceId} not found or inactive`);
       if (!name) name = service.name;
-      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price;
+      // From the pence (sales in pence, step A′).
+      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price_pence / 100;
       if (minutes === undefined || minutes === null || minutes === '') minutes = service.minutes;
     }
 
@@ -334,6 +409,11 @@ export async function loadDocumentLine(it, { checkStock }) {
       unitPrice: price,
       minutes: mins,
       lineTotal: price,
+      // Pence beside pounds (sales in pence, step A). Labour's VAT rate is
+      // Jack's call (#134), so none is assumed.
+      unitPricePence: poundsToPence(price),
+      lineTotalPence: poundsToPence(price),
+      vatRateBp: null,
     };
   }
 
@@ -365,6 +445,11 @@ export async function loadDocumentLine(it, { checkStock }) {
     unitPrice,
     minutes: null,
     lineTotal: unitPrice * qty,
+    // The line's pence is its rounded unit price times the quantity, so a
+    // line never carries a fraction of a penny.
+    unitPricePence: poundsToPence(unitPrice),
+    lineTotalPence: poundsToPence(unitPrice) * qty,
+    vatRateBp: product.vat_rate_bp,
   };
 }
 

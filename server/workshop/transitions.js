@@ -26,12 +26,15 @@ export const MACHINE_COLUMNS = {
 // ended (issue #190 A). Collecting a bike already in the shop stays allowed -
 // the bike really is there (docs/decisions/2026-10-15-job-page-fixes.md, 5).
 // A pending request is not ended and may still be booked in.
-const ENDED_BOOKING = new Set(['cancelled', 'declined', 'expired']);
+// Resume is refused too: it starts held work again, and nothing records whether
+// held work had ever started (Jack, 22 Oct, "block both").
+// The words follow Jack's plain refusals ("This booking expired.").
+const ENDED_BOOKING_WORDS = { cancelled: 'This booking was cancelled', declined: 'This booking was declined', expired: 'This booking expired' };
 const REFUSED_ON_ENDED_BOOKING = {
   custody: new Set(['book_in']),
-  work: new Set(['start', 'hold', 'reopen']),
+  work: new Set(['start', 'hold', 'resume', 'reopen']),
 };
-const ENDED_BOOKING_VERB = { book_in: 'booked in', start: 'started', hold: 'put on hold', reopen: 'reopened' };
+const ENDED_BOOKING_VERB = { book_in: 'booked in', start: 'started', hold: 'put on hold', resume: 'resumed', reopen: 'reopened' };
 
 export async function applyEvent({ jobId, machine, event, expectedVersion }) {
   const column = MACHINE_COLUMNS[machine.name];
@@ -51,11 +54,12 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
     };
   }
 
-  if (ENDED_BOOKING.has(job.booking_state) && REFUSED_ON_ENDED_BOOKING[machine.name]?.has(event)) {
+  const endedWords = ENDED_BOOKING_WORDS[job.booking_state];
+  if (endedWords && REFUSED_ON_ENDED_BOOKING[machine.name]?.has(event)) {
     return {
       ok: false,
       code: 'illegal',
-      message: `This booking was ${job.booking_state}, so the job can't be ${ENDED_BOOKING_VERB[event]}.`,
+      message: `${endedWords}, so the job can't be ${ENDED_BOOKING_VERB[event]}.`,
     };
   }
 
@@ -64,8 +68,16 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
   // parameterise an identifier. Safe here and only here: MACHINE_COLUMNS is a
   // closed map keyed by machine name, and an unmapped machine throws above. Do
   // not extend this pattern to a caller-supplied column.
+  // When the bike came in and went (booking page stages, 21 Oct; migration 051):
+  // set by the custody moves themselves, so every way a bike moves records it.
+  const custodyTime = machine.name !== 'custody' ? ''
+    : event === 'book_in' ? ', booked_in_at = now()'
+    // A collected bike leaves its storage slot (storage slots, 22 Oct).
+    : event === 'collect' ? ', collected_at = now(), storage_slot_id = NULL'
+    : event === 'reopen' ? ', collected_at = NULL'
+    : '';
   const { changes } = await prepare(
-    `UPDATE workshop_jobs SET ${column} = ?, version = version + 1, updated_at = now()
+    `UPDATE workshop_jobs SET ${column} = ?${custodyTime}, version = version + 1, updated_at = now()
      WHERE id = ? AND version = ?`
   ).run(to, jobId, expectedVersion);
 

@@ -34,6 +34,100 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    API. No website is live and hosting isn't chosen, so this is left for
    WP-0.5 or the website stage.
 
+### 21 Oct 2026: sales in pence, step A (`openspec/changes/wp-1-6-sales-in-pence` task 1.4)
+
+No screen: server only.
+
+1. **A typed price finer than a penny is rounded to the penny once, per
+   unit, and the line is that times the quantity.** The pounds written
+   beside it come from the pence, so the old app now sees £0.33 and £0.99
+   for 3 at £0.333 where it used to store £0.333 and £0.999. Prices typed
+   to the penny are unchanged. *Pattern:* design.md Decision 2 (pence is the
+   authority, pounds worked out from it) and the money contract's
+   `ROUND(x * 100)`.
+2. **An order's `total_pence` has no group discount on it; `paid_pence` is
+   what the sale took.** So a group customer's converted order reads paid
+   less than its total. *Pattern:* the order's pounds total already left the
+   group discount to `createSale`; the totals check holds `paid_pence` to
+   the converted sale's total (design.md Decision 7).
+3. **The amount due (`GET /api/sale-documents/:id/due`) also gains `…Pence`
+   fields** beside its pounds. *Pattern:* the money contract (Decision 6):
+   an endpoint that returns pounds adds the pence beside them.
+
+### 22 Oct 2026: held work on an ended booking
+
+5. **Held work can't be resumed on a cancelled, declined or expired booking,
+   and hold stays refused on all of them.** Jack's "block both" (22 Oct)
+   left the resume gap to Mark. The server doesn't record whether held work
+   had started, so allowing hold on started work would trap it with no
+   resume. Work under way can still be finished or marked waiting for parts;
+   held work stays held and the bike can be collected. A "started at"
+   column would allow the finer rule (schema change, not made). Change
+   `ended-booking-resume`. *Pattern:* start's refusal.
+
+### 22 Oct 2026: input checks (`openspec/changes/input-checks`, audit items 19, 21, 22)
+
+No screen: server only. Touches `docs/decisions/2026-10-16-mechanic-sign-off.md`
+(an active mechanic signs off; the till never refuses over it), without
+reopening it.
+
+1. **A job's mechanic is sent as a whole number.** Text, a fraction or
+   `true` is refused with "Mechanic not found or inactive". *Pattern:* the
+   sign-off's `signedOffBy`, which already takes whole numbers only.
+2. **A mechanic deleted or switched off while a job is being finished** gets
+   "Choose who is signing this off", as if they had gone a moment earlier,
+   and nothing moves. At the till the payment stands and the reply warns
+   "that mechanic isn’t active any more". *Pattern:* the same refusal and
+   warning when the earlier check finds them gone.
+3. **The four on/off workshop settings** (Show prices on the booking page,
+   Show who signed off to customers, Use storage slots, Confirm bookings
+   automatically) take
+   only true or false; anything else is refused and nothing is saved.
+   *Pattern:* the messages page's `enabled` ("must be true or false").
+
+### 22 Oct 2026: a deleted job's waiting messages (`openspec/changes/delete-job-messages`, audit item 11 on #265)
+
+No screen: server only. Touches `docs/decisions/2026-10-18-attachments-and-delete.md`
+(deleting a job) and `2026-10-20-messages-engine.md` (Undo), without
+reopening either.
+
+1. **Deleting a job stops its messages that haven't gone yet**, marked
+   undone as Undo marks them, even one whose minute is up but which the
+   timer hasn't picked up. One already being sent, or sent, is left as it
+   is. A refused delete stops nothing. *Pattern:* reopening the work stops a
+   waiting "Bike ready" (`undoWaiting`): nothing is sent about work that no
+   longer stands.
+
+### 22 Oct 2026: offer another time, three missed checks (`openspec/changes/offer-checks`, audit items 15–17 on #315)
+
+No screen: server only. Item 18 (untimed offers in drop-off mode skip the
+day's capacity check) is left: the offer design makes it a staff choice.
+
+1. **A request whose bike is in the shop, or whose work has started, can't
+   be offered another time**, in the words "The bike is already in the shop,
+   so this can’t be offered another time." and "The work has already
+   started, so this can’t be offered another time." *Pattern:* the customer
+   link's own "too late" test (`customerTooLate`), so no offer is made that
+   nobody can answer.
+2. **A time already gone today can't be offered**: "That time has passed -
+   please choose a later time." *Pattern:* the day-gone-by refusal beside it.
+3. **The offer's message must be text**: "The message must be text".
+   *Pattern:* decline's message.
+
+### 25 Oct 2026: a declined date change sends its message (`openspec/changes/date-change-declined-message`; audit item 23; Mark's answer, 25 Oct)
+
+1. **The declined wording is the second box of the Date change answered
+   row, as drawn (`bk-msg-change`), not a row of its own.** One On/Off covers
+   both wordings, and the row's subject is shared. *Pattern:* the drawing.
+2. **[New day and time] in the declined wording is the day the customer asked
+   for**, read before the decline clears the request. *Pattern:* Offer
+   another time's "the time the customer asked for".
+3. **The Settings box's two wordings are labelled "If the shop accepts" and
+   "If the shop can't"** as drawn; the preview shows the first wording only,
+   as the drawing's one example does.
+4. **`decline-change` was missing the shop id the other answers pass**; it
+   is passed now (a message needs it).
+
 ## Jack's lane
 
 ### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
@@ -802,7 +896,9 @@ silent:
    the answer itself already confirms; no Undo is drawn for these answers.
 2. **A declined date change sends nothing yet**: its wording isn't stored
    (messages engine item 3). Request received and Booking cancelled wait for
-   the customer's side, in Mark's booking server.
+   the customer's side, in Mark's booking server. *Since 21 Oct
+   (customer-booking-messages):* both send, built by Jack under the working
+   agreement.
 3. **[Service] is the job's services, else its title; [Booked day and time]
    reads "Thu 17 Sep, 11:30"; the drop-off sentence follows the booking
    page's rule in `bk-msg-confirmed`'s words.** *Pattern:* the approved
@@ -992,3 +1088,1456 @@ From `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`
    diary uses (`todayIso`); a device set to another time zone than the
    shop's would read another day. Shared with the diary, for later.
 
+### 21 Oct 2026: the bike tag (bike-tag)
+
+1. **`job-bike-tag`: the bike's colour ("Trek Domane AL 3 · green").**
+   *Decided:* the tag prints the job's bike label, make and model, as the job
+   page shows it; the server's job doesn't send the colour (a change for
+   Mark, noted in the change's design). *Since 21 Oct (planned-effort):* the
+   job sends it and the tag prints it, as drawn.
+2. **`job-bike-tag`: the tag's size.** *Decided:* 54 mm wide, to fit a 62 mm
+   label once the print styles' 4 mm margins are off, as the receipt is
+   72 mm for 80 mm paper. A template builder replaces it later (Jack).
+3. **A job with no number.** *Decided:* no Print bike tag; its id counts
+   every shop's jobs and nothing could find it from the barcode.
+4. **A job with no customer.** *Decided:* Print bike tag alone at the right
+   of the customer row, where Message would be.
+
+### 21 Oct 2026: the old app's job payments (old-app-job-payments)
+
+1. **The old app's order pop-up: Convert to sale on a job's order.**
+   *Decided:* it opens the new till without saving what was typed in the
+   pop-up, as its Convert never did; the old app is a placeholder (Jack, 21
+   Oct).
+2. **An old-app till tab left open since before this change**, holding a
+   job's order in its cart, can still rewrite that order's lines before the
+   server refuses the payment. *Decided:* left; nobody uses the old till, and
+   a fresh page can't reach it.
+
+### 21 Oct 2026: confirming bookings automatically, the screens (auto-confirm)
+
+1. **`bk-details-auto`: step 4's off wording.** The drawing's off button is
+   "Send booking request"; the built step 4 says "Request booking" (unchanged
+   here). *Decided:* on, "Confirm booking", as drawn; off stays as built. The
+   built step 4's terms line is the "I agree to the booking terms" tick, not
+   the drawing's "By sending…" sentence, so it has no word to change.
+2. **The mark in the No time row** (a whole-day shop's bookings have no
+   time, so they sit there). Not drawn. *Decided:* the chip shows the bike,
+   then the globe and "New online" ("New, booked online" on a phone), as a
+   block's one-line form.
+3. **The mark on a stack's front card, a stack fanned out, and the month
+   view.** Not drawn. *Decided:* not shown there yet; a stack's own job
+   blocks show it once opened, and each job's name for screen readers says
+   it. For a later piece.
+
+### 21 Oct 2026: the booking page's money and progress (booking-page-money)
+
+1. **`bk-expired`: "booked for [day] and cancelled".** The expired reply
+   carries the job's number, not its day. *Decided:* "It was for [number]."
+   and the 30-day rule, then Book a repair and the shop.
+2. **`dq-in-shop`: "Expected ready: [day], [time]".** *Decided:* the job's
+   last day, with no time until staff can set one.
+3. **`cp-summary`: the full service checklist.** *Decided:* not shown; no
+   checklist is kept yet.
+4. **The booking's rows once the work is listed.** *Decided:* the Service row
+   gives way to Work agreed / What we did; Bike, When and Your repair stay.
+5. **The quote card once the work is done.** *Decided:* only while the bike is
+   in the workshop; What we did comes from the job once it's ready. This
+   reverses the 21 Oct log's item 4 under the booking page's later stages.
+6. **`dq-in-shop`'s tracker card.** The drawing puts the in-shop tracker in a
+   card headed "Where your bike is", numbering the steps to come and saying
+   ", done" and ", to come" to screen readers. *Decided:* the list is labelled
+   "Where your bike is", earlier steps ticked, the current one marked; the
+   card, the numbers and the spoken words are for a later piece.
+7. **`cp-expired` / `bk-expired`: "Open [opening hours]".** The expired reply
+   carries the shop's name, address and phone. *Decided:* no hours there yet.
+8. **`dq-waiting-part`: the reason ("Your new brake pads are taking longer to
+   arrive").** Not kept for the customer yet. *Decided:* the bold warning
+   alone, then the ready day.
+
+### 21 Oct 2026: Request received and Booking cancelled (customer-booking-messages)
+
+1. **Booking cancelled after an offer never accepted.** Not drawn.
+   *Decided:* it names the time the customer asked for, as Request declined
+   does.
+2. **A booking sent with no bike.** Request received reads "on your [Bike]";
+   with no bike that tap-in is left out. *Decided:* left as the tidy-up makes
+   it, for now.
+
+
+### 21 Oct 2026: screen tests built from the reply shape (working agreement 3.13)
+
+1. **A job with no number.** Migration 016 added job numbers without filling
+   them in for older jobs, so the server can send `reference: null`, and the
+   bike tag already hides Print bike tag for one. The screens' type says a
+   job always has a number, and a receipt for such a job would print "null"
+   before the bike. *Decided:* the reply shape allows an empty number, to
+   match the database; the type and the receipt stay as they are, since no
+   shop on the new app has a job from before 16 Oct. What a receipt says for
+   one is yours to choose if a shop ever brings old jobs across.
+
+### 21 Oct 2026: the New online mark on stacks and in the month view (new-online-on-stacks)
+
+Closes item 3 of the auto-confirm screens entry above. Not drawn; the closest
+pattern is the No time chip's "bike · mark".
+
+1. **A stack's front card.** *Decided:* the mark shows when any job in the
+   stack is new, on its own line under the bike (beside it when the stack
+   has room for one line only, as a short block has it), with the job on the
+   third line. Beside the bike on every stack, it pushed the bike's name off
+   the card in a week column (seen in a real browser).
+2. **A fanned-out stack.** *Decided:* the new job's tile reads bike, job,
+   then the mark, as a tall block does.
+3. **The month view.** *Decided:* the chip shows the globe alone after the
+   bike, since a month chip has no room for words; its name and the day's
+   list say "new, booked online" / "New online".
+
+### 22 Oct 2026: service checklists, the server (service-checklists)
+
+1. **Unticked items and Mark ready for collection.** Not drawn or decided.
+   *Decided:* they don't stop it. The checklist shows what's done; the
+   sign-off stays as it is, as the till never refuses a payment over the
+   sign-off.
+2. **Who may tick.** The drawings tag the checklist "Mechanic". *Decided:*
+   anyone signed in, until roles are built (WP-1.1); a later tick or note on
+   the same item wins. The drawn "Keep mine or Keep Alex's" for two people
+   changing one line is for a later piece.
+3. **A job with more than one service.** *Decided:* the first service that
+   has a checklist, in the order booked (an online booking's services, then
+   the service lines on its order).
+4. **Finished work.** *Decided:* ticks and notes are refused once the work is
+   finished, until it is reopened, as the job's other details are (workshop-jobs
+   spec, "Finished work is frozen against edits").
+
+### 22 Oct 2026: service checklists, the screens (service-checklists)
+
+1. **Where Checklists sits.** Drawn under Services; Services isn't in the new
+   Settings yet. *Decided:* first in Settings › Workshop, so it opens first
+   there until Services is built above it.
+2. **Remove.** Drawn with no "Are you sure?". *Decided:* as drawn: it goes at
+   once. Jobs already begun keep their copy, and the template brings the ten
+   items back in one tap.
+3. **The bar's words.** Drawn as "Full service checklist". *Decided:* the
+   checklist's own name, since each shop names its own (the template's is
+   "Full service checklist").
+4. **Saving.** *Decided:* a tick saves at once and shows straight away (put
+   back if the server refuses); a note saves when its box is left, as Settings'
+   boxes do.
+5. **Finished work.** *Decided:* the checklist opens to read, its ticks
+   greyed, with "Reopen the work to change its checklist.", as the notes say
+   "Reopen the job to change its notes."
+6. **After the fresh review.** *Decided:* on a computer or tablet the
+   checklist is a pop-up over the job, not the drawing's full-screen page; on
+   a phone it fills the screen with Done pinned below, as drawn, but closes
+   with the cross on the right (the job's Messages pattern) rather than a back
+   arrow on the left. Words the drawings didn't give: a new checklist's box
+   is titled "New checklist", and one not yet used reads "not used for a
+   service yet". "+ Add note" is in the text colour, not the accent.
+
+### 22 Oct 2026: what a diary block shows (diary-block-lines)
+
+1. **The same thing on both lines.** Not drawn. *Decided:* never; choosing
+   the other line's choice swaps the two, so one choice is always one tap.
+2. **Where it applies.** *Decided:* diary blocks, a stack's front card and a
+   fanned stack's tiles. A month chip and a No time chip keep the bike: they
+   have room for one word.
+3. **Where the fold sits.** *Decided:* after Mechanics, as drawn; Services
+   and Storage slots come later.
+4. **The stack's chooser and the month's day list.** *Decided:* they keep
+   "bike · job": they list every job's details in full, not a block's two
+   lines.
+
+### 22 Oct 2026: storage slots, the server (storage-slots)
+
+The drawings show where slots appear but not these rules. *Decided:*
+1. **When.** A slot is chosen at book-in only ("no hook until the bike is
+   booked in", 3 Oct walk-through answer 11), or as a job is made with the
+   bike already here; not required.
+2. **Sharing.** Two bikes may share a slot; nothing stops it.
+3. **Changing.** While the bike is in the shop it can be moved or taken off a
+   slot; the last choice wins (no version check, as nothing else on the job
+   changes). Collecting the bike clears its slot; bringing it back in leaves
+   it on none until one is chosen.
+4. **Removing and switching off.** Removing a slot takes every bike off it.
+   Switching slots off hides them everywhere, keeps the list, and refuses new
+   ones until they're switched on.
+5. **Sites.** Per shop for now; the plan's per-site slots wait for sites in
+   the workshop (WP-1.4).
+
+### 22 Oct 2026: storage slots, the screens (storage-slots)
+
+1. **Book in on the job page and the Overview.** Only the till's book-in is
+   drawn with a slot (till-book-in). *Decided:* the same box opens from the
+   job page's Book in (and its Bike is here switch) and the Overview's Book
+   in, when the shop's slots are on; Not now books nothing; with slots off,
+   Book in books in at once as before.
+2. **Moving a bike.** Not drawn. *Decided:* "Kept on Hook 3" on the job page
+   is a button opening the same box, titled "Where the bike is kept"; a bike
+   in with no slot shows "Choose where it’s kept". Tapping the chosen slot
+   again takes the bike off it.
+3. **New job.** *Decided:* "Where the bike is kept" shows only once "The bike
+   is here now" is on, with none chosen, then the drawn note.
+4. **Settings.** Not drawn: what "+ Add a slot" opens and the off state.
+   *Decided:* a box for the name with Add and Cancel; switched off, the note
+   reads "Off for this shop. Switch it on to note where each bike is kept."
+5. **The diary block.** *Decided:* the slot on the line after the job (after
+   the New online mark when that shows), where there's room; a block's name
+   for screen readers doesn't say the slot yet.
+
+### 22 Oct 2026: the job page's layout (Jack's answer)
+
+1. **The roomier customer strip.** The tappable "Kept on Hook 3" (44px tall)
+   made the strip's second row taller than drawn. Jack, 22 Oct, on seeing it:
+   "I like the way it looks now more"; kept as approved.
+2. **Notes with more space.** Jack, 22 Oct: "if we can just swap around the
+   work/parts section with the notes section, so that the notes have more
+   space on the page i think then it would be perfect". The drawing
+   (job-page.mjs jobPopupContent) already has this: the job's details (420px)
+   beside Notes in the wider column, then Work and parts across the full
+   width below. The built page had drifted from it (Work and parts in the
+   right column); it now matches the drawing.
+
+### 22 Oct 2026: the quote's drawn words (`openspec/changes/quote-names-and-wording`)
+
+1. **"We" in place of the mechanic's name, with the switch off.** The
+   drawings name Alex throughout; Jack's 22 Oct answer puts names behind
+   the "Show who signed off to customers" switch. Off, each drawn line takes
+   "we": "We recommend more work", "We recommend this.", "Thanks, Maya —
+   we’re carrying on", "Thanks, Maya — we’ll carry on with the service",
+   "We’ve withdrawn this quote", "You answered by phone at [time]."
+2. **"Call the shop" with no phone.** "Not sure? Call [shop phone]" and the
+   withdrawn line read "Call the shop" when the shop has no phone in Shop
+   details.
+3. **The withdraw box keeps "Only the booked work stays agreed."** The drawing
+   names the booked Standard service; a job's title is free text, so the
+   general words stay.
+4. **The Record-answer intro follows How did they answer?** "Tick what Maya
+   agreed to on the phone" changes to "in the shop" with the choice, so it
+   sits under the choice. Its drawn note ("Maya gets a text … with what was
+   agreed") waits for that message (a later WP-4.2 piece) and isn't shown.
+5. **The switch's note says it covers quotes:** "Adds “Checked by [name]” to
+   their receipt and booking link, and the mechanic’s name to quotes. Off:
+   only staff see who signed a job off, and quotes say “we”." The drawings of
+   the switch (`set-workshop-sign-off`) keep the older note until redrawn.
+
+### 22 Oct 2026: the checklist on the customer's booking page (customer-checklist)
+
+1. **When.** *Decided:* once the work is finished (the ready and collected
+   pages, where it's drawn); not while it's under way.
+2. **Its title.** Drawn as "Full service checklist". *Decided:* the
+   checklist's own name, as on the job page (the template's is that).
+3. **A checklist nobody ticked** (fresh review). *Decided:* the customer sees
+   the checklist only once a mechanic ticked or noted something on it, and
+   then the job's own copy, so it's fixed and never says "0 of 10 checks done"
+   for a service done without the ticks. A note on a check not done isn't
+   shown, as drawn.
+
+### 22 Oct 2026: quote lines that go together (`openspec/changes/quote-goes-with`)
+
+1. **Only a labour line goes with something, and only with a part.** The
+   drawing (dq-job-quote) puts "Goes with" on the fitting line and offers the
+   pads; decision 2's example is pads and fitting. Keeping it labour-to-part
+   means a pair never chains and no line goes with itself. "Goes with" shows
+   on a draft's labour lines once the quote has a part; Nothing takes it off.
+   More than one labour line can go with the same part (fitting and a bleed
+   with the pads); the part and all of them tick together (fresh review).
+   A group starts ticked if any line in it is Needed, so a Needed part with
+   Optional fitting opens ticked together rather than split.
+2. **A pair can't be split.** Decision 2 says they "tick and untick as a
+   pair": the customer's card and Record their answer move both, and the
+   server refuses an answer that splits them. A customer bringing their own
+   pads means staff take the pads off the quote, or choose Nothing.
+3. **Where staff write what happens without it.** Not drawn; the audit (H1)
+   asks for "a new field on the job page". *Decided:* a box under the reason
+   on a draft's Needed lines, "What happens without it", saved when you
+   leave it, as the reason is. Up to 300 letters.
+4. **No words, no box.** The drawing shows "Alex recommends this. [words]"
+   only when there are words (dq-quote-decline). The card had shown "We
+   recommend this." alone on any unticked Needed line; it now follows the
+   drawing.
+5. **The older one-line answer refuses a line in a pair** ("This line goes
+   with another; answer the whole quote."), so it can't split one either.
+6. **Migration 056**, as Mark's sales in pence (#404) has 055.
+
+### 22 Oct 2026: a photo on a quote line (`openspec/changes/quote-line-photos`)
+
+1. **One photo per line.** The decision says "photos"; every drawing shows
+   one ("1 photo"). *Decided:* one, as drawn; Replace photo swaps it.
+2. **What "view or add" opens.** Not drawn (not-drawn pages, row 83).
+   *Decided:* the photo larger in a pop-up, as Files and photos and the
+   customer's dq-quote-photo do, with Replace photo, Remove from line and
+   Close.
+3. **The photo is one of the job's files.** It shows in Files and photos too;
+   removing it there takes it off the line. Remove from line leaves the file.
+4. **Only while the quote is a draft**, as drawn: the sent boards drop the
+   photo button.
+5. **JPEG, PNG or WebP only**, checked by the file's bytes, as the booking
+   photos are; the customer's photo route sends it as the picture it is.
+6. **Left for later:** "Use my phone" (walk-through 8), removing location
+   data (CX-2; booking photos don't yet either) and the photo on Ready to
+   collect.
+7. **Migration 057**, after the goes-with piece's 056.
+
+### 22 Oct 2026: a new quote after the customer says no to everything (`openspec/changes/quote-after-declined`)
+
+1. **"Already agreed" on the newer quote** lists the booking's services, then
+   the earlier yeses, with the booking's agreed total, as drawn
+   (dq-quote-newer: "Standard service, brake pads, fitting · £111.00").
+2. **A second quote after a withdrawn one** has no earlier answers, so it
+   reads as a first quote ("Waiting for your answer").
+3. **"line" or "lines"**: "Please answer the new line below." follows how
+   many new lines there are.
+4. **Each line's latest answer counts** (fresh review). Pads said no to on
+   one quote and yes to on a later one are agreed: they aren't listed as "You
+   said no thanks", on the newer quote or on the finished-work page. Lines
+   are matched by their words, as quotes don't link one revision's line to
+   the next.
+5. **A quote changed before it was answered in full leaves no earlier
+   answers**, even a line answered on its own.
+6. **The agreed total counts the earlier yeses** (fresh review): the booked
+   services plus the lines agreed before, as the drawing's £111.00 does.
+
+### 22 Oct 2026: the spending limit at booking (`openspec/changes/spend-limit-booking`)
+
+1. **The summary line.** Not drawn for a customer who sets a limit (every
+   drawn summary asks first). *Decided:* "Extra work: go ahead if the whole
+   bill is no more than £200", in the drawing's words; nothing when asking
+   first.
+2. **Typing an amount chooses Go ahead**, so the box can't hold a limit the
+   radio doesn't.
+3. **Whole pounds from £1 to £100,000.** The box is drawn numeric, "in
+   pounds". Otherwise Continue says "Enter the most the whole bill can come
+   to, in whole pounds."
+4. **Shown on every booking**, Not sure included, after the photos as drawn.
+5. **The job's tag shows on every job**, "Ask before any extra work" when
+   there's no limit (staff-made jobs included), as drawn.
+6. **Staff can't set or change a limit**: Jack, 22 Oct, "1: only the
+   customer sets it, when booking online; staff can't change it"
+   (`docs/decisions/2026-10-22-spend-limit-who-sets.md`).
+7. **Migration 058.**
+
+### 22 Oct 2026: work within the spending limit (`openspec/changes/spend-limit-within`)
+
+1. **Through Add to quote.** The drawing (dq-job-within) adds the work with
+   Add item and shows it Approved. *Decided:* staff add extra work the usual
+   way (Add to quote); when the whole bill stays within the limit, the panel
+   says so and offers "Save and tell Maya" in place of Send quote. The
+   quote's lines are the record of what was added and what the customer was
+   told.
+2. **The whole bill** is the job's order, plus any booked service not on it
+   yet, plus the new work: a booked service counts once.
+3. **"Maya will be told what was added."** The drawing says "She’ll"; the
+   app doesn't know anyone's pronouns, so it uses the name.
+4. **A minute to Undo**, as Send quote, since a message goes.
+5. **Over the limit, or with no limit**, the drawn hint "Quotes are sent
+   when the customer asked to be called first, or the total is over their
+   limit." shows under a draft quote, and Send quote is as before (fresh
+   review: the drawing shows it whether or not a limit was set).
+8. **Proposed total is the whole bill** the limit is checked against, booked
+   work included, so the two never disagree (fresh review).
+9. **No shop phone:** the message says "Call the shop", as the customer's
+   page does.
+6. **The message wording**: drafted, then approved (Jack, 22 Oct: "1: use
+   the drafted wording for Work added within your limit").
+7. **Migration 059.**
+
+### 22 Oct 2026: the quote reminder (`openspec/changes/quote-reminder`)
+
+1. **No switch of its own.** The drawn reminder row has the hours and Edit,
+   no On/Off: it goes when Quote to approve goes (and a quote message that
+   doesn't go, for no contact or Quote to approve off, queues no reminder).
+2. **Hours from 1 to 168** (a week), whole hours, saved when you leave the
+   box; otherwise "Choose from 1 to 168 hours."
+3. **A newer quote sent brings its own reminder**; replacing, withdrawing or
+   answering a quote stops one still waiting.
+4. **The customer's sent line** adds "· we sent a reminder at 10:15" once it
+   has gone, as drawn.
+5. **Jack approved the wording before reading it** (22 Oct, by the box);
+   shown to him straight after, and it's a one-line change.
+6. **A job with no bike** reads "on your is still waiting", as Quote to
+   approve already reads "on your ." Left for a messages fix.
+7. **Migration 060.**
+8. **Checked again when due** (fresh review). The reminder waits up to a
+   week, so when it's due it goes only if the job is still there, the bike
+   hasn't been collected, the booking hasn't ended, the job's newest quote is
+   still waiting, and Quote to approve and the reminder are still on.
+   Otherwise it's stopped, and the job's Messages don't list it.
+9. **Staff Messages say the day** a message waiting past today goes ("goes
+   Fri 23 Oct, 10:15").
+
+### 22 Oct 2026: the "Your answers" text (`openspec/changes/your-answers-message`)
+
+1. **Only for answers from a call.** The drawn Settings row says "from a
+   call"; recorded "in the shop", the customer was there, so none is sent.
+2. **At once**, as booking answers send at once (22 Oct): the answer is
+   final and was given on the call.
+3. **What it lists:** "Going ahead: …, £46.00. No thanks: …", the cost of
+   what's going ahead from the database; with nothing agreed, "Going ahead:
+   just the booked work."
+4. **Jack approved the wording before reading it** (22 Oct, by the box); it
+   was shown to him straight after, and it's a one-line change.
+5. **No word on the job page** that it went: not drawn; the job's Messages
+   show it.
+
+### 22 Oct 2026: notes with the shop, the server (`openspec/changes/notes-with-the-shop`)
+
+1. **Where the notes live.** A job's own conversation (`job_notes`), the
+   words themselves; the text telling the customer of a reply is a message
+   like any other. Questions from a customer's account come later.
+2. **Needs a reply** while the customer's note is the newest; a staff reply
+   clears it (the drawn "Send reply" then "Sent to Maya by text"). No
+   separate "No reply needed".
+3. **Staff names to the customer** only with "Show who signed off to
+   customers" on, as quotes (Jack, 22 Oct); otherwise the shop's name.
+4. **Up to 1,000 letters** a note; otherwise "Write a note of up to 1,000
+   letters."
+5. **The reply's own full stop** goes before the drawn ". Replies to this
+   number aren’t read…", so the text never reads "check it..".
+6. **Reply from the shop** is listed in Settings › Messages with the other
+   messages, in its drawn wording (ac-reply-text).
+7. **Migration 061.**
+8. **Notes at any stage the page is open** (fresh review). Decision 3 says
+   "a job's page"; the drawing shows the box on the in-the-shop page. The
+   server takes a note whenever the booking link works; the customer's card
+   is placed as drawn. A closed page (30 days after collection, or a
+   booking that never came in) takes none.
+9. **A reply on a job whose page has closed** is saved, and no text goes
+   ("Maya Patel’s booking page has closed, so no text went."): it would
+   carry a link that doesn't work.
+10. **Before real sending is switched on:** every message with a link issues
+    the customer a new one and the old stops working (one link per job). A
+    conversation would do that on every reply. To settle before real
+    sending: keep more than one live link per job, or reuse the one they
+    have. Pretend sending issues none, so nothing breaks today.
+11. **A reply ending "?" or "!"** reads "…come in?. Replies to this
+    number…": only a full stop is taken off. Left as is.
+12. **For the customer's card:** the booking link's guess limit (30 a
+    quarter hour) counts every read, so the card mustn't re-read the thread
+    on a timer.
+
+### 22 Oct 2026: the Notes with the shop card (`openspec/changes/notes-card`)
+
+1. **On the in-the-shop, ready and collected pages** (fresh review). Drawn on
+   the in-the-shop page; the recorded decisions (collect-and-pay review;
+   drop-off review decision 7, H4) put "Add a note for the shop" on the ready
+   page too, and a staff reply's text links the customer back to their page.
+   On ready and collected it sits after What we did and the checklist.
+2. **"Let you know", not "text you".** The drawing's "we’ll text you" is
+   Maya's choice; a customer may have chosen email or WhatsApp, and nothing
+   is really sent yet. Pattern: nothing said that isn't true (cancel, item 2).
+   "We’ll reply here and let you know when we do." / "Sent. [Shop] will reply
+   here, and we’ll let you know when they do."
+3. **Read once.** No re-reading on a timer or on focus: every read counts
+   against the booking link's guess limit. A read that fails says
+   "Wheelhouse couldn’t load your notes." with Try again.
+4. **Bubbles as drawn:** yours light with a border on the right, the shop's
+   on the panel on the left.
+
+### 22 Oct 2026: the staff Messages inbox (`openspec/changes/messages-inbox`)
+
+1. **No "Customer page" link yet.** Drawn beside Open the job; the Customers
+   page isn't built, so it would open a placeholder. Added with Customers.
+2. **The hint before sending** says "Goes to Maya the way they chose, with a
+   link to reply on the job’s page." The drawing shows "Sent to Maya by
+   text…" under the box before sending; that line is now said after
+   sending, with the way it really went (text, email or WhatsApp), or why
+   no text went ("Saved on the job, but no text went: …").
+3. **Read again every 30 seconds** while Messages is open: there are no live
+   updates between devices yet (WP-1.9).
+4. **The open conversation is in the address** (`?job=`), so Back works and
+   a link can open one.
+5. **"You (Jo Taylor)"** for your own replies, as drawn; another member of
+   staff's by their name.
+6. **A reply half typed is kept** per conversation while Messages is open
+   (fresh review), so checking another one doesn't lose it.
+7. **After sending, the drawn bar**: green with a tick when the text went;
+   amber, "Saved on the job, but no text went: [why]", when it didn't (the
+   drawing has only the green one).
+8. **A conversation that won't load**, or a job that's gone, says
+   "Wheelhouse couldn’t load this conversation." with Try again, and offers
+   no reply box.
+
+### 22 Oct 2026: "Add a note for the shop" from the quote (`openspec/changes/quote-note-button`)
+
+1. **The button goes to the Notes with the shop box on the same page, cursor
+   in it** (dq-quote, dq-in-shop). The mock-up sends it to the job's page
+   with its note box (ac-job-note); since #422 that box is a card on the
+   booking page itself, so the button moves to it rather than opening
+   anything new. With notes already there, the box is "Reply".
+2. **No button where the page has no notes card.** Before the bike is in,
+   the quote card says "Not sure? Call [shop phone]." as before: a button
+   that went nowhere would be a dead end. Pattern: the notes card's own
+   stages (notes-card, item 1).
+3. **The Ready to collect card's button (collect.mjs) isn't in this piece**;
+   the notes card is already under it on that page.
+
+### 22 Oct 2026: "No answer yet" after the quote reminder (`openspec/changes/quote-no-answer`)
+
+1. **Today isn't built yet, so its line waits for it.** When Today (WP-1.10)
+   is built, its list carries the drawn dq-today-no-answer line: "WH-1042 ·
+   Maya Patel — no answer to the quote yet", "Sent [time] · reminder sent
+   [time] · [phone]", and Record their answer. The job read already carries
+   what it needs (`quote.sentAt`, `quote.reminderSentAt`; the phone from the
+   customer).
+2. **In the diary, "No answer yet" is the job's word in place of "Quoting"**
+   (decision 4 names no other place). It shows where the diary already
+   shows the word: a wide block's line, the month view's day list, and what
+   a screen reader hears for every block and chip. The colour stays
+   Quoting's teal; a narrow week block, with no room for the word, looks as
+   before. Pattern: the New online mark's words (new-online-on-stacks).
+3. **The customer's number is on the job's page**, in the Today line's words
+   above Withdraw quote and Record their answer: "No answer to the quote
+   yet", "Sent Mon 5 Oct, 10:15 · reminder sent Tue 6 Oct, 10:15 ·
+   07700 900142" (a phone link). The job page's own stage still reads
+   Quoting.
+4. **Only the current quote's own reminder counts**, sent at or after that
+   quote was sent, and only while it waits: answering, withdrawing or a new
+   quote ends it. The same rule as the customer's "we sent a reminder"
+   (quote-reminder).
+
+### 23 Oct 2026: automatic updates of the hosted copy (`openspec/changes/add-hosted-copy` task 3.4, Mark's design Decision 3)
+
+1. **The health check gets 5 minutes** to show the new commit before the
+   update counts as failed and the version before is started again (the
+   design's `[n]`). Starting the app and running a migration take well under
+   that on the test copy; task 3.5 measures the real time.
+2. **The deploy key can only run the update script.** Root's
+   `authorized_keys` ties it to `/opt/wheelhouse/deploy.sh` with
+   `restrict,command=…`, so it can't open a shell, and the script accepts
+   only `deploy <full commit>` or `rollback` and starts only this
+   repository's images. The design says the key "is used for nothing else";
+   this makes the server enforce it.
+3. **The setup script hands GitHub its settings** (with `gh`): the deploy
+   key as a secret, and the server's address, web address and host key as
+   repository variables, so Jack doesn't copy keys by hand. The host key is
+   read from the server over the setup script's own login.
+4. **The version before is put back only when the new one went on.** A
+   failed download changes nothing on the server, so the workflow doesn't
+   roll back after it (it would replace a working version with an older
+   one). A new version that won't start is swapped back by the script
+   itself.
+5. **The first automatic update fails once, by design**, until Jack has run
+   the setup script and made the package public: the package only exists
+   after the first push. The runbook's "Automatic updates" says so.
+
+### 23 Oct 2026: the quote's pinned answer bar (`openspec/changes/quote-pinned-bar`, `dq-quote`)
+
+1. **"Tablet or phone" means a touch screen, or a window narrower than a
+   computer's** (`(pointer: coarse)` or under 1024px wide). The drawings
+   tell desktop from tablet by device: the tablet board is 1180 wide and
+   still has the bar. *Pattern:* the diary reads touch screens and "narrower
+   than a computer" the same way (`diary-page.tsx`, `diary-bits.tsx`).
+2. **A failed send's message shows in the bar**, above the button, where the
+   customer tapped, and the room kept under the bar grows to fit it.
+   *Pattern:* the quote card's own message beside its button.
+3. **With the bar pinned, only the bar announces the new total** to screen
+   readers, so a tick isn't read out twice; the quote's own "New total" line
+   stays on screen, as drawn.
+4. **No deposit in the bar yet.** The drawn "· deposit £[deposit] paid"
+   (`dq-quote-deposit`) comes with deposits, which aren't built.
+5. **The bar looks like the booking page's own pinned area**: a full-width
+   strip with a top border, the total and the line above a full-width
+   button. The drawing's `quoteBar` is a rounded box with a dark border and
+   the button beside the text on a tablet. *Pattern:* decision 8's "as 'Your
+   booking' does on the booking page", which is that strip
+   (`data-book-pinned` in `frame.tsx`).
+6. **The room kept under the bar is the bar's measured height**, so a
+   longer message never covers the end of the page.
+
+### 23 Oct 2026: photos lose their location when uploaded (`openspec/changes/photo-location-data`, CX-2)
+
+No screen: server only.
+
+1. **Every hidden detail goes, not only the location**: the time taken, the
+   camera or phone (make, model, serial number) and any embedded text too.
+   Nothing in Wheelhouse reads them, and they say as much about a customer as
+   the place does. *Pattern:* CX-2's purpose, privacy.
+2. **What a photo needs to look right stays**: which way up it goes (a phone
+   saves an upright photo turned and says so) and its colour profile. The
+   picture itself is copied byte for byte, never recompressed.
+3. **Nothing after the picture's end is kept**, such as the short video some
+   phones add to a photo ("motion photos"), which can carry its own location.
+4. **A picture too damaged to clean is refused** rather than saved with its
+   details: a booking photo gets "A photo could not be read — please try
+   adding it again" (the existing words); a staff attachment gets "That
+   picture couldn’t be read. Try adding it again." A file that isn't a JPEG,
+   PNG or WebP picture is saved as it was sent, as before.
+5. **iPhone HEIC pictures aren't cleaned yet.** Customers can't send them (the
+   booking page takes JPEG, PNG and WebP, and iPhones convert to JPEG for
+   it), nor can quote lines; only the job page's "Add file or photo" can
+   save one, usually a photo taken in the shop. **Jack, 23 Oct: leave HEIC
+   out**: "if iPhone converts photos automatically then it's fine, as long as
+   iPhone users can upload photos." Safari converts a picked photo to the
+   first type the button accepts (JPEG for both photo buttons), per WebKit's
+   bug tracker; not yet tried on a real iPhone.
+
+### 23 Oct 2026: Use my phone, the screens (`openspec/changes/use-my-phone`, `job-photo-choice` to `phone-photo-expired`)
+
+1. **A code that runs out on the computer** (not drawn): the pop-up says
+   "This code has expired." and "Make a new one to try again.", with Close
+   and "Make a new code". *Pattern:* the phone's own expired page, which
+   sends you back to the computer for a new one.
+2. **"Making the code…"** shows for the moment before the code arrives.
+   *Pattern:* the screens' other "Loading…" lines.
+3. **The address under the code is the full one**, in the code font (the
+   drawing's `[link]`), so it can be typed exactly as shown.
+4. **The phone refuses a photo over 10 MB, or a file that isn't a photo,
+   before sending**, in the booking page's words ("pads.jpg is over 10 MB.").
+   *Pattern:* the booking page's photo picker, with the same limit.
+5. **If the phone can't reach the shop**, it says "We couldn’t open this
+   code" with Try again. *Pattern:* the booking page's failed loads.
+6. **The QR code is drawn with `qrcode-generator`**, a small library with
+   nothing else of its own, rather than `qrcode`, which brings a
+   command-line tool and a PNG library the app doesn't need.
+7. **Cancel, Close or Escape switch the code off** at once (a staff route,
+   `DELETE /api/workshop-jobs/:id/quote-photo-codes/:codeId`), and however
+   the pop-up closes the quote is read again, so a photo can't arrive unseen
+   and a later save can't take it off the line (fresh review). Closing once
+   the photo has come is the same as Done.
+8. **If the code can't be made**, the pop-up offers Try again. *Pattern:*
+   the screens' failed loads.
+
+### 23 Oct 2026: Today (`openspec/changes/today-page`, `op-today` and `op-today-staff`)
+
+1. **A drop-off still to arrive has Book in beside "Drop-off"**, where the
+   drawing shows "Drop-off" alone. *Pattern:* the Workshop Overview, where a
+   drop-off is due all day, so the two pages agree (design decision 4).
+2. **The date line has no town** ("North Street Cycles, Bolton" in the
+   drawing): Wheelhouse doesn't record a shop's town yet, so the line is the
+   day, the shop's name and its hours.
+3. **The hours are today's opening hours from Settings**; on a day the shop
+   is closed the "open [opens]–[closes]" part is left out rather than made up.
+4. **Who's in and Tills are left out** until check-ins and the till's float
+   exist (WP-1.7; Jack, 23 Oct, "1"). Staff see Workshop today alone.
+5. **No "Seen" on the lines yet**: the two kinds built (a quote with no
+   answer, messages needing a reply) go by themselves once the quote is
+   answered or the message replied to; "Seen" comes with the kinds that need it.
+6. **Needs attention reads again every minute** and when the window comes
+   back, until live updates (WP-1.9). *Pattern:* the diary's refresh.
+7. **"Every bike booked for today is in."** when Still to arrive is empty,
+   and "Loading…" while the jobs come. *Pattern:* the Overview's empty and
+   loading lines.
+8. **The lines' buttons are links** (Record their answer opens the job in
+   the diary, Open Messages opens Messages), drawn as buttons, so they can be
+   opened in a new tab. *Pattern:* the Overview's "Open job".
+9. **A message waiting since an earlier day shows the day too** ("oldest
+   from Maya Patel at Tue 20 Oct, 16:20"); today's shows the time alone, as
+   drawn (fresh review). *Pattern:* the quote line's "Sent Mon 19 Oct, 10:15".
+10. **A quote on a cancelled, declined or expired booking isn't listed**,
+    since nothing on Today could clear it (fresh review).
+
+### 23 Oct 2026: the bike on Waiting cards (`openspec/changes/waiting-bike`, `diary`)
+
+1. **A request with no bike has no bike line**, rather than "No bike" or
+   "Bike"; the card is its label, the customer and the detail, as before.
+   *Pattern:* the bike tag, which leaves the line out.
+2. **The computer's Waiting column shows the bike too**, not only the tablet
+   and phone cards: the drawing's desktop card has the same line
+   (`waitingCard` in `diary.mjs`).
+
+### 23 Oct 2026: a bike left uncollected, the server (`openspec/changes/uncollected-bike`, `cp-setting`, `cp-today-uncollected`)
+
+1. **New shops start at 3 days for the reminder and 7 for Today** (the
+   drawing shows `[n]`). 7 follows the build plan's flag for uncollected
+   online orders (Q8, `2026-10-03-build-plan-questions.md`); 3 comes before
+   it. The reminder can be 1–60 days, Today 2–90, and longer than the
+   reminder.
+2. **One reminder**, as buy online decision 7 says of uncollected bikes.
+3. **It follows Bike ready**: switched off, undone in its minute, or with no
+   way to reach the customer, no Bike still waiting either. *Pattern:* the
+   quote reminder, which only follows a quote that went.
+4. **What's left to pay is worked out again when it goes**, so a payment or
+   a changed bill in the days between is right; a paid bike is reminded with
+   "Paid — nothing more to pay", as drawn.
+5. **Contacted records who and when and takes the line off Today**; marked
+   ready again (after reopening), it counts afresh. The decision says what
+   the line shows and that it goes at hand-over, not what Contacted does.
+6. **The email subject is "Your bike is still waiting — [Shop name]"** (not
+   drawn). *Pattern:* Bike ready's "Your bike is ready — [Shop name]".
+7. **Owner only, until roles**, as the rest of Needs attention (the hint
+   says "for owners and managers").
+
+### 23 Oct 2026: a bike left uncollected, the screens (`openspec/changes/uncollected-bike`, `cp-setting`, `cp-today-uncollected`)
+
+1. **Leaving either day box saves both as they read**, so raising the
+   reminder past Today's count works by raising Today next; a refused save
+   keeps what was typed and says why (server review). *Pattern:* the other
+   number boxes, which save when left.
+2. **The fold's summary is "Reminder after 3 days"**, without the drawing's
+   "· hand-back reminders off", since that switch isn't built.
+3. **"edit it in Messages" opens Front desk with Automatic messages open**
+   (`?fold=`, new: a link can name the fold to open).
+4. **Settings › Messages says the shop's days** ("When a ready bike isn’t
+   collected after 3 days"), and its edit box adds "— set in Settings ›
+   Workshop › Collection", as drawn.
+5. **Today's line leaves out "reminder sent" until it has gone**, and the
+   bike when the job has none.
+6. **Months are three letters** ("Sep"), as drawn and as the server's
+   messages say them: the browser's British dates say "Sept", which the
+   quote's "Sent …" line also showed in September.
+
+### 23 Oct 2026: Your settings › Accessibility, first part (`openspec/changes/your-settings-accessibility`, `your-settings`)
+
+1. **Saved in a table of its own, per login** (`login_preferences`), as Jack
+   decided (23 Oct, answer 1); every switch is off until turned on.
+2. **The pop-up opens at `/workshop/your-settings`**, where your name already
+   linked, over an empty frame rather than over the page you were on;
+   Close or Escape goes back to that page (the desk when opened directly).
+   The drawing shows it over the diary.
+3. **Only the switches built show**: Reduce motion now. Show status
+   symbols, Don't close things by themselves, Folded sidebar and Larger
+   text come with what they act on; the Till PIN with PINs; Show graphs with
+   reports. With no Till column, the pop-up is one column (560px) on a
+   computer, the whole screen on a phone.
+4. **Larger text is held back, a question for Jack.** It was built as a zoom
+   of the whole app by 17/14 (text is set in pixels) and taken out after the
+   review: checked in a browser, a zoomed page put the diary's drops about a
+   fifth too far down and pop-ups beside a block off their marks.
+5. **Reduce motion stops every animation and transition**, as the
+   computer's own setting does, and the diary's hover card opens at once
+   with either.
+
+### 23 Oct 2026: Show status symbols (`openspec/changes/status-symbols`, `your-settings`, the diary's blocks)
+
+1. **Where the drawing puts them**: narrow week blocks and every request,
+   and the legend's swatches; not day view or a phone, which spell the
+   status out.
+2. **An offered time has no shape**: the drawing gives it none.
+3. **A tablet's week shows them too**, though the drawing's tablet blocks
+   (touchJobBlock) have none: its week columns are as narrow as a computer's,
+   and the switch is there for anyone who can't tell the colours apart.
+   A phone's job blocks don't (review), as drawn; its requests do.
+
+### 23 Oct 2026: emailing a receipt, the email side (`openspec/changes/receipt-email`, `cp-receipt-email`, `cp-receipt-address`)
+
+1. **The subject is "Your receipt — [Shop name]"** (not drawn). *Pattern:*
+   "Your bike is ready — [Shop name]".
+2. **As the printed receipt**: "Sale [n]", no VAT line and no "(includes
+   VAT)" until the sale records VAT; "Paid by card" and "Paid by cash", the
+   printed receipt's words, for the drawing's payment line; the shop's own
+   words at the bottom when it has them.
+3. **The footer says "give the sale number"** for the drawing's "receipt
+   number", until receipts have numbers of their own; "Questions? Call
+   [shop phone]." only when the shop has a phone.
+4. **A receipt goes to the address typed, the customer's way aside**, and is
+   kept with the sale's customer when it has one, so it shows in their
+   history later; with no customer it goes all the same.
+5. **Nothing is saved to the customer from here** (review answer 3: "for
+   this receipt only"); Save to a customer record comes with the till's pop-up.
+
+### 23 Oct 2026: Folded sidebar (`openspec/changes/folded-sidebar`, `foldedRail`, `your-settings`)
+
+1. **The keyboard opens it with Unfold, not by moving into the rail** (the
+   drawing opens on focus): opening on focus put it straight back open after
+   Escape, so a keyboard user couldn't close it.
+2. **After Fold or Escape, resting the pointer doesn't reopen it** until the
+   pointer has left the rail, so Escape works with the mouse over it.
+3. **A tablet's rail has Unfold too**, as its drawn hint says ("tap Unfold
+   to open it").
+4. **The panel over the page has the rooms, the shop and your name, without
+   the drawn shop switcher**, which comes with more than one shop.
+5. **Tapping or clicking the page beside it folds it** (not drawn; review),
+   as the phone menu's dimmed page does, so a tablet isn't left half covered.
+
+### 24 Oct 2026: the header search (`openspec/changes/header-search`, `staff-search`)
+
+1. **Results are links, not a list of options** (the later `staff-search`
+   drawing, 3 Oct: "a labelled list of rows, not a listbox"); the older
+   `cs-search-c2w` drew a listbox with the first row chosen.
+2. **"Search jobs and customers"** in the box until orders and products are
+   found too (drawn: "Search jobs, customers, orders, products").
+3. **A job row reads "Trek Domane AL 3 · Standard service · Expected · Thu 17
+   Sep"**: its stage and day (walk-through 9 H1); "approved £…" waits until
+   quote totals are read here. **A customer row reads "Customer · [phone]"**.
+4. **Five of each, two characters at least, a pause of 250 ms**; a job is found
+   by its number, its customer's name or phone (however it's spaced), or its
+   bike; a customer by name, phone or email; requests not yet confirmed are
+   found, removed customers aren't. A postcode comes with Customers' address.
+5. **"Nothing matches “[what was typed]”"** when nothing is found (the till's
+   words), said on screen and to screen readers; groups with nothing are left
+   out rather than drawn empty.
+6. **Escape clears the box on a computer**; on a tablet or phone it shuts the
+   search, as Close search does, and the focus goes back to the search button.
+7. **The sheet over the page holds the keyboard** (Tab goes round it) and
+   tapping the page shuts it, on a tablet as on a phone (review).
+8. **"Wheelhouse couldn’t search just now. Try again in a moment."** when a
+   search fails (not drawn), as the screens' other failed loads say.
+
+### 24 Oct 2026: Customers, the list and Add a customer (`openspec/changes/customers-list`, `cs-list`, `cs-add`, `cs-add-match`)
+
+1. **Recent** is the latest of a customer's own change, their newest job and
+   their newest sale; 25 of them. "No customers yet." when there are none.
+2. **The match is by the same phone number (whatever its spaces) or the same
+   email**, not by name: many people share a name, and the header search
+   finds them. It says "already has this number" or "already has this email
+   address", with their phone and bike.
+3. **"A phone number or an email — at least one"** is checked in the pop-up,
+   with "Add their name." for a missing name; the server's add stays as the
+   booking page and the old app use it.
+4. **Group appears only when the shop has groups** (set up with WP-5.1).
+5. **Left out until built:** a company or club (its VAT invoice waits on the
+   accountant), the "Owes" chip (money in pence), Privacy requests.
+6. **Adding opens the new customer's page**, as "Use [name]" opens theirs.
+
+### 24 Oct 2026: a customer's page and Edit (`openspec/changes/customer-page`, `cs-page`, `cs-page-new`, `cs-edit`)
+
+1. **History rows**: a job shows its number, the work, its day and mechanic and
+   its stage, and opens in the diary; a sale shows "Sale [n]", its day, what was
+   bought and its total; a message shows "Text" or "Email", its name and where
+   it went. Sales and messages don't open anything until their pages exist.
+2. **Eight rows, then "Show all ([n])"**; the filters show only their kind.
+3. **A cancelled job reads "Cancelled"** and a collected one "Collected" in the
+   history, beside the diary's stage words for the rest.
+4. **Offers show On or Off on the page**, changed in Edit, not with a switch
+   on the page (the drawing shows the switch): a customer's yes or no is
+   changed deliberately, with Save changes.
+5. **Bikes are listed without their own pages or "+ Add" yet** (the bike's
+   page is next), with their colour when they have one; "No bikes yet."
+6. **New job opens the diary's New job with them chosen** (`?customer=`), at a
+   time to enter, as an order does.
+7. **Left out until built**: "Owes", the account and store credit (money in
+   pence), warranty (needs "bought here"), refunds and credit changes in the
+   history.
+8. **A job never booked in, whose day has gone, isn't "Open now"** (a no-show;
+   review), though it still shows under Earlier with its stage.
+9. **Edit leaves a customer's groups as they are unless the group is changed**
+   there, so someone in two groups (the old app allows it) keeps both (review).
+10. **A UK number matches however it's written**: +44 7700 900142, 0044 … and
+    07700 900142 are the same (review).
+
+### 24 Oct 2026: possible duplicates and Merge (`openspec/changes/customer-merge`, `cs-page-dup`, `cs-merge`)
+
+1. **The page you're on is the customer kept**; for each field that differs
+   (name, phone, email, address with postcode, note) its value is chosen to
+   start, and the other's can be picked instead.
+2. **Both with an online account can't be merged yet**, with that reason; one
+   with an account moves it to the kept record. (Which sign-in survives isn't
+   decided.)
+3. **The kept record keeps its own "Happy to hear about offers"**, not the
+   other's: a yes or no is the customer's, given on that record.
+4. **"Merged with [name] on [day] · can be undone until [day]"** with "Undo
+   the merge", at the top of the kept page (not drawn; its place is "from the
+   customer's page"), in the duplicate notice's style.
+5. **Removed for good after 30 days** when merges are next read or undone, not
+   on a timer; anything that has come to point at it since (a till sale synced
+   late) moves to the kept record first.
+6. **"Added on [day] and [day]."** before the 30-day note, without the
+   drawing's "on different tills" (where each was added isn't recorded).
+7. **Duplicates are found by phone or email, not by name.**
+8. **Undo is refused once the kept record has itself been merged** into
+   another, saying to undo that one first; undoing in order keeps every job
+   and sale on one record.
+9. **A name or email differing only in capitals is offered as a choice**, so
+   the spelling kept is the one picked.
+10. **Undo puts back only what the merge changed, and only where nobody has
+    changed it since**: a correction made after the merge stays.
+11. **Undo goes newest first**: an older merge into the same record waits
+    until a later one is undone. Undo also says so when the kept record has
+    been switched off.
+12. **A hidden record comes back only through Undo**, not by switching it on.
+13. **A till that was offline finds the kept record**: its sales for the
+    merged-away customer go to the one kept, and that customer sent again
+    isn't made a second time, before and after the 30 days.
+
+### 24 Oct 2026: the shop's deposit settings (`openspec/changes/deposit-settings`, `bk-settings-deposits`)
+
+1. **The rows under "Take a deposit when booking" show only while it's on**
+   (not drawn off), as "Drop off before the booking" shows only for set times.
+2. **Deposits can be switched on before "How much" is filled in**, since its
+   row only shows once they're on; until it is, no deposit is taken and the
+   fold says "no deposit".
+3. **A deposit is never more than the price shown**, for a fixed amount too:
+   a £20 deposit on a £12.50 booking takes £12.50. A free booking takes none.
+4. **"How much" is a whole percentage** (1 to 100), and amounts are typed in
+   pounds and pence, from £0.01 to £10,000.
+5. **Deposits only switch on while a payment provider is connected** (the
+   website settings' "booking deposits are off, until you connect [payment
+   provider]"); until a real account exists that is the pretend one, and
+   only where it's asked for (`PAYMENTS_PROVIDER=pretend`: the tests, a
+   developer's computer, the hosted test copy), never by a shop running for
+   real (review).
+6. **"For: Every booking / Chosen services" waits for the service editor**,
+   which the new app doesn't have yet; until then every booking takes it.
+7. **The note about declining shows only while automatic confirming is off**,
+   as its own words say ("With automatic confirming off, …").
+
+### 24 Oct 2026: paying a booking's deposit, the server (`openspec/changes/deposit-payments`, `bk-details-deposit`, `bk-checking-payment`)
+
+1. **The card is held when the customer pays, and the money taken only once
+   the booking is saved** (Stripe's held card payments). A booking that can't
+   be saved, say the time went, lets the hold go, so nothing is taken and
+   there's nothing to refund.
+2. **The deposit is worked out by the server on the stored prices**, never
+   from the booking page, and checked again as the booking is saved: if it
+   has changed meanwhile, the customer is asked to pay it again.
+3. **The pretend provider answers as Stripe's test cards**: 4242 4242 4242
+   4242 is accepted, 4000 0000 0000 0002 is declined, anything else is "Check
+   the card number". Its card form exists only while it's the provider.
+4. **"Free to cancel until" is worked out at booking and kept on it**: the
+   booked start less the shop's hours, in the shop's time zone; for a
+   whole-day booking, from the start of the day.
+5. **A hold with no booking an hour later is let go**, and a deposit the
+   provider couldn't take as the booking was saved is taken, the next time
+   deposits are held or booked (no timer yet) (review).
+
+### 24 Oct 2026: paying the deposit on the booking page (`openspec/changes/deposit-pay-screen`, `bk-details-deposit`, `bk-card-failed`, `bk-checking-payment`)
+
+1. **The pretend card form is one "Card number" box** in the drawn card
+   form's place, saying plainly that payments are pretend while Wheelhouse is
+   being built, nothing is taken, and which test numbers pay or decline.
+2. **Pressing Pay with no card number says "Enter the card number"** and pays
+   nothing, as the other boxes say what's missing.
+3. **Once the deposit is paid, the button reads "Send request"** ("Book" when
+   the shop confirms automatically), with "Paid. It's held until your booking
+   is sent." in place of the card box, so a retry or a refresh never pays
+   twice. The drawings don't show this state.
+4. **A declined card can be tried again on the same payment**, as Stripe
+   allows: typing another number and pressing Try again pays with it.
+5. **"Free to cancel until" on step 4 is worked out in the shop's clock** from
+   the booked time less the shop's hours, as the booking shows times; the
+   booking itself keeps the exact moment.
+6. **If the deposit can't be got ready** (no connection as step 4 opens), the
+   page says "We couldn't get the deposit ready - please check your
+   connection and try again" and its button reads Try again, sending nothing
+   (review).
+7. **A hold let go meanwhile** (an hour on, or a refused booking) is asked
+   for again, saying "The deposit needs paying again — please press Pay."
+   (review).
+
+### 24 Oct 2026: the deposit on the booking page (`openspec/changes/deposit-booking-page`, `bookingLines`, `bk-request-deposit`)
+
+1. **"Deposit paid" and "Free to cancel until" sit after When, before Your
+   repair**, the drawing's order; the built page has no Extra work row there.
+2. **The request's sentence joins the built page's own**: "Please wait for
+   the shop to confirm … Check this page to see when it does. If we can't
+   fit you in, your deposit comes back in full."
+3. **Shown while the booking stands**; a cancelled or declined booking's
+   deposit words come with refunds (part 3).
+
+### 24 Oct 2026: refunding the deposit, the server (`openspec/changes/deposit-refunds`, `bk-cancel`, `bk-cancel-late`, `bk-declined`, `bk-staff-decline`)
+
+1. **The shop cancelling a booking refunds the deposit automatically**, as
+   declining and an expired request do: the customer was told it comes back
+   in full if the shop can't fit them in. The decisions only cover declining.
+2. **A late cancel needs the customer's own choice**: a cancel sent after the
+   cut-off without "Cancel and lose the deposit" is refused, so a page left
+   open from before the cut-off can't lose the deposit unawares.
+3. **A refund owed is recorded with the cancel or decline**, then made, so a
+   refund the provider can't make at once is made later, never lost; the
+   booking page counts it as on its way back.
+4. **The cut-off is judged by the server's clock**, as every other time rule.
+5. **A moved booking's "Free to cancel until" moves with it**: the same hours
+   before its new start, in the shop's time, however it was moved (review).
+6. ~~A request the shop hasn't confirmed yet, cancelled after the cut-off,
+   keeps the deposit.~~ **Overruled by Jack, 24 Oct**: a request the shop
+   hasn't confirmed always gets its deposit back
+   (`docs/decisions/2026-10-24-request-deposit-refund.md`).
+
+### 24 Oct 2026: the deposit on the customer's pages (`openspec/changes/deposit-refund-pages`, `bk-cancel`, `bk-cancel-late`, `bk-cancelled`, `bk-declined`)
+
+1. **Past the cut-off, "Free to cancel until" isn't shown** on the booking
+   page, so it never reads as still free; the cancel pop-up says it instead.
+2. **The late pop-up names the shop's number when the shop has one**, else
+   says "call the shop".
+3. **The green "will be refunded" note uses the page's "Booking confirmed"
+   colours**; there's no separate success colour.
+
+### 24 Oct 2026: the diary job's deposit, the server (`openspec/changes/deposit-diary-server`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is a mark on the job, not a new booking state**: who and
+   when; the booking otherwise stays as it was, and Undo clears the mark.
+2. **Any signed-in member of staff can refund a deposit by hand**, as other
+   job actions; the job shows who did it. The reason is needed, up to 200
+   characters, and the whole deposit goes back (the drawing has no part
+   amount).
+3. **A deposit is "kept" once taken and the booking was cancelled late or
+   marked Didn't come**; refunding it by hand afterwards makes it
+   "refunded".
+4. **Booking the bike in after all clears "Didn't come"**, and the deposit is
+   then simply paid, as for any booking (review).
+
+### 24 Oct 2026: requests and the cut-off (`openspec/changes/deposit-request-refund`)
+
+1. **A booking confirmed at once by automatic confirming keeps its own
+   cut-off**, without Jack's 1-hour window: it isn't a request, and the
+   customer saw "Free to cancel until" when booking.
+
+### 24 Oct 2026: the diary job's deposit, the job pop-up (`openspec/changes/deposit-diary-screen`, `bk-staff-deposit…`, `bk-staff-no-show…`)
+
+1. **"Didn't come" is offered once the booked day has gone by the shop
+   computer's own date**, as the diary reads today.
+2. **The Undo bar after "Didn't come" stays until the job is closed**, as
+   answer 9 has nothing close by itself; the drawing's note said "for a few
+   minutes".
+3. **Opened again later, a job marked Didn't come offers Book in** (the bike
+   came after all, which clears the mark), not Put on hold.
+4. **"Not come in" shows on any booking whose day has gone with the bike not
+   in**, with or without a deposit; the deposit line shows only when it took one.
+5. **The Undo on the "Marked Didn't come" bar is underlined text**, as the
+   job's "Bike ready" Undo already is, rather than the drawing's lighter
+   button: the colours stay the app's own named ones.
+
+### 24 Oct 2026: Larger text (`openspec/changes/larger-text`, `ys-text`)
+
+1. **Every text size is on one scale, 14 to 17 with Larger text on**, the
+   same step for every size; the registry's controls too, so the app's copies
+   still match them.
+2. **The diary's hour column grows by the same step**, so its times aren't cut
+   off; the days are then a few pixels narrower. Blocks keep their place down
+   the day and their height.
+3. **The page's own heading grows with the text**, so the diary starts a
+   little lower on the page; nothing inside it moves.
+4. **The preview's two lines stay at 14 and 17** whichever is on, so it always
+   shows the difference.
+
+### 24 Oct 2026: Don't close things by themselves, the screens (`openspec/changes/dont-close-screens`, `ys-wait`, `job-finished-wait`, `job-finished-sent`, `till-receipt-wait`)
+
+1. **A held Bike ready shows again when the job is opened again.** The
+   drawings show the strip just after marking the job ready. Without this,
+   closing the pop-up first would leave Bike ready waiting with no Send now
+   anywhere. The strip comes from the job's messages, and anyone who opens the
+   job can press Send now or Undo.
+2. **The sent line lasts while the pop-up is open**, as the minute's strip
+   does; when the job is opened again, Messages still shows that it went.
+3. **The job's Messages says a held Bike ready "waits until you press Send
+   now"**, beside its Waiting label (pattern: "goes at 10:15"). It isn't
+   checked every few seconds the way a message in its minute is.
+4. **The till's switch is the signed-in person's**, as all of Your settings
+   is until PINs; the cashier picked on the till doesn't change it.
+
+### 24 Oct 2026: the test shop on the hosted copy (`openspec/changes/add-hosted-copy`, tasks 3.6a and 5.1)
+
+1. **The test shop's four grouped services are bookable online**: Standard
+   service, Brake service, Gear adjustment and Safety check, the ones the
+   booking page draws (`book.mjs:48`, `:51`). Otherwise the online booking
+   page would offer nothing on the test copy. Gear service, which only the
+   diary's week uses, isn't. **Gap for later:** no screen lets a shop say
+   which services can be booked online. Only the settings API sets it, so a
+   shop that signs up can't take online bookings until that screen exists.
+   It needs a drawing.
+2. **The loader reads a snapshot of the drawings** (`scripts/dev/test-shop-drawings.json`),
+   kept exact by a test (pattern: the route-list snapshot), because the app's
+   image can't carry the 169 MB drawings folder.
+
+### 24 Oct 2026: a Done tick and a note on each line (`openspec/changes/line-done-notes`, `job-overview`, `job-mechanic`, `job-waiting-parts`, `job-finished`)
+
+The drawings show the Done and Note columns but not how they behave; each
+follows the job checklist, the closest pattern built.
+1. **Anyone signed in ticks or writes a note, and the latest change wins**;
+   who ticked isn't recorded (waits for PINs, WP-1.7).
+2. **Neither changes once the work is finished**, until it's reopened, with
+   "Reopen the work to change its Done ticks and notes." under the table.
+   The drawings show ticks on `job-finished`, as a picture of the state.
+3. **A note is added with "+ Add note"** and saved when its box is left; a
+   note already there is pressed to change it. Nothing is drawn for editing.
+4. **A line starts unticked**, even one approved on a quote. The drawings
+   draw approved lines ticked, but ticking is the mechanic saying the work is
+   done.
+5. **The phone keeps the existing table**, which scrolls sideways, rather than
+   the drawn row cards, which aren't built for any column yet.
+
+### 24 Oct 2026: the till's Email receipt button (`openspec/changes/till-email-receipt`, `till-receipt`, `cp-receipt-address`)
+
+1. **The row is Print · Email · No receipt.** The drawn Text button waits
+   for texting, which has nothing on the server yet.
+2. **"Save to a customer record" and its "Add a customer" pop-up come
+   later**, as a piece of their own; the till can't add a customer yet. With
+   no customer on the sale, the address is used for this receipt only, as the
+   decision says.
+3. **Sending, sent and a failure aren't drawn.** "Send receipt" reads
+   "Sending…" while it sends (pattern: the booking page's buttons). A
+   refusal shows in the pop-up in the server's words, and a bad address shows
+   under the box.
+4. **Once sent, the next sale starts**, as the drawing goes to the empty till.
+   With "Don't close things by themselves" on, Paid stays and says "Receipt
+   sent to [address]." (pattern: Print with the setting on).
+5. **Cancel lets the countdown carry on** from where it stopped.
+6. **The pop-up says "Sale [n]"**, not the drawn "B1-[0000]", as the printed
+   receipt does until the sale records a receipt number.
+7. **The browser's own email check is off**, so the drawn "That doesn't look
+   like an email address — check it" shows instead of the browser's pop-up.
+
+### 24 Oct 2026: a deposit paid online comes off at the till (`openspec/changes/till-online-deposit`, `till-job-balance`)
+
+1. **The deposit is recorded as its own payment, "Deposit paid online"**, as
+   the receipt drawing shows it (`collect.mjs:204`). The server works it out
+   from the payment record; anything the till claims is ignored.
+2. **Only a deposit taken counts.** A card only held isn't charged yet, and
+   a refunded, owed or kept deposit doesn't come off.
+3. **The line reads "[date] · online"**, where `till-job-balance` draws
+   "[date] · card" for a deposit taken at the till, which isn't built yet.
+   Total and Take payment show what's left, as the discounts already do.
+4. **A deposit larger than the bill** (work declined after booking) counts
+   up to the bill, and the till says "The deposit is more than the bill:
+   [£n] isn't paid back here yet." **Gap for later:** paying the difference
+   back needs a decision.
+5. **The day's takings** count the deposit once, in the sale, under its own
+   name. Nothing else counts the online payment.
+6. **A deposit card only held, never charged, is let go when the job is paid
+   in full at the till** ("Paid in full at the till"), so it can't be charged
+   on top later (review).
+7. **A refund pressed while the till takes payment waits its turn**, so a
+   deposit is never both counted and refunded (review).
+
+### 24 Oct 2026: Save to a customer record from the till (`openspec/changes/till-save-customer`, `cp-receipt-address`, `cp-receipt-address-save`)
+
+1. **The new customer isn't attached to the sale.** The decision doesn't say,
+   and nothing can attach a customer to a finished sale yet, so the sale stays
+   with no customer. Jack to overrule.
+2. **Closing Add a customer (Escape or outside it) counts as Not now**: the
+   receipt stays sent and no one is added.
+3. **A customer with the same email may already exist**; Add the customer
+   adds a new record anyway, as the customer form does, and Customers' Merge
+   joins them.
+
+### 24 Oct 2026: "You didn't finish booking" (`openspec/changes/booking-draft-resume`, `bk-resume`)
+
+1. **An unfinished booking is kept on the customer's device for 7 days**,
+   then thrown away. The decision says "coming back later" without a time.
+   7 days keeps a shared computer from holding someone's name and number for
+   long. Jack to overrule.
+2. **It comes back on the step it was left on**, as drawn, and only on a new
+   tab or visit: a refresh in the same tab carries on without the banner, as
+   it always has.
+3. **Photos aren't kept**, as before; the bike step already says they need
+   adding again.
+
+### 24 Oct 2026: workshop amounts in pence, the screens' totals (`openspec/changes/wp-1-6-sales-in-pence`, task 2.2; `job-quote`, `dq-quote`, `dq-in-shop`)
+
+1. **The job page's Proposed total comes from the server**, worked out from
+   the pence: the order, any booked service not on it yet, and the quote's
+   lines not on the order yet (waiting for an answer, or said yes to one at a
+   time before the whole answer adds them). For a draft that is the whole bill the
+   limit is checked against, as before. For a sent quote the screen used to
+   add only the order and the waiting lines, so a quote sent before the
+   booked service joined the order showed less than its draft had; it now
+   counts the booked service too, the same bill either way.
+2. **The customer's Approve total is added up in whole pence**: what was
+   agreed before (now sent in pence too) and each ticked line's pence, which
+   the server worked out. Their ticks change it as they go, so the server
+   can't send one figure for every choice; adding whole numbers is exact.
+3. **Work agreed's total on the booking page comes from the server**: its
+   lines' pence summed, none with prices hidden online, as each line's price
+   is hidden.
+4. **A price is under £1,000,000** (fresh review): the pence are whole
+   numbers that stop at £21,474,836.47, so a service's price, a quote line's
+   price or total, or a quote's lines together, of £1,000,000 or more is
+   refused in plain words rather than failing; no bike shop charges that. A quoted part needs a quantity of 1 or
+   more, so a part isn't quoted at £0.00 and then charged as one.
+
+### 25 Oct 2026: saying yes to service reminders when booking (`openspec/changes/reminder-consent`, `ac-book-remind`)
+
+1. **Not ticking isn't a "stop".** A customer who said yes before and books
+   again without ticking keeps their yes; "Stop these" and the account are
+   where it goes off (decision 6). The tick always starts unticked, as drawn.
+2. **The yes is kept with when and where** (booking or collection), so a
+   yes to being contacted can be shown later.
+
+### 25 Oct 2026: Settings › Workshop › Services, the list and the box (`openspec/changes/services-room`, `set-workshop-services`, `ac-service-edit`)
+
+1. **Edit and Remove always show**, as Checklists' rows do, rather than on
+   hover at a desk as drawn.
+2. **No "+ Add a group" and no handle to move services yet.** The groups
+   are the two kinds the app has, and the server lists services by name;
+   neither is drawn beyond its button. Both are for later.
+3. **"+ Add a service" opens the same box empty, titled "New service"**, in
+   the group chosen, with "Customers can book this online" on (not drawn;
+   as Checklists' "New checklist", and the walk-through's "on unless
+   switched off").
+4. **Remove doesn't ask first**, as Checklists' Remove doesn't. The service
+   is only switched off: it leaves the list and online booking, and past
+   jobs keep it. There is no way to bring one back on screen yet.
+5. **An empty price is refused** with the shop's own words ("A service
+   needs a price of zero or more"), rather than saved as £0.00.
+6. **This is where a shop now chooses which services can be booked online**,
+   the gap logged on 24 Oct, using the walk-through's line for the box.
+
+### 25 Oct 2026: when each service's reminder is due (`openspec/changes/service-reminder-months`, `ac-service-edit`, `ac-services`)
+
+1. **Months from 1 to 60, or empty for none.** 60 (five years) is a ceiling
+   chosen here to catch a slip of the keyboard; 0 is refused, as empty
+   already means no reminder.
+2. **The box's drawn line "The wording is in Settings › Messages › Service
+   reminder." waits** until that message exists, so it doesn't point at
+   nothing.
+
+### 25 Oct 2026: sending service reminders (`openspec/changes/service-reminder-send`, `ac-reminder-wording`, `set-msg-list`; Jack's answers 1 to 4 of `2026-10-25-morning-questions.md`)
+
+1. **The email's subject isn't drawn**: "Your [Bike] is due its [Service]
+   — [Shop name]", as the other messages' subjects read.
+2. **"Stop these: [link]." keeps the full stop** the drawn preview ends
+   with, after the shop's wording, on every reminder and in the preview.
+3. **Both links read "[link]" while sending is pretend**, as every pretend
+   message's do; the booking landing and the stop page are the next pieces.
+4. **A shop open no day of the week** sends on the due day at its usual
+   opening time; otherwise the first open day within a week.
+5. **A job with no bike keeps its own reminder** (one per bike can't match
+   it), and when it's due it is still checked for the customer's yes, the
+   message being on and the job still collected.
+6. **The shop removing a service's months** before it's due means the
+   reminder doesn't go, as no service names it any more.
+
+### 25 Oct 2026: "Stop these" for service reminders (`openspec/changes/stop-reminders`, `ac-stopped`, `ac-stopped-on`; Jack's answer 5)
+
+1. **The page that asks first isn't drawn**: "Stop service reminders?",
+   "We’ll stop sending you service reminders from [Shop name]. Job updates
+   about a bike that’s with us still come as usual.", and one button, "Stop
+   service reminders", laid out as the drawn stopped page.
+2. **A link that doesn't work** says "This link doesn’t work" and "Check you
+   opened the whole link from your message.", showing nothing about anyone,
+   as the photo step's spent code does.
+3. **The heading sits above the round tick**, as the booking pages' frame
+   and the photo step's finished page lay it out, rather than under it as
+   drawn.
+4. **The drawn "Sign in to your account" line waits** for the customer's
+   account (the emailed-code sign-in, WP-1.7).
+5. **A stop link never runs out** (a reminder can be months old) and can be
+   used again: stop, turn back on, stop. Stopping turns off service
+   reminders only; review requests will have their own stop.
+6. **The link is made when the reminder is set up and kept with it**, as
+   the timer that sends it has no web address to make one from; while
+   sending is pretend it reads "[link]", as every pretend link does.
+### 25 Oct 2026: the reminder tick on the in-shop ready page (`openspec/changes/ready-remind-tick`, `ac-collect-remind`, `cp-summary-said-yes`; Jack's answer 8)
+
+1. **It ends the "To pay when you collect" card, above a line**, as drawn in
+   the pay-online card; the paid card has none, as drawn.
+2. **Ticking saves at once**: the card has no button to send it with.
+   Unticking says no, the customer's own answer on this page (unlike not
+   ticking when booking).
+3. **The tick stays in front of the customer once ticked**, rather than
+   turning into the said-yes line under their finger; the said-yes line
+   shows the next time the page opens.
+4. **Change shows the tick, ticked, in place**; the drawing doesn't say
+   where Change goes.
+
+### 25 Oct 2026: merging two customers keeps a yes (`openspec/changes/merge-keeps-yes`; Jack's answer 9)
+
+1. **When and where the yes was given** come from the record whose yes to
+   service reminders it is, else the one whose yes to review requests it
+   is, the kept record first when both did.
+2. **A kept record that stopped reminders still becomes yes** if the other
+   record says yes, as the answer reads: a stop doesn't record when it
+   happened, so there's no telling which came later.
+3. **Undo puts the four answers back together or not at all**: once the
+   customer has changed any of them since the merge, they stay as they are,
+   so a yes never loses its date.
+
+### 25 Oct 2026: review requests, the message and when it goes (`openspec/changes/review-requests`, `ac-review-first`, `ac-review-setting`; decision 5)
+
+1. **The days start at 2**; the drawing shows "[n]". From 1 to 60.
+2. **It goes when the shop opens** on the day those days after collection
+   come round (or the next open day), as service reminders do (Jack's
+   answer 4).
+3. **Clearing the review page while review requests are on is refused**:
+   "Switch review requests off first."
+4. **The email's subject isn't drawn**: "Thanks for coming to [Shop name]".
+5. **The stop page for review requests isn't drawn**; it reads as service
+   reminders' does, with review requests' own name (audit M5): "Stop review
+   requests?", "Review requests stopped", "We won’t ask you for reviews any
+   more…", "Review requests are on again", "We’ll ask for a review after you
+   collect your bike…".
+6. **A review page must be a whole web address** starting http:// or
+   https://; anything else is refused with "Paste the whole link to your
+   review page, starting https://".
+
+### 25 Oct 2026: the review request's box in Settings › Messages (`openspec/changes/review-box`, `ac-review-first`, `ac-review-setting`)
+
+1. **The switch can go on once the page box has something in it**, typed
+   or saved; the drawn line ("Add your review page first, then switch this
+   on.") shows until then.
+2. **Clearing the page while it's on switches it off as it saves**, so the
+   shop never refuses the save.
+3. **A refusal shows the shop's own words**, in the box and from the
+   message's own On switch in the list ("Add your review page first, then
+   switch this on."), rather than "Wheelhouse couldn’t save that".
+4. **Only a text preview**, as drawn; the plain wording box also shows an
+   email preview.
+
+### 25 Oct 2026: a bike's own page (`openspec/changes/bike-page`, `cs-bike`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
+
+1. **The bike's Edit box isn't drawn**; it follows the customer page's Edit:
+   "Edit bike", "Nothing changes until you save", Make, Model, Colour, Frame
+   number and Note, Cancel and Save, the server's refusal shown in the box.
+2. **The Warranty block is left off** until a bike can be bought here:
+   nothing records a bike's purchase yet, so there is no date to show.
+3. **New job from a bike's page opens with that bike chosen** as well as its
+   owner, as New job from a customer's page opens with them.
+4. **The jobs list is "Jobs on this bike"**, split as the customer page's
+   history is: "Open now", then "Earlier, newest first", eight shown with
+   "Show all ([n])".
+
+### 25 Oct 2026: finding a bike in the header search (`openspec/changes/bike-search`, `staff-search`; Jack's answer of 15 Oct, not-drawn pages 7 and 8)
+
+1. **The Bikes group isn't drawn**; it comes after Customers, its rows as
+   theirs are: the bike's name, opening its page, with "[Owner] · [Colour] ·
+   [Frame number]" under it, leaving out what's blank.
+2. **The box is now named "Search jobs, customers and bikes"**, saying what it
+   finds so far, as it did before; the drawing's name lists orders and
+   products too, which join as they're built.
+3. **A bike is found by make and model or frame number, not by its owner's
+   name**: the owner is found under Customers. A removed bike, or a removed
+   customer's, isn't found.
+
+### 25 Oct 2026: customers sign in with a code sent by email, the server (`openspec/changes/customer-code-signin`, `cust-signin`, `cust-code`, `cust-code-expired`; signing-in decision 5)
+
+1. **A wrong code isn't drawn**; it reads as the drawn expired one does:
+   "That code isn’t right. Check it, or send a new one".
+2. **The fifth wrong try uses a code up**; after that it reads as expired,
+   with "send a new one".
+3. **A switched-off account is refused** once its code is right: "This
+   account can’t sign in. Ask the shop".
+4. **Too many asks or tries**: "Too many codes asked for. Wait a few minutes,
+   then try again" (5 per email, 10 per network, in 15 minutes) and "Too many
+   tries. Wait a few minutes, then try again" (30 checks per network).
+5. **With no sign-in provider connected** (until WorkOS is), asking for a code
+   says "Signing in by email isn’t switched on yet", as deposits stay off
+   with no payment provider.
+6. **A first sign-in makes a customer with no name**, only the email, as
+   password sign-up makes a new customer and never joins one the shop already
+   has. For Jack: these show on the Customers page with a blank name until
+   the account pages ask for one.
+
+### 25 Oct 2026: the sign-in screens (`openspec/changes/customer-signin-screens`, `cust-signin`, `cust-code`, `cust-code-expired`)
+
+1. **In the booking pages' frame, not the website's**: the shop's website
+   frame, with Account in its header, isn't built yet, so sign-in sits in the
+   frame the stop page uses (the shop's name at the top).
+2. **"Send a new code" says "We sent a new code to [email]"** and empties the
+   boxes; not drawn.
+3. **The keyboard lands on "Enter your code", not in the boxes**, as on every
+   booking page (d2: the frame puts focus on each new heading). For Jack: on a
+   phone that is one tap on the boxes before typing; putting the keyboard
+   straight in the boxes would change d2 for this page.
+4. **With no page to return to, or one that isn't this shop's own**, sign-in
+   goes on to the shop's booking page, `/book/[shop]`.
+
+### 25 Oct 2026: staff sign in through WorkOS, the server (`openspec/changes/staff-signin-workos`; signing-in decision 2; WorkOS only, Jack 25 Oct)
+
+1. **WorkOS's sign-in comes back to `/api/auth/workos/callback`**, and starts
+   at `/api/auth/workos/start`, not `/callback`: only `/api/` addresses
+   reach the sign-in routes. For Jack: WorkOS's Staging Redirects need these
+   two addresses (on `localhost:8080`).
+2. **A sign-in lands on the staff app, `/workshop`**, not the old app at
+   `/`, whose password box no longer works. Signing out goes to WorkOS's
+   sign-out and back, or to `/workshop`. **A failed sign-in goes back to the
+   staff app with its reason**:
+   `off` (nothing connected), `failed` (a link this browser didn't start, or
+   a code WorkOS refused), `unchecked` (WorkOS hasn't checked the email),
+   `not-on-staff` (no active person with that email, or the person is linked
+   to someone else: one answer for all), `busy` (10 tries per network in 15
+   minutes). The wording on screen comes with the screens change, following
+   `auth-signedout`.
+3. **The pretend WorkOS page** asks only for an email, with "WorkOS has
+   checked this email" ticked, for building and tests without the internet.
+   It never runs in production.
+4. **Password sign-in answers "Staff sign in through WorkOS now"**, the route
+   kept so the old app and the label printer helper get a clear answer.
+
+### 25 Oct 2026: the staff sign-in screens (`openspec/changes/staff-signin-workos-screens`, `auth-signedout`, `auth-expired`)
+
+1. **A failed sign-in's words** (not drawn), in the drawn frame, one button
+   each, following the customer sign-in's messages:
+   - "That email isn’t on a staff list": "Sign in with the email your shop
+     has for you, or ask the shop’s owner to add you." · Sign in again
+   - "Check your email first": "WorkOS sent you an email to check it’s yours.
+     Open it, then sign in again." · Sign in again
+   - "Too many tries": "Wait a few minutes, then try again." · Try again
+   - "That sign-in didn’t work": "Please try again." · Try again
+   - "Signing in isn’t switched on yet": "Ask whoever runs Wheelhouse for
+     your shop." No button: it would only come back here.
+2. **Opening the staff app when not signed in goes straight to WorkOS's
+   page**, with no "You're signed out" first, and back to the page opened
+   after signing in (fewest clicks). "You've signed out" shows only after
+   signing out, and "Please sign in again" only when a session has run out.
+3. **"You've signed out" has its own address, `/workshop/signed-out`**, where
+   WorkOS's sign-out comes back. For Jack: add
+   `http://localhost:8080/workshop/signed-out` as a Sign-out URI in WorkOS's
+   Staging Redirects.
+4. **No logo** on these pages: the frame's logo slot shows the word
+   Wheelhouse only, as no logo file exists.
+
+### 26 Oct 2026: the customer's account, the server (`openspec/changes/customer-account-server`; Jack's answers in `2026-10-26-customer-account.md`)
+
+1. **A repair opened from the account doesn't expire for its owner.** The
+   private link stops working 30 days after collection; a signed-in customer
+   can still open their own past repairs from the account.
+2. **Cancelling from the account links the cancellation message to the
+   account** (`/book/[shop]/account`), not to the job, since a job's
+   account address only opens for its signed-in owner. While sending is
+   pretend, every message's link reads "[link]".
+3. **A repair's total in the history** is what was paid, or else Work
+   agreed's total; with Show prices off it is left out, as on the repair page.
+4. **Purchases** list what was bought, comma-separated, from either sales
+   record; a till sale carries its receipt number, an old sale none.
+5. **After the review:** an action through the account (not a page load) from
+   another website is refused; account answers are never kept by the
+   browser; loading one's own repairs doesn't count toward the private links'
+   "too many attempts" limit. An email staff type in, or change, is marked
+   as not the customer's own (Jack's option 2), so a code sign-in never joins
+   that customer.
+
+### 26 Oct 2026: the customer's account, the screens (`openspec/changes/customer-account-screens`, `ac-account`, `ac-account-repairs`, `ac-account-new`)
+
+1. **Left out until their pieces are built:**
+   - "Ask the shop a question";
+   - store credit;
+   - the warranty and "next service due" lines;
+   - "+ Add a bike";
+   - Edit and Change for details and contact choices;
+   - a purchase's receipt;
+   - Your data.
+
+   Each part shows only when its server work exists, so nothing on the page
+   is a button that does nothing.
+2. **A purchase's number** is the till's receipt number, or "No. [id]" for
+   an old sale. The drawn "B1-[0000]" waits for till receipt codes.
+3. **A repair's chip** is the tracker's current step: Booked, In the shop,
+   Being worked on or Ready. Its past line is "[date] · collected", or
+   cancelled, declined or request expired.
+4. **Signing in with no page to return to** now lands on the account
+   rather than the booking page.
+5. **The account is the only customer page wider than a phone.** It has two
+   columns from 1024px, as drawn. Every other customer page stays
+   phone-width.
+6. **With nothing earlier yet**, the history leaves out the "Earlier, newest
+   first" heading. An empty name or mobile shows as a blank row.
+7. **Still to do:** a repair opened from the account still says "Keep this
+   link to check your booking" with Copy link. That link only works for the
+   signed-in owner.
+
+### 26 Oct 2026: a sale from a customer's history (`openspec/changes/customer-sale-dialog`, `cs-sale`)
+
+1. **"Refund at the till" is left out** until refunds exist; Close stands in.
+2. **"Till B1"** isn't on the pop-up: neither sales record holds which till
+   a sale was on yet.
+3. **A till sale has no "Print the receipt"** until the new record's receipt
+   exists (step C); its pop-up shows the lines, total and how it was paid.
+4. **The history lists till sales too**, with their receipt number ("Sale 12"),
+   alongside the old record's ("Sale [id]").
+
+### 26 Oct 2026: customer groups in Settings (`openspec/changes/customer-groups-settings`, `cs-groups`)
+
+1. **Settings › Front desk › Payments shows only Customer groups** for now
+   (stage 1 drawing gaps decision 6, "show only what works"): the card
+   machine and ways to pay come with their pieces.
+2. **The group's box isn't drawn**: Name and "% off", Save, and "Remove
+   group" for an existing one, following the Services box.
+3. **Removing a group** leaves its customers in no group, as the server
+   already did; no confirmation step, as Services' Remove has none.
+4. **With no groups** the fold's summary reads "No groups yet".
+
+### 26 Oct 2026: booking search and "Online booking is unavailable" (`openspec/changes/booking-search-unavailable`, `bk-service-many`, `bk-unavailable`)
+
+1. **The search box shows when a shop has more than 8 single jobs**, about
+   one phone screen of cards. The drawing shows the box but not when it
+   appears.
+2. **A job matches when its name has every word typed**, in any order,
+   ignoring case. Full services always show. A ticked job stays ticked
+   while the search hides it.
+3. **With nothing matching**, a line reads "No single jobs match “[what was
+   typed]”." Not drawn.
+4. **No "Show all [n] individual services" link.** The built list already
+   shows every job, and the search narrows it.
+5. **"Online booking is unavailable just now"** replaces "We couldn't load
+   this shop's services". "Try again" stays. The drawn shop name, address
+   and phone can't show: they come with the services that failed to load.

@@ -12,7 +12,19 @@ const JOB = {
   'Full service checklist 8 of 10 done · 1 note': go('job-checklist'),
 };
 
-const SHOWING = { 'Showing Everyone. Change whose jobs are shown': STAY };
+// The job page at the quote with Use my phone drawn over it (walk-through 8,
+// decision 6): Add photo on a desktop opens the choice, drawn for the pads.
+const PHOTO_JOB = {
+  ...JOB,
+  'Send quote': go('dq-job-sent'),
+  'Close, back to the diary': BACK,
+  'Add photo for Shimano brake pads': go('job-photo-choice'),
+  'Add photo for Fit & adjust brakes': go('job-photo-choice', 'The same choice, drawn for Shimano brake pads.'),
+  'Add photo for Replace gear cable': go('job-photo-choice', 'The same choice, drawn for Shimano brake pads.'),
+  '1 photo — view or add for Shimano brake pads': notDrawn('The staff job page: a line’s photos, to view or add'),
+};
+
+const SHOWING ={ 'Showing Everyone. Change whose jobs are shown': STAY };
 
 const NEW_JOB = {
   '+ Add a bike': notDrawn('Adding a bike for the customer, from New job'),
@@ -54,11 +66,21 @@ export default {
   'new-job-entered': NEW_JOB,
   // The job
   // Close goes back to where the job was opened from (third walk, walk-through 9 L1).
+  'job-book-in-print': { ...JOB, 'Print bike tag': go('job-bike-tag') },
   'job-overview': { ...JOB, 'Close, back to the diary': BACK },
   'job-quote': { 'Send quote': go('dq-job-sent') },
   'job-waiting-parts': { 'Mark ready for collection': go('job-finished') },
   'job-finished': { 'Undo': go('job-mechanic') },
+  // Don't close things by themselves on (24 Oct, answer 9; drawn for Jack's approval).
+  'job-finished-wait': { 'Send now': go('job-finished-sent'), Undo: go('job-mechanic') },
   'job-collection': { 'Hand over': go('cp-collected') },
+  // Use my phone for a line's photo (walk-through 8, decision 6; drawn 23 Oct
+  // for Jack's approval): the quote being built, before the pads' photo.
+  'job-photo-choice': { ...PHOTO_JOB, 'Choose a file': outside('The computer’s file picker'), 'Use my phone': go('job-photo-phone') },
+  'job-photo-phone': { ...PHOTO_JOB, Close: BACK, Cancel: BACK },
+  'job-photo-phone-added': { ...PHOTO_JOB, Close: go('dq-job-quote'), Done: go('dq-job-quote') },
+  'phone-photo-ready': { 'Choose from your photos': go('phone-photo-check', 'Drawn after Take a photo: a photo chosen from the phone is checked the same way.') },
+  'phone-photo-check': { 'Take another': outside('The phone’s camera') },
   'job-checklist': {
     ...JOB,
     // A workshop computer's PIN screen is till-checkin (its line: Walk-through 8, decision 1).

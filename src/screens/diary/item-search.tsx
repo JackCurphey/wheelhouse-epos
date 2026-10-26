@@ -59,7 +59,7 @@ export function ItemSearch({ id, disabled, onPick }: { id: string; disabled?: bo
           </button>
         ))}
         {term.length >= 2 && products.isSuccess && products.data.length === 0 && serviceHits.length === 0 ? (
-          <span className="px-2.5 text-[13px] text-[var(--wh-muted)]">Nothing matches “{term}”.</span>
+          <span className="px-2.5 text-size-13 text-[var(--wh-muted)]">Nothing matches “{term}”.</span>
         ) : null}
       </div>
     </div>

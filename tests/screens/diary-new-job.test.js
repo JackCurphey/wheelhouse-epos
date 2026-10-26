@@ -7,6 +7,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -22,19 +23,21 @@ const SERVICES = [
 const CUSTOMERS = [{ id: 5, name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', active: true }];
 const BIKES = [{ id: 7, customerId: 5, make: 'Trek', model: 'Domane AL 3', colour: 'green', active: true }];
 // Alex already has two hours on Tuesday; Jo has none, so Jo is chosen.
-const JOBS = [{
+const JOBS = [fakeJob({
   id: 1, title: 'Full service', reference: 'WH-1001', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane AL 3',
   mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '13:00', endTime: '15:00', status: 'scheduled',
   bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 1, notes: null, requested: null,
   cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, orderId: null, orderStatus: null, orderTotal: null,
   createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z',
-}];
+})];
 
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
 let calls;
 let answer;
+// Storage slots switched on for a test (Workshop day 27), else off.
+let slotsOn = false;
 // Free time by day and mechanic, as GET /api/workshop-capacity gives it.
 // Unless a test says otherwise everyone is free 09:00–18:00.
 let freeOn;
@@ -69,7 +72,8 @@ function stubServer() {
     if (method === 'POST') return reply(200, { ...JOBS[0], id: 50, version: 2 });
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
-    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
+    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], storageSlotsOn: slotsOn });
+    if (u.pathname === '/api/storage-slots') return reply(200, [{ id: 3, name: 'Hook 3' }, { id: 7, name: 'Workshop floor' }]);
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
@@ -149,7 +153,7 @@ test('a customer is found by name and their bike chosen; saving creates the job'
   r.fireEvent.click(form.getByRole('radio', { name: 'Standard service · 90 min' }));
   r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
   await r.waitFor(() => assert.equal(has(r.ui.queryByRole('dialog')), false));
-  assert.deepEqual(posts(), ['/api/workshop-jobs {"title":"Standard service","jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30","customerId":5,"bikeId":7,"mechanicId":12,"status":"scheduled","notes":"","customerDescription":"","plannedMinutes":90}']);
+  assert.deepEqual(posts(), ['/api/workshop-jobs {"title":"Standard service","jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30","customerId":5,"bikeId":7,"mechanicId":12,"status":"scheduled","notes":"","customerDescription":"","plannedMinutes":90,"serviceIds":[1]}']);
 });
 
 test('"The bike is here now" books it in straight after saving', async () => {
@@ -638,3 +642,48 @@ test('New job’s pills are one Tab stop per group and move with the arrow keys'
   assert.ok(document.activeElement === individual);
 });
 
+
+// Storage slots (Workshop day 27; drawn as new-job's "Where the bike is kept"):
+// with slots on, a bike that's here goes on a slot as it's made; not before
+// it's here ("no hook until the bike is booked in").
+test('with slots on, "The bike is here now" offers Where the bike is kept, and the book-in takes the slot', async () => {
+  slotsOn = true;
+  try {
+    const r = await openDiary();
+    const form = await pickTuesdayTen(r);
+    r.fireEvent.change(form.getByLabelText('Find customer by name, phone or email'), { target: { value: 'Maya' } });
+    r.fireEvent.click(await form.findByRole('button', { name: /Maya Patel/ }));
+    r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'Wobbly wheel' } });
+    assert.ok(form.queryByRole('radiogroup', { name: 'Where the bike is kept' }) === null, 'not before the bike is here');
+    r.fireEvent.click(form.getByRole('switch', { name: 'The bike is here now' }));
+    const kept = await form.findByRole('radiogroup', { name: 'Where the bike is kept' });
+    assert.ok(has(form.queryByText('Storage slots are on for this shop. Turn them off in Settings.')));
+    r.fireEvent.click(r.within(kept).getByRole('radio', { name: 'Hook 3' }));
+    r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+    await r.waitFor(() => assert.equal(posts().length, 2));
+    assert.equal(posts()[1], '/api/workshop-jobs/50/book-in {"storageSlotId":3,"version":1}');
+  } finally {
+    slotsOn = false;
+  }
+});
+
+test('with slots on, Waiting for parts with the bike here makes the job on its slot', async () => {
+  slotsOn = true;
+  try {
+    const r = await openDiary();
+    const form = await pickTuesdayTen(r);
+    r.fireEvent.change(form.getByLabelText('Find customer by name, phone or email'), { target: { value: 'Maya' } });
+    r.fireEvent.click(await form.findByRole('button', { name: /Maya Patel/ }));
+    r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'Wobbly wheel' } });
+    r.fireEvent.click(form.getByRole('radio', { name: 'Waiting for parts' }));
+    r.fireEvent.click(form.getByRole('switch', { name: 'The bike is here now' }));
+    r.fireEvent.click(r.within(await form.findByRole('radiogroup', { name: 'Where the bike is kept' })).getByRole('radio', { name: 'Workshop floor' }));
+    answer = { status: 201, ok: true, json: async () => ({ ...JOBS[0], id: 50, version: 1, custodyState: 'in_shop', workState: 'waiting_parts' }) };
+    r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+    await r.waitFor(() => assert.ok(r.ui.queryByRole('dialog', { name: 'New job' }) === null));
+    assert.deepEqual(posts().map((p) => p.split(' ')[0]), ['/api/workshop-jobs']);
+    assert.equal(JSON.parse(posts()[0].slice(posts()[0].indexOf(' ') + 1)).storageSlotId, 7);
+  } finally {
+    slotsOn = false;
+  }
+});

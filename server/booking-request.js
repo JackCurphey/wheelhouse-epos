@@ -48,6 +48,8 @@ export function parseBookingRequest(body, phone = '') {
       updateChannel: body.updateChannel,
       termsAccepted: true,
       marketingPermission: body.marketingPermission === true,
+      // The reminder tick (reminder-consent): only a tick counts, as above.
+      remindMe: body.remindMe === true,
     },
   };
 }

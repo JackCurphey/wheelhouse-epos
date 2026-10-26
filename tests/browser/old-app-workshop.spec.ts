@@ -15,6 +15,7 @@ import { futureDate } from '../helpers/workshopFixtures.js';
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
 let jobTitle: string;
+let jobId: number;
 
 test.describe.configure({ timeout: 60_000 });
 test.use({ timezoneId: 'Europe/London', viewport: { width: 1400, height: 900 } });
@@ -29,6 +30,7 @@ test.beforeAll(async () => {
     body: { title: jobTitle, jobDate: futureDate(2, new Date(TEST_CLOCK_PIN)), startTime: '10:00', endTime: '11:00', mechanicId: sam },
   });
   expect(made.status, JSON.stringify(made.body)).toBe(201);
+  jobId = made.body.id;
 });
 
 test.afterAll(async () => {
@@ -103,4 +105,62 @@ test('ticking Show in workshop diary opens New job filled in from the order, and
   const linked = (await staff(`/api/sale-documents/${order.body.id}`)).body;
   expect(linked.workshopJobId).toBeTruthy();
   expect((await staff(`/api/workshop-jobs/${linked.workshopJobId}`)).body.title).toBe(typed);
+});
+
+// The old app never takes payment for a workshop job (Jack, 21 Oct,
+// docs/decisions/2026-10-21-old-app-placeholder.md): its till's "Load into
+// sale" and an order's "Convert to sale" go to the new till for that job,
+// where the sign-off is asked.
+test("a workshop job's order: Load into sale opens the new till for the job", async ({ page, context }) => {
+  await signIn(context);
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#till`);
+  await page.locator('#view-orders-btn').click();
+  await page.locator('#order-table-body tr', { hasText: jobTitle }).locator('button[data-load]').click();
+  await expect(page).toHaveURL(new RegExp(`/workshop/till\\?job=${jobId}$`));
+});
+
+test("a workshop job's order: Convert to sale opens the new till for the job", async ({ page, context }) => {
+  const name = `Jo Taylor ${Date.now()}`;
+  const cashier = await staff('/api/team', { method: 'POST', body: { name, isCashier: true, email: `jo-${Date.now()}@example.test`, password: 'password123' } });
+  expect(cashier.status, JSON.stringify(cashier.body)).toBeLessThan(300);
+  await signIn(context);
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#till`);
+  await page.locator('button[data-cashier]', { hasText: name }).click();
+  await page.locator('#view-orders-btn').click();
+  await page.locator('#order-table-body tr', { hasText: jobTitle }).locator('button[data-open]').click();
+  await page.locator('#doc-convert-btn').click();
+  await expect(page).toHaveURL(new RegExp(`/workshop/till\\?job=${jobId}$`));
+});
+
+// The old app's Customers screen is gone (openspec/changes/remove-old-customers;
+// CLAUDE.md rule 5): its tab, and its old links open the new pages.
+test("the old app's Office has no Customers tab, and an old Customers link opens the new page", async ({ page, context }) => {
+  await signIn(context);
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#office/dashboard`);
+  await expect(page.locator('button[data-office-nav="suppliers"]')).toBeVisible();
+  await expect(page.locator('button[data-office-nav="customers"]')).toHaveCount(0);
+  await page.goto(`${server!.baseUrl}/#office/customers`);
+  await expect(page).toHaveURL(/\/workshop\/customers$/);
+});
+
+test("an old link to a customer opens that customer's new page", async ({ page, context }) => {
+  await signIn(context);
+  const made = await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900142' } });
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#office/customers/${made.body.id}`);
+  await expect(page).toHaveURL(new RegExp(`/workshop/customers/${made.body.id}$`));
+});
+
+test("the old till's new-customer form still opens, as it's kept", async ({ page, context }) => {
+  await signIn(context);
+  await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
+  await page.goto(`${server!.baseUrl}/#till`);
+  const input = page.locator('#customer-input');
+  await input.click();
+  await input.fill('Nobody by this name');
+  await page.locator('.search-dropdown button', { hasText: /new customer/i }).first().click();
+  await expect(page.locator('#customer-form')).toBeVisible();
 });

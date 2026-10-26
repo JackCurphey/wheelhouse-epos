@@ -150,7 +150,7 @@ of them blocks building; all of them block going live.
 | Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Stripe Terminal first, then SumUp, then Paymentsense (Ingenico Move/5000, #138), each its own connection behind the same adapter (Jack, 5 Oct; `docs/decisions/2026-10-05-card-payments-provider.md`) |
 | Online payments (PAY-05) | fake provider with test outcomes | Stripe (payment links and checkout), the same company as the card reader (Jack, 5 Oct); Mark sets the account up, with Jack's yes (Q10; project rules) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
-| Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
+| Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Done: Jack made the WorkOS account, Staging set up (25 Oct, changing Q10; `docs/decisions/2026-10-25-workos-account.md`) |
 | Text messages (Twilio) | already real; fake in tests | keys exist in Jack's set-up |
 | Xero and QuickBooks | spreadsheet downloads first, then a fake connector | developer accounts (Q10) |
 | Citrus Lime import | Excel files laid out by the real Cloud Reports column names (`specs/2026-10-05-citrus-lime-exports.md`, #136) | Jack's real export files, and Citrus Lime's full export |
@@ -305,8 +305,9 @@ later packages.
 *Building blocks built here:* 13 Shop switcher; 22 Status line (no board of its own); 26 "Working: [name] · Switch" bar for a shared workshop computer (no board of its own); 40 Message or outcome page; 42 Emailed-code sign-in; 43 PIN pad.
 *Reused, already built:* 1 Settings page (WP-1.3).
 
-*Screens it builds (8) and the situations it covers:*
+*Screens it builds (9) and the situations it covers:*
 
+- **`staff-signin`** (block 42, Emailed-code sign-in) — no other situations. Wheelhouse's own sign-in with Continue with Google (Jack, 25 Oct; built by the OpenSpec change staff-signin-google).
 - **`workos-signin`** (block 42, Emailed-code sign-in) — no other situations.
 - **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
 - **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.
@@ -494,7 +495,7 @@ later packages.
 - **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
 - **`till-pay-cash`** (block 20, Payment step) — no other situations.
 - **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
-- **`till-receipt`** (block 20, Payment step) — 5 of its 7 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper`, `till-receipt-paper-checked`, `till-receipt-paper-details` (the last four built early: Jack, 18 Oct, print receipt, mechanic sign-off and shop details decisions).
+- **`till-receipt`** (block 20, Payment step) — 6 of its 8 situations here: `till-receipt-split`, `till-receipt-print`, `till-receipt-paper`, `till-receipt-paper-checked`, `till-receipt-paper-details` (these four built early: Jack, 18 Oct, print receipt, mechanic sign-off and shop details decisions), `till-receipt-wait` (Don't close things by themselves on: Paid waits for Start next sale; drawn 24 Oct for Jack's approval, morning questions answer 9).
 - **`till-giftcard`** (block 20, Payment step) — no other situations.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
@@ -570,23 +571,29 @@ later packages.
 - **WP-4.1 Workshop day, the rest** (journey 12; walk-through 8): Overview
   page; request pop-up (mechanic pills, offer another time, decline with a
   message); new job extras; storage slots; bike tag at book-in; full service
-  checklist; done ticks and notes per line; diary settings; "I'll do this";
-  "Who did what"; mechanic sign-off (Q3); "Use my phone" photo.
+  checklist, with each shop's own checklists in Settings (Jack, 22 Oct); done ticks and notes per line; diary settings; "I'll do this";
+  "Who did what"; mechanic sign-off (Q3); "Use my phone" photo (drawn 23 Oct
+  for Jack's approval: the choice, the code to scan, and the phone's photo
+  step with no sign-in).
 
 <!-- screens 4.1 -->
 *Building blocks built here:* 15 The job page, reused as it is; 23 Diary; 25 Quick-look box.
-*Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 7 Step-by-step checklist (WP-3.4); 9 Form box (WP-1.3).
+*Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 7 Step-by-step checklist (WP-3.4); 9 Form box (WP-1.3); 40 Message or outcome page (WP-1.7).
 
-*Screens it builds (9) and the situations it covers:*
+*Screens it builds (13) and the situations it covers:*
 
 - **`set-workshop-diary`** (block 1, Settings page) — 1 situation: `diary-settings`.
+- **`set-workshop-checklists`** (block 1, Settings page) — 1 situation: `set-workshop-checklists-empty`. The shop's own checklists and the services that have each, with a full service template (Jack, 22 Oct, decision file 2026-10-22-service-checklists).
+- **`set-workshop-checklist-edit`** (block 9, Form box) — no other situations.
 - **`diary`** (block 23, Diary) — 10 of its 15 situations here: `desk`, `diary-mechanic`, `waiting-open`, `change-selected`, `diary-context-menu`, `diary-stack-hover`, `diary-stack-open`, `new-job-pick`, `request-offer-pick`, `rs-diary-arrived`; plus 6 written lines.
 - **`diary-day`** (block 23, Diary) — no other situations.
 - **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
 - **`request-new`** (block 9, Form box) — 6 of its 7 situations here: `request-decline`, `request-offer`, `request-offered`, `request-offered-decline`, `request-change`, `request-cancel`.
 - **`new-job`** (block 9, Form box) — 2 of its 3 situations here: `new-job-day`, `new-job-entered`; plus 1 written line.
-- **`job-overview`** (block 15, The job page, reused as it is) — 11 of its 22 situations here: `job-book-in`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 10 of its 11 written lines.
+- **`job-overview`** (block 15, The job page, reused as it is) — 16 of its 32 situations here: `job-book-in`, `job-book-in-print`, `job-bike-tag`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-finished-wait`, `job-finished-sent` (Don't close things by themselves on: Bike ready waits for Send now or Undo, then sent; drawn 24 Oct for Jack's approval, morning questions answer 9), `job-collection`, `job-photo-choice`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 9 of its 11 written lines.
 - **`job-checklist`** (block 7, Step-by-step checklist) — no other situations.
+- **`job-photo-phone`** (block 9, Form box) — 1 situation: `job-photo-phone-added`. "Use my phone": a code to scan that opens one line's photo step on the phone (walk-through 8, decision 6).
+- **`phone-photo-ready`** (block 40, Message or outcome page) — 3 situations: `phone-photo-check`, `phone-photo-done`, `phone-photo-expired`. The page the code opens on the phone, no sign-in; no customer name or number on it.
 - **`overview`** (block 3, Table with search and filters) — 1 situation: `rs-overview-arrived`.
 <!-- /screens -->
 
@@ -655,6 +662,7 @@ later packages.
 - **`pending`** (block 40, Message or outcome page) — 1 situation: `expired`.
 - Added to the `bk-page` board (built in WP-4.2) — 11 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-request-expired`, `bk-expired`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 3 situations: `bk-staff-request`, `bk-staff-confirmed`, `bk-staff-decline`.
+- Added to the `job-overview` board (built in WP-4.1) — 5 situations: `bk-staff-deposit`, `bk-staff-deposit-refund`, `bk-staff-deposit-refunded`, `bk-staff-no-show`, `bk-staff-no-show-kept` (deposits on the job, drawn 24 Oct for Jack's approval).
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `bk-messages`.
 - Added to the `set-msg-edit` board (built in WP-1.8) — 6 situations: `bk-msg-request`, `bk-msg-confirmed`, `bk-msg-offered`, `bk-msg-declined`, `bk-msg-change`, `bk-msg-cancelled`.
 <!-- /screens -->

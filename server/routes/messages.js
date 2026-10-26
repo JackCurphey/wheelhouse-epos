@@ -8,8 +8,9 @@ import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/htt
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
-import { serializeMessage, undoMessage } from '../messaging/engine.js';
+import { serializeMessage, undoMessage, sendHeldNow, readyStillNeeded } from '../messaging/engine.js';
 import { LIVE_KEYS, TEMPLATES, render, templateFor } from '../messaging/templates.js';
+import { STOP_LINE } from '../messaging/service-reminders.js';
 
 const MAX_WORDING = 2000;
 const MAX_SUBJECT = 200;
@@ -25,6 +26,8 @@ const EXAMPLE = {
   'Link to the quote': '[link]',
   'Link to the job': '[link]',
   'Link to the booking': '[link]',
+  'Link to book': '[link]',
+  'Link to review': '[link]',
   'Opening hours': '[opening hours]',
   Service: 'Standard service',
   'Booked day and time': 'Thu 17 Sep, 11:30',
@@ -33,6 +36,13 @@ const EXAMPLE = {
   'Suggested day and time': 'Sat 19 Sep, [time]',
   'The shop’s message': '[The shop’s message]',
   'New day and time': 'Fri 25 Sep, [time]',
+  // The quote messages' own (dq-within-limit, dq-record-answer).
+  'Work added': 'Shimano brake pads and Fit and adjust brakes',
+  'Amount added': '£46.00',
+  'Spending limit': '£200',
+  'Shop phone': '[shop phone]',
+  'The shop’s reply': '[Jo’s reply]',
+  'What was agreed': 'Going ahead: Shimano brake pads and Fit and adjust brakes, £46.00. No thanks: Replace gear cable.',
 };
 // Where a message's drawing fills a tap-in differently (bk-msg-change: the
 // new day's drop-off time is open).
@@ -42,7 +52,7 @@ const EXAMPLE_FOR = {
 
 const asSetting = (t) => ({
   key: t.key, name: t.name, when: t.when, enabled: t.enabled, wording: t.wording, subject: t.subject,
-  changed: t.changed, tapIns: t.tapIns, live: LIVE_KEYS.includes(t.key), group: t.group ?? null,
+  changed: t.changed, tapIns: t.tapIns, live: LIVE_KEYS.includes(t.key), group: t.group ?? null, partOf: t.partOf ?? null,
 });
 
 // A shop's own text, or null for Wheelhouse's: blank goes back to Wheelhouse's.
@@ -89,6 +99,22 @@ export function register(route) {
     sendJson(res, 200, serializeMessage(row));
   });
 
+  // Send now: a message held by Don't close things by themselves goes now
+  // (dont-close-server design 3).
+  // screens: diary
+  route('POST', '/api/messages/:id/send-now', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const id = Number(params.id);
+    const msg = await prepare('SELECT job_id, template_key FROM customer_messages WHERE id = ?').get(id);
+    if (msg?.template_key === 'bike_ready' && !(await readyStillNeeded(msg.job_id))) {
+      return sendJson(res, 409, { error: 'The bike has been collected, so it won’t be sent.', code: 'illegal' });
+    }
+    if (!(await sendHeldNow(id))) return sendJson(res, 409, { error: 'It isn’t waiting to be sent', code: 'illegal' });
+    const row = await prepare('SELECT * FROM customer_messages WHERE id = ?').get(id);
+    sendJson(res, 200, serializeMessage(row));
+  });
+
   // Settings › Messages: every message, with this shop's wording.
   // screens: settings
   route('GET', '/api/message-templates', async (req, res) => {
@@ -120,11 +146,16 @@ export function register(route) {
     } catch (err) {
       return badRequest(res, err.message);
     }
+    // A review request needs the shop's review page first (ac-review-first).
+    if (params.key === 'review_request' && sent.enabled === true
+      && !(await prepare('SELECT review_page_url FROM workshop_settings LIMIT 1').get())?.review_page_url) {
+      return badRequest(res, 'Add your review page first, then switch this on.');
+    }
     const set = [...Object.keys(sent).map((c) => `${c} = EXCLUDED.${c}`), 'updated_at = EXCLUDED.updated_at'];
     await prepare(
       `INSERT INTO message_templates (key, enabled, wording, subject, updated_at) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT (shop_id, key) DO UPDATE SET ${set.join(', ')}`
-    ).run(params.key, sent.enabled ?? true, sent.wording ?? null, sent.subject ?? null, nowIso());
+    ).run(params.key, sent.enabled ?? !TEMPLATES[params.key].offUntilOn, sent.wording ?? null, sent.subject ?? null, nowIso());
     sendJson(res, 200, asSetting(await templateFor(params.key)));
   });
 
@@ -147,7 +178,9 @@ export function register(route) {
       return badRequest(res, err.message);
     }
     const vars = { ...EXAMPLE, ...EXAMPLE_FOR[params.key], 'Shop name': ctx.shop.name };
-    const text = render(wording, vars);
+    // The service reminder's fixed ending, as drawn in its preview (ac-reminder-wording).
+    // And the review request's (ac-review-setting).
+    const text = ['service_reminder', 'review_request'].includes(params.key) ? `${render(wording, vars)} ${STOP_LINE}` : render(wording, vars);
     sendJson(res, 200, { text, email: { subject: render(subject, vars), body: text } });
   });
 }

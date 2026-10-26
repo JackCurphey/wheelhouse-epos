@@ -17,10 +17,12 @@ const template = (over) => ({
 });
 const TEMPLATES = () => [
   template({ key: 'quote_to_approve', name: 'Quote to approve', when: 'When a job needs the customer’s OK', wording: 'Hi [Customer’s first name], a quote. [Link to the quote]', tapIns: ['Customer’s first name', 'Link to the quote'] }),
+  template({ key: 'quote_reminder', name: 'Quote reminder', when: 'Once, when a quote has had no answer for the hours the shop sets', wording: 'Hi [Customer’s first name], a reminder. [Link to the quote]', tapIns: ['Customer’s first name', 'Link to the quote'] }),
   template({}),
   template({ key: 'booking_confirmed', name: 'Booking confirmed', when: 'When a booking is accepted, or confirmed straight away', group: 'booking' }),
   template({ key: 'booking_cancelled', name: 'Booking cancelled', when: 'When a booking is cancelled', group: 'booking', live: false }),
 ];
+const SETTINGS = { openingHours: [], bookingMode: 'day', showPricesOnline: true, confirmationNote: null, bookingTerms: null, fullDayThresholdMinutes: 0, minNoticeMinutes: 0, minNoticeDays: null, quoteReminderHours: 24 };
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -38,9 +40,9 @@ afterEach(async () => {
 // The preview the server fills in: the drawings' example.
 const fill = (words) => words.replace('[Customer’s first name]', 'Maya').replace('[Bike]', 'Trek Domane AL 3').replace('[Shop name]', 'North Street Cycles');
 
-async function openSettings() {
+async function openSettings({ slowSettings = false, extra = [] } = {}) {
   calls = [];
-  templates = TEMPLATES();
+  templates = [...TEMPLATES(), ...extra];
   failPut = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -49,7 +51,8 @@ async function openSettings() {
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
-    if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], bookingMode: 'day', showPricesOnline: true, confirmationNote: null, bookingTerms: null, fullDayThresholdMinutes: 0, minNoticeMinutes: 0, minNoticeDays: null });
+    if (u.pathname === '/api/workshop-settings' && method === 'PUT') return reply(200, { ...SETTINGS, ...body });
+    if (u.pathname === '/api/workshop-settings') return slowSettings ? new Promise(() => {}) : reply(200, SETTINGS);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/message-templates') return reply(200, templates);
     const put = u.pathname.match(/^\/api\/message-templates\/(\w+)$/);
@@ -92,7 +95,8 @@ test('Messages lists the messages that send today, each with when, the customer�
   assert.ok(list.textContent.includes('Bike ready'));
   assert.ok(has(ui.queryByText('When a job is marked ready')));
   assert.ok(has(ui.queryByText('Quote to approve')));
-  assert.equal(list.textContent.includes('Booking cancelled'), false, 'not sent yet, so not listed');
+  // A message the server marks as not sent (this fixture's Booking cancelled) isn't listed.
+  assert.equal(list.textContent.includes('Booking cancelled'), false, 'a message not sent is not listed');
   // The booking messages under their own heading, as drawn (msgListOpen).
   const heading = list.querySelector('h5');
   assert.ok(heading !== null && heading.textContent === 'Booking messages');
@@ -192,4 +196,141 @@ test('the edit box says how [Shop name] fills in, as drawn, and keeps the wordin
   assert.ok(has(dlg.queryByText('Sent when a job is marked ready')));
   assert.ok(has(dlg.queryByText('With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.')));
   assert.equal(dlg.getByLabelText('Wording').getAttribute('maxlength'), '2000');
+});
+
+// The quote reminder (Jack, 22 Oct; setup.mjs msgRowChoice reminder): under
+// Quote to approve, the hours and Edit, not a row of its own.
+test('under Quote to approve, the reminder’s hours and its Edit', async () => {
+  const { ui, within } = await openSettings();
+  const list = await ui.findByText('Quote to approve');
+  const box = ui.getByRole('textbox', { name: 'Reminder if there’s no answer, after' });
+  assert.equal(box.value, '24');
+  assert.ok(Boolean(ui.getByRole('button', { name: 'Edit the wording of Quote reminder' })));
+  // Not listed as a message of its own.
+  assert.ok(ui.queryByText('Once, when a quote has had no answer for the hours the shop sets') === null);
+  assert.ok(Boolean(list));
+  void within;
+});
+
+test('changing the hours saves them when you leave the box', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  const box = await ui.findByRole('textbox', { name: 'Reminder if there’s no answer, after' });
+  fireEvent.change(box, { target: { value: '48' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.ok(calls.some((c) => c.method === 'PUT' && c.url === '/api/workshop-settings' && c.body.quoteReminderHours === 48)));
+});
+
+test('hours that aren’t 1 to 168 say so and save nothing', async () => {
+  const { ui, fireEvent } = await openSettings();
+  const box = await ui.findByRole('textbox', { name: 'Reminder if there’s no answer, after' });
+  fireEvent.change(box, { target: { value: '0' } });
+  fireEvent.blur(box);
+  assert.ok(Boolean(await ui.findByText('Choose from 1 to 168 hours.')));
+  assert.equal(calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings').length, 0);
+});
+
+test('the fold’s count is of the messages listed, not the reminder under Quote to approve', async () => {
+  const { ui } = await openSettings();
+  // Quote to approve, Bike ready and Booking confirmed are on; Booking cancelled isn't listed.
+  assert.ok(Boolean(await ui.findByRole('button', { name: /^Automatic messages.*3 on/ })));
+});
+
+test('until the settings load, the hours box waits rather than showing 24', async () => {
+  const { ui } = await openSettings({ slowSettings: true });
+  await ui.findByText('Quote to approve');
+  assert.ok(ui.queryByRole('textbox', { name: 'Reminder if there’s no answer, after' }) === null);
+});
+
+// Sending service reminders (openspec/changes/service-reminder-send; setup.mjs
+// bringBackRows, account.mjs ac-reminder-wording): under "Bringing customers
+// back", with its note, and its box says "Stop these" can't be taken off.
+const SERVICE_REMINDER = template({
+  key: 'service_reminder', name: 'Service reminder', when: 'When a bike is due its next service — set on each service', group: 'reminders',
+  wording: 'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].',
+  tapIns: ['Customer’s first name', 'Bike', 'Service', 'Shop name', 'Link to book'],
+});
+test('the service reminder sits under “Bringing customers back”, after the booking messages, with its note', async () => {
+  const { ui } = await openSettings({ extra: [SERVICE_REMINDER] });
+  const list = await ui.findByText((_, el) => el?.getAttribute('data-msg-list') === 'true');
+  await ui.findByText('Service reminder');
+  const headings = [...list.querySelectorAll('h5')].map((h) => h.textContent);
+  assert.deepEqual(headings, ['Booking messages', 'Bringing customers back']);
+  assert.ok(list.textContent.includes('Only to customers who said yes. Each ends “Stop these: [link]”.'));
+  const back = [...list.querySelectorAll('h5')][1];
+  const row = [...list.querySelectorAll('span')].find((el) => el.textContent === 'Service reminder');
+  assert.ok(back.compareDocumentPosition(row) & 4, 'the service reminder is under its heading');
+  assert.ok(has(ui.queryByText('When a bike is due its next service — set on each service')));
+});
+
+test('its wording box says “Stop these” is always added and can’t be taken off', async () => {
+  const { ui, fireEvent } = await openSettings({ extra: [SERVICE_REMINDER] });
+  fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Service reminder' }));
+  await ui.findByRole('dialog', { name: 'Service reminder' });
+  // Its subtitle as drawn (ac-reminder-wording), saying where the months are set (review).
+  assert.ok(has(ui.queryByText('Sent when a bike is due its next service — set on each service in Settings › Workshop')));
+  assert.ok(has(ui.queryByText('Always added at the end: “Stop these: [link]”. It can’t be taken off.')));
+  fireEvent.click(ui.getByRole('button', { name: 'Done' }));
+  fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Bike ready' }));
+  await ui.findByRole('dialog', { name: 'Bike ready' });
+  assert.ok(ui.queryByText(/It can’t be taken off/) === null, 'only the service reminder has it');
+});
+
+// A declined date change (openspec/changes/date-change-declined-message; drawn
+// in bk-msg-change): Date change answered is one row, and its box has two
+// wordings, "If the shop accepts" and "If the shop can't", each saved under its own key.
+const DATE_CHANGE = template({
+  key: 'date_change_answered', name: 'Date change answered', when: 'When the shop accepts or declines a new date', group: 'booking',
+  wording: 'Hi [Customer’s first name], [Shop name] has moved your [Service] to [New day and time].', tapIns: ['Customer’s first name', 'Shop name', 'Service', 'New day and time'],
+});
+const DECLINED = template({
+  key: 'date_change_declined', name: 'Date change answered', when: 'When the shop can’t do a new date', group: null, partOf: 'date_change_answered',
+  wording: 'Hi [Customer’s first name], [Shop name] can’t do [New day and time], so your booking stays on [Booked day and time].', tapIns: ['Customer’s first name', 'Shop name', 'New day and time', 'Booked day and time'],
+});
+async function openDateChange() {
+  const t = await openSettings({ extra: [DATE_CHANGE, DECLINED] });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Edit the wording of Date change answered' }));
+  const dlg = t.within(await t.ui.findByRole('dialog', { name: 'Date change answered' }));
+  return { ...t, dlg };
+}
+
+test('Date change answered is one row, and its second wording adds no row and no count', async () => {
+  const { ui } = await openSettings({ extra: [DATE_CHANGE, DECLINED] });
+  await ui.findByText('Date change answered');
+  assert.equal(ui.getAllByText('Date change answered').length, 1);
+  assert.equal(ui.getAllByRole('button', { name: /Edit the wording of Date change answered/ }).length, 1);
+  // Quote to approve, Bike ready, Booking confirmed and Date change answered: 4, not 5.
+  assert.ok(Boolean(await ui.findByRole('button', { name: /^Automatic messages.*4 on/ })));
+});
+
+test('its box shows both wordings under their drawn headings, the second with its own tap-ins', async () => {
+  const { dlg } = await openDateChange();
+  assert.ok(has(dlg.queryByText('If the shop accepts')));
+  assert.ok(has(dlg.queryByText('If the shop can’t')));
+  assert.equal(dlg.getByLabelText('If the shop accepts').value, DATE_CHANGE.wording);
+  assert.equal(dlg.getByLabelText('If the shop can’t').value, DECLINED.wording);
+  const groups = dlg.getAllByRole('group', { name: 'Put in' });
+  assert.equal(groups.length, 2);
+  assert.ok([...groups[1].querySelectorAll('button')].some((b) => b.textContent === '+ Booked day and time'));
+});
+
+test('a message with one wording shows no headings', async () => {
+  const { dlg } = await openEdit();
+  assert.ok(dlg.queryByText('If the shop accepts') === null);
+  assert.equal(dlg.getAllByRole('group', { name: 'Put in' }).length, 1);
+});
+
+test('Done saves only the wording that changed, under its own key', async () => {
+  const { dlg, fireEvent, waitFor } = await openDateChange();
+  fireEvent.change(dlg.getByLabelText('If the shop can’t'), { target: { value: 'Sorry, no: [New day and time]' } });
+  fireEvent.click(dlg.getByRole('button', { name: 'Done' }));
+  await waitFor(() => assert.deepEqual(puts(), ['/api/message-templates/date_change_declined {"wording":"Sorry, no: [New day and time]"}']));
+});
+
+test('Go back to Wheelhouse’s wording resets both wordings', async () => {
+  const { dlg, fireEvent, waitFor } = await openDateChange();
+  fireEvent.click(dlg.getByRole('button', { name: 'Go back to Wheelhouse’s wording' }));
+  await waitFor(() => assert.deepEqual(puts().sort(), [
+    '/api/message-templates/date_change_answered {"wording":null}',
+    '/api/message-templates/date_change_declined {"wording":null}',
+  ]));
 });

@@ -7,6 +7,8 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob, changed } from '../helpers/fake-job.js';
+import { fakeOrder, fakeOrderLine } from '../helpers/fake-order.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const JO = { id: 21, name: 'Jo Taylor', isCashier: true };
@@ -43,16 +45,16 @@ afterEach(async () => {
 });
 
 function job(over = {}) {
-  return { id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3',
+  return fakeJob({ id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeLabel: 'Trek Domane AL 3',
     mechanicId: 11, jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', bookingState: 'scheduled', custodyState: 'in_shop',
-    workState: 'complete', version: 7, orderId: 40, orderStatus: 'open', orderTotal: 83, requested: null, ...over };
+    workState: 'complete', version: 7, orderId: 40, orderStatus: 'open', orderTotal: 83, ...over });
 }
 function order(over = {}) {
-  return { id: 40, kind: 'order', status: 'open', customerId: 5, customerName: 'Maya Patel', subtotal: 83, discount: 0, total: 83, workshopJobId: 1,
+  return fakeOrder({ id: 40, kind: 'order', status: 'open', customerId: 5, customerName: 'Maya Patel', subtotal: 83, discount: 0, total: 83, workshopJobId: 1,
     items: [
-      { id: 1, productId: null, name: 'Standard service', unitPrice: 65, qty: 1, lineTotal: 65, lineType: 'labour', serviceId: 3, minutes: 60 },
-      { id: 2, productId: 7, name: 'Shimano brake pads', sku: 'B05S-RX', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null },
-    ], ...over };
+      fakeOrderLine({ id: 1, productId: null, name: 'Standard service', unitPrice: 65, qty: 1, lineTotal: 65, lineType: 'labour', serviceId: 3, minutes: 60 }),
+      fakeOrderLine({ id: 2, productId: 7, name: 'Shimano brake pads', sku: 'B05S-RX', unitPrice: 18, qty: 1, lineTotal: 18, lineType: 'product', serviceId: null, minutes: null }),
+    ], ...over });
 }
 
 function stubServer(employee) {
@@ -67,12 +69,13 @@ function stubServer(employee) {
       JOB = { ...JOB, workState: 'complete', version: JOB.version + 1, orderStatus: 'converted' };
       return reply(201, SALE);
     }
-    if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, { ...JOB, custodyState: 'collected', version: JOB.version + 1 });
+    if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, changed({ ...JOB, custodyState: 'collected', version: JOB.version + 1 }));
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
     if (u.pathname === '/api/employees') return reply(200, u.searchParams.get('role') === 'mechanic' ? MECHANICS : CASHIERS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     if (u.pathname === '/api/products') return reply(200, [PADS]);
     if (u.pathname === '/api/workshop-jobs/1') return reply(200, JOB);
+    if (u.pathname === '/api/customers/5') return reply(200, { id: 5, name: 'Maya Patel', email: 'maya@example.test', phone: '07700 900142', active: true });
     if (u.pathname === '/api/sale-documents/40') return reply(200, ORDER);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]' });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [], showSignOffToCustomers: SHOW_SIGN_OFF });
@@ -374,3 +377,49 @@ test('a job’s receipt from the till prints what the customer told us', async (
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Print' }));
   assert.ok(printed?.includes('WH-1042 · Trek Domane AL 3From the customer: Rear brake squeals and feels weak.'), String(printed));
 });
+
+// The reply-shape file (working agreement task 2.4): the fake job is the shape the server sends.
+test('the fake job here is the shape of the server’s', async () => {
+  const shapes = await import(new URL('../../.test-build/lib/api/shapes.js', import.meta.url).href);
+  assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB, job()), []);
+  for (const part of job().parts) assert.deepEqual(shapes.shapeProblems(shapes.JOB_PART, part), []);
+});
+
+// Emailing a job's receipt (cp-receipt-address-customer; openspec/changes/till-email-receipt):
+// the box holds the customer's address from their record, for this receipt only.
+test('Email on a job’s Paid box fills in the customer’s address from their record', async () => {
+  const t = await openJobTill();
+  const pay = await payByCard(t);
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Email' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Email the receipt' }));
+  assert.ok(Boolean(box.queryByText(/· Maya Patel$/)));
+  await t.waitFor(() => assert.equal(box.getByLabelText('Email address').value, 'maya@example.test'));
+  assert.ok(Boolean(box.queryByText('From Maya’s customer record. A change here is used for this receipt only.')));
+  // A customer on the sale: no Save to a customer record (cp-receipt-address-customer).
+  assert.ok(box.queryByRole('checkbox', { name: /Save to a customer record/ }) === null);
+  // Read out with the box, for a screen reader (review).
+  assert.match(box.getByLabelText('Email address').getAttribute('aria-describedby') ?? '', /email-receipt-from/);
+});
+
+// A deposit paid online comes off (Jack, 29 Sep, selling at the till decision
+// 11; drawn as till-job-balance; openspec/changes/till-online-deposit).
+const DEPOSIT_DUE = { depositPence: 1300, depositUsedPence: 1300, depositPaidAt: '2026-09-14T10:00:00Z', leftToPayPence: 7000, leftToPay: 70 };
+
+test('a deposit paid online comes off: a Deposit paid line, and Take payment for the rest', async () => {
+  const t = await openJobTill({ dueOver: DEPOSIT_DUE });
+  assert.ok(Boolean(await t.sale.findByText('Deposit paid')));
+  assert.ok(Boolean(t.sale.queryByText('Mon 14 Sep · online')));
+  assert.ok(Boolean(t.sale.queryByText('−£13.00')));
+  const take = await t.sale.findByRole('button', { name: 'Take payment · £70.00' });
+  await t.waitFor(() => assert.equal(take.disabled, false));
+  const pay = await payByCard(t);
+  await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
+  assert.equal(posts('/api/sale-documents/40/convert')[0].cardAmount, 70);
+  assert.ok(pay);
+});
+
+test('a deposit more than the bill says what isn’t paid back here', async () => {
+  const t = await openJobTill({ dueOver: { depositPence: 9000, depositUsedPence: 8300, depositPaidAt: '2026-09-14T10:00:00Z', leftToPayPence: 0, leftToPay: 0 } });
+  assert.ok(Boolean(await t.sale.findByText('The deposit is more than the bill: £7.00 isn’t paid back here yet.')));
+});
+

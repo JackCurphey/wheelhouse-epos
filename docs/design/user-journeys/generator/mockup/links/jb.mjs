@@ -9,10 +9,13 @@ export default {
     ...PAD,
     'Serving: Jack Lewis — switch who’s serving': STAY,
     'Give me a different one': STAY,
-    'Sign in again': go('workos-signin'),
+    // Wheelhouse's own sign-in first (staff-signin-google, Jack 25 Oct).
+    'Sign in again': go('staff-signin'),
     'Send a new code': STAY,
     'Use a different email': go('cust-signin'),
   },
+  // Google's account chooser is Google's own page; email and password are on WorkOS's.
+  'staff-signin': { '[G] Continue with Google': outside('Google’s account chooser, then back signed in'), 'Sign in with email': go('workos-signin') },
   'workos-signin': { Continue: go('auth-site'), 'Forgot your password?': outside('WorkOS’s reset-your-password page') },
   'auth-site': {
     'Bolton North Street Cycles · Till B1 Last time': go('op-today'),

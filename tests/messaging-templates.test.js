@@ -18,9 +18,22 @@ test('the approved booking wording and the first live messages', () => {
   assert.equal(TEMPLATES.booking_confirmed.wording,
     'Hi [Customer’s first name], your [Service] at [Shop name] is booked for [Booked day and time]. [When to drop off] [Your note on the confirmation] See or change your booking: [Link to the booking] — no app or sign-in needed. Your repair · [Job number].');
   assert.equal(TEMPLATES.bike_ready.name, 'Bike ready');
-  // The booking messages staff answers send (Jack, 20 Oct); Request received
-  // and Booking cancelled wait for the customer's side (Mark's booking server).
-  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'bike_ready', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered']);
+  assert.equal(TEMPLATES.bike_still_waiting.wording,
+    'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [What’s left to pay]. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].');
+  // The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct
+  // the customer's side: Request received and Booking cancelled.
+  // Work added within your limit, Quote reminder and Your answers joined 22 Oct (openspec/changes/spend-limit-within, quote-reminder, your-answers-message).
+  // Bike still waiting joined 23 Oct, in the words drawn on cp-setting's pop-up (openspec/changes/uncollected-bike).
+  // The service reminder joined 25 Oct, in the words drawn on ac-reminder-wording (openspec/changes/service-reminder-send).
+  assert.deepEqual(LIVE_KEYS, ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request']);
+  // The declined wording is the second box of Date change answered, not a row of its own (Mark, 25 Oct).
+  assert.equal(TEMPLATES.date_change_declined.partOf, 'date_change_answered');
+  assert.equal(TEMPLATES.date_change_declined.wording,
+    'Hi [Customer’s first name], [Shop name] can’t do [New day and time], so your booking stays on [Booked day and time]. See your booking: [Link to the booking]. Your repair · [Job number].');
+  // The review request joined 25 Oct, off until the shop switches it on (openspec/changes/review-requests).
+  assert.equal(TEMPLATES.review_request.offUntilOn, true);
+  assert.equal(TEMPLATES.service_reminder.wording,
+    'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].');
   assert.deepEqual(Object.keys(TEMPLATES).filter((k) => TEMPLATES[k].group === 'booking'),
     ['request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'booking_cancelled']);
 });

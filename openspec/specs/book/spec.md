@@ -91,11 +91,15 @@ A booking the shop hasn't accepted SHALL show "Your booking request" with the "W
 - **THEN** her page says it is cancelled
 
 ### Requirement: The customer answers an offered time on the booking page
-When the shop has suggested another time, the customer's booking page SHALL say what the shop can't do, the time it suggests and its message, with "Accept this time" and "Cancel my request" (Jack, 1 Oct, decision 12; 20 Oct).
+When the shop has suggested another time, the customer's booking page SHALL say what the shop can't do, the time it suggests and its message, with "Accept this time" and "Cancel my request" (Jack, 1 Oct, decision 12; 20 Oct). Accepting SHALL confirm only the time the page showed: if the shop has changed it since, the page SHALL say "The shop has changed the time it’s offering. Here’s the new one." and show the new time (Jack, 22 Oct).
 
 #### Scenario: Accepting the offer
 - **WHEN** Sam presses Accept this time
 - **THEN** the booking is confirmed for the suggested time
+
+#### Scenario: The shop changed the time meanwhile
+- **WHEN** Sam's page shows Friday at 12:00, the shop offers Monday at 09:00 instead, and Sam presses Accept this time
+- **THEN** nothing is confirmed, and the page says the shop has changed the time and shows Monday at 09:00
 
 ### Requirement: A declined booking's page says so, with the shop's message
 A declined booking's page SHALL say "Sorry, we can't fit this booking in", show the shop's message, say nothing is booked, and offer to choose another date (Book a repair 12; Jack, 20 Oct).
@@ -125,3 +129,440 @@ A booking request the shop never answered SHALL, once expired, say "Sorry, we co
 #### Scenario: The shop didn't answer in time
 - **WHEN** the customer opens the link of an expired request
 - **THEN** the page says it has expired and nothing is booked, and "Choose another date" opens the shop's booking start
+
+### Requirement: The booking link says how far the bike is, and who to contact
+The booking link SHALL carry:
+- how far the work is;
+- when the bike was booked in and collected;
+- the day the bike is expected to be ready (the job's last day);
+- the shop's address, phone and opening hours.
+
+#### Scenario: A bike in the workshop
+- **WHEN** the customer opens the link after their bike is booked in and started
+- **THEN** it says the work is in progress and when the bike was booked in, with the shop's address, phone and hours
+
+### Requirement: A booking link lasts 30 days after collection
+A booking link SHALL stop working 30 days after its bike was collected. A link SHALL keep working while its bike is in the shop. A link whose bike never came in SHALL stop working 30 days after its booked day. An expired link SHALL say which job it was, why it expired, and the shop's name, address and phone, with nothing that identifies the customer.
+
+#### Scenario: Collected 31 days ago
+- **WHEN** the customer opens the link of a bike collected 31 days ago
+- **THEN** it is refused as expired, giving the job's number, "collected", and the shop's details
+
+#### Scenario: Still in the shop
+- **WHEN** a bike booked 40 days ago is still in the shop
+- **THEN** its link still works
+
+### Requirement: A booking is confirmed straight away when the shop confirms automatically
+When the shop confirms online bookings automatically, a booking that fits the diary SHALL be confirmed when sent: step 4's button reads "Confirm booking", and the customer's booking page shows it confirmed at once (Jack, 1 Oct, decision 8; 19 Oct).
+
+#### Scenario: Confirmed at once
+- **WHEN** the shop confirms automatically and Maya books a time that fits
+- **THEN** her booking page shows "Confirmed", with when to drop the bike off
+
+#### Scenario: The shop answers each request
+- **WHEN** the shop doesn't confirm automatically
+- **THEN** step 4's button reads "Request booking" and the booking waits for the shop to accept it
+
+### Requirement: The booking page shows the work and the money, figures only when prices show
+Once the bike is in, the booking page SHALL list the work on the job. Once ready, it SHALL list what the customer declined, what's left to pay, or what was paid and when. With "Show prices on the booking page" off, every figure SHALL be hidden and the rest SHALL still show (Jack, 21 Oct, answer 4).
+
+#### Scenario: Ready, prices shown
+- **WHEN** Maya opens her link once her bike is ready
+- **THEN** the page shows "To pay when you collect £111.00", then What we did with each line's price, and "Not done — you said no thanks: Replace gear cable (£12.00)"
+
+#### Scenario: Prices hidden
+- **WHEN** the shop doesn't show prices online
+- **THEN** the same lines show with no figures
+
+### Requirement: An expired link's page says which job and gives the shop
+An expired link's page SHALL give the job's number and the shop's address and phone. A collected job's page SHALL say it has been collected. A booking whose bike never came in SHALL give the 30-day rule and "Book a repair".
+
+#### Scenario: Collected long ago
+- **WHEN** Maya opens her link 31 days after collecting her bike
+- **THEN** it says "This link has expired" and that the job was collected, with the shop's details
+
+### Requirement: The customer's quote names staff only when the shop shows who signed off
+The quote on the customer's booking link SHALL follow its drawings (journey 4). It SHALL name the mechanic, and who took an answer by phone or in the shop, only when the shop's "Show who signed off to customers" switch is on; otherwise it SHALL say "we" (Jack, 22 Oct). It SHALL thank the customer by first name, and offer the shop's phone for anyone not sure.
+
+#### Scenario: Switch on
+- **WHEN** Alex Morgan's quote is sent to Maya Patel and the shop's switch is on
+- **THEN** the card says "Alex recommends more work", and once Maya answers, "Thanks, Maya — Alex is carrying on"
+
+#### Scenario: Switch off
+- **WHEN** the same quote is sent with the switch off
+- **THEN** the card says "We recommend more work", and once Maya answers, "Thanks, Maya — we’re carrying on", and the reply carries no staff names
+
+#### Scenario: Answered by phone
+- **WHEN** Jo Taylor records Maya's answer by phone and the switch is off
+- **THEN** Maya's page says "Your answers, from your call" and "You answered by phone at [time]. Here’s what was agreed.", without Jo's name
+
+#### Scenario: Withdrawn
+- **WHEN** the shop withdraws the quote with the switch off
+- **THEN** the card says "We’ve withdrawn this quote" and "Nothing to answer. Call [shop phone] if you have a question."
+
+### Requirement: The finished job's checklist shows on the booking page
+Once the work is finished, the ready and collected booking pages SHALL show the job's checklist, if a mechanic ticked or noted anything on it, as it was then, after "What we did": each check done, reading "All working well" or "What the mechanic found:" with its note, then "[n] of [n] checks done." and the checks not done by name (cp-summary; Workshop day 21; audit M1, Jack 30 Sep). It SHALL NOT show while the work is under way.
+
+#### Scenario: Eight of ten done, one note
+- **WHEN** the mechanic ticked eight checks, noting the brakes, and finished the work
+- **THEN** the page lists the eight, the brakes with what the mechanic found, and reads "8 of 10 checks done. Not done: Cables & housing, Bolts torqued."
+
+#### Scenario: A checklist nobody used
+- **WHEN** the work was finished without anything ticked or noted on the job's checklist
+- **THEN** the page shows no checklist, rather than "0 of 10 checks done"
+
+### Requirement: Quote lines that go together are answered together
+On the customer's quote, a labour line that goes with a part SHALL tick and untick with it (Jack, 1 Oct, decision 2), and the server SHALL refuse an answer that says yes to one and no to the other. An unticked Needed line SHALL show the mechanic's words on what happens without it, when the shop wrote some (decision 7).
+
+#### Scenario: Unticking the part
+- **WHEN** Maya unticks Shimano brake pads, which Fit and adjust brakes goes with
+- **THEN** Fit and adjust brakes is unticked too, the total drops by both, and a screen reader hears "Fit and adjust brakes unticked too."
+
+#### Scenario: What happens without it
+- **WHEN** Maya unticks Shimano brake pads, whose without words are "The rear brake stays worn."
+- **THEN** the card shows "We recommend this. The rear brake stays worn." under it
+
+#### Scenario: A split answer
+- **WHEN** an answer says yes to the pads and no to the fitting
+- **THEN** it is refused and nothing is saved
+
+### Requirement: The customer sees a quote line's photo and can enlarge it
+A quote line with a photo SHALL show a small picture beside its reason on the customer's quote, with "Tap to enlarge"; tapping it SHALL open the photo larger, titled with the line and its reason (Jack, 1 Oct). The photo SHALL be served only through the booking's link, and only for a line of its current quote.
+
+#### Scenario: Enlarging the pads photo
+- **WHEN** Maya taps the photo beside Shimano brake pads
+- **THEN** a pop-up titled "Shimano brake pads" shows the reason and the photo larger, with Close
+
+#### Scenario: A photo not on the current quote
+- **WHEN** a link asks for the photo of a line on an older revision, or of another booking's line
+- **THEN** nothing is served (not found)
+
+### Requirement: A newer quote keeps the customer's earlier answers as history
+When the shop sends a quote after the customer has answered an earlier one, the customer's quote SHALL say "The quote has changed", that the earlier answers are kept, what was already agreed and what they said no thanks to, and ask only about the new lines (Jack, 22 Oct; dq-quote-newer).
+
+#### Scenario: Pads after all
+- **WHEN** Maya said no to the pads and the cable, then rings back, and the shop sends a new quote with just the pads
+- **THEN** her page says "The quote has changed", "You said no thanks: Shimano brake pads, Replace gear cable", and asks only about the pads
+
+### Requirement: The customer can set a spending limit when booking
+The booking's bike step SHALL ask "If the mechanic finds more to do", with "Ask me before any extra work" chosen to start and "Go ahead if the whole bill comes to no more than £[amount]", the amount in whole pounds (Workshop day 41). A limit SHALL be stored on the job; asking first stores none.
+
+#### Scenario: Setting £200
+- **WHEN** Maya chooses Go ahead and leaves £200, then books
+- **THEN** her job's limit is £200, and her summary says "Extra work: go ahead if the whole bill is no more than £200"
+
+#### Scenario: Not a whole amount
+- **WHEN** Maya chooses Go ahead and enters "150.50"
+- **THEN** Continue is refused with "Enter the most the whole bill can come to, in whole pounds."
+
+### Requirement: The customer's quote says when a reminder was sent
+Once the reminder has gone, the customer's quote SHALL say so beside when it was sent: "Sent Thu 17 Sep, 10:15 · we sent a reminder at 10:15" (dq-quote-reminded).
+
+#### Scenario: After the reminder
+- **WHEN** Maya opens her quote after the reminder went at 10:15
+- **THEN** the sent line ends "· we sent a reminder at 10:15"
+
+### Requirement: The customer can write to the shop from their booking page
+Through their booking link, the customer SHALL be able to add a note for the shop and read the shop's replies, oldest first, with staff names only when the shop shows who signed off (decision 3).
+
+#### Scenario: A note
+- **WHEN** Maya adds "Can you check the back light too?" on her booking page
+- **THEN** it is saved on her job, and her page lists it as hers
+
+### Requirement: The booking page shows the conversation with the shop
+From the bike being in the shop until the page closes after collection, the customer's booking page SHALL show "Notes with the shop": the notes so far, a box to add a note (then to reply), and that the shop will reply there and let them know (ac-job-note).
+
+#### Scenario: Waiting for a reply
+- **WHEN** Maya sends "Can you check the back light too?"
+- **THEN** her page shows it as hers and "Sent. North Street Cycles will reply here, and we’ll let you know when they do."
+
+### Requirement: The quote and the agreed work lead to a note for the shop
+While the bike is in the shop, the customer's quote card SHALL end "Not sure? Call [shop phone], or" with an "Add a note for the shop" button, and the Work agreed card SHALL end with the same button (dq-quote, dq-in-shop). The button SHALL move the customer to the Notes with the shop card and put the cursor in its box. Where the page has no notes card, the quote card SHALL offer the phone only.
+
+#### Scenario: Not sure about the quote
+- **WHEN** Maya, looking at her quote, taps "Add a note for the shop"
+- **THEN** the page moves to Notes with the shop and the cursor is in its box, ready to type
+
+#### Scenario: Before the bike is in
+- **WHEN** the page has no Notes with the shop card
+- **THEN** the quote card says "Not sure? Call [shop phone]." with no note button
+
+### Requirement: On a tablet or phone the quote's answer stays pinned at the bottom
+
+While a quote waits for the customer's answer on a tablet or phone, the booking page SHALL keep a bar pinned along the bottom holding the new total, "Your answers are final once sent." and the one send button, and the quote itself SHALL NOT repeat that line or button. On a computer they SHALL stay in the quote. Sending SHALL stay one click with no confirming pop-up.
+
+#### Scenario: Maya opens her quote on her phone
+
+- **WHEN** Maya opens her booking page on her phone and the quote for Shimano brake pads, Fit & adjust brakes and Replace gear cable waits for her answer
+- **THEN** a bar along the bottom shows "New total £111.00", "Your answers are final once sent." and "Approve £111.00", and stays in view as she scrolls
+
+#### Scenario: Unticking lines changes the bar
+
+- **WHEN** Maya unticks Shimano brake pads, and Fit & adjust brakes goes with it
+- **THEN** the bar's total becomes £65.00 and its button reads "Decline the extra work"
+
+#### Scenario: One tap sends
+
+- **WHEN** Maya taps the bar's button
+- **THEN** her answers are sent at once, with no "Send your answers?" pop-up
+
+#### Scenario: On a computer the button stays in the quote
+
+- **WHEN** Maya opens the same quote on a computer
+- **THEN** "Your answers are final once sent." and the button sit inside the quote, and no bar is pinned
+
+#### Scenario: The bar covers nothing
+
+- **WHEN** Maya scrolls to the bottom of her booking page on a 320-pixel-wide phone
+- **THEN** the last thing on the page sits above the bar, not under it
+
+#### Scenario: No bar once answered
+
+- **WHEN** the quote has been answered or withdrawn
+- **THEN** no bar is pinned
+
+### Requirement: A booking request's photos are saved without where they were taken
+
+Before a customer's booking photos are saved, the server SHALL remove their hidden details: location, time taken, camera and phone details, and embedded text. It SHALL keep which way up the photo goes and its colour profile, and SHALL NOT change the picture itself.
+
+#### Scenario: A photo taken at home
+
+- **WHEN** Maya adds a photo of her Trek Domane AL 3 taken on her phone at home to her booking request
+- **THEN** the saved photo carries no location, no time taken and no phone details
+
+#### Scenario: A phone photo stays the right way up
+
+- **WHEN** the photo was taken with the phone held upright
+- **THEN** the saved photo still shows upright
+
+#### Scenario: The picture is unchanged
+
+- **WHEN** a photo has its hidden details removed
+- **THEN** the picture itself is exactly the same as the one Maya sent
+
+### Requirement: A booking takes the shop's deposit, held first and taken once the booking is saved
+
+When the shop takes a deposit, a booking request SHALL need the deposit held
+on a card first, worked out by the server from the stored prices, never
+taken from the booking page. The booking SHALL be saved with the deposit and
+when it is free to cancel until, and only then SHALL the money be taken; a
+booking that can't be saved SHALL let the hold go. Sending the same request
+again SHALL book once and take once.
+
+#### Scenario: Paid and booked
+- **WHEN** the shop takes 20% and a customer holds £13.00 on a £65.00 service and sends the booking
+- **THEN** the booking is saved with a £13.00 deposit, the £13.00 is taken, and it is free to cancel until 24 hours before
+
+#### Scenario: Not held
+- **WHEN** the shop takes a deposit and a booking request comes without a held deposit
+- **THEN** it is refused, saying the deposit is needed, and nothing is booked
+
+#### Scenario: The slot went
+- **WHEN** the deposit is held and the time is gone by the time the booking is sent
+- **THEN** nothing is booked and the hold is let go, so nothing is taken
+
+#### Scenario: Sent twice
+- **WHEN** the connection drops after paying and the customer sends again
+- **THEN** the booking already made is answered, and the deposit is taken once
+
+#### Scenario: Declined card
+- **WHEN** the card is declined
+- **THEN** nothing is held, and the booking can't be sent until a card is accepted
+
+### Requirement: The customer pays the deposit on step 4 before the booking is sent
+
+When the shop takes a deposit, step 4 SHALL show the deposit part drawn in
+`bk-details-deposit` with the amount, the refund and cancel lines and the card
+form, the summary SHALL show "Deposit to pay now", and the button SHALL read
+"Pay £[deposit] and send request", or "Pay £[deposit] and book" when the shop
+confirms automatically. Pressing it SHALL pay, then send the booking.
+
+#### Scenario: Paid and sent
+- **WHEN** the shop takes 20% of a £65.00 service and the customer enters an accepted card and presses Pay £13.00 and send request
+- **THEN** the deposit is held, the booking is sent with it, and the customer is taken to their booking
+
+#### Scenario: A declined card
+- **WHEN** the card is declined
+- **THEN** "The card didn't go through. Nothing was taken and nothing is booked yet. Try again, or use another card." shows, the button reads Try again, and nothing is sent
+
+#### Scenario: The connection drops after paying
+- **WHEN** the card was accepted and the booking couldn't be sent
+- **THEN** "We're checking whether your payment went through — please don't pay again." shows with Check again, which sends the same booking without paying again
+
+#### Scenario: No deposit
+- **WHEN** the shop takes no deposit
+- **THEN** step 4 has no deposit part and its button is as before
+
+### Requirement: The booking page shows the deposit paid and when it's free to cancel until
+
+A booking that took a deposit SHALL show "Deposit paid" with the amount and
+"Free to cancel until" with the day and time in the shop's time, above "Your
+repair", as drawn in `bookingLines`. A request waiting for the shop SHALL add
+"If we can't fit you in, your deposit comes back in full." A booking with no
+deposit SHALL show neither.
+
+#### Scenario: A confirmed booking with a deposit
+- **WHEN** Maya's booking took £13.00 and is free to cancel until 24 hours before Monday 11:30
+- **THEN** her page shows Deposit paid £13.00 and Free to cancel until Sunday 4 October, 11:30
+
+#### Scenario: A request with a deposit
+- **WHEN** her request is waiting for the shop
+- **THEN** the page adds "If we can't fit you in, your deposit comes back in full."
+
+### Requirement: The deposit comes back when the booking is cancelled in time or the shop can't fit it in
+
+A booking's deposit SHALL be refunded automatically when the customer cancels
+before the time it is free to cancel until, and when the shop declines it,
+lets the request expire, or cancels it. Cancelled after that time, the
+deposit SHALL be kept, and the cancel SHALL be refused unless the customer
+chose to lose the deposit. A refund the provider can't make at once SHALL be
+made later, never lost.
+
+#### Scenario: Cancelled in time
+- **WHEN** Maya cancels two days before her booking, before Free to cancel until
+- **THEN** her £13.00 is refunded to her card
+
+#### Scenario: Cancelled late
+- **WHEN** Maya cancels after Free to cancel until and chose Cancel and lose the deposit
+- **THEN** the booking is cancelled and the £13.00 is kept
+
+#### Scenario: Late, without choosing to lose it
+- **WHEN** a page opened before the cut-off sends a cancel after it
+- **THEN** it is refused, saying the deposit would be kept, and nothing changes
+
+#### Scenario: The shop declines
+- **WHEN** the shop declines Maya's request
+- **THEN** her £13.00 is refunded automatically
+
+### Requirement: The customer's pages say what happens to the deposit
+
+The cancel pop-up SHALL say the deposit will be refunded before the cut-off,
+and after it that it isn't refundable, with the shop's number and the button
+"Cancel and lose the deposit". The cancelled page SHALL say the deposit comes
+back or was kept; the declined and expired pages SHALL say it comes back.
+Past the cut-off the booking page SHALL NOT show "Free to cancel until".
+
+#### Scenario: Cancelling late
+- **WHEN** Maya cancels after Sunday 4 October, 11:30
+- **THEN** the pop-up says "It's past Sunday 4 October, 11:30, so your £13.00 deposit isn't refundable. If something's gone wrong, call the shop on 01204 555 123 — they can still refund it." and its button reads Cancel and lose the deposit
+
+#### Scenario: Declined
+- **WHEN** the shop declines Maya's request
+- **THEN** her page says "Nothing is booked. Your £13.00 deposit comes back to your card within 5 to 10 working days."
+
+### Requirement: A request the shop hasn't confirmed gets its deposit back when cancelled
+
+A request waiting for the shop, or a time the shop offered that the customer
+hasn't accepted, SHALL get its deposit back when the customer cancels it,
+whenever that is; only a confirmed booking keeps it after the cut-off. A
+request the shop confirms after its cut-off SHALL be free to cancel for 1 hour
+from then, never past the booking's start.
+
+#### Scenario: A request cancelled after the cut-off
+- **WHEN** Maya's request for tomorrow, not yet confirmed, is cancelled after its cut-off
+- **THEN** her £13.00 is refunded, and the cancel pop-up said it would be
+
+#### Scenario: Confirmed after the cut-off
+- **WHEN** the shop confirms Maya's request after its cut-off has passed
+- **THEN** she can cancel free for 1 hour from then, never past the booking's start
+
+### Requirement: An unfinished booking comes back on a later visit
+
+A booking in progress SHALL be kept on the customer's device for 7 days,
+besides the tab's own copy. Coming back to the shop's booking page later,
+with no copy in the tab, SHALL bring it back on the step the customer left,
+with "You didn't finish booking. Carry on where you left off — everything
+you typed is still here.", Carry on and Start again. Start again SHALL clear
+it and go to the first step. Sending the booking SHALL clear it. A refresh
+in the same tab SHALL show no banner.
+
+#### Scenario: Coming back the next day
+- **WHEN** Maya chose a Standard service, told us about her bike, closed the tab, and opens the booking page the next day
+- **THEN** she's on the step she left, with everything filled in, and the banner
+
+#### Scenario: Start again
+- **WHEN** she presses Start again
+- **THEN** the booking starts empty on the first step, and nothing is kept
+
+#### Scenario: Too old
+- **WHEN** she comes back after more than 7 days
+- **THEN** the booking starts empty and the old copy is gone
+
+### Requirement: The details step asks about service reminders
+The booking's details step SHALL show the tick "Remind me when my bike is due its next service", with "And ask me for a review after I collect. One message each, the way you chose above. Stop any time.", unticked to start (`ac-book-remind`; account and reminders decisions 2 and 8).
+
+#### Scenario: Unticked to start
+- **WHEN** Maya reaches the details step
+- **THEN** the reminder tick is there, unticked
+
+### Requirement: A booking saves the customer's yes to reminders
+A booking sent with the reminder tick ticked SHALL record, on its customer, a yes to service reminders and to review requests, with when it was given and that it came from a booking. A booking sent without it SHALL leave the customer's answers as they were.
+
+#### Scenario: Ticked
+- **WHEN** Maya ticks it and books
+- **THEN** her customer record says yes to service reminders and review requests, given now, from a booking
+
+#### Scenario: Not ticked
+- **WHEN** a customer who said yes before books again without ticking
+- **THEN** their yes stays
+
+### Requirement: A customer stops service reminders with a press, no sign-in
+A service reminder's "Stop these" link SHALL open a page that asks "Stop service reminders?" with one button; reminders SHALL stop only when it is pressed. The page SHALL then say "Service reminders stopped" and "We won’t send you service reminders any more. Job updates about a bike that’s with us still come as usual.", with "Turn them back on" (`ac-stopped`). Turning them back on SHALL say "Service reminders are on again" (`ac-stopped-on`) and record a yes from the stop page.
+
+#### Scenario: Opening the link
+- **WHEN** Maya's phone opens the link to check it
+- **THEN** nothing stops until she presses the button
+
+#### Scenario: Stopping
+- **WHEN** Maya presses "Stop service reminders"
+- **THEN** her service reminders stop, and the page says so
+
+#### Scenario: A link that doesn't work
+- **WHEN** someone opens a stop link with a made-up code
+- **THEN** the page says "This link doesn’t work" and shows nothing about anyone
+
+### Requirement: The ready page asks about service reminders
+While the bike is ready to collect, the in-shop "To pay when you collect" card SHALL end with the tick "Remind me when my bike is due its next service" and "And ask me for a review after I collect. One message each, the way you chose when you booked. Stop any time.", unticked; ticking it SHALL save a yes from collection at once.
+
+#### Scenario: Ticking at collection
+- **WHEN** Maya, booked in by staff, ticks it on her ready page
+- **THEN** she has said yes to service reminders and review requests, from collection
+
+### Requirement: A customer who said yes sees so on the ready page
+A customer who already said yes SHALL see "You’ll get a reminder when the next service is due. Change" instead of the tick; Change SHALL show the tick, ticked, and unticking it SHALL turn reminders off.
+
+#### Scenario: Changing their mind
+- **WHEN** Maya presses Change and unticks it
+- **THEN** her service reminders are off
+
+#### Scenario: Said yes when booking
+- **WHEN** Maya said yes when booking
+- **THEN** her ready page says "You’ll get a reminder when the next service is due."
+
+### Requirement: A shop with many single jobs can search them
+
+The service list SHALL show a search box above the single jobs when the shop has more than 8 of them, labelled "Search the individual services", with the placeholder "Search [n] individual services — like “brakes” or “puncture”". Typing SHALL narrow the single jobs to those whose name has every word typed, ignoring case, and SHALL leave the full services and the ticks as they are.
+
+#### Scenario: 8 or fewer single jobs
+- **WHEN** a shop has 8 single jobs
+- **THEN** the list has no search box
+
+#### Scenario: searching for brakes
+- **WHEN** a shop has 12 single jobs and the customer types "brake"
+- **THEN** only the single jobs with "brake" in their name show, under their categories; a category with none left is hidden; every full service still shows
+
+#### Scenario: a ticked job the search hides
+- **WHEN** the customer has ticked "Wheel true" and types "brake"
+- **THEN** "Wheel true" stays ticked and in the running summary
+
+#### Scenario: nothing matches
+- **WHEN** the customer types "zzz"
+- **THEN** "No single jobs match “zzz”." shows, and the full services and "Not sure what you need?" still show
+
+### Requirement: Booking that can't load says online booking is unavailable
+
+When the shop's services fail to load for any reason but a shop that doesn't exist, every booking screen SHALL show the heading "Online booking is unavailable just now" and "Please try again in a little while, or call the shop to book.", with "Try again". A shop that doesn't exist SHALL still say "We can't find this shop".
+
+#### Scenario: the server is down
+- **WHEN** the services request fails with a server error
+- **THEN** the page reads "Online booking is unavailable just now" with "Try again", and pressing it once the server is back shows the booking step

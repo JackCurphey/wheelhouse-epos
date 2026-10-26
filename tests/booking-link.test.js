@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from '../server/booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, linkExpiry, bookingStage } from '../server/booking-link.js';
 
 test('a code is 64 hex characters and never repeats', () => {
   const a = newLinkCode();
@@ -56,4 +56,25 @@ test('a scheduled booking follows custody and work', () => {
   assert.equal(stage('scheduled', 'in_shop', 'waiting_parts'), 'in_workshop');
   assert.equal(stage('scheduled', 'in_shop', 'complete'), 'ready_to_collect');
   assert.equal(stage('scheduled', 'collected', 'complete'), 'collected');
+});
+
+// Build-plan Q8 (Jack, 3 Oct; booking page stages, 21 Oct): 30 days after
+// collection, or after the booked date if the bike never came in; a bike
+// still in the shop keeps its link.
+test('a collected bike’s link works for 30 days after collection, whatever the booked date', () => {
+  assert.deepEqual(linkExpiry({ jobDate: '2026-10-01', custodyState: 'collected', collectedOn: '2026-11-10' }, '2026-12-10'), { expired: false, reason: null });
+  assert.deepEqual(linkExpiry({ jobDate: '2026-10-01', custodyState: 'collected', collectedOn: '2026-11-10' }, '2026-12-11'), { expired: true, reason: 'collected' });
+});
+
+test('a bike in the shop keeps its link, however long ago it was booked', () => {
+  assert.deepEqual(linkExpiry({ jobDate: '2026-10-01', custodyState: 'in_shop', collectedOn: null }, '2027-01-01'), { expired: false, reason: null });
+});
+
+test('a bike that never came in: 30 days after the booked date', () => {
+  assert.deepEqual(linkExpiry({ jobDate: '2026-10-01', custodyState: 'expected', collectedOn: null }, '2026-10-31'), { expired: false, reason: null });
+  assert.deepEqual(linkExpiry({ jobDate: '2026-10-01', custodyState: 'expected', collectedOn: null }, '2026-11-01'), { expired: true, reason: 'never_came_in' });
+});
+
+test('a bike collected before collection was recorded counts from its booked date', () => {
+  assert.deepEqual(linkExpiry({ jobDate: '2026-10-01', custodyState: 'collected', collectedOn: null }, '2026-11-01'), { expired: true, reason: 'collected' });
 });

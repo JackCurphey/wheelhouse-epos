@@ -130,3 +130,53 @@ test('useDraft outside a provider says so', async () => {
   function Probe() { mod.useDraft(); return null; }
   assert.throws(() => render(h(Probe)), /DraftProvider/);
 });
+
+// Kept for later (Jack, 1 Oct, book a repair decision 9; drawn as bk-resume;
+// openspec/changes/booking-draft-resume): a copy on the device for 7 days,
+// brought back when a new tab or visit has none.
+const LATER = 'wh-book-draft-later:north';
+const later = () => JSON.parse(window.localStorage.getItem(LATER));
+
+test('every save is also kept for later, with when', async () => {
+  const m = await mount('north');
+  await m.act(() => m.api.update({ serviceIds: [7], name: 'Maya Patel' }));
+  assert.deepEqual(later().draft, { serviceIds: [7], name: 'Maya Patel' });
+  assert.ok(Date.now() - Date.parse(later().savedAt) < 60_000);
+});
+
+test('a new visit with nothing in the tab brings the kept draft back, and says so', async () => {
+  const first = await mount('north');
+  await first.act(() => first.api.update({ serviceIds: [7], description: 'Squeaky brakes' }));
+  first.ui.unmount();
+  window.sessionStorage.clear(); // the tab was closed
+  const second = await mount('north');
+  assert.deepEqual(second.api.draft, { serviceIds: [7], description: 'Squeaky brakes' });
+  assert.equal(second.api.resumed, true);
+  // Brought back into the tab, so a refresh carries on quietly.
+  assert.deepEqual(JSON.parse(window.sessionStorage.getItem('wh-book-draft:north')), { serviceIds: [7], description: 'Squeaky brakes' });
+});
+
+test('a refresh in the same tab carries on without saying so', async () => {
+  const first = await mount('north');
+  await first.act(() => first.api.update({ serviceIds: [7] }));
+  first.ui.unmount();
+  const second = await mount('north');
+  assert.equal(second.api.resumed, false);
+});
+
+test('a kept draft more than 7 days old is thrown away', async () => {
+  uninstall ??= installDom('http://localhost/book/north');
+  window.localStorage.setItem(LATER, JSON.stringify({ draft: { serviceIds: [7] }, savedAt: new Date(Date.now() - 8 * 86_400_000).toISOString(), step: 'problem' }));
+  const m = await mount('north');
+  assert.deepEqual(m.api.draft, {});
+  assert.equal(m.api.resumed, false);
+  assert.equal(window.localStorage.getItem(LATER), null);
+});
+
+test('clear removes the kept copy too', async () => {
+  const m = await mount('north');
+  await m.act(() => m.api.update({ serviceIds: [7] }));
+  await m.act(() => m.api.clear());
+  assert.equal(window.localStorage.getItem(LATER), null);
+});
+

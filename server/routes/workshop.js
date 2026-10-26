@@ -12,24 +12,34 @@ import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, pool } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
-import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry, photoCodePath } from '../booking-link.js';
 import { currentSession } from '../lib/session.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-import { queueMessage, undoWaiting, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { queueMessage, undoWaiting, undoJobMessages, whyNotQueued, UNDO_MS } from '../messaging/engine.js';
+import { queueServiceReminder } from '../messaging/service-reminders.js';
+import { queueReviewRequest } from '../messaging/review-requests.js';
 import { TEMPLATES } from '../messaging/templates.js';
-import { jobMessageVars, bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobMessageVars, bookingMessageVars, messageLink, dayAndTime } from '../workshop/job-messages.js';
 import {
   createRevision as createQuoteRevision, send as sendQuoteForApproval, withdraw as withdrawQuote,
   serializeQuote, readQuote, serializeQuoteWithLines, listRevisions,
+  linePence,
 } from '../workshop/quotes.js';
 import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
+import { shopNow } from '../clock.js';
 import { SIGN_OFF_REQUIRED, signOffMechanic, recordSignOff, clearSignOff } from '../workshop/sign-off.js';
+import { ChecklistError, jobChecklist, setJobChecklistItem } from '../workshop/checklists.js';
+import { addNote, cleanNote, conversations as noteConversations, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
+import { removePhotoDetails } from '../photo-metadata.js';
+import { oweRefund, refundOwed } from '../payments/refund.js';
+import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
+import { cancelPhotoCode, makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
-  currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
+  currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
   serializeWorkshopJob, syncJobHold, timeToMinutes, addMinutesToTime, withBookingLock, withJobBookingLock, applyLocked,
-  sendQuoteResult, answerAndAddToOrder,
+  sendQuoteResult, answerAndAddToOrder, agreeWithinLimit, wholeBill,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -207,6 +217,7 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
   if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
   const requestedGone = { status: 409, body: { error: 'The requested time is no longer free', code: 'capacity' } };
   let out;
+  let declinedWhen = null;
   try {
     out = await withJobBookingLock(id, [], async (job) => {
       if (job.version !== body.version) return staleRefusal;
@@ -241,6 +252,8 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
         await db.prepare(
           `UPDATE workshop_jobs SET ${CLEAR_REQUEST}, change_declined_at = now(), updated_at = now() WHERE id = ?`
         ).run(id);
+        // Declining clears the request, so the day asked for goes into the message from here.
+        declinedWhen = dayAndTime(requested.jobDate, requested.startTime);
       }
       await syncJobHold(id);
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
@@ -252,7 +265,12 @@ async function answerChangeRequest(req, res, id, answer, shopId) {
     out = requestedGone;
   }
   if (out?.gone) return notFound(res, 'Job not found');
-  const bookingMessage = answer === 'accept' && out.status === 200 ? await sendBookingMessage(req, id, shopId, 'date_change_answered') : undefined;
+  let bookingMessage;
+  if (out.status === 200) {
+    bookingMessage = answer === 'accept'
+      ? await sendBookingMessage(req, id, shopId, 'date_change_answered')
+      : await sendBookingMessage(req, id, shopId, 'date_change_declined', { 'New day and time': declinedWhen });
+  }
   sendJson(res, out.status, bookingMessage ? { ...out.body, bookingMessage } : out.body);
 }
 
@@ -270,6 +288,7 @@ function waitingItem(row) {
     reference: row.reference,
     ...current,
     customerName: row.customer_name ?? null,
+    bikeLabel: row.bike_label ?? null, // the tablet cards' bike line (#241)
     serviceNames: row.service_names,
     services: row.services,
     arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
@@ -297,9 +316,12 @@ async function issueJobLink(req, jobId, shopId) {
   return `${publicBase(req)}${linkPath(shop.slug, code)}`;
 }
 
-// Bike ready for a job just marked ready. The job's link is issued afresh
-// only for a message that will go, so a customer who gets nothing keeps the
-// link they have (fresh review).
+// Bike ready for a job just marked ready, and its one Bike still waiting for
+// the shop's days later (WP-4.3), which follows only a Bike ready that went,
+// as the quote reminder follows its quote (checked again when it's due,
+// engine.js). The job's link is issued afresh only for a message that will
+// go, so a customer who gets nothing keeps the link they have (fresh review);
+// both carry the same link, as a new one would end Bike ready's.
 async function queueBikeReady(req, jobId, shopId) {
   const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
   const skipped = await whyNotQueued('bike_ready', customerId);
@@ -307,7 +329,15 @@ async function queueBikeReady(req, jobId, shopId) {
   const link = await messageLink(() => issueJobLink(req, jobId, shopId));
   const { vars } = await jobMessageVars(jobId, shopId, link);
   const ctx = await currentSession(req);
-  return queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId: ctx?.login?.id ?? null });
+  const loginId = ctx?.login?.id ?? null;
+  // Don't close things by themselves, the person's own switch: held until Send now (dont-close-server design 2).
+  const prefs = loginId ? await prepare('SELECT accessibility FROM login_preferences WHERE login_id = ?').get(loginId) : null;
+  const hold = prefs?.accessibility?.noAutoClose === true;
+  const ready = await queueMessage({ customerId, jobId, key: 'bike_ready', vars, delayMs: UNDO_MS, loginId, hold });
+  // A shop with no settings row yet has the column's starting 3 days.
+  const days = (await prepare('SELECT collection_reminder_days AS days FROM workshop_settings LIMIT 1').get())?.days ?? 3;
+  await queueMessage({ customerId, jobId, key: 'bike_still_waiting', vars, delayMs: days * 86_400_000, loginId });
+  return ready;
 }
 
 // A booking message for a staff answer (Jack, 20 Oct,
@@ -316,17 +346,27 @@ async function queueBikeReady(req, jobId, shopId) {
 // follows has already been made and stands.
 // Returns { skipped: 'no_contact', name } when the customer can't be reached,
 // for staff to be told (booking messages answer 5); otherwise nothing.
-async function sendBookingMessage(req, jobId, shopId, key) {
+async function sendBookingMessage(req, jobId, shopId, key, extraVars = {}) {
+  // Its own savepoint when the request is one transaction (DB_TENANT_SCOPE=
+  // transaction): a failed statement here would otherwise leave that whole
+  // transaction aborted and roll the staff answer back with it (audit item
+  // 24, #336). Otherwise it is a short transaction of its own.
+  await db.exec('BEGIN');
   try {
     const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
     const why = await whyNotQueued(key, customerId);
-    if (why === 'no_contact') return { skipped: 'no_contact', name: TEMPLATES[key].name };
-    if (why) return undefined;
-    const link = await messageLink(() => issueJobLink(req, jobId, shopId));
-    const { vars } = await bookingMessageVars(jobId, shopId, link, key);
-    const ctx = await currentSession(req);
-    await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+    let result;
+    if (why === 'no_contact') result = { skipped: 'no_contact', name: TEMPLATES[key].name };
+    else if (!why) {
+      const link = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { vars } = await bookingMessageVars(jobId, shopId, link, key, extraVars);
+      const ctx = await currentSession(req);
+      await queueMessage({ customerId, jobId, key, vars, loginId: ctx?.login?.id ?? null });
+    }
+    await db.exec('COMMIT');
+    return result;
   } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
     console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
   }
   return undefined;
@@ -361,6 +401,15 @@ function serializeAttachment(row) {
     uploadedAt: row.uploaded_at,
     fromCustomer: row.from_customer,
   };
+}
+
+// Why a storage slot can't be used, or null: slots switched off for the shop,
+// or no such slot here (storage slots, Workshop day 27).
+async function slotRefusal(slotId) {
+  const on = await db.prepare('SELECT storage_slots_on FROM workshop_settings LIMIT 1').get();
+  if (on?.storage_slots_on !== 1) return 'Storage slots are off for this shop';
+  if (!Number.isInteger(slotId) || !(await db.prepare('SELECT 1 FROM storage_slots WHERE id = ?').get(slotId))) return 'That slot doesn’t exist';
+  return null;
 }
 
 export function register(route) {
@@ -419,6 +468,45 @@ export function register(route) {
     sendJson(res, 201, { privateLink: linkPath(shop.slug, code) });
   });
 
+  // Use my phone (docs/decisions/2026-10-23-use-my-phone.md; openspec/changes/use-my-phone):
+  // a code for one line of the job's draft quote, which a phone opens with no
+  // sign-in. Only its hash is kept; the code leaves the server once, here.
+  // screens: quote-editor
+  route('POST', '/api/workshop-jobs/:id/quote-photo-codes', async (req, res, params, query, afterRelease, shopId) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch {
+      return badRequest(res, 'Invalid request body');
+    }
+    const result = await makePhotoCode({ jobId: job.id, quoteId: body.quoteId, linePosition: body.linePosition });
+    if (!result.ok) {
+      if (result.code === 'not_found') return notFound(res, result.message);
+      if (result.code === 'illegal') return sendJson(res, 409, { error: result.message, code: 'illegal' });
+      return badRequest(res, result.message);
+    }
+    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const path = photoCodePath(shop.slug, result.code);
+    sendJson(res, 201, { codeId: result.codeId, path, url: `${publicBase(req)}${path}`, expiresAt: result.expiresAt });
+  });
+
+  // What the pop-up asks every few seconds: waiting, added or expired.
+  // screens: quote-editor
+  route('GET', '/api/workshop-jobs/:id/quote-photo-codes/:codeId', async (req, res, params) => {
+    const status = await photoCodeStatus({ jobId: Number(params.id), codeId: Number(params.codeId) });
+    if (!status) return notFound(res, 'Code not found');
+    sendJson(res, 200, status);
+  });
+
+  // Cancel in the pop-up: the code stops working at once.
+  // screens: quote-editor
+  route('DELETE', '/api/workshop-jobs/:id/quote-photo-codes/:codeId', async (req, res, params) => {
+    if (!(await cancelPhotoCode({ jobId: Number(params.id), codeId: Number(params.codeId) }))) return notFound(res, 'Code not found');
+    sendJson(res, 200, { ok: true });
+  });
+
   route('POST', '/api/workshop-jobs', async (req, res) => {
     const body = await readJsonBody(req);
     const title = (body.title || '').trim();
@@ -451,12 +539,30 @@ export function register(route) {
     const planned = resolvePlannedMinutes(body.plannedMinutes, null);
     if (planned.error) return badRequest(res, planned.error);
 
+    // The services New job chose, kept as an online booking's are, so the job
+    // has its service's checklist (Jack, 22 Oct, service checklists).
+    if (body.serviceIds !== undefined && !Array.isArray(body.serviceIds)) return badRequest(res, 'serviceIds must be a list');
+    if (!(body.serviceIds ?? []).every(Number.isInteger)) return badRequest(res, 'Service not found');
+    const serviceIds = [...new Set(body.serviceIds ?? [])];
+    for (const serviceId of serviceIds) {
+      if (!(await db.prepare('SELECT 1 FROM workshop_services WHERE id = ?').get(serviceId))) return badRequest(res, 'Service not found');
+    }
+
     const status = resolveJobStatus(body.status, null);
     if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
     // The staff diary still sends a legacy status and will until Phase 4 replaces
     // it. Translating here rather than changing the request contract is what
     // keeps public/app.js working untouched through this phase.
     const created = readLegacyStatus(status);
+
+    // A bike made in the shop (New job's Waiting for parts) may go on its slot
+    // as it's made; one not here yet has no slot (storage slots, 22 Oct).
+    const madeSlot = body.storageSlotId ?? null;
+    if (madeSlot !== null) {
+      if (created.custody !== 'in_shop') return badRequest(res, 'Only a bike that’s here can go on a slot');
+      const why = await slotRefusal(madeSlot);
+      if (why) return badRequest(res, why);
+    }
 
     // Staff are held to the shop's rules, never to capacity: no calculator here.
     // The only capacity answer is the 024 index firing on a stale pre-2b hold,
@@ -487,12 +593,16 @@ export function register(route) {
           customerDescription: customerDescription || null,
           skipAutoOrder: !!body.skipAutoOrder,
           plannedMinutes: planned.value,
+          serviceIds,
         });
+        if (madeSlot !== null) await db.prepare('UPDATE workshop_jobs SET storage_slot_id = ? WHERE id = ?').run(madeSlot, jobId);
         const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
         return { status: 201, body: serializeWorkshopJob(row) };
       });
     } catch (err) {
       if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+      // The storage slot was removed just now (fresh review).
+      else if (err.code === '23503' && madeSlot !== null) out = { status: 400, body: { error: 'That slot doesn’t exist' } };
       else throw err;
     }
     if (out.status === 201) out.body = (await attachParts([out.body]))[0];
@@ -626,6 +736,18 @@ export function register(route) {
       return badRequest(res, "A job's status can't be changed by saving it. Use the job's own actions instead: book in, start, hold, finish, reopen or cancel.");
     }
 
+    // A time on offer to the customer stays where it is until they answer, so
+    // they can never accept a time they weren't shown; staff offer again
+    // instead (Jack, 22 Oct, Mark's audit P2 2).
+    if (existing.booking_state === 'offered' && (
+      jobDate !== existing.job_date
+      || (times.startTime || '') !== (existing.start_time || '')
+      || (times.endTime || '') !== (existing.end_time || '')
+      || mechResolved.mechanicId !== existing.mechanic_id
+    )) {
+      return sendJson(res, 409, { error: 'This time is on offer to the customer. To change it, use Offer another time.', code: 'illegal' });
+    }
+
     // A complete job is a record of work already done, so its details are
     // frozen - the browser disables every field on the form. Changing status
     // is the one edit that stays open, because that is how a job is reopened.
@@ -744,6 +866,14 @@ export function register(route) {
         declineMessage = body.message.trim();
         if (declineMessage.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
       }
+      // Book-in may say where the bike is kept (storage slots, Workshop day 27;
+      // drawn as till-book-in), checked before anything moves.
+      let bookInSlot;
+      if (machine === custody && event === 'book_in' && body.storageSlotId !== undefined && body.storageSlotId !== null) {
+        const why = await slotRefusal(body.storageSlotId);
+        if (why) return badRequest(res, why);
+        bookInSlot = body.storageSlotId;
+      }
       const answeringRequest = machine === bookingRequest && (event === 'accept' || event === 'decline');
       // Finishing the work needs a mechanic to sign it off, and reopening it
       // clears the sign-off (Jack, 16 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -775,7 +905,11 @@ export function register(route) {
         try {
           result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
           if (result.ok && signing) {
-            await recordSignOff(id, signer);
+            // The mechanic deleted or switched off since the check above.
+            if (!(await recordSignOff(id, signer))) {
+              await db.exec('ROLLBACK');
+              return sendJson(res, 400, SIGN_OFF_REQUIRED);
+            }
             // Marking it ready sends "Bike ready", with a minute to Undo (UX
             // walk-through 1 H2; the messages engine, pretend for now), in the
             // same transaction: if it can't be queued, nothing is finished.
@@ -784,6 +918,7 @@ export function register(route) {
           if (result.ok && unsigning) {
             await clearSignOff(id);
             await undoWaiting(id, 'bike_ready');
+            await undoWaiting(id, 'bike_still_waiting');
           }
           await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
         } catch (err) {
@@ -844,6 +979,13 @@ export function register(route) {
             // its hold. syncJobHold decides from the job's current state, not from
             // which event fired, so it releases only when the job is no longer live
             // and otherwise keeps (or realigns) the one hold a live job holds.
+            // The shop declining, letting a request expire, or cancelling: the
+            // deposit comes back (deposit-refunds design 4), owed here, made below.
+            const ended = await db.prepare('SELECT booking_state FROM workshop_jobs WHERE id = ?').get(id);
+            const owed = { declined: 'Declined', expired: 'The request expired', cancelled: 'Cancelled by the shop' }[ended.booking_state];
+            if (owed) await oweRefund(id, owed);
+            // A request confirmed after its cut-off: 1 hour to cancel free (Jack, 24 Oct).
+            if (event === 'accept' && answering === 'pending') await graceOnConfirm(id);
             await syncJobHold(id);
             return { ...applied, job: await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id) };
           });
@@ -853,6 +995,19 @@ export function register(route) {
         }
         if (result.gone) return notFound(res, 'Job not found');
         if (result.refused) return sendJson(res, result.refused.status, result.refused.body);
+      } else if (bookInSlot !== undefined) {
+        // The bike comes in and goes on its slot together, or neither.
+        await db.exec('BEGIN');
+        try {
+          result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+          if (result.ok) await db.prepare('UPDATE workshop_jobs SET storage_slot_id = ? WHERE id = ?').run(bookInSlot, id);
+          await db.exec(result.ok ? 'COMMIT' : 'ROLLBACK');
+        } catch (err) {
+          await db.exec('ROLLBACK');
+          // The slot was removed just now (fresh review).
+          if (err.code === '23503') return badRequest(res, 'That slot doesn’t exist');
+          throw err;
+        }
       } else {
         result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
       }
@@ -863,15 +1018,97 @@ export function register(route) {
         // help. The message is for people and may be reworded; the code may not.
         return sendJson(res, 409, { error: result.message, code: result.code });
       }
-      // After the commit: a message that can't be queued is logged, not an error
-      // (the answer it follows has been made and stands).
+      // After the commit: a refund owed is made (deposit-refunds design 2), and a
+      // message that can't be queued is logged, not an error (the answer it
+      // follows has been made and stands).
+      if (event === 'decline' || event === 'expire' || event === 'cancel') await refundOwed(id);
+      // The bike came after all: Didn't come no longer stands (deposit-diary-server, review).
+      if (event === 'book_in') await db.prepare('UPDATE workshop_jobs SET no_show_at = NULL, no_show_by_login_id = NULL WHERE id = ? AND no_show_at IS NOT NULL').run(id);
       let bookingMessage;
       if (event === 'accept' && answering === 'pending') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_confirmed');
       if (event === 'decline' && (answering === 'pending' || answering === 'offered')) bookingMessage = await sendBookingMessage(req, id, shopId, 'request_declined');
+      // A service reminder from this visit, once the bike has gone; reopening
+      // the collection drops it (service-reminder-send). Logged, never an error:
+      // the collection stands.
+      if (machine === custody && event === 'collect') {
+        // Each on its own, so one that fails doesn't stop the other (review).
+        for (const [what, setUp] of [['service reminder', queueServiceReminder], ['review request', queueReviewRequest]]) {
+          try {
+            await setUp(id, shopId, publicBase(req));
+          } catch (err) {
+            console.error(`Messages: the ${what} for job ${id} could not be set up`, err);
+          }
+        }
+      }
+      if (machine === custody && event === 'reopen') {
+        await undoWaiting(id, 'service_reminder');
+        await undoWaiting(id, 'review_request');
+      }
+      // The shop cancelling (Jack, 20 Oct, booking messages answer 4; 21 Oct).
+      if (event === 'cancel') bookingMessage = await sendBookingMessage(req, id, shopId, 'booking_cancelled');
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
       sendJson(res, 200, { ...serializeWorkshopJob(row), ...(readyMessage ? { readyMessage } : {}), ...(bookingMessage ? { bookingMessage } : {}) });
     });
   }
+
+  // The job page says it was opened (Jack, 19 Oct, auto-confirm): an online
+  // booking confirmed at once loses its "new, booked online" mark. Any signed-in
+  // staff member; no version (seeing a job is not an edit), and doing it again
+  // changes nothing. A GET never changes data, so this is its own POST.
+  // screens: job-page, diary
+  route('POST', '/api/workshop-jobs/:id/seen', async (req, res, params) => {
+    const { changes } = await db.prepare('UPDATE workshop_jobs SET online_unseen = 0 WHERE id = ?').run(Number(params.id));
+    if (!changes) return notFound(res, 'Job not found');
+    res.writeHead(204).end();
+  });
+
+  // The job's checklist (Jack, 22 Oct, service checklists; drawn as job-checklist
+  // and job-mechanic's bar): its service's, or the copy its first tick made.
+  // Null when the job has none. Any signed-in staff member ticks and notes.
+  // screens: job-page
+  route('GET', '/api/workshop-jobs/:id/checklist', async (req, res, params) => {
+    const id = Number(params.id);
+    if (!(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(id))) return notFound(res, 'Job not found');
+    sendJson(res, 200, await jobChecklist(id));
+  });
+
+  // screens: job-page
+  route('PUT', '/api/workshop-jobs/:id/checklist/items/:index', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    try {
+      sendJson(res, 200, await setJobChecklistItem(Number(params.id), Number(params.index), body));
+    } catch (err) {
+      if (!(err instanceof ChecklistError)) throw err;
+      sendJson(res, err.status, err.code ? { error: err.message, code: err.code } : { error: err.message });
+    }
+  });
+
+  // Where a bike in the shop is kept, changed or cleared (storage slots; the
+  // job page's "Kept on [slot]"). Only while the bike is in: book-in sets it,
+  // collecting clears it. Not a versioned move: the last choice wins.
+  // screens: job-page
+  route('PUT', '/api/workshop-jobs/:id/storage-slot', async (req, res, params) => {
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    const slotId = body.storageSlotId;
+    if (slotId !== null) {
+      const why = await slotRefusal(slotId);
+      if (why) return badRequest(res, why);
+    }
+    if (!(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(id))) return notFound(res, 'Job not found');
+    let changes;
+    try {
+      ({ changes } = await db.prepare(
+        "UPDATE workshop_jobs SET storage_slot_id = ?, updated_at = now() WHERE id = ? AND custody_state = 'in_shop'"
+      ).run(slotId, id));
+    } catch (err) {
+      if (err.code === '23503') return badRequest(res, 'That slot doesn’t exist');
+      throw err;
+    }
+    if (!changes) return sendJson(res, 409, { error: 'Only a bike in the shop can be put on a slot.', code: 'illegal' });
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
 
   // screens: requests, review
   jobActionRoute('accept', bookingRequest, 'accept');
@@ -904,7 +1141,9 @@ export function register(route) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
     const mech = await resolveJobMechanicId(body.mechanicId, null);
     if (!mech.ok || mech.mechanicId === null) return badRequest(res, 'Please choose a mechanic');
-    const message = body.message === undefined || body.message === null ? '' : String(body.message).trim();
+    // Text only, as decline's message is: an object would be stored as "[object Object]".
+    if (body.message !== undefined && body.message !== null && typeof body.message !== 'string') return badRequest(res, 'The message must be text');
+    const message = body.message === undefined || body.message === null ? '' : body.message.trim();
     if (message.length > 1000) return badRequest(res, 'The message can be up to 1,000 characters');
     const startTime = String(body.startTime ?? '').trim();
     const taken = { status: 409, body: { error: 'That time is no longer free', code: 'capacity' } };
@@ -912,15 +1151,33 @@ export function register(route) {
     try {
       out = await withJobBookingLock(id, [jobDate], async (job) => {
         if (job.version !== body.version) return staleRefusal;
+        // The mechanic was checked before the lock; check again under it, and keep
+        // the row from changing until this commits (audit item 20, #337).
+        const mechanicStill = await db.prepare('SELECT id FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1 FOR SHARE').get(mech.mechanicId);
+        if (!mechanicStill) return { status: 400, body: { error: 'Please choose a mechanic' } };
         if (job.booking_state !== 'pending' && job.booking_state !== 'offered') {
           return { status: 409, body: { error: 'Only a booking request can be offered another time', code: 'illegal' } };
         }
+        // The customer's link can't act once the bike is in the shop or the work
+        // has started (customerTooLate in portal.js), so an offer would wait
+        // with nobody able to answer it (audit item 15, #315).
+        if (job.custody_state !== 'expected') {
+          return { status: 409, body: { error: 'The bike is already in the shop, so this can’t be offered another time.', code: 'illegal' } };
+        }
+        if (job.work_state !== 'not_started') {
+          return { status: 409, body: { error: 'The work has already started, so this can’t be offered another time.', code: 'illegal' } };
+        }
         // The customer couldn't accept a day gone by (fresh review).
-        if (jobDate < await currentShopToday()) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
+        const now = shopNow(await currentShopTimeZone());
+        if (jobDate < now.date) return { status: 400, body: { error: 'That date has passed - please choose another day.' } };
         const minutes = job.planned_minutes
           || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
         const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
         if (times.error) return { status: 400, body: { error: times.error } };
+        // Nor a time already gone today (audit item 16, #315).
+        if (jobDate === now.date && times.startTime && timeToMinutes(times.startTime) < now.minutes) {
+          return { status: 400, body: { error: 'That time has passed - please choose a later time.' } };
+        }
         const slotError = await checkJobSlot({
           jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId: mech.mechanicId, ignoreJobId: id,
         });
@@ -953,11 +1210,91 @@ export function register(route) {
     answerChangeRequest(req, res, Number(params.id), 'accept', shopId));
 
   // screens: change-pending, diary
-  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>
-    answerChangeRequest(req, res, Number(params.id), 'decline'));
+  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params, query, afterRelease, shopId) =>
+    answerChangeRequest(req, res, Number(params.id), 'decline', shopId));
 
   // Staff saw a customer's cancellation (piece 12, decision 5): it leaves
   // "Waiting for you". Keeps the first time it was seen; still needs the version.
+  // Refund the deposit by hand, with a reason, at any stage (Jack, 24 Oct
+  // answer 2; bk-staff-deposit-refund; deposit-diary-server design 3).
+  // screens: job-page
+  route('POST', '/api/workshop-jobs/:id/deposit-refund', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    const id = Number(params.id);
+    const body = (await readJsonBody(req)) ?? {};
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!reason) return badRequest(res, 'Say why the deposit is being refunded');
+    if (reason.length > 200) return badRequest(res, 'The reason can be up to 200 characters');
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    // Once the job is paid at the till its deposit is part of the sale (Jack,
+    // 24 Oct, docs/decisions/2026-10-24-deposit-after-paid.md). The job's
+    // order is locked while this decides, as paying it locks it, so a refund
+    // and a payment at the same moment go one after the other: never both
+    // counted and refunded (review).
+    await db.exec('BEGIN');
+    try {
+      const order = await db.prepare('SELECT status FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').get(id);
+      if (order?.status === 'converted') {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 409, { error: 'This deposit paid part of the bill at the till, so it can’t be refunded from the job.', code: 'paid_at_till' });
+      }
+      const pay = await db.prepare('SELECT status, refund_due_reason FROM online_payments WHERE job_id = ? ORDER BY id DESC LIMIT 1').get(id);
+      if (!pay || !['held', 'taken'].includes(pay.status) || pay.refund_due_reason) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 409, { error: 'There’s no deposit to refund on this job.', code: 'not_refundable' });
+      }
+      await oweRefund(id, reason, ctx?.login?.id ?? null);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    await refundOwed(id);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
+  // Didn't come: the booked day has gone and the bike never came in; the
+  // deposit is kept (Jack, 24 Oct answer 3; bk-staff-no-show; design 4). A
+  // mark, not a booking state; Undo clears it.
+  // screens: job-page
+  route('POST', '/api/workshop-jobs/:id/didnt-come', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    const id = Number(params.id);
+    const body = (await readJsonBody(req)) ?? {};
+    if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+    const job = await db.prepare('SELECT booking_state, custody_state, job_date, no_show_at, version FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    if (job.version !== body.version) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    if (job.no_show_at || job.booking_state !== 'scheduled' || job.custody_state !== 'expected' || !(job.job_date < await currentShopToday())) {
+      return sendJson(res, 409, { error: 'Only a booking whose day has gone, with the bike not in, can be marked Didn’t come.', code: 'illegal' });
+    }
+    const { changes } = await db.prepare(
+      'UPDATE workshop_jobs SET no_show_at = now(), no_show_by_login_id = ?, version = version + 1, updated_at = now() WHERE id = ? AND version = ?'
+    ).run(ctx?.login?.id ?? null, id, body.version);
+    if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
+  // screens: job-page
+  route('POST', '/api/workshop-jobs/:id/didnt-come/undo', async (req, res, params) => {
+    const id = Number(params.id);
+    const body = (await readJsonBody(req)) ?? {};
+    if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+    const job = await db.prepare('SELECT no_show_at, version FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    if (job.version !== body.version) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    if (!job.no_show_at) return sendJson(res, 409, { error: 'This job isn’t marked Didn’t come.', code: 'illegal' });
+    const { changes } = await db.prepare(
+      'UPDATE workshop_jobs SET no_show_at = NULL, no_show_by_login_id = NULL, version = version + 1, updated_at = now() WHERE id = ? AND version = ?'
+    ).run(id, body.version);
+    if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
   // screens: cancelled, diary
   route('POST', '/api/workshop-jobs/:id/cancellation-seen', async (req, res, params) => {
     const id = Number(params.id);
@@ -983,7 +1320,7 @@ export function register(route) {
   // screens: requests, diary
   route('GET', '/api/workshop-waiting', async (req, res) => {
     const rows = await db.prepare(
-      `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
+      `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
             (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
                FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
               WHERE js.workshop_job_id = w.id) AS service_names,
@@ -992,6 +1329,7 @@ export function register(route) {
               WHERE js.workshop_job_id = w.id) AS services
      FROM workshop_jobs w
      LEFT JOIN customers c ON c.id = w.customer_id
+     LEFT JOIN customer_bikes b ON b.id = w.bike_id
      LEFT JOIN employees m ON m.id = w.mechanic_id
      LEFT JOIN employees rm ON rm.id = w.requested_mechanic_id
      WHERE (w.booking_state = 'pending' AND w.terms_accepted_at IS NOT NULL)
@@ -1043,7 +1381,14 @@ export function register(route) {
   route('GET', '/api/quotes/:id', async (req, res, params) => {
     const result = await readQuote({ quoteId: Number(params.id) });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    // The customer's limit and the whole bill with this quote, so the job page
+    // offers Save and tell within it (Workshop day 41-43).
+    const bill = await wholeBill(result.quote.id, result.quote.workshop_job_id);
+    sendJson(res, 200, { ...serializeQuoteWithLines(result.quote, result.lines, result.totals),
+      limit: bill ? { spendLimit: bill.spendLimit, wholeBill: bill.wholeBill } : null,
+      // The job page's Proposed total, worked out here from the pence (sales in pence, step A′).
+      proposedTotalPence: bill ? bill.proposedPence : null,
+      proposedTotal: bill ? bill.proposedPence / 100 : null });
   });
 
   // screens: quote-editor, approved, job
@@ -1088,6 +1433,18 @@ export function register(route) {
       if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
       else {
         const queued = await queueMessage({ customerId, jobId, key: 'quote_to_approve', vars, loginId: ctx?.login?.id ?? null });
+        // One reminder, the shop's hours later, unless the quote is answered,
+        // withdrawn or replaced first (Jack, 22 Oct). It goes only with the quote.
+        // Its own fault is only logged: the quote's message has gone (fresh review).
+        if (!queued.skipped) {
+          try {
+            await undoWaiting(jobId, 'quote_reminder');
+            const settings = await db.prepare('SELECT quote_reminder_hours FROM workshop_settings LIMIT 1').get();
+            await queueMessage({ customerId, jobId, key: 'quote_reminder', vars, delayMs: (settings?.quote_reminder_hours ?? 24) * 3600_000, loginId: ctx?.login?.id ?? null });
+          } catch (err) {
+            console.error(`Quote ${result.quote.id}'s reminder couldn't be queued`, err);
+          }
+        }
         message = queued.skipped
           ? { status: 'not_sent', reason: notSent(queued.skipped, 'Quote to approve', customerName) }
           : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
@@ -1104,6 +1461,45 @@ export function register(route) {
     sendJson(res, 200, { quote: serializeQuote(result.quote), message, link });
   });
 
+  // Work within the customer's spending limit (Workshop day 41-43; dq-job-within):
+  // agreed without a quote, and the customer is told what was added. The
+  // panel had its minute's Undo before calling this, as for Send quote.
+  // screens: quote-send
+  route('POST', '/api/quotes/:id/within-limit', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const result = await agreeWithinLimit({ quoteId: Number(params.id), loginId: ctx?.login?.id ?? null });
+    if (!result.ok) return sendQuoteResult(res, result);
+    const jobId = result.quote.workshop_job_id;
+    let message;
+    try {
+      const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+      const { customerId, customerName, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+      const added = await db.prepare(
+        `SELECT string_agg(description, ', ' ORDER BY id) AS names, sum(${linePence()})::int AS total_pence
+           FROM workshop_quote_lines WHERE workshop_quote_id = ?`
+      ).get(result.quote.id);
+      const shop = await db.prepare('SELECT phone FROM shops WHERE id = ?').get(shopId);
+      Object.assign(vars, {
+        'Work added': added.names,
+        'Amount added': `£${(added.total_pence / 100).toFixed(2)}`,
+        'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
+        // With no phone in Shop details, "Call the shop", as the customer's page says.
+        'Shop phone': shop?.phone || 'the shop',
+      });
+      if (!customerId) message = { status: 'not_sent', reason: 'This job has no customer.' };
+      else {
+        const queued = await queueMessage({ customerId, jobId, key: 'work_within_limit', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Work added within your limit', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`Quote ${result.quote.id} was agreed within the limit but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The work is added, but the message could not be queued. Let the customer know another way.' };
+    }
+    sendJson(res, 200, { quote: serializeQuote(result.quote), message });
+  });
+
   // screens: quote-send
   route('POST', '/api/quotes/:id/withdraw', async (req, res, params) => {
     sendQuoteResult(res, await withdrawQuote({ quoteId: Number(params.id) }));
@@ -1112,13 +1508,97 @@ export function register(route) {
   // Record their answer (journey 4 decision 4): staff, after a phone call or a
   // chat in the shop. Who took it and when are recorded with each line.
   // screens: approved
-  route('POST', '/api/quotes/:id/answer', async (req, res, params) => {
+  route('POST', '/api/quotes/:id/answer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     const body = await readJsonBody(req);
     if (!['phone', 'in_shop'].includes(body.via)) return badRequest(res, "via must be 'phone' or 'in_shop'");
-    sendQuoteResult(res, await answerAndAddToOrder({
+    const result = await answerAndAddToOrder({
       quoteId: Number(params.id), decisions: body.decisions, via: body.via, loginId: ctx?.login?.id ?? null,
-    }));
+    });
+    // An answer from a call: the customer is sent what was agreed, at once
+    // (dq-record-answer; Jack, 22 Oct). In the shop they were there. A fault
+    // here is logged; the answer is saved either way.
+    if (result.ok && body.via === 'phone') {
+      try {
+        const jobId = result.quote.workshop_job_id;
+        // A customer who gets nothing keeps the link they have (fresh review),
+        // as Bike ready does: checked before a link is issued.
+        const owner = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(jobId);
+        if (!owner?.customer_id || (await whyNotQueued('your_answers', owner.customer_id))) return sendQuoteResult(res, result);
+        const messageLinkText = await messageLink(() => issueJobLink(req, jobId, shopId));
+        const { customerId, vars } = await jobMessageVars(jobId, shopId, messageLinkText);
+        const lines = await db.prepare('SELECT description, decision FROM workshop_quote_lines WHERE workshop_quote_id = ? ORDER BY id').all(result.quote.id);
+        const { total_pence } = await db.prepare(
+          `SELECT sum(${linePence()})::int AS total_pence FROM workshop_quote_lines WHERE workshop_quote_id = ? AND decision = 'approved'`
+        ).get(result.quote.id);
+        const total = (total_pence ?? 0) / 100;
+        const list = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]);
+        const yes = lines.filter((l) => l.decision === 'approved').map((l) => l.description);
+        const no = lines.filter((l) => l.decision === 'declined').map((l) => l.description);
+        vars['What was agreed'] = [
+          yes.length ? `Going ahead: ${list(yes)}, £${Number(total).toFixed(2)}.` : 'Going ahead: just the booked work.',
+          no.length ? `No thanks: ${list(no)}.` : null,
+        ].filter(Boolean).join(' ');
+        if (customerId) await queueMessage({ customerId, jobId, key: 'your_answers', vars, loginId: ctx?.login?.id ?? null });
+      } catch (err) {
+        console.error(`Quote ${result.quote.id}'s Your answers message couldn't be queued`, err);
+      }
+    }
+    sendQuoteResult(res, result);
+  });
+
+  // ---------- Notes with the shop (decisions 3 and 7; ac-inbox) ----------
+  // screens: diary
+  route('GET', '/api/job-notes/conversations', async (req, res, params, query) => {
+    sendJson(res, 200, await noteConversations(query.get('filter') === 'needs-reply' ? 'needs-reply' : 'all'));
+  });
+
+  // screens: diary
+  route('GET', '/api/workshop-jobs/:id/notes', async (req, res, params) => {
+    const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    sendJson(res, 200, await jobNotes(job.id));
+  });
+
+  // A staff reply, saved on the job; the customer is told with Reply from the
+  // shop, the way they chose (pretend for now). A customer who gets nothing
+  // keeps the link they have, as Bike ready.
+  // screens: diary
+  route('POST', '/api/workshop-jobs/:id/notes', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    const job = await db.prepare(
+      `SELECT w.id, w.customer_id, w.job_date, w.custody_state, c.name AS customer_name,
+              to_char(w.collected_at AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS collected_on
+         FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id WHERE w.id = ?`
+    ).get(Number(params.id));
+    if (!job) return notFound(res, 'Job not found');
+    const body = await readJsonBody(req);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: job.id, fromCustomer: false, loginId: ctx?.login?.id ?? null, text });
+    let message;
+    try {
+      // A page that has closed (fresh review): no text with a link that doesn't work.
+      const closed = linkExpiry({ jobDate: job.job_date, custodyState: job.custody_state, collectedOn: job.collected_on }, await currentShopToday()).expired;
+      const why = !job.customer_id ? 'no_customer' : closed ? 'closed' : await whyNotQueued('shop_reply', job.customer_id);
+      if (why) {
+        const who = job.customer_name ?? 'The customer';
+        message = { status: 'not_sent', reason: why === 'no_customer' ? 'This job has no customer.' : why === 'closed' ? `${who}’s booking page has closed.` : notSent(why, 'Reply from the shop', who) };
+      } else {
+        const messageLinkText = await messageLink(() => issueJobLink(req, job.id, shopId));
+        const { customerId, customerName, vars } = await jobMessageVars(job.id, shopId, messageLinkText);
+        // The drawn text puts its own full stop after the reply, so the reply's own goes.
+        vars['The shop’s reply'] = text.replace(/\.+$/, '');
+        const queued = await queueMessage({ customerId, jobId: job.id, key: 'shop_reply', vars, loginId: ctx?.login?.id ?? null });
+        message = queued.skipped
+          ? { status: 'not_sent', reason: notSent(queued.skipped, 'Reply from the shop', customerName) }
+          : { status: 'sent', channel: queued.channel, to: queued.to, pretend: true };
+      }
+    } catch (err) {
+      console.error(`A reply on job ${job.id} was saved but its message couldn't be queued`, err);
+      message = { status: 'not_sent', reason: 'The message could not be queued.' };
+    }
+    sendJson(res, 201, { notes: await jobNotes(job.id), message });
   });
 
   // ---------- Deleting a job, and its attachments ----------
@@ -1141,10 +1621,20 @@ export function register(route) {
     let out;
     await db.exec('BEGIN');
     try {
-      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? FOR UPDATE').all(id);
+      await db.prepare('SELECT id FROM sale_documents WHERE workshop_job_id = ? ORDER BY id FOR UPDATE').all(id);
       out = await withJobBookingLock(id, [], async (job) => {
-        // Any paid order linked to the job counts (a job can have more than one).
-        const paid = Boolean(await db.prepare("SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND status = 'converted' LIMIT 1").get(id));
+        // Money taken on the job counts, not only a converted order (Jack, 18
+        // Oct, answer 1: "a deposit or a payment"; audit item 12): a paid order
+        // linked to the job (a job can have more than one), a deposit paid on an
+        // open order, or an online deposit still held or taken. A deposit
+        // already refunded or released doesn't. The online deposit's job link is
+        // ON DELETE SET NULL, so deleting would lose track of the money.
+        const paid = Boolean(await db.prepare(
+          `SELECT 1 AS paid FROM sale_documents WHERE workshop_job_id = ? AND (status = 'converted' OR paid_pence > 0)
+           UNION ALL
+           SELECT 1 FROM online_payments WHERE job_id = ? AND status IN ('held', 'taken')
+           LIMIT 1`
+        ).get(id, id));
         const inShop = job.custody_state === 'in_shop';
         if (paid || inShop) {
           return {
@@ -1170,6 +1660,7 @@ export function register(route) {
         await db.prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id IN (SELECT id FROM workshop_quotes WHERE workshop_job_id = ?)').run(id);
         await db.prepare('DELETE FROM workshop_quotes WHERE workshop_job_id = ?').run(id);
         await db.prepare('DELETE FROM workshop_print_tasks WHERE workshop_job_id = ?').run(id);
+        await undoJobMessages(id);
         await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
         return undefined;
       });
@@ -1217,6 +1708,11 @@ export function register(route) {
     }
     if (!buffer.length) return badRequest(res, 'That file is empty');
     if (buffer.length > MAX_ATTACHMENT_BYTES) return badRequest(res, 'That file is too large (max 15MB).');
+    // A JPEG, PNG or WebP loses where it was taken, when and on what (CX-2,
+    // photo-metadata.js); any other file is saved as it was sent.
+    const cleaned = removePhotoDetails(buffer);
+    if (cleaned.error) return badRequest(res, 'That picture couldn’t be read. Try adding it again.');
+    buffer = cleaned.buffer;
 
     const storageKey = randomBytes(24).toString('hex');
     await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);

@@ -5,7 +5,76 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** away after 15 Oct. His half of WP-0.4 is done: every
+**Who is on what** (from 21 Oct, the working agreement, #349: take a piece
+here before starting it, so two people never build the same one):
+- **Jack:** 25 Oct. Merged 24 Oct: #447 to #477 (Customers with Merge,
+  deposits online, Larger text, Don't close things by themselves, WP-0.4
+  finished, the test copy's review fixes and test shop, Done ticks and staff
+  notes per line, the till's Email receipt and Save to a customer record, an
+  online deposit off at the till, an unfinished booking coming back).
+  Merged 25 Oct: the workshop's amounts in whole pence (#478 to #482);
+  service reminders from the tick when booking to Stop these (#483, #485,
+  #488, #489, #491, #493), Settings › Workshop › Services (#484), review
+  requests (#494, #495), a bike's own page and Find a bike (#497, #498).
+  Stage 0 is closed: the WP-0.5 drills and the walkthrough are done (Mark, 25
+  Oct). Merged 25 Oct, evening: customer sign-in by emailed code (#500,
+  #502); staff sign-in through WorkOS only, Jack's test account (#504), its
+  pages (#505) and Wheelhouse's own sign-in screen with Continue with Google
+  (#508); the test copy's remove-a-shop and add-a-login commands (#506), its
+  test shop loaded with Jack as owner and connected to WorkOS (add-hosted-copy
+  3.6, taken from Mark); tests on pull requests and once a day, not after a
+  merge (#509, Jack's option 3; the copy updates about a minute after a merge);
+  print jobs reach only their own shop's helper (#510); the old app's Log in
+  leads to the new sign-in (#512). Merged 26 Oct, overnight: the customer's
+  account page, its server (#514, migration 084: a first code sign-in joins
+  only a customer whose email they gave themselves, Jack's option 2; a
+  signed-in customer opens their own repairs, Jack's option 1) and its
+  screens (#515); a sale opens from a customer's history, from either sales
+  record (#516, WP-3.2); customer groups in Settings › Payments (#517,
+  WP-5.1); booking's search over many single jobs and "Online booking is
+  unavailable just now" (#518). Next, each waiting on an answer from Jack or
+  Mark: the text receipt and its page (whether it waits for Mark's step C,
+  which makes the till's receipt numbers); a shop's own automatic messages
+  (which customer "yes" lets them go, and what Stop stops); paying a repair
+  online (how it becomes a sale; Jack asked Mark on #199); the label printer
+  helper's own key (where the owner makes it isn't drawn; a helper already
+  signed in keeps its 30-day session).
+  Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
+  WorkOS: Jack's account, Staging only
+  (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
+  "continue to workos.com" until there's a domain ($99 a month, waits for
+  revenue).
+- **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Merged
+  25 Oct: step B, reports read both records (#492, migration 083), audit
+  items 12, 20 and 24 (#496), a declined date change's message as the
+  second box of Date change answered (audit item 23, #507), and local
+  development without signing in (#503, `WHEELHOUSE_DEV_AUTOLOGIN`, off
+  unless asked, refused in production and on the hosted copy). Open: the
+  overnight runner (#490) and a replan into playable slices (#499; Mark
+  answered its four questions: the shop day before stock). Written, waiting
+  for Mark's yes before anything is built: `till-job-deposit` (a deposit at
+  the till on the current sales path, branch `mark/till-job-deposit`, money
+  questions for Jack inside) and `component-registry-repo` (Wheelhouse's
+  components in their own repository, branch `mark/component-registry-spec`;
+  needs Jack's yes on Radix and on creating the repository). Next: step C
+  (the new till on sync; the browser's offline copy and send queue are not
+  built, so it is large and has no spec yet), then the shop day (roles on the
+  server, the settings store and activity log, sign-in and PINs).
+- **Waiting on Jack:** accepting or changing the replan (#499). Also:
+  discounts now on the old sales record or after Mark's step C; the
+  spreadsheet download's one file or several. Refunds wait for Mark's steps
+  B and C. For him to overrule: the 24 and 25 Oct `decided-while-building.md`
+  sections. From 25 Oct evening: where the owner makes the label printer
+  helper's key; paying a repair online (with Mark, #199); Google's official
+  "G" logo file for the sign-in button; the hosted server's "System restart
+  required". From 26 Oct overnight: the text receipt (wait for step C or show
+  "Sale [n]"; the PDF; the barcode); a shop's own messages (which yes
+  counts, what Stop stops, "After a sale" only with a customer, Remove, the
+  email subject); and to overrule, the 26 Oct `decided-while-building.md`
+  sections (no "are you sure?" when removing a customer group; the search
+  box from 9 single jobs).
+
+**Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
 #208 were Jack's #151 follow-ups). WP-0.5: the host is DigitalOcean in
 London, about £20 a month with VAT (#215; Jack's UK answer in
@@ -141,7 +210,75 @@ gains `GET /api/sale-documents/:id/due` (the amount due after the order's
 and the customer's group discounts, stock levels, and paying's line checks),
 convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
 `resolveGroupDiscount`.
-**Jack is on:** 20–21 Oct: staff decline or re-offer an offered time
+**Jack is on:** 23 Oct, evening and overnight: Today (#437: Needs
+attention for the Owner and Workshop today, sharing the Overview's rules);
+the bike on Waiting cards (#439); his six answers that unlock the next pieces
+(#438); a bike left uncollected (#440 server, migration 064; #441 screens:
+Settings › Workshop › Collection, Bike still waiting, the bike on Today with
+Contacted); Your settings with Reduce motion (#442, migration 065), Show
+status symbols (#444) and Folded sidebar with the Till folded (#445); the
+email side of emailing a receipt (#443, migration 066; the till's button after
+#404). Larger text was built as a zoom and taken out: it put the diary's
+drops off their marks (a question for Jack). Each piece had a fresh review,
+its findings fixed test-first. The 4 tests that need `ADMIN_DATABASE_URL`
+fail on Jack's Mac only; CI sets it. Migration 064 also ran on the Mac's
+development database by mistake (scratch databases since).
+23 Oct: the Overview's Book in test, which failed before
+09:00 on CI's clock and so failed every pull request each morning (#426);
+the hosted copy's automatic updates (WP-0.5 task 3.4, at Mark's request,
+#427, #428): every merge to `main` that passes Tests is built, pushed to
+GitHub's container registry and started on the server by
+`scripts/hosting/deploy.sh` over a key tied to that script, rolled back if
+`/healthz` doesn't show its commit within 5 minutes. Seen: the merge of #427
+deployed itself at 12:04, and #428's pull request deployed nothing. Merged
+Mark's #416 for him and answered his #402 and #404.
+22 Oct, evening: Notes with the shop: the customer's notes on their
+booking link and the staff's replies (#421 server, migration 061; #422 the
+booking page's card), the staff Messages inbox with Needs a reply first
+(#423), Add a note for the shop from the quote and Work agreed (#424), and
+"No answer yet" after the quote reminder, in the diary and on the job
+(#425).
+22 Oct, afternoon: the customer's finished checklist on the
+booking page (#403); quotes (WP-4.2): the drawn words, staff names only with
+the sign-off switch on (#405), lines that go together and what happens
+without a Needed line (#409, migration 056), a photo on a quote line (#411,
+migration 057), a new quote after the customer says no to everything
+(#412, Jack's answer in `docs/decisions/2026-10-22-quote-after-declined.md`),
+the spending limit chosen at booking (#413, migration 058; only the customer
+sets it, `2026-10-22-spend-limit-who-sets.md`) and work within it going ahead
+without a quote, the customer told (#417, migration 059), one reminder when a
+quote has no answer (#418, migration 060) and the Your answers text after a
+call (#419). The four messages' wording is Jack's approved. Each piece had a
+fresh review, its findings fixed test-first.
+22 Oct, later: the job checklist (#381 drawn and approved,
+#382 server, #383 screens): each shop's own checklists in Settings with a
+full service template, ticks and notes on the job page; Diary blocks, what a
+block shows first and second (#384); storage slots (#389 server, #390
+screens): the shop's own hooks, chosen at book-in, Kept on, cleared at
+collection; the job page laid out as drawn, Notes in the wider column (#391);
+Jack's answers to Mark's questions (#392, #393, #395, #396).
+22 Oct: a job's planned length reaches the screens, so the
+diary offers a whole-day request for its real length (#365); every screen
+test's fake jobs and orders are checked against the server's real replies
+(#366, #367, #368); quotes always show their prices (#370); the customer
+merge decision (#371, #372); the New online mark on stacks and in the month
+view (#374). Next: the job checklist.
+21 Oct, late: browser tests for the Workshop Overview and
+Settings › Messages (#353); the old app's job orders open the new till and it
+never takes a job's payment (#355); the spec for what ended bookings can't do
+(#356); confirming online bookings automatically, server and screens (#357,
+#358); the booking link's later-stage data and 30 days from collection
+(#359); the booking page's progress, money and what was done (#360); Planned
+effort on the Overview and the bike's colour on its tag (#361); Request
+received and Booking cancelled sent, pretend (#362); the reply-shape file
+(#363). Merged Mark's #348, #351 and #350 after checking each.
+21 Oct: the Workshop Overview (#346, its `custody=in_shop`
+jobs filter in the workshop server, Planned effort waiting on capacity
+figures: `openspec/changes/archive/2026-10-21-workshop-overview/design.md`),
+the bike tag printed through the browser (#347, a stand-in until a template
+builder for receipts and tags). Agreed Mark's working agreement (#349,
+merged). Checked Mark's #348 and pushed a lock change and a test fix to it.
+20–21 Oct: staff decline or re-offer an offered time
 (#332, #333); New job's + Add a bike and "From the customer" printed on the
 receipt (#334, #335); the booking messages staff answers send, pretend, and
 the diary's note when one couldn't go (#336, #340, #341); the mechanic chosen
@@ -249,8 +386,8 @@ shop first (#254), and Release 2 is done when built and checked, ready to
 sell, the all-in-one first with Lightspeed after (#256,
 `docs/decisions/2026-10-18-build-for-every-shop.md`). All of Mark's waiting
 pull requests merged on his word (#225, #231, #234, #249, #250, #256).
-Earlier: the online test copy is live at
-https://165-22-114-137.sslip.io (#221); 16 and 17 Oct's workshop changes
+Earlier: the online test copy went live (#221; its address is given to Jack
+privately, never in the repo, as its spec says); 16 and 17 Oct's workshop changes
 (#236, #237, #239 to #245, #247, #248). No pull request waits for Mark's
 approval; #265 and #267 changed his server files after his go-ahead, so he checks them.
 #238, the diary layout review, is a report, all of it now built or

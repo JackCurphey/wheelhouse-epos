@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createBrowserRouter, useRouteError } from 'react-router';
+import { createBrowserRouter, Navigate, useRouteError } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { ApiError } from '@/lib/api/client.ts';
 import { ROUTES, type ScreenId } from './routes.ts';
@@ -10,6 +10,12 @@ import { OverviewPage } from '@/screens/overview/overview-page.tsx';
 import { DiaryPage } from '@/screens/diary/diary-page.tsx';
 import { TillPage } from '@/screens/till/till-page.tsx';
 import { SettingsPage } from '@/screens/settings/settings-page.tsx';
+import { MessagesPage } from '@/screens/messages/messages-page.tsx';
+import { TodayPage } from '@/screens/today/today-page.tsx';
+import { CustomersPage } from '@/screens/customers/customers-page.tsx';
+import { CustomerPage } from '@/screens/customers/customer-page.tsx';
+import { BikePage } from '@/screens/customers/bike-page.tsx';
+import { YourSettingsPage } from '@/screens/your-settings/your-settings-page.tsx';
 
 /**
  * The staff app: query client, router, error boundary. The rooms sidebar
@@ -22,10 +28,15 @@ import { SettingsPage } from '@/screens/settings/settings-page.tsx';
 // are built; an id with no entry renders the placeholder, so every URL in
 // ROUTES is routable from day one - including the five edge screens entered
 // from outside the app.
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage };
+// Signed in at "You've signed out": nothing to say, so on to the front page.
+function SignedInAlready() {
+  return <Navigate to="/workshop" replace />;
+}
+
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 
@@ -62,6 +73,9 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
+// Exported so the screen tests can watch where a sign-out goes.
+export { pageNav } from '@/lib/page-nav.ts';
 
 // Exported so tests can clear it: its five-minute clean-up timers would
 // otherwise keep a finished test run waiting.

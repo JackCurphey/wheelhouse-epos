@@ -1,0 +1,615 @@
+{
+  "TODAY": 3,
+  "JOBS": [
+    {
+      "day": 3,
+      "start": 540,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1038",
+      "svc": "Safety check",
+      "title": "Safety check",
+      "detail": "09:00–10:00",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 3,
+      "start": 540,
+      "dur": 90,
+      "mech": "Jo",
+      "key": "scheduled",
+      "stage": "Booked in",
+      "job": "WH-1040",
+      "svc": "Gear service",
+      "title": "Gear service",
+      "detail": "09:00–10:30",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 3,
+      "start": 690,
+      "dur": 90,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1042",
+      "svc": "Standard service",
+      "title": "Maya Patel · Trek Domane AL 3",
+      "detail": "11:30–13:00 · approved £111",
+      "stage": "In the workshop",
+      "customerBike": [
+        "Maya Patel",
+        "Trek Domane AL 3"
+      ]
+    },
+    {
+      "day": 3,
+      "start": 840,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "ready",
+      "job": "WH-1067",
+      "svc": "Safety check",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "14:00–15:00 · safety check",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 3,
+      "start": 810,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1068",
+      "svc": "Standard service",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "13:30–14:30 · standard service",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 3,
+      "start": 900,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "waiting",
+      "job": "WH-1069",
+      "svc": "Gear adjustment",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "15:00–16:00 · gear adjustment",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 0,
+      "start": 540,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1049",
+      "svc": "Gear adjustment",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "09:00–10:00 · gear adjustment",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 0,
+      "start": 660,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "ready",
+      "job": "WH-1050",
+      "svc": "Safety check",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "11:00–12:00 · safety check",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 0,
+      "start": 960,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "waiting",
+      "job": "WH-1051",
+      "svc": "Standard service",
+      "title": "Sam Reed · Specialized Sirrus",
+      "detail": "16:00–17:00 · standard service",
+      "customerBike": [
+        "Sam Reed",
+        "Specialized Sirrus"
+      ]
+    },
+    {
+      "day": 0,
+      "start": 600,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "hold",
+      "job": "WH-1052",
+      "svc": "Gear adjustment",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "Requested move to 14:00",
+      "link": "change-selected",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 0,
+      "start": 720,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1053",
+      "svc": "Safety check",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "12:00–13:00 · safety check",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 0,
+      "start": 900,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "ready",
+      "job": "WH-1054",
+      "svc": "Gear adjustment",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "15:00–16:00 · gear adjustment",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 630,
+      "dur": 30,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1081",
+      "svc": "Gear adjustment",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "10:30–11:00 · gear adjustment",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 660,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1055",
+      "svc": "Gear adjustment",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "11:00–12:00 · gear adjustment",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 780,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "ready",
+      "job": "WH-1056",
+      "svc": "Standard service",
+      "title": "Sam Reed · Specialized Sirrus",
+      "detail": "13:00–14:00 · standard service",
+      "customerBike": [
+        "Sam Reed",
+        "Specialized Sirrus"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 900,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "waiting",
+      "job": "WH-1057",
+      "svc": "Safety check",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "15:00–16:00 · safety check",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 540,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "cancelled",
+      "job": "WH-1058",
+      "svc": "Safety check",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "Safety check · cancelled",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 720,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1059",
+      "svc": "Gear adjustment",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "12:00–13:00 · gear adjustment",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 1,
+      "start": 960,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "ready",
+      "job": "WH-1060",
+      "svc": "Standard service",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "16:00–17:00 · standard service",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 2,
+      "start": 540,
+      "dur": 120,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1061",
+      "svc": "Gear adjustment",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "09:00–11:00 · gear adjustment",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 2,
+      "start": 660,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1062",
+      "svc": "Standard service",
+      "title": "Sam Reed · Specialized Sirrus",
+      "detail": "11:00–12:00 · standard service",
+      "customerBike": [
+        "Sam Reed",
+        "Specialized Sirrus"
+      ]
+    },
+    {
+      "day": 2,
+      "start": 840,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "ready",
+      "job": "WH-1063",
+      "svc": "Safety check",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "14:00–15:00 · safety check",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 2,
+      "start": 600,
+      "dur": 120,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1064",
+      "svc": "Gear adjustment",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "10:00–12:00 · gear adjustment",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 2,
+      "start": 720,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "waiting",
+      "job": "WH-1065",
+      "svc": "Standard service",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "12:00–13:00 · standard service",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 2,
+      "start": 900,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "ready",
+      "job": "WH-1066",
+      "svc": "Safety check",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "15:00–16:00 · safety check",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 4,
+      "start": 540,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1070",
+      "svc": "Safety check",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "09:00–10:00 · safety check",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 4,
+      "start": 750,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "ready",
+      "job": "WH-1071",
+      "svc": "Gear adjustment",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "12:30–13:30 · gear adjustment",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 4,
+      "start": 900,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "waiting",
+      "job": "WH-1072",
+      "svc": "Standard service",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "15:00–16:00 · standard service",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 4,
+      "start": 660,
+      "dur": 45,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1045",
+      "svc": "Gear adjustment",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "11:00–11:45 appointment",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 4,
+      "start": 825,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1073",
+      "svc": "Safety check",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "13:45–14:45 · safety check",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 4,
+      "start": 975,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "ready",
+      "job": "WH-1074",
+      "svc": "Standard service",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "16:15–17:15 · standard service",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 5,
+      "start": 540,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1075",
+      "svc": "Gear adjustment",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "09:00–10:00 · gear adjustment",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 5,
+      "start": 660,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "ready",
+      "job": "WH-1076",
+      "svc": "Safety check",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "11:00–12:00 · safety check",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    },
+    {
+      "day": 5,
+      "start": 780,
+      "dur": 60,
+      "mech": "Alex",
+      "key": "scheduled",
+      "job": "WH-1077",
+      "svc": "Standard service",
+      "title": "Sam Reed · Specialized Sirrus",
+      "detail": "13:00–14:00 · standard service",
+      "customerBike": [
+        "Sam Reed",
+        "Specialized Sirrus"
+      ]
+    },
+    {
+      "day": 5,
+      "start": 600,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "scheduled",
+      "job": "WH-1078",
+      "svc": "Gear adjustment",
+      "title": "Oliver Chen · Brompton C Line",
+      "detail": "10:00–11:00 · gear adjustment",
+      "customerBike": [
+        "Oliver Chen",
+        "Brompton C Line"
+      ]
+    },
+    {
+      "day": 5,
+      "start": 720,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "ready",
+      "job": "WH-1079",
+      "svc": "Standard service",
+      "title": "Aisha Khan · Cannondale Quick",
+      "detail": "12:00–13:00 · standard service",
+      "customerBike": [
+        "Aisha Khan",
+        "Cannondale Quick"
+      ]
+    },
+    {
+      "day": 5,
+      "start": 840,
+      "dur": 60,
+      "mech": "Jo",
+      "key": "waiting",
+      "job": "WH-1080",
+      "svc": "Safety check",
+      "title": "Jamie Brooks · Giant Escape 2",
+      "detail": "14:00–15:00 · safety check",
+      "customerBike": [
+        "Jamie Brooks",
+        "Giant Escape 2"
+      ]
+    }
+  ],
+  "UNSCHEDULED": [
+    {
+      "job": "WH-1046",
+      "title": "Standard service",
+      "detail": "Shared queue · 60 min"
+    }
+  ],
+  "PENDING_DIARY": {
+    "day": 4,
+    "start": 600,
+    "dur": 45,
+    "customer": "Sam Reed",
+    "bike": "Specialized Sirrus",
+    "jobTitle": "Brake service",
+    "detail": "10:00–10:45 · requested Fri 18 Sep"
+  },
+  "REQUEST_OUTLINE": {
+    "day": 0,
+    "start": 840,
+    "dur": 60,
+    "label": "Requested 14:00",
+    "person": "Oliver Chen",
+    "bike": "Brompton C Line"
+  },
+  "SERVICE_OPTIONS": [
+    [
+      "Standard service",
+      60
+    ],
+    [
+      "Safety check",
+      60
+    ],
+    [
+      "Gear adjustment",
+      60
+    ],
+    [
+      "Brake service",
+      45
+    ]
+  ],
+  "SERVICE_GROUPS": {
+    "Full service": [
+      "Standard service"
+    ],
+    "Individual service": [
+      "Safety check",
+      "Gear adjustment",
+      "Brake service"
+    ]
+  }
+}

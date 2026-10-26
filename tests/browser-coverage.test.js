@@ -8,8 +8,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROUTES } from '../src/staff/routes.ts';
 
-// Screens built but with no browser spec yet. Remove each one when its spec lands.
-const GAPS = ['overview'];
+// Screens built but with no browser spec yet. Remove each one when its spec lands
+// (the Overview's landed in #353, 21 Oct).
+const GAPS = [];
 
 const shell = readFileSync(new URL('../src/staff/app-shell.tsx', import.meta.url), 'utf8');
 const screens = shell.match(/const SCREENS[^=]*=\s*\{([^}]*)\}/)?.[1];
@@ -18,7 +19,13 @@ const built = [...screens.matchAll(/(['\w-]+):\s*\w+/g)].map((m) => m[1].replace
 
 const specDir = new URL('./browser/', import.meta.url);
 const specs = readdirSync(specDir).filter((f) => f.endsWith('.spec.ts')).map((f) => readFileSync(new URL(f, specDir), 'utf8'));
-const opened = (path) => specs.some((src) => src.includes(`${path}?`) || src.includes(`${path}\``) || src.includes(`${path}'`) || src.includes(`${path}"`));
+// A path with a slot (/workshop/customers/:id) counts when a spec opens it
+// with any id there, written or filled in (`/workshop/customers/${id}`).
+const opened = (path) => {
+  const slot = path.split(/:[a-zA-Z]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(?:[^/?\'"`]+|\\$\\{[^}]+\\})');
+  const re = new RegExp(`${slot}[?'"\`]`);
+  return specs.some((src) => re.test(src));
+};
 
 test('the table of built screens was read', () => {
   assert.ok(built.length >= 4, `read ${JSON.stringify(built)}`);

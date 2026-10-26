@@ -31,9 +31,11 @@ afterEach(async () => {
 // Settings' rooms (WP-1.3): each test opens the room its setting is in, and
 // the fold if it isn't the room's first.
 const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'Office' };
-async function openSettings({ me = OWNER, room = 'workshop', open = null } = {}) {
+// Checklists comes first in Settings › Workshop (Jack, 22 Oct), so the booking
+// settings these tests are about are opened, not found open.
+async function openSettings({ me = OWNER, room = 'workshop', open = room === 'workshop' && me.isOwner ? 'Online booking' : null } = {}) {
   calls = [];
-  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null };
+  settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null, blockFirst: 'bike', blockSecond: 'jobTitle', depositOn: false, depositKind: 'percent', depositPercent: null, depositFixedPence: null, depositUnknownPence: null, depositCancelHours: 24, paymentsConnected: true };
   refuseHours = null;
   termsFail = false;
   putFails = false;
@@ -60,8 +62,10 @@ async function openSettings({ me = OWNER, room = 'workshop', open = null } = {})
       if (refuseHours && body.fullDayThresholdMinutes !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.nextBookingMode !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.showPricesOnline !== undefined) return reply(400, { error: refuseHours });
+      if (refuseHours && body.confirmBookingsAutomatically !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.confirmationNote !== undefined) return reply(400, { error: refuseHours });
       if (refuseHours && body.bookingTerms !== undefined) return reply(400, { error: refuseHours });
+      if (body.depositOn === true && !settings.paymentsConnected) return reply(409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
       settings = { ...settings, ...body };
       return reply(200, settings);
     }
@@ -82,6 +86,8 @@ async function openSettings({ me = OWNER, room = 'workshop', open = null } = {})
   if (open) {
     const button = ui.getByRole('button', { name: new RegExp(`^${open}`) });
     if (button.getAttribute('aria-expanded') !== 'true') rtl.fireEvent.click(button);
+    // Opening a fold reads the settings again; tests change them only once it has.
+    await rtl.waitFor(() => assert.equal(shell.queryClient.isFetching(), 0));
   }
   return { ...rtl, ui };
 }
@@ -98,7 +104,7 @@ test('Settings › Workshop › Mechanics has the switch, off, with its note', a
   const sw = await ui.findByRole('switch', { name: 'Show who signed off to customers' });
   assert.equal(sw.getAttribute('aria-checked'), 'false');
   assert.ok(sw.textContent.includes('Off'));
-  assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.')));
+  assert.ok(has(ui.queryByText('Adds “Checked by [name]” to their receipt and booking link, and the mechanic’s name to quotes. Off: only staff see who signed a job off, and quotes say “we”.')));
 });
 
 test('switching it on saves at once, and it reads On', async () => {
@@ -707,4 +713,142 @@ test('if the standard terms can’t be loaded, it says so', async () => {
   shell.queryClient.setDefaultOptions({ queries: { retry: false } });
   fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
   assert.ok(await ui.findByText('Wheelhouse couldn’t load the standard terms to start from. Try again in a moment.'));
+});
+
+// Confirm bookings automatically (Jack, 19 Oct, docs/decisions/2026-10-19-auto-confirm.md;
+// drawn as bk-settings-auto): after Show prices, with its note, saved at once;
+// the Online booking summary ends with what happens to a booking.
+test('Confirm bookings automatically shows its note, saves a switch at once, and the summary follows it', async () => {
+  const t = await openSettings();
+  const { ui, fireEvent, waitFor } = t;
+  const sw = await ui.findByRole('switch', { name: 'Confirm bookings automatically' });
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'false'));
+  assert.ok(has(ui.getByText('Off: each booking is a request, purple in the diary until someone accepts it. On: a booking that fits the diary is confirmed straight away. Changing a confirmed booking is always a request.')));
+  const summary = () => ui.getByRole('button', { name: /^Online booking/ }).textContent;
+  assert.match(summary(), /· each booking a request$/);
+  fireEvent.click(sw);
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT' && 'confirmBookingsAutomatically' in c.body).map((c) => c.body), [{ confirmBookingsAutomatically: true }]));
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'true'));
+  await waitFor(() => assert.match(summary(), /· confirmed straight away$/));
+});
+
+test('a refused Confirm bookings automatically says why and stays as it was', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings();
+  refuseHours = "Only the shop's owner can change settings";
+  const sw = await ui.findByRole('switch', { name: 'Confirm bookings automatically' });
+  await waitFor(() => assert.equal(sw.getAttribute('aria-checked'), 'false'));
+  fireEvent.click(sw);
+  assert.ok(has(await ui.findByText("Only the shop's owner can change settings")));
+  assert.equal(sw.getAttribute('aria-checked'), 'false');
+});
+
+// Diary blocks (Workshop day 17, 29; drawn as set-workshop-diary): what a
+// block shows first and second, saved as soon as it's chosen, with a preview.
+test('Diary blocks: the two lines, a preview and the note; its summary says the choice', async () => {
+  const { ui, within } = await openSettings({ open: 'Diary blocks' });
+  const fold = ui.getByRole('button', { name: /^Diary blocks/ });
+  assert.match(fold.textContent, /Bike, then job title/);
+  assert.equal(ui.getByLabelText('First line').value, 'bike');
+  assert.equal(ui.getByLabelText('Second line').value, 'jobTitle');
+  assert.deepEqual([...ui.getByLabelText('First line').options].map((o) => o.textContent), ['Bike', 'Job title', 'Customer', 'Job number']);
+  const preview = within(ui.getByRole('figure', { name: 'Preview' }));
+  assert.ok(has(preview.queryByText('Trek Domane AL 3')));
+  assert.ok(has(preview.queryByText('Standard service')));
+  assert.ok(has(preview.queryByText('Expected')));
+  assert.ok(has(ui.queryByText('The status always shows too, whatever the two lines above are set to.')));
+});
+
+test('choosing a line saves at once; choosing the other line’s choice swaps them', async () => {
+  const { ui, fireEvent, waitFor, within } = await openSettings({ open: 'Diary blocks' });
+  fireEvent.change(ui.getByLabelText('First line'), { target: { value: 'customer' } });
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body).at(-1), { blockFirst: 'customer', blockSecond: 'jobTitle' }));
+  await waitFor(() => assert.ok(has(within(ui.getByRole('figure', { name: 'Preview' })).queryByText('Maya Patel'))));
+  fireEvent.change(ui.getByLabelText('Second line'), { target: { value: 'customer' } });
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body).at(-1), { blockFirst: 'jobTitle', blockSecond: 'customer' }));
+  await waitFor(() => assert.match(ui.getByRole('button', { name: /^Diary blocks/ }).textContent, /Job title, then customer/));
+});
+
+// Deposits (bk-settings-deposits; Jack, 24 Oct; openspec/changes/deposit-settings).
+const depositPuts = () => calls.filter((c) => c.method === 'PUT' && c.url === '/api/workshop-settings' && Object.keys(c.body).some((k) => k.startsWith('deposit'))).map((c) => c.body);
+async function withDeposits(over = {}) {
+  const opened = await openSettings();
+  settings = { ...settings, ...over };
+  opened.shell = shell;
+  shell.queryClient.setQueryData(['workshop-settings'], { ...settings });
+  await opened.waitFor(() => assert.ok(opened.ui.queryByRole('switch', { name: 'Take a deposit when booking' }) !== null));
+  return opened;
+}
+
+test('Deposits: the switch, off to start, and nothing under it while off', async () => {
+  const { ui } = await withDeposits();
+  assert.ok(ui.getByRole('heading', { level: 4, name: 'Deposits' }));
+  assert.equal(ui.getByRole('switch', { name: 'Take a deposit when booking' }).getAttribute('aria-checked'), 'false');
+  assert.ok(ui.queryByLabelText('How much') === null);
+  assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· no deposit ·/);
+});
+
+test('switching on saves at once and shows the drawn rows, a percentage to start', async () => {
+  const { ui, fireEvent, waitFor } = await withDeposits();
+  fireEvent.click(ui.getByRole('switch', { name: 'Take a deposit when booking' }));
+  await waitFor(() => assert.deepEqual(depositPuts(), [{ depositOn: true }]));
+  const kind = await ui.findByRole('radiogroup', { name: 'Deposit' });
+  assert.equal(kind.querySelector('[aria-checked="true"]').textContent, 'A percentage of the price');
+  assert.ok(ui.getByLabelText('How much'));
+  assert.ok(ui.queryByText('%') !== null);
+  assert.ok(ui.getByLabelText('If the price isn’t known'));
+  assert.ok(ui.queryByText('For “Not sure what’s wrong?” bookings') !== null);
+  assert.equal(ui.getByLabelText('Free to cancel until').value, '24');
+  assert.ok(ui.queryByText('Before the booked time · after that, or if they don’t come, the shop keeps the deposit') !== null);
+  assert.ok(ui.queryByText('With automatic confirming off, the customer pays before the shop has said yes; if the shop declines, the deposit is refunded automatically.') !== null);
+});
+
+test('How much saves as a whole percentage, and the fold says it', async () => {
+  const { ui, fireEvent, waitFor } = await withDeposits({ depositOn: true });
+  const box = await ui.findByLabelText('How much');
+  fireEvent.change(box, { target: { value: '20' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositPercent: 20 }));
+  await waitFor(() => assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· deposit 20% ·/));
+  fireEvent.change(box, { target: { value: '12.5' } });
+  fireEvent.blur(box);
+  assert.ok((await ui.findByText('Enter a whole percentage from 1 to 100')) !== null);
+  assert.equal(depositPuts().length, 1, 'not saved');
+});
+
+test('a fixed amount is typed in pounds and saved in pence; the fold says it', async () => {
+  const { ui, fireEvent, waitFor, within } = await withDeposits({ depositOn: true });
+  fireEvent.click(within(await ui.findByRole('radiogroup', { name: 'Deposit' })).getByRole('radio', { name: 'A fixed amount' }));
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositKind: 'fixed' }));
+  const box = await ui.findByLabelText('How much');
+  fireEvent.change(box, { target: { value: '15' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositFixedPence: 1500 }));
+  await waitFor(() => assert.equal(box.value, '15.00'));
+  assert.match(ui.getByRole('button', { name: /^Online booking/ }).textContent, /· deposit £15\.00 ·/);
+});
+
+test('the amount for a price not known can be emptied, and Free to cancel until saves its hours', async () => {
+  const { ui, fireEvent, waitFor } = await withDeposits({ depositOn: true, depositPercent: 20, depositUnknownPence: 1000 });
+  const unknown = await ui.findByLabelText('If the price isn’t known');
+  assert.equal(unknown.value, '10.00');
+  fireEvent.change(unknown, { target: { value: '' } });
+  fireEvent.blur(unknown);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositUnknownPence: null }));
+  const hours = ui.getByLabelText('Free to cancel until');
+  fireEvent.change(hours, { target: { value: '48' } });
+  fireEvent.blur(hours);
+  await waitFor(() => assert.deepEqual(depositPuts().at(-1), { depositCancelHours: 48 }));
+});
+
+test('with automatic confirming on, the note about declining isn’t shown', async () => {
+  const { ui } = await withDeposits({ depositOn: true, confirmBookingsAutomatically: true });
+  await ui.findByLabelText('How much');
+  assert.ok(ui.queryByText(/if the shop declines, the deposit is refunded automatically/) === null);
+});
+
+test('with no payment provider connected, switching on says so and stays off', async () => {
+  const { ui, fireEvent } = await withDeposits({ paymentsConnected: false });
+  fireEvent.click(ui.getByRole('switch', { name: 'Take a deposit when booking' }));
+  assert.ok((await ui.findByText('Connect a payment provider first, then deposits can be switched on.')) !== null);
+  assert.equal(ui.getByRole('switch', { name: 'Take a deposit when booking' }).getAttribute('aria-checked'), 'false');
 });

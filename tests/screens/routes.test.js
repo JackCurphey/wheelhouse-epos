@@ -8,7 +8,10 @@ import { NAV_ROUTES } from '../../src/staff/nav.ts';
 const index = JSON.parse(
   await readFile(new URL('../../docs/design/release-1-journey/screen-index.json', import.meta.url), 'utf8'),
 );
-const SCREEN_DESIGN_IDS = new Set(index.map((s) => s.id));
+// Release 2's drawings name their screens in generator/journeys.mjs (CLAUDE.md,
+// "Where things live"), as sd15("cs-page", …) or sb('auth-signedout', …); those count too.
+const journeys = await readFile(new URL('../../docs/design/user-journeys/generator/journeys.mjs', import.meta.url), 'utf8');
+const SCREEN_DESIGN_IDS = new Set([...index.map((s) => s.id), ...[...journeys.matchAll(/\(\s*["']([a-z0-9][a-z0-9-]*)["']\s*,/g)].map((m) => m[1])]);
 
 test('the five standalone edge screens have their own URLs', () => {
   // Entered from an emailed link or a stale bookmark, never by navigation -
@@ -24,7 +27,7 @@ const SIDEBAR_IDS = new Set([...Object.keys(NAV_ROUTES), 'your-settings']);
 
 test('every route is keyed by a screen id from the screen designs or the rooms sidebar', () => {
   for (const id of Object.keys(ROUTES)) {
-    assert.ok(SCREEN_DESIGN_IDS.has(id) || SIDEBAR_IDS.has(id), `${id} is not a screen in screen-index.json or the sidebar`);
+    assert.ok(SCREEN_DESIGN_IDS.has(id) || SIDEBAR_IDS.has(id), `${id} is not a screen in screen-index.json, journeys.mjs or the sidebar`);
   }
 });
 

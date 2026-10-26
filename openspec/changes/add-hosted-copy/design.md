@@ -112,6 +112,13 @@ restarts). The server's own settings file holds the run-time settings
 
 ### 3. Deploys: `main` only, after tests, in order, watched to the end
 
+**Changed 25 Oct (Jack, option 3; `docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md`):**
+Tests no longer runs after each merge. It runs on each pull request, which
+GitHub makes include the latest `main` before it merges, and once a day. So
+a merge deploys straight away: the workflow starts on the push to `main` and
+deploys that commit, `pick-deploy.sh` still keeps an older commit from
+replacing a newer one, and "after tests" now means the pull request's tests.
+
 A new workflow, `.github/workflows/deploy-hosted-copy.yml`, runs on
 `workflow_run` when `Tests` completes. It deploys only when all of these
 hold:
@@ -122,8 +129,8 @@ hold:
   would otherwise match.
 
 It then works like this:
-- **The commit.** It deploys `workflow_run.head_sha`, never `GITHUB_SHA`,
-  which is just the latest `main`. It builds the image in GitHub Actions,
+- **The commit.** It deploys a commit whose Tests passed (see Order), never
+  `GITHUB_SHA`, which is just the latest `main` whether tested or not. It builds the image in GitHub Actions,
   pushes it to GitHub's container registry tagged with that commit (the
   package made public, as the repo is, so the server pulls it without a
   token), then logs into the server with a deploy-only SSH key (a repository
@@ -132,13 +139,22 @@ It then works like this:
   root on that server, so it is used for nothing else. The previous image stays on the server for
   rolling back.
 - **Order.** One concurrency group (`hosted-copy`), without cancelling a
-  deploy already under way. Before deploying, it skips a commit that is an
-  ancestor of the one already running, so two quick merges finishing out of
-  order can't put the older one on top.
+  deploy already under way. GitHub keeps only one run waiting in a group, so
+  a newer run arriving cancels the one waiting (fresh review, 24 Oct). So
+  each run deploys **the newest `main` commit whose Tests passed**, not just
+  its own, and checks it out to build; its own commit is always that one or
+  an older one. It skips when that commit is already running, or is an
+  ancestor of the one running, so merges finishing out of order can't put an
+  older one on top, and a cancelled waiting run's commit still goes on with
+  the next. The choice is `scripts/hosting/pick-deploy.sh`, tested against a
+  real git history.
 - **Watching to the end.** It waits until `/healthz`, over HTTPS, answers
   `ok` with the new commit (task 2.4). If that doesn't happen
-  within [n] minutes, the workflow fails, which emails Mark through GitHub,
-  and it starts the previous image again.
+  within 5 minutes in all (`scripts/hosting/wait-healthy.sh`, counting by
+  the clock, not by tries), the workflow fails, which emails the person who
+  merged through GitHub, and it starts the previous image again. It also
+  starts the previous image if the job is cancelled or runs out of time after
+  the new one went on (fresh review, 24 Oct).
 - **Settings at build time.** `NODE_ENV` is a run-time setting only. If it
   reached the image build, `npm ci` would skip the tools the build stage
   needs.
@@ -147,9 +163,22 @@ The existing start-up order already runs migrations before listening, so a
 failed migration never gives a healthy `/healthz`. We run one copy of the
 app, so the advisory lock never has to wait on another one.
 
+**How it's built** (task 3.4, 23 Oct). The server side is
+`scripts/hosting/deploy.sh`. The deploy key is tied to it in root's
+`authorized_keys` (`restrict,command="/opt/wheelhouse/deploy.sh"`), and it
+accepts only `deploy <commit>` or `rollback`. A deploy downloads the image
+before changing anything, writes the time and both commits to
+`/opt/wheelhouse/deploys.log`, keeps the running image and commit in
+`release.previous`, and names the new ones in the server's `.env`
+(`WHEELHOUSE_IMAGE`, `WHEELHOUSE_COMMIT`), which compose reads. The
+workflow rolls back only when the deploy step itself succeeded; a version
+that won't start is swapped back by the script. `setup.sh` makes the key
+and writes GitHub's settings with `gh`. The health check gets 5 minutes.
+
 **The commit it runs.** The workflow passes the commit in as
-`WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, and
-leaves `commit` out when the setting is unset.
+`WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, on
+the 503 when the database is down as well as on the 200, and leaves `commit`
+out when the setting is unset.
 
 **Old code against a new schema.** A rollback starts the previous image
 against a database the new version may already have migrated, so the old
@@ -237,7 +266,20 @@ the week, the pending booking, the change request and the services from
   label and theme settings, the Madison mock supplier) are the ones
   `createShop()` gives every new shop (`server/auth.js:85`).
 - **No login.** Jack's login is given to him privately (spec, "Jack can
-  sign in"), so the loader makes none.
+  sign in"), so the loader makes none. Since staff sign in only through WorkOS (#504, 25 Oct),
+  nobody can be signed in to a freshly loaded shop to add one from the app.
+  So a command adds it (task 3.6b):
+  `node server/scripts/add-login.mjs --shop <address> --email <email> --name <name>`
+  adds that person as the shop's owner. It refuses if:
+  - the shop isn't found;
+  - the shop already has an owner;
+  - the email isn't valid, or already has a login anywhere;
+  - the name is missing.
+
+  Their stored password is random and never shown, because they sign in
+  through WorkOS with that email. It lives in `server/scripts/`, which the
+  app's image already carries, so the Dockerfile doesn't change. It goes
+  through `server/auth.js`, the only file that writes logins.
 - **Site:** Bolton, code B (`G/book.mjs:224`, `G/sites.mjs:17`). **No
   tills:** a till's sign-in belongs to the device that sets it up, so Jack
   makes B1, "Front counter", through "Set up this till"
@@ -262,6 +304,8 @@ the week, the pending booking, the change request and the services from
   service has a price, £65.00 (`G/diary.mjs:341`). The rest are drawn as
   "[£ price]" (`G/browse.mjs:80`); a price can't hold a placeholder, so they
   are £0.00 (Jack, 16 Oct, `docs/decisions/2026-10-16-test-shop-defaults.md`).
+  The four in the two groups are bookable online, because the booking page
+  draws exactly those (`G/book.mjs:48`, `:51`); Gear service isn't (24 Oct).
 - **Product:** Shimano brake pads, SKU B05S-RX, £28.00 (`G/diary.mjs:342`).
   No other product has a price in the drawings.
 - **Workshop jobs:** the drawings' example week, Mon 14 to Sun 20 September

@@ -8,6 +8,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -16,13 +17,13 @@ const MECHANICS = [
   { id: 12, name: 'Jo Taylor', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true },
 ];
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Brake service', reference: 'WH-1001', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 3, notes: null, requested: null,
     cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, orderId: null, orderStatus: null, orderTotal: null,
     createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', ...over,
-  };
+  });
 }
 const JOBS = [
   job({}),
@@ -34,7 +35,7 @@ const JOBS = [
 const NEXT_WEEK = [job({ id: 9, reference: 'WH-1009', title: 'Wheel true', bikeLabel: 'Cube Attain', customerName: 'Lena Fox', jobDate: '2026-10-13' })];
 const WAITING = {
   count: 1,
-  items: [{ kind: 'new_booking', jobId: 7, reference: 'WH-1007', jobDate: '2026-10-08', startTime: '10:00', endTime: '11:00', mechanicId: null, customerName: 'Sam Reed', serviceNames: ['Puncture repair'], services: [], arrivedAt: '2026-10-03T08:15:00Z' }],
+  items: [{ kind: 'new_booking', jobId: 7, reference: 'WH-1007', jobDate: '2026-10-08', startTime: '10:00', endTime: '11:00', mechanicId: null, customerName: 'Sam Reed', bikeLabel: 'Orbea Vector 20', serviceNames: ['Puncture repair'], services: [], arrivedAt: '2026-10-03T08:15:00Z' }],
 };
 
 const realFetch = globalThis.fetch;
@@ -61,6 +62,7 @@ function stubServer() {
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname === '/api/workshop-waiting') return reply(200, WAITING);
+    if (u.pathname === '/api/your-settings') return reply(200, { accessibility: { statusSymbols: symbolsOn, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false } });
     if (u.pathname === '/api/workshop-jobs') return reply(200, u.searchParams.get('start') === '2026-10-12' ? NEXT_WEEK : JOBS);
     const one = u.pathname.match(/^\/api\/workshop-jobs\/(\d+)$/);
     if (one) return reply(200, JOBS.find((j) => j.id === Number(one[1])));
@@ -83,6 +85,26 @@ async function openPhone(query = '?date=2026-10-06') {
 }
 
 const has = (q) => Boolean(q);
+
+// Show status symbols on a phone (Your settings; diary.mjs touchJobBlock has
+// none; pendingBlock('phone') has one): a request carries its shape, a job
+// doesn't, as the phone's day spells nothing out on the block.
+let symbolsOn = false;
+test('on a phone with Show status symbols on, a request carries its shape and a job doesn’t', async () => {
+  symbolsOn = true;
+  try {
+    const { ui, fireEvent, waitFor } = await openPhone();
+    const block = (bike) => ui.getAllByText(bike).map((t) => t.closest('[title]')).find(Boolean);
+    // Wait for the settings, so "no shape" isn't "not loaded yet".
+    await waitFor(() => assert.ok(calls.some((c) => String(c.url ?? c).includes('/api/your-settings'))));
+    await new Promise((r) => setTimeout(r, 20));
+    assert.ok(block('Trek Domane').querySelector('[data-status-shape]') === null, 'a phone job block has no shape');
+    fireEvent.click(ui.getByRole('tab', { name: /^Thursday 8 October/ }));
+    await waitFor(() => assert.equal(block('Specialized Sirrus')?.querySelector('[data-status-shape]')?.getAttribute('data-status-shape'), 'pending'));
+  } finally {
+    symbolsOn = false;
+  }
+});
 
 test('a phone shows one day, chosen in a strip of the week', async () => {
   const { ui } = await openPhone();
@@ -165,6 +187,8 @@ test('Waiting in the top bar opens the list; a card goes to its day and shows th
   const { ui, fireEvent, within } = await openPhone();
   fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
   const sheet = within(await ui.findByRole('dialog', { name: 'Waiting for you (1)' }));
+  // The bike under the customer, as the drawing's phone card (waiting-bike).
+  assert.ok(sheet.getByRole('button', { name: /Sam Reed/ }).textContent.includes('Sam ReedOrbea Vector 20'));
   fireEvent.click(sheet.getByRole('button', { name: /Sam Reed/ }));
   assert.equal((await ui.findByRole('tab', { name: /^Thursday 8 October/ })).getAttribute('aria-selected'), 'true');
   const bar = within(await ui.findByRole('status', { name: 'Chosen from Waiting for you' }));

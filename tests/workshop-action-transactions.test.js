@@ -11,6 +11,10 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
+// The admin address on this test database, as the other tests find it: from
+// ADMIN_DATABASE_URL or the superuser password in .env (it crashed without the first).
+const adminDatabaseUrl = () => { const u = new URL(adminUrlFrom(process.env)); u.pathname = new URL(process.env.DATABASE_URL).pathname; return u.href; };
 
 let server;
 before(async () => { server = await startLiveServer(); });
@@ -20,7 +24,7 @@ after(async () => {
 });
 
 const admin = async () => {
-  const client = new pg.Client({ connectionString: process.env.ADMIN_DATABASE_URL.replace(/\/[^/]*$/, new URL(process.env.DATABASE_URL).pathname) });
+  const client = new pg.Client({ connectionString: adminDatabaseUrl() });
   await client.connect();
   return client;
 };
@@ -82,7 +86,7 @@ test('deleting a job while its order is being paid is refused, not a paid order 
   await db.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = ${job.orderId} AND NEW.status = 'converted' THEN PERFORM pg_sleep(1.5); END IF; RETURN NEW; END $$`);
   await db.query(`CREATE TRIGGER ${fn} BEFORE UPDATE ON sale_documents FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
-    const pay = req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: cashier } });
+    const pay = req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: cashier, signedOffBy: null } });
     await new Promise((r) => setTimeout(r, 600));
     const del = req(`/api/workshop-jobs/${job.id}`, { method: 'DELETE' });
     const [paid, deleted] = await Promise.all([pay, del]);

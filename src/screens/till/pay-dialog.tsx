@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession, type SessionEmployee } from '@/lib/auth/use-session.ts';
+import { useYourSettings } from '@/lib/your-settings.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
+import { EmailReceiptDialog, type ReceiptCustomer } from './email-receipt.tsx';
 import { asSaleItem, money, noteButtons, pence, saleTotal, type TillLine } from './rules.ts';
 
 /**
@@ -43,7 +45,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * paying converts the order, which charges its own saved lines, and then
  * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
  */
-type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
+type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
 export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
   const session = useSession();
@@ -51,6 +53,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
   // The shop's address, phone and VAT number for the receipt (Shop details, 18 Oct).
   const shopDetails = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails & { name: string }>('/api/shop-details') });
+  // The signed-in person's Don't close things by themselves (Your settings).
+  const wait = Boolean(useYourSettings().data?.accessibility?.noAutoClose);
   const [serving, setServing] = useState<SessionEmployee | null>(me && me.isCashier ? me : null);
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
@@ -119,13 +123,13 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
         <button type="button" onClick={() => go({ kind: 'card', amount: total, cashPart: 0 })} className={`${BIG} border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)]`}>
           <span className="flex flex-col gap-0.5">
             <span className="text-lg font-bold">{`Card · ${money(total)}`}</span>
-            <span className="text-[13px] opacity-85">Key it into the card machine</span>
+            <span className="text-size-13 opacity-85">Key it into the card machine</span>
           </span>
         </button>
         <button type="button" onClick={() => go({ kind: 'cash' })} className={`${BIG} border-[var(--wh-border)] bg-[var(--wh-panel)]`}>
           <span className="flex flex-col gap-0.5">
             <span className="text-lg font-bold">Cash</span>
-            <span className="text-[13px] text-[var(--wh-muted)]">Enter what the customer hands you; the till works out the change</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">Enter what the customer hands you; the till works out the change</span>
           </span>
         </button>
         <Button className="min-h-14" onClick={() => go({ kind: 'split' })}>Split</Button>
@@ -135,8 +139,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     title = `Card · ${money(step.amount)}`;
     body = (
       <div className="flex flex-col items-center gap-2 py-2 text-center">
-        <span className="font-mono text-[34px]">{money(step.amount)}</span>
-        <p className="m-0 text-[15px] font-semibold">{`Key ${money(step.amount)} into the card machine.`}</p>
+        <span className="font-mono text-size-34">{money(step.amount)}</span>
+        <p className="m-0 text-size-15 font-semibold">{`Key ${money(step.amount)} into the card machine.`}</p>
         <p className="m-0 text-sm text-[var(--wh-muted)]">When the machine says approved, press Card approved. If it’s declined, nothing was taken: go back and pay another way.</p>
       </div>
     );
@@ -170,8 +174,9 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     // A reply that warns the job wasn't signed off names nobody (piece 3).
     const warned = Boolean((paidSale as { jobWarning?: string } | null)?.jobWarning);
     const receiptJob = job?.receipt && warned ? { ...job.receipt, checkedBy: null } : job?.receipt;
-    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); onNextSale(); } : null;
-    body = <PaidStep total={total} change={step.change} note={step.note} onPrint={onPrint} onNextSale={onNextSale} />;
+    // With Don't close things by themselves on, Print leaves Paid open (till-receipt-wait).
+    const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); if (!wait) onNextSale(); } : null;
+    body = <PaidStep total={total} change={step.change} note={step.note} wait={wait} saleId={paidSale?.id ?? null} customer={job?.customer ?? null} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 
   return (
@@ -235,7 +240,7 @@ function CashStep({ total, saving, onBack, onTaken }: { total: number; saving: b
       </div>
       <div className="flex items-baseline justify-between rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4">
         <span className="text-lg font-bold">Change to give</span>
-        <span className="font-mono text-[34px]">{enough ? money((pence(handed) - pence(total)) / 100) : '—'}</span>
+        <span className="font-mono text-size-34">{enough ? money((pence(handed) - pence(total)) / 100) : '—'}</span>
       </div>
       <div className="flex justify-between gap-2.5 border-t border-[var(--wh-border)] pt-3.5">
         <Button variant="ghost" disabled={saving} onClick={onBack}>Back</Button>
@@ -255,16 +260,16 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
       <div className="flex flex-col gap-1.5">
         <label htmlFor="split-cash" className="text-sm font-semibold">Cash part</label>
         <input id="split-cash" inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)} aria-describedby="split-cash-hint" className="min-h-11 w-40 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-mono" />
-        <span id="split-cash-hint" className="text-[13px] text-[var(--wh-muted)]">Take the cash first; the rest goes on the card.</span>
+        <span id="split-cash-hint" className="text-size-13 text-[var(--wh-muted)]">Take the cash first; the rest goes on the card.</span>
       </div>
       <div className="flex items-baseline justify-between rounded-[10px] border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-[18px] py-4">
         <span className="text-lg font-bold">Still to pay</span>
-        <span className="font-mono text-[34px]">{money(rest)}</span>
+        <span className="font-mono text-size-34">{money(rest)}</span>
       </div>
       <button type="button" disabled={!ok} onClick={() => cash !== null && onCard(cash, rest)} className={`${BIG} border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)] disabled:opacity-50`}>
         <span className="flex flex-col gap-0.5">
           <span className="text-lg font-bold">{`Card · ${money(rest)}`}</span>
-          <span className="text-[13px] opacity-85">Key it into the card machine</span>
+          <span className="text-size-13 opacity-85">Key it into the card machine</span>
         </span>
       </button>
       <div><Button variant="ghost" onClick={onBack}>Back</Button></div>
@@ -272,10 +277,20 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
   );
 }
 
-function PaidStep({ total, change, note, onPrint, onNextSale }: { total: number; change: number; note: string | null; onPrint: (() => void) | null; onNextSale: () => void }) {
+// Don't close things by themselves (Jack, 24 Oct answer 9; drawn as
+// till-receipt-wait): no countdown, and Start next sale in No receipt's place.
+// Email (till-receipt; openspec/changes/till-email-receipt): the countdown
+// waits while its pop-up is open (2 Oct, leftover screens M1); once sent, the
+// next sale starts, or with the setting on Paid stays and says so.
+function PaidStep({ total, change, note, wait, saleId, customer, onPrint, onNextSale }: {
+  total: number; change: number; note: string | null; wait: boolean; saleId: number | null; customer: ReceiptCustomer | null;
+  onPrint: (() => void) | null; onNextSale: () => void;
+}) {
   const [left, setLeft] = useState(5);
+  const [emailing, setEmailing] = useState(false);
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
   // With a note to read, Paid waits for No receipt (as the job warning, 16 Oct).
-  const counting = !note;
+  const counting = !note && !wait && !emailing;
   // Kept in a ref so a new callback from the page doesn't restart the count.
   const next = useRef(onNextSale);
   useEffect(() => { next.current = onNextSale; });
@@ -289,15 +304,30 @@ function PaidStep({ total, change, note, onPrint, onNextSale }: { total: number;
     <>
       <div className="flex flex-col items-center gap-2 text-center">
         <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--wh-state-ready-bg)] text-3xl text-[var(--wh-state-ready-ink)]">✓</span>
-        <span className="font-mono text-[30px]">{money(total)}</span>
+        <span className="font-mono text-size-30">{money(total)}</span>
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
         {note ? <span role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-warn-ink)]">{note}</span> : null}
       </div>
-      <div role="group" aria-label="Receipt" className="grid grid-cols-2 gap-2.5">
+      <div role="group" aria-label="Receipt" className="grid grid-cols-3 gap-2.5">
         <Button className="min-h-[60px]" disabled={!onPrint} onClick={() => onPrint?.()}>Print</Button>
-        <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>No receipt</Button>
+        <Button className="min-h-[60px]" disabled={saleId === null} onClick={() => setEmailing(true)}>Email</Button>
+        <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>{wait ? 'Start next sale' : 'No receipt'}</Button>
       </div>
+      {emailedTo ? <p role="status" className="m-0 text-center text-sm font-semibold">{`Receipt sent to ${emailedTo}.`}</p> : null}
+      {emailing ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">Next sale waits until the receipt is sent</p> : null}
+      {wait && !emailing ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">The next sale waits until you press Start next sale.</p> : null}
       {counting ? <p role="timer" className="m-0 text-center text-sm text-[var(--wh-muted)]">{`Next sale starts in ${left} second${left === 1 ? '' : 's'}`}</p> : null}
+      {emailing && saleId !== null ? (
+        <EmailReceiptDialog
+          saleId={saleId} customer={customer}
+          onClose={() => setEmailing(false)}
+          onSent={(to) => {
+            setEmailing(false);
+            if (wait) setEmailedTo(to);
+            else onNextSale();
+          }}
+        />
+      ) : null}
     </>
   );
 }

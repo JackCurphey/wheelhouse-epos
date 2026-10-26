@@ -1,6 +1,7 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
 import { hostedCopyRefusal } from './hosted-copy-guard.js';
+import { devAutologinRefusal } from './lib/dev-autologin.js';
 import { startSender } from './messaging/engine.js';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -8,10 +9,9 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
-import { sendQuoteResult, answerAndAddToOrder } from './workshop/jobs.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso, ValidationError } from './lib/http.js';
+import { sendJson, notFound, badRequest, readRawBody, nowIso, ValidationError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
 import {
   loadDocumentLine, createSale,
@@ -21,7 +21,6 @@ import {
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
 import { currentSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
-import { resolveBookingLink } from './routes/portal.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
 export { serializeWorkshopService } from './routes/workshop-settings.js';
@@ -225,26 +224,8 @@ async function serveUploadedImage(req, res, key) {
   createReadStream(filePath).pipe(res);
 }
 
-// The customer's whole answer in one call - every line's yes or no, then
-// approve - so a quote with many lines doesn't run into the link's limit on
-// attempts. The revision is the one their page showed.
-// screens: approval, approval-done, stale
-route('POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer', async (req, res, params) => {
-  const found = await resolveBookingLink(req, res, params.code);
-  if (!found) return;
-  const body = await readJsonBody(req);
-  if (!Number.isInteger(body.revision)) return badRequest(res, 'revision is required - send the revision your page showed');
-  // The quote their page showed, by its revision; answerAll refuses it if a
-  // newer revision exists or it is no longer open (canApprove).
-  const shown = await db.prepare('SELECT id FROM workshop_quotes WHERE workshop_job_id = ? AND revision = ?').get(found.id, body.revision);
-  if (!shown) return notFound(res, 'There is no quote for this booking');
-  sendQuoteResult(res, await answerAndAddToOrder({
-    quoteId: shown.id, jobId: found.id, decisions: body.decisions, via: 'online', linkRevision: body.revision,
-  }));
-});
-
-// The route areas already moved to server/routes/ (split plan §4.1), in
-// the fixed order of server/routes/index.js.
+// Every route, from server/routes/ (split plan §4.1, WP-0.4), in the fixed
+// order of server/routes/index.js.
 for (const area of ROUTE_AREAS) area.register(route);
 
 // ---------- Static file serving ----------
@@ -447,9 +428,13 @@ const server = createServer(async (req, res) => {
   // and passes with Postgres completely down).
   if (pathname === '/healthz') {
     const health = await checkDatabaseHealth();
-    if (health.ok) return sendJson(res, 200, { status: 'ok' });
+    // The commit it runs, passed in by the deploy (add-hosted-copy design,
+    // "The commit it runs"), on the 200 and the 503 alike; left out when unset.
+    const commit = process.env.WHEELHOUSE_COMMIT;
+    const withCommit = (body) => (commit ? { ...body, commit } : body);
+    if (health.ok) return sendJson(res, 200, withCommit({ status: 'ok' }));
     console.error('Health check failed: database unreachable', health.error);
-    return sendJson(res, 503, { status: 'error', error: 'Database unreachable' });
+    return sendJson(res, 503, withCommit({ status: 'error', error: 'Database unreachable' }));
   }
 
   if (parseStorefrontSlugCandidate(req, url)) {
@@ -926,6 +911,12 @@ if (isMainModule) {
   console.log(SIGNALS_READY);
 
   // The hosted test copy refuses anything unsafe before any migration runs.
+  // The dev sign-in switch must never be on where anyone else can reach the server.
+  const devRefusal = devAutologinRefusal(process.env);
+  if (devRefusal) {
+    console.error(devRefusal);
+    process.exit(1);
+  }
   const hostedRefusal = hostedCopyRefusal(process.env);
   if (hostedRefusal) {
     console.error(hostedRefusal);

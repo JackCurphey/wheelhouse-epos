@@ -7,19 +7,20 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const MECHANICS = [{ id: 11, name: 'Alex Morgan', isMechanic: true, isCashier: false, workingDays: [1, 2, 3, 4, 5], active: true }];
 
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Brake service', reference: 'WH-1001', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 3, notes: null, requested: null,
     customerDescription: null, cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, changeDeclinedAt: null,
     orderId: null, orderStatus: null, orderTotal: null, createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', ...over,
-  };
+  });
 }
 const REQUEST = job({ id: 3, reference: 'WH-1003', title: 'Puncture repair', bikeLabel: 'Specialized Sirrus', customerName: 'Sam Reed', mechanicId: null, mechanicName: null, jobDate: '2026-10-09', startTime: '10:00', endTime: '10:45', bookingState: 'pending', version: 4 });
 const CHANGE = job({ id: 2, reference: 'WH-1002', title: 'Full service', bikeLabel: 'Brompton C Line', customerName: 'Oliver Chen', jobDate: '2026-10-05', bookingState: 'reschedule_requested', version: 7,
@@ -359,4 +360,16 @@ test('a change request pop-up opens the full job', async () => {
   r.fireEvent.click(dlg.getByRole('button', { name: 'Open full job' }));
   assert.ok(has(await r.ui.findByRole('dialog', { name: /Full service/ })), 'the job page opens');
   assert.ok(r.ui.queryByRole('heading', { name: 'Change request' }) === null, 'the request closes');
+});
+
+test('a request that took a deposit: declining says it’s refunded automatically (bk-staff-decline)', async () => {
+  REQUEST.deposit = { pence: 1300, paidAt: '2026-10-01T09:00:00Z', state: 'paid', refundedAt: null, refundReason: null, refundedBy: null, noShowAt: null, noShowBy: null };
+  try {
+    const r = await openDiary();
+    const dlg = await openCard(r, 'Sam Reed');
+    r.fireEvent.click(dlg.getByRole('button', { name: 'Decline' }));
+    assert.ok(has(dlg.queryByText('Declining releases the request’s reservation. The customer is told not to travel for this request. Their £13.00 deposit is refunded automatically.')));
+  } finally {
+    REQUEST.deposit = null;
+  }
 });

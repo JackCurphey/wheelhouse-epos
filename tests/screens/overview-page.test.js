@@ -6,16 +6,15 @@ import test, { afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 
+import { fakeJob, changed } from '../helpers/fake-job.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 // Wednesday 21 October 2026, 10:00 in the shop.
 const NOW = new Date(2026, 9, 21, 10, 0, 0);
 const TODAY = '2026-10-21';
-const job = (over) => ({
+const job = (over) => fakeJob({
   id: 1, title: 'Standard service', reference: 'WH-1042', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane AL 3',
-  mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: TODAY, startTime: '10:30', endTime: '12:00', status: 'scheduled',
-  bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 3, notes: null, requested: null, offer: null,
-  cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, orderId: null, orderStatus: null, orderTotal: null,
+  mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: TODAY, startTime: '10:30', endTime: '12:00', version: 3,
   createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', ...over,
 });
 // Today's arrivals: due now, later today, and a drop-off with no time and no mechanic.
@@ -23,7 +22,7 @@ const MAYA = job({});
 const JAMIE = job({ id: 2, reference: 'WH-1045', title: 'Gear adjustment', customerName: 'Jamie Brooks', bikeLabel: 'Giant Escape 2', startTime: '14:00', endTime: '15:00' });
 // As the server sends it: a drop-off's day has an empty start time (fresh review, 21 Oct).
 const AISHA = job({ id: 3, reference: 'WH-1047', title: 'Safety check', customerName: 'Aisha Khan', bikeLabel: 'Cannondale Quick', startTime: null, endTime: null, mechanicId: null, mechanicName: null,
-  parts: [{ id: 31, position: 0, date: TODAY, startTime: '', endTime: '', mechanicId: null, mechanicName: null }] });
+  parts: [{ id: 31, position: 1, date: TODAY, startTime: '', endTime: '', mechanicId: null, mechanicName: null }] });
 // A request still waiting for the shop: not a booking yet, so not counted.
 const REQUEST = job({ id: 4, reference: 'WH-1048', title: 'Puncture repair', customerName: 'Sam Reed', bikeLabel: 'Specialized Sirrus', startTime: '11:00', bookingState: 'pending' });
 // In the shop since earlier days.
@@ -31,12 +30,17 @@ const PARTS = job({ id: 5, reference: 'WH-1050', title: 'Wheel build', customerN
 const READY = job({ id: 6, reference: 'WH-1051', title: 'Brake bleed', customerName: 'Priya Shah', bikeLabel: 'Ribble CGR', jobDate: '2026-10-20', startTime: '13:00', custodyState: 'in_shop', workState: 'complete' });
 const QUEUED = job({ id: 7, reference: 'WH-1052', title: 'Gear service', customerName: 'Tom Hale', bikeLabel: 'Boardman ADV', jobDate: '2026-10-20', startTime: '15:00', custodyState: 'in_shop', workState: 'in_progress', mechanicId: null, mechanicName: null });
 
+// Started yesterday with Alex; today's day is in the shared queue, and the bike isn't in yet.
+const TWO_DAY = job({ id: 8, reference: 'WH-1053', title: 'Full rebuild', customerName: 'Ella Ward', bikeLabel: 'Surly Cross-Check', jobDate: '2026-10-20', startTime: '09:00',
+  parts: [{ id: 81, position: 1, date: '2026-10-20', startTime: '09:00', endTime: '17:00', mechanicId: 11, mechanicName: 'Alex Morgan' }, { id: 82, position: 2, date: TODAY, startTime: '09:30', endTime: '12:00', mechanicId: null, mechanicName: null }] });
+
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
 let calls;
 let bookIn;
 let booked;
+let capacity = null;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -44,6 +48,7 @@ afterEach(async () => {
   uninstall?.();
   globalThis.fetch = realFetch;
   mock.timers.reset();
+  capacity = null;
 });
 
 async function openOverview({ phone = false, coarse = false, inShopDown = false, extra = [], interval = false } = {}) {
@@ -57,13 +62,14 @@ async function openOverview({ phone = false, coarse = false, inShopDown = false,
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
     const maya = booked ? { ...MAYA, custodyState: 'in_shop', version: 4 } : MAYA;
-    if (method === 'POST' && u.pathname === '/api/workshop-jobs/3/book-in') return reply(200, { ...AISHA, custodyState: 'in_shop', version: 4 });
+    if (method === 'POST' && u.pathname === '/api/workshop-jobs/3/book-in') return reply(200, changed({ ...AISHA, custodyState: 'in_shop', version: 4 }));
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/book-in') {
       if (bookIn) return bookIn;
       booked = true;
-      return reply(200, { ...MAYA, custodyState: 'in_shop', version: 4 });
+      return reply(200, changed({ ...MAYA, custodyState: 'in_shop', version: 4 }));
     }
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
+    if (u.pathname === '/api/workshop-capacity' && capacity) return reply(200, capacity);
     if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('custody') === 'in_shop' && inShopDown) return reply(404, { error: 'Not found' });
     if (u.pathname === '/api/workshop-jobs' && u.searchParams.get('custody') === 'in_shop') return reply(200, [...(booked ? [maya] : []), PARTS, READY, QUEUED]);
     // Today's list also has a bike in the shop carried over to today: counted once.
@@ -91,7 +97,7 @@ test('today’s date, then the bikes expected and in the workshop; no Planned ef
   const inWorkshop = within(ui.getByRole('region', { name: 'In the workshop' }));
   assert.ok(inWorkshop.getByText('3'));
   assert.ok(inWorkshop.getByText('1 ready to collect'));
-  assert.ok(ui.queryByText(/Planned effort/) === null);
+  assert.ok(ui.queryByText(/Planned effort/) === null, 'no capacity figures, no Planned effort');
 });
 
 test('four tabs with their counts; Arrivals first, by time, a drop-off last; a request isn’t counted', async () => {
@@ -204,9 +210,6 @@ test('the time moves on by itself: an appointment becomes due without anything p
 });
 
 test('a job over several days is read from today’s day: its mechanic and its arrival', async () => {
-  // Started yesterday with Alex; today's day is in the shared queue, and the bike isn't in yet.
-  const TWO_DAY = job({ id: 8, reference: 'WH-1053', title: 'Full rebuild', customerName: 'Ella Ward', bikeLabel: 'Surly Cross-Check', jobDate: '2026-10-20', startTime: '09:00',
-    parts: [{ id: 81, position: 0, date: '2026-10-20', startTime: '09:00', endTime: '17:00', mechanicId: 11, mechanicName: 'Alex Morgan' }, { id: 82, position: 1, date: TODAY, startTime: '09:30', endTime: '12:00', mechanicId: null, mechanicName: null }] });
   const { ui, fireEvent } = await openOverview({ extra: [TWO_DAY] });
   assert.deepEqual(rowNames(ui), ['WH-1053 · Ella Ward', 'WH-1042 · Maya Patel', 'WH-1045 · Jamie Brooks', 'WH-1047 · Aisha Khan']);
   fireEvent.click(tab(ui, 'Shared queue'));
@@ -225,4 +228,35 @@ test('after Book in from the Shared queue the focus is on the Shared queue tab',
   fireEvent.click(ui.getByRole('button', { name: 'Book in WH-1047' }));
   await waitFor(() => assert.ok(calls.some((c) => c.method === 'POST')));
   await waitFor(() => assert.ok(document.activeElement === tab(ui, 'Shared queue')));
+});
+
+// Planned effort (Jack, 21 Oct, workshop overview answer 2: once the capacity
+// figures give it; drawn with its fill bar, audit M7).
+test('Planned effort: the day’s work against the mechanics’ time, with its bar', async () => {
+  capacity = { days: [{ date: TODAY, plannedMinutes: 360, availableMinutes: 480, mechanics: [] }] };
+  const { ui, within } = await openOverview();
+  const effort = within(await ui.findByRole('region', { name: 'Planned effort' }));
+  assert.ok(effort.getByText('6h / 8h'));
+  assert.ok(effort.getByText('Shared and assigned, counted once'));
+  assert.ok(effort.getByRole('img', { name: '75% of planned effort used today' }));
+});
+
+test('Planned effort in half hours, and a closed day', async () => {
+  capacity = { days: [{ date: TODAY, plannedMinutes: 390, availableMinutes: 0, mechanics: [] }] };
+  const { ui, within } = await openOverview();
+  const effort = within(await ui.findByRole('region', { name: 'Planned effort' }));
+  assert.ok(effort.getByText('6.5h / 0h'));
+  assert.ok(effort.queryByRole('img') === null, 'no bar with no time');
+});
+
+// The reply-shape file (working agreement task 2.4): this file's fake jobs are
+// the shape the server sends, so a changed reply fails here too.
+test('the fake jobs here are the shape of the server’s', async () => {
+  const shapes = await import(new URL('../../.test-build/lib/api/shapes.js', import.meta.url).href);
+  for (const j of [MAYA, JAMIE, AISHA, REQUEST, PARTS, READY, QUEUED, TWO_DAY]) {
+    assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB, j), [], j.reference);
+    for (const part of j.parts) assert.deepEqual(shapes.shapeProblems(shapes.JOB_PART, part), [], `${j.reference} part ${part.position}`);
+  }
+  // Book in sends the job back without its days.
+  assert.deepEqual(shapes.shapeProblems(shapes.WORKSHOP_JOB_CHANGED, changed(MAYA)), []);
 });

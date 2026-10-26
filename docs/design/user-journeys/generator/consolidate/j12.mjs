@@ -33,6 +33,8 @@ export default {
   'new-job-day': into('new-job', 'Workshop day 18, 54', "From Jo's day column: mechanic pre-filled, no customer yet, 'The bike is here now' on"),
   // The job — one page, no tabs (the 7 stages are its situation list)
   'job-overview': keep(15, { sizes: ['desktop', 'tablet', 'phone'] }), // rule 3: own touch layout (Workshop day 3)
+  'job-book-in-print': into('job-overview', 'Bike tag 1', "A printer button beside Message: prints the bike tag through the browser"),
+  'job-bike-tag': into('job-overview', 'Bike tag 1', "The printed tag: job number, barcode, customer, bike"),
   'job-book-in': into('job-overview', 'Workshop day 20', "'Booked in'; 'Bike tag sent' strip with barcode; 'Send quote' and 'Start work'"),
   'job-quote': into('job-overview', 'Workshop day 20', "'Quoting'; new lines pending, 'Proposed' total; 'Send quote'"),
   'job-mechanic': into('job-overview', 'Workshop day 20', "Alex Morgan's view: checklist progress, approved lines; 'Mark ready for collection'"),
@@ -40,6 +42,19 @@ export default {
   'job-finished': into('job-overview', 'Workshop day 20', "'Finished'; 'Alex marked it ready at 15:30' with 'Undo'; 'Take payment'"),
   'job-collection': into('job-overview', 'Workshop day 20', "'Paid' strip, 'Paid online · [date]'; footer 'Hand over'"),
   'job-checklist': keep(7),
+  // Use my phone for a line's photo (Walk-through 8, decision 6), drawn 23 Oct
+  // for Jack's approval in place of its written line on job-overview.
+  'job-photo-choice': into('job-overview', 'Walk-through 8, decision 6', "On a desktop, Add photo for Shimano brake pads opens a menu: 'Choose a file' or 'Use my phone'"),
+  'job-photo-phone': keep(9),
+  'job-photo-phone-added': into('job-photo-phone', 'Walk-through 8, decision 6', "The photo arrived by itself: 'Photo added', '[Photo from your phone]', 'Done'; the line reads '1 photo'"),
+  'phone-photo-ready': keep(40, { sizes: ['phone'] }), // the page the code opens, on the phone, no sign-in
+  'phone-photo-check': into('phone-photo-ready', 'Walk-through 8, decision 6', "'Check the photo': '[The photo you just took]', 'Use this photo' or 'Take another'"),
+  'phone-photo-done': into('phone-photo-ready', 'Walk-through 8, decision 6', "'Photo added to WH-1042': it's on the computer now; you can close this page"),
+  'phone-photo-expired': into('phone-photo-ready', 'Walk-through 8, decision 6', "'This code has expired or has already been used': make a new one on the computer; nothing else shown"),
+  // Don't close things by themselves (24 Oct, morning questions answer 9),
+  // drawn for Jack's approval.
+  'job-finished-wait': into('job-overview', 'Morning questions 24 Oct, answer 9', "Don’t close things by themselves on: 'Bike ready to Maya by text is waiting until you press Send now', with 'Send now' and 'Undo'; nothing on a timer"),
+  'job-finished-sent': into('job-overview', 'Morning questions 24 Oct, answer 9', "After 'Send now': 'Bike ready sent to Maya by text · [time]'; no Undo"),
   // Customer account
   'customer': into('cs-page', 'Customer service 11', "One-shop business: history rows without the shop name (cs-page shows '· Bolton')"),
   // Overview page
@@ -60,7 +75,6 @@ export const lines = [
   { on: 'job-overview', text: 'Open on another device: Jo Taylor has this job open', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
   { on: 'job-overview', text: "Notes: the other person's words arrive as they type", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
   { on: 'job-overview', text: "Two people change one line: Keep mine or Keep Alex's", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
-  { on: 'job-overview', text: "On a desktop, Add photo: Choose a file or Use my phone (a code to scan opens that line's photo step, no sign-in)", who: 'Mechanic', decision: 'Walk-through 8, decision 6' },
   { on: 'job-overview', text: 'Who did what, folded: name, what, time; Mark ready records Signed off by Alex Morgan · 15:30', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 7; build plan Q3' },
   // D5 — the quick look
   { on: 'job-quick-overview', text: 'After Mark ready: Signed off by Alex Morgan · 15:30 in the hover summary', who: 'Staff and Mechanic', decision: 'Build plan Q3' },

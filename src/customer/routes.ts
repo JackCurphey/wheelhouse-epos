@@ -20,3 +20,33 @@ export const CUSTOMER_ROUTES = {
 } as const;
 
 export type CustomerScreenId = keyof typeof CUSTOMER_ROUTES;
+
+/**
+ * Use my phone's photo step (openspec/changes/use-my-phone): the page a code
+ * opens on a member of staff's phone, with no sign-in. Under /book for the
+ * shop's slug and look, but not one of the booking steps above, so it sits
+ * apart from their table. The server's photoCodePath (server/booking-link.js)
+ * gives the same address.
+ */
+export const PHOTO_STEP_ROUTE = '/book/:shopSlug/photo/:code';
+
+/**
+ * "Stop these" for service reminders (openspec/changes/stop-reminders): the
+ * page a reminder's link opens, with no sign-in. The server's stopPath
+ * (server/messaging/stop-codes.js) gives the same address.
+ */
+export const STOP_ROUTE = '/book/:shopSlug/stop/:code';
+
+/**
+ * Signing in by a code sent by email (openspec/changes/customer-signin-screens;
+ * cust-signin, cust-code): the shop's sign-in page. Apart from the booking
+ * steps, as the photo and stop pages are. `?from=` is where it returns to.
+ */
+export const SIGNIN_ROUTE = '/book/:shopSlug/sign-in';
+
+/**
+ * The customer's account (openspec/changes/customer-account-screens;
+ * ac-account): her bikes, details and history, by her sign-in. Apart from the
+ * booking steps, as the sign-in page is.
+ */
+export const ACCOUNT_ROUTE = '/book/:shopSlug/account';

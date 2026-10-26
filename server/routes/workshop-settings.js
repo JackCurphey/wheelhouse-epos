@@ -10,6 +10,7 @@
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { ownerOnly } from '../lib/owner-only.js';
 import { prepare, dbExec } from '../db.js';
+import { paymentsConnected } from '../payments/provider.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { MAX_SERIAL } from '../lib/uploads.js';
 import {
@@ -18,6 +19,7 @@ import {
 } from '../capacity.js';
 import { isKnownTimeZone, shopToday } from '../clock.js';
 import { readServiceQuestions } from '../service-questions.js';
+import { ChecklistError, listChecklists, createChecklist, updateChecklist, deleteChecklist } from '../workshop/checklists.js';
 import {
   TIME_RE, LIVE_STATES_SQL, currentShopToday, parseWorkingDays, toCapacitySettings, toBlock, toCapacityJob, loadCapacity,
 } from '../workshop/jobs.js';
@@ -25,6 +27,8 @@ import {
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 // ---------- Workshop settings ----------
+
+const BLOCK_FIELDS = ['bike', 'jobTitle', 'customer', 'reference'];
 
 function serializeWorkshopSettings(row) {
   return {
@@ -51,8 +55,33 @@ function serializeWorkshopSettings(row) {
     showPricesOnline: row.show_prices_online === 1,
     // "Show who signed off to customers" (mechanic sign-off answer 3; Jack, 18 Oct).
     showSignOffToCustomers: row.show_sign_off_to_customers === 1,
+    // "Confirm bookings automatically", off to start (Jack, 19 Oct, auto-confirm decision 8; migration 050).
+    confirmBookingsAutomatically: row.confirm_bookings_automatically === 1,
     // The shop's additional note on the confirmation, '' for none (Jack, 19 Oct; migration 045).
     confirmationNote: row.confirmation_note ?? '',
+    // What a diary block shows first and second (Workshop day 17, 29; migration 053).
+    blockFirst: row.block_first,
+    blockSecond: row.block_second,
+    // Storage slots on for this shop (Workshop day 27; migration 054), off to start.
+    storageSlotsOn: row.storage_slots_on === 1,
+    // Hours before a quote with no answer is reminded (Jack, 22 Oct; migration 060).
+    quoteReminderHours: row.quote_reminder_hours,
+    // Days from when a bike is marked ready to Bike still waiting, and to Today (WP-4.3; migration 064).
+    collectionReminderDays: row.collection_reminder_days,
+    collectionTodayDays: row.collection_today_days,
+    // Review requests (account and reminders decision 5; migration 080): the
+    // shop's review page, null for none, and the days after collection.
+    reviewPageUrl: row.review_page_url ?? null,
+    reviewRequestDays: row.review_request_days,
+    // Deposits when booking (bk-settings-deposits; migration 069), off to
+    // start; money in pence. Connected: a payment provider takes them.
+    depositOn: row.deposit_on === 1,
+    depositKind: row.deposit_kind,
+    depositPercent: row.deposit_percent ?? null,
+    depositFixedPence: row.deposit_fixed_pence ?? null,
+    depositUnknownPence: row.deposit_unknown_pence ?? null,
+    depositCancelHours: row.deposit_cancel_hours,
+    paymentsConnected: paymentsConnected(),
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -131,7 +160,9 @@ export function serializeWorkshopService(row, includes = []) {
   return {
     id: row.id,
     name: row.name,
-    price: row.price,
+    // Pence is the authority; the pounds are the pence over 100 (sales in pence, step A′).
+    price: row.price_pence / 100,
+    pricePence: row.price_pence,
     minutes: row.minutes,
     // active is INTEGER 0/1 on this table, matching products.active.
     active: row.active === 1,
@@ -146,6 +177,9 @@ export function serializeWorkshopService(row, includes = []) {
     kind: row.kind,
     categoryId: row.category_id,
     position: row.position,
+    // Months after collection that its reminder is due, or null for none
+    // (service-reminder-months).
+    reminderMonths: row.reminder_months ?? null,
     // Ordered; each { id, wording, kind, required, choices?, allowNotSure? }.
     // See server/service-questions.js and migration 028.
     questions: row.questions ?? [],
@@ -163,6 +197,8 @@ function readServiceBody(body) {
   if (!name) throw new ValidationError('A service needs a name');
   const price = Number(body.price);
   if (!Number.isFinite(price) || price < 0) throw new ValidationError('A service needs a price of zero or more');
+  // Kept in whole pence (sales in pence, step A′), so well within what they hold.
+  if (price >= 1000000) throw new ValidationError('A service’s price must be under £1,000,000');
   let minutes = null;
   if (body.minutes !== undefined && body.minutes !== null && body.minutes !== '') {
     minutes = Math.trunc(Number(body.minutes));
@@ -203,6 +239,16 @@ async function readServicePlacement(body, existing) {
     }
   }
   return { kind, categoryId, position };
+}
+
+// When a service's reminder is due: a whole number of months from 1 to 60, or
+// null for none. Omitted on PUT keeps the stored value, as placement does.
+function readReminderMonths(body, existing) {
+  if (body.reminderMonths === undefined) return existing ? existing.reminder_months ?? null : null;
+  const m = body.reminderMonths;
+  if (m === null) return null;
+  if (!Number.isInteger(m) || m < 1 || m > 60) throw new ValidationError('Remind after a whole number of months, from 1 to 60');
+  return m;
 }
 
 // A service's questions, saved as one whole list. Omitted on PUT keeps the
@@ -392,10 +438,74 @@ export function register(route) {
       }
     }
 
-    const showPricesOnline = body.showPricesOnline === undefined
-      ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
-    const showSignOff = body.showSignOffToCustomers === undefined
-      ? existing.show_sign_off_to_customers : (body.showSignOffToCustomers ? 1 : 0);
+    // The on/off settings take a real true or false only, so a stray "false"
+    // can't turn one on (audit, 22 Oct, item 22); left out, each stays as it is.
+    for (const key of ['showPricesOnline', 'showSignOffToCustomers', 'storageSlotsOn', 'confirmBookingsAutomatically']) {
+      if (body[key] !== undefined && typeof body[key] !== 'boolean') return badRequest(res, `${key} must be true or false`);
+    }
+    const onOff = (key, column) => (body[key] === undefined ? existing[column] : (body[key] ? 1 : 0));
+    const showPricesOnline = onOff('showPricesOnline', 'show_prices_online');
+    const showSignOff = onOff('showSignOffToCustomers', 'show_sign_off_to_customers');
+    const storageSlotsOn = onOff('storageSlotsOn', 'storage_slots_on');
+    const confirmAutomatically = onOff('confirmBookingsAutomatically', 'confirm_bookings_automatically');
+    const quoteReminderHours = body.quoteReminderHours === undefined ? existing.quote_reminder_hours : body.quoteReminderHours;
+    if (!Number.isInteger(quoteReminderHours) || quoteReminderHours < 1 || quoteReminderHours > 168) {
+      return badRequest(res, 'Choose from 1 to 168 hours.');
+    }
+    // A bike left uncollected (WP-4.3, cp-setting): the reminder's days, and
+    // Today's, which come later.
+    const collectionReminderDays = body.collectionReminderDays === undefined ? existing.collection_reminder_days : body.collectionReminderDays;
+    if (!Number.isInteger(collectionReminderDays) || collectionReminderDays < 1 || collectionReminderDays > 60) {
+      return badRequest(res, 'Choose from 1 to 60 days.');
+    }
+    const collectionTodayDays = body.collectionTodayDays === undefined ? existing.collection_today_days : body.collectionTodayDays;
+    if (!Number.isInteger(collectionTodayDays) || collectionTodayDays < 2 || collectionTodayDays > 90) {
+      return badRequest(res, 'Choose from 2 to 90 days.');
+    }
+    if (collectionTodayDays <= collectionReminderDays) return badRequest(res, 'Show it on Today after more days than the reminder.');
+    // Review requests (review-requests design 2): a web address, or none.
+    let reviewPageUrl = existing.review_page_url ?? null;
+    if (body.reviewPageUrl !== undefined) {
+      const text = typeof body.reviewPageUrl === 'string' ? body.reviewPageUrl.trim() : body.reviewPageUrl;
+      if (text === null || text === '') reviewPageUrl = null;
+      else if (typeof text !== 'string' || text.length > 500 || !/^https?:\/\/\S+$/i.test(text)) return badRequest(res, 'Paste the whole link to your review page, starting https://');
+      else reviewPageUrl = text;
+    }
+    if (!reviewPageUrl && existing.review_page_url) {
+      const on = (await db.prepare("SELECT enabled FROM message_templates WHERE key = 'review_request'").get())?.enabled;
+      if (on) return badRequest(res, 'Switch review requests off first.');
+    }
+    const reviewRequestDays = body.reviewRequestDays === undefined ? existing.review_request_days : body.reviewRequestDays;
+    if (!Number.isInteger(reviewRequestDays) || reviewRequestDays < 1 || reviewRequestDays > 60) {
+      return badRequest(res, 'Choose from 1 to 60 days.');
+    }
+
+    // What a diary block shows first and second: two different things from
+    // bike, job title, customer and job number (Workshop day 17, 29).
+    const blockFirst = body.blockFirst === undefined ? existing.block_first : body.blockFirst;
+    const blockSecond = body.blockSecond === undefined ? existing.block_second : body.blockSecond;
+    if (![blockFirst, blockSecond].every((f) => BLOCK_FIELDS.includes(f))) return badRequest(res, 'Choose bike, job title, customer or job number');
+    if (blockFirst === blockSecond) return badRequest(res, 'Choose two different things for the two lines');
+
+    // Deposits when booking (openspec/changes/deposit-settings design 2).
+    if (body.depositOn !== undefined && typeof body.depositOn !== 'boolean') return badRequest(res, 'depositOn must be true or false');
+    const depositOn = onOff('depositOn', 'deposit_on');
+    const depositKind = body.depositKind === undefined ? existing.deposit_kind : body.depositKind;
+    if (!['percent', 'fixed'].includes(depositKind)) return badRequest(res, 'Choose a fixed amount or a percentage');
+    const whole = (key, column, min, max, message, nullable = true) => {
+      if (body[key] === undefined) return { value: existing[column] ?? null };
+      if (body[key] === null && nullable) return { value: null };
+      return Number.isInteger(body[key]) && body[key] >= min && body[key] <= max ? { value: body[key] } : { error: message };
+    };
+    const depositPercent = whole('depositPercent', 'deposit_percent', 1, 100, 'Enter a whole percentage from 1 to 100');
+    const depositFixed = whole('depositFixedPence', 'deposit_fixed_pence', 1, 1_000_000, 'Enter an amount from 1p to £10,000');
+    const depositUnknown = whole('depositUnknownPence', 'deposit_unknown_pence', 1, 1_000_000, 'Enter an amount from 1p to £10,000');
+    const depositCancel = whole('depositCancelHours', 'deposit_cancel_hours', 0, 168, 'Choose from 0 to 168 hours.', false);
+    for (const v of [depositPercent, depositFixed, depositUnknown, depositCancel]) if (v.error) return badRequest(res, v.error);
+    // Switched on before How much is filled in, no deposit is taken until it is (design 2).
+    if (depositOn === 1 && existing.deposit_on !== 1 && !paymentsConnected()) {
+      return sendJson(res, 409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
+    }
 
     // The additional note on the confirmation: trimmed, up to 300 characters;
     // empty shows none (Jack, 19 Oct, docs/decisions/2026-10-19-confirmation-note.md).
@@ -428,12 +538,20 @@ export function register(route) {
          dropoff_window_start = ?,
          dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
          min_notice_minutes = ?, min_notice_days = ?, time_zone = ?,
-         show_prices_online = ?, show_sign_off_to_customers = ?, booking_terms = ?, confirmation_note = ?, updated_at = ? WHERE id = ?`
+         show_prices_online = ?, show_sign_off_to_customers = ?, confirm_bookings_automatically = ?, booking_terms = ?, confirmation_note = ?,
+         block_first = ?, block_second = ?, storage_slots_on = ?, quote_reminder_hours = ?,
+         collection_reminder_days = ?, collection_today_days = ?, review_page_url = ?, review_request_days = ?,
+         deposit_on = ?, deposit_kind = ?, deposit_percent = ?, deposit_fixed_pence = ?, deposit_unknown_pence = ?, deposit_cancel_hours = ?,
+         updated_at = ? WHERE id = ?`
     ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
           nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
           dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
           minNoticeMinutes, minNoticeDays, timeZone,
-          showPricesOnline, showSignOff, bookingTerms, confirmationNote, nowIso(), existing.id);
+          showPricesOnline, showSignOff, confirmAutomatically, bookingTerms, confirmationNote,
+          blockFirst, blockSecond, storageSlotsOn, quoteReminderHours,
+          collectionReminderDays, collectionTodayDays, reviewPageUrl, reviewRequestDays,
+          depositOn, depositKind, depositPercent.value, depositFixed.value, depositUnknown.value, depositCancel.value,
+          nowIso(), existing.id);
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
     sendJson(res, 200, serializeWorkshopSettings(row));
   });
@@ -524,6 +642,10 @@ export function register(route) {
           shopClosed: day.shopClosed,
           closures: day.shopBlocks,
           queueMinutes: day.queueMinutes,
+          // Planned effort on the Workshop Overview (Jack, 21 Oct): booked work inside
+          // working time, overlaps counted once, and the time the mechanics have.
+          plannedMinutes: day.plannedMinutes,
+          availableMinutes: day.availableMinutes,
           clashes,
           mechanics: day.mechanics.map((m) => ({
             mechanicId: m.mechanicId,
@@ -535,6 +657,84 @@ export function register(route) {
         };
       }),
     });
+  });
+
+  // ---------- Storage slots (Workshop day 27; drawn as set-workshop-diary's Storage slots) ----------
+  // The shop's own hooks and spaces, in the order added. Everyone signed in
+  // reads them; only the Owner adds or removes one. Removing one clears it
+  // from the bikes on it (ON DELETE SET NULL).
+  // screens: services
+  route('GET', '/api/storage-slots', async (req, res) => {
+    sendJson(res, 200, await db.prepare('SELECT id, name FROM storage_slots ORDER BY position, id').all());
+  });
+
+  // screens: services
+  route('POST', '/api/storage-slots', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name) return badRequest(res, 'Give the slot a name');
+    if (name.length > 40) return badRequest(res, 'A slot’s name can be up to 40 letters');
+    if (await db.prepare('SELECT 1 FROM storage_slots WHERE lower(name) = lower(?)').get(name)) return badRequest(res, 'There’s already a slot called that');
+    try {
+      const made = await db.prepare(
+        'INSERT INTO storage_slots (name, position) VALUES (?, (SELECT COALESCE(MAX(position), 0) + 1 FROM storage_slots)) RETURNING id, name'
+      ).get(name);
+      sendJson(res, 201, made);
+    } catch (err) {
+      // Two adds of one name at once: the second meets the unique index.
+      if (err.code === '23505') return badRequest(res, 'There’s already a slot called that');
+      throw err;
+    }
+  });
+
+  // screens: services
+  route('DELETE', '/api/storage-slots/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    const gone = await db.prepare('DELETE FROM storage_slots WHERE id = ?').run(Number(params.id));
+    if (!gone.changes) return notFound(res, 'That slot no longer exists');
+    res.writeHead(204).end();
+  });
+
+  // ---------- Service checklists (Jack, 22 Oct, docs/decisions/2026-10-22-service-checklists.md) ----------
+  // The shop's own checklists and the services that have each (drawn as
+  // set-workshop-checklists and set-workshop-checklist-edit). Everyone signed
+  // in reads them; only the Owner changes them, as all Settings until roles.
+  // `{ template: true }` makes the full service checklist, used for no service yet.
+  // screens: services, service-edit
+  route('GET', '/api/workshop-checklists', async (req, res) => {
+    sendJson(res, 200, await listChecklists());
+  });
+
+  const checklistReply = async (res, fn, status = 200) => {
+    try {
+      const out = await fn();
+      if (out === undefined) res.writeHead(204).end();
+      else sendJson(res, status, out);
+    } catch (err) {
+      if (!(err instanceof ChecklistError)) throw err;
+      sendJson(res, err.status, { error: err.message });
+    }
+  };
+
+  // screens: services, service-edit
+  route('POST', '/api/workshop-checklists', async (req, res) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    await checklistReply(res, () => createChecklist(body), 201);
+  });
+
+  // screens: services, service-edit
+  route('PUT', '/api/workshop-checklists/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    await checklistReply(res, () => updateChecklist(Number(params.id), body));
+  });
+
+  // screens: services, service-edit
+  route('DELETE', '/api/workshop-checklists/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    await checklistReply(res, () => deleteChecklist(Number(params.id)));
   });
 
   // screens: services, service-edit
@@ -607,6 +807,7 @@ export function register(route) {
     let includes;
     try {
       fields = readServiceBody(body);
+      fields.reminderMonths = readReminderMonths(body, null);
       placement = await readServicePlacement(body, null);
       questions = readQuestionsOrKeep(body, []);
       includes = await readIncludes(body, placement.kind, null, null, null);
@@ -619,8 +820,9 @@ export function register(route) {
     let info;
     try {
       info = await db.prepare(
-        'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
-      ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
+        // Pence beside the pounds, from the same value (sales in pence, step A′).
+        'INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, kind, category_id, position, questions, reminder_months) VALUES (?, ?, ROUND(CAST(? AS numeric) * 100)::int, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)'
+      ).run(fields.name, fields.price, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), fields.reminderMonths);
       await replaceIncludes(info.lastInsertRowid, includes);
       await db.exec('COMMIT');
     } catch (err) {
@@ -644,6 +846,7 @@ export function register(route) {
     let includes;
     try {
       fields = readServiceBody(body);
+      fields.reminderMonths = readReminderMonths(body, existing);
       placement = await readServicePlacement(body, existing);
       questions = readQuestionsOrKeep(body, existing.questions ?? []);
       const stored = (await db.prepare(
@@ -667,9 +870,9 @@ export function register(route) {
     await db.exec('BEGIN');
     try {
       await db.prepare(
-        'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
-      ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
-        placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
+        'UPDATE workshop_services SET name = ?, price = ?, price_pence = ROUND(CAST(? AS numeric) * 100)::int, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), reminder_months = ?, updated_at = ? WHERE id = ?'
+      ).run(fields.name, fields.price, fields.price, fields.minutes, active, bookableOnline,
+        placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), fields.reminderMonths, nowIso(), id);
       // Only touch the stored list when the caller actually sent one, or when
       // the demotion to individual must clear it - a save that leaves
       // `includes` out (as `questions` and placement work) must not delete and

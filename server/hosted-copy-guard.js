@@ -12,6 +12,10 @@ export function hostedCopyRefusal(env) {
   if (env.WHEELHOUSE_HOSTED_COPY !== '1') return null;
   const key = Object.keys(env).find((k) => env[k] && REAL_KEY_PREFIXES.some((p) => k.startsWith(p)));
   if (key) return `This is a test copy of Wheelhouse (WHEELHOUSE_HOSTED_COPY=1): remove ${key}. A test copy never sends real messages.`;
+  // staff-signin-workos design 6: a test WorkOS key only reaches WorkOS's test environment.
+  if (String(env.WORKOS_API_KEY || '').startsWith('sk_live_')) {
+    return 'This is a test copy of Wheelhouse (WHEELHOUSE_HOSTED_COPY=1): WORKOS_API_KEY must be a test (sk_test_) key.';
+  }
   if (env.NODE_ENV !== 'production') return 'This is a test copy of Wheelhouse (WHEELHOUSE_HOSTED_COPY=1): NODE_ENV must be production.';
   if (env.DB_TENANT_SCOPE && env.DB_TENANT_SCOPE !== 'session') {
     return `This is a test copy of Wheelhouse (WHEELHOUSE_HOSTED_COPY=1): DB_TENANT_SCOPE must be session, not ${env.DB_TENANT_SCOPE}.`;

@@ -67,3 +67,17 @@ test('any other custody is refused', async () => {
   const res = await staff('/api/workshop-jobs?custody=somewhere');
   assert.equal(res.status, 400);
 });
+
+// The bike's colour, for the bike tag (21 Oct, planned-effort): sent with the
+// job, and none for a blank one.
+test('a job carries its bike’s colour, or none', async () => {
+  const cust = await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel' } });
+  assert.equal(cust.status, 201, JSON.stringify(cust.body));
+  const green = await staff(`/api/customers/${cust.body.id}/bikes`, { method: 'POST', body: { make: 'Trek', model: 'Domane AL 3', colour: 'green' } });
+  const plain = await staff(`/api/customers/${cust.body.id}/bikes`, { method: 'POST', body: { make: 'Giant', model: 'Escape 2', colour: '' } });
+  for (const [bike, colour] of [[green.body, 'green'], [plain.body, null]]) {
+    const made = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Service', jobDate: nextDay(), startTime: '10:00', endTime: '11:00', mechanicId: sam, customerId: cust.body.id, bikeId: bike.id } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    assert.equal((await staff(`/api/workshop-jobs/${made.body.id}`)).body.bikeColour, colour);
+  }
+});

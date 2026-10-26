@@ -64,14 +64,50 @@ test('a sign-off that is no longer valid never refuses the payment: finished uns
   }
 });
 
-test('paying with no sign-off (the old app) finishes the work unsigned, as before', async () => {
+// The old app never takes payment for a workshop job (Jack, 21 Oct,
+// docs/decisions/2026-10-21-old-app-placeholder.md): a job's payment that
+// doesn't answer the sign-off question (only the old app sends none) is
+// refused, nothing is sold, and the job stays as it was.
+test('a job’s payment with no sign-off answer is refused: take it at the till', async () => {
   const { shop, req, job, pay } = await jobInProgress();
   try {
     const paid = await pay();
-    assert.equal(paid.status, 201, JSON.stringify(paid.body));
-    assert.equal(paid.body.jobWarning, undefined);
+    assert.equal(paid.status, 400, JSON.stringify(paid.body));
+    assert.equal(paid.body.code, 'use_till');
+    assert.match(paid.body.error, /Take payment for a workshop job at the till/);
     const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
-    assert.deepEqual([now.workState, now.signedOffBy], ['complete', null]);
+    assert.equal(now.workState, 'in_progress');
+    const order = (await req(`/api/sale-documents/${job.orderId}`)).body;
+    assert.equal(order.status, 'open', 'nothing sold');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Fresh review, 21 Oct: Jack's words are about a finished job, which the
+// route reaches by its own path; the refusal covers it too.
+test('a finished job’s payment with no sign-off answer is refused too', async () => {
+  const { shop, req, alex, job, pay } = await jobInProgress();
+  try {
+    const done = await req(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: alex } });
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    const paid = await pay();
+    assert.equal(paid.status, 400, JSON.stringify(paid.body));
+    assert.equal(paid.body.code, 'use_till');
+    assert.equal((await req(`/api/sale-documents/${job.orderId}`)).body.status, 'open');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('an order with no workshop job still converts with no sign-off answer', async () => {
+  const { shop, req } = await jobInProgress();
+  try {
+    const product = (await req('/api/products', { method: 'POST', body: { name: 'Inner tube', price: 5, sku: `TUBE-${shop.id}`, stockQty: 5 } })).body;
+    const order = (await req('/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ productId: product.id, qty: 1, unitPrice: 5 }] } })).body;
+    const cashier = (await req('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${shop.id}-${Date.now()}@example.test`, password: 'password123' } })).body.employeeId;
+    const paid = await req(`/api/sale-documents/${order.id}/convert`, { method: 'POST', body: { cashAmount: 5, cashTendered: 5, cashierId: cashier } });
+    assert.equal(paid.status, 201, JSON.stringify(paid.body));
   } finally {
     await deleteTestShop(shop.id);
   }
@@ -95,7 +131,7 @@ test('paying for work already signed off keeps that sign-off', async () => {
 
 // Fresh review: the till sends signedOffBy: null when it didn't ask (the work
 // read as finished). If the work was reopened meanwhile, paying finishes it
-// unsigned, and the reply says so; the old app, which sends no key, doesn't warn.
+// unsigned, and the reply says so. A payment with no key at all is refused.
 test('a till that saw finished work, reopened since, gets a warning that nobody signed it off', async () => {
   const { shop, req, job, pay } = await jobInProgress();
   try {
@@ -138,3 +174,40 @@ test('a sign-off whose history row cannot be saved leaves no half sign-off, and 
     await deleteTestShop(shop.id);
   }
 });
+
+// Audit item 21 (22 Oct), at the till: the signer is deleted or switched off
+// between the till's check and the sign-off being written. The payment stands,
+// the work finishes unsigned, and the reply says the mechanic isn't active.
+// A trigger on the job's finishing update stands in for the Owner making the
+// change at that moment.
+for (const what of ['deleted', 'switched off']) {
+  test(`a signer ${what} while the till pays: the payment stands, the work is finished unsigned, and the reply says so`, async () => {
+    const { shop, req, job, pay } = await jobInProgress();
+    // Not the job's own mechanic, who can't be deleted while the job names them.
+    const signer = await seedMechanic(shop.id, { name: 'Sam Lee' });
+    const adminUrl = new URL(adminUrlFrom(process.env));
+    adminUrl.pathname = new URL(process.env.DATABASE_URL).pathname;
+    const admin = new pg.Client({ connectionString: adminUrl.href });
+    await admin.connect();
+    const fn = `till_signer_goes_${job.id}_${shop.id}`;
+    const change = what === 'deleted' ? `DELETE FROM employees WHERE id = ${signer}` : `UPDATE employees SET active = 0 WHERE id = ${signer}`;
+    await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN ${change}; RETURN NEW; END $$`);
+    await admin.query(`CREATE TRIGGER ${fn} BEFORE UPDATE OF work_state ON workshop_jobs FOR EACH ROW WHEN (NEW.id = ${job.id} AND NEW.work_state = 'complete') EXECUTE FUNCTION ${fn}()`);
+    try {
+      const paid = await pay({ signedOffBy: signer });
+      assert.equal(paid.status, 201, JSON.stringify(paid.body));
+      assert.equal(paid.body.jobWarning, 'Paid and finished, but not signed off: that mechanic isn’t active any more.');
+      const now = (await req(`/api/workshop-jobs/${job.id}`)).body;
+      assert.equal(now.workState, 'complete');
+      assert.ok(now.signedOffBy === null);
+      assert.deepEqual(await history(shop.id, job.id), [], 'no sign-off history written');
+      const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
+      assert.equal(order.status, 'converted', 'the payment stands');
+    } finally {
+      await admin.query(`DROP TRIGGER ${fn} ON workshop_jobs`);
+      await admin.query(`DROP FUNCTION ${fn}()`);
+      await admin.end();
+      await deleteTestShop(shop.id);
+    }
+  });
+}

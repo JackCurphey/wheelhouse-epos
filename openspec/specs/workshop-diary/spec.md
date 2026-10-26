@@ -283,11 +283,19 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 - **THEN** its request pop-up opens, with Accept
 
 ### Requirement: "Waiting for you" lists what customers are waiting on staff for
-"Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer and the services in order; a change request SHALL also carry where the customer wants it.
+"Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer, the bike (make then model, as the diary's blocks name it, or none when the job has no bike) and the services in order; a change request SHALL also carry where the customer wants it.
 
 #### Scenario: A new online booking
 - **WHEN** Sam Reed books a Brake service online with [mechanic] at 10:00
 - **THEN** it is listed as a new booking from 10:00 to 10:45 with [mechanic], for Sam Reed, with that service, arriving when the booking was made
+
+#### Scenario: Every item carries the bike
+- **WHEN** Sam Reed books online with a Specialized Sirrus, then asks to move it, or cancels it
+- **THEN** the new booking, the change request and the cancellation each carry the bike "Specialized Sirrus"
+
+#### Scenario: A booking without a bike
+- **WHEN** a customer books online without choosing or adding a bike
+- **THEN** the item carries no bike
 
 #### Scenario: A change request
 - **WHEN** a confirmed booking with Jo at 10:00 asks to move to 14:00 with Alex on another day
@@ -1072,3 +1080,93 @@ The Overview page SHALL show:
 #### Scenario: A ready bike from an earlier day
 - **WHEN** the list is asked for `custody=in_shop`
 - **THEN** a bike finished and waiting since an earlier day is included
+
+### Requirement: A booking confirmed straight away is marked New, booked online
+A booking confirmed automatically SHALL sit in the diary as a normal booking, marked "New, booked online" until someone opens it; it SHALL NOT be listed in Waiting for you (Jack, 19 Oct, answer 1). The mark SHALL also show on a stack's front card when any job in the stack is new, on that job's tile when the stack fans out, and on its chip in the month view, where the chip shows the globe only; each one's name for screen readers SHALL say "new, booked online" for that job.
+
+#### Scenario: Seen once opened
+- **WHEN** a booking arrives confirmed and Jo opens the job
+- **THEN** the diary no longer marks it as new
+
+#### Scenario: A new booking in a stack
+- **WHEN** a new online booking for a Specialized Sirrus starts at the same time as another job
+- **THEN** the stack's front card shows New online, and its name says the Sirrus's puncture repair is new, booked online
+
+#### Scenario: A new booking in the month view
+- **WHEN** the diary shows the month with a new online booking at 10:00
+- **THEN** its chip shows the globe after the bike, and its name ends "new, booked online"
+
+### Requirement: The Workshop Overview shows the day's planned effort
+The Overview SHALL show Planned effort as the day's booked work against the mechanics' working time, in hours to the half hour, with overlaps counted once and the shared queue included. A bar SHALL show the share used. Planned effort SHALL be left out while the figures can't be read.
+
+#### Scenario: Six hours of eight
+- **WHEN** the day has 6 hours of work booked and the mechanics have 8 hours
+- **THEN** Planned effort reads "6h / 8h", with a bar three quarters full
+
+### Requirement: A diary block shows the shop's chosen lines
+A diary block, a stack's front card and a fanned stack's tiles SHALL show the shop's first and second choice from Settings › Workshop › Diary blocks, in place of the bike and the job title. A block's name for screen readers SHALL still give the bike, job, customer, number, status and time.
+
+#### Scenario: Customer, then job number
+- **WHEN** the shop chose Customer, then Job number, and Maya Patel's job WH-1001 is in the diary
+- **THEN** its block reads "Maya Patel", then "WH-1001"
+
+### Requirement: A quote with no answer after its reminder shows "No answer yet"
+When a job's quote is still waiting for the customer after its one reminder went, the diary SHALL call the job "No answer yet" where it would say "Quoting", and the job's page SHALL show "No answer to the quote yet" with when the quote and the reminder were sent and the customer's phone number, above Record their answer (Jack, 1 Oct, drop-off and quote decision 4; dq-today-no-answer).
+
+#### Scenario: The reminder went and nothing came back
+- **WHEN** Maya's quote was sent, its reminder went, and she hasn't answered
+- **THEN** the diary's WH-1042 reads "No answer yet", and its page says "No answer to the quote yet", "Sent [time] · reminder sent [time] · 07700 900 142" with Record their answer
+
+#### Scenario: Before the reminder
+- **WHEN** the quote was sent and its reminder hasn't gone yet
+- **THEN** the job reads "Quoting", with no "No answer yet" line
+
+#### Scenario: Answered
+- **WHEN** Maya answers after the reminder
+- **THEN** "No answer yet" goes
+
+### Requirement: The job pop-up shows the deposit and refunds it by hand
+
+A job that took a deposit SHALL show it in a strip under the customer strip
+as drawn: paid, with Refund the deposit; refunded, with the date and reason;
+or kept after Didn't come, with who and when, and Refund the deposit. Refund
+the deposit SHALL open the drawn pop-up, needing a reason, and refund the
+whole deposit.
+
+#### Scenario: Refunded by hand
+- **WHEN** Jo presses Refund the deposit, types "Bike wasn't ready in time" and presses Refund £13.00
+- **THEN** the strip reads Deposit refunded £13.00 with the date and the reason
+
+### Requirement: The job pop-up marks a booking that didn't come
+
+Once the booked day has gone with the bike not in, the job pop-up SHALL say
+"Not come in" with the booked day and time, and offer Didn't come beside Book
+in. Pressing it SHALL mark the job Didn't come, keeping the deposit, with
+"Marked Didn't come · the deposit is kept" and Undo until the job is closed.
+
+#### Scenario: Marked, then undone
+- **WHEN** Jo presses Didn't come, then Undo
+- **THEN** the job reads Didn't come with the bar, then Expected again
+
+### Requirement: A held Bike ready waits for Send now on the job page
+
+When Bike ready is held (the person marking the job ready has Don't close
+things by themselves on), the job page SHALL say "[name] marked it ready at
+[time]. “Bike ready” to [first name] by [way] is waiting until you press Send
+now." with Send now and Undo, and nothing on a timer (`job-finished-wait`).
+Send now SHALL send it and the strip SHALL then say "“Bike ready” sent to
+[first name] by [way] · [time]" with no buttons (`job-finished-sent`). Undo
+SHALL stop it, as it does in its minute. The strip SHALL show again whenever
+the job is opened while Bike ready is held.
+
+#### Scenario: Send now
+- **WHEN** Jo, with the switch on, marks Maya's job ready and presses Send now
+- **THEN** the strip says "“Bike ready” sent to Maya by text · [time]" and has no buttons
+
+#### Scenario: Reopened later
+- **WHEN** Jo closes the job before pressing either and opens it again
+- **THEN** the waiting strip, with Send now and Undo, is still there
+
+#### Scenario: The Messages list
+- **WHEN** Jo opens the job's Messages while Bike ready is held
+- **THEN** it says Bike ready is waiting until Send now

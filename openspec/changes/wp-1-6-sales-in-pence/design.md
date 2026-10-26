@@ -289,12 +289,31 @@ own change says how.
 E can't be rolled back, which is why it needs Jack's yes and a clean totals
 check.
 
+## Step A′ notes (Jack's side, 24 Oct)
+
+- **A quote line's quantity isn't money**, so it isn't converted: it stays a
+  `NUMERIC` count (hours of labour can be 1.5). A line's total in pence is
+  `ROUND(quantity * unit_amount_pence)`, worked out in one place on the
+  server, never by a screen.
+- **The pounds stay**, written in the same statement as their pence (as step
+  A), until nothing reads them: migration 075 adds `price_pence`,
+  `unit_amount_pence` and `booked_price_pence` (null where the price is), and
+  every writer writes both. Readers move to pence in the next pull request.
+- **The screens add no pounds** (task 2.2): the job page's Proposed total
+  and the booking page's Work agreed total come from the server
+  (`proposedTotal`/`proposedTotalPence` on a quote, `workTotal`/`workTotalPence`
+  on the booking link). The customer's Approve total changes with each tick,
+  so the card adds the server's whole pence (`lineTotalPence`,
+  `agreedTotalPence`) and divides by 100 once, to show it.
+
 ## Open Questions
 
 - For Jack (asked on #134): what VAT rate labour lines carry. Until he
   answers, labour lines' `vat_rate_bp` stays empty. This doesn't change the
   approach.
 - For Jack, before WP-3.1: the two new "check these" kinds (Decision 8).
-- For Jack, before WP-3.1: may the till take a deposit on a job whose work
+- ~~For Jack, before WP-3.1: may the till take a deposit on a job whose work
   isn't finished, which the paying-for-finished-work decision refuses today?
-  (Decision 8.)
+  (Decision 8.)~~ **Answered 24 Oct, "Yes, deposits only"**
+  (`docs/decisions/2026-10-24-till-deposit-unfinished-work.md`): a deposit
+  at any stage; the payment that pays the rest still needs the work finished.

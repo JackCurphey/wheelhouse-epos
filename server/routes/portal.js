@@ -7,34 +7,52 @@
 // themselves with currentCustomerSession(). Mark's file. Moved out of
 // server.js unchanged (split plan §4.1, WP-0.4); bookings and booking links
 // follow in the next move.
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
 import { currentCustomerSession } from '../lib/session.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
+import { queueMessage, whyNotQueued } from '../messaging/engine.js';
+import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
+import { jobChecklistCopy } from '../workshop/checklists.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from '../customer-auth.js';
-import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate } from '../capacity.js';
+import { MAX_RANGE_DAYS, isRealDate, dayCount, widestHours, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, modeForDate, openingHoursFor } from '../capacity.js';
+import { formatOpeningHours } from '../messaging/templates.js';
+import { computeOrderTotals } from '../lib/sales.js';
 import { currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime } from '../clock.js';
 import { STANDARD_BOOKING_TERMS } from '../standard-terms.js';
 import {
   requestedOf, WORKSHOP_JOB_SELECT, resolveJobMechanicId, addMinutesToTime, timeToMinutes, resolveJobTimes,
   CLEAR_REQUEST, capacityRefusal, refusal, SLOT_GONE, sendQuoteResult, parseWorkingDays, currentShopToday,
   toCapacitySettings, withBookingLock, withJobBookingLock, applyLocked, syncJobHold, createWorkshopJob,
-  checkJobSlot, loadCapacity,
+  checkJobSlot, loadCapacity, answerAndAddToOrder,
 } from '../workshop/jobs.js';
 import {
-  approve as approveQuote, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
+  approve as approveQuote, earlierAnswers, agreedBeforePence, latestAnswers, recordLineDecision, readQuoteForCustomer, serializeQuoteWithLines, currentQuoteForJob,
 } from '../workshop/quotes.js';
 import { parseBookingRequest } from '../booking-request.js';
-import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from '../booking-photos.js';
+import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
+import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
+import { setStopped, stopView } from '../messaging/stop-codes.js';
+import { addNote, cleanNote, jobNotes, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { checkAnswers } from '../service-questions.js';
-import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from '../booking-link.js';
+import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
+import { bookingDeposit } from '../workshop/booking-deposit.js';
+import { payments } from '../payments/index.js';
+import { paymentsConnected } from '../payments/provider.js';
+import { signinProvider } from '../signin/provider.js';
+import { EMAIL_RE } from '../auth.js';
+import { settleDeposits } from '../payments/settle.js';
+import { oweRefund, refundOwed } from '../payments/refund.js';
+import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -75,6 +93,68 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
+// network and by the shop's email address; codes checked, by network.
+const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
+const signinAskEmailLimiter = makeRateLimiter(5, 15 * 60 * 1000);
+const signinCheckLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+const SIGNIN_OFF = 'Signing in by email isn’t switched on yet';
+// The email typed, as the shop's logins hold it; '' for anything that isn't
+// one, or is longer than an email can be (254 characters).
+const signinEmail = (body) => {
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  return email.length <= 254 && EMAIL_RE.test(email) ? email : '';
+};
+const SIGNIN_REFUSED = {
+  wrong: 'That code isn’t right. Check it, or send a new one',
+  expired: 'That code has expired — send a new one',
+};
+
+// The shop's login for an email signed in by code. A first sign-in joins the
+// customer the shop already has with that email, when there's exactly one,
+// active, with no online account yet, and the email is one they gave
+// themselves: the code proves it's theirs, but an email staff typed in could be
+// someone else's (Jack, 25 and 26 Oct, docs/decisions/2026-10-26-customer-account.md).
+// Otherwise a new customer and a login with no password, made together.
+async function loginForSignedInEmail(shopId, email) {
+  const found = () => db.prepare('SELECT * FROM customer_logins WHERE shop_id = ? AND email = ?').get(shopId, email);
+  const login = await found();
+  if (login) return login;
+  await db.exec('BEGIN');
+  try {
+    const matches = await db.prepare(
+      `SELECT c.id, EXISTS (SELECT 1 FROM customer_logins l WHERE l.customer_id = c.id AND l.shop_id = ?) AS has_login
+         FROM customers c
+        WHERE c.active = 1 AND c.merged_into_id IS NULL AND lower(trim(coalesce(c.email, ''))) = ?
+          AND c.email_from_customer
+        LIMIT 2`
+    ).all(shopId, email);
+    const customer = matches.length === 1 && !matches[0].has_login
+      ? matches[0]
+      : await db.prepare("INSERT INTO customers (name, email, email_from_customer, updated_at) VALUES ('', ?, true, now()) RETURNING id").get(email);
+    const made = await db.prepare(
+      `INSERT INTO customer_logins (shop_id, customer_id, email) VALUES (?, ?, ?)
+       ON CONFLICT (shop_id, email) DO NOTHING RETURNING *`
+    ).get(shopId, customer.id, email);
+    if (!made) {
+      // Made by another sign-in a moment ago: theirs stands, and this customer goes.
+      await db.exec('ROLLBACK');
+      return await found();
+    }
+    await db.exec('COMMIT');
+    return made;
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+// Use my phone's codes: the same attempts as booking links, counted apart.
+const photoCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// "Stop these" codes: the same attempts again, counted apart (stop-reminders).
+const stopCodeLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// One photo, as base64 with the same headroom as booking photos.
+const MAX_PHOTO_CODE_BODY_BYTES = Math.ceil(MAX_PHOTO_BYTES * 1.4);
 
 // A customer may change or cancel through the link while the bike has not
 // reached the shop and the booking is live (piece 12) - and only while no work
@@ -148,17 +228,18 @@ async function bookedServices(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
   const rows = await db.prepare(
-    `SELECT s.name, js.booked_price FROM workshop_job_services js
+    `SELECT s.name, js.booked_price_pence FROM workshop_job_services js
      JOIN workshop_services s ON s.id = js.service_id
      WHERE js.workshop_job_id = ? ORDER BY js.position`
   ).all(jobId);
   const total = await db.prepare(
-    `SELECT CASE WHEN count(*) > 0 AND count(booked_price) = count(*) THEN sum(booked_price) END AS total
+    `SELECT CASE WHEN count(*) > 0 AND count(booked_price_pence) = count(*) THEN sum(booked_price_pence) END AS total
      FROM workshop_job_services WHERE workshop_job_id = ?`
   ).get(jobId);
   return {
-    services: rows.map((r) => ({ name: r.name, price: showPrices ? r.booked_price ?? null : null })),
-    totalPrice: showPrices ? total?.total ?? null : null,
+    // From the pence; said in pounds, as before (sales in pence, step A′).
+    services: rows.map((r) => ({ name: r.name, price: showPrices && r.booked_price_pence !== null ? r.booked_price_pence / 100 : null })),
+    totalPrice: showPrices && total?.total !== null && total?.total !== undefined ? Number(total.total) / 100 : null,
   };
 }
 
@@ -264,22 +345,65 @@ async function replayBookingRequest({ keyHash, bodyHash, linkCode }, shopSlug) {
 // dispatcher bound the shop from :shopSlug, so row-level security hides every
 // other shop's), and not expired. Answers the refusal itself and returns
 // null, or returns { id }.
-// Exported for the booking link's quote answer, which stays in server.js
-// until answerAndAddToOrder moves with Jack's quote routes.
-export async function resolveBookingLink(req, res, code) {
+async function resolveBookingLink(req, res, code) {
+  // A signed-in customer opens their own repair by job-<id>, from their account
+  // (customer-account-server design 2): the same answers as a bad link for
+  // anyone else, and no expiry for the job's owner. Checked before the attempt
+  // limiter, which counts only a refusal here, so loading one's own repairs
+  // never uses up the limit (review); never kept by the browser, as the answer
+  // depends on who is signed in; and an action from another website is refused.
+  const jobId = /^job-(\d{1,9})$/.exec(code)?.[1];
+  if (jobId) {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (req.method !== 'GET' && site && site !== 'same-origin' && site !== 'none') {
+      sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+      return null;
+    }
+    const ctx = await currentCustomerSession(req);
+    // The shop the dispatcher bound from :shopSlug, not the address re-read (review).
+    const here = await db.prepare("SELECT current_setting('app.current_shop_id', true) AS id").get();
+    const own = ctx && String(ctx.shop.id) === String(here?.id)
+      ? await db.prepare('SELECT id FROM workshop_jobs WHERE id = ? AND customer_id = ?').get(Number(jobId), ctx.login.customer_id)
+      : null;
+    if (own) return { id: own.id, signedIn: true };
+    if (!bookingLinkLimiter.check(clientIp(req))) {
+      sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    } else {
+      sendJson(res, 404, { error: "We can't find that booking" });
+    }
+    return null;
+  }
   if (!bookingLinkLimiter.check(clientIp(req))) {
     sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
     return null;
   }
+  // collected_on: the shop's own date of collection, for the 30 days after it.
   const row = /^[0-9a-f]{64}$/.test(code)
-    ? await db.prepare('SELECT id, job_date FROM workshop_jobs WHERE link_token_hash = ?').get(hashLinkCode(code))
+    ? await db.prepare(
+      `SELECT w.id, w.reference, w.job_date, w.custody_state,
+              to_char(w.collected_at AT TIME ZONE COALESCE(ws.time_zone, 'Europe/London'), 'YYYY-MM-DD') AS collected_on,
+              s.name AS shop_name, s.address AS shop_address, s.phone AS shop_phone
+         FROM workshop_jobs w
+         JOIN shops s ON s.id = w.shop_id
+         LEFT JOIN workshop_settings ws ON ws.shop_id = w.shop_id
+        WHERE w.link_token_hash = ?`
+    ).get(hashLinkCode(code))
     : null;
   if (!row) {
     sendJson(res, 404, { error: "We can't find that booking" });
     return null;
   }
-  if (isLinkExpired(row.job_date, await currentShopToday())) {
-    sendJson(res, 410, { error: 'This link has expired' });
+  const expiry = linkExpiry({ jobDate: row.job_date, custodyState: row.custody_state, collectedOn: row.collected_on }, await currentShopToday());
+  if (expiry.expired) {
+    // Which job it was and why, with the shop, for the expired page (cp-expired,
+    // bk-expired): nothing that identifies the customer.
+    sendJson(res, 410, {
+      error: 'This link has expired',
+      reference: row.reference,
+      reason: expiry.reason,
+      shop: { name: row.shop_name, address: row.shop_address || null, phone: row.shop_phone || null },
+    });
     return null;
   }
   return { id: row.id };
@@ -296,13 +420,21 @@ async function bookingLinkView(jobId, shop) {
             w.booking_state, w.custody_state, w.work_state, w.signed_off_name,
             w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
             w.offered_from_date, w.offered_from_time, w.offer_message, w.decline_message,
+            w.booked_in_at, w.collected_at, w.deposit_pence,
+            (SELECT c.service_reminders FROM customers c WHERE c.id = w.customer_id) AS reminders_yes,
+            to_char(w.deposit_cancel_until AT TIME ZONE (SELECT time_zone FROM workshop_settings LIMIT 1), 'YYYY-MM-DD HH24:MI') AS deposit_cancel_local,
+            (w.deposit_cancel_until > ?::timestamptz OR w.booking_state IN ('pending', 'offered')) AS deposit_refundable,
+            (SELECT CASE WHEN p.status IN ('refunded', 'released') OR p.refund_due_reason IS NOT NULL THEN 'refunded'
+                         WHEN w.booking_state = 'cancelled' THEN 'kept' ELSE 'paid' END
+               FROM online_payments p WHERE p.job_id = w.id ORDER BY p.id DESC LIMIT 1) AS deposit_state,
+            (SELECT max(p.part_date) FROM workshop_job_parts p WHERE p.workshop_job_id = w.id) AS last_day,
             b.make AS bike_make, b.model AS bike_model,
             (SELECT count(*)::int FROM workshop_job_attachments a
              WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
      FROM workshop_jobs w
      LEFT JOIN customer_bikes b ON b.id = w.bike_id
      WHERE w.id = ?`
-  ).get(jobId);
+  ).get(currentMoment().toISOString(), jobId);
   const requested = requestedOf(row);
   const today = await currentShopToday();
   const stage = bookingStage(row);
@@ -355,7 +487,132 @@ async function bookingLinkView(jobId, shop) {
     canChange: customerCanChange(row, today),
     canCancel: customerCanAct(row, today),
     changeDeclined: row.change_declined_at !== null,
+    // How far the bike and its work are (Jack, 21 Oct, booking page stages; the
+    // contract in openspec/changes/archive/2026-10-21-booking-page-stages/design.md).
+    workState: row.work_state,
+    // Whether the customer said yes to service reminders, for the ready page's
+    // tick (ready-remind-tick): a yes or no, nothing that identifies them.
+    remindersYes: row.reminders_yes === true,
+    bookedInAt: row.booked_in_at ? new Date(row.booked_in_at).toISOString() : null,
+    collectedAt: row.collected_at ? new Date(row.collected_at).toISOString() : null,
+    // The job's last day, as the job page's "Ready by"; no time until staff can set one.
+    // Only while the booking stands and the bike hasn't gone (fresh review).
+    expectedReady: (row.booking_state === 'scheduled' || row.booking_state === 'reschedule_requested') && row.custody_state !== 'collected'
+      ? { date: row.last_day || row.job_date, time: null } : null,
+    shop: await shopLines(),
+    // The job's checklist once the work is finished (cp-summary's "Full service
+    // checklist"; Jack, 22 Oct): every item, ticked or not, and what the
+    // mechanic found. Only one a mechanic used (its own copy, fixed), so
+    // never "0 of 10" for a service done without the ticks; none while the
+    // work is under way, or for a job without one.
+    checklist: row.work_state === 'complete' ? customerChecklist(await jobChecklistCopy(row.id)) : null,
+    // The deposit the booking took, and when it's free to cancel until in the
+    // shop's time (deposit-booking-page design 1).
+    deposit: row.deposit_pence ? {
+      pence: row.deposit_pence,
+      // Paid, refunded (or on its way back), or kept; and whether cancelling
+      // now would refund it (deposit-refunds design 5).
+      state: row.deposit_state ?? 'paid',
+      refundable: row.deposit_refundable === true,
+      cancelUntil: row.deposit_cancel_local ? { date: row.deposit_cancel_local.slice(0, 10), time: row.deposit_cancel_local.slice(11) } : null,
+    } : null,
+    ...(await jobMoney(row.id)),
     ...(await bookedServices(row.id)),
+  };
+}
+
+// What was done, what was declined, what's left to pay and what's been paid
+// (cp-summary's "What we did" and pay card; Jack, 21 Oct, booking page stages
+// answer 4: with Show prices off, every figure is null and the rest shows).
+// The work is the job's order's lines; declined is the newest quote's
+// declined lines; to pay is what the till would charge (computeOrderTotals,
+// group discount included), null once paid; paid is the sale that paid it.
+// The quote as a customer sees it (Jack, 22 Oct): staff names only when the
+// shop's "Show who signed off to customers" switch is on (mechanic sign-off
+// answer 3: no staff names reach customers until a shop chooses), so "Alex
+// recommends more work" or "We recommend more work"; and the customer's own
+// first name, for "Thanks, Maya".
+async function customerQuote(result, jobId) {
+  const shows = (await db.prepare('SELECT show_sign_off_to_customers FROM workshop_settings LIMIT 1').get())?.show_sign_off_to_customers === 1;
+  const who = await db.prepare(
+    `SELECT m.name AS mechanic_name, c.name AS customer_name, j.spend_limit FROM workshop_jobs j
+       LEFT JOIN employees m ON m.id = j.mechanic_id LEFT JOIN customers c ON c.id = j.customer_id
+      WHERE j.id = ?`
+  ).get(jobId);
+  const showPrices = (await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get())?.show_prices_online === 1;
+  const q = serializeQuoteWithLines(result.quote, result.lines, result.totals);
+  const agreedPence = await agreedBeforePence(result.quote, showPrices);
+  return {
+    ...q,
+    lines: q.lines.map((l) => ({ ...l, decidedByName: shows ? l.decidedByName : null })),
+    mechanicName: shows ? who?.mechanic_name ?? null : null,
+    earlier: await earlierAnswers(result.quote),
+    // In pence too, so the card adds the ticked lines' pence to it (sales in pence, step A′).
+    agreedTotal: agreedPence === null ? null : agreedPence / 100,
+    agreedTotalPence: agreedPence,
+    spendLimit: who?.spend_limit ?? null,
+    // When the quote's reminder went, if it has (dq-quote-reminded).
+    reminderSentAt: (await db.prepare(
+      `SELECT max(sent_at) AS at FROM customer_messages
+        WHERE job_id = ? AND template_key = 'quote_reminder' AND sent_at IS NOT NULL AND sent_at >= ?`
+    ).get(jobId, result.quote.sent_at ?? '9999-12-31'))?.at ?? null,
+    customerFirstName: who?.customer_name ? who.customer_name.trim().split(/\s+/)[0] : null,
+  };
+}
+
+function customerChecklist(c) {
+  return c ? { name: c.name, items: c.items.map((i) => ({ name: i.label, done: i.done, note: i.note })) } : null;
+}
+
+async function jobMoney(jobId) {
+  const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
+  const showPrices = settings?.show_prices_online === 1;
+  const figure = (n) => (showPrices && n !== null && n !== undefined ? Number(n) : null);
+  const order = await db.prepare(
+    `SELECT d.id, d.status, d.discount, d.customer_id, s.total AS paid_total, s.created_at AS paid_at
+       FROM sale_documents d LEFT JOIN sales s ON s.id = d.converted_sale_id
+      WHERE d.workshop_job_id = ? AND d.kind = 'order' AND d.status <> 'cancelled'
+      ORDER BY d.id DESC LIMIT 1`
+  ).get(jobId);
+  const items = order
+    ? await db.prepare('SELECT name, unit_price, qty, line_total_pence FROM sale_document_items WHERE document_id = ? ORDER BY id').all(order.id)
+    : [];
+  // Every revision the customer saw, not only the newest: a newer quote keeps
+  // the earlier answers (fresh review). Priced in the database, as the quote is.
+  // Each line's latest answer: pads said no to and then yes to aren't "no thanks".
+  const declined = (await latestAnswers(jobId)).filter((l) => l.decision === 'declined');
+  const paid = order?.status === 'converted' && order.paid_at
+    ? { at: new Date(order.paid_at).toISOString(), amount: figure(order.paid_total) } : null;
+  let due = 0;
+  if (order && !paid && items.length) {
+    due = (await computeOrderTotals({
+      items: items.map((l) => ({ unitPrice: l.unit_price, qty: l.qty })), discount: order.discount, customerId: order.customer_id,
+    })).total;
+  }
+  // Work agreed's total, the lines' pence summed here rather than on the page
+  // (sales in pence, step A′); null with prices hidden, as each line's is.
+  const workTotalPence = showPrices && items.length ? items.reduce((n, l) => n + l.line_total_pence, 0) : null;
+  return {
+    work: items.map((l) => ({ name: l.name, price: figure(l.line_total_pence / 100) })),
+    workTotalPence,
+    workTotal: workTotalPence === null ? null : workTotalPence / 100,
+    declined: declined.map((l) => ({ name: l.description, price: figure(l.line_total) })),
+    toPay: paid || due <= 0 ? null : figure(due),
+    // Nothing owed on collection, said even with prices hidden, as Bike ready says it.
+    nothingToPay: !paid && due <= 0,
+    paid,
+  };
+}
+
+// The shop's lines on the customer's page (cp-summary's shopLines): address,
+// phone and opening hours, each null when the shop hasn't given it.
+async function shopLines() {
+  const shop = await db.prepare('SELECT address, phone FROM shops WHERE id = current_setting(\'app.current_shop_id\')::int').get();
+  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  return {
+    address: shop?.address || null,
+    phone: shop?.phone || null,
+    openingHours: (settings && formatOpeningHours(openingHoursFor(toCapacitySettings(settings)))) || null,
   };
 }
 
@@ -415,6 +672,37 @@ async function withdrawRequest(job) {
   await syncJobHold(job.id);
 }
 
+// A booking message from the customer's side (pretend for now, so the link
+// reads "[link]"): Booking confirmed for a booking confirmed at once (Jack, 19
+// Oct, auto-confirm), Request received for one waiting for the shop, Booking
+// cancelled when the customer cancels (Jack, 20 Oct, booking messages answer
+// 4). The link is the one the customer already has, made absolute with
+// APP_PUBLIC_URL only: these routes need no sign-in, so the Host a request
+// claims must never reach a customer's message (fresh review). Without it, a
+// real message isn't queued. After the commit; one that can't be queued is
+// logged, and what the customer did stands.
+async function sendLinkMessage(key, jobId, shopId, privateLink) {
+  // Its own savepoint when the request is one transaction (DB_TENANT_SCOPE=
+  // transaction), so a failed statement here can't abort it and roll back what
+  // the customer did (audit item 24, #336); otherwise a short transaction.
+  await db.exec('BEGIN');
+  try {
+    const { customerId } = await prepare('SELECT customer_id AS "customerId" FROM workshop_jobs WHERE id = ?').get(jobId);
+    if (!(await whyNotQueued(key, customerId))) {
+      const link = await messageLink(async () => {
+        if (!process.env.APP_PUBLIC_URL) throw new Error('APP_PUBLIC_URL is needed for a customer message sent from a public route');
+        return `${process.env.APP_PUBLIC_URL}${privateLink}`;
+      });
+      const { vars } = await bookingMessageVars(jobId, shopId, link, key);
+      await queueMessage({ customerId, jobId, key, vars });
+    }
+    await db.exec('COMMIT');
+  } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
+    console.error(`Messages: ${key} for job ${jobId} couldn't be queued`, err);
+  }
+}
+
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
     const ip = clientIp(req);
@@ -459,6 +747,40 @@ export function register(route) {
     sendJson(res, 200, serializeCustomerLogin(login));
   });
 
+  // Sign in by a code sent by email (customer-code-signin; cust-signin,
+  // cust-code). The same answer whether the email has an account or not.
+  route('POST', '/api/portal/:shopSlug/sign-in/code', async (req, res, params, query, shop) => {
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    const body = await readJsonBody(req);
+    const email = signinEmail(body);
+    if (!email) return badRequest(res, 'Type the email address you use with the shop');
+    if (!signinAskNetworkLimiter.check(clientIp(req)) || !signinAskEmailLimiter.check(`${shop.id}:${email}`)) {
+      return sendJson(res, 429, { error: 'Too many codes asked for. Wait a few minutes, then try again' });
+    }
+    await provider.sendCode({ email });
+    sendJson(res, 200, { ok: true });
+  });
+
+  route('POST', '/api/portal/:shopSlug/sign-in/check', async (req, res, params, query, shop) => {
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    if (!signinCheckLimiter.check(clientIp(req))) {
+      return sendJson(res, 429, { error: 'Too many tries. Wait a few minutes, then try again' });
+    }
+    const body = await readJsonBody(req);
+    const email = signinEmail(body);
+    const code = typeof body?.code === 'string' ? body.code.replace(/\s/g, '') : '';
+    const answer = email && /^\d{6}$/.test(code) ? await provider.checkCode({ email, code }) : 'wrong';
+    if (answer !== 'ok') return sendJson(res, 401, { error: SIGNIN_REFUSED[answer], reason: answer });
+    const login = await loginForSignedInEmail(shop.id, email);
+    if (!login.active) return sendJson(res, 403, { error: 'This account can’t sign in. Ask the shop' });
+    const customer = await db.prepare('SELECT name FROM customers WHERE id = ?').get(login.customer_id);
+    const token = await createCustomerSession(login.id);
+    setCustomerSessionCookie(req, res, token);
+    sendJson(res, 200, { id: login.id, email: login.email, name: customer?.name ?? '', shopName: shop.name, shopSlug: shop.slug });
+  });
+
   route('POST', '/api/portal/:shopSlug/logout', async (req, res) => {
     const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
     await destroyCustomerSession(token);
@@ -476,6 +798,12 @@ export function register(route) {
       name: customer ? customer.name : '',
       shopName: ctx.shop.name,
       shopSlug: ctx.shop.slug,
+      // The account's Your details and How we contact you (customer-account-screens design 1).
+      phone: customer?.phone || null,
+      updateChannel: customer?.update_channel === 'email' ? 'email' : 'sms',
+      serviceReminders: Boolean(customer?.service_reminders),
+      reviewRequests: Boolean(customer?.review_requests),
+      marketingPermission: Boolean(customer?.marketing_permission),
     });
   });
 
@@ -505,16 +833,16 @@ export function register(route) {
   // screens: service, service-list
   // Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
   route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
-    const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
+    const settings = await db.prepare('SELECT show_prices_online, confirm_bookings_automatically, deposit_on FROM workshop_settings LIMIT 1').get();
     const showPrices = settings?.show_prices_online === 1;
     const services = await db.prepare(
-      `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
+      `SELECT id, name, price_pence, minutes, kind, category_id, questions FROM workshop_services
        WHERE active = 1 AND bookable_online = 1 ORDER BY position, name`
     ).all();
     const categories = await db.prepare(
       'SELECT id, name FROM workshop_service_categories ORDER BY position, name'
     ).all();
-    const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes, questions: s.questions });
+    const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price_pence / 100 : null, minutes: s.minutes, questions: s.questions });
     const individual = services.filter((s) => s.kind === 'individual');
     // What each full service includes, for its card and for d2's "already part
     // of your <full service>" warning: services still in use, bookable online
@@ -528,6 +856,10 @@ export function register(route) {
     sendJson(res, 200, {
       shopName: shop.name,
       showPrices,
+      // Step 4 words its button by it (Jack, 19 Oct, auto-confirm; drawn as bk-details-auto).
+      confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
+      // Step 4 asks for the deposit's hold only when one is taken (deposit-pay-screen design 1).
+      takesDeposit: settings?.deposit_on === 1 && paymentsConnected(),
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({
@@ -662,7 +994,7 @@ export function register(route) {
       customerId: ctx.login.customer_id,
     });
     if (!result.ok) return notFound(res, 'Quote not found');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, result.quote.workshop_job_id));
   });
 
   // screens: approval
@@ -699,6 +1031,24 @@ export function register(route) {
     }));
   });
 
+  // The customer's whole answer in one call - every line's yes or no, then
+  // approve - so a quote with many lines doesn't run into the link's limit on
+  // attempts. The revision is the one their page showed.
+  // screens: approval, approval-done, stale
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req);
+    if (!Number.isInteger(body.revision)) return badRequest(res, 'revision is required - send the revision your page showed');
+    // The quote their page showed, by its revision; answerAll refuses it if a
+    // newer revision exists or it is no longer open (canApprove).
+    const shown = await db.prepare('SELECT id FROM workshop_quotes WHERE workshop_job_id = ? AND revision = ?').get(found.id, body.revision);
+    if (!shown) return notFound(res, 'There is no quote for this booking');
+    sendQuoteResult(res, await answerAndAddToOrder({
+      quoteId: shown.id, jobId: found.id, decisions: body.decisions, via: 'online', linkRevision: body.revision,
+    }));
+  });
+
   route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     const ctx = await currentCustomerSession(req);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
@@ -708,7 +1058,49 @@ export function register(route) {
     sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
   });
 
-  route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
+  // The account's history (ac-account; customer-account-server design 3): the
+  // signed-in customer's repairs, each with its stage and total, and their
+  // purchases from both sales records, newest first.
+  route('GET', '/api/portal/:shopSlug/history', async (req, res, params) => {
+    const ctx = await currentCustomerSession(req);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const customerId = ctx.login.customer_id;
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    const jobs = await db.prepare(
+      `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
+              NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike_label,
+              CASE WHEN w.job_date IS NULL THEN w.created_at
+                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
+         FROM workshop_jobs w LEFT JOIN customer_bikes b ON b.id = w.bike_id
+        WHERE w.customer_id = ?`
+    ).all(zone, customerId);
+    const repairs = [];
+    for (const j of jobs) {
+      // The repair page's own figures, so Show prices off hides the total here too.
+      const money = await jobMoney(j.id);
+      const totalPence = money.paid?.amount != null ? Math.round(money.paid.amount * 100) : money.workTotalPence;
+      repairs.push({
+        kind: 'repair', jobId: j.id, reference: j.reference, title: j.title, bikeLabel: j.bike_label,
+        stage: bookingStage(j), jobDate: j.job_date, totalPence: totalPence ?? null, at: new Date(j.at).toISOString(),
+        // For the bike's "In the shop now" and the tracker's chip (customer-account-screens design 1).
+        bikeId: j.bike_id ?? null, workStarted: j.work_state !== 'not_started' && j.work_state != null,
+      });
+    }
+    const sales = await db.prepare(
+      `SELECT v.source, v.id, v.receipt_number, v.total_pence, v.made_at,
+              CASE WHEN v.source = 'old'
+                   THEN (SELECT string_agg(i.name, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
+                   ELSE (SELECT string_agg(l.description, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
+         FROM all_sales v WHERE v.customer_id = ?`
+    ).all(customerId);
+    const purchases = sales.map((p) => ({
+      kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
+      what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
+    }));
+    sendJson(res, 200, [...repairs, ...purchases].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
+  });
+
+  route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params, query, shop) => {
     const ctx = await currentCustomerSession(req);
     const signedIn = ctx && ctx.shop.slug === params.shopSlug;
     let body;
@@ -765,6 +1157,11 @@ export function register(route) {
     }
     const bikeNote = typeof body.bikeNote === 'string' ? body.bikeNote.trim() : '';
     if (bikeNote.length > 200) return badRequest(res, 'Your bike description can be up to 200 characters');
+    // The spending limit (Workshop day 41): whole pounds, or none to ask first.
+    const spendLimit = body.spendLimit ?? null;
+    if (spendLimit !== null && !(Number.isInteger(spendLimit) && spendLimit >= 1 && spendLimit <= 100000)) {
+      return badRequest(res, 'Enter the most the whole bill can come to, in whole pounds.');
+    }
 
     // What the customer chose: one or more services this shop ticked bookable
     // online, in the order chosen, or the "not sure" hour. Read through the
@@ -817,6 +1214,14 @@ export function register(route) {
       }
     }
 
+    // The deposit, worked out on the stored prices (deposit-payments design 5):
+    // with one due, the request must carry its key and the held payment.
+    await settleDeposits();
+    const deposit = await bookingDeposit({ serviceIds: request.notSure ? [] : request.serviceIds, notSure: request.notSure });
+    if (deposit.error) return badRequest(res, deposit.error);
+    const DEPOSIT_NEEDED = { status: 400, body: { error: 'Pay the deposit first.', code: 'deposit_needed' } };
+    if (deposit.pence !== null && (!requestKey || !Number.isInteger(body.paymentId))) return sendJson(res, DEPOSIT_NEEDED.status, DEPOSIT_NEEDED.body);
+
     // Photos are checked here with the other request checks: before the guest
     // limiter and before any write, so a refusal leaves nothing behind. They are
     // allowed on a "not sure" booking too - they describe the problem, not the service.
@@ -851,10 +1256,28 @@ export function register(route) {
     if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
     // Inside the lock: the time checks (checkCustomerTime), then the writes.
+    let confirmedAtOnce = false;
+    let heldPayment = null; // this request's deposit, held and checked
     const out = await withBookingLock([jobDate], async () => {
       if (requestKey) {
         const replay = await replayBookingRequest(requestKey, params.shopSlug);
         if (replay) return replay;
+      }
+      if (deposit.pence !== null) {
+        const pay = await db.prepare('SELECT * FROM online_payments WHERE id = ? FOR UPDATE').get(body.paymentId);
+        // This request's twin, sent at once on another day, booked while this one
+        // waited for the payment: answer the booking made (review).
+        if (pay?.job_id && pay.request_key_hash === requestKey.keyHash) {
+          const replay = await replayBookingRequest(requestKey, params.shopSlug);
+          if (replay) return replay;
+        }
+        if (!pay || pay.request_key_hash !== requestKey.keyHash || pay.job_id) return DEPOSIT_NEEDED;
+        if (pay.amount_pence !== deposit.pence) return { status: 409, body: { error: 'The deposit has changed — please pay it again.', code: 'deposit_changed' } };
+        const at = await payments()?.status(pay.provider_ref).catch(() => null);
+        if (at?.status !== 'held' || at.amountPence !== deposit.pence) {
+          return { status: 402, body: { error: 'The deposit hasn’t gone through yet.', code: 'deposit_not_held' } };
+        }
+        heldPayment = pay;
       }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;
@@ -890,8 +1313,14 @@ export function register(route) {
 
       // Never trusts a client-sent customerId or status - always the resolved
       // customer (signed-in, or a new guest row each time, see
-      // resolveGuestCustomer), always 'pending' until a mechanic reviews it,
-      // same principle as createSale() never trusting a client-sent total.
+      // resolveGuestCustomer), 'pending' until a mechanic reviews it, same
+      // principle as createSale() never trusting a client-sent total. With the
+      // shop's "Confirm bookings automatically" on, a booking that has passed
+      // every check above is saved confirmed instead, where accepting would put
+      // it, and marked new until staff open it (Jack, 19 Oct, auto-confirm).
+      // Read here, inside the lock, so a switch mid-booking can't half-apply.
+      const autoSetting = await db.prepare('SELECT confirm_bookings_automatically FROM workshop_settings LIMIT 1').get();
+      confirmedAtOnce = autoSetting?.confirm_bookings_automatically === 1;
       const linkCode = requestKey ? requestKey.linkCode : newLinkCode();
       let jobId;
       try {
@@ -907,7 +1336,8 @@ export function register(route) {
           jobDate,
           startTime: times.startTime,
           endTime: times.endTime,
-          bookingState: 'pending',
+          bookingState: confirmedAtOnce ? 'scheduled' : 'pending',
+          onlineUnseen: confirmedAtOnce,
           workState: 'not_started',
           custodyState: 'expected',
           notes: bookingNotes({ bikeNote: bikeNoteValue, questionAnswers, description }),
@@ -918,6 +1348,7 @@ export function register(route) {
           linkTokenHash: hashLinkCode(linkCode),
           customerDescription: description || null,
           customerBikeNote: bikeNoteValue,
+          spendLimit,
           questionAnswers,
           bookingRequestKeyHash: requestKey?.keyHash,
           bookingRequestBodyHash: requestKey?.bodyHash,
@@ -942,9 +1373,33 @@ export function register(route) {
       // signed-in customer it overwrites.
       await db
         .prepare(
-          `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
+          // An email typed into the booking is the customer's own (option 2, 26 Oct).
+          `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email),
+                  email_from_customer = email_from_customer OR NULLIF(?, '') IS NOT NULL,
+                  phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
         )
-        .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+        .run(request.updateChannel, request.marketingPermission, request.email, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      // The reminder tick is a yes to service reminders and review requests,
+      // with when and how; not ticking says nothing, so an earlier yes stays
+      // (reminder-consent design 2). Here for the same reason as above.
+      if (request.remindMe) {
+        await db
+          .prepare(
+            `UPDATE customers SET service_reminders = true, review_requests = true, reminders_said_yes_at = ?, reminders_said_yes_via = 'booking' WHERE id = ?`
+          )
+          .run(nowIso(), customerId);
+      }
+      // The deposit and when it's free to cancel until, worked out now and
+      // fixed: the booked start (the day's start for a whole-day booking) less
+      // the shop's hours, in the shop's time zone (design 5).
+      if (heldPayment) {
+        await db.prepare(
+          `UPDATE workshop_jobs SET deposit_pence = ?,
+             deposit_cancel_until = ((?::date + COALESCE(?::time, time '00:00')) AT TIME ZONE ws.time_zone) - make_interval(hours => ws.deposit_cancel_hours)
+           FROM (SELECT time_zone, deposit_cancel_hours FROM workshop_settings LIMIT 1) ws WHERE workshop_jobs.id = ?`
+        ).run(deposit.pence, jobDate, times.startTime ?? null, jobId);
+        await db.prepare('UPDATE online_payments SET job_id = ?, updated_at = now() WHERE id = ?').run(jobId, heldPayment.id);
+      }
       const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
       const booked = await bookedServices(jobId);
       // The last write, so nothing after it can fail and leave files behind for a
@@ -970,11 +1425,95 @@ export function register(route) {
         },
       };
     });
+    // After the commit, as accepting sends it: Booking confirmed for a booking
+    // confirmed at once, carrying the link the customer has just been given
+    // (never a new one, which would end theirs). One that can't be queued is
+    // logged; the booking stands.
+    // The deposit: taken only now the booking is saved; a booking that wasn't
+    // saved lets its hold go, so nothing is taken (design 5). A provider that
+    // can't take it now leaves it held and logged; the booking stands.
+    if (heldPayment) {
+      const done = out.status === 201 ? 'taken' : 'released';
+      try {
+        if (done === 'taken') await payments().take(heldPayment.provider_ref);
+        else await payments().release(heldPayment.provider_ref);
+        await db.prepare('UPDATE online_payments SET status = ?, updated_at = now() WHERE id = ?').run(done, heldPayment.id);
+      } catch (err) {
+        console.error(`deposit ${heldPayment.id}: couldn’t be ${done}`, err);
+      }
+    }
+    if (out.status === 201) await sendLinkMessage(confirmedAtOnce ? 'booking_confirmed' : 'request_received', out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
   });
 
   // The private booking link, read back without sign-in.
   // screens: pending, change-pending, cancelled
+  // Use my phone (docs/decisions/2026-10-23-use-my-phone.md; openspec/changes/use-my-phone):
+  // the phone's photo step for one quote line, with no sign-in. Unknown, used,
+  // run-out and malformed codes, and a line that changed, all get the same
+  // answer, so a code can't be probed.
+  const photoCodeGone = (res) => sendJson(res, 410, { error: 'This code has expired or has already been used' });
+  const photoCodeTooMany = (req, res) => {
+    if (photoCodeLimiter.check(clientIp(req))) return false;
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return true;
+  };
+
+  // screens: book
+  route('GET', '/api/portal/:shopSlug/photo-codes/:code', async (req, res, params) => {
+    if (photoCodeTooMany(req, res)) return;
+    const view = await photoCodeView(params.code);
+    if (!view) return photoCodeGone(res);
+    sendJson(res, 200, view);
+  });
+
+  // screens: book
+  route('POST', '/api/portal/:shopSlug/photo-codes/:code', async (req, res, params) => {
+    if (photoCodeTooMany(req, res)) return;
+    let body;
+    try {
+      body = await readJsonBody(req, MAX_PHOTO_CODE_BODY_BYTES);
+    } catch (err) {
+      return badRequest(res, err.message === 'Payload too large' ? 'Each photo can be up to 10 MB' : 'Invalid request body');
+    }
+    // The booking photo rules: a JPEG, PNG or WebP of at most 10 MB, its
+    // hidden details removed.
+    const checked = readBookingPhotos([{ dataBase64: body?.dataBase64 }]);
+    if (checked.error) return badRequest(res, checked.error);
+    const added = await addPhotoWithCode(params.code, checked.value[0]);
+    if (!added) return photoCodeGone(res);
+    sendJson(res, 201, added);
+  });
+
+  // "Stop these" for service reminders (stop-reminders; account and reminders
+  // decision 6; Jack's answer 5): no sign-in; opening the page changes
+  // nothing, and a press stops them or turns them back on. A code that
+  // doesn't work gets the same answer, however it fails, so codes can't be probed.
+  const stopCodeGone = (res) => sendJson(res, 404, { error: 'This link doesn’t work' });
+  const stopCodeTooMany = (req, res) => {
+    if (stopCodeLimiter.check(clientIp(req))) return false;
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return true;
+  };
+
+  // screens: ac-stopped
+  route('GET', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {
+    if (stopCodeTooMany(req, res)) return;
+    const view = await stopView(params.code);
+    if (!view) return stopCodeGone(res);
+    sendJson(res, 200, { shopName: shop.name, ...view });
+  });
+
+  // screens: ac-stopped, ac-stopped-on
+  route('POST', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {
+    if (stopCodeTooMany(req, res)) return;
+    const body = await readJsonBody(req);
+    if (typeof body?.stop !== 'boolean') return badRequest(res, 'stop must be true or false');
+    const done = await setStopped(params.code, body.stop);
+    if (!done) return stopCodeGone(res);
+    sendJson(res, 200, { shopName: shop.name, ...done });
+  });
+
   route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
@@ -1034,7 +1573,55 @@ export function register(route) {
     if (!found) return;
     const result = await currentQuoteForJob(found.id);
     if (!result.ok) return notFound(res, 'There is no quote for this booking');
-    sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+    sendJson(res, 200, await customerQuote(result, found.id));
+  });
+
+  // A quote line's photo (Jack, 1 Oct; dq-quote-photo), for the customer's
+  // card: only a line of the booking's current customer-readable quote, sent
+  // as the picture its bytes show. Anything else is not found.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/quote/lines/:lineId/photo', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const result = await currentQuoteForJob(found.id);
+    const line = result.ok ? result.lines.find((l) => l.id === Number(params.lineId)) : null;
+    const file = line?.photo_attachment_id
+      ? await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?').get(line.photo_attachment_id, found.id)
+      : null;
+    const bytes = file ? await readFile(path.join(UPLOADS_DIR, file.storage_key)).catch(() => null) : null;
+    const kind = bytes ? sniffImage(bytes) : null;
+    if (!kind) return notFound(res, 'There is no photo for that line');
+    res.writeHead(200, {
+      'Content-Type': kind.contentType,
+      'Content-Length': bytes.length,
+      'Content-Disposition': 'inline',
+      'X-Content-Type-Options': 'nosniff',
+      // Kept a few minutes by the customer's browser, so each view doesn't
+      // spend the link's guessing limit again (fresh review); never by
+      // job-<id>, whose answer depends on who is signed in (review, 26 Oct).
+      'Cache-Control': found.signedIn ? 'no-store' : 'private, max-age=300',
+    });
+    res.end(bytes);
+  });
+
+  // Notes with the shop (decisions 3 and 7; ac-job-note): the customer's notes
+  // and the shop's replies on their job, read and added through the link.
+  // screens: approval
+  route('GET', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    sendJson(res, 200, await jobNotes(found.id, { forCustomer: true }));
+  });
+
+  // screens: approval
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/notes', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req);
+    const text = cleanNote(body?.text);
+    if (!text) return badRequest(res, NOTE_WORDS);
+    await addNote({ jobId: found.id, fromCustomer: true, text });
+    sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
   });
 
   // The customer cancels through their booking link (piece 12, decision 1):
@@ -1042,15 +1629,47 @@ export function register(route) {
   // immediate, and every hold of the job - its own and a requested one - goes
   // at once.
   // screens: cancel, cancelled
+  // The ready page's reminder tick (ready-remind-tick; Jack's answer 8 of 25
+  // Oct): a yes is to service reminders and review requests, from collection;
+  // a no turns service reminders off. Saved at once; the link is the key.
+  // screens: ac-collect-remind, cp-summary-said-yes
+  route('POST', '/api/portal/:shopSlug/booking-links/:code/reminders', async (req, res, params) => {
+    const found = await resolveBookingLink(req, res, params.code);
+    if (!found) return;
+    const body = await readJsonBody(req).catch(() => null);
+    if (typeof body?.yes !== 'boolean') return badRequest(res, 'yes must be true or false');
+    const { customer_id: customerId } = await db.prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(found.id);
+    if (!customerId) return sendJson(res, 404, { error: "We can't find that booking" });
+    await db.prepare(body.yes
+      ? "UPDATE customers SET service_reminders = true, review_requests = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'collection' WHERE id = ?"
+      : 'UPDATE customers SET service_reminders = false WHERE id = ?').run(customerId);
+    sendJson(res, 200, { remindersYes: body.yes });
+  });
+
   route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
+    const body = await readJsonBody(req).catch(() => null);
     const out = await withJobBookingLock(found.id, [], async (job) => {
       // A double tap: the customer's own cancel already went through, so the
-      // answer is the cancelled booking, unchanged (final review).
-      if (job.booking_state === 'cancelled' && job.cancelled_by === 'customer') return undefined;
+      // answer is the cancelled booking, unchanged (final review), and no second
+      // message goes (fresh review, 21 Oct).
+      if (job.booking_state === 'cancelled' && job.cancelled_by === 'customer') return { already: true };
       const refused = customerActionRefusal(job, 'cancel', await currentShopToday());
       if (refused) return refused;
+      // The deposit: back if it's in time; past the cut-off it's kept, and only
+      // when the customer chose that (deposit-refunds design 3).
+      if (job.deposit_pence) {
+        // The server's clock, as every other time rule here (server/clock.js).
+        // A request the shop hasn't confirmed always gets it back (Jack, 24 Oct,
+        // docs/decisions/2026-10-24-request-deposit-refund.md).
+        const unconfirmed = job.booking_state === 'pending' || job.booking_state === 'offered';
+        const inTime = unconfirmed || (await db.prepare('SELECT deposit_cancel_until > ?::timestamptz AS ok FROM workshop_jobs WHERE id = ?').get(currentMoment().toISOString(), job.id)).ok;
+        if (!inTime && body?.losesDeposit !== true) {
+          return { status: 409, body: { error: 'It’s past the time you could cancel for free, so the deposit would be kept.', code: 'deposit_kept' } };
+        }
+        if (inTime) await oweRefund(job.id, 'Cancelled in time');
+      }
       await applyLocked(job, 'cancel');
       await db.prepare(
         `UPDATE workshop_jobs SET cancelled_by = 'customer', cancelled_at = now(), change_declined_at = NULL, ${CLEAR_REQUEST}
@@ -1060,7 +1679,12 @@ export function register(route) {
       return undefined;
     });
     if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
-    if (out) return sendJson(res, out.status, out.body);
+    if (out && !out.already) return sendJson(res, out.status, out.body);
+    if (!out?.already) await refundOwed(found.id);
+    // Cancelled from the account: the message links to the account, as a
+    // job-<id> link only opens for the signed-in owner.
+    const cancelLink = found.signedIn ? `/book/${encodeURIComponent(params.shopSlug)}/account` : linkPath(params.shopSlug, params.code);
+    if (!out?.already) await sendLinkMessage('booking_cancelled', found.id, shop.id, cancelLink);
     sendJson(res, 200, await bookingLinkView(found.id, shop));
   });
 
@@ -1072,11 +1696,20 @@ export function register(route) {
   route('POST', '/api/portal/:shopSlug/booking-links/:code/accept-offer', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
+    // The Accept says which time the customer was shown, so a time the shop
+    // has changed since is never confirmed unseen (Jack, 22 Oct, Mark's audit P2 2).
+    const body = await readJsonBody(req);
+    const shownDate = String(body?.jobDate ?? '').trim();
+    const shownTime = body?.startTime ? String(body.startTime).trim() : '';
+    // A page that doesn't say its time (one loaded before this check) is
+    // answered as out of date, so it reloads and shows the time on offer.
+    const STALE = { status: 409, body: { error: 'The shop has changed the time it’s offering. Here’s the new one.', code: 'stale' } };
     const out = await withJobBookingLock(found.id, [], async (job) => {
       if (job.booking_state !== 'offered') {
         if (job.booking_state === 'scheduled' && job.offer_accepted_at) return undefined;
         return { status: 409, body: { error: "There's no time offered to accept", code: 'illegal' } };
       }
+      if (!isRealDate(shownDate) || job.job_date !== shownDate || (job.start_time || '') !== shownTime) return STALE;
       if (customerTooLate(job, await currentShopToday())) {
         return { status: 409, body: { error: CUSTOMER_REFUSALS.change.inShop, code: 'in_shop' } };
       }
@@ -1084,6 +1717,9 @@ export function register(route) {
       await db.prepare(
         'UPDATE workshop_jobs SET offered_from_date = NULL, offered_from_time = NULL, offer_message = NULL, offer_accepted_at = now() WHERE id = ?'
       ).run(job.id);
+      // Accepted after its cut-off: 1 hour to cancel free, as a request the
+      // shop confirms late (Jack, 24 Oct; review).
+      await graceOnConfirm(job.id);
       await syncJobHold(job.id);
       return undefined;
     });

@@ -55,7 +55,7 @@ test('staff quote, send and record a phone answer; the approved part joins the j
   await expect(job.getByText('Quote sent to Maya Patel by text.')).toBeVisible();
   await expect(job.getByText('Quoting')).toBeVisible();
   await job.getByRole('button', { name: 'Record their answer' }).click();
-  const rec = page.getByRole('dialog', { name: "Record Maya Patel's answer" });
+  const rec = page.getByRole('dialog', { name: 'Record Maya’s answer' });
   await rec.getByRole('button', { name: 'Save: yes to 1 line, no thanks to 0' }).click();
   await expect(job.getByText('Approved total £18.00')).toBeVisible();
   const orderId = (await staff(`/api/workshop-jobs/${jobId}`)).body.orderId;
@@ -86,7 +86,7 @@ test('the customer approves on their link, with no sign-in, and the staff side s
   await theirs.goto(link);
   await expect(theirs.getByText('Waiting for your answer')).toBeVisible();
   await theirs.getByRole('button', { name: 'Approve £18.00' }).click();
-  await expect(theirs.getByText('Thanks — the work you agreed is going ahead.')).toBeVisible();
+  await expect(theirs.getByRole('heading', { name: 'Thanks, Oliver — we’re carrying on' })).toBeVisible();
   await customer.close();
 
   const orderId = (await staff(`/api/workshop-jobs/${job2.id}`)).body.orderId;

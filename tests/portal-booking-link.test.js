@@ -96,7 +96,25 @@ test('a booking returns a booking link, and the link reads the booking back', as
     canChange: true,
     canCancel: true,
     changeDeclined: false,
+    // Booking page stages (21 Oct): progress, the ready day and the shop's lines.
+    workState: 'not_started',
+    remindersYes: false, // not ticked when booking (ready-remind-tick)
+    bookedInAt: null,
+    collectedAt: null,
+    expectedReady: null, // a request still waiting: no ready day yet
+    checklist: null, // the work isn't finished
+    deposit: null, // the shop takes none (deposit-booking-page)
+    shop: { address: null, phone: null, openingHours: res.body.shop?.openingHours },
+    // Nothing done or paid yet (booking page stages answer 4).
+    work: [],
+    workTotal: null, // no lines, so no total (sales in pence, step A′)
+    workTotalPence: null,
+    declined: [],
+    toPay: null,
+    nothingToPay: true,
+    paid: null,
   });
+  assert.equal(typeof res.body.shop.openingHours, 'string');
 });
 
 test('the database holds the hash, never the code', async () => {
@@ -180,7 +198,8 @@ test('31 days after the booked date the link has expired; moving the date revive
   await setJob(booked.id, 'job_date = ?', daysAgo(31));
   const expired = await read(code);
   assert.equal(expired.status, 410);
-  assert.deepEqual(expired.body, { error: 'This link has expired' });
+  assert.equal(expired.body.error, 'This link has expired');
+  assert.equal(expired.body.reason, 'never_came_in');
   await setJob(booked.id, 'job_date = ?', daysAgo(30));
   assert.equal((await read(code)).status, 200);
 });
@@ -257,4 +276,12 @@ test('the link read-back has a null bike note when none was given', async () => 
   const booked = await book();
   const res = await read(codeOf(booked.privateLink));
   assert.equal(res.body.bikeNote, null);
+});
+
+// Option 2 (Jack, 26 Oct): a guest's own booking marks the email they typed as
+// theirs, so a later sign-in by code can join them.
+test('a guest booking marks the email the guest typed as their own', async () => {
+  await book({}, { guest: true });
+  const row = await runWithShop(owner.shop.id, () => prepare('SELECT email_from_customer AS f FROM customers WHERE email = ? ORDER BY id DESC LIMIT 1').get(GUEST.email));
+  assert.equal(row.f, true);
 });

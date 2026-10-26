@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 # Runs ON the hosted copy's server, as root, started by setup.sh over SSH
 # (WP-0.5). setup.sh has already copied compose.yml, Caddyfile and the
-# database's certificate (ca.crt) into /opt/wheelhouse, and passes the
-# database details as exported variables ahead of this script on stdin:
-#   DB_HOST, DB_PORT, DB_ADMIN_PASSWORD, APP_DB_PASSWORD, SITE_ADDRESS
+# database's certificate (ca.crt) and deploy.sh into /opt/wheelhouse, and
+# passes these as exported variables ahead of this script on stdin:
+#   DB_HOST, DB_PORT, DB_ADMIN_PASSWORD, APP_DB_PASSWORD, SITE_ADDRESS,
+#   DEPLOY_PUBLIC_KEY (the public half of GitHub's deploy-only key)
 # Safe to run again: the sign-up code and the Shopify encryption key are
 # kept; everything else is refreshed.
 set -euo pipefail
 
-: "${DB_HOST:?}" "${DB_PORT:?}" "${DB_ADMIN_PASSWORD:?}" "${APP_DB_PASSWORD:?}" "${SITE_ADDRESS:?}"
-cd /opt/wheelhouse
+: "${DB_HOST:?}" "${DB_PORT:?}" "${DB_ADMIN_PASSWORD:?}" "${APP_DB_PASSWORD:?}" "${SITE_ADDRESS:?}" "${DEPLOY_PUBLIC_KEY:?}"
+# One line, a plain ed25519 key: anything else could slip extra options into
+# authorized_keys below.
+[[ "$DEPLOY_PUBLIC_KEY" =~ ^ssh-ed25519\ [A-Za-z0-9+/=]+(\ [A-Za-z0-9@._-]+)?$ ]] \
+  || { echo "The deploy key doesn't look like an ed25519 public key." >&2; exit 1; }
+# Both overridable only so the tests can run this in a scratch folder.
+DIR=${WHEELHOUSE_DIR:-/opt/wheelhouse}
+AUTHORIZED_KEYS=${AUTHORIZED_KEYS:-/root/.ssh/authorized_keys}
+cd "$DIR"
 
 echo "Waiting for the server's first-boot setup to finish..."
 cloud-init status --wait >/dev/null || true
@@ -39,6 +47,17 @@ done
 keep() { [ -f .env ] && grep "^$1=" .env | cut -d= -f2- || true; }
 signup_code=$(keep SIGNUP_CODE); signup_code=${signup_code:-$(openssl rand -hex 6)}
 shopify_key=$(keep SHOPIFY_TOKEN_ENCRYPTION_KEY); shopify_key=${shopify_key:-$(openssl rand -hex 32)}
+# What's running now, which this run replaces (written down below).
+was_image=$(keep WHEELHOUSE_IMAGE | tail -n 1); was_commit=$(keep WHEELHOUSE_COMMIT | tail -n 1)
+echo "Fetching the latest main from GitHub..."
+if [ -d app/.git ]; then
+  git -C app fetch --quiet origin main
+  git -C app checkout --quiet --force origin/main
+else
+  git clone --quiet --depth 1 --branch main https://github.com/JackCurphey/wheelhouse-epos.git app
+fi
+commit=$(git -C app rev-parse HEAD)
+
 app_pw=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$APP_DB_PASSWORD")
 echo "Writing the server's settings (.env)..."
 umask 077
@@ -55,15 +74,31 @@ APP_PUBLIC_URL=https://${SITE_ADDRESS}
 SIGNUP_CODE=${signup_code}
 SHOPIFY_TOKEN_ENCRYPTION_KEY=${shopify_key}
 SITE_ADDRESS=${SITE_ADDRESS}
+# What's running: the image built below, from this commit. deploy.sh changes
+# these two when GitHub deploys a merge; /healthz shows the commit.
+WHEELHOUSE_IMAGE=wheelhouse-app:current
+WHEELHOUSE_COMMIT=${commit}
 SETTINGS
+# The time, for a restore (runbook section D), as deploy.sh writes it.
+printf '%s setup %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$commit" >> deploys.log
+# The version deploy.sh rollback goes back to: what this run replaced, when
+# that was a downloaded image, kept by its commit. The image built here is
+# rebuilt in place below, so it can't come back as it was: nothing to go back
+# to then, rather than an older record (fresh review, 24 Oct).
+case "$was_image" in
+  ghcr.io/*) printf 'WHEELHOUSE_IMAGE=%s\nWHEELHOUSE_COMMIT=%s\n' "$was_image" "$was_commit" > release.previous ;;
+  *) rm -f release.previous ;;
+esac
 
-echo "Fetching the latest main from GitHub..."
-if [ -d app/.git ]; then
-  git -C app fetch --quiet origin main
-  git -C app checkout --quiet --force origin/main
-else
-  git clone --quiet --depth 1 --branch main https://github.com/JackCurphey/wheelhouse-epos.git app
-fi
+# GitHub's deploy-only key may run deploy.sh and nothing else: no shell, no
+# forwarding (restrict). An older deploy key is replaced; other keys stay.
+echo "Letting GitHub's automatic updates in (deploy.sh only)..."
+mkdir -p "$(dirname "$AUTHORIZED_KEYS")"
+touch "$AUTHORIZED_KEYS"
+{ grep -v -F 'command="/opt/wheelhouse/deploy.sh"' "$AUTHORIZED_KEYS" || true
+  printf 'restrict,command="/opt/wheelhouse/deploy.sh" %s\n' "$DEPLOY_PUBLIC_KEY"; } > "$AUTHORIZED_KEYS.new"
+chmod 600 "$AUTHORIZED_KEYS.new"
+mv "$AUTHORIZED_KEYS.new" "$AUTHORIZED_KEYS"
 
 echo "Building and starting the app (the first build takes several minutes)..."
 docker compose up -d --build </dev/null

@@ -94,3 +94,89 @@ The printed receipt SHALL print the shop's words at the bottom just above the ba
 #### Scenario: Words set
 - **WHEN** the shop's words at the bottom are its returns policy
 - **THEN** each receipt prints them between the VAT number and the barcode
+
+### Requirement: A workshop job is paid only at the till
+A payment for a workshop job's order that doesn't answer who signed the work off SHALL be refused, with nothing sold. The old app's "Load into sale" and "Convert to sale" on a job's order SHALL open the till for that job instead.
+
+#### Scenario: The old app tries to take a job's payment
+- **WHEN** staff press Convert to sale, or Load into sale, on a workshop job's order in the old app
+- **THEN** the till opens for that job, where it asks who is signing it off
+
+#### Scenario: A payment with no sign-off answer
+- **WHEN** a job's order is paid with no answer to the sign-off question
+- **THEN** it is refused with `use_till`, nothing is sold, and the job is as it was
+
+### Requirement: With Don't close things by themselves on, Paid waits for Start next sale
+
+For a cashier with Don't close things by themselves on, the Paid box SHALL
+have no countdown. It SHALL offer Print and Start next sale (in No receipt's
+place) with the line "The next sale waits until you press Start next sale."
+(`till-receipt-wait`). Print SHALL print the receipt and leave the box open,
+and only Start next sale SHALL start the next sale. With the switch off, Paid
+is as before.
+
+#### Scenario: Printing, then the next sale
+- **WHEN** Jo, with the switch on, pays a sale by card and presses Print
+- **THEN** the receipt prints and Paid stays until she presses Start next sale
+
+### Requirement: The Paid box can email the receipt
+
+The Paid box SHALL offer Email between Print and No receipt (or Start next
+sale). Email SHALL open "Email the receipt", which sends the sale's receipt
+to the address typed. For a workshop job's customer, the address SHALL be
+filled from their record and used for this receipt only. The next-sale
+countdown SHALL stop while it's open. Once it's sent, the next sale SHALL
+start, unless "Don't close things by themselves" is on, when Paid SHALL stay
+open and say it was sent.
+
+#### Scenario: A shop sale with no customer
+- **WHEN** Jo takes £18.00 by card, presses Email and sends to maya@example.test
+- **THEN** the receipt goes to that address and the next sale starts
+
+#### Scenario: A workshop job's customer
+- **WHEN** Jo pays Maya's job and presses Email
+- **THEN** the box already holds Maya's address from her record
+
+#### Scenario: The countdown waits
+- **WHEN** the Email pop-up is open for longer than five seconds
+- **THEN** the next sale doesn't start, and Paid says "Next sale waits until the receipt is sent"
+
+#### Scenario: A bad address
+- **WHEN** Jo sends to "maya@"
+- **THEN** it says "That doesn't look like an email address — check it" and nothing is sent
+
+### Requirement: A job's online deposit comes off at the till
+
+When a job's deposit was paid online and hasn't been refunded, kept or given
+back, paying the job's order at the till SHALL take the deposit off what's
+due. The till SHALL show a "Deposit paid" line and take only what's left,
+and the sale SHALL record the deposit as its own payment, "Deposit paid
+online", for the amount the server holds.
+
+#### Scenario: Collecting with a deposit paid
+- **WHEN** Maya's £65.00 job had a £13.00 deposit paid online, and Jo takes payment
+- **THEN** the till shows Deposit paid −£13.00 and asks for £52.00, and the sale records £13.00 Deposit paid online and £52.00 by card
+
+#### Scenario: A refunded deposit
+- **WHEN** the deposit was refunded before Maya collects
+- **THEN** nothing comes off, and the till asks for £65.00
+
+### Requirement: A receipt's address can be saved as a new customer
+
+With no customer on the sale, "Email the receipt" SHALL offer "Save to a
+customer record", unticked. Ticked, once the receipt is sent, a quick "Add a
+customer" SHALL open with the address filled in; "Add the customer" SHALL
+save them with what was typed, and "Happy to hear about offers" only if
+ticked; "Not now" SHALL keep the receipt sent and add no one.
+
+#### Scenario: Saved
+- **WHEN** Jo ticks Save to a customer record, sends to maya@example.test, types Maya Patel and presses Add the customer
+- **THEN** Maya Patel is added with that email and no offers, and the till carries on
+
+#### Scenario: Not now
+- **WHEN** Jo ticks it, sends, then presses Not now
+- **THEN** the receipt stays sent and no customer is added
+
+#### Scenario: Unticked
+- **WHEN** Jo sends without ticking it
+- **THEN** no Add a customer opens and no one is added

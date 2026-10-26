@@ -19,6 +19,8 @@ export type JobMessage = {
   state: 'intended' | 'sending' | 'delivered' | 'failed' | 'unknown' | 'undone';
   pretend: boolean; sendAfter: string | null; sentAt: string | null; error: string | null; createdAt: string;
   direction?: 'outbound' | 'inbound';
+  // Held until Send now or Undo: Don't close things by themselves (Jack, 24 Oct answer 9).
+  held?: boolean;
 };
 
 export const jobMessagesKey = (jobId: number) => ['job-messages', jobId];
@@ -30,13 +32,16 @@ const TONE = {
   red: 'bg-[var(--wh-danger-bg)] text-[var(--wh-danger-hover)]',
 };
 
+const londonDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+// "goes at 10:15" today; a message waiting longer (the quote reminder) says its day.
+const goesAt = (iso: string) => (londonDay(iso) === londonDay(new Date().toISOString()) ? `goes at ${clock(iso)}` : `goes ${signedOffWhen(iso)}`);
 const clock = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
 
 // The state's word and colour, and what follows "By text to …".
 function describe(m: JobMessage): { word: string; tone: keyof typeof TONE; when: string } {
   switch (m.state) {
-    // Past its time and not yet claimed by the sender's next round.
-    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? `goes at ${clock(m.sendAfter)}` : 'going now' };
+    // Held until Send now; or past its time and not yet claimed by the sender's next round.
+    case 'intended': return { word: 'Waiting', tone: 'amber', when: m.held ? 'waits until you press Send now' : m.sendAfter && Date.parse(m.sendAfter) > Date.now() ? goesAt(m.sendAfter) : 'going now' };
     case 'sending': return { word: 'Sending', tone: 'amber', when: 'going now' };
     case 'delivered': return { word: m.pretend ? 'Pretend' : 'Sent', tone: m.pretend ? 'grey' : 'green', when: signedOffWhen(m.sentAt ?? m.createdAt) };
     case 'undone': return { word: 'Undone', tone: 'grey', when: 'stopped with Undo' };
@@ -76,11 +81,14 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
     queryKey: jobMessagesKey(jobId),
     queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
     // While one waits its minute, look again so it shows when it's gone.
-    refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'intended' || m.state === 'sending') ? 5000 : false),
+    // Checked again while one is about to go; a reminder a day away isn't.
+    refetchInterval: (q) => (q.state.data?.some((m) => m.state === 'sending' || (m.state === 'intended' && !m.held && (!m.sendAfter || Date.parse(m.sendAfter) - Date.now() < 120_000))) ? 5000 : false),
   });
   const first = customerName.trim().split(/\s+/)[0] || 'the customer';
   // The server lists newest first; a conversation reads oldest first.
-  const thread = [...(messages.data ?? [])].reverse();
+  // A quote reminder stopped because the quote was answered, withdrawn or
+  // replaced (or the job moved on) isn't news, so it isn't listed.
+  const thread = [...(messages.data ?? [])].filter((m) => !(m.key === 'quote_reminder' && m.state === 'undone')).reverse();
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="job-msgs-title"
       // Full screen on a phone, as drawn (job-messages-phone).
@@ -101,7 +109,7 @@ function MessagesDialog({ jobId, customerName, title, reference, onClose }: { jo
         {thread.length ? <ol aria-label={`Messages with ${customerName}`} className="m-0 flex list-none flex-col gap-3.5 p-0">
           {thread.map((m) => (m.direction === 'inbound' ? (
             <li key={m.id} data-from="customer" className="flex flex-col items-start gap-1">
-              <span className="text-[13px] font-bold">{first}</span>
+              <span className="text-size-13 font-bold">{first}</span>
               <span className="max-w-[85%] rounded-[16px_16px_16px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-2.5 text-sm leading-[1.45] whitespace-pre-wrap [overflow-wrap:anywhere] md:max-w-[78%]">{m.body}</span>
               <span className="text-xs text-[var(--wh-muted)]">{signedOffWhen(m.sentAt ?? m.createdAt)}</span>
             </li>
@@ -119,7 +127,7 @@ function ShopMessage({ m }: { m: JobMessage }) {
   return (
     <li data-from="shop" className="flex flex-col items-end gap-1 text-right">
       <span className="flex items-center gap-2">
-        <span className="text-[13px] font-bold">{m.name}</span>
+        <span className="text-size-13 font-bold">{m.name}</span>
         <span className={`inline-flex items-center rounded-full px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${TONE[d.tone]}`}>{d.word}</span>
       </span>
       <span className="max-w-[85%] rounded-[16px_16px_4px_16px] bg-[var(--wh-ink)] px-3.5 py-2.5 text-left text-sm leading-[1.45] whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--wh-panel)] md:max-w-[78%]">{m.body}</span>

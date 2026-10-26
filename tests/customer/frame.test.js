@@ -107,6 +107,20 @@ test('with a pinned action, scroll-padding-bottom is set on the document and res
   assert.equal(document.documentElement.style.scrollPaddingBottom, '');
 });
 
+// The room kept under the pinned action: 7rem, or 9rem with a note above the
+// button (the old pb-28 and pb-36), on the page and as scroll padding.
+test('the room under the pinned action is 7rem, or 9rem with a note', async () => {
+  const plain = await renderFrame({ step: 2, title: 'T', action: { label: 'Choose a day', onClick: () => {} } });
+  await plain.findByText('North Street Cycles');
+  assert.equal(document.querySelector('main').style.paddingBottom, '7rem');
+  assert.equal(document.documentElement.style.scrollPaddingBottom, '7rem');
+  plain.unmount();
+  const noted = await renderFrame({ step: 2, title: 'T', action: { label: 'Choose a day', onClick: () => {} }, actionNote: '1 service' });
+  await noted.findByText('North Street Cycles');
+  assert.equal(document.querySelector('main').style.paddingBottom, '9rem');
+  assert.equal(document.documentElement.style.scrollPaddingBottom, '9rem');
+});
+
 test('without a pinned action, scroll-padding-bottom is left alone', async () => {
   const ui = await renderFrame({ step: 2, title: 'T' });
   await ui.findByText('North Street Cycles');
@@ -142,13 +156,14 @@ test('an unknown shop says so, with no shop name', async () => {
   assert.ok(ui.queryByText('Screen body') === null);
 });
 
-test('a failed load offers Try again, which recovers', async () => {
+test('a failed load says online booking is unavailable and offers Try again, which recovers (bk-unavailable)', async () => {
   const { fireEvent } = await import('@testing-library/react');
   let fail = true;
   const ui = await renderFrame({ step: 1, title: 'Tell us about your bike' }, undefined, () => (fail
     ? new Response(JSON.stringify({ error: 'boom' }), { status: 500, headers: { 'content-type': 'application/json' } })
     : new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } })));
-  assert.ok(await ui.findByRole('heading', { level: 1, name: "We couldn't load this shop's services" }));
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Online booking is unavailable just now' }));
+  assert.ok(ui.getByText('Please try again in a little while, or call the shop to book.'));
   fail = false;
   fireEvent.click(ui.getByRole('button', { name: 'Try again' }));
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Tell us about your bike' }));

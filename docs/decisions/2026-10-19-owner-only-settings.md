@@ -16,3 +16,12 @@ the server.
    holds the 5 Oct decision back for Managers and the switch until WP-1.1;
    it doesn't change it. Chosen over building WP-1.1 now and over leaving
    it open.
+
+## Later: the website settings (22 Oct)
+
+Mark's audit (22 Oct, P2 1) found the website settings and the Shopify
+connection still open to any staff member. Jack, 22 Oct: "1: make the website
+settings and the Shopify connection Owner-only now, like the rest of
+Settings." `PUT /api/storefront-settings`, `POST /api/shopify/connection`
+and the logo and hero uploads are now Owner only, and
+`tests/owner-only-routes.test.js` checks `website.js` with the other files.

@@ -62,7 +62,11 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, ...env },
+    // The pretend payment provider and pretend WorkOS, as a developer's .env
+    // asks for (deposit-settings design 3; staff-signin-workos design 7).
+    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend',
+      // A developer's .env may switch the local sign-in skip on; a test server never has it unless the test asks (dev-autologin.test.js).
+      WHEELHOUSE_DEV_AUTOLOGIN: '', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));

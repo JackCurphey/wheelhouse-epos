@@ -55,7 +55,35 @@ export type BookingLink = {
   changeDeclined?: boolean;
   services: { name: string; price: number | null }[];
   totalPrice: number | null;
+  /** The deposit the booking took, and when it's free to cancel until in the shop's time (deposit-booking-page). */
+  deposit?: {
+    pence: number;
+    cancelUntil: { date: string; time: string } | null;
+    /** Paid, refunded (or on its way back), or kept; and whether cancelling now would refund it (deposit-refunds). */
+    state?: 'paid' | 'refunded' | 'kept';
+    refundable?: boolean;
+  } | null;
+  /** Once the bike is in (pull request 359; booking page stages): how far it is, its times, the shop, and the money (figures null with Show prices off). */
+  workState?: string;
+  bookedInAt?: string | null;
+  collectedAt?: string | null;
+  expectedReady?: { date: string; time: string | null } | null;
+  shop?: { address: string | null; phone: string | null; openingHours: string | null };
+  work?: { name: string; price: number | null }[];
+  // Work agreed's total, the lines' pence summed by the server; null with prices hidden.
+  workTotal?: number | null;
+  // Whether the customer said yes to service reminders (ready-remind-tick).
+  remindersYes?: boolean;
+  declined?: { name: string; price: number | null }[];
+  /** The job's checklist once the work is finished (cp-summary; Jack, 22 Oct): every item and what the mechanic found. */
+  checklist?: { name: string; items: { name: string; done: boolean; note: string | null }[] } | null;
+  toPay?: number | null;
+  nothingToPay?: boolean;
+  paid?: { at: string; amount: number | null } | null;
 };
+
+/** The 410 reply's details (pull request 359): which job, why, and the shop. */
+export type ExpiredLink = { reference?: string; reason?: 'collected' | 'never_came_in'; shop?: { name: string; address: string | null; phone: string | null } };
 
 export const bookingLinkPath = (shopSlug: string, code: string) =>
   `/api/portal/${encodeURIComponent(shopSlug)}/booking-links/${encodeURIComponent(code)}`;

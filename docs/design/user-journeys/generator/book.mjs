@@ -24,7 +24,7 @@ import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
 import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, remindBox } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CUSTOMER_NOTE } from './job-page.mjs';
-import { requestDepositBoard, withNewOnline, buildDiaryDesktopBoard, tabletDiary, phoneDiary } from './diary.mjs';
+import { requestDepositBoard, withNewOnline, buildDiaryDesktopBoard, tabletDiary, phoneDiary, screens as diaryScreens } from './diary.mjs';
 import { msgPage, msgListOpen, wordingBox, bubble } from './setup.mjs';
 import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs';
 
@@ -439,6 +439,13 @@ def('bk-page-ls', () => withLightspeedShop(() => bookingPage()));
 def('bk-cancel-ls', () => withLightspeedShop(() => bookingPage({ dialog: cancelDialog() })));
 def('bk-staff-request', () => requestDepositBoard(SIZE));
 def('bk-staff-decline', () => requestDepositBoard(SIZE, true));
+// Deposits on the job (Jack, 24 Oct, morning questions, Deposits 2, 3 and 5):
+// drawn in diary.mjs on WH-1042's job page, for Jack's approval.
+def('bk-staff-deposit', () => diaryScreens['job-deposit'][SIZE]);
+def('bk-staff-deposit-refund', () => diaryScreens['job-deposit-refund'][SIZE]);
+def('bk-staff-deposit-refunded', () => diaryScreens['job-deposit-refunded'][SIZE]);
+def('bk-staff-no-show', () => diaryScreens['job-not-come'][SIZE]);
+def('bk-staff-no-show-kept', () => diaryScreens['job-didnt-come'][SIZE]);
 // Scrolled down to the booking messages, below the shop's other messages.
 // The six booking messages' wording, for Jack's approval (Jack, 20 Oct:
 // "1: draw the six booking messages' wording and their edit box for my
@@ -550,6 +557,11 @@ export const TITLES = {
   'bk-settings-auto': 'Settings › Workshop › Online booking: Confirm bookings automatically on',
   'bk-settings-preview': 'Settings › Workshop › Online booking: Preview what the customer sees',
   'bk-staff-decline': 'Declining it refunds the deposit',
+  'bk-staff-deposit': 'The job: Deposit paid, with Refund the deposit',
+  'bk-staff-deposit-refund': 'Refund the deposit: the whole deposit, with a reason',
+  'bk-staff-deposit-refunded': 'The job after refunding: Deposit refunded, with the reason',
+  'bk-staff-no-show': 'The day has gone and the bike never came in: Didn’t come',
+  'bk-staff-no-show-kept': 'Marked Didn’t come: the deposit kept, still refundable',
   'bk-messages': 'Settings › Front desk › Messages: the booking messages',
   'bk-msg-request': 'Messages: Request received, its wording',
   'bk-msg-confirmed': 'Messages: Booking confirmed, its wording',
@@ -572,7 +584,7 @@ export const ROWS = [
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-request-expired', 'bk-expired', 'bk-unavailable'] },
   // UX walk-through 6 H1.
   { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
-  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-messages', 'bk-msg-request', 'bk-msg-confirmed', 'bk-msg-offered', 'bk-msg-declined', 'bk-msg-change', 'bk-msg-cancelled', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-preview', 'bk-settings-deposits'] },
+  { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-confirmed', 'bk-staff-decline', 'bk-staff-deposit', 'bk-staff-deposit-refund', 'bk-staff-deposit-refunded', 'bk-staff-no-show', 'bk-staff-no-show-kept', 'bk-messages', 'bk-msg-request', 'bk-msg-confirmed', 'bk-msg-offered', 'bk-msg-declined', 'bk-msg-change', 'bk-msg-cancelled', 'bk-settings', 'bk-settings-reserve', 'bk-settings-whole-day', 'bk-settings-notice-days', 'bk-settings-mode-change', 'bk-settings-mode-scheduled', 'bk-settings-auto', 'bk-settings-preview', 'bk-settings-deposits'] },
 ];
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.

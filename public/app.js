@@ -46,11 +46,7 @@ let dashboardData = null;
 let printAgents = []; // [{deviceId, deviceName, printers}] currently checked in for this shop (see /api/print-agents)
 
 let customers = [];
-let customerSearch = '';
-let customerShowInactive = false;
-let customerBikes = []; // bikes belonging to whichever customer is currently in view
 let customerGroups = []; // shop-wide list of groups (e.g. "Blue Light", "ACC") customers can be tagged with
-let customerMessages = []; // texts sent to whichever customer is currently in view
 
 let activeCashiers = []; // employees with isCashier=true, active only - used by the Till
 let activeCashierId = null;
@@ -205,24 +201,12 @@ async function loadDashboard() {
   printAgents = await api('/api/print-agents').then((r) => r.agents);
 }
 
-async function loadCustomers() {
-  customers = await api(`/api/customers?all=${customerShowInactive ? '1' : '0'}`);
-}
-
 async function loadCustomerGroups() {
   customerGroups = await api('/api/customer-groups');
 }
 
 async function loadActiveCustomers() {
   customers = await api('/api/customers');
-}
-
-async function loadCustomerBikes(customerId) {
-  customerBikes = customerId ? await api(`/api/customers/${customerId}/bikes`) : [];
-}
-
-async function loadCustomerMessages(customerId) {
-  customerMessages = customerId ? await api(`/api/customers/${customerId}/texts`) : [];
 }
 
 async function loadActiveCashiers() {
@@ -256,7 +240,6 @@ const OFFICE_TABS = [
   { id: 'suppliers', label: 'Suppliers' },
   { id: 'purchase-orders', label: 'Purchase Orders' },
   { id: 'sales', label: 'Sales History' },
-  { id: 'customers', label: 'Customers' },
   {
     id: 'edit-shop',
     label: 'Edit Shop',
@@ -1181,6 +1164,13 @@ function renderFrontDeskOrderTable() {
 }
 
 function loadOrderIntoCart(doc) {
+  // The old app never takes payment for a workshop job (Jack, 21 Oct,
+  // docs/decisions/2026-10-21-old-app-placeholder.md): the new till asks who
+  // signed the work off.
+  if (doc.workshopJobId) {
+    location.assign(`/workshop/till?job=${doc.workshopJobId}`);
+    return;
+  }
   cart = doc.items.map((it) => {
     const product = products.find((p) => p.id === it.productId);
     return {
@@ -1382,8 +1372,8 @@ async function renderOffice() {
   else if (sub === 'purchase-orders' && subId) await renderPurchaseOrderDetail(Number(subId));
   else if (sub === 'purchase-orders') await renderPurchaseOrders();
   else if (sub === 'sales') await renderSalesHistory();
-  else if (sub === 'customers' && subId) await renderCustomerDetail(Number(subId));
-  else if (sub === 'customers') await renderCustomers();
+  // The old Customers screen is gone: its links open the new pages (remove-old-customers).
+  else if (sub === 'customers') location.assign(subId ? `/workshop/customers/${encodeURIComponent(subId)}` : '/workshop/customers');
   else if (sub === 'edit-shop' && subId === 'office') await renderShopOffice();
   // Front desk, also for an old link to the retired Workshop page (Jack, 19 Oct).
   else if (sub === 'edit-shop') await renderEditFrontDesk();
@@ -2527,14 +2517,14 @@ function renderSalesTable() {
         <td>${s.items ? s.items.length : ''}</td>
         <td><span class="badge ${paymentBadgeClass(s.paymentMethod)}">${esc(s.paymentMethod)}</span></td>
         <td class="num">${money(s.total)}</td>
-        <td><button class="icon-btn" data-view="${s.id}">View receipt</button></td>
+        <td><button class="icon-btn" data-view="${s.id}" data-source="${s.source || 'old'}">View receipt</button></td>
       </tr>
     `
     )
     .join('');
   tbody.querySelectorAll('button[data-view]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const sale = await api(`/api/sales/${b.dataset.view}`);
+      const sale = await api(`/api/sales/${b.dataset.view}?source=${b.dataset.source || 'old'}`);
       openModal({ type: 'receipt', sale, title: `Sale #${sale.id}` });
     })
   );
@@ -2543,354 +2533,6 @@ function renderSalesTable() {
 function renderGroupBadges(groups) {
   if (!groups || !groups.length) return '<span class="muted">—</span>';
   return groups.map((g) => `<span class="badge role-cashier">${esc(g.name)}</span>`).join(' ');
-}
-
-// ================= CUSTOMERS =================
-
-async function renderCustomers() {
-  await loadCustomers();
-  await loadCustomerGroups();
-  const main = document.getElementById('office-content');
-  main.innerHTML = `
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Customers</h2>
-        <button class="btn btn-primary" id="add-customer-btn">+ Add customer</button>
-      </div>
-      <div class="panel-body">
-        <div class="table-toolbar">
-          <input type="text" id="cust-search" class="search-input" placeholder="Search name, email or phone…" value="${esc(customerSearch)}" />
-          <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;">
-            <input type="checkbox" id="cust-show-inactive" ${customerShowInactive ? 'checked' : ''} /> Show deactivated
-          </label>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="data-table">
-            <thead>
-              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Groups</th><th></th></tr>
-            </thead>
-            <tbody id="cust-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('add-customer-btn').addEventListener('click', () => openModal({ type: 'customer-form', customer: null }));
-  document.getElementById('cust-search').addEventListener('input', (e) => {
-    customerSearch = e.target.value;
-    renderCustomerTable();
-  });
-  document.getElementById('cust-show-inactive').addEventListener('change', async (e) => {
-    customerShowInactive = e.target.checked;
-    await loadCustomers();
-    renderCustomerTable();
-  });
-
-  renderCustomerTable();
-}
-
-function renderCustomerTable() {
-  const tbody = document.getElementById('cust-table-body');
-  if (!tbody) return;
-  const term = customerSearch.trim().toLowerCase();
-  const filtered = customers.filter((c) => {
-    if (!term) return true;
-    return (
-      c.name.toLowerCase().includes(term) ||
-      (c.email || '').toLowerCase().includes(term) ||
-      (c.phone || '').toLowerCase().includes(term)
-    );
-  });
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No customers found.</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = filtered
-    .map((c) => {
-      const inactiveTag = !c.active ? ' <span class="badge low">Inactive</span>' : '';
-      return `
-      <tr>
-        <td><button class="link-btn" data-view="${c.id}">${esc(c.name)}</button>${inactiveTag}</td>
-        <td>${esc(c.email || '—')}</td>
-        <td>${esc(c.phone || '—')}</td>
-        <td>${renderGroupBadges(c.groups)}</td>
-        <td>
-          <button class="icon-btn" data-view-sales="${c.id}">Sales</button>
-          <button class="icon-btn" data-edit="${c.id}">Edit</button>
-          ${c.active ? `<button class="icon-btn" data-deactivate="${c.id}">Deactivate</button>` : `<button class="icon-btn" data-activate="${c.id}">Activate</button>`}
-        </td>
-      </tr>
-    `;
-    })
-    .join('');
-
-  tbody.querySelectorAll('button[data-view]').forEach((b) =>
-    b.addEventListener('click', () => {
-      location.hash = `office/customers/${b.dataset.view}`;
-    })
-  );
-  tbody.querySelectorAll('button[data-view-sales]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const c = customers.find((x) => x.id === Number(b.dataset.viewSales));
-      const sales = await api(`/api/customers/${c.id}/sales`);
-      openModal({ type: 'customer-sales', customer: c, sales });
-    })
-  );
-  tbody.querySelectorAll('button[data-edit]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const c = customers.find((x) => x.id === Number(b.dataset.edit));
-      openModal({ type: 'customer-form', customer: c });
-    })
-  );
-  tbody.querySelectorAll('button[data-deactivate]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const c = customers.find((x) => x.id === Number(b.dataset.deactivate));
-      if (!confirm(`Deactivate "${c.name}"? Their sales history is kept.`)) return;
-      try {
-        await api(`/api/customers/${c.id}`, { method: 'DELETE' });
-        showToast('Customer deactivated');
-        await loadCustomers();
-        renderCustomerTable();
-      } catch (err) {
-        showToast(err.message);
-      }
-    })
-  );
-  tbody.querySelectorAll('button[data-activate]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const c = customers.find((x) => x.id === Number(b.dataset.activate));
-      try {
-        await api(`/api/customers/${c.id}`, { method: 'PUT', body: { active: true } });
-        showToast('Customer activated');
-        await loadCustomers();
-        renderCustomerTable();
-      } catch (err) {
-        showToast(err.message);
-      }
-    })
-  );
-}
-
-// Refreshes whichever Customers view is currently on screen (list or detail)
-// after an edit, since both share the customer-form modal.
-async function refreshCustomerView(customerId) {
-  await loadCustomers();
-  if (document.getElementById('cust-table-body')) {
-    renderCustomerTable();
-  } else if (document.getElementById('customer-detail-page')) {
-    await renderCustomerDetail(customerId);
-  }
-}
-
-async function renderCustomerDetail(id) {
-  if (!customers.length) await loadCustomers();
-  let customer = customers.find((c) => c.id === id);
-  if (!customer) {
-    try {
-      customer = await api(`/api/customers/${id}`);
-    } catch (_) {
-      customer = null;
-    }
-  }
-
-  const main = document.getElementById('office-content');
-  if (!customer) {
-    main.innerHTML = `
-      <button class="btn btn-sm" id="back-to-customers">‹ Back to Customers</button>
-      <div class="empty-state" style="margin-top:14px;">Customer not found.</div>
-    `;
-    document.getElementById('back-to-customers').addEventListener('click', () => {
-      location.hash = 'office/customers';
-    });
-    return;
-  }
-
-  await loadCustomerBikes(id);
-  await loadCustomerGroups();
-  await loadCustomerMessages(id);
-
-  main.innerHTML = `
-    <div id="customer-detail-page">
-      <button class="btn btn-sm" id="back-to-customers">‹ Back to Customers</button>
-      <div class="panel" style="margin-top:14px;">
-        <div class="panel-header">
-          <h2>${esc(customer.name)} ${!customer.active ? '<span class="badge low">Inactive</span>' : ''}</h2>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn" id="cd-sales-btn">Sales</button>
-            <button class="btn" id="cd-edit-btn">Edit</button>
-            ${customer.active ? `<button class="btn btn-danger" id="cd-deactivate-btn">Deactivate</button>` : `<button class="btn" id="cd-activate-btn">Activate</button>`}
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${esc(customer.email || '—')}</span></div>
-            <div class="detail-item"><span class="detail-label">Phone</span><span class="detail-value">${esc(customer.phone || '—')}</span></div>
-            <div class="detail-item"><span class="detail-label">Notes</span><span class="detail-value">${esc(customer.notes || '—')}</span></div>
-            <div class="detail-item"><span class="detail-label">Groups</span><span class="detail-value">${renderGroupBadges(customer.groups)}</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-top:16px;">
-        <div class="panel-header">
-          <h2>Bikes</h2>
-          <button class="btn btn-primary" id="add-bike-btn">+ Add bike</button>
-        </div>
-        <div class="panel-body">
-          <div style="overflow-x:auto;">
-            <table class="data-table">
-              <thead>
-                <tr><th>Make</th><th>Model</th><th>Colour</th><th>Serial number</th><th></th></tr>
-              </thead>
-              <tbody id="bike-table-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-top:16px;">
-        <div class="panel-header">
-          <h2>Messages</h2>
-          <button class="btn btn-primary" id="send-text-btn">+ Send text</button>
-        </div>
-        <div class="panel-body">
-          <div style="overflow-x:auto;">
-            <table class="data-table">
-              <thead>
-                <tr><th>Date</th><th>Status</th><th>Message</th><th>Sent by</th></tr>
-              </thead>
-              <tbody id="message-table-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('back-to-customers').addEventListener('click', () => {
-    location.hash = 'office/customers';
-  });
-  document.getElementById('send-text-btn').addEventListener('click', () => openModal({ type: 'customer-sms', customer }));
-  document.getElementById('cd-sales-btn').addEventListener('click', async () => {
-    const sales = await api(`/api/customers/${customer.id}/sales`);
-    openModal({ type: 'customer-sales', customer, sales });
-  });
-  document.getElementById('cd-edit-btn').addEventListener('click', () => openModal({ type: 'customer-form', customer }));
-  const deactivateBtn = document.getElementById('cd-deactivate-btn');
-  if (deactivateBtn) {
-    deactivateBtn.addEventListener('click', async () => {
-      if (!confirm(`Deactivate "${customer.name}"? Their sales history is kept.`)) return;
-      try {
-        await api(`/api/customers/${customer.id}`, { method: 'DELETE' });
-        showToast('Customer deactivated');
-        await renderCustomerDetail(customer.id);
-      } catch (err) {
-        showToast(err.message);
-      }
-    });
-  }
-  const activateBtn = document.getElementById('cd-activate-btn');
-  if (activateBtn) {
-    activateBtn.addEventListener('click', async () => {
-      try {
-        await api(`/api/customers/${customer.id}`, { method: 'PUT', body: { active: true } });
-        showToast('Customer activated');
-        await renderCustomerDetail(customer.id);
-      } catch (err) {
-        showToast(err.message);
-      }
-    });
-  }
-  document.getElementById('add-bike-btn').addEventListener('click', () => {
-    openModal({ type: 'bike-form', bike: null, customerId: customer.id });
-  });
-
-  renderBikeTable(customer.id);
-  renderMessageTable();
-}
-
-function smsStatusBadgeClass(status) {
-  return status === 'sent' ? 'ok' : 'low';
-}
-
-function renderMessageTable() {
-  const tbody = document.getElementById('message-table-body');
-  if (!tbody) return;
-  if (!customerMessages.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No texts sent yet.</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = customerMessages
-    .map(
-      (m) => `
-      <tr>
-        <td>${fmtDateTime(m.createdAt)}</td>
-        <td>
-          <span class="badge ${smsStatusBadgeClass(m.status)}">${esc(m.status)}</span>
-          ${m.status === 'failed' && m.error ? `<div class="muted" style="font-size:12px;">${esc(m.error)}</div>` : ''}
-        </td>
-        <td>${esc(m.body)}</td>
-        <td>${esc(m.sentByName || '—')}</td>
-      </tr>
-    `
-    )
-    .join('');
-}
-
-function renderBikeTable(customerId) {
-  const tbody = document.getElementById('bike-table-body');
-  if (!tbody) return;
-  if (!customerBikes.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No bikes on file yet.</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = customerBikes
-    .map(
-      (bike) => `
-      <tr>
-        <td><button class="link-btn" data-history="${bike.id}">${esc(bike.make || '—')}</button></td>
-        <td>${esc(bike.model || '—')}</td>
-        <td>${esc(bike.colour || '—')}</td>
-        <td>${esc(bike.serialNumber || '—')}</td>
-        <td>
-          <button class="icon-btn" data-history="${bike.id}">Service history</button>
-          <button class="icon-btn" data-edit="${bike.id}">Edit</button>
-          <button class="icon-btn" data-deactivate="${bike.id}">Remove</button>
-        </td>
-      </tr>
-    `
-    )
-    .join('');
-
-  tbody.querySelectorAll('button[data-history]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const bike = customerBikes.find((x) => x.id === Number(b.dataset.history));
-      const jobs = await api(`/api/bikes/${bike.id}/jobs`);
-      openModal({ type: 'bike-service', bike, jobs });
-    })
-  );
-  tbody.querySelectorAll('button[data-edit]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const bike = customerBikes.find((x) => x.id === Number(b.dataset.edit));
-      openModal({ type: 'bike-form', bike, customerId });
-    })
-  );
-  tbody.querySelectorAll('button[data-deactivate]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const bike = customerBikes.find((x) => x.id === Number(b.dataset.deactivate));
-      const label = `${bike.make} ${bike.model}`.trim() || 'this bike';
-      if (!confirm(`Remove "${esc(label)}" from this customer's profile? Its service history is kept.`)) return;
-      try {
-        await api(`/api/bikes/${bike.id}`, { method: 'DELETE' });
-        showToast('Bike removed');
-        await loadCustomerBikes(customerId);
-        renderBikeTable(customerId);
-      } catch (err) {
-        showToast(err.message);
-      }
-    })
-  );
 }
 
 // ================= QUOTES & ORDERS =================
@@ -3467,10 +3109,7 @@ function renderModal() {
   if (modal.type === 'stock-adjust') return renderStockAdjustModal(holder, modal.product);
   if (modal.type === 'receipt') return renderReceiptModal(holder, modal.sale, modal.title);
   if (modal.type === 'customer-form') return renderCustomerFormModal(holder, modal.customer);
-  if (modal.type === 'customer-sales') return renderCustomerSalesModal(holder, modal.customer, modal.sales);
   if (modal.type === 'document-view') return renderDocumentModal(holder, modal.doc);
-  if (modal.type === 'bike-form') return renderBikeFormModal(holder, modal.bike, modal.customerId);
-  if (modal.type === 'bike-service') return renderBikeServiceModal(holder, modal.bike, modal.jobs);
   if (modal.type === 'team-add-form') return renderTeamAddFormModal(holder);
   if (modal.type === 'team-edit-form') return renderTeamEditFormModal(holder, modal.member);
   if (modal.type === 'team-attach-login-form') return renderTeamAttachLoginFormModal(holder, modal.member);
@@ -4108,55 +3747,12 @@ function renderCustomerFormModal(holder, customer) {
       showToast(isEdit ? 'Customer updated' : 'Customer added');
       const afterSave = modal && modal.afterSave;
       closeModal();
-      if (afterSave) {
-        afterSave(saved);
-      } else if (document.getElementById('cust-table-body') || document.getElementById('customer-detail-page')) {
-        await refreshCustomerView(saved.id);
-      }
+      if (afterSave) afterSave(saved);
     } catch (err) {
       showToast(err.message);
     }
   });
 }
-
-function renderCustomerSalesModal(holder, customer, sales) {
-  const rowsHtml = sales.length
-    ? sales
-        .map(
-          (s) => `
-      <tr>
-        <td>#${s.id}</td>
-        <td>${esc(fmtDateTime(s.createdAt))}</td>
-        <td><span class="badge ${paymentBadgeClass(s.paymentMethod)}">${esc(s.paymentMethod)}</span></td>
-        <td class="num">${money(s.total)}</td>
-      </tr>
-    `
-        )
-        .join('')
-    : `<tr><td colspan="4"><div class="empty-state">No sales recorded for this customer yet.</div></td></tr>`;
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop">
-      <div class="modal wide">
-        <div class="modal-header">
-          <h2>Sales — ${esc(customer.name)}</h2>
-          <button class="modal-close" id="modal-close">✕</button>
-        </div>
-        <div class="modal-body">
-          <table class="data-table">
-            <thead><tr><th>#</th><th>Date &amp; time</th><th>Payment</th><th class="num">Total</th></tr></thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary" id="modal-cancel">Close</button>
-        </div>
-      </div>
-    </div>
-  `;
-  wireModalDismiss();
-}
-
-const SMS_MAX_LEN = 1600;
 
 function renderCustomerSmsModal(holder, customer) {
   if (!customer.phone) {
@@ -4231,10 +3827,6 @@ function renderCustomerSmsModal(holder, customer) {
         errorEl.style.display = '';
         sendBtn.disabled = false;
       }
-      if (document.getElementById('message-table-body')) {
-        await loadCustomerMessages(customer.id);
-        renderMessageTable();
-      }
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.style.display = '';
@@ -4243,123 +3835,6 @@ function renderCustomerSmsModal(holder, customer) {
   });
 }
 
-function renderBikeFormModal(holder, bike, customerId) {
-  const isEdit = !!bike;
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>${isEdit ? 'Edit bike' : 'Add bike'}</h2>
-          <button class="modal-close" id="modal-close">✕</button>
-        </div>
-        <form id="bike-form">
-          <div class="modal-body">
-            <div class="field-row">
-              <div class="field">
-                <label for="bk-make">Make</label>
-                <input id="bk-make" type="text" value="${esc(bike?.make || '')}" placeholder="e.g. Trek, Specialized…" />
-              </div>
-              <div class="field">
-                <label for="bk-model">Model</label>
-                <input id="bk-model" type="text" value="${esc(bike?.model || '')}" placeholder="e.g. FX2, Rockhopper…" />
-              </div>
-            </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="bk-colour">Colour</label>
-                <input id="bk-colour" type="text" value="${esc(bike?.colour || '')}" />
-              </div>
-              <div class="field">
-                <label for="bk-serial">Serial number</label>
-                <input id="bk-serial" type="text" value="${esc(bike?.serialNumber || '')}" />
-              </div>
-            </div>
-            <div class="field">
-              <label for="bk-notes">Notes</label>
-              <textarea id="bk-notes" rows="3" placeholder="Optional">${esc(bike?.notes || '')}</textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn" id="modal-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">${isEdit ? 'Save changes' : 'Add bike'}</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-  wireModalDismiss();
-
-  document.getElementById('bike-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = {
-      make: document.getElementById('bk-make').value.trim(),
-      model: document.getElementById('bk-model').value.trim(),
-      colour: document.getElementById('bk-colour').value.trim(),
-      serialNumber: document.getElementById('bk-serial').value.trim(),
-      notes: document.getElementById('bk-notes').value.trim(),
-    };
-    if (!body.make && !body.model) {
-      showToast('Enter at least a make or model');
-      return;
-    }
-    try {
-      if (isEdit) {
-        await api(`/api/bikes/${bike.id}`, { method: 'PUT', body });
-      } else {
-        await api(`/api/customers/${customerId}/bikes`, { method: 'POST', body });
-      }
-      showToast(isEdit ? 'Bike updated' : 'Bike added');
-      closeModal();
-      await loadCustomerBikes(customerId);
-      renderBikeTable(customerId);
-    } catch (err) {
-      showToast(err.message);
-    }
-  });
-}
-
-function renderBikeServiceModal(holder, bike, jobs) {
-  const label = `${bike.make} ${bike.model}`.trim() || 'Bike';
-  const rowsHtml = jobs.length
-    ? jobs
-        .map(
-          (j) => `
-      <tr>
-        <td>${esc(j.jobDate)}</td>
-        <td>${j.startTime ? esc(`${j.startTime}–${j.endTime}`) : '<span class="muted">Unscheduled</span>'}</td>
-        <td>${esc(j.title)}</td>
-        <td>${esc(j.notes || '—')}</td>
-      </tr>
-    `
-        )
-        .join('')
-    : `<tr><td colspan="4"><div class="empty-state">No workshop jobs recorded for this bike yet.</div></td></tr>`;
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop">
-      <div class="modal wide">
-        <div class="modal-header">
-          <h2>Service history — ${esc(label)}</h2>
-          <button class="modal-close" id="modal-close">✕</button>
-        </div>
-        <div class="modal-body">
-          ${bike.serialNumber ? `<p class="muted" style="margin-top:0;">Serial: ${esc(bike.serialNumber)}</p>` : ''}
-          <table class="data-table">
-            <thead><tr><th>Date</th><th>Time</th><th>Job</th><th>Notes</th></tr></thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary" id="modal-cancel">Close</button>
-        </div>
-      </div>
-    </div>
-  `;
-  wireModalDismiss();
-}
-
-// Shared by the four Team modals below: a Mechanic/Staff checkbox pair
-// plus a working-days picker that only matters (and only shows) once
-// Mechanic is ticked, since only mechanics have a diary.
 function rolesAndWorkingDaysFieldsHtml({ isMechanic, isCashier, workingDays }) {
   return `
     <div class="field">
@@ -4734,6 +4209,11 @@ function renderDocumentModal(holder, doc) {
   const convertBtn = document.getElementById('doc-convert-btn');
   if (convertBtn) {
     convertBtn.addEventListener('click', async () => {
+      // A workshop job's order is paid at the new till (Jack, 21 Oct).
+      if (doc.workshopJobId) {
+        location.assign(`/workshop/till?job=${doc.workshopJobId}`);
+        return;
+      }
       if (!activeCashierId) {
         showToast('Select a staff member before completing the sale');
         return;
@@ -4875,7 +4355,7 @@ function renderReceiptModal(holder, sale, title) {
             <div class="rline"><span>Discount</span><span>−${money(sale.discount)}</span></div>
             ${sale.groupDiscountAmount ? `<div class="rline"><span>${esc(sale.groupDiscountName)} discount</span><span>−${money(sale.groupDiscountAmount)}</span></div>` : ''}
             <div class="rline rtotal"><span>Total</span><span>${money(sale.total)}</span></div>
-            <div class="rline"><span>Inc. VAT (20%)</span><span>${money(vatFromInclusive(sale.total))}</span></div>
+            <div class="rline"><span>${sale.vatPence != null ? 'Inc. VAT' : 'Inc. VAT (20%)'}</span><span>${money(sale.vatPence != null ? sale.vatPence / 100 : vatFromInclusive(sale.total))}</span></div>
             <div class="rline"><span>Payment</span><span>${esc(sale.paymentMethod)}</span></div>
             ${
               sale.paymentMethod === 'Split'
@@ -4933,8 +4413,11 @@ function renderAuthScreen() {
           <button class="auth-tab ${isSignup ? 'active' : ''}" data-auth-tab="signup">Create shop account</button>
         </div>
         ${authError ? `<div class="error-banner">${esc(authError)}</div>` : ''}
-        <form id="auth-form">
-          ${isSignup ? `
+        ${!isSignup ? `
+          <p>Staff sign in on Wheelhouse's sign-in screen, with Google or email.</p>
+          <a class="btn btn-primary btn-block" href="/workshop/sign-in">Sign in</a>
+        ` : `
+          <form id="auth-form">
             <div class="field">
               <label>Shop name</label>
               <input type="text" id="auth-shop-name" required autocomplete="organization" />
@@ -4947,17 +4430,17 @@ function renderAuthScreen() {
               <label>Invite code</label>
               <input type="text" id="auth-signup-code" autocomplete="off" />
             </div>
-          ` : ''}
-          <div class="field">
-            <label>Email</label>
-            <input type="email" id="auth-email" required autocomplete="email" />
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input type="password" id="auth-password" required minlength="8" autocomplete="${isSignup ? 'new-password' : 'current-password'}" />
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">${isSignup ? 'Create account' : 'Log in'}</button>
-        </form>
+            <div class="field">
+              <label>Email</label>
+              <input type="email" id="auth-email" required autocomplete="email" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input type="password" id="auth-password" required minlength="8" autocomplete="new-password" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Create account</button>
+          </form>
+        `}
       </div>
     </div>
   `;
@@ -4968,24 +4451,24 @@ function renderAuthScreen() {
       renderAuthScreen();
     });
   });
-  document.getElementById('auth-form').addEventListener('submit', async (e) => {
+  // Staff sign in only through WorkOS (pull request 504), so the Log in tab leads to the
+  // new sign-in screen; only Create shop account still has a form here.
+  document.getElementById('auth-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     authError = '';
     try {
-      const user = isSignup
-        ? await api('/api/auth/signup', {
-            method: 'POST',
-            body: {
-              shopName: document.getElementById('auth-shop-name').value.trim(),
-              ownerName: document.getElementById('auth-owner-name').value.trim(),
-              signupCode: document.getElementById('auth-signup-code').value.trim(),
-              email,
-              password,
-            },
-          })
-        : await api('/api/auth/login', { method: 'POST', body: { email, password } });
+      const user = await api('/api/auth/signup', {
+        method: 'POST',
+        body: {
+          shopName: document.getElementById('auth-shop-name').value.trim(),
+          ownerName: document.getElementById('auth-owner-name').value.trim(),
+          signupCode: document.getElementById('auth-signup-code').value.trim(),
+          email,
+          password,
+        },
+      });
       currentUser = user;
       renderShell();
       renderRoute();

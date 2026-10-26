@@ -229,3 +229,45 @@ test('a mode change needs both parts, a real future date, and a different mode',
   assert.match(validateModeChange({ nextBookingMode: 'weekly', nextBookingModeFrom: '2026-10-01' }, ctx).error, /timed' or 'dropoff/);
   assert.match(validateModeChange({ nextBookingMode: 'timed', nextBookingModeFrom: '2026-10-01' }, ctx).error, /already/);
 });
+
+// Planned effort on the Workshop Overview (Jack, 21 Oct,
+// docs/decisions/2026-10-21-workshop-overview.md answer 2; the contract in
+// openspec/changes/archive/2026-10-21-workshop-overview/design.md): the work
+// booked that day, overlaps counted once, against the mechanics' working time.
+test('a day sums the work booked, overlaps counted once, and the time the mechanics have', () => {
+  const d = day({
+    blocks: [lunch],
+    jobs: [
+      job({ startTime: '10:00', endTime: '14:00' }), job({ id: 101, startTime: '12:00', endTime: '16:00' }),
+      job({ id: 102, plannedMinutes: 45 }),
+      job({ id: 103, mechanicId: null, plannedMinutes: 30 }),
+    ],
+  });
+  // Sam: 10:00–16:00 is 6 hours, less the half-hour lunch inside it, plus 45
+  // untimed minutes; the shared queue's 30. Sam has 9 hours less lunch, Alex 9.
+  assert.equal(d.plannedMinutes, 330 + 45 + 30);
+  assert.equal(d.availableMinutes, 510 + 540);
+});
+
+test('a closed day has no time and nothing planned', () => {
+  const sunday = computeCapacity({ settings: settings(), mechanics: [SAM, ALEX], blocks: [], jobs: [], dates: [SUNDAY] })[0];
+  assert.equal(sunday.availableMinutes, 0);
+  assert.equal(sunday.plannedMinutes, 0);
+});
+
+// Fresh review, 21 Oct: Planned effort counts bookings that stand, once —
+// not a change request's requested time (a hold), nor a request or an offer
+// waiting for an answer, as the Overview's Expected today doesn't.
+test('planned effort leaves out a change request’s held time and unanswered requests', () => {
+  const d = day({
+    jobs: [
+      job({ startTime: '11:30', endTime: '13:00', bookingState: 'reschedule_requested' }),
+      { ...job({ startTime: '15:00', endTime: '16:30' }), requested: true },
+      job({ id: 101, mechanicId: 2, startTime: '10:00', endTime: '11:00', bookingState: 'pending' }),
+      job({ id: 102, mechanicId: 2, startTime: '14:00', endTime: '15:00', bookingState: 'offered' }),
+    ],
+  });
+  assert.equal(d.plannedMinutes, 90);
+  // Booking still sees every hold.
+  assert.equal(mech(d, 1).freeMinutes, 540 - 90 - 90);
+});

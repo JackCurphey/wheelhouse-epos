@@ -18,6 +18,7 @@ import { deleteTestShop } from './helpers/testShop.js';
 import { futureDate, UPLOADS_DIR, purgeAttachmentFiles } from './helpers/workshopFixtures.js';
 import { BOOKING_CONTACT } from './helpers/bookable.js';
 import { MAX_BOOKING_BODY_BYTES } from '../server/booking-photos.js';
+import { tinyJpeg, tinyPng, LOCATION_SIGNS } from './helpers/pictures.js';
 
 let server;
 let owner;
@@ -65,11 +66,8 @@ const counts = () => runWithShop(owner.shop.id, () => prepare(
   'SELECT (SELECT count(*)::int FROM workshop_jobs) AS jobs, (SELECT count(*)::int FROM customers) AS customers'
 ).get());
 
-const JPEG_HEAD = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
 // A photo whose bytes carry a unique marker, so a stray file can be found in the shared uploads folder.
-const photoOf = (marker, head = JPEG_HEAD, size = 64) => ({
-  dataBase64: Buffer.concat([head, Buffer.from(marker), Buffer.alloc(size)]).toString('base64'),
-});
+const photoOf = (marker, make = tinyJpeg) => ({ dataBase64: make(marker).toString('base64') });
 const filesNow = async () => new Set(await readdir(UPLOADS_DIR));
 // Files that appeared since `before` and contain `marker` (other test files write to the same folder in parallel).
 async function newFilesWith(before, marker) {
@@ -86,7 +84,7 @@ test('a request over the size cap gets a 400, not a dropped connection or a 500'
   const marker = `cap-${randomBytes(6).toString('hex')}`;
   const before = await filesNow();
   const c = await counts();
-  const big = Buffer.concat([JPEG_HEAD, Buffer.from(marker)]).toString('base64').replace(/=+$/, '').padEnd(MAX_BOOKING_BODY_BYTES + 1_000_000, 'A');
+  const big = tinyJpeg(marker, 0).toString('base64').replace(/=+$/, '').padEnd(MAX_BOOKING_BODY_BYTES + 1_000_000, 'A');
   const res = await book({ photos: [{ dataBase64: big }], marker }, { guest: true });
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.equal(res.body.error, 'Those photos are too large to send — please add fewer or smaller photos');
@@ -108,15 +106,26 @@ const storedPhotos = (jobId) => runWithShop(owner.shop.id, () => prepare(
 
 test('photos are stored as from-customer attachments, named by us, typed by their bytes', async () => {
   const marker = `ok-${randomBytes(6).toString('hex')}`;
-  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const res = await book({ photos: [photoOf(marker), photoOf(marker, png)] });
+  const res = await book({ photos: [photoOf(marker), photoOf(marker, tinyPng)] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const rows = await storedPhotos(res.body.id);
   assert.deepEqual(rows.map((r) => [r.original_name, r.content_type, r.from_customer]), [
     ['Customer photo 1.jpg', 'image/jpeg', true], ['Customer photo 2.png', 'image/png', true],
   ]);
   const onDisk = await readFile(path.join(UPLOADS_DIR, rows[0].storage_key));
-  assert.deepEqual(onDisk, Buffer.concat([JPEG_HEAD, Buffer.from(marker), Buffer.alloc(64)]));
+  assert.deepEqual(onDisk, tinyJpeg(marker));
+});
+
+// CX-2 (openspec/changes/photo-location-data): the saved photo has no location.
+test('a photo taken at home is saved without where, when or which phone', async () => {
+  const marker = `home-${randomBytes(6).toString('hex')}`;
+  const res = await book({ photos: [{ dataBase64: tinyJpeg(marker, 16, { withLocation: true }).toString('base64') }] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const [row] = await storedPhotos(res.body.id);
+  const onDisk = await readFile(path.join(UPLOADS_DIR, row.storage_key));
+  for (const sign of LOCATION_SIGNS) assert.ok(!onDisk.includes(Buffer.from(sign, 'latin1')), `"${sign}" was saved`);
+  assert.ok(onDisk.includes(Buffer.from(marker)), 'the picture itself was lost');
+  assert.equal(row.size_bytes, onDisk.length, 'the size recorded is the size saved');
 });
 
 test('the customer\'s own file name and claimed type are never stored', async () => {
@@ -141,7 +150,7 @@ test('a not-sure booking can carry photos', async () => {
   assert.equal((await storedPhotos(res.body.id)).length, 1);
 });
 
-const bigJpeg = (m) => Buffer.concat([JPEG_HEAD, Buffer.from(m), Buffer.alloc(10 * 1024 * 1024)]).toString('base64');
+const bigJpeg = (m) => tinyJpeg(m, 10 * 1024 * 1024).toString('base64');
 for (const [label, makePhotos, message] of [
   ['too many photos', (m) => Array(6).fill(photoOf(m)), 'You can add up to 5 photos'],
   ['a photo that is too big', (m) => [{ dataBase64: bigJpeg(m) }], 'Each photo can be up to 10 MB'],
@@ -169,7 +178,7 @@ test('staff see the photos as from-customer attachments and can download them', 
   assert.equal(list.body[0].originalName, 'Customer photo 1.jpg');
   const file = await fetch(`${server.baseUrl}/api/workshop-jobs/${res.body.id}/attachments/${list.body[0].id}`, { headers: { cookie: owner.cookie } });
   assert.equal(file.status, 200);
-  assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.concat([JPEG_HEAD, Buffer.from(marker), Buffer.alloc(64)]));
+  assert.deepEqual(Buffer.from(await file.arrayBuffer()), tinyJpeg(marker));
 });
 
 test('the booking link says how many photos were sent, and nothing else about them', async () => {

@@ -102,7 +102,7 @@ export function ChangeDate({ link, shopSlug, code, request = false, onClose }: {
                     onChange={() => { setDay(d.date); setTime(null); setError(null); }} />
                   <span aria-hidden="true" className="text-xs">{dayLabel(d.date).split(' ')[0].slice(0, 3)}</span>
                   <span aria-hidden="true" className="text-lg font-bold">{dt.getUTCDate()}</span>
-                  <span aria-hidden="true" className="text-[11px]">{words.sub}</span>
+                  <span aria-hidden="true" className="text-size-11">{words.sub}</span>
                 </label>
               );
             })}
@@ -111,10 +111,10 @@ export function ChangeDate({ link, shopSlug, code, request = false, onClose }: {
       )}
       {chosen && chosen.mode === 'timed' && free(chosen) && (
         <div className="flex flex-col gap-2">
-          <span id="chg-times" className="text-[15px] font-bold">{`${dayLabel(chosen.date)} — choose a time`}</span>
+          <span id="chg-times" className="text-size-15 font-bold">{`${dayLabel(chosen.date)} — choose a time`}</span>
           <div role="radiogroup" aria-labelledby="chg-times" className="flex flex-wrap gap-2">
             {(chosen.startTimes ?? []).map((t) => (
-              <label key={t} className={cn('inline-flex min-h-11 min-w-[76px] cursor-pointer items-center justify-center rounded-lg border px-3 font-[family-name:var(--wh-font-mono)] text-[15px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--accent)]',
+              <label key={t} className={cn('inline-flex min-h-11 min-w-[76px] cursor-pointer items-center justify-center rounded-lg border px-3 font-[family-name:var(--wh-font-mono)] text-size-15 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--accent)]',
                 time === t ? 'border-2 border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)]')}>
                 <input type="radio" name="change-time" className="sr-only" checked={time === t} aria-label={t} onChange={() => { setTime(t); setError(null); }} />
                 <span aria-hidden="true">{t}</span>
@@ -124,7 +124,7 @@ export function ChangeDate({ link, shopSlug, code, request = false, onClose }: {
         </div>
       )}
       {chosen && chosen.mode === 'dropoff' && chosen.dropoffWindow && (
-        <p className="m-0 text-[15px]">{`Drop off between ${chosen.dropoffWindow.start} and ${chosen.dropoffWindow.end}`}</p>
+        <p className="m-0 text-size-15">{`Drop off between ${chosen.dropoffWindow.start} and ${chosen.dropoffWindow.end}`}</p>
       )}
       {/* A request moves at once, still waiting for the shop (piece 12); a confirmed booking waits. */}
       <p className="m-0 text-sm text-[var(--wh-muted)]">{request ? 'Your request moves to the new date straight away; the shop still needs to confirm it.' : `Your booking stays on ${weekday} until the shop confirms the new time.`}</p>

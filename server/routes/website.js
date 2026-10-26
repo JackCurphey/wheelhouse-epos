@@ -6,6 +6,7 @@
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { badRequest, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
+import { ownerOnly } from '../lib/owner-only.js';
 import { readUploadedImage } from '../lib/uploads.js';
 import { getShopifyConnection, registerShopifyWebhooks, saveShopifyConnection, serializeShopifyConnection } from '../shopify.js';
 import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStorefrontSettings } from '../storefront.js';
@@ -29,6 +30,8 @@ export function register(route) {
   });
 
   route('PUT', '/api/storefront-settings', async (req, res) => {
+    // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
+    if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
     try {
       const updated = await updateStorefrontSettings(body);
@@ -43,7 +46,14 @@ export function register(route) {
     sendJson(res, 200, serializeShopifyConnection(await getShopifyConnection()));
   });
 
+  // The hosted test copy never connects a real online shop (add-hosted-copy
+  // design §5), so it refuses before reading anything and saves nothing.
   route('POST', '/api/shopify/connection', async (req, res) => {
+    // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
+    if (await ownerOnly(req, res)) return;
+    if (process.env.WHEELHOUSE_HOSTED_COPY === '1') {
+      return sendJson(res, 403, { error: 'This is a test copy of Wheelhouse: connecting Shopify is switched off.' });
+    }
     const body = await readJsonBody(req);
     const shopDomain = String(body.shopDomain || '').trim();
     const accessToken = String(body.accessToken || '').trim();
@@ -73,6 +83,8 @@ export function register(route) {
   });
 
   route('POST', '/api/storefront-settings/logo', async (req, res) => {
+    // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
+    if (await ownerOnly(req, res)) return;
     let logoUrl;
     try {
       logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
@@ -84,6 +96,8 @@ export function register(route) {
   });
 
   route('POST', '/api/storefront-settings/hero', async (req, res) => {
+    // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
+    if (await ownerOnly(req, res)) return;
     let heroImageUrl;
     try {
       heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);

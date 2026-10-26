@@ -11,7 +11,7 @@ test('a service row stores a name, price and duration', async () => {
   try {
     await runWithShop(shop.id, async () => {
       const info = await prepare(
-        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+        `INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('Standard service', 55.00, ROUND(55.00 * 100)::int, 60)`
       ).run();
       const row = await prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
       assert.equal(row.name, 'Standard service');
@@ -58,21 +58,26 @@ test('a labour line cannot carry a product, and a product line must have one', a
 });
 
 test('serializeWorkshopService converts a row to camelCase with active as a boolean', () => {
-  const row = { id: 7, name: 'Puncture repair', price: '12.00', minutes: 15, active: 1, bookable_online: 1,
+  const row = { id: 7, name: 'Puncture repair', price: '12.00', price_pence: 1200, minutes: 15, active: 1, bookable_online: 1,
     kind: 'full', category_id: null, position: 2 };
   assert.deepEqual(serializeWorkshopService(row), {
     id: 7,
     name: 'Puncture repair',
-    price: '12.00',
+    // From the pence, with the pence beside it (sales in pence, step A′).
+    price: 12,
+    pricePence: 1200,
     minutes: 15,
     active: true,
     bookableOnline: true,
     kind: 'full',
     categoryId: null,
     position: 2,
+    // No reminder set (service-reminder-months).
+    reminderMonths: null,
     questions: [],
     includes: [],
   });
+  assert.equal(serializeWorkshopService({ ...row, reminder_months: 12 }).reminderMonths, 12);
   assert.deepEqual(serializeWorkshopService(row, [3, 1]).includes, [3, 1]);
 });
 
@@ -81,7 +86,7 @@ test('a shop cannot see another shop\'s services', async () => {
   const shopB = await createTestShop();
   try {
     await runWithShop(shopA.id, async () => {
-      await prepare(`INSERT INTO workshop_services (name, price, minutes) VALUES ('A only', 10, 30)`).run();
+      await prepare(`INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('A only', 10, ROUND(10 * 100)::int, 30)`).run();
     });
     await runWithShop(shopB.id, async () => {
       const rows = await prepare('SELECT * FROM workshop_services').all();
@@ -98,7 +103,7 @@ test('a deactivated service drops out of selection but its line keeps working', 
   try {
     await runWithShop(shop.id, async () => {
       const svc = await prepare(
-        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Gear index', 20.00, 20)`
+        `INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('Gear index', 20.00, ROUND(20.00 * 100)::int, 20)`
       ).run();
       const doc = await prepare(
         `INSERT INTO sale_documents (kind, subtotal, discount, total) VALUES ('order', 20, 0, 20)`

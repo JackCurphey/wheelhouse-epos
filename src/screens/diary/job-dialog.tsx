@@ -11,9 +11,13 @@ import { WorkParts } from './work-parts.tsx';
 import { jobRefusalText, refusalText } from './refusal-words.ts';
 import { ChangeDetailsDialog } from './change-details-dialog.tsx';
 import { JobFiles } from './job-files.tsx';
-import { JobMessagesButton, jobMessagesKey } from './job-messages.tsx';
+import { JobMessagesButton, jobMessagesKey, type JobMessage } from './job-messages.tsx';
+import { printBikeTag } from './bike-tag.tsx';
 import { SignOffDialog, signedOffWhen } from './sign-off-dialog.tsx';
+import { JobChecklistBar } from './job-checklist.tsx';
+import { SlotDialog, useStorageSlots } from './storage-slots.tsx';
 import { channelWord } from './channel-word.ts';
+import { DepositStrip, RefundDepositDialog, canMarkNoShow } from './job-deposit.tsx';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -28,7 +32,7 @@ type Customer = { id: number; name: string; email: string | null; phone: string 
 const money = (n: number) => `£${n.toFixed(2)}`;
 
 /** The badge's word for where the job is (the drawings' stage names). */
-export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested'] }): string {
+export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested']; noShowAt?: string | null }): string {
   if (j.bookingState === 'pending') return 'Booking request';
   // A time the shop offered, waiting for the customer (Jack, 20 Oct).
   if (j.bookingState === 'offered') return 'Time offered';
@@ -47,6 +51,8 @@ export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 
   if (j.quote?.state === 'sent') return 'Quoting';
   if (j.workState === 'on_hold') return 'On hold';
   if (j.custodyState === 'in_shop') return 'In the workshop';
+  // Marked Didn't come (bk-staff-no-show-kept; deposit-diary-screen design 3).
+  if (j.noShowAt) return 'Didn’t come';
   return 'Expected';
 }
 
@@ -58,7 +64,9 @@ function stageActions(j: WorkshopJob): Action[] {
   if (j.custodyState === 'collected') return [];
   // Put on hold, beside the main button, wherever the work can be held (Jack, 15 Oct).
   const hold: Action = { label: 'Put on hold', action: 'hold', primary: false };
-  if (j.custodyState === 'expected') return [{ label: 'Book in', action: 'book-in', primary: true }, ...(j.workState === 'not_started' ? [hold] : [])];
+  // Didn't come beside Book in once the booked day has gone (bk-staff-no-show; design 2).
+  const noShow: Action[] = canMarkNoShow(j) ? [{ label: 'Didn’t come', action: 'didnt-come', primary: false }] : [];
+  if (j.custodyState === 'expected') return [...noShow, { label: 'Book in', action: 'book-in', primary: true }, ...(j.workState === 'not_started' && !j.noShowAt ? [hold] : [])];
   switch (j.workState) {
     case 'not_started': return [{ label: 'Start work', action: 'start', primary: true }, hold];
     case 'in_progress': return [
@@ -92,6 +100,7 @@ const BADGE: Record<string, string> = {
   Expired: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
   Finished: 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',
   Collected: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
+  'Didn’t come': 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
 };
 
 const Tag = ({ children }: { children: ReactNode }) => (
@@ -103,6 +112,17 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const navigate = useNavigate();
   const jobQuery = useQuery({ queryKey: ['workshop-job', jobId], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${jobId}`) });
   const job = jobQuery.data;
+  // Opening a booking confirmed straight away clears its "New, booked online"
+  // mark (Jack, 19 Oct, auto-confirm): once, then the diary reads it again.
+  const newOnline = Boolean(job?.newOnline);
+  useEffect(() => {
+    if (!newOnline) return;
+    // The diary reads its jobs again even if the page has closed meanwhile,
+    // so the mark doesn't linger (fresh review).
+    apiMutate(`/api/workshop-jobs/${jobId}/seen`, {})
+      .then(() => queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }))
+      .catch(() => { /* the mark stays; it's cleared next time the job is opened */ });
+  }, [newOnline, jobId, queryClient]);
   // A booking that ended can't be booked in or given another day, though its page still opens (fresh review, 15 Oct).
   const ended = job?.bookingState === 'cancelled' || job?.bookingState === 'declined' || job?.bookingState === 'expired';
   // Finished work's notes are read-only: what was typed and not saved is not shown as if saved.
@@ -119,6 +139,10 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   const [notesNote, setNotesNote] = useState('');
   // "Change details" (Jack, 18 Oct): not for finished work, which is frozen until reopened.
   const [changing, setChanging] = useState(false);
+  // Storage slots (Workshop day 27): Book in asks where the bike is kept, and
+  // "Kept on [slot]" moves it, when the shop's slots are on.
+  const { on: slotsOn, slots, ask: askSlot } = useStorageSlots();
+  const [slotBox, setSlotBox] = useState<'book-in' | 'move' | null>(null);
   // Deleting a job (Jack, 18 Oct, docs/decisions/2026-10-18-attachments-and-delete.md):
   // asks first, or says "Settle up first" while money has been paid on its
   // order or the bike is in the shop. The server refuses the same cases.
@@ -158,25 +182,88 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
 
   // "Mark ready for collection" asks who is signing it off first (Jack, 16 Oct).
   const [signing, setSigning] = useState(false);
+  // The deposit's refund pop-up, and Didn't come's Undo, which waits until the
+  // job is closed (Jack, 24 Oct answer 9; deposit-diary-screen design 3).
+  const [refunding, setRefunding] = useState(false);
+  const [noShowUndo, setNoShowUndo] = useState(false);
   // "Bike ready" waits a minute with Undo after marking it ready (UX
   // walk-through 1 H2; the messages engine). The strip goes when the minute does.
   const [ready, setReady] = useState<ReadyStrip | null>(null);
   useEffect(() => {
-    if (!ready || !('id' in ready)) return undefined;
+    if (!ready || !('sendAfter' in ready)) return undefined;
     const t = setTimeout(() => setReady(null), Math.max(0, Date.parse(ready.sendAfter) - Date.now()));
     return () => clearTimeout(t);
   }, [ready]);
+  // With Don't close things by themselves on, Bike ready is held until Send
+  // now or Undo (Jack, 24 Oct answer 9; job-finished-wait). Read from the
+  // job's messages too, so it still waits when the job is opened again
+  // (decided while building).
+  // Only while the bike is here and finished: collected or reopened, Bike
+  // ready isn't going (review).
+  const [handled, setHandled] = useState<number | null>(null);
+  const readyNow = finished && job?.custodyState === 'in_shop';
+  const messagesQuery = useQuery({
+    queryKey: jobMessagesKey(jobId),
+    queryFn: () => apiGet<JobMessage[]>(`/api/messages?jobId=${jobId}&limit=200`),
+    enabled: readyNow,
+  });
+  const heldMessage = messagesQuery.data?.find((m) => m.key === 'bike_ready' && m.state === 'intended' && m.held && m.id !== handled);
+  const strip = !readyNow ? null : ready ?? (job && heldMessage ? readyStrip(job, { ...heldMessage, held: true }) : null);
   async function undoReady() {
-    if (!ready || !('id' in ready)) return;
+    if (!strip || !('id' in strip)) return;
     setSending(true);
     setMessage(null);
+    setHandled(strip.id);
     try {
-      await apiMutate(`/api/messages/${ready.id}/undo`, {});
+      await apiMutate(`/api/messages/${strip.id}/undo`, {});
       setReady(null);
       void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job?.id ?? 0) });
     } catch (err) {
       setReady(null);
       setMessage(refusalText(err));
+    } finally {
+      setSending(false);
+    }
+  }
+  async function sendReadyNow() {
+    if (!strip || !('held' in strip)) return;
+    setSending(true);
+    setMessage(null);
+    setHandled(strip.id);
+    try {
+      await apiMutate(`/api/messages/${strip.id}/send-now`, {});
+      setReady({ who: strip.who, sent: `“Bike ready” sent to ${strip.first} by ${channelWord(strip.channel)} · ${clockNow()}` });
+    } catch (err) {
+      setMessage(refusalText(err));
+      // Refused (the bike has gone, or it went): the strip goes. Not reached:
+      // it stays, still held, to press again (review).
+      if (err instanceof ApiError && err.status < 500) setReady(null);
+      else setHandled(null);
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job?.id ?? 0) });
+      setSending(false);
+    }
+  }
+
+  function bookIn() {
+    if (askSlot) setSlotBox('book-in');
+    else void run('book-in');
+  }
+
+  async function moveSlot(storageSlotId: number | null) {
+    if (!job) return;
+    setSending(true);
+    setMessage(null);
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}/storage-slot`, { storageSlotId }, { method: 'PUT' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+      ]);
+    } catch (err) {
+      // Refused (say the bike was collected meanwhile): show the job as it is now.
+      setMessage(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+      void jobQuery.refetch();
     } finally {
       setSending(false);
     }
@@ -188,6 +275,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     setMessage(null);
     try {
       const done = await jobAction<WorkshopJob & { readyMessage?: ReadyMessage }>(job.id, action, job.version, extra);
+      if (action === 'didnt-come') setNoShowUndo(true);
+      if (action === 'didnt-come/undo') setNoShowUndo(false);
       if (action === 'finish' && done?.readyMessage) setReady(readyStrip(done, done.readyMessage));
       // Finishing, or reopening, changes what the job's Messages list holds.
       if (action === 'finish' || action === 'reopen-work') void queryClient.invalidateQueries({ queryKey: jobMessagesKey(job.id) });
@@ -310,35 +399,71 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 <strong>{job.customerName ?? 'No customer'}</strong>
                 {customer.data?.phone ? <span>{customer.data.phone}</span> : null}
                 {customer.data?.email ? <span>{customer.data.email}</span> : null}
-                {/* The drawn "Message [customer]" button opens the job's messages (Jack, 20 Oct). */}
-                {job.customerId ? <span className="ml-auto"><JobMessagesButton jobId={job.id} customerName={job.customerName ?? 'the customer'} title={job.title} reference={job.reference ?? null} /></span> : null}
+                {/* Print bike tag once the bike is in (Jack, 21 Oct, bike tag answer 2:
+                    "the top right where the three boxes are"; drawn as job-book-in-print),
+                    then the drawn "Message [customer]" button (Jack, 20 Oct). */}
+                {(job.custodyState === 'in_shop' && job.reference) || job.customerId ? (
+                  <span className="ml-auto flex gap-2">
+                    {/* A job with no number gets no tag: its id is the database's, counting every
+                        shop's jobs, and nothing could find it from the barcode (fresh review). */}
+                    {job.custodyState === 'in_shop' && job.reference ? (
+                      <button
+                        type="button" aria-label="Print bike tag" title="Print bike tag"
+                        onClick={() => printBikeTag({ reference: job.reference as string, customerName: job.customerName ?? null, bikeLabel: [job.bikeLabel, job.bikeColour].filter(Boolean).join(' · ') || null })}
+                        className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] hover:bg-[var(--wh-hover)]"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9V3h12v6" /><rect x="3" y="9" width="18" height="8" rx="2" /><path d="M6 14h12v7H6z" /></svg>
+                      </button>
+                    ) : null}
+                    {job.customerId ? <JobMessagesButton jobId={job.id} customerName={job.customerName ?? 'the customer'} title={job.title} reference={job.reference ?? null} /> : null}
+                  </span>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 {job.bikeLabel ? <span>{job.bikeLabel}</span> : null}
+                {/* Where a bike in the shop is kept (job-book-in's "Kept on Hook 3"); a button to move it. */}
+                {slotsOn && job.custodyState === 'in_shop' ? (
+                  <button type="button" disabled={sending} onClick={() => setSlotBox('move')} className="min-h-11 text-[var(--wh-muted)] underline-offset-2 hover:underline">
+                    {job.storageSlotName ? `Kept on ${job.storageSlotName}` : 'Choose where it’s kept'}
+                  </button>
+                ) : null}
                 <span>{`Mechanic: ${job.mechanicName ?? 'Shared queue'}`}</span>
+                {/* The customer's spending limit (Workshop day 42): the one tag that stops unapproved work, outlined to stand out. */}
+                <span className="inline-flex rounded-full border border-[var(--wh-state-scheduled-ink)] bg-[var(--wh-state-scheduled-bg)] px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-[var(--wh-state-scheduled-ink)]">
+                  {job.spendLimit ? `Customer OK up to £${job.spendLimit.toLocaleString('en-GB')}` : 'Ask before any extra work'}
+                </span>
                 <Tag>{`Ready by ${shortDay(readyBy as string)}`}</Tag>
                 {job.orderTotal ? <Tag>{`Total ${money(job.orderTotal)}`}</Tag> : null}
               </div>
             </div>
 
+            {/* The deposit, and Not come in (approved drawings bk-staff-deposit…, bk-staff-no-show). */}
+            <DepositStrip job={job} notCome={canMarkNoShow(job)} onRefund={() => setRefunding(true)} />
             {/* Who signed the finished work off (Jack, 16 Oct, answer 3; drawn under the finished strip). */}
             {finished && job.signedOffByName && job.signedOffAt ? (
-              <p className="m-0 flex shrink-0 items-center gap-2 border-b border-[var(--wh-border)] px-5 py-1.5 text-[13px]">
+              <p className="m-0 flex shrink-0 items-center gap-2 border-b border-[var(--wh-border)] px-5 py-1.5 text-size-13">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
                 <span data-sign-off="true">Signed off by <strong>{job.signedOffByName}</strong>{` · ${signedOffWhen(job.signedOffAt)}`}</span>
               </p>
             ) : null}
-            {ready && 'id' in ready ? (
+            {strip && 'id' in strip ? (
               <div role="status" className="flex shrink-0 flex-wrap items-center gap-3 bg-[var(--wh-ink)] px-5 py-2 text-sm text-[var(--wh-bg)]">
-                <span className="grow">{ready.text}</span>
+                <span className="grow">{strip.text}</span>
+                {'held' in strip ? <Button disabled={sending} className="min-h-11" onClick={() => void sendReadyNow()}>Send now</Button> : null}
                 <button type="button" disabled={sending} onClick={() => void undoReady()} className="min-h-11 rounded-md px-3 font-semibold underline">Undo</button>
               </div>
             ) : null}
-            {ready && 'reason' in ready ? (
-              <p role="status" className="m-0 shrink-0 border-b border-[var(--wh-border)] px-5 py-2 text-sm">{ready.reason}</p>
+            {/* After Send now: sent, and when; nothing left to undo (job-finished-sent). */}
+            {strip && 'sent' in strip ? (
+              <div role="status" className="flex shrink-0 flex-wrap items-center gap-3 bg-[var(--wh-ink)] px-5 py-2 text-sm text-[var(--wh-bg)]">
+                <span className="grow">{strip.who}<strong className="font-semibold">{strip.sent}</strong></span>
+              </div>
+            ) : null}
+            {strip && 'reason' in strip ? (
+              <p role="status" className="m-0 shrink-0 border-b border-[var(--wh-border)] px-5 py-2 text-sm">{strip.reason}</p>
             ) : null}
             <div className="min-h-0 grow overflow-y-auto px-5 py-4">
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+              <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
                 <div className="flex min-w-0 flex-col gap-4">
                   <section aria-labelledby="job-details" className="flex flex-col gap-1.5 text-sm">
                     <h3 id="job-details" className="m-0 text-sm font-bold">Job details</h3>
@@ -372,8 +497,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           role="switch"
                           aria-checked={here}
                           disabled={here || sending || job.bookingState === 'pending' || job.bookingState === 'offered' || ended}
-                          onClick={() => run('book-in')}
-                          className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-[13px] font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+                          onClick={() => bookIn()}
+                          className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-size-13 font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
                         >
                           <span aria-hidden="true" className={`inline-block size-3 rounded-full border ${here ? 'border-[var(--wh-accent-soft-ink)] bg-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)]'}`} />
                           Bike is here
@@ -381,6 +506,8 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                       );
                     })()}
                   </section>
+                </div>
+                <div className="flex min-w-0 flex-col gap-4">
                   <section aria-labelledby="job-notes" className="flex flex-col gap-1.5">
                     <h3 id="job-notes" className="m-0 text-sm font-bold">Notes</h3>
                     <div className="flex flex-col gap-2 rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 py-2.5 text-sm leading-normal">
@@ -402,44 +529,71 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                       />
                     </div>
                     {job.workState === 'complete' ? (
-                      <span className="text-[13px] text-[var(--wh-muted)]">Reopen the job to change its notes.</span>
+                      <span className="text-size-13 text-[var(--wh-muted)]">Reopen the job to change its notes.</span>
                     ) : (
                       <div className="flex items-center gap-3">
                         <Button size="sm" disabled={sending || draft === null || draft === (job.notes ?? '')} onClick={saveNotes}>Save notes</Button>
-                        <span role="status" className="text-[13px] text-[var(--wh-muted)]">{notesNote}</span>
+                        <span role="status" className="text-size-13 text-[var(--wh-muted)]">{notesNote}</span>
                       </div>
                     )}
+                    {/* The service's checklist, under the notes as drawn (job-mechanic). */}
+                    <JobChecklistBar job={job} />
                   </section>
                   <JobFiles jobId={job.id} />
                 </div>
-                <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
+              </div>
+              {/* As drawn (job-page.mjs jobPopupContent): the job's details beside Notes in
+                  the wider column, then Work and parts across the full width (Jack, 22 Oct:
+                  "so that the notes have more space on the page"). */}
+                <section aria-labelledby="job-work" className="mt-6 flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>
                   {job.orderId ? <WorkParts orderId={job.orderId} job={job} /> : <p className="m-0 text-sm text-[var(--wh-muted)]">This job has no order to add work and parts to.</p>}
                 </section>
-              </div>
             </div>
 
             {message ? <p role="alert" className="mx-5 mb-2 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
             {/* Always shown, so "Delete job" is in view without scrolling (Jack, 18 Oct). */}
             <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-[var(--wh-border)] px-5 py-3.5">
+              {noShowUndo && job.noShowAt ? (
+                // The drawn dark bar (bk-staff-no-show-kept), with Undo until the job is closed.
+                <div role="status" className="flex min-h-12 grow items-center justify-between gap-3 rounded-[10px] bg-[var(--wh-ink)] py-1 pr-1.5 pl-4 text-sm text-[var(--wh-bg)]">
+                  <span>{job.deposit ? 'Marked Didn’t come · the deposit is kept' : 'Marked Didn’t come'}</span>
+                  <button type="button" disabled={sending} onClick={() => void run('didnt-come/undo')} className="min-h-11 rounded-md px-3 font-semibold underline">Undo</button>
+                </div>
+              ) : (<>
               <Button variant="danger" className="mr-auto min-h-11" disabled={sending} onClick={askDelete}>Delete job</Button>
               {actions.filter((a) => !a.primary).map((a) => (
                 <Button key={a.action} disabled={sending} onClick={() => run(a.action)}>{a.label}</Button>
               ))}
               {actions.filter((a) => a.primary).map((a) => (
-                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : a.action === 'finish' ? setSigning(true) : run(a.action))}>{a.label}</Button>
+                <Button key={a.action} variant="accent" disabled={sending} onClick={() => (a.action === 'pay' ? navigate(`${ROUTES.till}?job=${jobId}`) : a.action === 'finish' ? setSigning(true) : a.action === 'book-in' ? bookIn() : run(a.action))}>{a.label}</Button>
               ))}
+              </>)}
             </footer>
           </>
         ) : null}
       </div>
       {changing && job ? <ChangeDetailsDialog job={job} onClose={() => setChanging(false)} /> : null}
+      {refunding && job ? <RefundDepositDialog job={job} onClose={() => setRefunding(false)} onDone={() => { setRefunding(false); void refresh(job.id); }} /> : null}
+      {slotBox && job ? (
+        <SlotDialog
+          job={job} slots={slots} busy={sending}
+          title={slotBox === 'book-in' ? (job.reference ? `Book in · job ${job.reference}` : 'Book in') : 'Where the bike is kept'}
+          onClose={() => setSlotBox(null)}
+          onDone={(slot) => {
+            const was = slotBox;
+            setSlotBox(null);
+            if (was === 'book-in') void run('book-in', slot === null ? {} : { storageSlotId: slot });
+            else void moveSlot(slot);
+          }}
+        />
+      ) : null}
       {signing && job ? <SignOffDialog job={job} busy={sending} onClose={() => setSigning(false)} onSign={(id) => { setSigning(false); void run('finish', { signedOffBy: id }); }} /> : null}
       <Dialog open={deleting === 'ask'} onOpenChange={(o) => { if (!o) setDeleting(null); }} aria-labelledby="delete-job-title">
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="delete-job-title">{`Delete ${job?.title ?? 'this job'}?`}</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">{[job?.reference, job?.customerName, job?.bikeLabel].filter(Boolean).join(' · ')}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{[job?.reference, job?.customerName, job?.bikeLabel].filter(Boolean).join(' · ')}</span>
           </div>
           <button type="button" aria-label="Close" onClick={() => setDeleting(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -455,7 +609,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="delete-blocked-title">Settle up first</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">{`Before ${[job?.title, job?.reference].filter(Boolean).join(' · ')} can be deleted`}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{`Before ${[job?.title, job?.reference].filter(Boolean).join(' · ')} can be deleted`}</span>
           </div>
           <button type="button" aria-label="Close" onClick={() => setDeleting(null)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--wh-hover)]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -481,8 +635,14 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   );
 }
 
-type ReadyMessage = { id: number; channel: string; to: string; sendAfter: string } | { skipped: 'off' | 'no_contact' };
-type ReadyStrip = { id: number; sendAfter: string; text: string } | { reason: string };
+type ReadyMessage = { id: number; channel: string; to: string | null; sendAfter: string | null; held?: boolean } | { skipped: 'off' | 'no_contact' };
+type ReadyStrip =
+  | { id: number; sendAfter: string; text: string }
+  | { id: number; held: true; text: string; who: string; first: string; channel: string }
+  | { who: string; sent: string }
+  | { reason: string };
+
+const clockNow = () => signedOffWhen(new Date().toISOString()).split(', ').at(-1);
 
 // What the strip says after marking it ready: the drawn line, or why Bike
 // ready didn't go (no phone or email; switched off says nothing).
@@ -493,5 +653,8 @@ function readyStrip(job: WorkshopJob, m: ReadyMessage): ReadyStrip | null {
   const first = (job.customerName ?? '').trim().split(/\s+/)[0] || 'the customer';
   const at = job.signedOffAt ? signedOffWhen(job.signedOffAt).split(', ').at(-1) : null;
   const who = job.signedOffByName && at ? `${job.signedOffByName} marked it ready at ${at}. ` : '';
+  if (m.held || !m.sendAfter) {
+    return { id: m.id, held: true, who, first, channel: m.channel, text: `${who}“Bike ready” to ${first} by ${channelWord(m.channel)} is waiting until you press Send now.` };
+  }
   return { id: m.id, sendAfter: m.sendAfter, text: `${who}“Bike ready” goes to ${first} by ${channelWord(m.channel)} in 1 minute.` };
 }

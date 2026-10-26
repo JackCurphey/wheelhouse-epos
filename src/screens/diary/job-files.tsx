@@ -4,6 +4,7 @@ import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { refusalText } from './refusal-words.ts';
+import { readBase64 } from '@/lib/read-base64.ts';
 
 /**
  * "Files and photos" on the job page (Jack, 18 Oct,
@@ -15,20 +16,15 @@ import { refusalText } from './refusal-words.ts';
  */
 type Attachment = { id: number; originalName: string; contentType: string; sizeBytes: number; uploadedAt: string; fromCustomer: boolean };
 
-const MAX_BYTES = 15 * 1024 * 1024;
-const TOO_LARGE = 'That file is too large (max 15MB).';
+export const MAX_BYTES = 15 * 1024 * 1024;
+export const TOO_LARGE = 'That file is too large (max 15MB).';
 const sizeText = (n: number) => (n >= 1024 * 1024 ? `${(n / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const isPhoto = (a: Attachment) => a.contentType.startsWith('image/');
 
-async function readBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let text = '';
-  // In slices, so a large photo doesn't overflow the call stack.
-  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(text);
-}
+// Shared with the phone's photo step (src/lib/read-base64.ts).
+export { readBase64 };
 
-const REMOVE = 'min-h-11 self-start px-0.5 text-[13px] font-semibold text-[var(--wh-danger)] underline underline-offset-2';
+const REMOVE = 'min-h-11 self-start px-0.5 text-size-13 font-semibold text-[var(--wh-danger)] underline underline-offset-2';
 
 export function JobFiles({ jobId }: { jobId: number }) {
   const queryClient = useQueryClient();
@@ -63,7 +59,9 @@ export function JobFiles({ jobId }: { jobId: number }) {
     setError(null);
     try {
       await apiMutate(url(a), undefined, { method: 'DELETE' });
-      await queryClient.invalidateQueries({ queryKey: key });
+      // A quote line's photo is one of these files: removing it takes it off
+      // the line, so the quote is read again too (fresh review).
+      await Promise.all([queryClient.invalidateQueries({ queryKey: key }), queryClient.invalidateQueries({ queryKey: ['quote'] })]);
     } catch (err) {
       setError(refusalText(err));
     }

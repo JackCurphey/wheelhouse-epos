@@ -57,6 +57,12 @@ const map = {
   // Staff side: the request in the diary (Workshop day 7, 12, 15)
   'bk-staff-request': { Accept: go('diary'), 'Offer another time': go('request-offer-pick'), 'Another time': go('request-offer-pick') },
   'bk-staff-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('bk-staff-request') },
+  // Deposits on the job (24 Oct, Deposits 2 and 3)
+  'bk-staff-deposit': { 'Refund the deposit': go('bk-staff-deposit-refund') },
+  // The refund box: the page behind it keeps its own buttons
+  'bk-staff-deposit-refund': { 'Refund the deposit': STAY, Cancel: go('bk-staff-deposit'), Close: go('bk-staff-deposit'), 'Refund £[deposit]': go('bk-staff-deposit-refunded') },
+  'bk-staff-no-show': { 'Didn’t come': go('bk-staff-no-show-kept'), 'Refund the deposit': go('bk-staff-deposit-refund') },
+  'bk-staff-no-show-kept': { Undo: go('bk-staff-no-show'), 'Refund the deposit': go('bk-staff-deposit-refund') },
   // Settings
   // Coverage walk 7 M1: the Services and Mechanics rows open their sections.
   'bk-settings-notice-days': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },

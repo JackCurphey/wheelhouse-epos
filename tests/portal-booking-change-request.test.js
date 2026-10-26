@@ -200,7 +200,7 @@ test('withdraw refuses an expired link', async () => {
   d.setUTCDate(d.getUTCDate() - 31);
   await setJob(shopId(), booked.id, 'job_date = ?', d.toISOString().slice(0, 10));
   const res = await link.withdraw(booked.code);
-  assert.deepEqual([res.status, res.body], [410, { error: 'This link has expired' }]);
+  assert.deepEqual([res.status, res.body.error], [410, 'This link has expired']);
 });
 
 test('replacing a request waits while another booking write holds the day first asked for', async () => {

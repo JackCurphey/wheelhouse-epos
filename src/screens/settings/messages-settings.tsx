@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
+import { RowSwitch } from './row-switch.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 
@@ -15,6 +16,8 @@ type Template = {
   changed: boolean; tapIns: string[]; live: boolean;
   /** 'booking' for the booking messages, listed under their own heading. */
   group?: string | null;
+  /** A second wording shown in another message's box, not as a row (Date change answered's "If the shop can't"). */
+  partOf?: string | null;
 };
 type Preview = { text: string; email: { subject: string; body: string } };
 
@@ -25,7 +28,8 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 export function useMessagesSummary(): string {
   const templates = useQuery({ queryKey: KEY, queryFn: () => apiGet<Template[]>('/api/message-templates') });
   if (!templates.data) return '';
-  return `${templates.data.filter((t) => t.live && t.enabled).length} on`;
+  // The reminder sits under Quote to approve, so it isn't counted on its own.
+  return `${templates.data.filter((t) => t.live && !t.partOf && t.enabled && t.key !== 'quote_reminder').length} on`;
 }
 
 /** Front desk › Messages › Automatic messages, inside its fold. */
@@ -36,6 +40,11 @@ export function AutomaticMessages() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Template | null>(null);
+  // Bike still waiting says the shop's days, as drawn ("after [n] days"; cp-setting).
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ collectionReminderDays?: number }>('/api/workshop-settings') });
+  const days = settings.data?.collectionReminderDays;
+  const withDays = (t: Template, where = ''): Template => (t.key === 'bike_still_waiting' && days !== undefined
+    ? { ...t, when: `When a ready bike isn’t collected after ${days} ${days === 1 ? 'day' : 'days'}${where}` } : t);
 
   async function change(key: string, body: object) {
     setBusy((b) => new Set(b).add(key));
@@ -44,8 +53,9 @@ export function AutomaticMessages() {
       const saved = await apiMutate<Template>(`/api/message-templates/${key}`, body, { method: 'PUT' });
       queryClient.setQueryData<Template[]>(KEY, (list) => list?.map((t) => (t.key === key ? saved : t)));
       return saved;
-    } catch {
-      setError(SAVE_FAILED);
+    } catch (err) {
+      // The shop's own words for a refusal (a review request with no page yet), else the plain one.
+      setError(err instanceof ApiError && err.status === 400 ? err.message : SAVE_FAILED);
       return null;
     } finally {
       setBusy((b) => { const next = new Set(b); next.delete(key); return next; });
@@ -60,17 +70,21 @@ export function AutomaticMessages() {
     setTimeout(() => document.querySelector<HTMLButtonElement>(`[aria-label="Edit the wording of ${name}"]`)?.focus(), 0);
   }
 
-  const live = templates.data?.filter((t) => t.live) ?? [];
-  const jobMessages = live.filter((t) => t.group !== 'booking');
+  const live = templates.data?.filter((t) => t.live && !t.partOf) ?? [];
+  // The quote reminder sits under Quote to approve, not as a row of its own (setup.mjs).
+  const reminder = live.find((t) => t.key === 'quote_reminder');
+  const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.key !== 'quote_reminder');
   const bookingMessages = live.filter((t) => t.group === 'booking');
+  // Bringing customers back: the service reminder (service-reminder-send; setup.mjs bringBackRows).
+  const bringBack = live.filter((t) => t.group === 'reminders');
   const row = (t: Template) => (
     <div key={t.key} className="flex min-h-[60px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pr-2.5 pl-3.5 md:flex-nowrap md:py-0 md:pr-2">
       <span className="flex min-w-0 grow basis-full flex-col gap-0.5 md:basis-auto">
-        <span className="text-[15px] font-bold">{t.name}</span>
-        <span className="text-[13px] text-[var(--wh-muted)]">{t.when}</span>
+        <span className="text-size-15 font-bold">{t.name}</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">{withDays(t).when}</span>
       </span>
       <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
-      <span className="text-[13px] whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
+      <span className="text-size-13 whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
       <OnOff name={t.name} on={t.enabled} disabled={busy.has(t.key)} onChange={(on) => void change(t.key, { enabled: on })} />
     </div>
   );
@@ -78,25 +92,89 @@ export function AutomaticMessages() {
     <div className="flex flex-col gap-2">
       <div data-msg-list="true" className="flex flex-col gap-2">
         {templates.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the messages. Try again in a moment.</p> : null}
-        {jobMessages.map(row)}
+        {jobMessages.map((t) => (t.key === 'quote_to_approve' && reminder
+          ? <div key={t.key} className="flex flex-col gap-2">{row(t)}<ReminderRow onEdit={() => setEditing(reminder)} /></div>
+          : row(t)))}
         {/* The booking messages under their own heading, as drawn (msgListOpen). */}
         {bookingMessages.length ? (
           <>
             <h5 className="m-0 mt-2 text-sm font-bold">Booking messages</h5>
-            <p className="m-0 text-[13px] text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
           </>
         ) : null}
         {bookingMessages.map(row)}
+        {bringBack.length ? (
+          <>
+            <h5 className="m-0 mt-2 text-sm font-bold">Bringing customers back</h5>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">Only to customers who said yes. Each ends “Stop these: [link]”.</p>
+          </>
+        ) : null}
+        {bringBack.map(row)}
         {error && !editing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </div>
-      {editing ? (
+      {editing?.key === 'review_request' ? (
+        <ReviewRequestBox template={templates.data?.find((t) => t.key === editing.key) ?? editing} onClose={closeEdit} />
+      ) : editing ? (
         <EditMessage
-          template={templates.data?.find((t) => t.key === editing.key) ?? editing}
+          template={withDays(templates.data?.find((t) => t.key === editing.key) ?? editing, ' — set in Settings › Workshop › Collection')}
+          second={templates.data?.find((t) => t.partOf === editing.key)}
           error={error}
-          onSave={(body) => change(editing.key, body)}
+          onSave={(key, body) => change(key, body)}
           onClose={closeEdit}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The quote reminder's row (Jack, 22 Oct; setup.mjs msgRowChoice reminder):
+ * "Reminder if there’s no answer, after [n] hours", saved when you leave the
+ * box, and Edit for its wording. It goes when Quote to approve goes.
+ */
+function ReminderRow({ onEdit }: { onEdit: () => void }) {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ quoteReminderHours?: number }>('/api/workshop-settings') });
+  const saved = settings.data?.quoteReminderHours;
+  const [text, setText] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function save() {
+    if (text === null || saved === undefined || text.trim() === String(saved)) { setText(null); setError(null); return; }
+    const hours = /^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
+    if (!(hours >= 1 && hours <= 168)) { setError('Choose from 1 to 168 hours.'); return; }
+    setError(null);
+    try {
+      const next = await apiMutate<{ quoteReminderHours: number }>('/api/workshop-settings', { quoteReminderHours: hours }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], (old: object | undefined) => ({ ...old, ...next }));
+      setText(null);
+    } catch {
+      setError(SAVE_FAILED);
+    }
+  }
+  // Nothing until the shop's hours are known, so the box never shows a guess (fresh review).
+  if (saved === undefined) {
+    return settings.isError ? <p className="m-0 ml-6 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t load the reminder’s hours. Try again in a moment.</p> : null;
+  }
+  return (
+    <div className="ml-6 flex flex-col gap-1">
+      <div className="flex min-h-[52px] flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-1 pr-2 pl-3.5">
+        <label htmlFor="quote-reminder-hours" className="grow text-sm font-semibold">Reminder if there’s no answer, after</label>
+        <span className="inline-flex items-center gap-1.5 text-sm">
+          <input
+            id="quote-reminder-hours"
+            inputMode="numeric"
+            value={text ?? String(saved)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'quote-reminder-error' : undefined}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={() => void save()}
+            className="min-h-11 w-14 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-mono"
+          />
+          hours
+        </span>
+        <button type="button" aria-label="Edit the wording of Quote reminder" onClick={onEdit} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
+      </div>
+      {error ? <p id="quote-reminder-error" role="alert" className="m-0 ml-1 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
     </div>
   );
 }
@@ -118,12 +196,15 @@ function OnOff({ name, on, disabled, onChange }: { name: string; on: boolean; di
   );
 }
 
-function EditMessage({ template, error, onSave, onClose }: { template: Template; error: string | null; onSave: (body: object) => Promise<Template | null>; onClose: () => void }) {
+function EditMessage({ template, second, error, onSave, onClose }: { template: Template; second?: Template; error: string | null; onSave: (key: string, body: object) => Promise<Template | null>; onClose: () => void }) {
   const [words, setWords] = useState(template.wording);
+  // A message with a second wording (Date change answered: "If the shop can't") shows both, as drawn.
+  const [words2, setWords2] = useState(second?.wording ?? '');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
+  const box2 = useRef<HTMLTextAreaElement>(null);
 
   // The preview follows the words as they're typed, filled in by the server
   // with the drawings' example (Maya Patel's Trek Domane AL 3, WH-1042).
@@ -138,61 +219,84 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
   }, [template.key, words]);
 
   // A tap-in goes in where the cursor is.
-  function putIn(name: string) {
-    const el = box.current;
-    const at = el ? el.selectionStart : words.length;
-    const end = el ? el.selectionEnd : words.length;
+  function putIn(name: string, which: 1 | 2 = 1) {
+    const el = (which === 1 ? box : box2).current;
+    const text = which === 1 ? words : words2;
+    const set = which === 1 ? setWords : setWords2;
+    const at = el ? el.selectionStart : text.length;
+    const end = el ? el.selectionEnd : text.length;
     const tag = `[${name}]`;
-    setWords(words.slice(0, at) + tag + words.slice(end));
+    set(text.slice(0, at) + tag + text.slice(end));
     setTimeout(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); }, 0);
   }
 
   async function done() {
-    if (words === template.wording) return onClose();
+    const first = words !== template.wording;
+    const other = second !== undefined && words2 !== second.wording;
+    if (!first && !other) return onClose();
     setBusy(true);
-    const saved = await onSave({ wording: words });
+    const saved = first ? await onSave(template.key, { wording: words }) : true;
+    const saved2 = saved && other && second ? await onSave(second.key, { wording: words2 }) : saved;
     setBusy(false);
-    if (saved) onClose();
+    if (saved && saved2) onClose();
   }
 
   async function goBack() {
     setBusy(true);
-    const saved = await onSave({ wording: null });
-    setBusy(false);
+    const saved = await onSave(template.key, { wording: null });
     if (saved) setWords(saved.wording);
+    if (second) {
+      const saved2 = await onSave(second.key, { wording: null });
+      if (saved2) setWords2(saved2.wording);
+    }
+    setBusy(false);
   }
+
+  const chips = (t: Template, which: 1 | 2) => (
+    <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
+      {t.tapIns.map((name) => (
+        <button key={name} type="button" onClick={() => putIn(name, which)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
+      ))}
+    </div>
+  );
+  const area = 'resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal';
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="msg-title" className="md:max-w-[620px]">
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="msg-title">{template.name}</DialogTitle>
-          <span className="text-[13px] text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}`}</span>
+          {/* The service reminder's box says where its months are set, as drawn (ac-reminder-wording). */}
+          <span className="text-size-13 text-[var(--wh-muted)]">{`Sent ${template.when.charAt(0).toLowerCase()}${template.when.slice(1)}${template.key === 'service_reminder' ? ' in Settings › Workshop' : ''}`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
-        <p className="m-0 text-[15px]">Sent the way each customer chose: text, WhatsApp or email.</p>
+        <p className="m-0 text-size-15">Sent the way each customer chose: text, WhatsApp or email.</p>
         <div className="flex flex-col gap-2">
-          <label htmlFor="msg-words" className="text-[15px] font-semibold">Wording</label>
-          <textarea
-            id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)}
-            className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
-          />
-          <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
-            {template.tapIns.map((name) => (
-              <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[13px] font-semibold">{`+ ${name}`}</button>
-            ))}
-          </div>
+          <label htmlFor="msg-words" className="text-size-15 font-semibold">{second ? 'If the shop accepts' : 'Wording'}</label>
+          <textarea id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)} className={area} />
+          {chips(template, 1)}
+          {second ? (
+            <>
+              <label htmlFor="msg-words-2" className="mt-1 text-size-15 font-semibold">If the shop can’t</label>
+              <textarea id="msg-words-2" ref={box2} rows={4} maxLength={2000} value={words2} onChange={(e) => setWords2(e.target.value)} className={area} />
+              {chips(second, 2)}
+            </>
+          ) : null}
+          {/* The service reminder's fixed ending (ac-reminder-wording, audit M8). */}
+          {template.key === 'service_reminder' ? (
+            <p className="m-0 rounded-md bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>
+          ) : null}
           {/* UX walk-through 7 M6, drawn under the wording (set-msg-edit). */}
           <p className="m-0 text-sm text-[var(--wh-muted)]">With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.</p>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
+          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
           {previewFailed ? <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t show the preview. Try again in a moment.</p> : null}
           <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview?.text ?? ''}</div>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-bold text-[var(--wh-muted)]">PREVIEW · EMAIL TO MAYA PATEL</span>
+          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · EMAIL TO MAYA PATEL</span>
           <div className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3 text-sm leading-normal">
             <span className="font-bold">{preview?.email.subject ?? ''}</span>
             <span className="whitespace-pre-wrap">{preview?.email.body ?? ''}</span>
@@ -207,3 +311,130 @@ function EditMessage({ template, error, onSave, onClose }: { template: Template;
     </Dialog>
   );
 }
+
+/**
+ * The review request's own box (openspec/changes/review-box; drawn as
+ * ac-review-first and ac-review-setting; account and reminders decision 5,
+ * audit M6): the switch, which waits for a review page; the page; the days
+ * after collection; the wording with its fixed Stop these line and a text
+ * preview; the note. Save writes the page and days first, then the switch and
+ * the wording, as the shop refuses the switch without a page.
+ */
+type ReviewSettings = { reviewPageUrl: string | null; reviewRequestDays: number };
+function ReviewRequestBox({ template, onClose }: { template: Template; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<ReviewSettings>('/api/workshop-settings') });
+  const [on, setOn] = useState(template.enabled);
+  const [page, setPage] = useState<string | null>(null);
+  const [days, setDays] = useState<string | null>(null);
+  const [words, setWords] = useState(template.wording);
+  const [preview, setPreview] = useState<string>('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // What's typed, else what's saved, once the settings are in.
+  const pageNow = page ?? settings.data?.reviewPageUrl ?? '';
+  const daysNow = days ?? String(settings.data?.reviewRequestDays ?? '');
+  const hasPage = pageNow.trim() !== '';
+
+  useEffect(() => {
+    let current = true;
+    const t = setTimeout(() => {
+      apiMutate<Preview>(`/api/message-templates/${template.key}/preview`, { wording: words })
+        .then((p) => { if (current) setPreview(p.text); })
+        .catch(() => {});
+    }, 200);
+    return () => { current = false; clearTimeout(t); };
+  }, [template.key, words]);
+
+  function putIn(name: string) {
+    const el = box.current;
+    const at = el ? el.selectionStart : words.length;
+    const end = el ? el.selectionEnd : words.length;
+    const tag = `[${name}]`;
+    setWords(words.slice(0, at) + tag + words.slice(end));
+    setTimeout(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); }, 0);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      // On only with a page. Switching off goes first and switching on last, so
+      // the shop never refuses the order (it needs a page to be on, and won't
+      // lose the page while it's on).
+      const wantOn = on && hasPage;
+      const url = `/api/message-templates/${template.key}`;
+      if (!wantOn && template.enabled) await apiMutate(url, { enabled: false }, { method: 'PUT' });
+      const n = Number(daysNow);
+      await apiMutate('/api/workshop-settings', { reviewPageUrl: pageNow.trim() || null, reviewRequestDays: Number.isFinite(n) && daysNow.trim() !== '' ? n : daysNow }, { method: 'PUT' });
+      const change: { enabled?: boolean; wording?: string } = {};
+      if (wantOn && !template.enabled) change.enabled = true;
+      if (words !== template.wording) change.wording = words;
+      if (Object.keys(change).length) await apiMutate(url, change, { method: 'PUT' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: KEY }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-settings'] }),
+      ]);
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 400 ? err.message : SAVE_FAILED);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const input = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm';
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="rev-title" className="md:max-w-[640px]">
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="rev-title">Review request</DialogTitle>
+          <span className="text-size-13 text-[var(--wh-muted)]">Sent after a bike is collected</span>
+        </div>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-1">
+          <RowSwitch label="Send review requests" on={on && hasPage} disabled={busy || !hasPage} onChange={setOn} />
+          {/* Audit M6: the first time, off until there's a review page. */}
+          {!hasPage ? <p className="m-0 text-sm font-semibold text-[var(--wh-warn-ink)]">Add your review page first, then switch this on.</p> : null}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="rev-page" className="text-size-15 font-semibold">Your review page</label>
+          <input id="rev-page" type="url" value={pageNow} placeholder="Paste the link to your review page" aria-describedby="rev-page-hint"
+            onChange={(e) => setPage(e.target.value)} className={input} />
+          <span id="rev-page-hint" className="text-sm text-[var(--wh-muted)]">Where the link goes — your Google page, say.</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="rev-days" className="text-size-15 font-semibold">Send it</label>
+          <span className="inline-flex items-center gap-2 text-size-15">
+            <input id="rev-days" inputMode="numeric" value={daysNow} onChange={(e) => setDays(e.target.value)} className={`${input} w-16 text-center`} />
+            <span>days after collection</span>
+          </span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="rev-words" className="text-size-15 font-semibold">Wording</label>
+          <textarea id="rev-words" ref={box} rows={3} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)}
+            className="resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal" />
+          <div role="group" aria-label="Put in" className="flex flex-wrap gap-1.5">
+            {template.tapIns.map((name) => (
+              <button key={name} type="button" onClick={() => putIn(name)} className="min-h-11 rounded-md border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-13 font-semibold">{`+ ${name}`}</button>
+            ))}
+          </div>
+          <p className="m-0 rounded-md bg-[var(--wh-surface-muted)] px-2.5 py-2 text-sm">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
+          <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview}</div>
+        </div>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Everyone gets the same link — Google doesn’t allow asking only happy customers. Only customers who said yes get it.</p>
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="flex justify-between gap-2.5">
+        <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={busy} onClick={() => void save()}>Save</Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+

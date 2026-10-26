@@ -100,6 +100,10 @@ test('a customer books from the first screen to pending, the booking link reopen
   await expect(page.getByText('Wednesday 2 September, 10:00 with Sam')).toBeVisible();
   await page.getByRole('textbox', { name: 'Your name' }).fill('Gina Guest');
   await page.getByRole('textbox', { name: 'Mobile number' }).fill('07700 900123');
+  // Saying yes to reminders (reminder-consent): unticked to start.
+  const remind = page.getByRole('checkbox', { name: /Remind me when my bike is due its next service/ });
+  await expect(remind).not.toBeChecked();
+  await remind.check();
   await page.getByRole('checkbox', { name: 'I agree to the booking terms' }).check();
   await page.getByRole('button', { name: 'Request booking' }).click();
 
@@ -126,9 +130,9 @@ test('a customer books from the first screen to pending, the booking link reopen
   expect(job).toMatchObject({ job_date: '2026-09-02', start_time: '10:00', booking_state: 'pending', customer_bike_note: 'Blue Trek road bike' });
   expect(job.question_answers).toMatchObject([{ serviceId, wording: QUESTION, kind: 'choice', answer: 'Squeaking' }]);
   const customer = await runWithShop(shop!.id, () => prepare(
-    'SELECT c.name, c.update_channel FROM customers c JOIN workshop_jobs w ON w.customer_id = c.id WHERE w.id = ?',
+    'SELECT c.name, c.update_channel, c.service_reminders, c.review_requests, c.reminders_said_yes_via FROM customers c JOIN workshop_jobs w ON w.customer_id = c.id WHERE w.id = ?',
   ).get(job.id));
-  expect(customer).toMatchObject({ name: 'Gina Guest', update_channel: 'sms' });
+  expect(customer).toMatchObject({ name: 'Gina Guest', update_channel: 'sms', service_reminders: true, review_requests: true, reminders_said_yes_via: 'booking' });
   const photos = await runWithShop(shop!.id, () => prepare(
     'SELECT storage_key, content_type, from_customer FROM workshop_job_attachments WHERE workshop_job_id = ?',
   ).all(job.id));

@@ -2624,6 +2624,45 @@ screens['job-book-in'] = buildJobPage({
 });
 keepDesktopSeq('job-book-in');
 
+// The bike tag, printed through the browser for now, like receipts (Jack, 21
+// Oct, docs/decisions/2026-10-21-bike-tag.md: "1: build the bike tag at
+// book-in, printed through the browser for now like receipts"). The browser
+// can't say whether a tag came out, so the strip has Print bike tag where
+// job-book-in has the print agent's "Bike tag sent · Acknowledged". Drawn for
+// Jack's approval, 21 Oct.
+// Jack, 21 Oct (approving with changes): "move the print tag button to the
+// top right where the three boxes are and just have the button instead of
+// the banner". So no strip: a printer button joins the customer row's icon
+// buttons once the bike is in the shop.
+const withPrintTagButton = (html) => html.replace(/<button type="button" aria-label="Message Maya Patel"/, (m) => `<button type="button" aria-label="Print bike tag" title="Print bike tag" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon('printer', 18)}</button>${m}`);
+// Built without moving the counters that name the hover styles, so every
+// board after it keeps its class names (fresh review, 21 Oct).
+const seqsBefore = [hoverSeq, devSeq, requestConnectorSeq];
+const bookedIn = buildJobPage({
+  status: 'Booked in', tone: 'blue',
+  touch: {
+    footer: (size) => `${button('Send quote', { variant: 'default', block: true, href: `job-quote-${size}.dc.html` })}${button('Start work', { variant: 'primary', block: true, href: `job-mechanic-${size}.dc.html` })}`,
+  },
+  desktop: {
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: 'Booked in', bikeHere: true,
+    lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
+    footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
+  },
+});
+[hoverSeq, devSeq, requestConnectorSeq] = seqsBefore;
+screens['job-book-in-print'] = Object.fromEntries(Object.entries(bookedIn).map(([k, v]) => [k, withPrintTagButton(v)]));
+// The printed tag: the job number large, its barcode (Workshop day 4: Code
+// 128, as the product stickers), the customer and the bike, on a small label
+// or the top of a page. Nothing else: no prices, no work. Approved 21 Oct as
+// a stand-in: a template builder for receipts and tags comes later (Jack).
+const bikeTagPaper = (w, h, pad) => `<div style="width: ${w}px; height: ${h}px; box-sizing: border-box; padding: ${pad}px; display: flex; justify-content: center; align-items: flex-start; background: ${C.bg}; overflow: hidden">
+<article aria-label="Printed bike tag" style="width: 312px; box-sizing: border-box; padding: 14px 16px; background: #ffffff; box-shadow: 0 2px 10px rgba(28,30,25,0.18); display: flex; flex-direction: column; align-items: center; gap: 6px; color: #111111; text-align: center">
+<strong style="font-family: ${MONO}; font-size: 26px; letter-spacing: 1px">WH-1042</strong>${barcode128('WH-1042', 260, 44)}<span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px">Trek Domane AL 3 · green</span>
+</article></div>`;
+screens['job-bike-tag'] = { desktop: bikeTagPaper(1440, 900, 40), tablet: bikeTagPaper(TW, TH, 40), phone: bikeTagPaper(390, 844, 16) };
+
 // 11. job-quote — "Job · quote"; the quote (left column) is in edit mode on
 // tablet/phone. Desktop: the four lines pending approval, "Send quote" both
 // in the table toolbar and the footer.
@@ -2697,6 +2736,71 @@ export const quoteJobBoards = (stage = 'build') => {
   });
 };
 
+// ---------- "Use my phone" for a line's photo, for Jack to approve ----------
+// Walk-through 8, decision 6 (docs/decisions/2026-10-03-ux-walkthrough-8.md):
+// on a desktop, a quote line's Add photo offers "Choose a file" and "Use my
+// phone"; Use my phone shows a code to scan that opens that one line's photo
+// step on the phone, with no sign-in. Drawn 23 Oct on the quote being built
+// (dq-job-quote), before the pads' photo was added: Add photo for Shimano
+// brake pads, which then reads "1 photo" as dq-job-quote draws it. Staff
+// side at desktop only (tablet and phone go straight to the camera or file
+// picker, as today); the page the code opens at phone size only.
+const LINES_PHOTO_NONE = LINES_QUOTE_BUILD.map((l) => (l.work === WORK_LINE_PADS.work ? { ...l, photos: 0 } : l));
+const photoJobDesktop = (lines) => buildJobPageDesktop({
+  status: 'Quoting', tone: 'purple',
+  customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: 0, notedCount: 0,
+  leftStatus: 'Quoting', bikeHere: true,
+  lines, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: true,
+  totalBadge: badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
+  footer: button('Send quote', { variant: 'primary', block: true }),
+});
+// The code: a placeholder box, as the drawings' other unknowns.
+const QR_BOX = `<div role="img" aria-label="A code to scan with your phone’s camera" style="align-self: center; width: 208px; height: 208px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 2px dashed ${C.input}; background: ${C.mutedBg}; font-family: ${MONO}; font-size: 15px; color: ${C.muted}">[QR code]</div>`;
+const PHOTO_PHONE_TITLE = 'Add a photo from your phone';
+const PHOTO_PHONE_SUB = 'Shimano brake pads · WH-1042';
+function photoPhoneDialog(added) {
+  // Done goes back to the job page, the pads now with their photo; Cancel and
+  // Close while waiting go back to the page the choice was made on.
+  const head = dialogHeader(PHOTO_PHONE_TITLE, added ? 'dq-job-quote-desktop.dc.html' : '#', PHOTO_PHONE_SUB, 'photo-phone-title');
+  const body = added
+    ? `<div role="status" style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 20)}Photo added</div>
+<div style="align-self: center; width: 208px; height: 156px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; font-size: 13px; color: ${C.muted}; text-align: center">[Photo from your phone]</div>
+${note('It’s on Shimano brake pads now, and the code no longer works.', 14)}`
+    : `${txt('Scan this code with your phone’s camera. It opens the photo step for Shimano brake pads on WH-1042.', 15)}
+${QR_BOX}
+${note('Works for 15 minutes, for this photo only. No sign-in needed.', 14)}
+<div role="status" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: ${C.muted}">${icon('phone', 16)}Waiting for the photo…</div>
+${note(`No camera app? Open ${mono('[link]')} on your phone.`, 13)}`;
+  const foot = added
+    ? button('Done', { variant: 'primary', href: 'dq-job-quote-desktop.dc.html' })
+    : button('Cancel', { variant: 'default' });
+  return `${head}${dialogBody(body, 20, 14)}<div style="flex-shrink: 0; padding: 14px 20px; border-top: 1px solid ${C.border}; display: flex; justify-content: flex-end">${foot}</div>`;
+}
+screens['job-photo-choice'] = { desktop: photoJobDesktop(LINES_PHOTO_NONE.map((l) => (l.work === WORK_LINE_PADS.work ? { ...l, photoMenu: 'job-photo-phone-desktop.dc.html' } : l))) };
+screens['job-photo-phone'] = { desktop: dialogOverlay(photoJobDesktop(LINES_PHOTO_NONE), DW, DH, photoPhoneDialog(false), { maxWidth: 460, labelledby: 'photo-phone-title' }) };
+// The same pop-up once the photo arrives, by itself (every device updating,
+// walk-through 8 decision 2); behind it the line already reads "1 photo".
+screens['job-photo-phone-added'] = { desktop: dialogOverlay(photoJobDesktop(LINES_QUOTE_BUILD), DW, DH, photoPhoneDialog(true), { maxWidth: 460, labelledby: 'photo-phone-title' }) };
+
+// The page the code opens, on the mechanic's phone: no sign-in, so nothing
+// about the customer beyond the job number, the bike and the line (no name,
+// no phone number). Laid out as Wheelhouse's own full-page messages on a
+// phone (signin.mjs centred()), with the shop's name at the top and no logo.
+const photoStepPage = (inner) => `<div style="position: relative; width: ${PW}px; height: ${PH}px; box-sizing: border-box; padding: 28px 20px; display: flex; flex-direction: column; gap: 28px; background: ${C.panel}; overflow: hidden">
+<div style="font-size: 18px; font-weight: 700">${SHOP}</div>
+<main style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; gap: 18px">${inner}</main>
+</div>`;
+const roundIcon = (name, bg, ink) => `<span style="display: inline-flex; width: 48px; height: 48px; border-radius: 999px; align-items: center; justify-content: center; background: ${bg}; color: ${ink}">${icon(name, 24)}</span>`;
+const PHOTO_STEP_LINE = `<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 600">${mono('WH-1042')} · Trek Domane AL 3</span><span style="font-size: 14px; color: ${C.muted}">Rear pads worn — replacing</span></div>`;
+screens['phone-photo-ready'] = { phone: photoStepPage(`${h1('Add a photo for Shimano brake pads', 24)}${PHOTO_STEP_LINE}
+<div style="flex-grow: 1"></div>
+<div style="display: flex; flex-direction: column; gap: 10px">${button('Take a photo', { variant: 'primary', block: true, iconName: 'camera', href: 'phone-photo-check-phone.dc.html' })}${button('Choose from your photos', { variant: 'default', block: true })}</div>`) };
+screens['phone-photo-check'] = { phone: photoStepPage(`${h1('Check the photo', 24)}${p('For Shimano brake pads on WH-1042.')}
+<div role="img" aria-label="The photo you just took" style="flex-grow: 1; min-height: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; font-size: 14px; color: ${C.muted}; text-align: center">[The photo you just took]</div>
+<div style="display: flex; flex-direction: column; gap: 10px">${button('Use this photo', { variant: 'primary', block: true, href: 'phone-photo-done-phone.dc.html' })}${button('Take another', { variant: 'default', block: true })}</div>`) };
+screens['phone-photo-done'] = { phone: photoStepPage(`${roundIcon('check', C.okBg, C.successInk)}<div role="status" style="display: flex; flex-direction: column; gap: 10px">${h1('Photo added to WH-1042', 24)}${p('It’s on the computer now, under Shimano brake pads. You can close this page.')}</div>`) };
+screens['phone-photo-expired'] = { phone: photoStepPage(`${roundIcon('alert', C.warnBg, C.warnInk)}${h1('This code has expired or has already been used', 24)}${p('Make a new one on the computer.')}`) };
+
 
 // 12. job-mechanic — "Job · in the workshop (mechanic)"; the worked example
 // (decision 40's base board, job-final-2 itself) — close → diary-mechanic;
@@ -2758,6 +2862,55 @@ screens['job-finished'] = buildJobPage({
   },
 });
 keepDesktopSeq('job-finished');
+
+// Don't close things by themselves (Jack, 24 Oct,
+// docs/decisions/2026-10-24-morning-questions.md answer 9; the switch is
+// Your settings › Accessibility, app-map.mjs ys-wait): with it on, "Bike
+// ready" doesn't go after a minute. The strip says it is waiting, with Send
+// now and Undo, and the server holds the message until one is pressed. After
+// Send now the strip says it was sent, as the waiting-for-parts strip says
+// its "New ready date" was; nothing to undo then. Drawn for Jack's approval.
+// The same strip as job-finished's (finishedStripCompact), only its words
+// and buttons changed; built without moving the counters that name the hover
+// styles, so every board after it keeps its class names (as job-deposit).
+const READY_WAITING = 'Alex marked it ready at 15:30. “Bike ready” to Maya by text is waiting until you press Send now.';
+const READY_SENT_NOW = '“Bike ready” sent to Maya by text · [time]';
+const SEND_NOW_BTN = (sz = 'sm') => button('Send now', { variant: 'default', size: sz });
+const readyWaitingText = (f) => `<span role="status" style="font-size: ${f}px">Alex marked it ready at ${jpMono('15:30')}. “Bike ready” to Maya by text is waiting until you press Send now.</span>`;
+const readySentText = (f) => `<span role="status" style="font-size: ${f}px">Alex marked it ready at ${jpMono('15:30')}. <span style="font-weight: 600">“Bike ready” sent to Maya by text · ${jpMono('[time]')}</span></span>`;
+function finishedWaitStrip() {
+  return jpPanel(`${jpRow(`${readyWaitingText(13)}<span style="flex-grow: 1"></span>${SEND_NOW_BTN()}${UNDO_BTN()}`, 10)}`, '', 6, 0);
+}
+function finishedSentStrip() {
+  return jpPanel(`${jpRow(readySentText(13), 10)}`, '', 6, 0);
+}
+const finishedWaitPhone = () => phoneStagePanel(`${readyWaitingText(14)}<div style="display: flex; gap: 8px">${SEND_NOW_BTN('default')}${UNDO_BTN('default')}</div>`);
+const finishedSentPhone = () => phoneStagePanel(readySentText(14));
+const finishedVariant = (strip, phoneTop) => buildJobPage({
+  status: 'Finished', tone: 'green',
+  touch: {
+    footer: (size) => `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Opens the till with this job’s lines.', size === 'phone' ? 13 : 12)}`,
+    stageTop: () => strip(), phoneTop,
+  },
+  desktop: {
+    stageTop: strip(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Finished', bikeHere: true,
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Opens the till with this job’s lines.', 12)}`,
+  },
+});
+{
+  const seqs = [hoverSeq, devSeq, requestConnectorSeq];
+  screens['job-finished-wait'] = finishedVariant(finishedWaitStrip, finishedWaitPhone);
+  screens['job-finished-sent'] = finishedVariant(finishedSentStrip, finishedSentPhone);
+  [hoverSeq, devSeq, requestConnectorSeq] = seqs;
+  for (const [id, said] of [['job-finished-wait', READY_WAITING], ['job-finished-sent', READY_SENT_NOW]]) {
+    for (const [size, html] of Object.entries(screens[id])) if (!html.replace(/<[^>]+>/g, '').includes(said)) throw new Error(`${id} ${size}: the Bike ready line not found`);
+  }
+}
 
 screens['job-collection'] = buildJobPage({
   status: 'Collecting', tone: 'green',
@@ -3029,7 +3182,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-entered', 'new-job-day', 'job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired', 'job-finished-wait', 'job-finished-sent', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -3048,7 +3201,7 @@ export const ROWS = [
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-offer-pick', 'request-offer', 'request-offered', 'request-offered-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-entered', 'new-job-day'] },
-  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
+  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-book-in-print', 'job-bike-tag', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'job-photo-choice', 'job-photo-phone', 'job-photo-phone-added', 'phone-photo-ready', 'phone-photo-check', 'phone-photo-done', 'phone-photo-expired', 'job-finished-wait', 'job-finished-sent'] }, // Use my phone (walk-through 8, decision 6) and Don't close things by themselves (24 Oct, answer 9) appended, so no board moves
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },
 ];
@@ -3100,8 +3253,81 @@ screens['job-collection-ticks'] = jobVariant('Collecting', 'green', collectionSt
 function collectedStripCompact() {
   return jpPanel(`${jpRow(`${badge('Collected', 'grey')}<span style="font-size: 13px; font-weight: 700">[time] · handed over by Jo Taylor</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Paid online · [date]</span>`, 8)}`, '', 6, 3);
 }
-const undoFooter = (size) => `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-grow: 1; min-height: 48px; padding: 4px 6px 4px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}Collected · the job is closed</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>`;
+const undoBar = (said) => `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-grow: 1; min-height: 48px; padding: 4px 6px 4px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}${said}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>`;
+const undoFooter = () => undoBar('Collected · the job is closed');
 screens['job-collected'] = jobVariant('Collected', 'grey', collectedStripCompact, () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Collected', 'grey')}<span style="font-size: 15px; font-weight: 700">[time]</span></div><span style="font-size: 13px; color: ${C.muted}">Handed over by Jo Taylor</span>`), undoFooter);
+
+// Deposits on the job (Jack, 24 Oct, docs/decisions/2026-10-24-morning-questions.md,
+// Deposits answers 2, 3 and 5). Drawn for Jack's approval, for journey 3's
+// canvas (bk-staff-deposit…); not rows of journey 12's.
+//   2: "the job page shows 'Deposit paid £[deposit]' with 'Refund the
+//      deposit' and a reason, at any stage": a strip at the top of the job,
+//      as the payment strips are, with the refund pop-up over it.
+//   3: a no-show keeps the deposit, marked by staff with "Didn't come" on
+//      the job; staff can still refund it by hand.
+//   5: the refund wording is "within 5 to 10 working days".
+// WH-1042 is drawn Expected (job-overview's page), the stage a booking's
+// deposit is paid at. Built without moving the counters that name the hover
+// styles, so every board after it keeps its class names (as job-book-in-print).
+const DEPOSIT_REFUND_NOTE = 'It goes back to the card they paid with, within 5 to 10 working days.';
+const depositRefundButton = (size) => button('Refund the deposit', { variant: 'default', size: size === 'desktop' ? 'sm' : 'default' });
+// paid: Refund offered. refunded: no button. kept (a no-show): Refund still offered.
+const DEPOSIT_LINE = {
+  paid: ['Deposit paid', 'green', '[date]'],
+  refunded: ['Deposit refunded', 'grey', '[date] · [reason]'],
+  kept: ['Deposit kept', 'grey', 'Didn’t come · marked by Jo Taylor · [date]'],
+};
+function depositStrip(kind, size = 'desktop', lead = '') {
+  const [head, tone, side] = DEPOSIT_LINE[kind];
+  const action = kind === 'refunded' ? '' : depositRefundButton(size);
+  return jpPanel(`${lead}${jpRow(`${badge(head, tone)}<span style="font-size: 13px; font-weight: 700">${jpMono('£[deposit]')}</span><span style="font-size: 12px; color: ${C.muted}">· ${side}</span><span style="flex-grow: 1"></span>${action}`, 8)}`, '', 6, 3);
+}
+function depositPhoneTop(kind, lead = '') {
+  const [head, tone, side] = DEPOSIT_LINE[kind];
+  return phoneStagePanel(`${lead}<div style="display: flex; align-items: center; gap: 8px">${badge(head, tone)}<span style="font-size: 15px; font-weight: 700">${jpMono('£[deposit]')}</span></div><span style="font-size: 13px; color: ${C.muted}">${side}</span>${kind === 'refunded' ? '' : `<div>${depositRefundButton('phone')}</div>`}`);
+}
+// Answer 3: the booked day has gone and the bike never came in. One tap on
+// "Didn't come" marks it, with Undo for a few minutes, as Collected has.
+const notComeLead = (size) => size === 'phone'
+  ? `<div style="display: flex; align-items: center; gap: 8px">${badge('Not come in', 'amber')}</div><span style="font-size: 14px">Booked for ${jpMono('Thu 17 Sep · 11:30')} · the bike hasn’t come in</span>`
+  : jpRow(`${badge('Not come in', 'amber')}<span style="font-size: 13px; font-weight: 600">Booked for ${jpMono('Thu 17 Sep · 11:30')} · the bike hasn’t come in</span>`, 8);
+const bookInFooter = (size) => button('Book in', { variant: 'primary', block: true, href: `job-book-in-${size}.dc.html` });
+const notComeFooter = (size) => `${button('Didn’t come', { variant: 'default', block: true })}${bookInFooter(size)}`;
+const didntComeFooter = () => undoBar('Marked Didn’t come · the deposit is kept');
+const expectedWithDeposit = ({ status = 'Expected', tone = 'blue', strip, phoneTop, footer }) => withJobExpected('WH-1042', () => buildJobPage({
+  status, tone,
+  touch: { footer, stageTop: strip, phoneTop },
+  desktop: {
+    stageTop: strip('desktop'),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_NONE,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: status, bikeHere: false,
+    lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
+    footer: footer('desktop'),
+  },
+}));
+// The refund pop-up: the whole deposit, a reason (needed), where it goes.
+function depositRefundDialog(size, back) {
+  const fact = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; min-height: 40px; align-items: center; border-top: 1px solid ${C.border}; font-size: 14px"><span>${esc(k)}</span><span style="font-weight: 600">${v}</span></div>`;
+  const reason = field('Reason (needed)', { id: `deposit-reason-${size}`, value: '[reason]' }).replace('<input ', '<input required aria-required="true" ');
+  return `${dialogHeader('Refund the deposit', back, 'Maya Patel · Standard service · WH-1042', 'deposit-refund-title', size)}
+${dialogBody(`<div style="display: flex; flex-direction: column; border-bottom: 1px solid ${C.border}">${fact('The whole deposit, paid [date]', jpMono('£[deposit]'))}</div>${reason}${note(DEPOSIT_REFUND_NOTE, 14)}`)}
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid ${C.border}">${button('Cancel', { variant: 'ghost', href: back })}${button('Refund £[deposit]', { variant: 'primary' })}</div>`;
+}
+{
+  const seqs = [hoverSeq, devSeq, requestConnectorSeq];
+  screens['job-deposit'] = expectedWithDeposit({ strip: (size) => depositStrip('paid', size), phoneTop: () => depositPhoneTop('paid'), footer: bookInFooter });
+  screens['job-deposit-refunded'] = expectedWithDeposit({ strip: (size) => depositStrip('refunded', size), phoneTop: () => depositPhoneTop('refunded'), footer: bookInFooter });
+  screens['job-not-come'] = expectedWithDeposit({ strip: (size) => depositStrip('paid', size, notComeLead(size)), phoneTop: () => depositPhoneTop('paid', notComeLead('phone')), footer: notComeFooter });
+  screens['job-didnt-come'] = expectedWithDeposit({ status: 'Didn’t come', tone: 'grey', strip: (size) => depositStrip('kept', size), phoneTop: () => depositPhoneTop('kept'), footer: didntComeFooter });
+  [hoverSeq, devSeq, requestConnectorSeq] = seqs;
+  const back = (size) => `job-deposit-${size}.dc.html`;
+  screens['job-deposit-refund'] = {
+    desktop: dialogOverlay(screens['job-deposit'].desktop, DW, DH, depositRefundDialog('desktop', back('desktop')), { maxWidth: 520, labelledby: 'deposit-refund-title' }),
+    tablet: dialogOverlay(screens['job-deposit'].tablet, TW, TH, depositRefundDialog('tablet', back('tablet')), { maxWidth: 520, labelledby: 'deposit-refund-title' }),
+    phone: dialogOverlay(screens['job-deposit'].phone, PW, PH, depositRefundDialog('phone', back('phone')), { pad: 16, maxWidth: 360, labelledby: 'deposit-refund-title' }),
+  };
+}
 
 // Journey 13 decision 2 (30 Sep): a part a job is waiting for gets flagged
 // when it's booked in. The job stays "Waiting for parts" until someone

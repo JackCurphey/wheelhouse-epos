@@ -307,6 +307,17 @@ def('till-receipt-print', () => overlay(() => tillPage(leftSide(), jobBasket()),
 <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 4px; text-align: center"><span style="display: inline-flex; width: 64px; height: 64px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 32)}</span>${mono(money(WORK_TOTAL_APPROVED), 'font-size: 30px')}</div>
 <div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('close', 'No receipt', true)}</div>
 <p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)));
+// Don't close things by themselves (Jack, 24 Oct, morning questions answer
+// 9; the switch is Your settings › Accessibility, app-map.mjs ys-wait): with
+// it on, Paid doesn't start the next sale after 5 seconds; it waits for
+// "Start next sale". till-receipt-print's box, with Start next sale in No
+// receipt's place (one press, as No receipt is today) and the countdown
+// line saying it waits. Print prints and the box stays, so a receipt is
+// Print then Start next sale. Drawn for Jack's approval.
+def('till-receipt-wait', () => overlay(() => tillPage(leftSide(), jobBasket()), dialog('paid-title', 'Paid', `Card · ${money(WORK_TOTAL_APPROVED)} · Sale ${mono('[n]')}`, `
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 4px; text-align: center"><span style="display: inline-flex; width: 64px; height: 64px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 32)}</span>${mono(money(WORK_TOTAL_APPROVED), 'font-size: 30px')}</div>
+<div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('basket', 'Start next sale', true)}</div>
+<p role="status" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">The next sale waits until you press Start next sale.</p>`, '', 560)));
 // The printed receipt, on an 80 mm till roll or the top of an A4 page. The
 // contents follow the receipt email's (collect.mjs receiptBody): the shop's
 // name, the sale number, when, the job, the lines and how it was paid, then
@@ -656,6 +667,7 @@ export const TITLES = {
   'till-pay-split': 'Split payment — part paid, the rest by card',
   'till-receipt': 'Paid — receipt choices, closes by itself',
   'till-receipt-print': 'Paid — Print or No receipt, for now',
+  'till-receipt-wait': 'Paid, Don’t close things by themselves on — waits for Start next sale', // 24 Oct, answer 9
   'till-receipt-paper': 'The printed receipt',
   'till-receipt-paper-checked': 'The printed receipt, showing who signed the job off',
   'till-receipt-paper-details': 'The printed receipt, with the shop’s address, phone and VAT number',
@@ -702,7 +714,7 @@ export const TITLES = {
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-serving-pills', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split', 'till-receipt-print', 'till-receipt-paper', 'till-receipt-paper-checked', 'till-receipt-paper-details'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split', 'till-receipt-print', 'till-receipt-wait', 'till-receipt-paper', 'till-receipt-paper-checked', 'till-receipt-paper-details'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit', 'till-pay-link', 'till-pay-link-waiting', 'till-pay-link-paid'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },
   // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.

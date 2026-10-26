@@ -19,6 +19,11 @@ export function linkPath(shopSlug, code) {
   return `/book/${shopSlug}/booking/${code}`;
 }
 
+// Use my phone's page for a quote line's photo (openspec/changes/use-my-phone).
+export function photoCodePath(shopSlug, code) {
+  return `/book/${shopSlug}/photo/${code}`;
+}
+
 // Both dates are YYYY-MM-DD. Worked out from job_date at read time, so moving a
 // booking moves its link's expiry with it.
 export function isLinkExpired(jobDate, today) {
@@ -26,6 +31,21 @@ export function isLinkExpired(jobDate, today) {
   if (Number.isNaN(last.getTime())) return true;
   last.setUTCDate(last.getUTCDate() + LINK_DAYS);
   return today > last.toISOString().slice(0, 10);
+}
+
+// When a link stops working (build-plan Q8, Jack 3 Oct; booking page stages,
+// 21 Oct): 30 days after collection; a bike still in the shop keeps its link;
+// otherwise 30 days after the booked date (the bike never came in). A bike
+// collected before collection was recorded counts from its booked date.
+// collectedOn is the shop's own date of collection. reason says which, for the
+// expired page (cp-expired, bk-expired).
+export function linkExpiry({ jobDate, custodyState, collectedOn }, today) {
+  if (custodyState === 'in_shop') return { expired: false, reason: null };
+  const collected = custodyState === 'collected';
+  const from = collected && collectedOn ? collectedOn : jobDate;
+  return isLinkExpired(from, today)
+    ? { expired: true, reason: collected ? 'collected' : 'never_came_in' }
+    : { expired: false, reason: null };
 }
 
 const BOOKING_STAGES = {

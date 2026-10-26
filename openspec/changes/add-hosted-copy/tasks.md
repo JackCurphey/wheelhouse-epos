@@ -31,10 +31,21 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   - each refusal comes before any migration runs and names the setting;
   - it starts with none of these.
 - [x] 2.2 Add the guard before `runMigrations()` in the start-up order, with the known real-key list starting at Twilio. Verify the 2.1 tests pass
-- [ ] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off
-- [ ] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
-- [ ] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail
-- [ ] 2.6 Verify `npm test` and `npm run test:browser` pass, then get a fresh review
+- [x] 2.3 Write a test first that `POST /api/shopify/connection`, with the setting on, is refused with "This is a test copy of Wheelhouse: connecting Shopify is switched off." and saves nothing. Watch it fail, then add the refusal in `server/routes/website.js`. Verify it passes, and that the existing Shopify tests still pass with the setting off. Refused with 403 before the request is read (`tests/hosted-copy-switches.test.js`); watched failing first with 400 "Could not connect"
+- [x] 2.4 Write a test first that `/healthz` returns `commit` from `WHEELHOUSE_COMMIT`, with no `commit` when it is unset. Watch it fail, then add it and verify it passes
+- [x] 2.4a Write a test first that the 503 `/healthz` gives when the database is down also carries `commit`. Watch it fail, then add it and verify it passes. Extended the database-down test in `tests/server-lifecycle.test.js`; watched failing first with `commit` undefined on the 503
+- [x] 2.5 Add a test that, with the setting on and `NODE_ENV=production`, a pinned `WHEELHOUSE_TEST_CLOCK` has no effect. This checks the clock's existing behaviour (`server/clock.js:16`), so it is expected to pass straight away. Confirm it is really testing that by removing line 16 briefly and watching it fail. Seen: without line 16 it failed with "expected the real time, got 2026-09-01T06:00:00.000Z"; line 16 put back unchanged
+- [x] 2.6 Verify `npm test` and `npm run test:browser` pass, then get a fresh review. The fresh review (24 Oct, after Jack took WP-0.5 over from Mark) found eight problems. 2.7 to 2.11 fix five of them. The other three are handled elsewhere:
+  - the copy's address in `STATUS.md` goes in the day's status pull request;
+  - loading the test shop on the copy is 3.6;
+  - Mark's key on the server is 3.3.
+
+  With 2.7 to 2.11 in, `npm test` has no failures other than the 4 that need `ADMIN_DATABASE_URL`, and `npm run test:browser` passes 111 of 111 (24 Oct).
+- [x] 2.7 Tests first, then `scripts/hosting/pick-deploy.sh`: each run deploys the newest `main` commit whose Tests passed, and skips when that one, or a newer one, is running. This way a run that GitHub cancels while waiting doesn't leave its merge off the copy. Tested against a real git history. Tests in `tests/hosting-deploy.test.js` (a real three-commit history), watched failing first. Swapping the ancestor check turns two of them red
+- [x] 2.8 Tests first, then `scripts/hosting/wait-healthy.sh`: it waits at most 5 minutes in all for `/healthz` to answer `ok` with the commit, tested against a pretend `curl`. The workflow also starts the previous version when the job is cancelled or times out after the new one went on. Tests against a pretend `curl` watched failing first. Accepting the old version's answer, ignoring the clock, or rolling back on failure alone each turn a test red
+- [x] 2.9 Tests first: `setup.sh` forgets the server's host key only when it has just made a new server. On a re-run, a changed key is refused rather than trusted. Watched failing first (the existing server's key was forgotten). Forgetting it every run again turns it red
+- [x] 2.10 Tests first: running setup again records what it replaced as the version to go back to, only when that was a downloaded image. When it was the image built on the server, it leaves nothing to go back to, because that image is rebuilt and would no longer match its commit. Watched failing first. Never keeping a way back, or keeping the stale record, each turn it red
+- [x] 2.11 The guard test proves the order. With a database the server can't reach, the guard still refuses, naming the setting, without ever trying to connect. It passed straight away, because the guard was already first. Moving the guard after the migrations turns it red
 
 ## 3. The host and the first deploy (Mark; waits for Jack's yes on #137)
 
@@ -47,23 +58,42 @@ Each of groups 1–3 is about one pull request (aim: 250–600 changed lines).
   - the app started from `main`, built on the server, behind Caddy.
 
   Verify point-in-time restore is available on the cluster, that migrations and row-level security work under the app's login, and that `/healthz` answers `ok` over HTTPS. Record the database address and port used, and why, in `docs/runbooks/hosted-copy.md`
-- [ ] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
+- [x] 3.4 (after group 2) Add `.github/workflows/deploy-hosted-copy.yml` as Decision 3 describes:
   - it starts on `workflow_run` and only deploys when `Tests` succeeded on a `push` to this repository's `main`;
   - it builds the image, pushes it to GitHub's container registry (package public) tagged with `head_sha`, and starts it on the server over SSH with a deploy-only key checked against a stored `known_hosts` entry, in one concurrency group, skipping an older commit;
   - it records the time before each deploy;
   - it waits for `/healthz` to show the new commit, and fails and starts the previous image otherwise.
 
   Verify that a merge deploys and `/healthz` shows its commit, and that a branch push or pull request deploys nothing
+
+  Built 23 Oct (Jack, on Mark's request): the workflow, `scripts/hosting/deploy.sh` (run over SSH by a key tied to it alone), the setup script writing GitHub's settings, and the runbook's "Automatic updates" (tests: `tests/hosting-deploy.test.js`, `tests/hosting-scripts.test.js`). Seen 23 Oct: the merge of #427 (`f2b70dc`) deployed itself at 12:04 BST, every step green, and `/healthz` answered `{"status":"ok","commit":"f2b70dce…"}`; the package downloads without a password. and #428's pull request deployed nothing (its run skipped, no steps ran, the copy stayed on `f2b70dc`)
 - [ ] 3.5 On the hosted copy, deploy by hand a scratch commit with a deliberately failing migration. Verify that the deploy is reported as failed and that the previous version is serving within [n] minutes, and write down what was seen and how long it took
-- [ ] 3.6 (after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
+- [x] 3.6a The loader can run on the hosted copy (fresh review, 24 Oct: the image doesn't carry the drawings it read). Its data comes from `scripts/dev/test-shop-drawings.json`, a snapshot of the drawings that `tests/test-shop-snapshot.test.js` keeps exact. The image carries the loader and the snapshot, and the runbook's "Loading the test shop" says how to run it. The tests were watched failing first. Seen on 24 Oct: built the real image locally and ran the loader inside it against an empty scratch database. It loaded the shop with its 38 jobs, and a second run was refused, changing nothing
+- [x] 3.6b (Jack, 25 Oct, taking 3.6 from Mark) The "add a login" command (design 7, "No login"):
+  - tests first, each watched failing, cover adding an owner, and each refusal;
+  - the runbook's "Loading the test shop" says how to run it after the loader.
+
+  Verify with `npm test`, and by running it once against a scratch database.
+
+  Done 25 Oct. The tests failed first, and breaking the owner check made them
+  fail again. Seen against a scratch database: the loader loaded North Street
+  Cycles, the command added jack@curphey.com as its owner, and a second
+  owner was refused with exit 1, changing nothing.
+- [x] 3.6c (Jack, 25 Oct) A "remove a shop" command, so Jack can clear the shop he made at sign-up (his decision, 25 Oct) before loading the test shop:
+  - it uses the same deletion every test file's teardown uses, moved from `tests/helpers/testShop.js` to `server/remove-shop.js`;
+  - it says what it would remove until the shop's address is typed a second time.
+
+  Done 25 Oct. The tests failed first, and breaking the second-address check made them fail again.
+- [ ] 3.6 (Jack from 25 Oct; after group 2) Load the test shop, make Jack's test login, and send him the address and login privately, never in the repo. Tell him uploads aren't kept. From a phone, verify that signing in works, `http://` goes to `https://`, and sign-up without the code is refused
 
 ## 4. The way back (Mark; after group 3)
 
-- [ ] 4.1 In `docs/runbooks/hosted-copy.md`, write deploying, checking that `WHEELHOUSE_HOSTED_COPY=1` is set, rolling back with no migration, and rolling back with a migration in Decision 8's order. Verify each rollback by doing it once on the hosted copy and writing down the time
+- [x] 4.1 In `docs/runbooks/hosted-copy.md`, write deploying, checking that `WHEELHOUSE_HOSTED_COPY=1` is set, rolling back with no migration, and rolling back with a migration in Decision 8's order. Written for today's by-hand updates (the deploy workflow, 3.4, isn't built yet) and checked against `scripts/hosting/`; the restore details read `[to confirm …]` until 4.1b
+- [ ] 4.1b Verify each rollback by doing it once on the hosted copy and writing down the time in the runbook (split from 4.1 on 22 Oct, so 4.1's tick doesn't claim a run that hasn't happened; the hosted copy isn't set up yet)
 
 ## 5. The restore rehearsal (PL-3: Jack's hands, Mark's eyes)
 
-- [ ] 5.1 Mark writes the restore steps for Jack in plain English, in `docs/runbooks/hosted-copy.md`. Jack reads them and says they're clear
+- [x] 5.1 Mark writes the restore steps for Jack in plain English, in `docs/runbooks/hosted-copy.md`. Jack reads them and says they're clear. Written 24 Oct (Jack took WP-0.5 over): D step 2 now has the real `doctl` restore command, and the new section E is the rehearsal, step by step. Point-in-time restore over the last 7 days was checked against DigitalOcean's documentation and the cluster's daily backups (read-only, with Jack's yes). Jack read sections D and E on 24 Oct: "I've read runbook sections D and E: the restore steps are clear"
 - [ ] 5.2 Jack, with Mark watching, restores the database to a chosen moment into a new cluster, points a fresh copy at it, and opens a job. Record it in `docs/runbooks/<date>-restore-drill.md` with each step and its time. This task stays open ("blocked") until it is actually done
 - [ ] 5.3 Fill in the spec's `[n]` values from what was measured and agreed, then get a fresh review of the whole change against the spec
 

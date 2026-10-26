@@ -17,12 +17,58 @@ export const TEMPLATES = {
     subject: 'A quote to approve — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
   },
+  // One reminder when a quote has no answer, facts only (decision 7); wording
+  // approved by Jack, 22 Oct. Settings shows it under Quote to approve.
+  quote_reminder: {
+    name: 'Quote reminder',
+    when: 'Once, when a quote has had no answer for the hours the shop sets',
+    wording: 'Hi [Customer’s first name], a reminder from [Shop name]: the quote for more work on your [Bike] is still waiting for your answer. See it and say yes or no to each part: [Link to the quote] — no app or sign-in needed. Your repair · [Job number].',
+    subject: 'A reminder: your quote is waiting — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'Link to the quote', 'Job number'],
+  },
+  // Work within the customer's spending limit (Workshop day 41-43); wording
+  // approved by Jack, 22 Oct ("1: use the drafted wording").
+  work_within_limit: {
+    name: 'Work added within your limit',
+    when: 'When extra work fits the limit the customer set',
+    wording: 'Hi [Customer’s first name], we found a bit more to do on your [Bike] and went ahead, as it keeps your whole bill within the [Spending limit] limit you set. Added: [Work added], [Amount added]. See it here: [Link to the job] — no app or sign-in needed. Not what you wanted? Call [Shop phone]. Your repair · [Job number].',
+    subject: 'Work added to your repair — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Spending limit', 'Work added', 'Amount added', 'Link to the job', 'Shop phone', 'Job number', 'Shop name'],
+  },
+  // After staff record the customer's answer from a call (dq-record-answer);
+  // wording approved by Jack, 22 Oct. [What was agreed] is built from the
+  // quote: "Going ahead: …, £46.00. No thanks: …".
+  your_answers: {
+    name: 'Your answers',
+    when: 'When staff record the customer’s answer from a call',
+    wording: 'Hi [Customer’s first name], thanks for your answers about your [Bike]. [What was agreed] See it here: [Link to the job] — no app or sign-in needed. Your repair · [Job number].',
+    subject: 'Your answers — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'What was agreed', 'Link to the job', 'Job number', 'Shop name'],
+  },
+  // A staff reply to the customer's note (decision 3; ac-reply-text, as drawn).
+  shop_reply: {
+    name: 'Reply from the shop',
+    when: 'When staff reply to a customer’s note',
+    wording: '[Shop name] replied about your [Bike] ([Job number]): [The shop’s reply]. Replies to this number aren’t read — reply on your page: [Link to the job]',
+    subject: '[Shop name] replied about your repair',
+    tapIns: ['Shop name', 'Bike', 'Job number', 'The shop’s reply', 'Link to the job'],
+  },
   bike_ready: {
     name: 'Bike ready',
     when: 'When a job is marked ready',
     wording: 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
     subject: 'Your bike is ready — [Shop name]',
     tapIns: ['Customer’s first name', 'Bike', 'Job number', 'Amount to pay', 'Link to the job', 'Shop name', 'Opening hours'],
+  },
+  // One reminder when a ready bike isn't collected (collect and pay review
+  // item 4; WP-4.3), the wording drawn on cp-setting's pop-up. Queued at
+  // ready for the shop's days, and checked when it's due (engine.js).
+  bike_still_waiting: {
+    name: 'Bike still waiting',
+    when: 'When a ready bike isn’t collected after the days the shop sets',
+    wording: 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [What’s left to pay]. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].',
+    subject: 'Your bike is still waiting — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Shop name', 'What’s left to pay', 'Link to the job', 'Job number', 'Opening hours'],
   },
   request_received: {
     group: 'booking',
@@ -64,6 +110,18 @@ export const TEMPLATES = {
     subject: 'Your new date — [Shop name]',
     tapIns: [...BOOKING, 'New day and time', 'When to drop off'],
   },
+  // The second wording of Date change answered, "If the shop can't" (bk-msg-change,
+  // as drawn; Mark, 25 Oct, openspec/changes/date-change-declined-message). It is
+  // that row's second box, not a row of its own: its on/off and subject follow
+  // the row's.
+  date_change_declined: {
+    partOf: 'date_change_answered',
+    name: 'Date change answered',
+    when: 'When the shop can’t do a new date',
+    wording: 'Hi [Customer’s first name], [Shop name] can’t do [New day and time], so your booking stays on [Booked day and time]. See your booking: [Link to the booking]. Your repair · [Job number].',
+    subject: 'Your new date — [Shop name]',
+    tapIns: [...BOOKING, 'New day and time'],
+  },
   booking_cancelled: {
     group: 'booking',
     name: 'Booking cancelled',
@@ -72,12 +130,39 @@ export const TEMPLATES = {
     subject: 'Booking cancelled — [Shop name]',
     tapIns: BOOKING,
   },
+  // When a bike is due its next service (account and reminders decision 2):
+  // the wording as drawn (ac-reminder-wording); "Stop these: [link]" is added
+  // after it, so it can't be taken off. The email's subject isn't drawn
+  // (service-reminder-send design 8).
+  service_reminder: {
+    group: 'reminders',
+    name: 'Service reminder',
+    when: 'When a bike is due its next service — set on each service',
+    wording: 'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].',
+    subject: 'Your [Bike] is due its [Service] — [Shop name]',
+    tapIns: ['Customer’s first name', 'Bike', 'Service', 'Shop name', 'Link to book'],
+  },
+  // A review request after collection (account and reminders decision 5):
+  // off until the shop switches it on, with its review page; wording as drawn
+  // (ac-review-setting), with "Stop these" added after it. The email's
+  // subject isn't drawn.
+  review_request: {
+    group: 'reminders',
+    offUntilOn: true,
+    name: 'Review request',
+    when: 'After a bike is collected',
+    wording: 'Thanks for coming to [Shop name], [Customer’s first name]. If you have a minute, we’d love a review: [Link to review].',
+    subject: 'Thanks for coming to [Shop name]',
+    tapIns: ['Customer’s first name', 'Shop name', 'Link to review'],
+  },
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
-// The booking messages staff answers send (Jack, 20 Oct); Request received and
-// Booking cancelled come with the customer's side (Mark's booking server).
-export const LIVE_KEYS = ['quote_to_approve', 'bike_ready', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered'];
+// The booking messages staff answers send (Jack, 20 Oct), and from 21 Oct the
+// customer's side: Request received and Booking cancelled.
+// The service reminder joined 25 Oct (openspec/changes/service-reminder-send),
+// and the review request (openspec/changes/review-requests).
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
@@ -108,13 +193,16 @@ export async function templateFor(key) {
   const base = TEMPLATES[key];
   if (!base) throw new Error(`unknown message: ${key}`);
   const row = await prepare('SELECT enabled, wording, subject FROM message_templates WHERE key = ?').get(key);
+  // A second wording follows its row's switch and subject.
+  const parent = base.partOf ? await templateFor(base.partOf) : null;
   return {
     key,
     ...base,
-    enabled: row ? row.enabled : true,
+    // A message the shop must switch on itself (the review request) is off until it does.
+    enabled: parent ? parent.enabled : row ? row.enabled : !base.offUntilOn,
     wording: row?.wording ?? base.wording,
-    subject: row?.subject ?? base.subject,
-    changed: Boolean(row && (!row.enabled || row.wording !== null || row.subject !== null)),
+    subject: parent ? parent.subject : (row?.subject ?? base.subject),
+    changed: Boolean(row && (row.wording !== null || (!parent && (!row.enabled || row.subject !== null)))),
   };
 }
 

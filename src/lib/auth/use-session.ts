@@ -18,7 +18,8 @@ export type SessionUser = { id: number; name: string; email: string; isOwner: bo
 export type SessionShop = { name: string; slug: string };
 export type SessionState =
   | { status: 'loading' }
-  | { status: 'signed-out' }
+  // expired: the browser had a session that has run out (staff-signin-workos-screens design 2).
+  | { status: 'signed-out'; expired: boolean }
   | { status: 'error'; error: unknown }
   | { status: 'signed-in'; user: SessionUser; shop: SessionShop };
 
@@ -44,7 +45,10 @@ export async function resolveSession(): Promise<SessionState> {
     // Signed out is an ordinary answer to "who am I", not a failure. Anything
     // else is a real error and must not be disguised as signed-out, or an
     // outage silently becomes a login screen.
-    if (err instanceof ApiError && err.status === 401) return { status: 'signed-out' };
+    if (err instanceof ApiError && err.status === 401) {
+      const reason = (err.body as { reason?: unknown } | null)?.reason;
+      return { status: 'signed-out', expired: reason === 'expired' };
+    }
     throw err;
   }
 }

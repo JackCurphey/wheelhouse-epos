@@ -9,6 +9,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
+import { fakeJob } from '../helpers/fake-job.js';
 
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
@@ -19,13 +20,13 @@ const MECHANICS = [
 const SETTINGS = { openingHours: [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '18:00' })) };
 
 function job(over) {
-  return {
+  return fakeJob({
     id: 1, title: 'Brake service', reference: 'WH-1001', customerId: 5, customerName: 'Maya Patel', bikeId: 7, bikeLabel: 'Trek Domane',
     mechanicId: 11, mechanicName: 'Alex Morgan', jobDate: '2026-10-06', startTime: '10:00', endTime: '11:00', status: 'scheduled',
     bookingState: 'scheduled', custodyState: 'expected', workState: 'not_started', version: 3, notes: null, requested: null,
     cancelledBy: null, cancelledAt: null, cancellationSeenAt: null, changeDeclinedAt: null, orderId: null, orderStatus: null, orderTotal: null,
     createdAt: '2026-10-01T09:00:00Z', updatedAt: '2026-10-01T09:00:00Z', ...over,
-  };
+  });
 }
 
 const JOBS = [
@@ -46,6 +47,11 @@ const WAITING = {
   ],
 };
 
+// What Waiting for you returns; a test may swap it, and puts it back.
+let waitingReply = WAITING;
+// The person's own switches (Your settings); a test may turn Show status symbols on, and puts it back.
+const A11Y_OFF = { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+let a11yReply = { accessibility: A11Y_OFF };
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -67,7 +73,8 @@ function stubServer() {
     if (u.pathname === '/api/auth/me') return ok(OWNER);
     if (u.pathname === '/api/employees') return ok(MECHANICS);
     if (u.pathname === '/api/workshop-settings') return ok(SETTINGS);
-    if (u.pathname === '/api/workshop-waiting') return ok(WAITING);
+    if (u.pathname === '/api/workshop-waiting') return ok(waitingReply);
+    if (u.pathname === '/api/your-settings') return ok(a11yReply);
     if (u.pathname === '/api/workshop-jobs') {
       const [from, to] = [u.searchParams.get('start'), u.searchParams.get('end')];
       return ok([...JOBS, ...NEXT_WEEK].filter((j) => j.jobDate >= from && j.jobDate <= to));
@@ -105,6 +112,58 @@ test('a job sits in its own day, showing the bike and the job', async () => {
   assert.ok(has(tue.queryByText('Trek Domane')));
   assert.ok(has(tue.queryByText('Brake service')));
   assert.ok(has(tue.queryByText('Trek Domane, Brake service, Maya Patel, WH-1001, Expected, 10:00–11:00')));
+});
+
+// What a block shows first and second is the shop's choice (Workshop day 17,
+// 29; set-workshop-diary's Diary blocks): bike, then job title, by default.
+test('a block shows what the shop chose first and second', async () => {
+  Object.assign(SETTINGS, { blockFirst: 'customer', blockSecond: 'reference' });
+  try {
+    const { ui, within } = await openDiary('?date=2026-10-05', 'WH-1001');
+    const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
+    assert.ok(has(tue.queryByText('Maya Patel')));
+    assert.ok(has(tue.queryByText('WH-1001')));
+    assert.ok(!has(tue.queryByText('Brake service')));
+    // Its name for screen readers still says everything.
+    assert.ok(has(tue.queryByText('Trek Domane, Brake service, Maya Patel, WH-1001, Expected, 10:00–11:00')));
+  } finally {
+    delete SETTINGS.blockFirst;
+    delete SETTINGS.blockSecond;
+  }
+});
+
+test('on a phone a block shows the shop’s chosen lines too', async () => {
+  Object.assign(SETTINGS, { blockFirst: 'customer', blockSecond: 'reference' });
+  try {
+    const phone = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} });
+    const { ui } = await openDiary('?date=2026-10-06', 'WH-1001', phone);
+    assert.ok(has(ui.queryByText('Maya Patel')));
+    assert.ok(!has(ui.queryByText('Brake service')));
+  } finally {
+    delete SETTINGS.blockFirst;
+    delete SETTINGS.blockSecond;
+  }
+});
+
+// Storage slots (Workshop day 27): a block shows where the bike is kept on
+// its third line, where there's room, when the shop's slots are on.
+test('a block shows its storage slot on a third line, only with slots on', async () => {
+  const kept = JOBS.find((j) => j.reference === 'WH-1001');
+  Object.assign(kept, { custodyState: 'in_shop', storageSlotId: 3, storageSlotName: 'Hook 3' });
+  try {
+    SETTINGS.storageSlotsOn = false;
+    const off = await openDiary();
+    assert.ok(!has(off.within(off.ui.getByRole('group', { name: 'Tuesday 6 October' })).queryByText('Hook 3')));
+    off.cleanup();
+    shell.queryClient.clear();
+    uninstall();
+    SETTINGS.storageSlotsOn = true;
+    const { ui, within } = await openDiary();
+    assert.ok(has(await within(ui.getByRole('group', { name: 'Tuesday 6 October' })).findByText('Hook 3')));
+  } finally {
+    delete SETTINGS.storageSlotsOn;
+    Object.assign(kept, { custodyState: 'expected', storageSlotId: null, storageSlotName: null });
+  }
 });
 
 test('the week runs Monday to Sunday and is named in the toolbar', async () => {
@@ -217,6 +276,21 @@ test('the Day view\'s No time row leaves out other days\' jobs', async () => {
   fireEvent.click(ui.getByRole('tab', { name: 'Day' }));
   assert.ok(has(await ui.findByText('Wednesday 7 October')));
   assert.ok(ui.queryByText('Ribble CGR') === null);
+});
+
+test('a Waiting card shows the bike under the customer, and no line when there\'s no bike (waiting-bike)', async () => {
+  // Lena's card carries her bike; Sam's has none. Its own name, so the diary's blocks can't be mistaken for it.
+  waitingReply = { ...WAITING, items: [WAITING.items[0], { ...WAITING.items[1], bikeLabel: 'Orbea Vector 20' }] };
+  try {
+    const { ui, within } = await openDiary();
+    const col = within(await ui.findByRole('region', { name: 'Waiting for you (2)' }));
+    const lena = col.getByRole('button', { name: /Lena Fox/ });
+    assert.ok(lena.textContent.includes('Lena FoxOrbea Vector 20'), lena.textContent);
+    const sam = col.getByRole('button', { name: /Sam Reed/ });
+    assert.equal(sam.children.length, 3, 'Sam\'s card should be its label, name and detail, with no bike line');
+  } finally {
+    waitingReply = WAITING;
+  }
 });
 
 test('Waiting for you lists what needs an answer', async () => {
@@ -399,4 +473,31 @@ test('on an upright tablet, a card chosen from the sheet shows the chosen bar wi
   const bar = await ui.findByRole('status', { name: 'Chosen from Waiting for you' });
   assert.ok(bar.closest('[data-tablet-foot]') !== null, 'the bar sits at the foot of the page');
   assert.ok(has(within(bar).queryByRole('button', { name: "Open Lena Fox's request" })));
+});
+
+// Show status symbols (Your settings; decision 57; diary.mjs STATUS_SHAPE): off
+// to start, colour alone; on, a week block and the legend carry the status's shape.
+const shapeIn = (el) => el?.querySelector('[data-status-shape]')?.getAttribute('data-status-shape') ?? null;
+const blockOf = (ui, bike) => ui.getAllByText(bike).map((t) => t.closest('[title]')).find(Boolean);
+
+test('with Show status symbols on, each week block and the legend carry the status’s shape', async () => {
+  a11yReply = { accessibility: { ...A11Y_OFF, statusSymbols: true } };
+  try {
+    const { ui, waitFor } = await openDiary();
+    await waitFor(() => assert.equal(shapeIn(blockOf(ui, 'Trek Domane')), 'scheduled'));
+    const legend = ui.getByRole('list', { name: 'What the colours mean' });
+    assert.deepEqual([...legend.querySelectorAll('li')].map(shapeIn), ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled']);
+    assert.ok([...document.querySelectorAll('[data-status-shape]')].every((el) => el.getAttribute('aria-hidden') === 'true'), 'the shapes are hidden from screen readers, which hear the word');
+  } finally {
+    a11yReply = { accessibility: A11Y_OFF };
+  }
+});
+
+test('with Show status symbols off, the diary is colour alone, as before', async () => {
+  const { ui, waitFor } = await openDiary();
+  // Once the person's settings have come, so "off" isn't "not loaded yet".
+  await waitFor(() => assert.ok(calls.some((c) => c.includes('/api/your-settings'))));
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(blockOf(ui, 'Trek Domane'), 'the block is there');
+  assert.equal(document.querySelectorAll('[data-status-shape]').length, 0);
 });

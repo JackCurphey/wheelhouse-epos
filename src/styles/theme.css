@@ -195,10 +195,41 @@
   --modal-bg: #1f221b;
 }
 
+/* Larger text (Jack, 24 Oct answer 8; openspec/changes/larger-text): every
+   text size is on this one scale, which the person's Larger text switch
+   raises a step, 14 to 17, without zooming the page. */
+:root {
+  --wh-text-scale: 1;
+}
+html.wh-larger-text {
+  --wh-text-scale: calc(17 / 14);
+}
+
 /* `inline` keeps the variables live: the utility class emits var(--primary)
    / var(--accent) etc. at the use site, so the .dark block above - or a
    runtime style.setProperty() on <html> - still wins. */
 @theme inline {
+
+  /* The text scale (larger-text design 1): Tailwind's named sizes and each
+     fixed size the screens use, all times --wh-text-scale. */
+  --text-xs: calc(0.75rem * var(--wh-text-scale));
+  --text-sm: calc(0.875rem * var(--wh-text-scale));
+  --text-base: calc(1rem * var(--wh-text-scale));
+  --text-lg: calc(1.125rem * var(--wh-text-scale));
+  --text-xl: calc(1.25rem * var(--wh-text-scale));
+  --text-2xl: calc(1.5rem * var(--wh-text-scale));
+  --text-3xl: calc(1.875rem * var(--wh-text-scale));
+  --text-size-10: calc(10px * var(--wh-text-scale));
+  --text-size-11: calc(11px * var(--wh-text-scale));
+  --text-size-12-5: calc(12.5px * var(--wh-text-scale));
+  --text-size-13: calc(13px * var(--wh-text-scale));
+  --text-size-13-5: calc(13.5px * var(--wh-text-scale));
+  --text-size-15: calc(15px * var(--wh-text-scale));
+  --text-size-17: calc(17px * var(--wh-text-scale));
+  --text-size-22: calc(22px * var(--wh-text-scale));
+  --text-size-26: calc(26px * var(--wh-text-scale));
+  --text-size-30: calc(30px * var(--wh-text-scale));
+  --text-size-34: calc(34px * var(--wh-text-scale));
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -290,4 +321,13 @@
   body > *:not(#wh-print) { display: none !important; }
   #wh-print { display: block; }
   @page { margin: 4mm; }
+}
+
+/* Your settings › Accessibility (workshop day 57; openspec/changes/your-settings-accessibility).
+   Reduce motion: as the computer's own setting does. */
+html.wh-reduce-motion *, html.wh-reduce-motion *::before, html.wh-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

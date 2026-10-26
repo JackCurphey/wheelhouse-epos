@@ -1,7 +1,10 @@
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { PinnedRoom } from './frame.tsx';
 
 /**
  * The quote on the customer's booking link (journey 4; drawn by quoteCard,
@@ -13,10 +16,27 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
  */
 
 type QuoteLine = {
-  id: number; description: string; lineTotal: number; decision: 'pending' | 'approved' | 'declined';
-  need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedByName: string | null;
+  id: number; description: string; lineTotal: number; lineTotalPence: number; decision: 'pending' | 'approved' | 'declined';
+  need: 'needed' | 'optional'; reason: string | null; decidedVia: string | null; decidedAt?: string | null; decidedByName: string | null;
+  goesWithLineId?: number | null; without?: string | null; photoId?: number | null;
 };
-type Quote = { id: number; revision: number; state: string; sentAt: string | null; lines: QuoteLine[] };
+// mechanicName and each line's decidedByName come only with the shop's "Show
+// who signed off to customers" switch on; without them the card says "we"
+// (Jack, 22 Oct).
+type Quote = {
+  id: number; revision: number; state: string; sentAt: string | null; lines: QuoteLine[];
+  mechanicName?: string | null; customerFirstName?: string | null;
+  // What the customer answered on the job's earlier quotes (dq-quote-newer).
+  earlier?: { agreed: string[]; declined: string[] };
+  // Booked work plus earlier yeses, summed by the server (fresh review), and in pence.
+  agreedTotal?: number | null;
+  agreedTotalPence?: number | null;
+  // The limit the customer set when booking (Workshop day 41-43).
+  spendLimit?: number | null;
+  // When the quote's one reminder went (dq-quote-reminded).
+  reminderSentAt?: string | null;
+  totals?: { all: number; approved: number; pending: number; declined: number };
+};
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -24,13 +44,36 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 function sentLine(iso: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
-  return `Sent ${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `Sent ${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${hhmm(d)}`;
+}
+
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const firstName = (name: string | null | undefined) => (name ? name.trim().split(/\s+/)[0] : null);
+
+/** The drawn "Call [shop phone]" link, or the words "the shop" with no phone. */
+function Phone({ phone }: { phone: string | null }) {
+  return phone ? <a href={`tel:${phone}`} className="font-semibold text-[var(--wh-ink)]">{phone}</a> : <>the shop</>;
+}
+
+function useMedia(query: string): boolean {
+  return React.useSyncExternalStore(
+    (onChange) => {
+      const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
+      mq?.addEventListener('change', onChange);
+      return () => mq?.removeEventListener('change', onChange);
+    },
+    () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false),
+  );
 }
 
 const CARD = 'mb-4 flex flex-col gap-3 rounded-md border-2 border-[var(--wh-ink)] p-4';
 const BADGE = 'inline-flex self-start rounded-full px-2.5 py-0.5 text-xs font-bold';
 
-export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopSlug: string; code: string; agreedTotal: number | null; done?: boolean }) {
+export function QuoteCard({ shopSlug, code, agreedTotal, shopPhone = null, booked = [], done = false, hideAnswered = false, onAddNote }: {
+  shopSlug: string; code: string; agreedTotal: number | null; shopPhone?: string | null; booked?: string[]; done?: boolean; hideAnswered?: boolean;
+  /** To the Notes with the shop card's box, where the page has one (quote.mjs). */
+  onAddNote?: () => void;
+}) {
   const queryClient = useQueryClient();
   const key = ['booking-quote', shopSlug, code];
   const quote = useQuery({
@@ -42,23 +85,84 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
   const [ticks, setTicks] = React.useState<Record<number, boolean> | null>(null);
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  // Said to screen readers when a tick also changed the line's partner.
+  const [pairNote, setPairNote] = React.useState('');
+  // The line whose photo is open larger (dq-quote-photo).
+  const [enlarged, setEnlarged] = React.useState<QuoteLine | null>(null);
+  const photoUrl = (l: QuoteLine) => `/api/portal/${shopSlug}/booking-links/${code}/quote/lines/${l.id}/photo`;
+  // On a tablet or phone the quote is longer than the screen, so the new
+  // total, the final-answer line and the button sit in a bar pinned along the
+  // bottom (Jack, 1 Oct, decision 8; quoteBar in quote.mjs). A touch screen or
+  // a window narrower than a computer counts, as the diary reads them.
+  const touch = useMedia('(pointer: coarse)');
+  const narrow = useMedia('(max-width: 1023px)');
+  // Only a sent quote is answered here; every other state shows no button.
+  const pinBar = Boolean(q && Array.isArray(q.lines) && q.state === 'sent') && (touch || narrow);
+  const askRoom = React.useContext(PinnedRoom);
+  const barRef = React.useRef<HTMLDivElement>(null);
+  // The room kept under the bar is the bar's own height, measured as it
+  // changes (a failed send's message makes it taller). Where it can't be
+  // measured, two lines and the button, or 13rem with a message.
+  React.useEffect(() => {
+    if (!pinBar) return undefined;
+    const el = barRef.current;
+    const guess = message ? 13 : 9;
+    if (!el || typeof ResizeObserver !== 'function') {
+      askRoom(guess);
+      return () => askRoom(0);
+    }
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const measure = () => askRoom(Math.ceil((el.getBoundingClientRect().height / rem) * 4) / 4 + 0.5);
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    return () => { watch.disconnect(); askRoom(0); };
+  }, [pinBar, message, askRoom]);
   // Nothing to show without a quote (a 404 means the booking has none).
   if (!q || !Array.isArray(q.lines)) return null;
 
-  const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, l.need === 'needed']));
-  const agreed = agreedTotal ?? 0;
+  // Lines that go together (decision 2): a part and every labour line that
+  // goes with it tick and untick as one, starting ticked if any is Needed.
+  const groupOf = (l: QuoteLine) => {
+    const part = l.goesWithLineId ?? (q.lines.some((o) => o.goesWithLineId === l.id) ? l.id : null);
+    return part === null ? [l] : q.lines.filter((o) => o.id === part || o.goesWithLineId === part);
+  };
+  const tick = ticks ?? Object.fromEntries(q.lines.map((l) => [l.id, groupOf(l).some((o) => o.need === 'needed')]));
+  // The server's figure counts earlier yeses too; the booking's total is the
+  // fallback for a reply without it.
+  const agreedSoFar = q.agreedTotal !== undefined ? q.agreedTotal : agreedTotal;
+  const agreed = agreedSoFar ?? 0;
+  const mechanic = firstName(q.mechanicName);
+  const thanks = q.customerFirstName ? `Thanks, ${q.customerFirstName}` : 'Thanks';
 
   if (q.state === 'withdrawn') {
     return (
       <section className={CARD} aria-labelledby="quote-heading">
         <span className={`${BADGE} bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]`}>Quote withdrawn</span>
-        <h2 id="quote-heading" className="m-0 text-xl font-bold">The quote was withdrawn</h2>
-        <p className="m-0">The shop has withdrawn this quote. There is nothing to answer.</p>
+        <h2 id="quote-heading" className="m-0 text-xl font-bold">{mechanic ? `${mechanic} has withdrawn this quote` : 'We’ve withdrawn this quote'}</h2>
+        <p className="m-0">Nothing to answer. Call <Phone phone={shopPhone} /> if you have a question.</p>
+      </section>
+    );
+  }
+
+  // Work added within the customer's limit (dq-within-limit): no quote went,
+  // so this says what was added and that the shop went ahead.
+  if (!done && q.state === 'approved' && q.lines.length && q.lines.every((l) => l.decidedVia === 'limit')) {
+    const names = q.lines.map((l) => l.description);
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+    return (
+      <section className={CARD} aria-labelledby="quote-heading">
+        <span role="status" className={`${BADGE} bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]`}>Work added</span>
+        <h2 id="quote-heading" className="m-0 text-xl font-bold">{`${mechanic ?? 'We'} added some work, within your limit`}</h2>
+        <p className="m-0">{`${list}, ${money(q.totals?.approved ?? 0)} — within your ${q.spendLimit ? `£${q.spendLimit.toLocaleString('en-GB')} ` : ''}limit, so we’ve gone ahead. Nothing to pay today.`}</p>
+        <p className="m-0">Not what you wanted? Call <Phone phone={shopPhone} />.</p>
       </section>
     );
   }
 
   if (q.state === 'approved' || q.state === 'partly_approved' || q.state === 'declined') {
+    // Where the page lists the agreed work itself (Work agreed), the answer isn't listed twice (fresh review).
+    if (hideAnswered) return null;
     const yes = q.lines.filter((l) => l.decision === 'approved');
     const no = q.lines.filter((l) => l.decision === 'declined');
     const phone = q.lines.find((l) => l.decidedVia === 'phone' || l.decidedVia === 'in_shop');
@@ -68,11 +172,16 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
             (cp-summary; booking page stages, 21 Oct). */}
         {!done && <span className={`${BADGE} bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]`}>Answered</span>}
         <h2 id="quote-heading" className="m-0 text-xl font-bold">
-          {done ? 'What we did' : yes.length ? 'Thanks — the work you agreed is going ahead.' : 'Thanks — the booked work is going ahead.'}
+          {done ? 'What we did'
+            : phone ? `Your answers, from your ${phone.decidedVia === 'phone' ? 'call' : 'visit'}`
+            : yes.length ? `${thanks} — ${mechanic ? `${mechanic} is carrying on` : 'we’re carrying on'}`
+            : `${thanks} — ${mechanic ? `${mechanic} will` : 'we’ll'} carry on with the service`}
         </h2>
-        {phone ? (
-          <p className="m-0">{`You answered ${phone.decidedVia === 'phone' ? 'by phone' : 'in the shop'}${phone.decidedByName ? ` with ${phone.decidedByName}` : ''}.`}</p>
-        ) : null}
+        {done ? null : phone ? (
+          <p className="m-0">{`You answered ${phone.decidedVia === 'phone' ? 'by phone' : 'in the shop'}${phone.decidedByName ? ` with ${phone.decidedByName}` : ''}${phone.decidedAt ? ` at ${hhmm(new Date(phone.decidedAt))}` : ''}. Here’s what was agreed.`}</p>
+        ) : (
+          <p className="m-0">{yes.length ? 'We’ve saved your answers. The work you agreed is going ahead.' : 'You didn’t add any extra work. We’ve saved your answers.'}</p>
+        )}
         <ul className="m-0 list-none p-0 text-sm">
           {yes.map((l) => (
             <li key={l.id} className="flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
@@ -92,8 +201,21 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
   }
 
   if (q.state !== 'sent') return null;
+  // A later quote after earlier answers (Jack, 22 Oct; dq-quote-newer).
+  const newer = Boolean(q.earlier && (q.earlier.agreed.length || q.earlier.declined.length));
+  // Shown only when there is something to say (fresh review).
+  const alreadyAgreed = [[...booked, ...(q.earlier?.agreed ?? [])].join(', '), agreedSoFar !== null ? money(agreedSoFar) : null].filter(Boolean).join(' · ');
   const ticked = q.lines.filter((l) => tick[l.id]);
-  const total = agreed + ticked.reduce((s, l) => s + Number(l.lineTotal), 0);
+  const partners = (l: QuoteLine) => groupOf(l).filter((o) => o.id !== l.id);
+  function setTick(l: QuoteLine, on: boolean) {
+    const others = partners(l).filter((o) => Boolean(tick[o.id]) !== on);
+    setTicks({ ...tick, [l.id]: on, ...Object.fromEntries(others.map((o) => [o.id, on])) });
+    setPairNote(others.map((o) => `${o.description} ${on ? 'ticked' : 'unticked'} too.`).join(' '));
+  }
+  // Added in whole pence, as the server worked each figure out; pounds only to
+  // show (sales in pence, step A′). The booking's total is pounds, so rounded.
+  const agreedPence = q.agreedTotalPence !== undefined ? q.agreedTotalPence ?? 0 : Math.round(agreed * 100);
+  const total = (agreedPence + ticked.reduce((s, l) => s + l.lineTotalPence, 0)) / 100;
   const label = ticked.length ? `Approve ${money(total)}` : 'Decline the extra work';
 
   async function send() {
@@ -110,7 +232,10 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
         lines: q.lines.map((l) => ({ ...l, decision: tick[l.id] ? 'approved' : 'declined', decidedVia: 'online' })),
       });
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.code === 'pair') {
+        // A split pair: the shop's words, and the ticks stay as they were.
+        setMessage(err.message);
+      } else if (err instanceof ApiError && err.status === 409) {
         setMessage('The quote has changed since you opened it. Please look at it again.');
         setTicks(null);
         void quote.refetch();
@@ -124,19 +249,44 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
 
   return (
     <section className={CARD} aria-labelledby="quote-heading">
-      <span className={`${BADGE} bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]`}>Waiting for your answer</span>
-      <h2 id="quote-heading" className="m-0 text-xl font-bold">We recommend more work</h2>
-      {sentLine(q.sentAt) ? <p className="m-0 text-sm text-[var(--wh-muted)]">{sentLine(q.sentAt)}</p> : null}
+      <span className={`${BADGE} bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]`}>{newer ? 'The quote has changed' : 'Waiting for your answer'}</span>
+      <h2 id="quote-heading" className="m-0 text-xl font-bold">
+        {newer ? (mechanic ? `${mechanic} has added to the quote` : 'We’ve added to the quote') : mechanic ? `${mechanic} recommends more work` : 'We recommend more work'}
+      </h2>
+      {sentLine(q.sentAt) ? (
+        <p className="m-0 text-sm text-[var(--wh-muted)]">
+          {`${sentLine(q.sentAt)}${q.reminderSentAt ? ` · we sent a reminder at ${hhmm(new Date(q.reminderSentAt))}` : ''}`}
+        </p>
+      ) : null}
+      {newer ? (
+        <>
+          <p className="m-0">{`Your earlier answers are kept. Please answer the new ${q.lines.length === 1 ? 'line' : 'lines'} below.`}</p>
+          <div className="text-sm">
+            {alreadyAgreed ? (
+              <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
+                <span className="text-[var(--wh-muted)]">Already agreed</span>
+                <span className="text-right">{alreadyAgreed}</span>
+              </p>
+            ) : null}
+            {q.earlier?.declined.length ? (
+              <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2">
+                <span className="text-[var(--wh-muted)]">You said no thanks</span><span className="text-right">{q.earlier.declined.join(', ')}</span>
+              </p>
+            ) : null}
+          </div>
+        </>
+      ) : null}
       <p className="m-0 font-semibold">Untick anything you don&apos;t want.</p>
       <ul className="m-0 list-none p-0" aria-labelledby="quote-heading">
         {q.lines.map((l) => (
           <li key={l.id} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] py-3">
-            <label className="flex min-h-11 cursor-pointer items-start gap-3">
+            <div className="flex items-start gap-3">
+            <label className="flex min-h-11 min-w-0 grow cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
                 className="mt-0.5 size-[22px] shrink-0 accent-[var(--wh-ink)]"
                 checked={Boolean(tick[l.id])}
-                onChange={(e) => setTicks({ ...tick, [l.id]: e.target.checked })}
+                onChange={(e) => setTick(l, e.target.checked)}
                 aria-label={`${l.description}, ${l.need}, ${money(l.lineTotal)}`}
               />
               <span className="flex min-w-0 grow flex-col gap-0.5">
@@ -150,24 +300,87 @@ export function QuoteCard({ shopSlug, code, agreedTotal, done = false }: { shopS
                 {l.reason ? <span className="text-sm">{l.reason}</span> : null}
               </span>
             </label>
-            {l.need === 'needed' && !tick[l.id] ? (
-              <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]"><strong>We recommend this.</strong></p>
+            {l.photoId ? (
+              <span className="flex shrink-0 flex-col items-center gap-0.5">
+                <button
+                  type="button"
+                  aria-label={`Photo of ${l.description}${l.reason ? `: ${l.reason}` : ''} — open larger photo`}
+                  onClick={() => setEnlarged(l)}
+                  className="relative h-[72px] w-24 overflow-hidden rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-surface-muted)] p-0"
+                >
+                  <img src={photoUrl(l)} alt="" className="size-full object-cover" />
+                  <span aria-hidden="true" className="absolute right-1 bottom-1 inline-flex rounded-md bg-[var(--wh-ink)] p-[3px] text-[var(--wh-panel)]">
+                    <Search size={12} />
+                  </span>
+                </button>
+                <span className="text-xs text-[var(--wh-muted)]">Tap to enlarge</span>
+              </span>
+            ) : null}
+            </div>
+            {/* Drawn only when the mechanic wrote what happens without it (dq-quote-decline). */}
+            {l.need === 'needed' && !tick[l.id] && l.without ? (
+              <p className="m-0 ml-[34px] rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
+                <strong>{mechanic ? `${mechanic} recommends this.` : 'We recommend this.'}</strong> <span>{l.without}</span>
+              </p>
             ) : null}
           </li>
         ))}
       </ul>
-      {agreedTotal !== null ? (
+      {agreedSoFar !== null && !newer ? (
         <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2 text-sm">
-          <span className="text-[var(--wh-muted)]">Already agreed</span><span>{money(agreedTotal)}</span>
+          <span className="text-[var(--wh-muted)]">Already agreed</span><span>{money(agreedSoFar)}</span>
         </p>
       ) : null}
-      <p aria-live="polite" className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2">
+      {/* With the bar pinned, the bar is what's announced, so the total isn't read out twice. */}
+      <p aria-live={pinBar ? undefined : 'polite'} className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2">
         <strong>New total</strong><strong>{money(total)}</strong>
+        {pairNote && !pinBar ? <span className="sr-only">{pairNote}</span> : null}
       </p>
-      <p className="m-0 text-sm font-semibold">Your answers are final once sent.</p>
+      {pinBar ? null : <p className="m-0 text-sm font-semibold">Your answers are final once sent.</p>}
       <p className="m-0 text-sm text-[var(--wh-muted)]">Prices include VAT. Nothing to pay today.</p>
-      {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
-      <Button variant="accent" className="self-end" disabled={sending} onClick={() => void send()}>{label}</Button>
+      {pinBar ? null : (
+        <>
+          {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
+          <Button variant="accent" className="self-end" disabled={sending} onClick={() => void send()}>{label}</Button>
+        </>
+      )}
+      {pinBar ? (
+        // The frame's pinned style (data-book-pinned), holding what quoteBar draws.
+        // The total is announced as it changes; a failed send's message is an
+        // alert of its own, outside that, so it's read once.
+        <div ref={barRef} data-book-pinned className="fixed inset-x-0 bottom-0 z-10 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-3">
+          <div className="mx-auto flex max-w-md flex-col gap-1.5">
+            <div aria-live="polite" className="flex flex-col gap-1.5">
+              <p className="m-0 flex items-baseline justify-between gap-3">
+                <span>New total</span><strong className="text-lg">{money(total)}</strong>
+                {pairNote ? <span className="sr-only">{pairNote}</span> : null}
+              </p>
+              <p className="m-0 font-semibold">Your answers are final once sent.</p>
+            </div>
+            {message ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{message}</p> : null}
+            <Button variant="accent" block className="min-h-12" disabled={sending} onClick={() => void send()}>{label}</Button>
+          </div>
+        </div>
+      ) : null}
+      {enlarged ? (
+        <Dialog open onOpenChange={(o) => { if (!o) setEnlarged(null); }} aria-labelledby="photo-title" className="md:max-w-[720px]">
+          <DialogHeader>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <DialogTitle id="photo-title">{enlarged.description}</DialogTitle>
+              {enlarged.reason ? <span className="text-size-13 text-[var(--wh-muted)]">{enlarged.reason}</span> : null}
+            </div>
+          </DialogHeader>
+          <DialogBody><img src={photoUrl(enlarged)} alt={enlarged.description} className="max-h-[70vh] w-full object-contain" /></DialogBody>
+          <DialogFooter className="flex justify-end"><Button onClick={() => setEnlarged(null)}>Close</Button></DialogFooter>
+        </Dialog>
+      ) : null}
+      {/* "or Add a note for the shop" where the page has the notes card to go to (dq-quote). */}
+      {onAddNote ? (
+        <div className="flex flex-wrap items-center gap-2.5 border-t border-[var(--wh-border)] pt-2.5 text-sm">
+          <span>Not sure? Call <Phone phone={shopPhone} />, or</span>{' '}
+          <Button className="min-h-11" onClick={onAddNote}>Add a note for the shop</Button>
+        </div>
+      ) : <p className="m-0 border-t border-[var(--wh-border)] pt-2.5 text-sm">Not sure? Call <Phone phone={shopPhone} />.</p>}
     </section>
   );
 }

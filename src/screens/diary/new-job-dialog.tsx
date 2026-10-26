@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { addDays, dayLabel, hhmm, shortDay, toMinutes } from './rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
+import { SlotPills, useStorageSlots } from './storage-slots.tsx';
 
 /**
  * New job (journey 12; drawn as new-job and new-job-day in
@@ -62,7 +63,7 @@ function Pill({ on, onClick, children, label }: { on: boolean; onClick: () => vo
       aria-checked={on}
       aria-label={label}
       onClick={onClick}
-      className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+      className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-size-13 font-semibold whitespace-nowrap ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
     >
       {children}
     </button>
@@ -77,7 +78,7 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
         role="switch"
         aria-checked={on}
         onClick={() => onChange(!on)}
-        className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+        className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 text-size-13 font-semibold ${on ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
       >
         <span aria-hidden="true" className={`inline-block size-3 rounded-full border ${on ? 'border-[var(--wh-accent-soft-ink)] bg-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)]'}`} />
         {label}
@@ -93,10 +94,15 @@ const INPUT = 'min-h-11 w-full rounded-md border border-[var(--wh-input-border)]
 /** The order New job was opened for, from the old app's "Show in workshop diary". */
 export type ForOrder = { id: number; title: string; customer: Customer | null; notes: string };
 
-export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, onSavedWithProblem, onClose }: {
+export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanicId, autoChosen, entered = false, chooseMechanic, people, order, forCustomer, forBike, onSavedWithProblem, onClose }: {
   date: string; startMin: number; mechanicId: number | null; autoChosen: boolean; entered?: boolean;
   chooseMechanic?: (day: string) => number | null; people: Person[];
-  order?: ForOrder; onSavedWithProblem?: (words: string) => void; onClose: () => void;
+  order?: ForOrder;
+  /** The customer New job was opened for, from their page (customer-page design 4). */
+  forCustomer?: Customer | null;
+  /** That customer's bike, when New job came from the bike's own page (bike-page design 4). */
+  forBike?: number | null;
+  onSavedWithProblem?: (words: string) => void; onClose: () => void;
 }) {
   // Opened by "Enter a time instead" (Jack, 15 Oct, issue 192; drawn as
   // new-job-entered), the form has Date and Start time boxes, filled with the
@@ -113,8 +119,8 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   // The matches drop down over the form, so New job keeps one size while
   // staff type (Jack, 16 Oct).
   const [listOpen, setListOpen] = useState(false);
-  const [customer, setCustomer] = useState<Customer | null>(order?.customer ?? null);
-  const [bikeId, setBikeId] = useState<number | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(order?.customer ?? forCustomer ?? null);
+  const [bikeId, setBikeId] = useState<number | null>(forBike ?? null);
   // "+ Add a bike": the fields while open, and why it couldn't be added.
   const [newBike, setNewBike] = useState<{ make: string; model: string; colour: string; serialNumber: string } | null>(null);
   const [bikeError, setBikeError] = useState<string | null>(null);
@@ -156,6 +162,11 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
   }
   const [status, setStatus] = useState<'scheduled' | 'waiting_parts'>('scheduled');
   const [bikeHere, setBikeHere] = useState(false);
+  // Where the bike is kept, when the shop's storage slots are on and the bike
+  // is here (Workshop day 27; drawn on new-job): none chosen to start.
+  const { slots } = useStorageSlots();
+  const [slot, setSlot] = useState<number | null>(null);
+  const keptOn = bikeHere && slots.length ? slot : null;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -316,6 +327,10 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
       customerDescription: customerWords.trim(),
     };
     if (service) body.plannedMinutes = service.minutes;
+    // The service chosen, so the job has its checklist (Jack, 22 Oct, service checklists).
+    if (service) body.serviceIds = [service.id];
+    // A waiting-for-parts job is made with the bike in, so it goes on its slot as it's made.
+    if (keptOn !== null && status === 'waiting_parts') body.storageSlotId = keptOn;
     let job: WorkshopJob;
     try {
       job = await apiMutate<WorkshopJob>('/api/workshop-jobs', body);
@@ -332,7 +347,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
     // A waiting-for-parts job is created with the bike already in, so
     // booking it in again would be refused (Jack, 8 Oct).
     if (bikeHere && job.custodyState !== 'in_shop') {
-      try { await jobAction(job.id, 'book-in', job.version); } catch (err) { problems.push(`The job is saved, but couldn’t be booked in: ${words(err)}`); }
+      try { await jobAction(job.id, 'book-in', job.version, keptOn === null ? {} : { storageSlotId: keptOn }); } catch (err) { problems.push(`The job is saved, but couldn’t be booked in: ${words(err)}`); }
     }
     // Opened for an order, the job is linked to it, as the old form did
     // (Jack, 20 Oct, docs/decisions/2026-10-18-retire-old-diary.md).
@@ -366,7 +381,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               <div className="flex items-start justify-between gap-2 rounded-lg border-2 border-[var(--accent)] bg-[var(--wh-surface-muted)] px-3 py-1.5">
                 <div className="flex min-w-0 flex-col">
                   <span className="text-sm font-bold">{customer.name}</span>
-                  <span className="text-[13px] text-[var(--wh-muted)]">{[customer.phone, customer.email].filter(Boolean).join(' · ')}</span>
+                  <span className="text-size-13 text-[var(--wh-muted)]">{[customer.phone, customer.email].filter(Boolean).join(' · ')}</span>
                 </div>
                 <Button variant="ghost" size="sm" disabled={addingBike} onClick={() => { setCustomer(null); closeNewBike(); }}>Change</Button>
               </div>
@@ -398,10 +413,10 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
                       // don't focus a clicked button, so the list would close first.
                       <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => chooseCustomer(c)} className="flex flex-col rounded-md px-3 py-1.5 text-left hover:bg-[var(--wh-hover)]">
                         <span className="text-sm font-bold">{c.name}</span>
-                        <span className="text-[13px] text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
+                        <span className="text-size-13 text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
                       </button>
                     ))}
-                    {found.data?.length === 0 ? <span className="px-3 py-1.5 text-[13px] text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
+                    {found.data?.length === 0 ? <span className="px-3 py-1.5 text-size-13 text-[var(--wh-muted)]">No customer matches “{term}”.</span> : null}
                   </div>
                 ) : null}
               </div>
@@ -478,7 +493,7 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               </p>
             )}
             {/* Chosen for the day shown, until staff pick one themselves. */}
-            {autoChosen && !mechByHand ? <span className="text-[13px] text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
+            {autoChosen && !mechByHand ? <span className="text-size-13 text-[var(--wh-muted)]">{`Mechanic chosen automatically: most free time on ${weekday}.`}</span> : null}
             {wontFit && service ? (
               <div role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm text-[var(--wh-warn-ink)]">
                 <span>{`${freeHere > 0 ? `Only ${freeHere} minutes free` : 'No free time'} at ${hhmm(startMin)} — this job needs ${service.minutes}. Choose another time, or save anyway and the diary will show the overlap.`}</span>{' '}
@@ -503,6 +518,12 @@ export function NewJobDialog({ date: chosenDate, startMin: chosenStart, mechanic
               </RadioPillGroup>
             </div>
             <Toggle on={bikeHere} onChange={setBikeHere} label="The bike is here now" hint="Books it in straight away." />
+            {bikeHere && slots.length ? (
+              <div className="flex flex-col gap-1.5">
+                <SlotPills id="nj-slot" slots={slots} value={slot} onChange={setSlot} />
+                <p className="m-0 text-size-13 text-[var(--wh-muted)]">Storage slots are on for this shop. Turn them off in Settings.</p>
+              </div>
+            ) : null}
           </div>
         </div>
         {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}

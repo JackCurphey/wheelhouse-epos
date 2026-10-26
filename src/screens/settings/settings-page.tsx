@@ -8,7 +8,14 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { previewLines } from './booking-preview.ts';
 import { AutomaticMessages, useMessagesSummary } from './messages-settings.tsx';
+import { ChecklistsSettings, useChecklistsSummary } from './checklists-settings.tsx';
+import { ServicesSettings, SERVICES_SUMMARY } from './services-settings.tsx';
+import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
+import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
+import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
+import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
+import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 
@@ -20,8 +27,9 @@ import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
  * WP-5.1.
  */
 type DayHours = { weekday: number; open: string; close: string };
-type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
-  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null };
+type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; confirmBookingsAutomatically?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
+  nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null;
+  depositOn?: boolean; depositKind?: 'percent' | 'fixed'; depositPercent?: number | null; depositFixedPence?: number | null; depositUnknownPence?: number | null; depositCancelHours?: number; paymentsConnected?: boolean };
 type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
 type DetailKey = keyof ShopDetails;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
@@ -71,7 +79,7 @@ function ShopDetailsBox() {
       {details.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the shop’s details. Try again in a moment.</p> : null}
       {DETAIL_ROWS.map(([key, label, autoComplete]) => (
         <div key={key} className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3 md:py-0">
-          <label htmlFor={`shop-${key}`} className="shrink-0 text-[15px] font-semibold md:w-40">{label}</label>
+          <label htmlFor={`shop-${key}`} className="shrink-0 text-size-15 font-semibold md:w-40">{label}</label>
           <input
             id={`shop-${key}`}
             value={valueOf(key)}
@@ -79,37 +87,13 @@ function ShopDetailsBox() {
             disabled={!details.data}
             onChange={(e) => setTyped((t) => ({ ...t, [key]: e.target.value }))}
             onBlur={() => void save(key)}
-            className="min-h-11 grow rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]"
+            className="min-h-11 grow rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15"
           />
         </div>
       ))}
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">These show on receipts, emails and the website.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 mt-1 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
     </div>
-  );
-}
-
-// The settings pages' own switch (settings-frame.mjs rowSwitch): the label,
-// On or Off in words, and the track; the whole row is the control.
-function RowSwitch({ label, on, disabled, onChange }: { label: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!on)}
-      className="flex min-h-12 w-full items-center justify-between gap-3 text-left"
-    >
-      <span className="text-[15px] font-bold">{label}</span>
-      <span className="inline-flex items-center gap-2.5">
-        <span className={`text-sm font-semibold ${on ? '' : 'text-[var(--wh-muted)]'}`}>{on ? 'On' : 'Off'}</span>
-        <span aria-hidden="true" className={`relative inline-block h-[26px] w-11 rounded-full ${on ? 'bg-[var(--wh-brand)]' : 'bg-[var(--wh-input-border)]'}`}>
-          <span className={`absolute top-[3px] size-5 rounded-full bg-[var(--wh-panel)] shadow ${on ? 'left-[21px]' : 'left-[3px]'}`} />
-        </span>
-      </span>
-    </button>
   );
 }
 
@@ -194,7 +178,7 @@ function HoursBox() {
   };
   const setTime = (weekday: number, which: 'open' | 'close', value: string) =>
     void saveWeek(week.map((d) => (d.weekday === weekday ? { ...d, [which]: value } : d)));
-  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-size-15';
   // A time saved elsewhere outside the list still shows as it is (fresh review).
   const options = (value: string) => (HOURS.includes(value) ? HOURS : [value, ...HOURS].sort());
 
@@ -208,7 +192,7 @@ function HoursBox() {
         return (
           <div key={weekday} className="flex flex-col gap-2 border-t border-[var(--wh-border)] py-2 md:min-h-[50px] md:flex-row md:items-center md:gap-3 md:py-1">
             <div className="flex items-center justify-between gap-3 md:contents">
-              <span className="text-[15px] font-semibold md:order-1 md:w-24">{name}</span>
+              <span className="text-size-15 font-semibold md:order-1 md:w-24">{name}</span>
               <button
                 type="button"
                 aria-pressed={Boolean(day)}
@@ -255,38 +239,41 @@ function NoAccess() {
         <span aria-hidden="true" className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
-        <h2 className="m-0 text-[22px] font-bold">Settings aren’t part of your role</h2>
-        <p className="m-0 text-[15px]">Only the shop’s owner can change settings for now. Ask the owner if you need something changed.</p>
+        <h2 className="m-0 text-size-22 font-bold">Settings aren’t part of your role</h2>
+        <p className="m-0 text-size-15">Only the shop’s owner can change settings for now. Ask the owner if you need something changed.</p>
         <div><Link to={ROUTES.till} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-input-border)] px-4 font-semibold">Go to the till</Link></div>
       </div>
     </div>
   );
 }
 
-type NumberField = 'fullDayThresholdMinutes' | 'timedLeadMinutes';
+type NumberField = 'fullDayThresholdMinutes' | 'timedLeadMinutes' | 'depositPercent' | 'depositFixedPence' | 'depositUnknownPence' | 'depositCancelHours';
 
 /**
  * One number setting saved to the workshop settings when its box is left, if
  * it changed: shown in the box's own unit, refused in the screen when it
  * isn't allowed, a server refusal shown in its words.
  */
-function NumberSetting({ id, label, hint, unit, field, toBox, fromBox, invalid }: {
-  id: string; label: string; hint: string; unit: string; field: NumberField;
+function NumberSetting({ id, label, hint, unit, prefix, field, toBox, fromBox, invalid, emptyIsNone = false }: {
+  id: string; label: string; hint: string; unit: string; prefix?: string; field: NumberField;
   toBox: (stored: number) => string; fromBox: (typed: number) => number | null; invalid: string;
+  // An empty box saves "none" (null), as "If the price isn't known" (deposit-settings design 5).
+  emptyIsNone?: boolean;
 }) {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const [typed, setTyped] = useState<string | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const stored = settings.data?.[field];
-  const shown = typed ?? (stored === undefined ? '' : toBox(stored));
+  const shown = typed ?? (stored === undefined || stored === null ? '' : toBox(stored));
 
   async function save() {
     if (typed === null) return;
     const number = Number(typed.trim());
-    const value = typed.trim() === '' || !Number.isFinite(number) ? null : fromBox(number);
-    if (value === null) { setNote({ ok: false, text: invalid }); return; }
-    if (value === stored) { setTyped(null); setNote(null); return; }
+    const none = emptyIsNone && typed.trim() === '';
+    const value = none ? null : typed.trim() === '' || !Number.isFinite(number) ? null : fromBox(number);
+    if (value === null && !none) { setNote({ ok: false, text: invalid }); return; }
+    if (value === (stored ?? null)) { setTyped(null); setNote(null); return; }
     setNote(null);
     try {
       const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { [field]: value }, { method: 'PUT' });
@@ -302,19 +289,20 @@ function NumberSetting({ id, label, hint, unit, field, toBox, fromBox, invalid }
     <div className="flex flex-col gap-1">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
-          <span id={`${id}-h`} className="text-[13px] text-[var(--wh-muted)]">{hint}</span>
+          <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
+          {hint ? <span id={`${id}-h`} className="text-size-13 text-[var(--wh-muted)]">{hint}</span> : null}
         </span>
         <span className="inline-flex items-center gap-2 text-sm">
+          {prefix}
           <input
             id={id}
-            aria-describedby={`${id}-h`}
+            aria-describedby={hint ? `${id}-h` : undefined}
             inputMode="decimal"
             value={shown}
             disabled={!settings.data}
             onChange={(e) => setTyped(e.target.value)}
             onBlur={() => void save()}
-            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-size-15"
           />
           {unit}
         </span>
@@ -384,8 +372,8 @@ function NoticeSetting() {
     <div className="flex flex-col gap-1">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <label htmlFor="notice" className="text-[15px] font-semibold">Notice</label>
-          <span id="notice-h" className="text-[13px] text-[var(--wh-muted)]">How far ahead customers must book</span>
+          <label htmlFor="notice" className="text-size-15 font-semibold">Notice</label>
+          <span id="notice-h" className="text-size-13 text-[var(--wh-muted)]">How far ahead customers must book</span>
         </span>
         <div className="inline-flex items-center gap-2 text-sm">
           <input
@@ -396,7 +384,7 @@ function NoticeSetting() {
             disabled={!data}
             onChange={(e) => setTyped(e.target.value)}
             onBlur={() => void save(unit)}
-            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-[15px]"
+            className="min-h-11 w-[72px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-center font-[family-name:var(--wh-font-mono)] text-size-15"
           />
           <RadioPillGroup pickOnMove={false} aria-label="Notice in" className="inline-flex gap-2">{pill('hours')}{pill('days')}</RadioPillGroup>
         </div>
@@ -464,13 +452,13 @@ function ModeSetting() {
       {label}
     </button>
   );
-  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-[15px]';
+  const select = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2 font-[family-name:var(--wh-font-mono)] text-size-15';
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="m-0 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">How bikes are booked in</h4>
+      <h4 className="m-0 border-t border-[var(--wh-border)] pt-3 text-size-15 font-bold">How bikes are booked in</h4>
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
-        <span id="mode-label" className="text-[15px] font-semibold">Bikes are booked in for</span>
+        <span id="mode-label" className="text-size-15 font-semibold">Bikes are booked in for</span>
         <RadioPillGroup pickOnMove={false} aria-labelledby="mode-label" className="flex flex-wrap gap-2">{pill('timed', 'A set time')}{pill('dropoff', 'The whole day')}</RadioPillGroup>
       </div>
       {data?.nextBookingMode && data.nextBookingModeFrom ? (
@@ -485,8 +473,8 @@ function ModeSetting() {
       {showWindow ? (
         <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
           <span className="flex flex-col gap-0.5">
-            <span className="text-[15px] font-semibold">Drop-off window</span>
-            <span className="text-[13px] text-[var(--wh-muted)]">Whole-day customers drop their bike off between these times</span>
+            <span className="text-size-15 font-semibold">Drop-off window</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">Whole-day customers drop their bike off between these times</span>
           </span>
           <span className="inline-flex items-center gap-2 text-sm">
             <select aria-label="Drop-off window starts" value={windowFrom} disabled={busy} onChange={(e) => void put({ dropoffWindowStart: e.target.value, dropoffWindowEnd: windowTo })} className={select}>
@@ -504,14 +492,14 @@ function ModeSetting() {
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="mode-title">{`Book bikes in for ${asking ? MODE_WORDS[asking] : ''}?`}</DialogTitle>
-            <span className="text-[13px] text-[var(--wh-muted)]">From a day you choose</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">From a day you choose</span>
           </div>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="mode-from" className="text-[15px] font-semibold">Starting on</label>
-            <input id="mode-from" type="date" min={tomorrow} value={from} onChange={(e) => setFrom(e.target.value)} aria-describedby="mode-from-h" className="min-h-11 max-w-[220px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-[15px]" />
-            <span id="mode-from-h" className="text-[13px] text-[var(--wh-muted)]">Tomorrow at the earliest</span>
+            <label htmlFor="mode-from" className="text-size-15 font-semibold">Starting on</label>
+            <input id="mode-from" type="date" min={tomorrow} value={from} onChange={(e) => setFrom(e.target.value)} aria-describedby="mode-from-h" className="min-h-11 max-w-[220px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15" />
+            <span id="mode-from-h" className="text-size-13 text-[var(--wh-muted)]">Tomorrow at the earliest</span>
           </div>
           <p className="m-0 text-sm text-[var(--wh-muted)]">{asking === 'dropoff'
             ? 'Bookings already made keep their set times. From that day, customers book a day and drop their bike off in the drop-off window.'
@@ -554,6 +542,124 @@ function PricesSetting() {
     <div className="flex flex-col gap-1">
       <RowSwitch label="Show prices on the booking page" on={settings.data?.showPricesOnline === true} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
       {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * "Confirm bookings automatically" (Jack, 19 Oct, docs/decisions/2026-10-19-auto-confirm.md;
+ * drawn as bk-settings-auto): after Show prices, with the drawn note, saved at once.
+ */
+function ConfirmSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function change(next: boolean) {
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', { confirmBookingsAutomatically: next }, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <RowSwitch label="Confirm bookings automatically" on={settings.data?.confirmBookingsAutomatically === true} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Off: each booking is a request, purple in the diary until someone accepts it. On: a booking that fits the diary is confirmed straight away. Changing a confirmed booking is always a request.</p>
+      {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+    </div>
+  );
+}
+
+// Pounds typed, whole pence saved: 1p to £10,000 (deposit-settings design 1).
+const penceFromPounds = (pounds: number) => { const p = Math.round(pounds * 100); return Math.abs(p - pounds * 100) < 1e-6 && p >= 1 && p <= 1_000_000 ? p : null; };
+const poundsBox = (pence: number) => (pence / 100).toFixed(2);
+const AMOUNT_INVALID = 'Enter an amount from £0.01 to £10,000';
+
+/** The deposit as the Online booking fold's summary says it (settings-frame.mjs line 192). */
+function depositWords(s: WorkshopSettings): string {
+  if (s.depositOn && s.depositKind === 'percent' && s.depositPercent) return `deposit ${s.depositPercent}%`;
+  if (s.depositOn && s.depositKind === 'fixed' && s.depositFixedPence) return `deposit £${poundsBox(s.depositFixedPence)}`;
+  return 'no deposit';
+}
+
+/**
+ * Deposits (Jack, 24 Oct, docs/decisions/2026-10-24-morning-questions.md;
+ * drawn as bk-settings-deposits; openspec/changes/deposit-settings design 5):
+ * the switch, and while it's on the drawn rows, each saved as soon as changed.
+ * "For: Every booking / Chosen services" waits for the service editor (design 6).
+ */
+function DepositSetting() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
+  const data = settings.data;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function put(body: object) {
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<WorkshopSettings>('/api/workshop-settings', body, { method: 'PUT' });
+      queryClient.setQueryData(['workshop-settings'], saved);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  const kind = data?.depositKind ?? 'percent';
+  const pill = (to: 'percent' | 'fixed', label: string) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={kind === to}
+      disabled={!data || saving}
+      onClick={() => { if (to !== kind) void put({ depositKind: to }); }}
+      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${kind === to ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-size-15 font-bold">Deposits</h4>
+      <RowSwitch label="Take a deposit when booking" on={data?.depositOn === true} disabled={saving || !data} onChange={(next) => void put({ depositOn: next })} />
+      {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      {data?.depositOn ? (
+        <>
+          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+            <span id="deposit-kind-label" className="text-size-15 font-semibold">Deposit</span>
+            <RadioPillGroup pickOnMove={false} aria-labelledby="deposit-kind-label" className="flex flex-wrap gap-2">{pill('fixed', 'A fixed amount')}{pill('percent', 'A percentage of the price')}</RadioPillGroup>
+          </div>
+          {kind === 'percent' ? (
+            <NumberSetting
+              key="percent" id="dep-pc" label="How much" hint="" unit="%" field="depositPercent" toBox={(n) => String(n)}
+              fromBox={(n) => (Number.isInteger(n) && n >= 1 && n <= 100 ? n : null)} invalid="Enter a whole percentage from 1 to 100"
+            />
+          ) : (
+            <NumberSetting
+              key="fixed" id="dep-fixed" label="How much" hint="" unit="" prefix="£" field="depositFixedPence" toBox={poundsBox}
+              fromBox={penceFromPounds} invalid={AMOUNT_INVALID}
+            />
+          )}
+          <NumberSetting
+            id="dep-unknown" label="If the price isn’t known" hint="For “Not sure what’s wrong?” bookings" unit="" prefix="£" field="depositUnknownPence"
+            toBox={poundsBox} fromBox={penceFromPounds} invalid={AMOUNT_INVALID} emptyIsNone
+          />
+          <NumberSetting
+            id="cutoff" label="Free to cancel until" hint="Before the booked time · after that, or if they don’t come, the shop keeps the deposit" unit="hours before"
+            field="depositCancelHours" toBox={(n) => String(n)} fromBox={(n) => (Number.isInteger(n) && n >= 0 && n <= 168 ? n : null)} invalid="Enter 0 to 168 whole hours"
+          />
+          {data.confirmBookingsAutomatically ? null : (
+            <p className="m-0 text-sm text-[var(--wh-muted)]">With automatic confirming off, the customer pays before the shop has said yes; if the shop declines, the deposit is refunded automatically.</p>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -615,14 +721,14 @@ function TermsSetting() {
     <div className="flex flex-col gap-1.5">
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
         <span className="flex flex-col gap-0.5">
-          <span className="text-[15px] font-semibold">Booking terms</span>
-          <span className="text-[13px] text-[var(--wh-muted)]">{own !== null ? 'Your own terms · a copy is kept with each booking' : 'Wheelhouse’s standard terms · a copy is kept with each booking'}</span>
+          <span className="text-size-15 font-semibold">Booking terms</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{own !== null ? 'Your own terms · a copy is kept with each booking' : 'Wheelhouse’s standard terms · a copy is kept with each booking'}</span>
         </span>
         {!open && <Button disabled={!settings.data} onClick={() => { setNote(null); setEditing(true); }}>Use your own</Button>}
       </div>
       {open && (
         <>
-          <label htmlFor="booking-terms" className="text-[15px] font-semibold">Your booking terms</label>
+          <label htmlFor="booking-terms" className="text-size-15 font-semibold">Your booking terms</label>
           <textarea
             id="booking-terms"
             ref={boxRef}
@@ -635,7 +741,7 @@ function TermsSetting() {
             onBlur={(e) => leave(e)}
             className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm leading-normal"
           />
-          <span id="booking-terms-h" className="text-[13px] text-[var(--wh-muted)]">Customers agree to these when they book. A copy is kept with each booking.</span>
+          <span id="booking-terms-h" className="text-size-13 text-[var(--wh-muted)]">Customers agree to these when they book. A copy is kept with each booking.</span>
           {own !== null && (
             <div><Button id="terms-go-back" variant="ghost" onClick={() => { setTyped(null); void put(null); }}>Go back to Wheelhouse’s standard terms</Button></div>
           )}
@@ -659,7 +765,7 @@ function BookingPreview() {
   const [open, setOpen] = useState(false);
   const p = previewLines(settings.data ?? {});
   const row = (k: string, v: string) => (
-    <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[15px]">
+    <p className="m-0 flex justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-size-15">
       <span className="text-[var(--wh-muted)]">{k}</span>{' '}<strong className="text-right">{v}</strong>
     </p>
   );
@@ -670,7 +776,7 @@ function BookingPreview() {
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle id="preview-title">What the customer sees</DialogTitle>
-            <span id="preview-sub" className="text-[13px] text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
+            <span id="preview-sub" className="text-size-13 text-[var(--wh-muted)]">An example booking, with your settings as they are now</span>
           </div>
           <DialogClose onClick={() => setOpen(false)} />
         </DialogHeader>
@@ -678,7 +784,7 @@ function BookingPreview() {
           <div className="flex flex-col gap-3 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px]">
             <span className="self-start rounded-full bg-[var(--wh-status-complete-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-complete-ink)]">Booking confirmed</span>
             <h3 className="m-0 text-xl font-bold">{p.heading}</h3>
-            {p.arrival ? <p className="m-0 text-[15px] leading-normal">{p.arrival}</p> : null}
+            {p.arrival ? <p className="m-0 text-size-15 leading-normal">{p.arrival}</p> : null}
             <div>{row('Service', p.service)}{row('Bike', p.bike)}{row('When', p.when)}</div>
           </div>
           <p className="m-0 text-sm text-[var(--wh-muted)]">Customers see this once a booking is confirmed. Change a setting and preview again to see the difference.</p>
@@ -720,7 +826,7 @@ function ConfirmationNoteSetting() {
 
   return (
     <div className="flex flex-col gap-1.5 py-1.5">
-      <label htmlFor="confirm-note" className="text-[15px] font-semibold">Additional note on the confirmation</label>
+      <label htmlFor="confirm-note" className="text-size-15 font-semibold">Additional note on the confirmation</label>
       <textarea
         id="confirm-note"
         aria-describedby="confirm-note-h"
@@ -730,9 +836,9 @@ function ConfirmationNoteSetting() {
         disabled={!settings.data}
         onChange={(e) => setTyped(e.target.value)}
         onBlur={() => void save()}
-        className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-[15px] leading-normal"
+        className="resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal"
       />
-      <span id="confirm-note-h" className="text-[13px] text-[var(--wh-muted)]">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span>
+      <span id="confirm-note-h" className="text-size-13 text-[var(--wh-muted)]">Shown after the drop-off time once a booking is confirmed. Leave it empty to show nothing.</span>
       <BookingPreview />
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
     </div>
@@ -744,7 +850,8 @@ function ConfirmationNoteSetting() {
  * docs/decisions/2026-10-19-retire-old-workshop-settings.md; drawn as
  * bk-settings-reserve): how long before a set-time booking bikes come in
  * (answers 3 and 7), shown while bikes are booked in for a set time, and the
- * time kept free each day (answers 1 and 6). The rest of the section comes later.
+ * time kept free each day (answers 1 and 6); then the confirmation note,
+ * notice, prices, confirming, Deposits (deposit-settings) and Terms.
  */
 function OnlineBookingBox() {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
@@ -767,7 +874,9 @@ function OnlineBookingBox() {
       />
       <p className="m-0 text-sm text-[var(--wh-muted)]">Lunch and admin go in the diary as blocks, so don’t count them here. Online booking treats a day as full once less than this is left.</p>
       <PricesSetting />
-      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-[15px] font-bold">Terms</h4>
+      <ConfirmSetting />
+      <DepositSetting />
+      <h4 className="m-0 mt-2 border-t border-[var(--wh-border)] pt-3 text-size-15 font-bold">Terms</h4>
       <TermsSetting />
     </div>
   );
@@ -806,7 +915,7 @@ function MechanicsBody() {
     <div className="flex flex-col gap-2">
       {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the settings. Try again in a moment.</p> : null}
       <RowSwitch label="Show who signed off to customers" on={on} disabled={saving || !settings.data} onChange={(next) => void change(next)} />
-      <p className="m-0 text-sm text-[var(--wh-muted)]">Adds “Checked by [name]” to their receipt and booking link. Off: only staff see who signed a job off.</p>
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Adds “Checked by [name]” to their receipt and booking link, and the mechanic’s name to quotes. Off: only staff see who signed a job off, and quotes say “we”.</p>
       {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
     </div>
   );
@@ -833,6 +942,11 @@ function OwnerSettings() {
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<WorkshopSettings>('/api/workshop-settings') });
   const details = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails>('/api/shop-details') });
   const messages = useMessagesSummary();
+  const checklists = useChecklistsSummary();
+  const diaryBlocks = useDiaryBlocksSummary();
+  const storageSlots = useStorageSlotsSummary();
+  const customerGroups = useCustomerGroupsSummary();
+  const collection = useCollectionSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
@@ -843,6 +957,10 @@ function OwnerSettings() {
         { key: 'till', title: 'Till', intro: 'What staff see and use at the till.', folds: [
           { key: 'receipts', title: 'Receipts', summary: details.data ? (details.data.receiptFooter ? 'Words at the bottom' : 'Nothing at the bottom yet') : '', body: <ReceiptsBox /> },
         ] },
+        // After Till, as drawn (settings-frame.mjs); only Customer groups works yet (cs-groups).
+        { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [
+          { key: 'customer-groups', title: 'Customer groups', summary: customerGroups, body: <CustomerGroupsSettings /> },
+        ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
         ] },
@@ -852,8 +970,15 @@ function OwnerSettings() {
       key: 'workshop', name: 'Workshop', intro: '',
       areas: [
         { key: 'workshop', title: 'Workshop', intro: 'Services, who works in the workshop, and how the diary looks.', folds: [
-          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)}` : '', body: <OnlineBookingBox /> },
+          // First, as drawn (set-workshop-services; services-room).
+          { key: 'services', title: 'Services', summary: SERVICES_SUMMARY, body: <ServicesSettings /> },
+          // Under Services in the drawing (set-workshop-checklists).
+          { key: 'checklists', title: 'Checklists', summary: checklists, body: <ChecklistsSettings /> },
+          { key: 'online-booking', title: 'Online booking', summary: s ? `${s.bookingMode === 'dropoff' ? 'The whole day' : 'Set times'} · ${noticeWords(s)} · ${depositWords(s)} · ${s.confirmBookingsAutomatically ? 'confirmed straight away' : 'each booking a request'}` : '', body: <OnlineBookingBox /> },
           { key: 'mechanics', title: 'Mechanics', summary: s ? `Who signed off: ${s.showSignOffToCustomers ? 'shown to customers' : 'staff only'}` : '', body: <MechanicsBody /> },
+          { key: 'diary-blocks', title: 'Diary blocks', summary: diaryBlocks, body: <DiaryBlocksSettings /> },
+          { key: 'storage-slots', title: 'Storage slots', summary: storageSlots, body: <StorageSlotsSettings /> },
+          { key: 'collection', title: 'Collection', summary: collection, body: <CollectionSettings /> },
         ] },
       ],
     },

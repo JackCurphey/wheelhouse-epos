@@ -8,6 +8,9 @@
 #   - a 1GB server ("droplet") with Docker and Caddy, about $6 a month
 #   - a managed Postgres database, smallest plan, about $15 a month
 #   - a firewall (web and SSH only) and database access for that server only
+# It also sets up automatic updates (task 3.4): a deploy-only key that can run
+# deploy.sh on the server and nothing else, and the settings GitHub's deploy
+# workflow (.github/workflows/deploy-hosted-copy.yml) needs, set with `gh`.
 set -euo pipefail
 
 NAME=wheelhouse-test
@@ -18,6 +21,8 @@ DB_NAME=${NAME}-db
 DB_SIZE=db-s-1vcpu-1gb
 DB_VERSION=16
 SSH_KEY_FILE=${SSH_KEY_FILE:-$HOME/.ssh/id_ed25519}
+DEPLOY_KEY_FILE=${DEPLOY_KEY_FILE:-$HOME/.ssh/wheelhouse-deploy}
+REPO=JackCurphey/wheelhouse-epos
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 step() { printf '\n==> %s\n' "$*"; }
@@ -36,9 +41,15 @@ step "Checking your setup"
 command -v doctl >/dev/null || fail "doctl isn't installed. Run: brew install doctl"
 command -v jq >/dev/null || fail "jq isn't installed. Run: brew install jq"
 doctl account get >/dev/null 2>&1 || fail "doctl isn't signed in. Run: doctl auth init (and paste your API token)"
+command -v gh >/dev/null || fail "GitHub's gh isn't installed. Run: brew install gh"
+gh auth status >/dev/null 2>&1 || fail "gh isn't signed in to GitHub. Run: gh auth login"
 if [ ! -f "$SSH_KEY_FILE.pub" ]; then
   echo "No SSH key found at $SSH_KEY_FILE.pub; making one (press Enter at any questions)."
   ssh-keygen -t ed25519 -f "$SSH_KEY_FILE" -N ""
+fi
+if [ ! -f "$DEPLOY_KEY_FILE.pub" ]; then
+  echo "Making the key GitHub uses for automatic updates, at $DEPLOY_KEY_FILE."
+  ssh-keygen -q -t ed25519 -f "$DEPLOY_KEY_FILE" -N "" -C wheelhouse-deploy
 fi
 echo "Signed in to DigitalOcean as $(doctl account get --format Email --no-header)."
 
@@ -64,8 +75,10 @@ fi
 
 step "The server"
 droplet_id=$(doctl compute droplet list --format ID,Name --no-header | awk -v n="$NAME" '$2==n {print $1}')
+new_server=""
 if [ -z "$droplet_id" ]; then
   echo "Creating it (about a minute)..."
+  new_server=yes
   droplet_id=$(doctl compute droplet create "$NAME" --region "$REGION" --size "$DROPLET_SIZE" \
     --image "$DROPLET_IMAGE" --ssh-keys "$fingerprint" --user-data-file "$HERE/cloud-init.yaml" \
     --tag-names "$NAME" --enable-monitoring --wait --format ID --no-header)
@@ -74,8 +87,12 @@ else
 fi
 ip=$(doctl compute droplet get "$droplet_id" --format PublicIPv4 --no-header)
 echo "Server address: $ip"
-# DigitalOcean reuses addresses: forget any old server this Mac saw there.
-ssh-keygen -R "$ip" >/dev/null 2>&1 || true
+# DigitalOcean reuses addresses: a new server forgets any old one this Mac saw
+# there. An existing server keeps the key this Mac trusts, so a different one
+# answering is refused rather than trusted again (fresh review, 24 Oct).
+if [ -n "$new_server" ]; then
+  ssh-keygen -R "$ip" >/dev/null 2>&1 || true
+fi
 
 step "The firewall (web and SSH only)"
 if ! doctl compute firewall list --format Name --no-header | grep -qx "$NAME"; then
@@ -129,16 +146,48 @@ ssh_opts=(-i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new -o ConnectTimeo
 echo "Waiting for the server to accept SSH..."
 for _ in $(seq 1 30); do ssh "${ssh_opts[@]}" "root@$ip" true 2>/dev/null && break; sleep 10; done
 ssh "${ssh_opts[@]}" "root@$ip" 'mkdir -p /opt/wheelhouse'
-scp -q "${ssh_opts[@]}" "$HERE/compose.yml" "$HERE/Caddyfile" "root@$ip:/opt/wheelhouse/"
+scp -q "${ssh_opts[@]}" "$HERE/compose.yml" "$HERE/Caddyfile" "$HERE/deploy.sh" "root@$ip:/opt/wheelhouse/"
 scp -q "${ssh_opts[@]}" "$ca_file" "root@$ip:/opt/wheelhouse/ca.crt"
-ssh "${ssh_opts[@]}" "root@$ip" 'chmod 644 /opt/wheelhouse/ca.crt'
+ssh "${ssh_opts[@]}" "root@$ip" 'chmod 644 /opt/wheelhouse/ca.crt && chmod 755 /opt/wheelhouse/deploy.sh'
 # The database details go in on standard input, not the command line, so no
 # password shows up in a process list on either machine.
 {
-  printf 'export DB_HOST=%q DB_PORT=%q DB_ADMIN_PASSWORD=%q APP_DB_PASSWORD=%q SITE_ADDRESS=%q\n' \
-    "$db_host" "$db_port" "$db_admin_pw" "$app_pw" "$site"
+  printf 'export DB_HOST=%q DB_PORT=%q DB_ADMIN_PASSWORD=%q APP_DB_PASSWORD=%q SITE_ADDRESS=%q DEPLOY_PUBLIC_KEY=%q\n' \
+    "$db_host" "$db_port" "$db_admin_pw" "$app_pw" "$site" "$(cat "$DEPLOY_KEY_FILE.pub")"
   cat "$HERE/remote-install.sh"
 } | ssh "${ssh_opts[@]}" "root@$ip" 'bash -s'
+
+step "Automatic updates (GitHub)"
+# The server's own host key, read over the SSH login above, so GitHub only
+# ever talks to this server.
+host_key=$(ssh "${ssh_opts[@]}" "root@$ip" 'cat /etc/ssh/ssh_host_ed25519_key.pub' | awk '{print $1" "$2}')
+[ -n "$host_key" ] || fail "couldn't read the server's host key. Run it again; if it stops here twice, ask Mark."
+gh secret set HOSTED_COPY_SSH_KEY --repo "$REPO" < "$DEPLOY_KEY_FILE" >/dev/null
+gh variable set HOSTED_COPY_HOST --body "$ip" --repo "$REPO" >/dev/null
+gh variable set HOSTED_COPY_URL --body "https://$site" --repo "$REPO" >/dev/null
+gh variable set HOSTED_COPY_KNOWN_HOSTS --body "$ip $host_key" --repo "$REPO" >/dev/null
+echo "GitHub can now update the test copy after every merge to main."
+# Public means the server can download it without a password, so ask the
+# registry exactly that, signed in as nobody. (gh's own package lookup needs
+# a permission gh usually isn't given, and answers "not found" without it.)
+package_is_public() {
+  local token
+  token=$(curl -fsS -m 10 "https://ghcr.io/token?scope=repository:jackcurphey/wheelhouse-epos:pull" | jq -r '.token // empty') || return 1
+  [ -n "$token" ] || return 1
+  curl -fsS -m 10 -o /dev/null -H "Authorization: Bearer $token" "https://ghcr.io/v2/jackcurphey/wheelhouse-epos/tags/list"
+}
+if ! package_is_public; then
+  cat <<PACKAGE
+
+One more thing, once: the server downloads each update from GitHub without a
+password, so the app's package on GitHub must be public (the code already
+is). It appears after the first automatic update has run; then open
+  https://github.com/users/${REPO%%/*}/packages/container/wheelhouse-epos/settings
+choose "Change visibility", then Public, and re-run the failed update from
+the Actions tab. docs/runbooks/hosted-copy.md, "Automatic updates", has it
+step by step.
+PACKAGE
+fi
 
 signup_code=$(ssh "${ssh_opts[@]}" "root@$ip" "grep '^SIGNUP_CODE=' /opt/wheelhouse/.env | cut -d= -f2")
 cat <<DONE
