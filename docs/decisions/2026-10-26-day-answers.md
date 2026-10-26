@@ -146,3 +146,10 @@ till). Jack answered the rest:
 4. **Built after Mark's till-deposit piece is merged** (Jack: "After Mark's
    till deposit"), so it uses his "what's left to pay" and deposit rules
    directly, in slice A, rather than being built now and redone.
+
+## 10. A company's receipt until VAT is recorded
+
+**Headed "Invoice" until sales record VAT** (Jack: "Invoice until VAT
+exists"), with the company's "Invoice to" block. A document called a VAT
+invoice without its VAT amount isn't a proper one. It becomes "VAT invoice",
+with its VAT line, when Mark's step C records VAT on each sale.
