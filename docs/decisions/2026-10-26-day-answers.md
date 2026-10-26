@@ -68,23 +68,34 @@ What it unblocks, as drawn (`cs-add-company`; collect.mjs's VAT invoice):
 
 ## 4. Spreadsheet downloads
 
-**Both** (Jack: "Both"):
-- **A Download button on each list now:** customers, workshop jobs and
-  sales each give their own spreadsheet file, as the reports drawings show
-  "Download (a spreadsheet)" on each (`2026-10-01-reports-and-accounts-review.md`).
-- **"Download everything" stays as decided on 25 Oct**
-  (`2026-10-25-morning-questions.md` answer 10): one zip of all four
-  spreadsheets, once stock exists.
+**With Reports, as drawn** (Jack: "With Reports, as drawn"). Each report
+(Sales, Takings, VAT, Workshop and the rest) gets its "Download as
+spreadsheet" button when Reports is built in slice D (`reports.mjs:68`,
+`2026-10-01-reports-and-accounts-review.md`). "Download everything" stays as
+decided on 25 Oct (`2026-10-25-morning-questions.md` answer 10): one zip of
+all four spreadsheets once stock exists.
 
-(The question was asked again by mistake: STATUS still listed it as open
-after the 25 Oct answer. Jack confirmed the 25 Oct answer stands alongside.)
+This replaces a first answer that day ("a Download button on each list
+now"). That came from a wrongly framed question: the drawings put Download
+on the reports, not the lists, and only the Customers list is built. The
+question was also asked again by mistake, since STATUS still listed it as
+open after the 25 Oct answer.
 
-## 5. The label printer helper's own key
+## 5. The label printer helper: dropped, browser printing only
 
-**In Settings › Till, next to Tills, as "Label printers"** (Jack: "Next to
-Till › Tills"). The owner adds a printer there, gets its key, and can remove
-it. Not drawn, so it is drawn first for Jack to approve. Helpers already
-signed in keep working up to 30 days meanwhile.
+**Drop the print agent; print everything through the browser** (Jack: "Drop
+it, browser only"). This follows Jack's 1 Sep answer to Mark
+(`2026-09-01-ownership-signoff.md` PF-3: "you can get rid of the print agent
+if you want and just make it all browser based"). It also matches how
+receipts (`2026-10-18-print-receipt.md`) and bike tags
+(`2026-10-21-bike-tag.md`) already print.
+
+The earlier question, where the owner makes the helper's own key, falls
+away. A "Label printers" page was drawn for it that morning before Jack
+pointed out the 1 Sep answer; it was scrapped, not kept. The helper's code
+and its server routes (`print-agent/`, `server/routes/print-agents.js`) are
+removed in their own pull request; Jack approved the deletion with this
+answer.
 
 ## 6. Discounts at the till
 
@@ -97,3 +108,48 @@ already work at the till meanwhile.
 **Wait for slice B** (Jack: "Wait for slice B"). They are built with the new
 till after Mark's step C, so the till screen changes once. Today's automatic
 Workshop buttons stay as they are until then.
+
+## 8. The conversation, drawn and approved
+
+1. **The redrawn account screens are approved** (Jack: "Approve").
+   `account.mjs` now draws:
+   - `ac-ask`: "Ask the shop a question" opens "Messages with North Street
+     Cycles", one thread, with repair notes marked "About WH-1042" (opening
+     that repair) and "We'll let you know when North Street Cycles replies";
+   - `ac-account-question-sent` and `ac-question`;
+   - `ac-account-asked`: one "Messages" row in the history.
+2. **The staff Messages inbox shows one conversation per customer too**
+   (Jack: "Yes, one per customer"). A customer's repair notes and general
+   messages are together, each repair note marked with its repair, instead
+   of a row per repair's notes and a row per question. The inbox drawings
+   (`ac-inbox*`) are updated to match as part of the build.
+
+## 9. Paying a repair online: the three open points
+
+Most of it is settled already: where it is paid (`2026-09-30-collect-and-pay-review.md`),
+the drawings (`cp-pay`, `cp-pay-failed`, `cp-pay-balance`, `cp-paid`), and
+Mark's rules for the balance (his till-deposit design, decision 12: charge
+what's left to pay, take the order's lock first, count deposits held at the
+till). Jack answered the rest:
+
+1. **The cashier on an online payment is nobody: the sale shows "Paid
+   online"** (Jack: "Nobody"). It needs a server change so a sale can have no
+   cashier, since Mark ruled out a pretend online till (sales-in-pence
+   decision 4).
+2. **While the till has the bike's order open, the customer's page hides Pay**
+   and says it's being paid at the counter, as drawn (audit H3). A short
+   "till has it open" marker, which clears itself after a few minutes
+   (Jack: "Hide Pay while the till has it").
+3. **Refunds of an online repair payment wait for the till's refunds**
+   (slice B), built once for both. Until then a refund is made in the
+   payment provider's own dashboard (Jack: "Wait for till refunds").
+4. **Built after Mark's till-deposit piece is merged** (Jack: "After Mark's
+   till deposit"), so it uses his "what's left to pay" and deposit rules
+   directly, in slice A, rather than being built now and redone.
+
+## 10. A company's receipt until VAT is recorded
+
+**Headed "Invoice" until sales record VAT** (Jack: "Invoice until VAT
+exists"), with the company's "Invoice to" block. A document called a VAT
+invoice without its VAT amount isn't a proper one. It becomes "VAT invoice",
+with its VAT line, when Mark's step C records VAT on each sale.
