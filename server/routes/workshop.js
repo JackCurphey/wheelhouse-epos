@@ -9,7 +9,7 @@ import { writeFile, unlink } from 'node:fs/promises';
 import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { prepare, dbExec, pool } from '../db.js';
+import { prepare, dbExec } from '../db.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, photoCodePath } from '../booking-link.js';
@@ -312,7 +312,10 @@ function publicBase(req) {
 async function issueJobLink(req, jobId, shopId) {
   const code = newLinkCode();
   await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(code), nowIso(), jobId);
-  const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+  // Through this request's own connection, never a second one from the pool
+  // (openspec/changes/portal-connection-per-request); shops has no row-level
+  // security, and shopId is the signed-in session's shop.
+  const shop = await db.prepare('SELECT slug FROM shops WHERE id = ?').get(shopId);
   return `${publicBase(req)}${linkPath(shop.slug, code)}`;
 }
 
@@ -464,7 +467,7 @@ export function register(route) {
     const code = newLinkCode();
     await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?')
       .run(hashLinkCode(code), nowIso(), job.id);
-    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const shop = await db.prepare('SELECT slug FROM shops WHERE id = ?').get(shopId);
     sendJson(res, 201, { privateLink: linkPath(shop.slug, code) });
   });
 
@@ -487,7 +490,7 @@ export function register(route) {
       if (result.code === 'illegal') return sendJson(res, 409, { error: result.message, code: 'illegal' });
       return badRequest(res, result.message);
     }
-    const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+    const shop = await db.prepare('SELECT slug FROM shops WHERE id = ?').get(shopId);
     const path = photoCodePath(shop.slug, result.code);
     sendJson(res, 201, { codeId: result.codeId, path, url: `${publicBase(req)}${path}`, expiresAt: result.expiresAt });
   });

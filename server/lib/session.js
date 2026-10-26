@@ -30,7 +30,24 @@ export async function currentSession(req) {
   return (await getSessionContext(token)) ?? (await devSession(req));
 }
 
+// The same for a customer on the shop's website: the dispatcher's portal
+// branch in server.js looks the customer up here, before runWithShop takes the
+// request's connection, and only when the request carries the cookie (with no
+// cookie there is nothing to look up and no query is run). Without this, ten
+// requests with any cookie at all, even a made-up one, held all ten
+// connections waiting for an eleventh (openspec/changes/
+// portal-connection-per-request). The answer, a session or null, is kept per
+// request object, exactly as for staff; each route still checks that it
+// belongs to the shop it asked.
+const rememberedCustomers = new WeakMap();
+
+export async function rememberCustomerSession(req) {
+  const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
+  if (token) rememberedCustomers.set(req, await getCustomerSessionContext(token));
+}
+
 export async function currentCustomerSession(req) {
+  if (rememberedCustomers.has(req)) return rememberedCustomers.get(req);
   const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
   return getCustomerSessionContext(token);
 }

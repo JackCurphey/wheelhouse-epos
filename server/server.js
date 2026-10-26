@@ -19,7 +19,7 @@ import {
 } from './lib/sales.js';
 // Tests import these from server.js; it keeps re-exporting them (split plan §4.1).
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
-import { currentSession, rememberSession } from './lib/session.js';
+import { currentSession, rememberSession, rememberCustomerSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
@@ -611,6 +611,9 @@ const server = createServer(async (req, res) => {
       if (!shop) return notFound(res, 'Shop not found');
 
       try {
+        // Which customer is asking, looked up before runWithShop takes this
+        // request's connection, so a route asking again needs no second one.
+        await rememberCustomerSession(req);
         await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, shop));
       } catch (err) {
         console.error(err);
