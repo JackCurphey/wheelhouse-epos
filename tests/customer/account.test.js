@@ -175,3 +175,19 @@ test('with bikes already, + Add a bike under them adds another and the box close
   assert.ok(await bikes.findByText('Brompton C Line'));
   assert.ok(ui.queryByRole('dialog') === null, 'the box closes');
 });
+
+// next-service-due design 3 (ac-account, audit L10): the reminder's day, only while reminders are on.
+test('each bike says when its next service is due, joined to In the shop now; nothing with reminders off', async () => {
+  const bikesDue = [{ ...BIKES[0], nextServiceDue: '2027-03-17' }, { id: 8, make: 'Brompton', model: 'C Line', colour: 'Black', nextServiceDue: '2027-05-04' }];
+  let { ui } = await open({ bikes: bikesDue });
+  const { within: w } = await import('@testing-library/react');
+  let bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
+  assert.ok(await bikes.findByText('In the shop now · WH-1042 · next service due Wed 17 Mar 2027'));
+  assert.ok(bikes.getByText('Next service due Tue 4 May 2027'));
+  const { cleanup } = await import('@testing-library/react');
+  cleanup(); current.client.clear(); current.uninstall();
+  ({ ui } = await open({ bikes: bikesDue, me: { ...ME, serviceReminders: false } }));
+  bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
+  await bikes.findByText('Brompton C Line · Black');
+  assert.ok(bikes.queryByText(/next service due/i) === null);
+});

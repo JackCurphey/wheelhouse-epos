@@ -226,3 +226,48 @@ test('adding a bike from another website is refused, and no bike is added', asyn
   const ok = await portal('/bikes', { method: 'POST', body: { make: 'Brompton', model: 'C Line' }, headers: { 'sec-fetch-site': 'same-origin' } });
   assert.equal(ok.status, 201);
 });
+
+// next-service-due design 1 and 2: each bike's waiting service reminder's day, in the shop's time; none with reminders off.
+test('/bikes gives each bike the day its service reminder is waiting for, and none with reminders off', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET service_reminders = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'booking' WHERE id = ?").run(maya.id));
+  // A bike of its own, collected after a service: what a waiting reminder follows.
+  const bike = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Ribble', model: 'CGR' } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-10-27', customerId: maya.id, bikeId: bike.id } })).body;
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = '2026-09-17T10:00:00Z' WHERE id = ?").run(job.id));
+  await runWithShop(owner.shop.id, () => prepare(
+    `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, to_address, send_after)
+     VALUES (?, ?, 'Time for a service', 'queued', 'intended', 'sms', 'service_reminder', '07700 900142', '2027-03-17T09:00:00Z')`
+  ).run(maya.id, job.id));
+  const ribble = (await portal('/bikes')).body.find((b) => b.id === bike.id);
+  assert.equal(ribble.nextServiceDue, '2027-03-17');
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET service_reminders = false WHERE id = ?').run(maya.id));
+  assert.equal((await portal('/bikes')).body.find((b) => b.id === bike.id).nextServiceDue, null);
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET service_reminders = true WHERE id = ?').run(maya.id));
+});
+
+
+// Review of next-service-due: the shop's own date in summer time; nothing for
+// a held or undone reminder, or one that will be cancelled as it comes due
+// because the bike has been collected again since (serviceReminderNow).
+test('/bikes: the shop’s own date in summer; none for a held, undone or overtaken reminder', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customers SET service_reminders = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'booking' WHERE id = ?").run(maya.id));
+  const bike = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Cube', model: 'Attain' } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-10-28', customerId: maya.id, bikeId: bike.id } })).body;
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = '2026-09-01T10:00:00Z' WHERE id = ?").run(job.id));
+  const reminder = (sendAfter, state = 'intended') => runWithShop(owner.shop.id, () => prepare(
+    `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, to_address, send_after)
+     VALUES (?, ?, 'Service', 'queued', ?, 'sms', 'service_reminder', '07700 900142', ?) RETURNING id`
+  ).get(maya.id, job.id, state, sendAfter));
+  const due = async () => (await portal('/bikes')).body.find((b) => b.id === bike.id).nextServiceDue;
+  const r = await reminder('2027-06-30T23:30:00Z');
+  assert.equal(await due(), '2027-07-01', 'half past eleven at night in June, UTC, is the next day in London');
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customer_messages SET send_after = 'infinity' WHERE id = ?").run(r.id));
+  assert.equal(await due(), null, 'held');
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customer_messages SET send_after = '2027-06-30T23:30:00Z', intent_state = 'undone', status = 'undone' WHERE id = ?").run(r.id));
+  assert.equal(await due(), null, 'undone');
+  await runWithShop(owner.shop.id, () => prepare("UPDATE customer_messages SET intent_state = 'intended', status = 'queued' WHERE id = ?").run(r.id));
+  assert.equal(await due(), '2027-07-01');
+  const later = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Puncture', jobDate: '2026-10-29', customerId: maya.id, bikeId: bike.id } })).body;
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET custody_state = 'collected', collected_at = '2026-10-01T10:00:00Z' WHERE id = ?").run(later.id));
+  assert.equal(await due(), null, 'collected again since: this reminder won’t go');
+});
