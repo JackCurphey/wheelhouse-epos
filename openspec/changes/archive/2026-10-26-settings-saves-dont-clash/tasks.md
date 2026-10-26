@@ -6,4 +6,4 @@
 - [x] 1.4 Break each fix on purpose (drop `FOR UPDATE`; drop the `BEGIN`), confirm the edit landed, see the test go red, restore
 - [x] 1.5 A refused save writes nothing and the next save goes through; break a check on purpose and see it go red
 - [x] 1.6 Self-review and `/review` 26 Oct: nothing serious; the first-save race fixed (two first website saves at once both inserted the row and one got a 500; now `INSERT … ON CONFLICT (shop_id) DO NOTHING`, then read the row; test watched failing with the duplicate-key 500, and red again with the fix taken out)
-- [ ] 1.7 `npm test`, `npm run test:browser` and lint; archive as the last commit
+- [x] 1.7 `npm test`, `npm run test:browser` and lint; archive as the last commit
