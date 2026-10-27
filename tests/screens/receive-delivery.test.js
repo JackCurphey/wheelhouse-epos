@@ -302,6 +302,16 @@ test('?order= naming an order that isn’t waiting says it’s all in and picks 
   assert.ok(within(ui.getByRole('list', { name: 'Still to come on the order' })).getByText('[Product]'));
 });
 
+// Closed with part of it in (openspec/changes/close-part-delivered): all in,
+// nothing on it still to come, and it isn't picked.
+test('?order= naming a closed order says it’s all in, and its lines aren’t still to come', async () => {
+  const closed = order({ status: 'closed', items: [{ ...item(PADS, 1, 0), outstanding: 0, notComing: 1 }, { ...item(TUBE, 3, 1), outstanding: 0, notComing: 2 }] });
+  const { ui } = await open('/workshop/deliveries/receive?order=7', { orders: [closed, ORDERS[1]] });
+  await ui.findByText('This order is all in.');
+  assert.equal(ui.getByRole('radio', { name: '[Supplier]' }).checked, false);
+  assert.ok(ui.queryByRole('list', { name: 'Still to come on the order' }) === null);
+});
+
 test('booking in the last of an order keeps its supplier picked, with nothing still to come, and doesn’t move on to another', async () => {
   const r = await receivePage({}, '/workshop/deliveries/receive');
   const { ui, within, fireEvent } = r;

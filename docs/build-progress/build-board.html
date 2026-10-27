@@ -95,26 +95,29 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
 .next li span { display: block; font-size: 13px; color: var(--muted); }
 .more { margin: 0; font-size: 14px; color: var(--muted); }
 .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
-.stage .sum { margin: 0; font-size: 16px; font-weight: 600; }
 .stage .bar { height: 10px; border-radius: 999px; background: var(--next-bg); overflow: hidden; }
 .stage .bar span { display: block; height: 100%; background: var(--done-ink); border-radius: 999px; }
-.stage ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.stage li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; font-size: 14px; }
-.stage li span.d { grid-column: 2; font-size: 13px; color: var(--muted); }
-.stage .how { margin: 0; font-size: 13px; color: var(--muted); }
+.slices { display: flex; flex-direction: column; gap: 10px; }
+.slices .sum { margin: 0; font-size: 16px; font-weight: 600; }
+.slices .how { margin: 0; font-size: 13px; color: var(--muted); max-width: 68ch; }
+#ov-slices { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 8px; align-items: start; }
+.slice-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+.slice-head h3 { margin: 0; font-size: 16px; font-weight: 600; min-width: 0; }
+.stage .play, .stage .count { margin: 0; font-size: 14px; }
+.stage .count { font-size: 13px; color: var(--muted); }
 .packages summary { cursor: pointer; font-size: 14px; font-weight: 600; }
-.packages > ol { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.packages > ol > li { display: block; }
-.packages > ol > li > strong { font-size: 14px; }
-.packages > ol > li > span.d { display: inline; margin-left: 6px; font-size: 13px; color: var(--muted); }
-.packages > ol ol { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.packages > ol ol li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 2px 10px; align-items: start; font-size: 14px; }
-.packages > ol ol li .pill { justify-self: start; }
-.packages > ol ol li span.d { grid-column: 2; font-size: 13px; color: var(--muted); }
+.packages summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.packages ol { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.packages li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 2px 10px; align-items: start; font-size: 14px; }
+.packages li .pill { justify-self: start; }
+.packages li strong, .packages li span.d { min-width: 0; overflow-wrap: anywhere; }
+.packages li span.d { grid-column: 2; font-size: 13px; color: var(--muted); }
+.packages > .how { margin-top: 8px; }
 .more button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
 @media (max-width: 560px) {
   ol.pieces li { grid-template-columns: minmax(0, 1fr) auto; }
   ol.pieces li .st { grid-column: 1 / -1; }
+  .stage { padding: 14px 16px; }
 }
 </style>
 
@@ -137,22 +140,18 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
       <p class="lead" id="ov-now"></p>
       <div class="tally" id="ov-tally"></div>
     </section>
-    <section class="stage" aria-labelledby="ov-project-h">
-      <h2 id="ov-project-h">How far through Release 2</h2>
-      <p class="sum" id="ov-project-sum"></p>
-      <div class="bar" id="ov-project-bar" role="progressbar" aria-labelledby="ov-project-sum" aria-valuemin="0" aria-valuemax="100"><span></span></div>
-      <p class="how" id="ov-project-how"></p>
-      <details class="packages">
-        <summary>Every work package, by stage</summary>
-        <ol id="ov-project-packages"></ol>
-      </details>
-    </section>
-    <section class="stage" aria-labelledby="ov-stage-h">
-      <h2 id="ov-stage-h">How far through the stage</h2>
-      <p class="sum" id="ov-stage-sum"></p>
-      <div class="bar" id="ov-stage-bar" role="progressbar" aria-labelledby="ov-stage-sum" aria-valuemin="0" aria-valuemax="100"><span></span></div>
-      <ol id="ov-stage-steps"></ol>
-      <p class="how" id="ov-stage-how"></p>
+    <section aria-labelledby="ov-slices-h">
+      <h2 id="ov-slices-h">Slices</h2>
+      <div class="slices">
+        <p class="sum" id="ov-slices-sum"></p>
+        <ol id="ov-slices"></ol>
+        <p class="how" id="ov-slices-how"></p>
+        <details class="packages">
+          <summary>Not in a slice</summary>
+          <p class="how" id="ov-outside-how"></p>
+          <ol id="ov-outside"></ol>
+        </details>
+      </div>
     </section>
     <section aria-labelledby="ov-wait-h">
       <h2 id="ov-wait-h">Needs you</h2>
@@ -217,87 +216,90 @@ const BOARD = {
   // Jack (from Mark, or a decision), with a link where there is one, and the
   // next few pieces for each person. Keep it short; the rest is on Detail.
   overview: {
-    // How far through the whole of Release 2 (Jack, 23 Oct): every work
-    // package in the build plan's stages 0 to 8, marked done, part or todo
-    // from what is merged; a partly done one counts half. Marked by Claude on
-    // 23 Oct for Jack and Mark to correct; kept up in the day's status update.
-    project: {
-      how: "Counted from the build plan's work packages, stages 0 to 8: done counts 1, partly done counts half. It's a judgement of each package against what's merged, not of how much work is left inside it. The walk-throughs (stage W) were planning, so they aren't counted; running alongside and the switch-over moved after Release 2 on 18 Oct.",
-      stages: [
-        { name: "Stage 0 — Close what's open", packages: [
-          { id: "WP-0.1", what: "Merge the open pull requests", status: "done", detail: "#110, #111, #112, #114" },
-          { id: "WP-0.2", what: "Fix the recorded booking bugs", status: "done", detail: "Server half #148, screens half #164" },
-          { id: "WP-0.3", what: "Trim STATUS.md", status: "done", detail: "#149" },
-          { id: "WP-0.4", what: "Split the server into files", status: "done", detail: "Every route has left server.js; the last, the booking link's quote answer, moved on 24 Oct (#468)" },
-          { id: "WP-0.5", what: "Online test copy", status: "done", detail: "Live, updating itself on every merge (#427, #428), the fresh review's fixes (#469), the test shop loadable and the restore steps written (#470); the four drills done (25 Oct)" },
+    // Release 2 in six slices (Mark's replan, #499; Jack accepted it as is on
+    // 26 Oct, docs/decisions/2026-10-26-day-answers.md section 1). Each slice
+    // ends in something to play on the test copy. A slice's state is the agreed
+    // order, A to F: build (Being built), next, later, or played once its
+    // "play it" check is done. Its bar is worked out from its items: done
+    // counts 1, part counts half. The packages are the build plan's, marked by
+    // Claude against what is merged, for Jack and Mark to correct.
+    slicesHow: "Each slice's bar counts its own items: done counts 1, partly done counts half. Slice A's items are the replan's open items plus the workshop and customer packages already mostly built; putting those packages under A is the board's reading of the replan, not a line in it. A slice is played once its play-it check on the test copy is done.",
+    slices: [
+        { letter: "A", name: "A repair, start to finish", state: "build",
+          play: "Book online, answer it, take the bike in, quote, work, ready, collect, pay with a deposit taken off, receipt, the reminder and review text",
+          items: [
+          { what: "Sales in pence, step B", status: "done", detail: "#492" },
+          { what: "Sales in pence, step C, the new till on sync", status: "todo", detail: "Mark's" },
+          { what: "A deposit taken at the till", status: "todo", detail: "Mark's; the spec is written on mark/till-job-deposit, waiting for his yes" },
+          { what: "Paying a repair online", status: "todo", detail: "Jack's; after Mark's till deposit" },
+          { what: "Audit item 23, a declined date change's message", status: "done", detail: "#507" },
+          { id: "WP-1.6", what: "One sales record in pence", status: "part", detail: "Step A merged (#404); the workshop's amounts in pence (#478 to #482); step B (reports read both records) merged (#492); step C, the new till on sync, is next" },
+          { id: "WP-1.8", what: "Messages engine and email", status: "part", detail: "The engine, wording, Undo, Settings › Messages and the reminder, pretend sending (#321 to #330, #418); a shop's own automatic messages (#521, #522)" },
+          { id: "WP-3.2", what: "Customers", status: "part", detail: "The list (#449), a customer's page and Edit (#450), Merge with Undo (#451); the old screen removed (#465); a bike's own page (#497) and Find a bike in the header search (#498); a sale opens from the history (#516); Add a bike from a customer's page (#523); company customers, with a receipt headed Invoice (#528)" },
+          { id: "WP-4.1", what: "Workshop day, the rest", status: "part", detail: "Overview, offers, storage slots, checklists, sign-off, Use my phone, the bike on Waiting cards, Done ticks and notes per line (#471), the diary legend in a box (#525) and more; not yet: I'll do this, Who did what" },
+          { id: "WP-4.2", what: "Quotes, the rest", status: "part", detail: "Photos, lines that go together, the reminder, the spending limit, notes, the pinned bar, Use my phone, location taken off photos, No answer yet on Today, deposits (#405 to #462)" },
+          { id: "WP-4.3", what: "Collect and pay", status: "part", detail: "Bike ready (#326), the ready and collected stages (#344, #360), a bike left uncollected (#440, #441), emailed receipts (#443, the till's button #472 and Save to a customer record #474), an online deposit off at the till (#473); not yet: paying online (after Mark's till deposit, your 26 Oct answer 9)" },
+          { id: "WP-4.4", what: "Book a repair, rebuilt", status: "part", detail: "Change, cancel, offered times, confirming automatically, booking settings and messages, deposits online with refunds and Didn't come (#452 to #462), an unfinished booking coming back (#477); not yet: a deposit taken at the till (after Mark's step B)" },
+          { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); service reminders: the yes when booking (#483), each service's months (#485), sending them (#488), Stop these (#489), the in-shop ready page's tick (#491), a merge keeping a yes (#493); review requests (#494, #495); the customer's account (#514, #515) with Add a bike (#523), next service due (#524), How we contact you (#526) and Ask the shop, one conversation per customer (#529, #531); not yet: [to check against the drawings]" },
         ] },
-        { name: "Stage 1 — Foundations", packages: [
+        { letter: "B", name: "A shop day with real people", state: "next",
+          play: "Staff sign in with a PIN, see only their own rooms, the shop opens with a float check, sells, the day closes with a count and a report",
+          items: [
           { id: "WP-1.1", what: "Roles and switches", status: "part", detail: "App frame and where each person lands (#97), Settings for the Owner only (#283); the roles and switches aren't on the server yet" },
           { id: "WP-1.2", what: "Settings store, change record, activity log", status: "todo", detail: "Not built; I'll do this and Who did what wait for it" },
-          { id: "WP-1.3", what: "The Settings frame", status: "part", detail: "The frame with rooms and folds (#339); the till's quick buttons aren't in Settings yet" },
-          { id: "WP-1.4", what: "Shops and sites everywhere", status: "todo", detail: "Written down (#154), not built" },
-          { id: "WP-1.5", what: "Products, stock, sizes and colours", status: "todo", detail: "Only the old app's products" },
-          { id: "WP-1.6", what: "One sales record in pence", status: "part", detail: "Step A merged (#404); the workshop's amounts in pence (#478 to #482); step B (reports read both records) is built and in review (#492); step C, the new till on sync, is next" },
-          { id: "WP-1.7", what: "Sign-in and PINs", status: "part", detail: "Customers sign in with an emailed code (#500, #502); staff sign in only through WorkOS (#504), with its pages (#505) and Wheelhouse's own sign-in screen with Continue with Google (#508); not yet: till PINs, the shared workshop computer, the label printer helper's own key" },
-          { id: "WP-1.8", what: "Messages engine and email", status: "part", detail: "The engine, wording, Undo, Settings › Messages and the reminder, pretend sending (#321 to #330, #418)" },
-          { id: "WP-1.9", what: "Live updates", status: "todo", detail: "Not built" },
+          { id: "WP-1.7", what: "Sign-in and PINs", status: "part", detail: "Customers sign in with an emailed code (#500, #502), staying signed in 30 days from their last visit (#529); staff sign in only through WorkOS (#504), with its pages (#505) and Wheelhouse's own sign-in screen with Continue with Google (#508); the label printer helper is dropped, everything prints through the browser (#527); not yet: till PINs, the shared workshop computer" },
+          { id: "WP-3.3", what: "Opening the shop", status: "part", detail: "Jack, 27 Oct: the float check is being built (branch jack/opening-float-check)" },
+          { id: "WP-3.4", what: "End-of-day cash-up", status: "todo", detail: "Not built" },
           { id: "WP-1.10", what: "Needs attention and Today", status: "part", detail: "Today with Needs attention for the Owner and Workshop today (#437), the uncollected bike line (#441); not yet: Tills, Who's in (wait for PINs)" },
-          { id: "WP-1.11", what: "Small shared parts", status: "part", detail: "Receipt and bike-tag printing (#269, #347); Your settings with Reduce motion, status symbols, the folded sidebar, Larger text and Don't close things by themselves (#442 to #467); the header search (#448); not yet: spreadsheet download" },
+          { id: "WP-3.1", what: "The till, complete", status: "part", detail: "Sale and payment (#111), paying a job (#267), receipts (#269), sign-off at the till (#273); no discounts, refunds or card machine yet" },
         ] },
-        { name: "Stage 2 — Products and stock", packages: [
-          { id: "WP-2.1", what: "Stock control", status: "todo", detail: "Old app only" },
+        { letter: "C", name: "Stock you can trust", state: "later",
+          play: "Add a product with sizes and colours, receive a delivery, sell it and watch stock drop, count the shelf",
+          items: [
+          { id: "WP-1.5", what: "Products, stock, sizes and colours", status: "todo", detail: "Only the old app's products" },
+          { id: "WP-2.1", what: "Stock control", status: "part", detail: "The stock list and a product's page (#530); adjusting stock with a reason, who and when, by anyone with the Stock page (#538); two saves at once no longer undo each other (#542)" },
+          { id: "WP-2.3", what: "Deliveries and purchase orders", status: "part", detail: "The hub, a new order and an order's page (#532); receiving against an order with damaged, wrong and missing items (#533) and without one (#541); not yet: the restock list's details and closing a part-delivered order (waiting on your answers)" },
           { id: "WP-2.2", what: "Stock take", status: "todo", detail: "Not built" },
-          { id: "WP-2.3", what: "Deliveries and purchase orders", status: "todo", detail: "Old app only" },
           { id: "WP-2.4", what: "Citrus Lime import, first half", status: "todo", detail: "The export list is written down (#170); no importer yet" },
         ] },
-        { name: "Stage 3 — The till and the shop day", packages: [
-          { id: "WP-3.1", what: "The till, complete", status: "part", detail: "Sale and payment (#111), paying a job (#267), receipts (#269), sign-off at the till (#273); no discounts, refunds or card machine yet" },
-          { id: "WP-3.2", what: "Customers", status: "part", detail: "The list (#449), a customer's page and Edit (#450), Merge with Undo (#451); the old screen removed (#465); a bike's own page (#497) and Find a bike in the header search (#498); a sale opens from the history (#516)" },
-          { id: "WP-3.3", what: "Opening the shop", status: "todo", detail: "Not built" },
-          { id: "WP-3.4", what: "End-of-day cash-up", status: "todo", detail: "Not built" },
-        ] },
-        { name: "Stage 4 — The workshop and the customer's repair", packages: [
-          { id: "WP-4.1", what: "Workshop day, the rest", status: "part", detail: "Overview, offers, storage slots, checklists, sign-off, Use my phone, the bike on Waiting cards, Done ticks and notes per line (#471) and more; not yet: I'll do this, Who did what" },
-          { id: "WP-4.2", what: "Quotes, the rest", status: "part", detail: "Photos, lines that go together, the reminder, the spending limit, notes, the pinned bar, Use my phone, location taken off photos, No answer yet on Today, deposits (#405 to #462)" },
-          { id: "WP-4.3", what: "Collect and pay", status: "part", detail: "Bike ready (#326), the ready and collected stages (#344, #360), a bike left uncollected (#440, #441), emailed receipts (#443, the till's button #472 and Save to a customer record #474), an online deposit off at the till (#473); not yet: paying online (waits on how it becomes a sale)" },
-          { id: "WP-4.4", what: "Book a repair, rebuilt", status: "part", detail: "Change, cancel, offered times, confirming automatically, booking settings and messages, deposits online with refunds and Didn't come (#452 to #462), an unfinished booking coming back (#477); not yet: a deposit taken at the till (after Mark's step B)" },
-          { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); service reminders: the yes when booking (#483), each service's months (#485), sending them (#488), Stop these (#489), the in-shop ready page's tick (#491), a merge keeping a yes (#493); review requests (#494, #495); not yet: the customer's account (waits for the emailed-code sign-in)" },
-        ] },
-        { name: "Stage 5 — The office", packages: [
+        { letter: "D", name: "The owner's view", state: "later",
+          play: "Reports and takings by day, the activity log, staff and roles setup, payments set up",
+          items: [
           { id: "WP-5.1", what: "Owner setup, the rooms", status: "part", detail: "Shop details, hours, receipt words, the sign-off switch (#275 to #281), Workshop › Services (#484), customer groups in Payments (#517); not yet: staff and roles, ways to pay, end of day" },
-          { id: "WP-5.2", what: "Multiple sites, the screens", status: "todo", detail: "Not built" },
           { id: "WP-5.3", what: "Reports and accounts", status: "todo", detail: "Old app's sales history only" },
           { id: "WP-5.4", what: "Management oversight", status: "todo", detail: "Not built" },
+          { id: "WP-1.11", what: "Small shared parts", status: "part", detail: "Receipt and bike-tag printing (#269, #347), everything through the browser (#527); the note-and-coin counter for the float check and Close the day (#540); Your settings with Reduce motion, status symbols, the folded sidebar, Larger text and Don't close things by themselves (#442 to #467); the header search (#448); not yet: spreadsheet download" },
+          { id: "WP-1.3", what: "The Settings frame", status: "part", detail: "The frame with rooms and folds (#339); the till's quick buttons aren't in Settings yet" },
         ] },
-        { name: "Stage 6 — The website", packages: [
+        { letter: "E", name: "Sell online", state: "later",
+          play: "The public website, buy online, click and collect; Cycle to Work",
+          items: [
           { id: "WP-6.1", what: "Website management", status: "todo", detail: "Old app only" },
           { id: "WP-6.2", what: "Find the shop and browse", status: "todo", detail: "The old shop website only" },
           { id: "WP-6.3", what: "Buy online, click and collect", status: "todo", detail: "The old shop website only" },
-        ] },
-        { name: "Stage 7 — Cycle to Work", packages: [
           { id: "WP-7.1", what: "Cycle to Work", status: "todo", detail: "Not built" },
         ] },
-        { name: "Stage 8 — The move", packages: [
+        { letter: "F", name: "The move", state: "later",
+          play: "The shop's data in; run alongside; switch over",
+          items: [
           { id: "WP-8.1", what: "Citrus Lime import, second half", status: "todo", detail: "Not built. Running alongside and the switch-over moved after Release 2 (your 18 Oct answer, #256), so they aren't counted" },
         ] },
-      ],
-    },
-    // The current stage's steps, as the split plan's §9 lists them; the
-    // percentage on the board is worked out from these, never typed in.
-    stage: {
-      name: 'Stage 0',
-      how: 'Counted from the stage\'s seven steps in the split plan (§9). Pieces built ahead of the plan on your word, like the booking page and the messages engine, belong to later stages and aren\'t counted here.',
-      steps: [
-        { done: true, what: 'Merge the till and diary work (WP-0.1)', detail: 'You, #110, #111 and #112' },
-        { done: true, what: 'Booking bugs, server half (WP-0.2)', detail: 'Mark, #148' },
-        { done: true, what: 'Trim STATUS to 8 KB (WP-0.3)', detail: 'Mark, #149' },
-        { done: true, what: 'Split the server into files (WP-0.4)', detail: 'Mark, finished by you on 24 Oct: the last route moved (#468)' },
-        { done: true, what: 'Booking bugs, screens half (WP-0.2)', detail: 'You, #164' },
-        { done: true, what: 'The online test copy (WP-0.5)', detail: 'Yours from 24 Oct; the four drills are done (25 Oct)' },
-        { done: true, what: 'Stage check: walk booking, the till and the diary in the real app', detail: 'You, 25 Oct' },
-      ],
-    },
-    now: 'Stage 0 is closed. Overnight, 26 Oct: the customer\'s account page, its server and screens (#514, #515); a sale opens from a customer\'s history (#516); customer groups in Settings › Payments (#517); booking\'s search over many single jobs and "Online booking is unavailable" (#518).',
+    ],
+    // Packages in no slice: stage 0 (closed, 25 Oct); shops and sites
+    // everywhere and the multiple-sites screens wait for a second shop; live
+    // updates joins B if its stage check misses it (26 Oct answers, section 1).
+    outsideHow: "Stage 0 closed on 25 Oct. Shops and sites everywhere and the multiple-sites screens wait for a second shop; live updates joins slice B if its stage check misses it.",
+    outside: [
+      { id: "WP-0.1", what: "Merge the open pull requests", status: "done", detail: "#110, #111, #112, #114" },
+      { id: "WP-0.2", what: "Fix the recorded booking bugs", status: "done", detail: "Server half #148, screens half #164" },
+      { id: "WP-0.3", what: "Trim STATUS.md", status: "done", detail: "#149" },
+      { id: "WP-0.4", what: "Split the server into files", status: "done", detail: "Every route has left server.js; the last, the booking link's quote answer, moved on 24 Oct (#468)" },
+      { id: "WP-0.5", what: "Online test copy", status: "done", detail: "Live, updating itself on every merge (#427, #428), the fresh review's fixes (#469), the test shop loadable and the restore steps written (#470); the four drills done (25 Oct)" },
+      { id: "WP-1.4", what: "Shops and sites everywhere", status: "todo", detail: "Written down (#154), not built" },
+      { id: "WP-5.2", what: "Multiple sites, the screens", status: "todo", detail: "Not built" },
+      { id: "WP-1.9", what: "Live updates", status: "todo", detail: "Not built" },
+    ],
+    now: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice C\'s stock pieces are largely in: the stock list, a product\'s page, adjusting stock, deliveries and orders, and receiving with or without an order (#530 to #541). You accepted the replan as is, A to F. From 27 Oct Jack is on WP-3.3, opening the shop, starting with the float check (slice B).',
     next: {
       Mark: [
         { what: 'Sales in pence step C', detail: 'The new till records through sync instead of POST /api/sales; the first piece of "a shop day" (replan slice B)' },
@@ -305,31 +307,31 @@ const BOARD = {
         { what: 'Then the shop day', detail: 'Roles on the server, the settings store and activity log, sign-in and PINs (slice B in the replan, #499)' },
       ],
       Jack: [
-        { what: 'Paying a repair online', detail: 'Waits on how the payment becomes a sale (your question to Mark on #199) and his till-deposit design' },
-        { what: 'The text receipt and its page', detail: 'Waits on your answer: wait for Mark\'s step C (the till\'s receipt numbers), or show "Sale [n]" first?' },
-        { what: 'A shop\'s own automatic messages', detail: 'Waits on your answers: which customer yes lets them go, and what Stop stops' },
+        { what: 'Opening the shop: the float check (WP-3.3)', detail: 'Now, from 27 Oct; the first piece of slice B, using the note-and-coin counter (#540)' },
+        { what: 'Paying a repair online', detail: 'After Mark\'s till deposit is merged (your 26 Oct answer 9): "Paid online" with no cashier, Pay hidden while the till has it open' },
+        { what: 'The text receipt and its page', detail: 'Waits for Mark\'s step C (your 26 Oct answer)' },
         { what: 'Waiting on groundwork', detail: 'I\'ll do this and Who did what wait for who\'s at the device and the activity record (your answer, 22 Oct)' },
       ],
     },
     waiting: [
-      { what: 'From overnight, 26 Oct', detail: 'The text receipt: wait for step C or show "Sale [n]"; the PDF and the barcode now or later. A shop\'s own messages: which yes counts (suggested: offers and news), what Stop stops (suggested: that message), After a sale only with a customer, a Remove button, the message\'s name as the email subject. To overrule: no "are you sure?" when removing a customer group; the search box from 9 single jobs.' },
-      { what: 'From the evening', detail: 'Where the owner makes the label printer helper\'s key (not drawn; a helper already signed in keeps working up to 30 days). Google\'s official G logo file for the sign-in button. The test server\'s "System restart required". Customer sign-in through real WorkOS would send real emails, which the test copy forbids: keep the pretend one?' },
-      { what: 'The replan', detail: 'Playable slices A to F (#499): the shop day (sign-in, PINs, opening, cash-up) before stock. Mark has answered its four questions; it is yours to accept or change.' },
-      { what: 'Small questions left', detail: 'Discounts: build now on the old sales record (redone at Mark\'s step C), or wait for it? The spreadsheet download: one file or several, and only once all four lists can be made?' },
-      { what: 'Waiting on Mark', detail: 'Paying a repair online: how it becomes a sale overlaps his sales-in-pence design (decisions 4 and 8). Refunds wait for his steps B and C.' },
-      { what: 'To overrule if you want', detail: 'The 24 and 25 Oct sections of decided-while-building.md, including the Services room, the reminder tick, the £1,000,000 price limit and the 60-month reminder limit.' },
+      { what: 'Who may edit a supplier', detail: 'Any staff member can today, unlike the other settings (#543).' },
+      { what: 'Still open from before', detail: 'Google\'s official G logo file for the sign-in button. The test server\'s "System restart required".' },
+      { what: 'Waiting on Mark', detail: 'Paying a repair online is built after his till deposit (till-job-deposit). Discounts and the text receipt wait for his step C.' },
+      { what: 'To overrule if you want', detail: 'The 26 Oct sections of decided-while-building.md.' },
       { what: 'Later', detail: 'Your yes to switch real sending on (texts and emails cost money per message), to open the Stripe account and buy the S700 reader, and a Google account for Wheelhouse.', links: [140] },
     ],
     waitingOnMark: [
+      { what: 'Your yes on the till deposit', detail: 'till-job-deposit, written and waiting for your yes; paying a repair online (slice A) is built after it.' },
+      { what: 'A money route to look at', detail: 'PUT /api/sale-documents/:id can write an order back to open if it is saved while being completed. Found 26 Oct, listed in the archived more-saves-dont-clash design, not changed.' },
       { what: 'Read what was built on your word', detail: 'No approval needed now (working agreement). Built server and screens by Jack on 21 Oct: auto-confirm (#357), the booking link\'s data (#359), Planned effort (#361), the two booking messages (#362). Earlier: booking: drop-off time (#287), notice in hours or days (#289), the confirmation note (#295), Change the date (#305), Offer another time (#315), declining with a message (#319). Messages: the hosted-copy guard (#321), the wording store (#322), the engine (#323), Settings › Messages routes (#325), the quote and Bike ready triggers in the workshop server (#326), the outbox\'s direction (#330); the offer on the job (#333), the customer\'s note on a new job (#335), the booking messages (#336, #341), choosing the mechanic on accept (#337). Also #265 (Delete job).' },
       { what: 'Your opinion wanted', detail: 'Replying to texts: a shop\'s own number with replies in its inbox (costs monthly), or the cheaper shared number with replies on the booking page, as now. Not to build yet.' },
       { what: 'Read what changed near his work', detail: '#473: an online deposit is a \'Deposit paid online\' tender on the converted sale, and a deposit refund is refused once the order is converted. #471: order lines carry done and note (migration 074), kept through PUT items by line id. Told on #199.' },
       { what: 'Still his from before', detail: 'When the front page switches to the new app.' },
     ],
   },
-  updated: '26 October 2026, early morning',
-  lead: 'Customers now have their account page: their bikes, details and one history of repairs and purchases, with each repair opening its own page. Staff can open a sale from a customer\'s history and set up customer groups with a discount. Booking has a search for shops with many single jobs.',
-  sub: 'Merged 26 Oct overnight: #514 to #518, all Jack\'s. Open: Mark\'s #490, #499 (the replan) and #511 (the component registry).',
+  updated: '27 Oct 2026',
+  lead: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice C\'s stock pieces are largely in: the stock list, a product\'s page, adjusting stock, deliveries and orders, and receiving with or without an order. Jack is now on WP-3.3, opening the shop, starting with the float check (slice B).',
+  sub: 'Merged 26 Oct, day: #519 and #521 to #543, all Jack\'s. Open: Mark\'s #490, #499 (the replan, accepted as is), #511 (the component registry) and #520.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -552,12 +554,32 @@ const BOARD = {
     { status: 'done', what: 'A sale from a customer\'s history', detail: 'Opens the drawn pop-up from either sales record; Refund at the till waits for refunds', pr: 516 },
     { status: 'done', what: 'Customer groups', detail: 'Settings › Front desk › Payments: each group with its customers and % off; add, edit and remove', pr: 517 },
     { status: 'done', what: 'Booking search and "unavailable"', detail: 'A search box over more than 8 single jobs; Online booking is unavailable just now when booking can\'t load', pr: 518 },
-    { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock (a proposal for you, #499)', pr: 499 },
+    { status: 'done', what: 'A shop\'s own automatic messages', detail: 'Set up by the Owner, sent to customers who said yes, Stop stops just that one (#521, migration 085); Your own messages in Settings › Messages (#522)', pr: 522 },
+    { status: 'done', what: 'Add a bike', detail: 'From the staff customer page and the customer\'s account; a repair opened from the account leads back to it', pr: 523 },
+    { status: 'done', what: 'Next service due', detail: 'The account\'s bikes say when their next service is due', pr: 524 },
+    { status: 'done', what: 'The diary legend', detail: 'In a box above Waiting for you, with Show the diary legend in Your settings', pr: 525 },
+    { status: 'done', what: 'How we contact you', detail: 'Customers change how the shop reaches them from their account (migration 086)', pr: 526 },
+    { status: 'done', what: 'The print agent dropped', detail: 'Everything prints through the browser; the day\'s answers recorded (docs/decisions/2026-10-26-day-answers.md)', pr: 527 },
+    { status: 'done', what: 'Company customers', detail: 'A company or club on Add and Edit; its receipt headed Invoice until sales record VAT (migration 088)', pr: 528 },
+    { status: 'done', what: 'Ask the shop', detail: 'One conversation per customer, replies from the inbox, signed in 30 days from the last visit (#529, migration 091); the customer\'s conversation page and the staff inbox one per customer (#531)', pr: 531 },
+    { status: 'done', what: 'The stock list and a product\'s page', detail: 'st-list and st-product', pr: 530 },
+    { status: 'done', what: 'Deliveries and orders', detail: 'The hub, a new order and an order\'s page', pr: 532 },
+    { status: 'done', what: 'Receive against an order', detail: 'Scan a delivery in, with damaged, wrong and missing items (migration 092)', pr: 533 },
+    { status: 'done', what: 'Requests never wait on a second database connection', detail: 'Staff requests (#534), the website and staff message links (#535)', pr: 535 },
+    { status: 'done', what: 'The deposit amount', detail: 'How much waits while A fixed amount saves, so £15 isn\'t saved as 15%', pr: 536 },
+    { status: 'done', what: 'The server stays up', detail: 'A bad request fails only itself, and messaging never waits on a second connection', pr: 537 },
+    { status: 'done', what: 'Adjust stock', detail: 'From a product\'s page, with a reason and who did it; anyone with the Stock page (your answer 11, migration 093)', pr: 538 },
+    { status: 'done', what: 'Saves don\'t undo each other', detail: 'Settings (#539); customers, bikes, products and jobs (#542); services, groups, time off, team, suppliers and stock orders (#543)', pr: 543 },
+    { status: 'done', what: 'The note-and-coin counter', detail: 'Block 18: the cash-count part for the float check and Close the day', pr: 540 },
+    { status: 'done', what: 'Receive without an order', detail: 'A delivery received with or without an order (migration 094)', pr: 541 },
+    { status: 'build', what: 'Opening the shop: the float check', detail: 'WP-3.3, the first piece of slice B (from 27 Oct)' },
+    { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock; you accepted it as is (your 26 Oct answer 1); the pull request is still open', pr: 499 },
   ],
   asks: [
-    { what: 'Wording to check', detail: 'A few words the drawings needed that no answer gave, in decided-while-building.md, for you to overrule if you want.' },
+    { what: 'Wording to check', detail: 'A few words the drawings needed that no answer gave, in the 26 Oct sections of decided-while-building.md, for you to overrule if you want.' },
+    { what: 'Who may edit a supplier', detail: 'Any staff member can today, unlike the other settings (#543).' },
+    { what: 'Still open', detail: 'Google\'s official G logo file for the sign-in button; the test server\'s "System restart required".' },
     { what: 'Check with the shop', detail: 'Citrus Lime\'s exports are listed (#170); ask Citrus Lime for the full customer list and workshop history nearer the end (#171). Card payments: Stripe first (#174); the Paymentsense questions (#138) wait until Paymentsense is added. Your yes is needed later for the Stripe account and which reader to buy.' },
-    { what: 'Pages not drawn yet', detail: 'Every one of the 95 pages a mockup button leads to now has an answer and a work package (#139), and the five to draw before their stages are drawn (#217, 15 Oct).' },
     { what: 'Mechanic sign-off (Workshop day 64)', detail: 'All three pieces built (#271, #273, #275). Showing customers who signed off stays off at a real shop until the solicitor\'s check.' },
     { what: 'Staff roles', detail: 'The roles and switches are written down (#153), but the server still only knows who the Owner is until WP-1.1 is built.' },
   ],
@@ -566,41 +588,41 @@ const BOARD = {
   screens: [
     { area: 'Staff app', note: 'The frame is built: Soft sand look, the sidebar grouped by rooms, tablet rail and phone menu. The Owner lands on Today, everyone else on the Till. Your settings opens from your name.', rooms: [
       { room: 'Front desk', pages: [
-        ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid; pays a job\'s order; prints a receipt. No discounts or card machine yet'],
-        ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'old'], ['Messages', 'built', 'The staff inbox: Needs a reply first, the conversation and Send reply'],
+        ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid; pays a job\'s order; prints a receipt, headed Invoice for a company. No discounts or card machine yet'],
+        ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'part', 'The list, a customer\'s page with Edit, Merge and Add a bike, company customers, a sale from the history; Refund waits for refunds'], ['Messages', 'built', 'The staff inbox, one conversation per customer: Needs a reply first, the conversation and Send reply'],
       ] },
       { room: 'Workshop', pages: [
-        ['Diary', 'built', 'Week, day and phone views; Waiting for you; drag jobs; New job; jobs over several days'],
+        ['Diary', 'built', 'Week, day and phone views; Waiting for you; drag jobs; New job; jobs over several days; the legend in a box'],
         ['Job window', 'part', 'Move a job through its stages, or put it on hold; notes; work and parts; barcode scan; refusals in plain words. Not yet: the Done tick, a note per line'],
         ['Quotes', 'built', 'Build, send by text, the customer approves, Quoting in teal; lines that go together, a photo per line, a new quote after a no, the spending limit, one reminder, Your answers, No answer yet in the diary and on the job, Add a note for the shop. Not yet: No answer yet on Today (waits for Today), the pinned bar on a phone, Use my phone for photos'],
         ['Overview', 'built', 'Today\'s bikes expected and in the workshop, four tabs of jobs, Book in, Planned effort, where each bike is kept'],
       ] },
       { room: 'Stockroom', pages: [
-        ['Stock', 'old'], ['Deliveries and orders', 'old', 'The old app has Suppliers and Purchase orders'], ['Stock take', 'none'],
+        ['Stock', 'part', 'The stock list, a product\'s page and Adjust stock'], ['Deliveries and orders', 'part', 'The hub, a new order, an order\'s page, receiving with or without an order; not yet: the restock list\'s details, closing a part-delivered order'], ['Stock take', 'none'],
       ] },
       { room: 'Office', pages: [
         ['Today', 'part', 'Needs attention for the Owner and Workshop today; Tills and Who\'s in wait for PINs'], ['Reports', 'old', 'The old app has Sales history'],
-        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending; Checklists, Diary blocks, Storage slots; the quote reminder\'s hours'],
+        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending; Checklists, Diary blocks, Storage slots; the quote reminder\'s hours; Your own messages; Services; customer groups in Payments'],
       ] },
     ] },
-    { area: 'Customer side', note: 'What a shop\'s customers see. Booking a repair works end to end in the new app. The old shop website is still running; the new one, and the customer account, are drawn but not built.', rooms: [
+    { area: 'Customer side', note: 'What a shop\'s customers see. Booking a repair works end to end in the new app. The old shop website is still running; the new one is drawn but not built. The customer account is built.', rooms: [
       { room: 'Booking a repair', pages: [
         ['Pick a service', 'built'], ['Describe the problem', 'built', 'With the spending limit'], ['Pick a date', 'built'],
         ['Your details', 'built'], ['Booking sent, with a private link', 'built'], ['Approve the quote', 'built'],
         ['Your booking page', 'built', 'Confirmed or waiting; change the date, cancel, accept another time, see why it was declined; then progress, the amount to pay and what was done; notes with the shop'],
       ] },
       { room: 'Website and account', pages: [
-        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'none'], ['Customer sign-in', 'built', 'Sign in with a code sent by email (#500, #502); the account page isn\'t built yet'],
+        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'built', 'Bikes with Add a bike and next service due, details, How we contact you, one history, Ask the shop'], ['Customer sign-in', 'built', 'Sign in with a code sent by email (#500, #502); signed in 30 days from the last visit'],
       ] },
     ] },
   ],
   // status per journey id; anything not listed is 'designed'.
-  building: { ja: 'Frame built', j12: 'Building', j11: 'Building' },
+  building: { ja: 'Frame built', j12: 'Building', j11: 'Building', j7: 'Building', j10: 'Building', j13: 'Building', j14: 'Building' },
   journeys: [
     ['A', 'App map and navigation', 'ja'], ['B', 'Signing in and access', 'jb'], ['1', 'Find the shop and browse the website'], ['2', 'Buy online, or click and collect'],
     ['3', 'Book a repair'], ['4', 'Drop off and approve the quote'], ['5', 'Collect the bike and pay'], ['6', 'Cycle to Work'],
-    ['7', 'Account, history and reminders'], ['8', 'Owner setup and onboarding'], ['9', 'Moving from Citrus Lime'], ['10', 'Opening the shop and checking in'],
-    ['11', 'Selling at the till', 'j11'], ['12', 'Workshop day', 'j12'], ['13', 'Receiving stock and purchase orders'], ['14', 'Stock take and stock control'],
+    ['7', 'Account, history and reminders', 'j7'], ['8', 'Owner setup and onboarding'], ['9', 'Moving from Citrus Lime'], ['10', 'Opening the shop and checking in', 'j10'],
+    ['11', 'Selling at the till', 'j11'], ['12', 'Workshop day', 'j12'], ['13', 'Receiving stock and purchase orders', 'j13'], ['14', 'Stock take and stock control', 'j14'],
     ['15', 'Customer service'], ['16', 'End-of-day cash-up'], ['17', 'Reports and accounts'], ['18', 'Website management'],
     ['19', 'Multiple sites'], ['20', 'Management oversight'], ['21', 'Lightspeed shops'],
   ],
@@ -647,56 +669,65 @@ for (const s of ['done', 'review', 'build', 'next']) {
 }
 
 const ov = BOARD.overview;
-// How far through the whole of Release 2: every work package in the build
-// plan, done, partly done (counting half) or to do. Worked out, never typed in.
+// Release 2 in slices: each slice's bar from its own items (done counts 1,
+// partly done half), and the summary line from the slices' states. Worked
+// out, never typed in.
 {
-  const { how, stages } = ov.project;
-  const all = stages.flatMap((st) => st.packages);
-  const count = (status) => all.filter((p) => p.status === status).length;
-  const [done, part, todo] = [count('done'), count('part'), count('todo')];
-  const pct = Math.round(((done + part / 2) / all.length) * 100);
-  document.getElementById('ov-project-sum').textContent = `Release 2: ${done} done, ${part} partly done, ${todo} to do of ${all.length} work packages · about ${pct}%`;
-  const bar = document.getElementById('ov-project-bar');
-  bar.setAttribute('aria-valuenow', String(pct));
-  bar.firstElementChild.style.width = `${pct}%`;
-  document.getElementById('ov-project-how').textContent = how;
-  const PACKAGE = { done: ['s-done', 'Done'], part: ['s-build', 'Partly done'], todo: ['s-next', 'To do'] };
-  const list = document.getElementById('ov-project-packages');
-  for (const st of stages) {
-    const li = el('li');
-    const finished = st.packages.filter((p) => p.status === 'done').length;
-    li.append(el('strong', null, st.name), el('span', 'd', `${finished} of ${st.packages.length} done`));
+  const ITEM = { done: ['s-done', 'Done'], part: ['s-build', 'Partly done'], todo: ['s-next', 'To do'] };
+  const STATE = { played: ['s-done', 'Played'], build: ['s-build', 'Being built'], next: ['s-review', 'Next'], later: ['s-next', 'Later'] };
+  const itemRows = (items) => {
     const ol = el('ol');
-    for (const p of st.packages) {
+    for (const it of items) {
       const row = el('li');
-      row.dataset.status = p.status;
-      const [cls, label] = PACKAGE[p.status];
-      row.append(el('span', `pill ${cls}`, label), el('strong', null, `${p.id} ${p.what}`));
-      if (p.detail) row.append(el('span', 'd', p.detail));
+      row.dataset.status = it.status;
+      if (it.id) row.dataset.id = it.id;
+      const [cls, label] = ITEM[it.status];
+      row.append(el('span', `pill ${cls}`, label), el('strong', null, it.id ? `${it.id} ${it.what}` : it.what));
+      if (it.detail) row.append(el('span', 'd', it.detail));
       ol.append(row);
     }
-    li.append(ol);
-    list.append(li);
+    return ol;
+  };
+  const list = document.getElementById('ov-slices');
+  for (const s of ov.slices) {
+    const count = (status) => s.items.filter((it) => it.status === status).length;
+    const [done, part, todo] = [count('done'), count('part'), count('todo')];
+    const pct = Math.round(((done + part / 2) / s.items.length) * 100);
+    const card = el('li', 'stage');
+    card.dataset.letter = s.letter;
+    card.dataset.state = s.state;
+    const head = el('div', 'slice-head');
+    const [cls, label] = STATE[s.state];
+    head.append(el('h3', null, `${s.letter}. ${s.name}`), el('span', `pill ${cls}`, label));
+    const sumId = `ov-slice-${s.letter}-sum`;
+    const sum = el('p', 'count', `${done} done, ${part} partly done, ${todo} to do · about ${pct}%`);
+    sum.id = sumId;
+    const bar = el('div', 'bar');
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-label', `Slice ${s.letter}`);
+    bar.setAttribute('aria-describedby', sumId);
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', '100');
+    bar.setAttribute('aria-valuenow', String(pct));
+    const fill = el('span'); fill.style.width = `${pct}%`; bar.append(fill);
+    const fold = el('details', 'packages');
+    fold.append(el('summary', null, `Its ${s.items.length} items`), itemRows(s.items));
+    card.append(head, el('p', 'play', `You can play: ${s.play}`), bar, sum, fold);
+    list.append(card);
   }
-}
-// How far through the stage: done steps out of all of them.
-{
-  const { name, steps, how } = ov.stage;
-  const done = steps.filter((s) => s.done).length;
-  const pct = Math.round((done / steps.length) * 100);
-  document.getElementById('ov-stage-sum').textContent = `${name}: ${done} of ${steps.length} steps done · ${pct}%`;
-  const bar = document.getElementById('ov-stage-bar');
-  bar.setAttribute('aria-valuenow', String(pct));
-  bar.firstElementChild.style.width = `${pct}%`;
-  const ol = document.getElementById('ov-stage-steps');
-  for (const s of steps) {
-    const li = el('li');
-    li.dataset.done = String(s.done);
-    li.append(el('span', `pill ${s.done ? 's-done' : 's-next'}`, s.done ? 'Done' : 'To do'), el('strong', null, s.what));
-    if (s.detail) li.append(el('span', 'd', s.detail));
-    ol.append(li);
-  }
-  document.getElementById('ov-stage-how').textContent = how;
+  const letters = (state) => ov.slices.filter((s) => s.state === state).map((s) => s.letter);
+  const join = (ls) => ls.length > 1 ? `${ls.slice(0, -1).join(', ')} and ${ls.at(-1)}` : ls[0];
+  const parts = [];
+  const building = letters('build'); const upNext = letters('next');
+  if (building.length) parts.push(`${join(building)} ${building.length > 1 ? 'are' : 'is'} being built`);
+  if (upNext.length) parts.push(`${join(upNext)} ${upNext.length > 1 ? 'are' : 'is'} next`);
+  const n = ov.slices.length;
+  document.getElementById('ov-slices-sum').textContent = `Release 2 in ${n} slices${parts.length ? `: ${parts.join(', ')}` : ''} · ${letters('played').length} of ${n} played`;
+  document.getElementById('ov-slices-how').textContent = ov.slicesHow;
+  document.getElementById('ov-outside-how').textContent = ov.outsideHow;
+  const outside = itemRows(ov.outside);
+  outside.id = 'ov-outside';
+  document.getElementById('ov-outside').replaceWith(outside);
 }
 document.getElementById('ov-now').textContent = ov.now;
 const ovTally = document.getElementById('ov-tally');

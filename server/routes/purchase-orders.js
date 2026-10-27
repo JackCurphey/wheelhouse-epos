@@ -29,7 +29,13 @@ const PROBLEM_KINDS = ['damaged', 'wrong_item', 'missing'];
 // rounded to the penny so floating-point sums don't show (3 x 1.10).
 const totalCost = (items) => Math.round(items.reduce((sum, it) => sum + it.qty_ordered * it.unit_cost * 100, 0)) / 100;
 
+// A closed order (partly delivered, the rest not coming: Jack's answer 1,
+// 27 Oct) or a cancelled one (nothing in) has nothing still to come; what
+// had been to come is not coming (openspec/changes/close-part-delivered).
+const CLOSED = ['closed', 'cancelled'];
+
 function serializePurchaseOrder(row, items) {
+  const closed = CLOSED.includes(row.status);
   return {
     id: row.id,
     supplierId: row.supplier_id,
@@ -48,7 +54,8 @@ function serializePurchaseOrder(row, items) {
           sku: it.product_sku,
           qtyOrdered: it.qty_ordered,
           qtyReceived: it.qty_received,
-          outstanding: outstanding(it),
+          outstanding: closed ? 0 : outstanding(it),
+          notComing: closed ? Math.max(0, outstanding(it)) : 0,
           unitCost: it.unit_cost,
         }))
       : undefined,
@@ -406,25 +413,32 @@ export function register(route) {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
-    // Checked in the UPDATE itself, as mark-ordered is: only a draft or an
-    // ordered order, with nothing booked in, so a receipt landing between a
-    // check and the cancel can't be dropped (review of 26 Oct). The status is
-    // the part that holds under a race: a receipt changes the order's row in
-    // its own transaction, so this UPDATE waits for it and then re-checks the
-    // status on the new row. The NOT EXISTS on the lines alone would be re-run
-    // against the old snapshot and pass (second review, 26 Oct).
+    // Checked in the UPDATE itself, as mark-ordered is, so a receipt landing
+    // between a check and the close can't be dropped (review of 26 Oct). A
+    // partly delivered order closes: its lines keep what arrived, and the
+    // rest is not coming (Jack's answer 1, 27 Oct; openspec/changes/
+    // close-part-delivered). A draft or ordered one with nothing in is
+    // cancelled, as before. The status is the part that holds under a race:
+    // a receipt locks and changes the order's row in its own transaction, so
+    // this UPDATE waits for it and then re-checks the WHERE, and works out the
+    // CASE, on the new row. The NOT EXISTS on the lines alone would be re-run
+    // against the old snapshot and pass (second review, 26 Oct). A receipt
+    // that arrives while this close holds the row waits, then reads it closed
+    // and is refused (bookIn).
     const changed = await db
       .prepare(
-        `UPDATE purchase_orders SET status = 'cancelled', updated_at = ?
-         WHERE id = ? AND status IN ('draft', 'ordered')
-           AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ? AND qty_received > 0)`
+        `UPDATE purchase_orders SET status = CASE WHEN status = 'partially_received' THEN 'closed' ELSE 'cancelled' END, updated_at = ?
+         WHERE id = ? AND (status = 'partially_received'
+           OR (status IN ('draft', 'ordered')
+               AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ? AND qty_received > 0)))`
       )
       .run(nowIso(), id, id);
     if (changed.changes === 0) {
       const now = await db.prepare('SELECT status FROM purchase_orders WHERE id = ?').get(id);
       return sendJson(res, 409, {
-        error: now?.status === 'cancelled'
-          ? 'This purchase order is already cancelled'
+        error: now?.status === 'cancelled' ? 'This purchase order is already cancelled'
+          : now?.status === 'closed' ? 'This purchase order is already closed'
+          : now?.status === 'received' ? 'Everything on this purchase order has arrived'
           : 'This purchase order already has items booked in and cannot be cancelled',
       });
     }
