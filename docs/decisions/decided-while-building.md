@@ -3160,8 +3160,8 @@ pills and "Works with or without an order" are built.
 1. **"First in" is the first person to open the till page that day who
    takes payments**, signed in as themselves, since the PIN check-in (WP-1.7)
    isn't built. One float check a shop a day, the shop's own date. When the
-   check-in arrives it becomes the trigger. *Pattern:* decision 2's "first
-   person", read without a check-in.
+   check-in arrives it becomes the trigger. Jack chose it, 27 Oct
+   (`docs/decisions/2026-10-27-answers.md`, answer 3).
 2. **No till name** ("Till B1") until tills have names in the new app (Mark's
    step C); a shop has one float check a day, not one a till.
 3. **"Takes payments" is the Owner, or a team member marked as a cashier**
@@ -3178,9 +3178,11 @@ pills and "Works with or without an order" are built.
 6. **The first day on Wheelhouse is "no float check yet"** for the shop,
    until the move (journey 9) can say so more precisely. The server refuses
    Looks right that day, as the drawing offers only Count it.
-7. **Short floats on Today are today's only**, matching "short this
-   morning"; an earlier day's unseen short float isn't listed. The day's
-   report (reports.mjs, "Float at the start") will carry it when built.
+7. **A short float stays on Today until the Owner presses Seen**, whatever
+   day it was counted: the safer reading of decision 8 H3 ("one click clears
+   it"), so a short float nobody saw can't drop off overnight (review, 27
+   Oct). Oldest first. Today's says "this morning"; an earlier day's says
+   "on [date]", as the uncollected bike line gives its date.
 8. **An over float isn't listed on Today** until Close the day exists:
    decision 8 H1 lists an over float only when yesterday was closed, and no
    day is closed yet. `op-float-check-unclosed` waits for Close the day too.
