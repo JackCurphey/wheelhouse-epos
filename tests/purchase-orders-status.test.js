@@ -122,14 +122,8 @@ test('an order with something booked in can’t be cancelled: 409, and its statu
   assert.equal((await statusOf(id)).status, 'ordered');
 });
 
-test('a partly arrived order can’t be closed: 409, and its status stays', async () => {
-  const made = await create({ markOrdered: true });
-  const id = made.body.id;
-  await runWithShop(owner.shop.id, () => prepare("UPDATE purchase_orders SET status = 'partially_received' WHERE id = ?").run(id));
-  const res = await as(owner)(`/api/purchase-orders/${id}/cancel`, {});
-  assert.equal(res.status, 409, JSON.stringify(res.body));
-  assert.equal((await statusOf(id)).status, 'partially_received');
-});
+// A partly arrived order now closes, the rest not coming (Jack's answer 1,
+// 27 Oct): tests/close-part-delivered.test.js.
 
 // Review of 26 Oct, finding 1: a close that arrives while a delivery is being
 // booked in waits on the order's row, then must see the booking once it
@@ -156,7 +150,7 @@ test('a close that waits on a delivery being booked in is refused once the booki
     for (let i = 0; i < 200 && !waiting; i++) {
       await admin.query('SELECT pg_stat_clear_snapshot()');
       const { rows } = await admin.query(
-        "SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%status = ''cancelled''%' AND pid <> pg_backend_pid()"
+        "SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%UPDATE purchase_orders SET status = CASE%' AND pid <> pg_backend_pid()"
       );
       waiting = rows.length > 0;
       if (!waiting) await new Promise((r) => setTimeout(r, 25));
