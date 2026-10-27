@@ -32,13 +32,28 @@ here before starting it, so two people never build the same one):
   screens (#515); a sale opens from a customer's history, from either sales
   record (#516, WP-3.2); customer groups in Settings › Payments (#517,
   WP-5.1); booking's search over many single jobs and "Online booking is
-  unavailable just now" (#518). Next, each waiting on an answer from Jack or
-  Mark: the text receipt and its page (whether it waits for Mark's step C,
-  which makes the till's receipt numbers); a shop's own automatic messages
-  (which customer "yes" lets them go, and what Stop stops); paying a repair
-  online (how it becomes a sale; Jack asked Mark on #199); the label printer
-  helper's own key (where the owner makes it isn't drawn; a helper already
-  signed in keeps its 30-day session).
+  unavailable just now" (#518). Merged 26 Oct, day (#519 to #543): own
+  automatic messages (#521, #522, migration 085); adding a bike from the
+  customer page and the account (#523); the account's bikes say when their
+  next service is due (#524); How we contact you, changed from the account
+  (#526, migration 086); the diary legend in a
+  box with its switch in Your settings (#525); the print agent dropped, the
+  day's answers recorded (#527, `docs/decisions/2026-10-26-day-answers.md`);
+  company customers, a company's receipt headed Invoice (#528, migration
+  088); Ask the shop, one conversation per customer, 30 days signed in from
+  the last visit (#529 server, migration 091; #531 screens); the stock list
+  and a product's page (#530); deliveries and orders (#532), receiving
+  against an order (#533, migration 092) and without one (#541, migration
+  094); adjusting stock, anyone with the Stock page, who, reason and when
+  recorded (#538, migration 093, Jack's answer 11); the note-and-coin
+  counter, block 18 (#540); the deposit amount waits while A fixed amount
+  saves (#536). Server fixes: staff and website requests never wait on a
+  second database connection (#534, #535); a bad address or cookie fails
+  only itself instead of stopping the server (#537); two saves at once no
+  longer undo each other for settings (#539), customers, bikes, products and
+  jobs (#542), and services, groups, time off, team, suppliers and purchase
+  orders (#543). **Now on (27 Oct): WP-3.3, opening the shop with the float
+  check** (slice B of the replan; branch `jack/opening-float-check`).
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
@@ -60,19 +75,21 @@ here before starting it, so two people never build the same one):
   (the new till on sync; the browser's offline copy and send queue are not
   built, so it is large and has no spec yet), then the shop day (roles on the
   server, the settings store and activity log, sign-in and PINs).
-- **Waiting on Jack:** accepting or changing the replan (#499). Also:
-  discounts now on the old sales record or after Mark's step C; the
-  spreadsheet download's one file or several. Refunds wait for Mark's steps
-  B and C. For him to overrule: the 24 and 25 Oct `decided-while-building.md`
-  sections. From 25 Oct evening: where the owner makes the label printer
-  helper's key; paying a repair online (with Mark, #199); Google's official
-  "G" logo file for the sign-in button; the hosted server's "System restart
-  required". From 26 Oct overnight: the text receipt (wait for step C or show
-  "Sale [n]"; the PDF; the barcode); a shop's own messages (which yes
-  counts, what Stop stops, "After a sale" only with a customer, Remove, the
-  email subject); and to overrule, the 26 Oct `decided-while-building.md`
-  sections (no "are you sure?" when removing a customer group; the search
-  box from 9 single jobs).
+- **Waiting on Jack:** the replan (#499) is accepted as is, order A to F
+  (day answers 1); the 26 Oct list is answered in
+  `docs/decisions/2026-10-26-day-answers.md` (the text receipt waits for
+  step C; own messages as built; paying a repair online after Mark's till
+  deposit; discounts after step C; downloads with Reports; browser printing
+  only). Still open: the restock list's details and closing a part-delivered
+  order (in Jack's task log); who may edit a supplier (any staff member can,
+  unlike the other settings, #543); Google's "G" logo file; the hosted
+  server's "System restart required". For him to overrule: the 26 Oct
+  `decided-while-building.md` sections.
+- **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
+  is built after it); a money route, `PUT /api/sale-documents/:id`, can
+  write an order back to open if it is saved while being completed (found
+  26 Oct, listed in the archived `more-saves-dont-clash` design, not
+  changed).
 
 **Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
