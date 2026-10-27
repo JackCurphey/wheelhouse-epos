@@ -2,10 +2,10 @@
 
 ## 1. Server (pull request 1, `jack/close-the-day`)
 
-- [ ] 1.1 Tests first: migration 096 from an empty scratch database and run twice (`tests/migration-096.test.js`); the routes (`tests/close-the-day.test.js`: the day's cash from both records, the expected figure from this morning's float, paid-outs in whole pence with a reason, one close a day and two at once keep one, no paid-out after the close, banking with the float left, a count below the float banks nothing, no close without a float or a float check, Owner only, the button's time, each shop sees only its own; an over float on Today only when the previous day was closed, and Seen). Watch each fail
-- [ ] 1.2 Migration 096, `server/routes/close-the-day.js`, the over float in `float-check.js` and `today.js`
-- [ ] 1.3 The route list snapshot, the owner-only list
-- [ ] 1.4 Break each key rule on purpose, see its test go red, and restore
+- [x] 1.1 Tests first: migration 096 from an empty scratch database and run twice (`tests/migration-096.test.js`); the routes (`tests/close-the-day.test.js`: the day's cash from both records, the expected figure from this morning's float, paid-outs in whole pence with a reason, one close a day and two at once keep one, no paid-out after the close, banking with the float left, a count below the float banks nothing, no close without a float or a float check, Owner only, the button's time, each shop sees only its own; an over float on Today only when the previous day was closed, and Seen). Watch each fail
+- [x] 1.2 Migration 096, `server/routes/close-the-day.js`, the over float in `float-check.js` and `today.js`
+- [x] 1.3 The route list snapshot, the owner-only list
+- [x] 1.4 Break each key rule on purpose, see its test go red, and restore
 - [ ] 1.5 Lint, typecheck, the touched tests; `/review` (migration, money)
 
 ## 2. Screens (pull request 2, `jack/close-the-day-screens`, stacked on 1)
