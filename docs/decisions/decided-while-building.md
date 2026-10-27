@@ -3296,3 +3296,61 @@ but no closed order. Decided here, for Jack to overrule:
     and write (the settings-saves-dont-clash pattern), so two closes keep
     one and cash taken out at the moment of closing is counted in it or
     refused.
+
+### 27 Oct 2026: Close the day, the screens (`openspec/changes/close-the-day`, `eod-entry`, `eod-count`, `eod-count-result`, `eod-count-exact`, `eod-banking`, `eod-banking-none`, `eod-paidout`, `eod-finish`, `eod-z`, `op-today-short`)
+
+1. **Three steps, numbered 1 to 3**: Count the cash, Paid-outs and banking,
+   End-of-day report. The drawing's other three (the till has sent its
+   sales, Needs attention, the card machine check) wait for what they stand
+   on (step C, Park, a connected card machine), so they aren't shown, and
+   the steps that are shown are numbered in order rather than 3, 4 and 6.
+2. **No "Till B1 · Bolton"** beside the title: the date only ("Tuesday 1
+   September"), until tills and sites have names. The report reads "Day
+   closed" and "[date] · closed by [Name]", without "saved to Reports"
+   until Reports exists.
+3. **The page is at `/workshop/till/close`**, inside the till's folded
+   frame, so the header still says Till; the page's own heading is "Close
+   the day".
+4. **The count is always blind** (the drawings assume blind; decision 2's
+   setting isn't built), with the built note-and-coin counter and its
+   "Cash counted" box, as the float check.
+5. **The count's status shows as soon as the count is done** ("Spot on" or
+   "Counted", as `eod-count-exact` and `eod-count-result` draw it); "Keep
+   this count and go on" opens Paid-outs and banking. "Banking bagged —
+   next step" stays off until the count is kept.
+6. **"How the till worked it out" has no "minus cash refunds" row**: there
+   are no refunds yet. Its float row reads "Float this morning · looked
+   right · [Name] at [time]", or "counted by" for a count, with "[£] short,"
+   first for a short count (the j16 line on `eod-z`).
+7. **Leave in the drawer and Bank show once the cash is counted**, worked
+   out from the count. A count under the float leaves the count and banks
+   £0.00 (server entry 5).
+8. **Cash taken out** (`eod-paidout`): "What it was for" is a box to type
+   in, since Settings › Till › Reasons isn't built (the drawing's "Other…");
+   the subtitle is "From the drawer" and the button "Take it out", as there
+   is no cash drawer to open from Wheelhouse yet. A wrong amount says
+   "Pounds and pence, like 5.00" (the counter's words); a missing reason
+   says "Say what it was for." Each paid-out lists "[time] · [Name]" and its
+   note.
+9. **The report** shows Takings, Card, Cash, "Gift cards, store credit,
+   customer accounts, other", Float at the start, Cash difference and
+   Banked, and "Online money is not in this till’s takings." (walk-through
+   11 H2). Cycle to Work, Refunds, Voids, Discounts given, VAT, the online
+   money figure and "Email it" wait for what they stand on. Print uses the
+   till's own printing (the receipt's).
+10. **A closed day** opens with every step done and "Show the report" under
+    End-of-day report, so the report can be seen again. *Pattern:* none
+    drawn; the smallest way back to `eod-z`.
+11. **"Close the day" on the till sits in a strip above the sale on every
+    size**, "The shop closes at [time]" with the button, since the new till
+    has no till bar yet; the drawing gives this strip to a phone. It reads
+    "closes at" rather than "It's after", as it shows from an hour before.
+    Only the Owner sees it, until roles.
+12. **The float check comes first on Close the day** when it's due, the
+    till's own pop-up, and saving it refreshes the day's figures.
+13. **Someone who isn't the Owner** opening the address is told "Only the
+    shop’s owner can close the day."; with no float set the page says "Set
+    the shop’s float in Settings › Front desk › End of day first: Close the
+    day leaves it in the drawer and banks the rest."
+14. **An over float on Today** reads as the short one: "The float was [£]
+    over this morning", "Counted by [Name] at [time]", the reason, and Seen.
