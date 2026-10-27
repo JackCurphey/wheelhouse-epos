@@ -24,7 +24,8 @@ type Attention =
   | { kind: 'quote_no_answer'; jobId: number; reference: string; customerName: string | null; phone: string | null; sentAt: string | null; reminderSentAt: string | null }
   | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string }
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
-  | { kind: 'float_short'; checkId: number; day: string; shortPence: number; countedByName: string; checkedAt: string; reason: string };
+  | { kind: 'float_short'; checkId: number; day: string; shortPence: number; countedByName: string; checkedAt: string; reason: string }
+  | { kind: 'float_over'; checkId: number; day: string; overPence: number; countedByName: string; checkedAt: string; reason: string };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
 
 // The drawing's card: a labelled section, its rows a list (opening.mjs `section`).
@@ -110,11 +111,13 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   }
   const lines = items.map((i) => {
     // op-today-short, without "Till B1’s" until tills have names; it stays until
-    // Seen, so an earlier day's gives its date (review, 27 Oct).
-    if (i.kind === 'float_short') {
+    // Seen, so an earlier day's gives its date (review, 27 Oct). An over float
+    // reads the same, once yesterday was closed (decision 8 H1; close-the-day).
+    if (i.kind === 'float_short' || i.kind === 'float_over') {
+      const by = i.kind === 'float_short' ? `${penceText(i.shortPence)} short` : `${penceText(i.overPence)} over`;
       return (
         <Line key={`f${i.checkId}`} lead={warn}
-          title={`The float was ${penceText(i.shortPence)} short ${londonDay(i.checkedAt) === today ? 'this morning' : `on ${shortDate(i.checkedAt)}`}`}
+          title={`The float was ${by} ${londonDay(i.checkedAt) === today ? 'this morning' : `on ${shortDate(i.checkedAt)}`}`}
           sub={`Counted by ${i.countedByName} at ${clock(i.checkedAt)}${i.reason ? ` · “${i.reason}”` : ''}`}
           right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeing.has(i.checkId)} onClick={() => void seen(i.checkId)}>Seen</Button>} />
       );

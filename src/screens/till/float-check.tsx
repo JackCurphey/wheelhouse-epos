@@ -25,6 +25,8 @@ type Today = { day: string; floatPence: number | null; takesPayments: boolean; f
 type Step = { at: 'check' } | { at: 'count' } | { at: 'diff'; counted: number };
 
 const QUERY = ['float-check'];
+// Close the day's query (close-the-day.tsx imports this file, so it is named here).
+const CLOSE_DAY_QUERY = ['close-the-day'];
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 
 export function FloatCheck() {
@@ -50,6 +52,8 @@ export function FloatCheck() {
     try {
       const { check } = await apiMutate<{ check: Check }>('/api/float-check', why ? { countedPence, reason: why } : { countedPence }, { method: 'POST' });
       queryClient.setQueryData<Today>(QUERY, (old) => (old ? { ...old, check } : old));
+      // Close the day's figures start from this morning's float (close-the-day.tsx).
+      void queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
       // A count that matches, or a look, says so; only a count says "counted by" (j10 line).
       if (countedPence === null) setMessage(`Float checked · looked right · ${check.checkedByName}`);
       else if (countedPence === check.expectedPence) setMessage(`Float checked · counted by ${check.checkedByName}`);
@@ -57,6 +61,7 @@ export function FloatCheck() {
       // Someone else checked it first: the day is checked, so the pop-up goes.
       if (err instanceof ApiError && err.status === 409 && (err.body as { code?: string } | null)?.code === 'already_checked') {
         await queryClient.invalidateQueries({ queryKey: QUERY });
+        void queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
       // The server's own words for a refused count, as the settings boxes show them.
       } else setFailed(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : SAVE_FAILED);
     } finally {
