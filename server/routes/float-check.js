@@ -42,14 +42,17 @@ async function takesPayments(login) {
   return !!row?.is_cashier;
 }
 
-// A float counted short today and not yet Seen, for Today's Needs attention
-// (op-today-short). Over isn't listed until Close the day exists (decision 8
-// H1: only when yesterday was closed); an earlier day's isn't either.
+// A float counted short and not yet Seen, for Today's Needs attention
+// (op-today-short): it stays until the Owner's one click clears it, whatever
+// day it was counted (decision 8 H3; review, 27 Oct), oldest first, with its
+// day so an earlier one can say which. Over isn't listed until Close the day
+// exists (decision 8 H1: only when yesterday was closed).
 export async function shortFloats() {
-  const rows = await prepare(`${CHECK_SELECT}
-    WHERE f.day = ? AND f.seen_at IS NULL AND f.counted_pence < f.expected_pence ORDER BY f.id`).all(await today());
+  const rows = await prepare(`SELECT f.*, to_char(f.day, 'YYYY-MM-DD') AS day_text, l.name AS checked_by_name
+    FROM float_checks f JOIN logins l ON l.id = f.login_id
+    WHERE f.seen_at IS NULL AND f.counted_pence < f.expected_pence ORDER BY f.day, f.id`).all();
   return rows.map((r) => ({
-    kind: 'float_short', checkId: r.id, shortPence: r.expected_pence - r.counted_pence,
+    kind: 'float_short', checkId: r.id, day: r.day_text, shortPence: r.expected_pence - r.counted_pence,
     countedByName: r.checked_by_name, checkedAt: new Date(r.checked_at).toISOString(), reason: r.reason,
   }));
 }

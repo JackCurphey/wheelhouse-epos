@@ -6,7 +6,7 @@
 - [x] 1.2 Migration 095, `server/routes/float-check.js`, the End of day route in `shop-settings.js`, the short float in `today.js`
 - [x] 1.3 The route list snapshot, the owner-only list
 - [x] 1.4 Break each key rule on purpose, see its test go red, and restore
-- [ ] 1.5 Lint, typecheck, the touched tests; `/review` (migration, money)
+- [x] 1.5 Lint, typecheck, the touched tests; `/review` (migration, money) — /review 26-27 Oct: one serious, fixed
 
 ## 2. Screens (pull request 2, `jack/opening-float-check-screens`, stacked on 1)
 

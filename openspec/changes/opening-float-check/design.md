@@ -34,10 +34,10 @@ request's row-level security.
   `{ check }`, the one already made.
 - `POST /api/float-check/:id/seen` → `{ ok: true }`. Owner only. 409
   `not_short` for a check that isn't short or is already seen; 404 for an id
-  that isn't a number.
-- `GET /api/needs-attention` gains `{ kind: 'float_short', checkId,
-  shortPence, countedByName, checkedAt, reason }` for today's short float not
-  yet seen.
+  that isn't 1 to 2,147,483,647 (the dispatcher's own check, before the route).
+- `GET /api/needs-attention` gains `{ kind: 'float_short', checkId, day,
+  shortPence, countedByName, checkedAt, reason }` for every short float not
+  yet seen, oldest first (decision 8 H3; review, 27 Oct).
 
 ## Decisions
 

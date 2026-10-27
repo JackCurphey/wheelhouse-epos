@@ -148,7 +148,7 @@ test('a short float is on the Owner\'s Needs attention until Seen, by the Owner 
   assert.equal(res.body.check.reason, 'change given wrong');
   const [line, ...more] = await shortLines(owner);
   assert.equal(more.length, 0);
-  assert.deepEqual({ ...line, checkedAt: 0 }, { kind: 'float_short', checkId: res.body.check.id, shortPence: 420, countedByName: 'Jo Taylor', reason: 'change given wrong', checkedAt: 0 });
+  assert.deepEqual({ ...line, checkedAt: 0 }, { kind: 'float_short', checkId: res.body.check.id, day: '2026-09-01', shortPence: 420, countedByName: 'Jo Taylor', reason: 'change given wrong', checkedAt: 0 });
   assert.equal(line.checkedAt, res.body.check.checkedAt);
   assert.equal((await post(jo, `/api/float-check/${line.checkId}/seen`, {})).status, 403);
   assert.equal((await shortLines(owner)).length, 1);
@@ -162,16 +162,37 @@ test('a short float is on the Owner\'s Needs attention until Seen, by the Owner 
   assert.deepEqual([twice.status, twice.body.code], [409, 'not_short']);
 });
 
-test('an over float, a right one and an earlier day\'s short float are not listed', async () => {
+test('an over float and a right one are not listed', async () => {
   const over = await shop();
   const res = await post(over, '/api/float-check', { countedPence: FLOAT + 100 });
   assert.equal(res.status, 201);
   assert.equal((await shortLines(over)).length, 0);
   assert.equal((await post(over, `/api/float-check/${res.body.check.id}/seen`, {})).body.code, 'not_short');
+  assert.equal((await post(over, '/api/float-check/abc/seen', {})).status, 404);
+});
+
+// Decision 8 H3, "one click clears it": a short float stays until it's Seen,
+// whatever day it was counted (review, 27 Oct), oldest first, each with its day.
+test('an earlier day\'s short float stays on Today until Seen', async () => {
   const old = await shop();
-  await earlier(old, '2026-08-31', FLOAT, FLOAT - 500);
-  assert.equal((await shortLines(old)).length, 0);
-  assert.equal((await post(old, '/api/float-check/abc/seen', {})).status, 404);
+  await earlier(old, '2026-08-30', FLOAT, FLOAT - 500);
+  await earlier(old, '2026-08-31', FLOAT, FLOAT);
+  const res = await post(old, '/api/float-check', { countedPence: FLOAT - 20 });
+  assert.equal(res.status, 201);
+  const lines = await shortLines(old);
+  assert.deepEqual(lines.map((l) => [l.day, l.shortPence]), [['2026-08-30', 500], ['2026-09-01', 20]]);
+  assert.equal((await post(old, `/api/float-check/${lines[0].checkId}/seen`, {})).status, 200);
+  assert.deepEqual((await shortLines(old)).map((l) => l.day), ['2026-09-01']);
+});
+
+// The dispatcher refuses an id that isn't 1 to 2,147,483,647 before any
+// route runs (server.js idParamsWellFormed), so it's never a server error.
+test('Seen with an id out of range is refused as not found, never a server error', async () => {
+  const owner = await shop();
+  for (const id of [0, -3, 2_147_483_648, 99_999_999_999]) {
+    const r = await post(owner, `/api/float-check/${id}/seen`, {});
+    assert.equal(r.status, 404, `${id} ${JSON.stringify(r.body)}`);
+  }
 });
 
 test('each shop sees and clears only its own float checks', async () => {
