@@ -14,4 +14,4 @@
 - [x] 2.2 Build them to the drawings
 - [x] 2.3 Break each key rule on purpose, see its test go red, and restore
 - [x] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review` — /review 26-27 Oct: one serious, fixed
-- [ ] 2.5 `/opsx:archive` as the last commit
+- [x] 2.5 `/opsx:archive` as the last commit
