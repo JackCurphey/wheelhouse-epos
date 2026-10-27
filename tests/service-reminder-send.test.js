@@ -45,7 +45,7 @@ async function maya({ yes = true } = {}) {
   return { customer, bikeId };
 }
 async function collectedJob({ customer, bikeId }, serviceIds) {
-  let job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Service', jobDate: '2026-10-13', mechanicId: alex, customerId: customer.id, bikeId, serviceIds } })).body;
+  let job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Service', jobDate: openDay('2026-10-13'), mechanicId: alex, customerId: customer.id, bikeId, serviceIds } })).body;
   assert.ok(job.id, JSON.stringify(job));
   job = (await staff(`/api/workshop-jobs/${job.id}/book-in`, { method: 'POST', body: { version: job.version } })).body;
   const collected = await staff(`/api/workshop-jobs/${job.id}/collect`, { method: 'POST', body: { version: job.version } });
@@ -68,6 +68,10 @@ function plusMonths(date, n) {
 }
 const nextDay = (date) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 const weekday = (date) => new Date(`${date}T00:00:00Z`).getUTCDay();
+// The first test closes the weekday six months from today (the due day), so a
+// job booked through the API goes on that date, or the day after when the
+// shop is closed on it; a fixed date failed whenever today+6 months fell on its weekday.
+const openDay = (date) => (weekday(date) === weekday(plusMonths(londonDate(new Date()), 6)) ? nextDay(date) : date);
 const until = async (check, ms = 8000) => {
   const end = Date.now() + ms;
   for (;;) {
@@ -154,7 +158,7 @@ test('when it goes, it doesn’t if the customer stopped saying yes, the message
   // The bike booked in again, not yet collected.
   const booked = await maya();
   const [b] = await reminders((await collectedJob(booked, [svc])).id);
-  const again = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Service', jobDate: '2026-10-20', mechanicId: alex, customerId: booked.customer.id, bikeId: booked.bikeId } })).body;
+  const again = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Service', jobDate: openDay('2026-10-20'), mechanicId: alex, customerId: booked.customer.id, bikeId: booked.bikeId } })).body;
   assert.ok(again.id, JSON.stringify(again));
   await dueNow(b.id);
   assert.equal((await settled(b.id)).intent_state, 'undone');
