@@ -3177,3 +3177,81 @@ but no closed order. Decided here, for Jack to overrule:
 4. **The note "Closing the order drops anything still to come."** shows under
    every open order for the Owner, as `rs-order-ordered` draws it; the job
    warning in `rs-order-close` waits until jobs are linked to order lines.
+
+### 27 Oct 2026: opening the shop with a float check, the server (`openspec/changes/opening-float-check`, `op-float-check`, `op-float-check-first`, `op-float-short`, `op-today-short`, `set-eod`; WP-3.3, slice B; opening the shop decisions 2, 4 and 8)
+
+1. **"First in" is the first person to open the till page that day who
+   takes payments**, signed in as themselves, since the PIN check-in (WP-1.7)
+   isn't built. One float check a shop a day, the shop's own date. When the
+   check-in arrives it becomes the trigger. Jack chose it, 27 Oct
+   (`docs/decisions/2026-10-27-answers.md`, answer 3).
+2. **No till name** ("Till B1") until tills have names in the new app (Mark's
+   step C); a shop has one float check a day, not one a till.
+3. **"Takes payments" is the Owner, or a team member marked as a cashier**
+   (the team's existing switch), until roles (WP-1.1). *Pattern:* UX
+   walk-through 2 M1's "Staff, Manager, Owner" read as the switches there are.
+4. **The float is set in Settings › Front desk › End of day › Float**
+   (`set-eod`, drawn; planned in WP-5.1), built here as that one fold since
+   the check has nothing to check without it. Stored on the shop's row, as
+   the receipt words are, until the settings store (WP-1.2). From £0.00 to
+   £100,000.00. With no float set there is no float check.
+5. **No activity log entry yet** (WP-1.2 isn't built): the float check
+   itself records who, when, what the drawer should have had, the count and
+   the reason; Seen records who and when.
+6. **The first day on Wheelhouse is "no float check yet"** for the shop,
+   until the move (journey 9) can say so more precisely. The server refuses
+   Looks right that day, as the drawing offers only Count it.
+7. **A short float stays on Today until the Owner presses Seen**, whatever
+   day it was counted: the safer reading of decision 8 H3 ("one click clears
+   it"), so a short float nobody saw can't drop off overnight (review, 27
+   Oct). Oldest first. Today's says "this morning"; an earlier day's says
+   "on [date]", as the uncollected bike line gives its date.
+8. **An over float isn't listed on Today** until Close the day exists:
+   decision 8 H1 lists an over float only when yesterday was closed, and no
+   day is closed yet. `op-float-check-unclosed` waits for Close the day too.
+9. **No lock**: nothing here reads a row and writes it back (one column for
+   the float, one insert that keeps the day's first check, one update for
+   Seen), so the settings-saves-dont-clash lock isn't used.
+
+### 27 Oct 2026: opening the shop with a float check, the screens (`openspec/changes/opening-float-check`, `op-float-check`, `op-float-check-first`, `op-float-count`, `op-float-matched`, `op-float-short`, `op-float-over`, `op-today-short`, `set-eod`)
+
+1. **The pop-ups have no "Till B1"**: the subtitles read "first in today to
+   take payments", "first in on the first day on Wheelhouse", "count every
+   note and coin" and "counted by Jo Taylor", and the message "Float
+   checked · counted by Jo Taylor". Today's line reads "The float was [£]
+   short this morning". Till names come with step C.
+2. **The count uses the built note-and-coin counter**, with its "Cash
+   counted" box that can be typed over (26 Oct entry 2), not the drawing's
+   read-only "Counted" line. It never shows the float (blind counting).
+3. **"Float checked · …" stays until "Close the message"**, in the drawing's
+   dark colours. *Pattern:* the diary's floating message (20 Oct, entry 1),
+   since the drawing doesn't say when it goes and Jack's "Don't close things
+   by themselves" (24 Oct) keeps messages from going by themselves.
+4. **Start the day after a difference shows no message**: none is drawn;
+   the pop-up closes and the till is ready.
+5. **"Any idea why?" has no placeholder**: the drawing's "[reason]" is a
+   placeholder for an example, not words to show.
+6. **If someone else checked the float first**, the pop-up just goes (the
+   day is checked). A save that fails says "Wheelhouse couldn’t save that.
+   Try again in a moment." in the pop-up. *Pattern:* the settings boxes.
+7. **The Float fold's summary is the float, or "Not set yet"**; the box
+   takes pounds and pence ("£150", "150.00") and saves when it's left, as
+   the Receipts box. A wrong amount says "Pounds and pence, like 150.00",
+   the counter's words. *Pattern:* the Receipts fold.
+8. **End of day is the fourth area of Front desk**, after Messages, as the
+   drawn rooms order it; only its Float fold is built.
+9. **After the review (27 Oct):**
+   - **Escape never closes a float check pop-up.** A page can stop Escape
+     only once without a click in between, so if the browser closes the
+     pop-up anyway it opens again at once.
+   - **Each step is its own pop-up with the focus in it**: Count it puts the
+     focus in the £50 box, a difference puts it in "Any idea why?", so a
+     second Enter can't press the next step's button and a screen reader
+     hears the new title.
+   - **The till reads the float check again every minute and when it comes
+     back into view**, so a till left open overnight asks the next morning.
+     *Pattern:* Today's Needs attention.
+   - **A count the server refuses shows the server's words**, as the
+     settings boxes do.
+   - **An earlier day's short float reads "The float was [£] short on [date]"**
+     ("on Mon 31 Aug"), as the uncollected bike line gives its date.
