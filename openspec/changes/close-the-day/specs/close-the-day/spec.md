@@ -32,11 +32,15 @@ Once counted, the step SHALL show Counted, "The till expected", "How the till wo
 - **THEN** the step shows "Spot on" £0.00 and no reason box
 
 ### Requirement: What the drawer should hold
-The till's expected cash SHALL be this morning's float (what was counted, or the shop's float when it looked right), plus the day's cash sales from both sales records, minus the day's cash taken out, in whole pence.
+The till's expected cash SHALL be this morning's float (what was counted, or the shop's float when it looked right), plus the cash sales since the float check from both sales records, minus the cash taken out since it, in whole pence. Cash from before the check SHALL not be added again: it was in the morning count (Jack's answer 9, 27 Oct).
 
 #### Scenario: A day's cash
 - **WHEN** the float looked right at £150.00, cash sales came to £74.00 and £5.00 was taken out
 - **THEN** the till expects £219.00
+
+#### Scenario: Cash already counted this morning
+- **WHEN** a £22.00 cash sale was made after yesterday's close, and this morning's float was counted at £172.00
+- **THEN** the till expects £172.00 plus today's cash, not £194.00
 
 ### Requirement: Cash taken out
 "Add a paid-out" SHALL open "Cash taken out" with the amount, what it was for and an optional note; it SHALL be recorded with who took it out and when, listed under "Cash taken out today", and come off what the till expects. A day with none SHALL say "No cash taken out today." Once the day is closed, no more SHALL be added (`eod-paidout`, `eod-banking`, `eod-banking-none`).
@@ -57,11 +61,15 @@ Banking SHALL say "Leave in the drawer" the shop's float and "Bank" the count le
 - **THEN** it says bank £0.00 and "Put £10.00 in to make the float up to £150.00"
 
 ### Requirement: A day runs from the previous close
-The day's figures SHALL run from the previous close's saved time (or the start of the shop's day when there is none) to this close, so a sale made after a close counts in the next day's takings and drawer, and a closed day's report SHALL never change (Jack's answer 6, 27 Oct).
+The report's figures SHALL cover every sale no close has counted yet, each sale counted by exactly one close, so a sale made after a close counts in the next day's takings, and a closed day's report SHALL never change (Jack's answer 6, 27 Oct). A sale SHALL be counted by the close that finds it saved, never placed by its time: a sale still being saved at the close SHALL count in the next close, and a till's own clock SHALL not count a sale twice or lose it.
 
 #### Scenario: A sale after yesterday's close
 - **WHEN** yesterday was closed at 18:00 and a cash sale was made at 18:30
-- **THEN** it is in today's cash sales, not yesterday's
+- **THEN** it is in today's takings, not yesterday's
+
+#### Scenario: A till with its clock wrong
+- **WHEN** a till's clock runs a day fast or slow
+- **THEN** each of its sales is counted by one close, once
 
 ### Requirement: The figures are checked again before closing
 The page SHALL reload the till's figures when the count is done, and the close SHALL be refused with the new figures if a sale or cash taken out changed what the till expects since they were shown, so the owner sees the new difference before the day closes.

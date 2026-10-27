@@ -3263,12 +3263,15 @@ but no closed order. Decided here, for Jack to overrule:
 2. **Only the Owner closes the day and takes cash out**, until roles
    (WP-1.1) bring managers and "Can close the day" (decision 5; roles answer
    6 of 5 Oct). *Pattern:* Needs attention and Seen.
-3. **What the drawer should hold is this morning's float, plus the day's
-   cash sales, minus cash taken out** (walk-through 2 M2's rows). This
-   morning's float is what was counted, or the shop's float when it looked
-   right. The cash sales are both sales records on the dashboard's day
-   window, the shop's own date. There is no "minus cash refunds" yet: the
-   till has no refunds (WP-3.1).
+3. **What the drawer should hold is this morning's float, plus the cash
+   sales since the float check, minus cash taken out since it**
+   (walk-through 2 M2's rows; Jack's answer 9, "trust the morning check",
+   which replaced "the day's cash sales" after the second review found cash
+   counted twice). This morning's float is what was counted, or the shop's
+   float when it looked right. "Since the check" is by the old record's
+   saved time and the till record's own clock (when the cash went in the
+   drawer). There is no "minus cash refunds" yet: the till has no refunds
+   (WP-3.1).
 4. **The day can't close without this morning's float check**, so the
    expected figure starts from a real one. The Close the day page asks for
    the float check first, as the till does.
@@ -3297,11 +3300,18 @@ but no closed order. Decided here, for Jack to overrule:
     one and cash taken out at the moment of closing is counted in it or
     refused. The lock is `FOR NO KEY UPDATE`, so a sale being saved at the
     same moment isn't held up (review, 27 Oct).
-11. **A day's sales run from the previous close** (its saved time) to the
-    end of the shop's day, or from the start of the day when the shop has
-    never closed (Jack's answer 6). Cash taken out counts by its day: the
-    days after the previous close's day, up to today. So an unclosed day's
-    sales and cash taken out roll into the next close.
+11. **A close counts every sale no close has counted yet** (Jack's answer
+    6), and marks each one with its own id (`day_close_id` on both sales
+    records, migration 096) under the shop's lock; the report comes from
+    exactly the sales it marked. No sale is placed in a day by its time
+    (second review, 27 Oct): a sale still being saved at the close is left
+    for the next close, and a till whose clock runs fast or slow still has
+    each sale counted once. Counting starts at the start of the shop's
+    first close's day, by the server's clock (a till sale by when the
+    server received it), so the history from before Close the day isn't
+    swept into the first close; a sale from before that never counts.
+    Cash taken out is listed and taken off from the morning's check on
+    (entry 3).
 12. **Closing after midnight isn't handled** (review, 27 Oct: logged, not
     fixed). The day is the shop's date when the close is made, so a close
     made at 00:30 closes the new day, and the evening's sales after the
@@ -3317,8 +3327,13 @@ but no closed order. Decided here, for Jack to overrule:
     always adds up (review, 27 Oct).
 15. **At closing, a float nobody checked is looked at, never counted**
     (Jack's answer 8), on the first day on Wheelhouse too. The server
-    allows that look only for the Owner and only when the close page asks
-    for it; anywhere else the first day is still counted.
+    allows that look only for the Owner, only when the close page asks for
+    it, and only while "Close the day" is showing (second review, 27 Oct);
+    anywhere else the first day is still counted.
+16. **The report and the drawer can differ on purpose**: the report's Cash
+    is every cash sale this close counted, the drawer's figure only those
+    since the morning check (both kept on the close). Cash from a day
+    nobody closed is in the report and shows in the drawer as over.
 
 ### 27 Oct 2026: Close the day, the screens (`openspec/changes/close-the-day`, `eod-entry`, `eod-count`, `eod-count-result`, `eod-count-exact`, `eod-banking`, `eod-banking-none`, `eod-paidout`, `eod-finish`, `eod-z`, `op-today-short`)
 

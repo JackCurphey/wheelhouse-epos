@@ -5,28 +5,21 @@
 // the close. Whole pence; the shop's own date. Staff routes for the Owner
 // until roles (decision 5: owners and managers): they run with the shop's
 // row-level security already bound.
+//
+// This touches the sales records: a close marks each sale it counts with
+// its own id (sales.day_close_id, till_sales.day_close_id, migration 096).
 import { prepare, dbExec } from '../db.js';
-import { shopNow } from '../clock.js';
-import { effectiveHours, toMinutes } from '../capacity.js';
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
-import { currentShopTimeZone, toCapacitySettings } from '../workshop/jobs.js';
+import { closeEntryNow, entryFor } from '../lib/close-entry.js';
+import { currentShopTimeZone } from '../workshop/jobs.js';
 import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
 import { isPence } from './float-check.js';
 
-const iso = (v) => new Date(v).toISOString();
+export { entryFor };
 
-// "Close the day" shows from an hour before closing (cash-up decision 5;
-// set-eod-close's drawn "1 hour before", until that setting is built), all
-// day when the opening hours say the shop is shut today, and not once the
-// day is closed. `hours` is today's { open, close } or null; `minutes` is
-// the shop's time of day.
-export function entryFor(hours, minutes, closed) {
-  const closesAt = hours ? hours.close : null;
-  if (closed) return { show: false, closesAt };
-  return { show: hours ? minutes >= toMinutes(hours.close) - 60 : true, closesAt };
-}
+const iso = (v) => new Date(v).toISOString();
 
 // This morning's float check: what the drawer started with (what was counted,
 // or the float when it looked right), by whom and when (walk-through 2 M2).
@@ -35,6 +28,7 @@ async function floatStartOn(day) {
   if (!row) return null;
   return {
     id: row.id,
+    checkedAt: row.checked_at,
     start: {
       pence: row.counted_pence ?? row.expected_pence, how: row.counted_pence === null ? 'looked' : 'counted',
       expectedPence: row.expected_pence, byName: row.by_name, at: iso(row.checked_at),
@@ -47,51 +41,72 @@ async function floatStartOn(day) {
 // (workshop/counted-deposit.js). It has its own line on the report.
 const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
 
-// The day runs from the previous close (or, with none, the start of the
-// shop's day) to the end of the shop's day (Jack's answer 6, 27 Oct): a sale
-// made after a close is the next day's, and a closed day's figures never
-// change. Cash taken out counts by its day, after the previous close's day.
-async function dayWindow(day) {
+// Which sales a figure is worked from. A close counts every sale no close
+// has counted yet (Jack's answer 6): `open` is those, before the close marks
+// them; `closedBy(id)` is exactly the ones a close marked. A sale is never
+// placed in a day by its time, so a till's clock can't move it, and one still
+// being saved at the close is left for the next (second review, 27 Oct). The
+// one bound by time is where counting began: the start of the shop's first
+// close's day (or today's), by the server's own clock, so the history from
+// before Close the day isn't swept into the first close.
+async function openSales(day) {
   const timeZone = await currentShopTimeZone();
-  const prev = await prepare(`SELECT closed_at, to_char(day, 'YYYY-MM-DD') AS day_text FROM day_closes WHERE day < ? ORDER BY day DESC LIMIT 1`).get(day);
-  return (column) => ({
-    sql: prev
-      ? `${column} > ?::timestamptz AND ${column} < (?::date + 1)::timestamp AT TIME ZONE ?`
-      : `${column} >= (?::date)::timestamp AT TIME ZONE ? AND ${column} < (?::date + 1)::timestamp AT TIME ZONE ?`,
-    args: prev ? [prev.closed_at, day, timeZone] : [day, timeZone, day, timeZone],
-    paidOuts: prev ? { sql: 'p.day > ? AND p.day <= ?', args: [prev.day_text, day] } : { sql: 'p.day = ?', args: [day] },
-  });
+  const { first } = await prepare(`SELECT to_char(COALESCE(min(day), ?::date), 'YYYY-MM-DD') AS first FROM day_closes`).get(day);
+  const since = (column) => `${column} >= (?::date)::timestamp AT TIME ZONE ?`;
+  return {
+    old: { sql: `s.day_close_id IS NULL AND ${since('s.created_at')}`, args: [first, timeZone] },
+    till: { sql: `t.day_close_id IS NULL AND ${since('t.received_at')}`, args: [first, timeZone] },
+  };
 }
+const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till: { sql: 't.day_close_id = ?', args: [id] } });
 
-// The day's till money by how it was paid, from both sales records: the old
-// record's cash and card columns and extra tenders (pounds, converted as the
-// all_sales view does), and the till record's payments (pence). Takings is
-// card + cash + other, so the report always adds up (review, 27 Oct).
-async function takingsIn(windowOf) {
-  const old = windowOf('s.created_at');
-  const till = windowOf('t.till_clock_at');
-  const o = await prepare(
+// Till money by how it was paid, from both sales records: the old record's
+// cash and card columns and extra tenders (pounds, converted as the all_sales
+// view does), and the till record's payments (pence). Takings is card + cash
+// + other, so the report always adds up (review, 27 Oct). `after`, when
+// given, keeps only sales made after that moment (the till's own clock for a
+// till sale: when the cash went in the drawer).
+async function takingsIn({ old, till }, after = null) {
+  const o = after ? { sql: `${old.sql} AND s.created_at > ?`, args: [...old.args, after] } : old;
+  const t = after ? { sql: `${till.sql} AND t.till_clock_at > ?`, args: [...till.args, after] } : till;
+  const os = await prepare(
     `SELECT COALESCE(SUM(ROUND(s.cash_amount * 100)), 0)::int AS cash, COALESCE(SUM(ROUND(s.card_amount * 100)), 0)::int AS card,
-            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${old.sql} AND p.tender_type <> ALL(?)), 0)::int AS other,
-            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${old.sql} AND p.tender_type = ANY(?)), 0)::int AS online
-       FROM sales s WHERE ${old.sql}`
-  ).get(...old.args, ONLINE_TENDERS, ...old.args, ONLINE_TENDERS, ...old.args);
-  const t = await prepare(
+            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type <> ALL(?)), 0)::int AS other,
+            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type = ANY(?)), 0)::int AS online
+       FROM sales s WHERE ${o.sql}`
+  ).get(...o.args, ONLINE_TENDERS, ...o.args, ONLINE_TENDERS, ...o.args);
+  const ts = await prepare(
     `SELECT COALESCE(SUM(p.amount_pence) FILTER (WHERE p.method = 'cash'), 0)::int AS cash,
             COALESCE(SUM(p.amount_pence) FILTER (WHERE p.method = 'card'), 0)::int AS card,
             COALESCE(SUM(p.amount_pence) FILTER (WHERE p.method NOT IN ('cash', 'card')), 0)::int AS other
-       FROM till_sale_payments p JOIN till_sales t ON t.id = p.till_sale_id WHERE ${till.sql}`
-  ).get(...till.args);
-  const cash = o.cash + t.cash;
-  const card = o.card + t.card;
-  const other = o.other + t.other;
-  return { takingsPence: card + cash + other, cashPence: cash, cardPence: card, otherPence: other, onlinePence: o.online };
+       FROM till_sale_payments p JOIN till_sales t ON t.id = p.till_sale_id WHERE ${t.sql}`
+  ).get(...t.args);
+  const cash = os.cash + ts.cash;
+  const card = os.card + ts.card;
+  const other = os.other + ts.other;
+  return { takingsPence: card + cash + other, cashPence: cash, cardPence: card, otherPence: other, onlinePence: os.online };
 }
 
-async function paidOutsIn(windowOf) {
-  const { sql, args } = windowOf('').paidOuts;
+// Cash taken out since this morning's float check (Jack's answer 9: the
+// morning check counted everything before it), or today's with no check yet.
+async function paidOutsSince(day, start) {
+  const where = start ? { sql: 'p.created_at > ?', args: [start.checkedAt] } : { sql: 'p.day = ?', args: [day] };
+  return paidOutsWhere(where);
+}
+async function paidOutsWhere({ sql, args }) {
   const rows = await prepare(`SELECT p.*, l.name AS by_name FROM paid_outs p JOIN logins l ON l.id = p.login_id WHERE ${sql} ORDER BY p.created_at, p.id`).all(...args);
   return rows.map((r) => ({ id: r.id, amountPence: r.amount_pence, reason: r.reason, note: r.note, byName: r.by_name, at: iso(r.created_at) }));
+}
+
+// What the drawer should hold (Jack's answer 9, "trust the morning check"):
+// this morning's start, plus the cash sales since the check, minus the cash
+// taken out since it. Cash from before the check was in the morning count,
+// so leftover cash from a day nobody closed shows tonight as over.
+async function drawer(day, start, sales) {
+  const { cashPence } = await takingsIn(sales, start.checkedAt);
+  const paidOuts = await paidOutsSince(day, start);
+  const paidOutsPence = paidOuts.reduce((n, p) => n + p.amountPence, 0);
+  return { cashPence, paidOuts, paidOutsPence, expectedPence: start.start.pence + cashPence - paidOutsPence };
 }
 
 async function closeOn(day) {
@@ -102,7 +117,7 @@ async function closeOn(day) {
   return {
     id: r.id, day: r.day_text, closedByName: r.closed_by_name, closedAt: iso(r.closed_at),
     floatStart: { ...start.start, pence: r.float_start_pence },
-    cashPence: r.cash_pence, paidOutsPence: r.paid_outs_pence, expectedPence: r.expected_pence,
+    cashPence: r.cash_pence, drawerCashPence: r.drawer_cash_pence, paidOutsPence: r.paid_outs_pence, expectedPence: r.expected_pence,
     countedPence: r.counted_pence, differencePence: r.counted_pence - r.expected_pence, reason: r.reason,
     floatPence: r.float_pence, bankedPence: r.banked_pence, ...leftAndTopUp(r.counted_pence, r.float_pence),
     takingsPence: r.takings_pence, cardPence: r.card_pence, otherPence: r.other_pence, onlinePence: r.online_pence,
@@ -140,26 +155,17 @@ async function lockedOnShop(shopId, fn) {
   return reply;
 }
 
-const today = async () => shopNow(await currentShopTimeZone());
-
 export function register(route) {
   route('GET', '/api/close-the-day', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res, OWNER_ONLY)) return;
-    const now = await today();
-    const day = now.date;
+    const { day, entry } = await closeEntryNow();
     const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
     const start = await floatStartOn(day);
-    const windowOf = await dayWindow(day);
-    const { cashPence } = await takingsIn(windowOf);
-    const paidOuts = await paidOutsIn(windowOf);
-    const paidOutsPence = paidOuts.reduce((n, p) => n + p.amountPence, 0);
-    const close = await closeOn(day);
-    const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-    const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
+    const d = start ? await drawer(day, start, await openSales(day)) : { cashPence: 0, paidOuts: await paidOutsSince(day, null), expectedPence: null };
     sendJson(res, 200, {
-      day, floatPence, floatStart: start?.start ?? null, cashPence, paidOutsPence,
-      expectedPence: start ? start.start.pence + cashPence - paidOutsPence : null,
-      paidOuts, entry: entryFor(effectiveHours(toCapacitySettings(settings), weekday), now.minutes, !!close), close,
+      day, floatPence, floatStart: start?.start ?? null, cashPence: d.cashPence,
+      paidOutsPence: d.paidOuts.reduce((n, p) => n + p.amountPence, 0), expectedPence: d.expectedPence,
+      paidOuts: d.paidOuts, entry, close: await closeOn(day),
     });
   });
 
@@ -175,7 +181,7 @@ export function register(route) {
     if (body.note !== undefined && typeof body.note !== 'string') return badRequest(res, 'The note must be text');
     const note = (body.note ?? '').trim();
     if (note.length > 500) return badRequest(res, 'The note can be up to 500 characters');
-    const day = (await today()).date;
+    const { day } = await closeEntryNow();
     const reply = await lockedOnShop(shopId, async () => {
       if (await prepare('SELECT 1 FROM day_closes WHERE day = ?').get(day)) return { status: 409, body: { error: 'Today is already closed', code: 'day_closed' } };
       const { id } = await prepare('INSERT INTO paid_outs (day, login_id, amount_pence, reason, note) VALUES (?, ?, ?, ?, ?) RETURNING id')
@@ -183,12 +189,14 @@ export function register(route) {
       return { ok: true, status: 201, id };
     });
     if (!reply.ok) return sendJson(res, reply.status, reply.body);
-    const paidOut = (await paidOutsIn(() => ({ paidOuts: { sql: 'p.id = ?', args: [reply.id] } })))[0];
+    const [paidOut] = await paidOutsWhere({ sql: 'p.id = ?', args: [reply.id] });
     sendJson(res, 201, { paidOut });
   });
 
-  // Close the day (eod-finish): the count and an optional reason; the server
-  // works out what was expected, the banking and the takings, and keeps them.
+  // Close the day (eod-finish): the count and an optional reason. Under the
+  // shop's lock the close is saved, marks every sale no close has counted,
+  // and works its figures out from exactly the sales it marked; a refusal
+  // after that rolls the marking back with it.
   route('POST', '/api/close-the-day', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res, OWNER_ONLY)) return;
     const ctx = await currentSession(req);
@@ -203,27 +211,33 @@ export function register(route) {
     // since then changes it, and the owner sees the new difference first.
     const shown = body.expectedPence;
     if (shown !== undefined && !Number.isSafeInteger(shown)) return badRequest(res, 'The expected figure must be whole pence');
-    const day = (await today()).date;
+    const { day } = await closeEntryNow();
     const reply = await lockedOnShop(shopId, async () => {
       if (await prepare('SELECT 1 FROM day_closes WHERE day = ?').get(day)) return { status: 409, body: { error: 'Today is already closed', code: 'already_closed' } };
       const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
       if (floatPence === null) return { status: 409, body: { error: 'The shop has no float set', code: 'no_float' } };
       const start = await floatStartOn(day);
       if (!start) return { status: 409, body: { error: 'Check the float before closing the day', code: 'float_not_checked' } };
-      const windowOf = await dayWindow(day);
-      const t = await takingsIn(windowOf);
-      const paidOutsPence = (await paidOutsIn(windowOf)).reduce((n, p) => n + p.amountPence, 0);
-      const expected = start.start.pence + t.cashPence - paidOutsPence;
-      if (shown !== undefined && shown !== expected) {
-        return { status: 409, body: { error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: expected } };
-      }
-      const banked = bankedFrom(counted, floatPence);
+      const open = await openSales(day);
+      // Saved first, so the sales can be marked with its id; the figures follow.
       const made = await prepare(
         `INSERT INTO day_closes (day, login_id, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
-           reason, float_pence, banked_pence, takings_pence, card_pence, other_pence, online_pence)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (shop_id, day) DO NOTHING RETURNING id`
-      ).get(day, ctx.login.id, start.id, start.start.pence, t.cashPence, paidOutsPence, expected, counted, reason, floatPence, banked, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence);
+           reason, float_pence, banked_pence, takings_pence, card_pence, other_pence)
+         VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?, 0, 0, 0) ON CONFLICT (shop_id, day) DO NOTHING RETURNING id`
+      ).get(day, ctx.login.id, start.id, start.start.pence, counted, reason, floatPence, bankedFrom(counted, floatPence));
       if (!made) return { status: 409, body: { error: 'Today is already closed', code: 'already_closed' } };
+      await prepare(`UPDATE sales s SET day_close_id = ? WHERE ${open.old.sql}`).run(made.id, ...open.old.args);
+      await prepare(`UPDATE till_sales t SET day_close_id = ? WHERE ${open.till.sql}`).run(made.id, ...open.till.args);
+      const counts = closedBy(made.id);
+      const t = await takingsIn(counts);
+      const d = await drawer(day, start, counts);
+      if (shown !== undefined && shown !== d.expectedPence) {
+        return { status: 409, body: { error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: d.expectedPence } };
+      }
+      await prepare(
+        `UPDATE day_closes SET cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
+           takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ? WHERE id = ?`
+      ).run(t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
       return { ok: true };
     });
     if (!reply.ok) {
