@@ -3217,3 +3217,18 @@ pills and "Works with or without an order" are built.
    the counter's words. *Pattern:* the Receipts fold.
 8. **End of day is the fourth area of Front desk**, after Messages, as the
    drawn rooms order it; only its Float fold is built.
+9. **After the review (27 Oct):**
+   - **Escape never closes a float check pop-up.** A page can stop Escape
+     only once without a click in between, so if the browser closes the
+     pop-up anyway it opens again at once.
+   - **Each step is its own pop-up with the focus in it**: Count it puts the
+     focus in the £50 box, a difference puts it in "Any idea why?", so a
+     second Enter can't press the next step's button and a screen reader
+     hears the new title.
+   - **The till reads the float check again every minute and when it comes
+     back into view**, so a till left open overnight asks the next morning.
+     *Pattern:* Today's Needs attention.
+   - **A count the server refuses shows the server's words**, as the
+     settings boxes do.
+   - **An earlier day's short float reads "The float was [£] short on [date]"**
+     ("on Mon 31 Aug"), as the uncollected bike line gives its date.

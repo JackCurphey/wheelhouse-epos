@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check } from 'lucide-react';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
@@ -30,12 +30,14 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 export function FloatCheck() {
   const session = useSession();
   const queryClient = useQueryClient();
-  const today = useQuery({ queryKey: QUERY, queryFn: () => apiGet<Today>('/api/float-check'), retry: false, refetchOnWindowFocus: false });
+  // Read again every minute and when the till comes back into view, so a till
+  // left open overnight asks the next morning (review, 27 Oct; Today's pattern).
+  const today = useQuery({ queryKey: QUERY, queryFn: () => apiGet<Today>('/api/float-check'), retry: false, refetchInterval: 60_000, refetchOnWindowFocus: true });
   const [step, setStep] = useState<Step>({ at: 'check' });
   const [counted, setCounted] = useState<number | null>(null);
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const name = session.status === 'signed-in' ? session.user.name : '';
   const t = today.data;
@@ -44,7 +46,7 @@ export function FloatCheck() {
 
   async function save(countedPence: number | null, why?: string) {
     setSaving(true);
-    setFailed(false);
+    setFailed(null);
     try {
       const { check } = await apiMutate<{ check: Check }>('/api/float-check', why ? { countedPence, reason: why } : { countedPence }, { method: 'POST' });
       queryClient.setQueryData<Today>(QUERY, (old) => (old ? { ...old, check } : old));
@@ -55,7 +57,8 @@ export function FloatCheck() {
       // Someone else checked it first: the day is checked, so the pop-up goes.
       if (err instanceof ApiError && err.status === 409 && (err.body as { code?: string } | null)?.code === 'already_checked') {
         await queryClient.invalidateQueries({ queryKey: QUERY });
-      } else setFailed(true);
+      // The server's own words for a refused count, as the settings boxes show them.
+      } else setFailed(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : SAVE_FAILED);
     } finally {
       setSaving(false);
     }
@@ -75,11 +78,11 @@ export function FloatCheck() {
   ) : null;
   if (!due || t.floatPence === null) return floating;
   const expected = t.floatPence;
-  const error = failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{SAVE_FAILED}</p> : null;
+  const error = failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed}</p> : null;
 
   if (step.at === 'count') {
     return (
-      <Box id="cnt" title="Count the float" sub="count every note and coin" wide
+      <Box key="count" id="cnt" title="Count the float" sub="count every note and coin" wide focus='input[aria-label="Number of £50"]'
         footer={<>
           <Button onClick={() => setStep({ at: 'check' })}>Back</Button>
           <Button variant="primary" disabled={counted === null || saving} onClick={() => {
@@ -98,7 +101,7 @@ export function FloatCheck() {
     const over = step.counted > expected;
     const diff = Math.abs(step.counted - expected);
     return (
-      <Box id="diff" title={`The float is ${over ? 'over' : 'short'}`} sub={`counted by ${name}`}
+      <Box key="diff" id="diff" focus="#diff-why" title={`The float is ${over ? 'over' : 'short'}`} sub={`counted by ${name}`}
         footer={<>
           <Button onClick={toCount}>Count again</Button>
           <Button variant="primary" disabled={saving} onClick={() => void save(step.counted, reason.trim() || undefined)}>Start the day</Button>
@@ -122,7 +125,7 @@ export function FloatCheck() {
   // UX walk-through 4 M4: the first day on Wheelhouse is counted, never looked at.
   const first = t.firstDay;
   return (
-    <Box id="fc" title={`Hello, ${name.split(' ')[0]}`} sub={first ? 'first in on the first day on Wheelhouse' : 'first in today to take payments'}
+    <Box key="check" id="fc" title={`Hello, ${name.split(' ')[0]}`} sub={first ? 'first in on the first day on Wheelhouse' : 'first in today to take payments'}
       footer={first ? <Button variant="primary" onClick={toCount}>Count it</Button> : <>
         <Button onClick={toCount}>Count it</Button>
         <Button variant="primary" disabled={saving} onClick={() => void save(null)}>Looks right</Button>
@@ -140,10 +143,20 @@ export function FloatCheck() {
   );
 }
 
-/** A float check pop-up: no ✕, Escape does nothing, a click outside does nothing. */
-function Box({ id, title, sub, wide = false, footer, children }: { id: string; title: string; sub: string; wide?: boolean; footer: ReactNode; children: ReactNode }) {
+/**
+ * A float check pop-up: no ✕, a click outside does nothing, and Escape does
+ * nothing. The page can stop Escape only once without a click in between, so
+ * if the browser closes it anyway it opens again (review, 27 Oct). Each step
+ * is its own pop-up (a key per step) with the focus put in it, so Enter on
+ * one step's button can't press the next one's.
+ */
+function Box({ id, title, sub, wide = false, focus, footer, children }: { id: string; title: string; sub: string; wide?: boolean; focus?: string; footer: ReactNode; children: ReactNode }) {
+  const [opened, setOpened] = useState(0);
+  useEffect(() => {
+    if (focus) document.getElementById(`${id}-title`)?.closest('dialog')?.querySelector<HTMLElement>(focus)?.focus();
+  }, [id, focus, opened]);
   return (
-    <Dialog open onOpenChange={() => {}} dismissOnBackdrop={false} wide={wide} onCancel={(e) => e.preventDefault()} aria-labelledby={`${id}-title`} aria-describedby={`${id}-sub`}>
+    <Dialog key={opened} open onOpenChange={(open) => { if (!open) setOpened((n) => n + 1); }} dismissOnBackdrop={false} wide={wide} onCancel={(e) => e.preventDefault()} aria-labelledby={`${id}-title`} aria-describedby={`${id}-sub`}>
       <DialogHeader>
         <div className="min-w-0 grow">
           <DialogTitle id={`${id}-title`}>{title}</DialogTitle>

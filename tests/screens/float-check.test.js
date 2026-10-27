@@ -12,7 +12,7 @@ const JO = { id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false, 
 const JACK = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const DUE = { day: '2026-09-01', floatPence: 15000, takesPayments: true, firstDay: false, check: null };
 const madeCheck = (body) => ({ id: 7, how: body.countedPence === null ? 'looked' : 'counted', expectedPence: 15000, countedPence: body.countedPence, reason: body.reason ?? '', checkedByName: 'Jo Taylor', checkedAt: '2026-09-01T08:02:00Z' });
-const SHORT = { kind: 'float_short', checkId: 7, shortPence: 420, countedByName: 'Jo Taylor', checkedAt: '2026-09-01T08:02:00Z', reason: 'change given wrong' };
+const SHORT = { kind: 'float_short', checkId: 7, day: new Date().toLocaleDateString('en-CA'), shortPence: 420, countedByName: 'Jo Taylor', checkedAt: new Date().toISOString(), reason: 'change given wrong' };
 
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -38,7 +38,7 @@ async function open(path, { me = JO, floatCheck = DUE, saveStatus = 201, float =
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/float-check' && method === 'POST') {
-      if (saveStatus !== 201) return reply(saveStatus, { error: 'Internal error' });
+      if (saveStatus !== 201) return reply(saveStatus, { error: saveStatus === 400 ? 'The count must be pounds and pence' : 'Internal error' });
       server.floatCheck = { ...server.floatCheck, check: madeCheck(body) };
       return reply(201, { check: server.floatCheck.check });
     }
@@ -205,4 +205,45 @@ test('Today: a short float, who counted it and why, cleared by Seen', async () =
   t.fireEvent.click(t.within(row).getByRole('button', { name: 'Seen' }));
   await t.waitFor(() => assert.ok(calls.some((c) => c.method === 'POST' && c.url === '/api/float-check/7/seen')));
   await t.waitFor(() => assert.ok(t.ui.queryByText('The float was £4.20 short this morning') === null));
+});
+
+// Review, 27 Oct: each step opens fresh, with the focus in it, so Enter on one
+// step's button can't press the next step's, and a screen reader hears the new title.
+test('each step takes the focus: the first box to count, then Any idea why?', async () => {
+  const t = await openTill();
+  const count = (await popUp(t, 'Hello, Jo')).getByRole('button', { name: 'Count it' });
+  count.focus();
+  t.fireEvent.click(count);
+  const counting = await popUp(t, 'Count the float');
+  await t.waitFor(() => assert.ok(document.activeElement === counting.getByLabelText('Number of £50')));
+  t.fireEvent.change(counting.getByLabelText('Cash counted, total'), { target: { value: '145.80' } });
+  const done = counting.getByRole('button', { name: 'Done counting' });
+  done.focus();
+  t.fireEvent.click(done);
+  const diff = await popUp(t, 'The float is short');
+  await t.waitFor(() => assert.ok(document.activeElement === diff.getByLabelText(/Any idea why\?/)));
+  // Each step is its own pop-up, not the last one's reused.
+  assert.equal(t.ui.getAllByRole('dialog').length, 1);
+});
+
+test('a count the server refuses shows its words', async () => {
+  const t = await openTill({ saveStatus: 400 });
+  t.fireEvent.click((await popUp(t, 'Hello, Jo')).getByRole('button', { name: 'Looks right' }));
+  assert.ok(await (await popUp(t, 'Hello, Jo')).findByText('The count must be pounds and pence'));
+});
+
+// Review, 27 Oct: a till left open overnight asks again the next morning.
+test('the float check is read again when the till comes back into view', async () => {
+  const t = await openTill({ floatCheck: { ...DUE, check: madeCheck({ countedPence: null }) } });
+  await settled(t);
+  assert.ok(t.ui.queryByRole('dialog') === null);
+  server.floatCheck = { ...DUE, day: '2026-09-02' };
+  window.dispatchEvent(new window.Event('focus'));
+  window.dispatchEvent(new window.Event('visibilitychange'));
+  assert.ok(await popUp(t, 'Hello, Jo'));
+});
+
+test('Today: an earlier day\'s short float gives its date', async () => {
+  const t = await open('/workshop/today', { me: JACK, items: [{ ...SHORT, day: '2026-08-31', checkedAt: '2026-08-31T08:02:00Z' }] });
+  assert.ok(await t.ui.findByText('The float was £4.20 short on Mon 31 Aug'));
 });

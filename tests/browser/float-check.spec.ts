@@ -86,3 +86,23 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 }
+
+// Chrome lets a page block a dialog's Escape only once without a click in
+// between (review, 27 Oct): the float check must still be there after three,
+// and still answer.
+test('Escape pressed three times leaves the float check open', async ({ page, context }) => {
+  const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+  owners.push(owner);
+  expect((await staffRequest(server!.baseUrl, owner.cookie, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 15000 } })).status).toBe(200);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/till`);
+  const check = page.getByRole('dialog', { name: 'Hello, Jack' });
+  await expect(check).toBeVisible();
+  for (let i = 0; i < 3; i += 1) await page.keyboard.press('Escape');
+  await expect(check).toBeVisible();
+  await check.getByRole('button', { name: 'Count it' }).click();
+  await expect(page.getByRole('dialog', { name: 'Count the float' })).toBeVisible();
+  for (let i = 0; i < 3; i += 1) await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Count the float' })).toBeVisible();
+});

@@ -24,7 +24,7 @@ type Attention =
   | { kind: 'quote_no_answer'; jobId: number; reference: string; customerName: string | null; phone: string | null; sentAt: string | null; reminderSentAt: string | null }
   | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string }
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
-  | { kind: 'float_short'; checkId: number; shortPence: number; countedByName: string; checkedAt: string; reason: string };
+  | { kind: 'float_short'; checkId: number; day: string; shortPence: number; countedByName: string; checkedAt: string; reason: string };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
 
 // The drawing's card: a labelled section, its rows a list (opening.mjs `section`).
@@ -109,11 +109,12 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
     if (done) document.getElementById('today-attention')?.focus();
   }
   const lines = items.map((i) => {
-    // op-today-short, without "Till B1’s" until tills have names.
+    // op-today-short, without "Till B1’s" until tills have names; it stays until
+    // Seen, so an earlier day's gives its date (review, 27 Oct).
     if (i.kind === 'float_short') {
       return (
         <Line key={`f${i.checkId}`} lead={warn}
-          title={`The float was ${penceText(i.shortPence)} short this morning`}
+          title={`The float was ${penceText(i.shortPence)} short ${londonDay(i.checkedAt) === today ? 'this morning' : `on ${shortDate(i.checkedAt)}`}`}
           sub={`Counted by ${i.countedByName} at ${clock(i.checkedAt)}${i.reason ? ` · “${i.reason}”` : ''}`}
           right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeing.has(i.checkId)} onClick={() => void seen(i.checkId)}>Seen</Button>} />
       );
