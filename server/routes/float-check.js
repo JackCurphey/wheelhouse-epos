@@ -45,16 +45,28 @@ async function takesPayments(login) {
 // A float counted short and not yet Seen, for Today's Needs attention
 // (op-today-short): it stays until the Owner's one click clears it, whatever
 // day it was counted (decision 8 H3; review, 27 Oct), oldest first, with its
-// day so an earlier one can say which. Over isn't listed until Close the day
-// exists (decision 8 H1: only when yesterday was closed).
-export async function shortFloats() {
+// day so an earlier one can say which. An over float goes there too, but
+// only when yesterday was closed (decision 8 H1; otherwise "wasn't closed"
+// explains it): "yesterday" is the last day before it that the till opened,
+// so a shop shut on Sundays looks back to Saturday, and a first day has none
+// (openspec/changes/close-the-day, design 6).
+const SHORT = 'f.counted_pence < f.expected_pence';
+const OVER_AFTER_CLOSED = `f.counted_pence > f.expected_pence AND EXISTS (SELECT 1 FROM day_closes c
+  WHERE c.day = (SELECT max(p.day) FROM float_checks p WHERE p.day < f.day))`;
+const WAITING_TO_BE_SEEN = `f.seen_at IS NULL AND (${SHORT} OR (${OVER_AFTER_CLOSED}))`;
+
+export async function floatsToSee() {
   const rows = await prepare(`SELECT f.*, to_char(f.day, 'YYYY-MM-DD') AS day_text, l.name AS checked_by_name
     FROM float_checks f JOIN logins l ON l.id = f.login_id
-    WHERE f.seen_at IS NULL AND f.counted_pence < f.expected_pence ORDER BY f.day, f.id`).all();
-  return rows.map((r) => ({
-    kind: 'float_short', checkId: r.id, day: r.day_text, shortPence: r.expected_pence - r.counted_pence,
-    countedByName: r.checked_by_name, checkedAt: new Date(r.checked_at).toISOString(), reason: r.reason,
-  }));
+    WHERE ${WAITING_TO_BE_SEEN} ORDER BY f.day, f.id`).all();
+  return rows.map((r) => {
+    const short = r.counted_pence < r.expected_pence;
+    return {
+      kind: short ? 'float_short' : 'float_over', checkId: r.id, day: r.day_text,
+      ...(short ? { shortPence: r.expected_pence - r.counted_pence } : { overPence: r.counted_pence - r.expected_pence }),
+      countedByName: r.checked_by_name, checkedAt: new Date(r.checked_at).toISOString(), reason: r.reason,
+    };
+  });
 }
 
 export function register(route) {
@@ -96,7 +108,8 @@ export function register(route) {
     sendJson(res, 201, { check: await checkOn(day) });
   });
 
-  // Seen on a short float (op-today-seen; H3): one click, who and when.
+  // Seen on a short float (op-today-seen; H3), or an over one Today lists:
+  // one click, who and when.
   // Owner only, as Needs attention, until roles; the check and the record in
   // one statement.
   route('POST', '/api/float-check/:id/seen', async (req, res, params) => {
@@ -105,8 +118,8 @@ export function register(route) {
     const id = Number(params.id);
     if (!Number.isInteger(id)) return sendJson(res, 404, { error: 'Float check not found' });
     const marked = await prepare(
-      `UPDATE float_checks SET seen_at = now(), seen_by_login_id = ?
-        WHERE id = ? AND seen_at IS NULL AND counted_pence < expected_pence RETURNING id`
+      `UPDATE float_checks f SET seen_at = now(), seen_by_login_id = ?
+        WHERE f.id = ? AND ${WAITING_TO_BE_SEEN} RETURNING f.id`
     ).get(ctx.login.id, id);
     if (!marked) return sendJson(res, 409, { error: 'That float isn’t waiting to be seen.', code: 'not_short' });
     sendJson(res, 200, { ok: true });

@@ -8,7 +8,7 @@ import { currentSession } from '../lib/session.js';
 import { sendJson } from '../lib/http.js';
 import { WORKSHOP_JOB_SELECT } from '../workshop/jobs.js';
 import { customerConversations } from '../workshop/job-notes.js';
-import { shortFloats } from './float-check.js';
+import { floatsToSee } from './float-check.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -69,7 +69,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await shortFloats()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies())] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies())] });
   });
 
   // Contacted on an uncollected bike's line (cp-today-uncollected; H4): who and
