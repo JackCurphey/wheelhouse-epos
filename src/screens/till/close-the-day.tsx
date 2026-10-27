@@ -26,7 +26,7 @@ type FloatStart = { pence: number; how: 'looked' | 'counted'; expectedPence: num
 type PaidOut = { id: number; amountPence: number; reason: string; note: string; byName: string; at: string };
 export type Close = {
   id: number; day: string; closedByName: string; closedAt: string; floatStart: FloatStart;
-  cashPence: number; paidOutsPence: number; expectedPence: number; countedPence: number; differencePence: number; reason: string;
+  cashPence: number; drawerCashPence: number; paidOutsPence: number; expectedPence: number; countedPence: number; differencePence: number; reason: string;
   floatPence: number; bankedPence: number; leftPence: number; topUpPence: number; takingsPence: number; cardPence: number; otherPence: number; onlinePence: number;
 };
 export type Day = {

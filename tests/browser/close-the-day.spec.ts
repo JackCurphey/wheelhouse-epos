@@ -33,10 +33,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     owners.push(owner);
     const float = await staffRequest(server!.baseUrl, owner.cookie, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 15000 } });
     expect(float.status).toBe(200);
-    // Maya Patel's £74.00, paid in cash, today (the drawing's example sale).
-    await runWithShop(owner.shop.id, () => prepare(
-      "INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES ('2026-09-01T10:00:00Z', 74, 74, 'Cash', 74)"
-    ).run());
+    // Shut on Tuesdays, so "Close the day" shows all day on the pinned
+    // Tuesday morning, and the float can be looked at when closing.
+    const hours = await staffRequest(server!.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { openingHours: [{ weekday: 1, open: '09:00', close: '17:00' }] } });
+    expect(hours.status).toBe(200);
     const [name, value] = owner.cookie.split('=');
     await context.addCookies([{ name, value, url: server!.baseUrl }]);
 
@@ -47,6 +47,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(check.getByRole('button')).toHaveText(['Looks right']);
     await check.getByRole('button', { name: 'Looks right' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Maya Patel's £74.00, paid in cash after the float check (the drawing's
+    // example sale), then the page read again.
+    await runWithShop(owner.shop.id, () => prepare("INSERT INTO sales (subtotal, total, payment_method, cash_amount) VALUES (74, 74, 'Cash', 74)").run());
+    await page.reload();
 
     // Count the cash, blind: nothing expected is shown until the count is done.
     const counting = page.getByRole('region', { name: 'Count the cash' });
