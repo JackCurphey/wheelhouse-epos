@@ -87,6 +87,12 @@ test('on the first day the float must be counted; the count is kept with who and
 test('at closing the Owner can look at a float nobody checked, even on the first day', async () => {
   const owner = await shop();
   const jo = await teamMember(owner, 'Jo Taylor', { isCashier: true });
+  // Only while "Close the day" is showing (second review, item 3): at 07:00,
+  // with the shop closing at 18:00, it isn't, so the first day is counted.
+  const early = await post(owner, '/api/float-check', { countedPence: null, atClose: true });
+  assert.deepEqual([early.status, early.body.code], [400, 'count_needed']);
+  // Shut on Tuesdays, "Close the day" shows all day.
+  assert.equal((await call(owner, '/api/workshop-settings', { method: 'PUT', body: { openingHours: [{ weekday: 1, open: '09:00', close: '17:00' }] } })).status, 200);
   const refused = await post(jo, '/api/float-check', { countedPence: null, atClose: true });
   assert.deepEqual([refused.status, refused.body.code], [400, 'count_needed']);
   const res = await post(owner, '/api/float-check', { countedPence: null, atClose: true });

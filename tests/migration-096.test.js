@@ -77,6 +77,13 @@ test('096 adds paid-outs and one close a day, and keeps each shop to its own', a
     assert.equal(made.shop_id, ids.shop);
     assert.ok(made.closed_at instanceof Date);
     assert.equal(made.online_pence, 0, 'online money is kept beside the takings');
+    assert.equal(made.drawer_cash_pence, 0, 'the drawer\'s cash sales are kept beside the report\'s');
+    // Each sale says which close counted it: none until one does, and only a real close.
+    const { rows: [sale] } = await c.query("INSERT INTO sales (subtotal, total, payment_method) VALUES (5, 5, 'Cash') RETURNING day_close_id");
+    assert.equal(sale.day_close_id, null);
+    await c.query('UPDATE sales SET day_close_id = $1', [made.id]);
+    await assert.rejects(c.query('UPDATE sales SET day_close_id = 999999'), /foreign key/i, 'a sale is marked only by a real close');
+    assert.equal((await c.query("SELECT count(*)::int AS n FROM information_schema.columns WHERE table_name = 'till_sales' AND column_name = 'day_close_id'")).rows[0].n, 1);
     await assert.rejects(close('2026-09-01'), /unique|duplicate/i, 'one close a day');
     await assert.rejects(close('2026-09-02', -1, 0), /check/i, 'a count is never below nothing');
     await assert.rejects(close('2026-09-03', 100, -1), /check/i, 'banking is never below nothing');

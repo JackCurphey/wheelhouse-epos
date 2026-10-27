@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS day_closes (
 -- till's takings, not in them (Jack's answer 7, 27 Oct). Added here for a
 -- database that ran an earlier draft of this file.
 ALTER TABLE day_closes ADD COLUMN IF NOT EXISTS online_pence INTEGER NOT NULL DEFAULT 0;
+-- The cash sales the drawer's expected figure added: those since this
+-- morning's float check, which counted everything before it (Jack's answer
+-- 9, 27 Oct). The report's Cash is every cash sale this close counted.
+ALTER TABLE day_closes ADD COLUMN IF NOT EXISTS drawer_cash_pence INTEGER NOT NULL DEFAULT 0;
 
 DO $$
 DECLARE t TEXT;
@@ -59,3 +63,16 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Which close counted each sale (second review, 27 Oct). A close marks every
+-- sale of its shop that no close has counted yet, under the shop's lock, and
+-- works its report out from exactly the rows it marked: a sale still being
+-- saved at that moment isn't seen and is left for the next close, and a
+-- till's own clock never decides the day (Jack's answer 6). Null until a
+-- close counts the sale. The sales tables keep their row-level security; the
+-- marking runs as the shop's own request. The all_sales view (083) names
+-- its columns, so it is unchanged.
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS day_close_id INTEGER REFERENCES day_closes(id);
+ALTER TABLE till_sales ADD COLUMN IF NOT EXISTS day_close_id INTEGER REFERENCES day_closes(id);
+CREATE INDEX IF NOT EXISTS idx_sales_day_close ON sales(shop_id, day_close_id);
+CREATE INDEX IF NOT EXISTS idx_till_sales_day_close ON till_sales(shop_id, day_close_id);
