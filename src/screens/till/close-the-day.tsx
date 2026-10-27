@@ -27,7 +27,7 @@ type PaidOut = { id: number; amountPence: number; reason: string; note: string; 
 export type Close = {
   id: number; day: string; closedByName: string; closedAt: string; floatStart: FloatStart;
   cashPence: number; paidOutsPence: number; expectedPence: number; countedPence: number; differencePence: number; reason: string;
-  floatPence: number; bankedPence: number; leftPence: number; takingsPence: number; cardPence: number; otherPence: number;
+  floatPence: number; bankedPence: number; leftPence: number; topUpPence: number; takingsPence: number; cardPence: number; otherPence: number; onlinePence: number;
 };
 export type Day = {
   day: string; floatPence: number | null; floatStart: FloatStart | null; cashPence: number; paidOutsPence: number;
@@ -59,6 +59,7 @@ export function CloseTheDayPage() {
   const [showReport, setShowReport] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  const [changed, setChanged] = useState<string | null>(null);
 
   if (session.status === 'signed-in' && !owner) return <p className="m-0 text-sm">Only the shop’s owner can close the day.</p>;
   const d = day.data;
@@ -80,19 +81,37 @@ export function CloseTheDayPage() {
   const float = d.floatPence;
   const expected = d.expectedPence;
 
-  async function closeDay(countedPence: number) {
+  // The till's figures are read again once the count is done, so the
+  // difference is against what the till expects now (review, 27 Oct).
+  async function doneCounting(countedPence: number) {
+    await day.refetch();
+    setResult(countedPence);
+    setReason('');
+    setChanged(null);
+  }
+
+  async function closeDay(countedPence: number, expectedPence: number) {
     setSaving(true);
     setFailed(null);
     try {
       const why = reason.trim();
-      const { close: made } = await apiMutate<{ close: Close }>('/api/close-the-day', why ? { countedPence, reason: why } : { countedPence }, { method: 'POST' });
+      // The expected figure shown goes too: if a sale or cash taken out changed it, the server says so.
+      const { close: made } = await apiMutate<{ close: Close }>('/api/close-the-day', why ? { countedPence, expectedPence, reason: why } : { countedPence, expectedPence }, { method: 'POST' });
       queryClient.setQueryData<Day>(CLOSE_DAY_QUERY, (old) => (old ? { ...old, close: made, entry: { ...old.entry, show: false } } : old));
       setShowReport(true);
     } catch (err) {
+      const code = err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
       // Closed already, by someone else: show that close.
-      if (err instanceof ApiError && err.status === 409 && (err.body as { code?: string } | null)?.code === 'already_closed') {
+      if (err instanceof ApiError && err.status === 409 && code === 'already_closed') {
         await queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
         setShowReport(true);
+      // The figures changed while counting: show the new difference, to keep again.
+      } else if (err instanceof ApiError && err.status === 409 && code === 'expected_changed') {
+        await day.refetch();
+        setChanged(err.message);
+        setKept(false);
+        setBagged(false);
+        setOpen(1);
       } else setFailed(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : SAVE_FAILED);
     } finally {
       setSaving(false);
@@ -123,11 +142,12 @@ export function CloseTheDayPage() {
             <Note>Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.</Note>
             <NoteCoinCounter onChange={setCounted} />
             <div className="flex justify-end">
-              <Button variant="primary" disabled={counted === null} onClick={() => { if (counted !== null) { setResult(counted); setReason(''); } }}>Done counting — show the difference</Button>
+              <Button variant="primary" disabled={counted === null || day.isFetching} onClick={() => { if (counted !== null) void doneCounting(counted); }}>Done counting — show the difference</Button>
             </div>
           </>
         ) : (
           <>
+            {changed ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-size-13 font-semibold text-[var(--wh-warn-ink)]">{changed}</p> : null}
             <div>
               <Row label="Counted" value={penceText(result)} first />
               <Row label="The till expected" value={penceText(expected)} />
@@ -154,8 +174,8 @@ export function CloseTheDayPage() {
               </>
             )}
             <div className="flex justify-between gap-2.5">
-              <Button variant="ghost" onClick={() => { setResult(null); setCounted(null); setKept(false); setBagged(false); }}>Count again</Button>
-              <Button variant="primary" onClick={() => { setKept(true); setOpen(2); }}>Keep this count and go on</Button>
+              <Button variant="ghost" onClick={() => { setResult(null); setCounted(null); setKept(false); setBagged(false); setChanged(null); }}>Count again</Button>
+              <Button variant="primary" onClick={() => { setKept(true); setChanged(null); setOpen(2); }}>Keep this count and go on</Button>
             </div>
           </>
         )}
@@ -183,9 +203,13 @@ export function CloseTheDayPage() {
         </div>
         {result !== null ? (
           <div className="flex flex-col rounded-[10px] border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-4 pt-1.5 pb-2.5">
-            <Row label="Leave in the drawer" value={penceText(Math.min(result, float))} first big />
+            <Row label="Leave in the drawer" value={penceText(float)} first big />
             <Row label="Bank" value={penceText(Math.max(0, result - float))} big />
           </div>
+        ) : null}
+        {/* Jack's answer 5 (27 Oct): a drawer below the float banks nothing and is made up to it. */}
+        {result !== null && result < float ? (
+          <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-size-13 font-semibold text-[var(--wh-warn-ink)]">{`Put ${penceText(float - result)} in to make the float up to ${penceText(float)}`}</p>
         ) : null}
         <Note>The float is the shop’s standard amount, so tomorrow starts the same. Bag the rest for the bank.</Note>
         <div className="flex justify-end">
@@ -199,7 +223,7 @@ export function CloseTheDayPage() {
             <Note>Everything above is done. Closing the day saves the report and starts tomorrow with the float.</Note>
             {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed}</p> : null}
             <div className="flex justify-end">
-              <Button variant="primary" disabled={saving} onClick={() => void closeDay(result)}>Close the day and show the report</Button>
+              <Button variant="primary" disabled={saving || expected === null} onClick={() => { if (expected !== null) void closeDay(result, expected); }}>Close the day and show the report</Button>
             </div>
           </>
         ) : (
@@ -208,8 +232,9 @@ export function CloseTheDayPage() {
       </Step>
 
       {adding ? <PaidOutDialog name={session.status === 'signed-in' ? session.user.name : ''} onClose={() => setAdding(false)} /> : null}
-      {/* The float is checked first, as on the till, so the count starts from a real figure. */}
-      <FloatCheck />
+      {/* The float is checked first, so the count starts from a real figure:
+          Looks right only at closing (Jack's answer 8, 27 Oct). */}
+      <FloatCheck atClose />
     </Page>
   );
 }
@@ -340,7 +365,9 @@ function reportRows(c: Close): [string, string, string?][] {
     ['Banked', penceText(c.bankedPence)],
   ];
 }
-const ONLINE = 'Online money is not in this till’s takings.';
+// Online money is beside the till's takings, not in them (walk-through 11 H2;
+// Jack's answer 7). The drawing's "see Reports" waits for Reports.
+const online = (c: Close) => `Online money is not in this till’s takings: ${penceText(c.onlinePence)} today`;
 
 /** "Day closed" (eod-z): the end-of-day report, with Print. */
 function Report({ close, onClose }: { close: Close; onClose: () => void }) {
@@ -368,7 +395,7 @@ function Report({ close, onClose }: { close: Close; onClose: () => void }) {
             </li>
           ))}
         </ul>
-        <p className="m-0 border-t border-[var(--wh-border)] pt-3 text-sm leading-normal">{ONLINE}</p>
+        <p className="m-0 border-t border-[var(--wh-border)] pt-3 text-sm leading-normal">{online(close)}</p>
       </DialogBody>
       <DialogFooter>
         <span />
@@ -389,7 +416,7 @@ function ReportPaper({ close, sub }: { close: Close; sub: string }) {
           {sub2 ? <div>{sub2}</div> : null}
         </div>
       ))}
-      <p className="m-0">{ONLINE}</p>
+      <p className="m-0">{online(close)}</p>
     </div>
   );
 }

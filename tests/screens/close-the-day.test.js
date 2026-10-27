@@ -20,9 +20,10 @@ const closeFrom = (body, day) => ({
   id: 9, day: '2026-09-01', closedByName: 'Jack Lewis', closedAt: '2026-09-01T17:40:00Z', floatStart: START,
   cashPence: day.cashPence, paidOutsPence: day.paidOutsPence, expectedPence: day.expectedPence, countedPence: body.countedPence,
   differencePence: body.countedPence - day.expectedPence, reason: body.reason ?? '', floatPence: 15000,
-  bankedPence: Math.max(0, body.countedPence - 15000), leftPence: Math.min(body.countedPence, 15000),
-  takingsPence: 9400, cardPence: 2000, otherPence: 0,
+  bankedPence: Math.max(0, body.countedPence - 15000), leftPence: 15000, topUpPence: Math.max(0, 15000 - body.countedPence),
+  takingsPence: 9400, cardPence: 2000, otherPence: 0, onlinePence: 4000,
 });
+const CHANGED = 'The till’s figures changed while you were counting. Check the difference again.';
 
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -54,6 +55,8 @@ async function open(path, { me = JACK, day = DAY, floatCheck = CHECKED, items = 
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/close-the-day' && method === 'POST') {
+      // The server's own check: the expected figure the screen showed must still be right.
+      if (body.expectedPence !== server.day.expectedPence) return reply(409, { error: CHANGED, code: 'expected_changed', expectedPence: server.day.expectedPence });
       server.day.close = closeFrom(body, server.day);
       server.day.entry = { ...server.day.entry, show: false };
       return reply(201, { close: server.day.close });
@@ -213,7 +216,7 @@ test('Close the day saves the count and shows the report, with Print', async () 
   assert.ok(text(await step(t, 'End-of-day report')).includes('Ready'));
   assert.ok(finish.getByText('Everything above is done. Closing the day saves the report and starts tomorrow with the float.'));
   t.fireEvent.click(finish.getByRole('button', { name: 'Close the day and show the report' }));
-  await t.waitFor(() => assert.deepEqual(posts('/api/close-the-day'), [{ countedPence: 22190, reason: 'change given wrongly' }]));
+  await t.waitFor(() => assert.deepEqual(posts('/api/close-the-day'), [{ countedPence: 22190, expectedPence: 22400, reason: 'change given wrongly' }]));
   const report = await popUp(t, 'Day closed');
   assert.ok(report.getByText('Tuesday 1 September · closed by Jack Lewis'));
   const rows = report.getAllByRole('listitem').map(text);
@@ -221,7 +224,8 @@ test('Close the day saves the count and shows the report, with Print', async () 
     'Takings £94.00', 'Card £20.00', 'Cash £74.00', 'Gift cards, store credit, customer accounts, other £0.00',
     'Float at the start £150.00 · looked right · Jack Lewis at 09:02 £150.00', 'Cash difference £2.10 short', 'Banked £71.90',
   ]);
-  assert.ok(report.getByText('Online money is not in this till’s takings.'));
+  // Online money on its own line, not in the takings (Jack's answer 7).
+  assert.ok(report.getByText('Online money is not in this till’s takings: £40.00 today'));
   t.fireEvent.click(report.getByRole('button', { name: 'Print' }));
   assert.equal(printed, 1);
   t.fireEvent.click(report.getByRole('button', { name: 'Close' }));
@@ -243,16 +247,64 @@ test('a day already closed opens with its steps done and the report to hand', as
   assert.ok(report.getAllByRole('listitem').map(text).includes('Cash difference £0.00'));
 });
 
-test('the float is checked first when nobody has checked it today, and the count then starts from it', async () => {
-  const t = await openClose({ day: { ...DAY, floatStart: null, expectedPence: null }, floatCheck: { ...CHECKED, check: null } });
+// Jack's answer 8: at closing, a float nobody checked is looked at (the
+// shop's set float, one press), never counted, even on the first day.
+test('the float is checked first when nobody has checked it today, Looks right only, and the count then starts from it', async () => {
+  const t = await openClose({ day: { ...DAY, floatStart: null, expectedPence: null }, floatCheck: { ...CHECKED, firstDay: true, check: null } });
   const check = await popUp(t, 'Hello, Jack');
+  assert.ok(check.getByText('£150.00'));
+  assert.deepEqual(check.getAllByRole('button').map((b) => b.textContent), ['Looks right']);
   // The server now has this morning's float, as it would once the check is saved.
   server.day = { ...server.day, floatStart: START, expectedPence: DAY.expectedPence };
   t.fireEvent.click(check.getByRole('button', { name: 'Looks right' }));
+  await t.waitFor(() => assert.deepEqual(posts('/api/float-check'), [{ countedPence: null, atClose: true }]));
   await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
   await count(t, '224.00');
   const region = t.within(await t.ui.findByRole('region', { name: 'Count the cash' }));
   assert.ok(await region.findByText('Spot on'));
+});
+
+// Jack's answer 5: a drawer below the float banks nothing and says how much to put in.
+test('a count below the float: bank nothing, and put the difference in', async () => {
+  const t = await openClose();
+  await count(t, '140.00');
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Keep this count and go on' }));
+  const banking = t.within(await t.ui.findByRole('region', { name: 'Paid-outs and banking' }));
+  assert.ok(text(banking.getByText('Leave in the drawer').closest('[data-row]')).includes('£150.00'));
+  assert.ok(text(banking.getByText('Bank').closest('[data-row]')).includes('£0.00'));
+  assert.ok(banking.getByText('Put £10.00 in to make the float up to £150.00'));
+});
+
+// Review fix 3: the figures are read again when the count is done, and a
+// change while counting is caught before the day closes.
+test('Done counting reads the figures again', async () => {
+  const t = await openClose();
+  await t.ui.findByRole('region', { name: 'Count the cash' });
+  await t.waitFor(() => assert.equal(shell.queryClient.isFetching(), 0));
+  // A £6.00 cash sale while counting.
+  server.day = { ...server.day, cashPence: 8000, expectedPence: 23000 };
+  await count(t, '230.00');
+  const region = t.within(await t.ui.findByRole('region', { name: 'Count the cash' }));
+  assert.ok(await region.findByText('Spot on'));
+});
+
+test('a sale between counting and closing: the close is refused and the new difference shown', async () => {
+  const t = await openClose();
+  await count(t, '224.00');
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Keep this count and go on' }));
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Banking bagged — next step' }));
+  server.day = { ...server.day, cashPence: 8000, expectedPence: 23000 };
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Close the day and show the report' }));
+  const region = t.within(await t.ui.findByRole('region', { name: 'Count the cash' }));
+  assert.ok(await region.findByText(CHANGED));
+  await t.waitFor(() => assert.ok(text(region.getByText('Difference').closest('[data-row]')).includes('£6.00 short')));
+  assert.ok(t.ui.queryByRole('dialog') === null);
+  // Kept again, it closes against the new figure.
+  t.fireEvent.click(region.getByRole('button', { name: 'Keep this count and go on' }));
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Banking bagged — next step' }));
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Close the day and show the report' }));
+  assert.ok(await popUp(t, 'Day closed'));
+  assert.deepEqual(posts('/api/close-the-day').map((b) => b.expectedPence), [22400, 23000]);
 });
 
 test('with no float set, the page says where to set it', async () => {

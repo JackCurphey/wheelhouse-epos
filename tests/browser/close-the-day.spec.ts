@@ -41,12 +41,11 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await context.addCookies([{ name, value, url: server!.baseUrl }]);
 
     await page.goto(`${server!.baseUrl}/workshop/till/close`);
-    // Nobody has checked the float today: that comes first (the first day: Count it).
+    // Nobody has checked the float today: that comes first, Looks right only,
+    // even on the first day (Jack's answer 8).
     const check = page.getByRole('dialog', { name: 'Hello, Jack' });
-    await check.getByRole('button', { name: 'Count it' }).click();
-    const floatCount = page.getByRole('dialog', { name: 'Count the float' });
-    await floatCount.getByLabel('Number of £50', { exact: true }).fill('3');
-    await floatCount.getByRole('button', { name: 'Done counting' }).click();
+    await expect(check.getByRole('button')).toHaveText(['Looks right']);
+    await check.getByRole('button', { name: 'Looks right' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // Count the cash, blind: nothing expected is shown until the count is done.
@@ -79,8 +78,9 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(report).toContainText('Tuesday 1 September · closed by Jack Lewis');
     await expect(report.getByRole('listitem')).toHaveText([
       'Takings£74.00', 'Card£0.00', 'Cash£74.00', 'Gift cards, store credit, customer accounts, other£0.00',
-      /^Float at the start£150\.00 · counted by Jack Lewis at \d\d:\d\d£150\.00$/, 'Cash difference£5.00 over', 'Banked£74.00',
+      /^Float at the start£150\.00 · looked right · Jack Lewis at \d\d:\d\d£150\.00$/, 'Cash difference£5.00 over', 'Banked£74.00',
     ]);
+    await expect(report).toContainText('Online money is not in this till’s takings: £0.00 today');
     // Nothing runs off the side of the page.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await report.getByRole('button', { name: 'Close' }).click();
