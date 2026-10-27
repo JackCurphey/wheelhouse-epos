@@ -80,8 +80,9 @@ here before starting it, so two people never build the same one):
   `docs/decisions/2026-10-26-day-answers.md` (the text receipt waits for
   step C; own messages as built; paying a repair online after Mark's till
   deposit; discounts after step C; downloads with Reports; browser printing
-  only). Still open: the restock list's details and closing a part-delivered
-  order (in Jack's task log); who may edit a supplier (any staff member can,
+  only). Answered 27 Oct (`docs/decisions/2026-10-27-answers.md`, with #546):
+  closing a part-delivered order marks the rest not coming; the restock list
+  waits for WP-1.5. Still open: who may edit a supplier (any staff member can,
   unlike the other settings, #543); Google's "G" logo file; the hosted
   server's "System restart required". For him to overrule: the 26 Oct
   `decided-while-building.md` sections.
