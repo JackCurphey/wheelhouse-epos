@@ -6,6 +6,7 @@
 import { ownerOnly } from '../lib/owner-only.js';
 import { dbExec, prepare } from '../db.js';
 import { badRequest, nowIso, readJsonBody, sendJson } from '../lib/http.js';
+import { isPence } from './float-check.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -146,5 +147,22 @@ export function register(route) {
     }
     await db.prepare('UPDATE shop_theme SET preset = ?, updated_at = ? WHERE id = ?').run(preset, nowIso(), existing.id);
     sendJson(res, 200, serializeShopTheme(await db.prepare('SELECT * FROM shop_theme LIMIT 1').get()));
+  });
+
+  // Settings › Front desk › End of day › Float (set-eod; cash-up decision 4;
+  // openspec/changes/opening-float-check): what's left in the drawer each
+  // night, in whole pence, null until set. On the shop's row like the
+  // receipt words; one column in one statement, so no lock is needed.
+  route('GET', '/api/end-of-day-settings', async (req, res, params, query, afterRelease, shopId) => {
+    const row = await db.prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
+    sendJson(res, 200, { floatPence: row.float_pence });
+  });
+
+  route('PUT', '/api/end-of-day-settings', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    if (!isPence(body?.floatPence)) return badRequest(res, 'The float must be pounds and pence, up to £100,000');
+    const row = await db.prepare('UPDATE shops SET float_pence = ? WHERE id = ? RETURNING float_pence').get(body.floatPence, shopId);
+    sendJson(res, 200, { floatPence: row.float_pence });
   });
 }

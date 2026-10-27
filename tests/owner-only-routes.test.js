@@ -80,6 +80,9 @@ const ROUTES = [
   ['PUT', `/api/purchase-orders/${MISSING}`, {}],
   ['POST', `/api/purchase-orders/${MISSING}/mark-ordered`, {}],
   ['POST', `/api/purchase-orders/${MISSING}/cancel`, {}],
+  // The float, and Seen on a short float (openspec/changes/opening-float-check).
+  ['PUT', '/api/end-of-day-settings', { floatPence: 15000 }],
+  ['POST', `/api/float-check/${MISSING}/seen`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
@@ -112,10 +115,11 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/till-attention/:id/resolve', 'day-to-day: clearing a till sale that needs attention'],
   ['POST /api/purchase-orders/:id/receive', 'day-to-day: everyone can receive deliveries (receiving decision 4)'],
   ['POST /api/deliveries/receive', 'day-to-day: everyone can receive deliveries, with or without an order (receiving decisions 2 and 4)'],
+  ['POST /api/float-check', 'day-to-day: the first person in who takes payments checks the float (opening the shop decision 2)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.

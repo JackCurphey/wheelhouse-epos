@@ -3154,3 +3154,36 @@ pills and "Works with or without an order" are built.
      the supplier this order is from." (was "That line is on another
      supplier’s order"). The screen doesn't send one; the old wording was
      wrong for it.
+
+### 27 Oct 2026: opening the shop with a float check, the server (`openspec/changes/opening-float-check`, `op-float-check`, `op-float-check-first`, `op-float-short`, `op-today-short`, `set-eod`; WP-3.3, slice B; opening the shop decisions 2, 4 and 8)
+
+1. **"First in" is the first person to open the till page that day who
+   takes payments**, signed in as themselves, since the PIN check-in (WP-1.7)
+   isn't built. One float check a shop a day, the shop's own date. When the
+   check-in arrives it becomes the trigger. *Pattern:* decision 2's "first
+   person", read without a check-in.
+2. **No till name** ("Till B1") until tills have names in the new app (Mark's
+   step C); a shop has one float check a day, not one a till.
+3. **"Takes payments" is the Owner, or a team member marked as a cashier**
+   (the team's existing switch), until roles (WP-1.1). *Pattern:* UX
+   walk-through 2 M1's "Staff, Manager, Owner" read as the switches there are.
+4. **The float is set in Settings › Front desk › End of day › Float**
+   (`set-eod`, drawn; planned in WP-5.1), built here as that one fold since
+   the check has nothing to check without it. Stored on the shop's row, as
+   the receipt words are, until the settings store (WP-1.2). From £0.00 to
+   £100,000.00. With no float set there is no float check.
+5. **No activity log entry yet** (WP-1.2 isn't built): the float check
+   itself records who, when, what the drawer should have had, the count and
+   the reason; Seen records who and when.
+6. **The first day on Wheelhouse is "no float check yet"** for the shop,
+   until the move (journey 9) can say so more precisely. The server refuses
+   Looks right that day, as the drawing offers only Count it.
+7. **Short floats on Today are today's only**, matching "short this
+   morning"; an earlier day's unseen short float isn't listed. The day's
+   report (reports.mjs, "Float at the start") will carry it when built.
+8. **An over float isn't listed on Today** until Close the day exists:
+   decision 8 H1 lists an over float only when yesterday was closed, and no
+   day is closed yet. `op-float-check-unclosed` waits for Close the day too.
+9. **No lock**: nothing here reads a row and writes it back (one column for
+   the float, one insert that keeps the day's first check, one update for
+   Seen), so the settings-saves-dont-clash lock isn't used.

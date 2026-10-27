@@ -19,6 +19,8 @@ GET /api/label-settings
 PUT /api/label-settings
 GET /api/shop-theme
 PUT /api/shop-theme
+GET /api/end-of-day-settings
+PUT /api/end-of-day-settings
 GET /api/storefront-settings
 PUT /api/storefront-settings
 GET /api/shopify/connection
@@ -232,3 +234,6 @@ GET /api/customers/:id/merges
 POST /api/customer-merges/:id/undo
 POST /api/portal/:shopSlug/deposit-holds
 POST /api/portal/:shopSlug/pretend-payments/:ref/card
+GET /api/float-check
+POST /api/float-check
+POST /api/float-check/:id/seen
