@@ -6,11 +6,14 @@ import { ROUTES } from '@/staff/routes.ts';
 /**
  * Pieces shared by Deliveries and orders, New order and an order
  * (openspec/changes/deliveries-orders; receiving.mjs's shared pieces).
- * Costs are pounds, as the server stores and sends them.
+ * Costs are pounds, as the server stores and sends them. A closed order
+ * (partly delivered, the rest not coming) or a cancelled one (nothing in)
+ * has nothing still to come; `notComing` is what had been to come
+ * (openspec/changes/close-part-delivered).
  */
-export type OrderItem = { id: number; productId: number; name: string; sku: string | null; qtyOrdered: number; qtyReceived: number; outstanding: number; unitCost: number };
+export type OrderItem = { id: number; productId: number; name: string; sku: string | null; qtyOrdered: number; qtyReceived: number; outstanding: number; notComing: number; unitCost: number };
 export type Order = {
-  id: number; supplierId: number; supplierName: string; status: 'draft' | 'ordered' | 'partially_received' | 'received' | 'cancelled';
+  id: number; supplierId: number; supplierName: string; status: 'draft' | 'ordered' | 'partially_received' | 'received' | 'closed' | 'cancelled';
   orderedAt: string | null; items: OrderItem[]; totalCost: number;
 };
 
@@ -25,7 +28,7 @@ const part = (iso: string, o: Intl.DateTimeFormatOptions) => new Date(iso).toLoc
 export const day = (iso: string) => `${part(iso, { weekday: 'short' })} ${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' }).slice(0, 3)}`;
 
 export const STATUS: Record<Order['status'], string> = {
-  draft: 'Draft', ordered: 'Ordered', partially_received: 'Partly delivered', received: 'Delivered', cancelled: 'Closed',
+  draft: 'Draft', ordered: 'Ordered', partially_received: 'Partly delivered', received: 'Delivered', closed: 'Closed', cancelled: 'Closed',
 };
 export const stillToCome = (o: Order) => o.items.reduce((n, it) => n + it.outstanding, 0);
 export const isOpen = (o: Order) => ['draft', 'ordered', 'partially_received'].includes(o.status);

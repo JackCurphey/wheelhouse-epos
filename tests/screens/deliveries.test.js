@@ -17,7 +17,7 @@ const TUBE = { id: 12, sku: '[Supplier code]', barcode: null, name: '[Product]',
 const NOCOST = { id: 13, sku: '[Supplier code 2]', barcode: null, name: '[Uncosted product]', cost: null, stockQty: 0 };
 const ZEROCOST = { id: 14, sku: '[Supplier code 3]', barcode: null, name: '[Zero-cost product]', cost: 0, stockQty: 0 };
 const PRODUCTS = [PADS, TUBE, NOCOST, ZEROCOST];
-const item = (p, ordered, received, id = p.id + 100) => ({ id, productId: p.id, name: p.name, sku: p.sku, qtyOrdered: ordered, qtyReceived: received, outstanding: ordered - received, unitCost: p.cost });
+const item = (p, ordered, received, id = p.id + 100) => ({ id, productId: p.id, name: p.name, sku: p.sku, qtyOrdered: ordered, qtyReceived: received, outstanding: ordered - received, notComing: 0, unitCost: p.cost });
 const order = (over) => ({ id: 7, supplierId: 1, supplierName: '[Supplier]', status: 'partially_received', reference: '', notes: '', orderedAt: '2026-09-01T10:00:00.000Z', createdAt: '2026-09-01T09:00:00.000Z', items: [item(PADS, 1, 0), item(TUBE, 3, 1)], totalCost: 31.3, ...over });
 
 const realFetch = globalThis.fetch;
@@ -67,7 +67,9 @@ async function open(path, { me = OWNER, orders = [order(), order({ id: 8, suppli
       if (!o) return reply(404, { error: 'Purchase order not found' });
       if (failOrdering && m[2] === 'mark-ordered') return reply(500, { error: 'Internal server error' });
       if (m[2] === 'mark-ordered') byId.set(o.id, { ...o, status: 'ordered', orderedAt: '2026-09-01T10:00:00.000Z' });
-      if (m[2] === 'cancel') byId.set(o.id, { ...o, status: 'cancelled' });
+      // As the server closes: partly delivered becomes closed, anything else
+      // cancelled; either way nothing is still to come, the rest not coming.
+      if (m[2] === 'cancel') byId.set(o.id, { ...o, status: o.status === 'partially_received' ? 'closed' : 'cancelled', items: o.items.map((it) => ({ ...it, outstanding: 0, notComing: it.outstanding })) });
       return reply(200, byId.get(o.id));
     }
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -103,7 +105,7 @@ test('the Owner sees the open orders, as drawn: supplier and lines, when ordered
 });
 
 test('closed and fully delivered orders leave the list; with none open, the drawn empty note', async () => {
-  const { ui } = await open('/workshop/deliveries', { orders: [order({ status: 'cancelled' }), order({ id: 8, status: 'received' })] });
+  const { ui } = await open('/workshop/deliveries', { orders: [order({ status: 'cancelled' }), order({ id: 8, status: 'received' }), order({ id: 9, status: 'closed' })] });
   assert.ok((await ui.findByText('No orders. Shops that order on the supplier’s website can ignore this — deliveries are received the same way.')) !== null);
   assert.ok(ui.queryByRole('list', { name: 'Orders' }) === null);
   assert.ok(ui.getByRole('link', { name: '+ New order' }));
@@ -284,7 +286,8 @@ test('an order, as drawn: supplier and date, Partly delivered, each line ordered
   assert.ok(lines[0].textContent.includes('Shimano brake pads') && lines[0].textContent.includes('B05S-RX · ordered 1 · arrived 0') && lines[0].textContent.includes('1 to come'), lines[0].textContent);
   assert.ok(lines[1].textContent.includes('ordered 3 · arrived 1') && lines[1].textContent.includes('2 to come'), lines[1].textContent);
   assert.ok(ui.getByText(/Total cost/).textContent.includes('£31.30'));
-  assert.ok(ui.queryByRole('button', { name: 'Close the order' }) === null, 'something has arrived: the server can’t close it yet');
+  assert.ok(ui.getByRole('button', { name: 'Close the order' }), 'partly delivered: the Owner can close it (rs-order-ordered)');
+  assert.ok(ui.getByText('Closing the order drops anything still to come.'));
 });
 
 test('a line that has all arrived says All arrived', async () => {
@@ -308,6 +311,32 @@ test('Close the order asks first; Keep it open changes nothing; Close the order 
   fireEvent.click(box.getByRole('button', { name: 'Close the order' }));
   assert.ok((await ui.findByText('Closed')) !== null);
   assert.equal(posts('/api/purchase-orders/7/cancel').length, 1);
+});
+
+// Jack's answer 1, 27 Oct (openspec/changes/close-part-delivered): closing
+// a partly delivered order keeps what arrived; the rest is not coming.
+test('Close the order on a partly delivered order: the box, then Closed, each line’s arrived kept and the rest not coming', async () => {
+  const { ui, fireEvent, within } = await open('/workshop/deliveries/orders/7');
+  fireEvent.click(await ui.findByRole('button', { name: 'Close the order' }));
+  const box = within(await ui.findByRole('dialog', { name: 'Close the order?' }));
+  assert.ok(box.queryByText('[Supplier] · ordered Tue 1 Sep · 3 still to come') !== null);
+  fireEvent.click(box.getByRole('button', { name: 'Close the order' }));
+  assert.ok((await ui.findByText('Closed')) !== null);
+  assert.equal(posts('/api/purchase-orders/7/cancel').length, 1);
+  const lines = within(ui.getByRole('list', { name: 'Lines' })).getAllByRole('listitem');
+  assert.ok(lines[0].textContent.includes('ordered 1 · arrived 0') && lines[0].textContent.includes('1 not coming') && !lines[0].textContent.includes('to come'), lines[0].textContent);
+  assert.ok(lines[1].textContent.includes('ordered 3 · arrived 1') && lines[1].textContent.includes('2 not coming') && !lines[1].textContent.includes('All arrived'), lines[1].textContent);
+  assert.ok(ui.queryByRole('button', { name: 'Close the order' }) === null);
+  assert.ok(ui.queryByRole('link', { name: 'Receive against this order' }) === null);
+  assert.ok(ui.queryByText('Closing the order drops anything still to come.') === null);
+});
+
+test('a closed order’s line that all arrived still says All arrived', async () => {
+  const { ui, within } = await open('/workshop/deliveries/orders/7', { orders: [order({ status: 'closed', items: [item(PADS, 1, 1), { ...item(TUBE, 3, 1), outstanding: 0, notComing: 2 }] })] });
+  await ui.findByText('Closed');
+  const lines = within(ui.getByRole('list', { name: 'Lines' })).getAllByRole('listitem');
+  assert.ok(lines[0].textContent.includes('All arrived'), lines[0].textContent);
+  assert.ok(lines[1].textContent.includes('2 not coming'), lines[1].textContent);
 });
 
 test('a draft: the Owner can mark it as ordered from its page', async () => {
