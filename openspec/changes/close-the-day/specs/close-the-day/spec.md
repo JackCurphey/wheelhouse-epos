@@ -1,0 +1,71 @@
+# Spec Delta
+
+## ADDED Requirements
+
+### Requirement: Close the day appears on the till after closing time
+For the Owner, the till SHALL show "Close the day" from an hour before today's closing time (cash-up decision 5; `set-eod-close`'s drawn "1 hour before"; `eod-entry`), all day when the opening hours say the shop is shut today, and not once the day is closed. Nobody else SHALL see it until roles.
+
+#### Scenario: An hour before closing
+- **WHEN** the shop closes at 17:30 and Jack Lewis, the Owner, is on the till at 16:45
+- **THEN** the till shows "Close the day"
+
+#### Scenario: During the day
+- **WHEN** it is 11:00 on the same day
+- **THEN** the till doesn't show it
+
+### Requirement: The cash is counted blind
+"Count the cash" SHALL open with the note-and-coin counter and "Done counting — show the difference", and SHALL not show what the till expects until the count is done (cash-up decisions 2 and 3; `eod-count`).
+
+#### Scenario: Counting
+- **WHEN** Jack Lewis opens Close the day
+- **THEN** he sees a box for each note and coin and the total, and no expected figure
+
+### Requirement: The difference, and how the till worked it out
+Once counted, the step SHALL show Counted, "The till expected", "How the till worked it out" (this morning's float with how it was checked, by whom and when; plus cash sales; minus cash taken out), and the Difference with an optional reason; a count that matches SHALL show "Spot on" and £0.00 with no reason box. "Count again" and "Keep this count and go on" SHALL follow (decision 6; walk-through 2 M2; `eod-count-result`, `eod-count-exact`).
+
+#### Scenario: A difference
+- **WHEN** the count is less than the till expected
+- **THEN** the step shows how much short, with "If there's a difference, why? (optional)"
+
+#### Scenario: Spot on
+- **WHEN** the count matches
+- **THEN** the step shows "Spot on" £0.00 and no reason box
+
+### Requirement: What the drawer should hold
+The till's expected cash SHALL be this morning's float (what was counted, or the shop's float when it looked right), plus the day's cash sales from both sales records, minus the day's cash taken out, in whole pence.
+
+#### Scenario: A day's cash
+- **WHEN** the float looked right at £150.00, cash sales came to £74.00 and £5.00 was taken out
+- **THEN** the till expects £219.00
+
+### Requirement: Cash taken out
+"Add a paid-out" SHALL open "Cash taken out" with the amount, what it was for and an optional note; it SHALL be recorded with who took it out and when, listed under "Cash taken out today", and come off what the till expects. A day with none SHALL say "No cash taken out today." Once the day is closed, no more SHALL be added (`eod-paidout`, `eod-banking`, `eod-banking-none`).
+
+#### Scenario: Paying the window cleaner
+- **WHEN** Jack Lewis takes out an amount for what it was for
+- **THEN** it is listed with the time and his name, and the till expects that much less
+
+### Requirement: Leave the float, bank the rest
+Banking SHALL say "Leave in the drawer" the shop's float and "Bank" the count less the float (cash-up decision 4). When the count is less than the float, nothing SHALL be banked.
+
+#### Scenario: Banking
+- **WHEN** the float is £150.00 and £219.00 was counted
+- **THEN** it says leave £150.00 and bank £69.00
+
+### Requirement: One close a day, with its report
+"Close the day and show the report" SHALL save the day's close once per shop per day, with who and when, and show "Day closed" with the date and who closed it, and Takings, Card, Cash, "Gift cards, store credit, customer accounts, other", "Float at the start", "Cash difference" and "Banked", with Print (`eod-finish`, `eod-z`). Two closes at once SHALL keep one. The figures SHALL stay as they were at the close.
+
+#### Scenario: Closing
+- **WHEN** Jack Lewis closes the day
+- **THEN** the report shows the day's takings by how they were paid, the float, the difference and what was banked
+
+#### Scenario: Closing twice
+- **WHEN** two people close the day at the same moment
+- **THEN** one close is kept and the other is shown it
+
+### Requirement: No close without a float check
+The day SHALL not close until the float was checked that morning; the Close the day page SHALL ask for the float check first, as the till does.
+
+#### Scenario: Nobody checked the float
+- **WHEN** nobody checked the float today and Jack Lewis opens Close the day
+- **THEN** the float check pop-up shows first
