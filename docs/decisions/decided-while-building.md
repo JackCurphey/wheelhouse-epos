@@ -3255,3 +3255,44 @@ but no closed order. Decided here, for Jack to overrule:
      settings boxes do.
    - **An earlier day's short float reads "The float was [£] short on [date]"**
      ("on Mon 31 Aug"), as the uncollected bike line gives its date.
+
+### 27 Oct 2026: Close the day, the server (`openspec/changes/close-the-day`, `eod-count`, `eod-count-result`, `eod-banking`, `eod-paidout`, `eod-finish`, `eod-z`; WP-3.4, slice B; cash-up decisions 2 to 6; opening the shop decision 8 H1)
+
+1. **One close a shop a day, no till name**, as the float check: tills get
+   names with Mark's step C, and a shop has one drawer until then.
+2. **Only the Owner closes the day and takes cash out**, until roles
+   (WP-1.1) bring managers and "Can close the day" (decision 5; roles answer
+   6 of 5 Oct). *Pattern:* Needs attention and Seen.
+3. **What the drawer should hold is this morning's float, plus the day's
+   cash sales, minus cash taken out** (walk-through 2 M2's rows). This
+   morning's float is what was counted, or the shop's float when it looked
+   right. The cash sales are both sales records on the dashboard's day
+   window, the shop's own date. There is no "minus cash refunds" yet: the
+   till has no refunds (WP-3.1).
+4. **The day can't close without this morning's float check**, so the
+   expected figure starts from a real one. The Close the day page asks for
+   the float check first, as the till does.
+5. **A count under the float banks nothing and leaves what was counted.**
+   Decision 4 says leave the float and bank the rest; the drawing doesn't
+   show a count under the float, and nothing can be banked below nothing.
+   The next morning's float check then finds the drawer short. *For Jack to
+   overrule.*
+6. **The close keeps its figures as they were**: the float, cash sales,
+   cash taken out, expected, counted, reason, banked, and the takings by
+   card, cash and everything else. A sale made after closing doesn't change
+   the report.
+7. **"Yesterday" for an over float is the last day the till opened** (the
+   last day with a float check before it), so a shop shut on Sundays looks
+   back to Saturday. A shop's first day has no yesterday, so an over float
+   that day isn't listed (decision 8 H1 lists it only when yesterday was
+   closed). Seen clears an over float as it does a short one.
+8. **"Close the day" shows an hour before closing** (`set-eod-close` draws
+   "1 hour before" chosen) until that setting is built, all day on a day
+   the opening hours say the shop is shut, and not once the day is closed.
+9. **Cash taken out needs what it was for** (1 to 100 characters), as the
+   drawing has no "(optional)" on it, and takes an optional note up to 500.
+   From 1p to £100,000. Not once the day is closed.
+10. **The close and cash taken out lock the shop's row** before they read
+    and write (the settings-saves-dont-clash pattern), so two closes keep
+    one and cash taken out at the moment of closing is counted in it or
+    refused.
