@@ -13,9 +13,10 @@ import { Back, Card, Page, Row, STATUS, Tag, day, isOpen, money, mono, stillToCo
  * openspec/changes/deliveries-orders design 4): what was ordered and what
  * has arrived, the server's total, and for the Owner Mark as ordered (a
  * draft) or Close the order, which asks first. "Receive against this
- * order", for anyone, while it's still to come (openspec/changes/receive-delivery);
- * an order something has arrived from can't be closed until the server can
- * drop what's still to come.
+ * order", for anyone, while it's still to come (openspec/changes/receive-delivery).
+ * Close the order works on a partly delivered order too: what arrived stays,
+ * and once closed a line says "[n] not coming" (Jack's answer 1, 27 Oct;
+ * openspec/changes/close-part-delivered).
  */
 export function OrderPage() {
   const id = Number(useParams().id ?? '');
@@ -50,7 +51,6 @@ export function OrderPage() {
   }
 
   const when = o.orderedAt ? `ordered ${day(o.orderedAt)}` : 'draft';
-  const arrived = o.items.some((it) => it.qtyReceived > 0);
   return (
     <Page>
       <Back />
@@ -59,7 +59,7 @@ export function OrderPage() {
         <ul aria-label="Lines" className="m-0 list-none p-0">
           {o.items.map((it) => (
             <Row key={it.id} title={it.name} sub={`${it.sku ? `${it.sku} · ` : ''}ordered ${it.qtyOrdered} · arrived ${it.qtyReceived}`}>
-              {it.outstanding <= 0 ? <Tag ok>All arrived</Tag> : <Tag>{`${it.outstanding} to come`}</Tag>}
+              {it.notComing > 0 ? <Tag>{`${it.notComing} not coming`}</Tag> : it.outstanding <= 0 ? <Tag ok>All arrived</Tag> : <Tag>{`${it.outstanding} to come`}</Tag>}
             </Row>
           ))}
         </ul>
@@ -67,14 +67,14 @@ export function OrderPage() {
           <span className="text-size-15">Total cost <span className={`text-base font-bold ${mono}`}>{money(o.totalCost)}</span></span>
           {isOpen(o) && (owner || o.status !== 'draft') ? (
             <span className="flex flex-wrap gap-2">
-              {owner && !arrived ? <Button variant="default" disabled={busy} onClick={() => setClosing(true)}>Close the order</Button> : null}
+              {owner ? <Button variant="default" disabled={busy} onClick={() => setClosing(true)}>Close the order</Button> : null}
               {owner && o.status === 'draft' ? <Button variant="accent" disabled={busy} onClick={() => void act('mark-ordered')}>Mark as ordered</Button> : null}
               {o.status !== 'draft' ? <Link to={`${ROUTES['rs-receive']}?order=${o.id}`} className={buttonVariants({ variant: 'accent' })}>Receive against this order</Link> : null}
             </span>
           ) : null}
         </div>
         {problem && !closing ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
-        {owner && isOpen(o) && !arrived ? <p className="m-0 text-sm text-[var(--wh-muted)]">Closing the order drops anything still to come.</p> : null}
+        {owner && isOpen(o) ? <p className="m-0 text-sm text-[var(--wh-muted)]">Closing the order drops anything still to come.</p> : null}
       </Card>
       {closing ? (
         <Dialog open onOpenChange={(v) => { if (!v) setClosing(false); }} aria-labelledby="close-title" dismissOnBackdrop={false}>
