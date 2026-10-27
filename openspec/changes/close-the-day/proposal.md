@@ -79,6 +79,8 @@ it differs:
 - Reopening a closed day and the list of closed days (Reports, WP-5.3).
 - Report rows with nothing behind them yet: Cycle to Work (WP-7.1), Refunds
   and Voids (the till's refunds, WP-3.1), Discounts given and VAT (the new
-  till records neither yet), and the online money line.
+  till records neither yet), and the online money figure with its "see
+  Reports" link (the report still says online money isn't in the till's
+  takings).
 - "Email it" on the report (who it goes to isn't settled), and opening the
   cash drawer (there is no drawer connection).
