@@ -52,8 +52,10 @@ here before starting it, so two people never build the same one):
   only itself instead of stopping the server (#537); two saves at once no
   longer undo each other for settings (#539), customers, bikes, products and
   jobs (#542), and services, groups, time off, team, suppliers and purchase
-  orders (#543). **Now on (27 Oct): WP-3.3, opening the shop with the float
-  check** (slice B of the replan; branch `jack/opening-float-check`).
+  orders (#543). Merged 27 Oct: the float check, WP-3.3 (#547, #548, migration 095);
+  closing a part-delivered order (#546); the build board shows slices (#544).
+  **Now on (27 Oct): WP-3.4, closing the day with the cash count** (slice B;
+  branches `jack/close-the-day` and `jack/close-the-day-screens`).
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says

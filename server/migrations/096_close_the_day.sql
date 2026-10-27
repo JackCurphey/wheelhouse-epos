@@ -4,7 +4,8 @@
 -- close a shop a day: who closed it and when, this morning's float check,
 -- what the drawer should have held and how that was worked out, what was
 -- counted and why it differed, the float left and the cash banked, and the
--- day's takings by how they were paid, kept as they were at the close so
+-- day's takings by how they were paid, and the online money beside them,
+-- kept as they were at the close so
 -- the report never changes afterwards. Whole pence. Additive and safe to
 -- run twice; row-level security as 095.
 CREATE TABLE IF NOT EXISTS paid_outs (
@@ -37,8 +38,13 @@ CREATE TABLE IF NOT EXISTS day_closes (
   takings_pence INTEGER NOT NULL,
   card_pence INTEGER NOT NULL,
   other_pence INTEGER NOT NULL,
+  online_pence INTEGER NOT NULL DEFAULT 0,
   UNIQUE (shop_id, day)
 );
+-- Online money (Shopify orders, deposits paid online) is kept beside the
+-- till's takings, not in them (Jack's answer 7, 27 Oct). Added here for a
+-- database that ran an earlier draft of this file.
+ALTER TABLE day_closes ADD COLUMN IF NOT EXISTS online_pence INTEGER NOT NULL DEFAULT 0;
 
 DO $$
 DECLARE t TEXT;

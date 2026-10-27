@@ -82,6 +82,18 @@ test('on the first day the float must be counted; the count is kept with who and
   assert.equal(after.firstDay, false);
 });
 
+// Jack's answer 8 (27 Oct): a float nobody checked is looked at when the
+// Owner closes the day, even on the first day, never counted.
+test('at closing the Owner can look at a float nobody checked, even on the first day', async () => {
+  const owner = await shop();
+  const jo = await teamMember(owner, 'Jo Taylor', { isCashier: true });
+  const refused = await post(jo, '/api/float-check', { countedPence: null, atClose: true });
+  assert.deepEqual([refused.status, refused.body.code], [400, 'count_needed']);
+  const res = await post(owner, '/api/float-check', { countedPence: null, atClose: true });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.body.check.how, 'looked');
+});
+
 test('after the first day, Looks right is kept as a look with no count', async () => {
   const owner = await shop();
   await earlier(owner, '2026-08-31', FLOAT, FLOAT);

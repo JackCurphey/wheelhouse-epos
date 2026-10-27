@@ -3272,11 +3272,11 @@ but no closed order. Decided here, for Jack to overrule:
 4. **The day can't close without this morning's float check**, so the
    expected figure starts from a real one. The Close the day page asks for
    the float check first, as the till does.
-5. **A count under the float banks nothing and leaves what was counted.**
-   Decision 4 says leave the float and bank the rest; the drawing doesn't
-   show a count under the float, and nothing can be banked below nothing.
-   The next morning's float check then finds the drawer short. *For Jack to
-   overrule.*
+5. **A count under the float banks nothing**, and the close says how much
+   to put in to make the float up (`topUpPence`), so the float is left
+   either way. Settled by Jack's answer 5 (27 Oct,
+   `docs/decisions/2026-10-27-answers.md`), replacing "leave what was
+   counted".
 6. **The close keeps its figures as they were**: the float, cash sales,
    cash taken out, expected, counted, reason, banked, and the takings by
    card, cash and everything else. A sale made after closing doesn't change
@@ -3295,7 +3295,30 @@ but no closed order. Decided here, for Jack to overrule:
 10. **The close and cash taken out lock the shop's row** before they read
     and write (the settings-saves-dont-clash pattern), so two closes keep
     one and cash taken out at the moment of closing is counted in it or
-    refused.
+    refused. The lock is `FOR NO KEY UPDATE`, so a sale being saved at the
+    same moment isn't held up (review, 27 Oct).
+11. **A day's sales run from the previous close** (its saved time) to the
+    end of the shop's day, or from the start of the day when the shop has
+    never closed (Jack's answer 6). Cash taken out counts by its day: the
+    days after the previous close's day, up to today. So an unclosed day's
+    sales and cash taken out roll into the next close.
+12. **Closing after midnight isn't handled** (review, 27 Oct: logged, not
+    fixed). The day is the shop's date when the close is made, so a close
+    made at 00:30 closes the new day, and the evening's sales after the
+    last close count in it. *For Jack to decide.*
+13. **The close can carry the expected figure the screen showed**; if a
+    sale or cash taken out changed it meanwhile, it's refused with the new
+    figure ("The till’s figures changed while you were counting. Check the
+    difference again."), so the owner sees the new difference before the
+    day closes (review, 27 Oct).
+14. **Online money is kept beside the takings, not in them** (Jack's answer
+    7): the old record's `Shopify` and `Deposit paid online` tenders. Till
+    sales have no online tender. Takings is card + cash + other, so it
+    always adds up (review, 27 Oct).
+15. **At closing, a float nobody checked is looked at, never counted**
+    (Jack's answer 8), on the first day on Wheelhouse too. The server
+    allows that look only for the Owner and only when the close page asks
+    for it; anywhere else the first day is still counted.
 
 ### 27 Oct 2026: Close the day, the screens (`openspec/changes/close-the-day`, `eod-entry`, `eod-count`, `eod-count-result`, `eod-count-exact`, `eod-banking`, `eod-banking-none`, `eod-paidout`, `eod-finish`, `eod-z`, `op-today-short`)
 

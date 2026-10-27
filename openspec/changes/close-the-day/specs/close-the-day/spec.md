@@ -46,14 +46,32 @@ The till's expected cash SHALL be this morning's float (what was counted, or the
 - **THEN** it is listed with the time and his name, and the till expects that much less
 
 ### Requirement: Leave the float, bank the rest
-Banking SHALL say "Leave in the drawer" the shop's float and "Bank" the count less the float (cash-up decision 4). When the count is less than the float, nothing SHALL be banked.
+Banking SHALL say "Leave in the drawer" the shop's float and "Bank" the count less the float (cash-up decision 4). When the count is less than the float, nothing SHALL be banked, and the page SHALL say "Put £[n] in to make the float up to £[float]" before finishing (Jack's answer 5, 27 Oct).
 
 #### Scenario: Banking
 - **WHEN** the float is £150.00 and £219.00 was counted
 - **THEN** it says leave £150.00 and bank £69.00
 
+#### Scenario: A drawer below the float
+- **WHEN** the float is £150.00 and £140.00 was counted
+- **THEN** it says bank £0.00 and "Put £10.00 in to make the float up to £150.00"
+
+### Requirement: A day runs from the previous close
+The day's figures SHALL run from the previous close's saved time (or the start of the shop's day when there is none) to this close, so a sale made after a close counts in the next day's takings and drawer, and a closed day's report SHALL never change (Jack's answer 6, 27 Oct).
+
+#### Scenario: A sale after yesterday's close
+- **WHEN** yesterday was closed at 18:00 and a cash sale was made at 18:30
+- **THEN** it is in today's cash sales, not yesterday's
+
+### Requirement: The figures are checked again before closing
+The page SHALL reload the till's figures when the count is done, and the close SHALL be refused with the new figures if a sale or cash taken out changed what the till expects since they were shown, so the owner sees the new difference before the day closes.
+
+#### Scenario: A sale while counting
+- **WHEN** a sale is taken at the till while Jack Lewis is counting
+- **THEN** Close the day shows the new difference before it closes
+
 ### Requirement: One close a day, with its report
-"Close the day and show the report" SHALL save the day's close once per shop per day, with who and when, and show "Day closed" with the date and who closed it, and Takings, Card, Cash, "Gift cards, store credit, customer accounts, other", "Float at the start", "Cash difference" and "Banked", with Print (`eod-finish`, `eod-z`). Two closes at once SHALL keep one. The figures SHALL stay as they were at the close.
+"Close the day and show the report" SHALL save the day's close once per shop per day, with who and when, and show "Day closed" with the date and who closed it, and Takings, Card, Cash, "Gift cards, store credit, customer accounts, other", "Float at the start", "Cash difference" and "Banked", and the online money line, with Print (`eod-finish`, `eod-z`). Two closes at once SHALL keep one. The figures SHALL stay as they were at the close.
 
 #### Scenario: Closing
 - **WHEN** Jack Lewis closes the day
@@ -64,8 +82,15 @@ Banking SHALL say "Leave in the drawer" the shop's float and "Bank" the count le
 - **THEN** one close is kept and the other is shown it
 
 ### Requirement: No close without a float check
-The day SHALL not close until the float was checked that morning; the Close the day page SHALL ask for the float check first, as the till does.
+The day SHALL not close until the float was checked that morning; the Close the day page SHALL ask for it first with "Looks right" only (the shop's set float, one press), never Count it (Jack's answer 8, 27 Oct).
 
 #### Scenario: Nobody checked the float
 - **WHEN** nobody checked the float today and Jack Lewis opens Close the day
-- **THEN** the float check pop-up shows first
+- **THEN** the float check pop-up shows first, with Looks right and no Count it
+
+### Requirement: Takings is till money only
+The report's Takings SHALL be till money only and SHALL equal Card + Cash + Other. Shopify orders and deposits paid online SHALL be on the online money line instead (Jack's answer 7, 27 Oct). There SHALL be no card machine check until a real card machine is connected (Jack's answer 4).
+
+#### Scenario: A deposit paid online
+- **WHEN** a repair was paid partly by a deposit paid online and partly by card at the till
+- **THEN** Takings and Card show the card part, and the deposit is on the online money line

@@ -33,9 +33,14 @@ it differs:
   today saves each sale as it is taken, so there is no queue to wait on.
 - **Step 2, "Needs attention"** (flagged sales, the basket, parked sales)
   waits for the till's Park and for step C's flagged sales.
-- **Step 5, the card check**, waits for a card machine connected to the
-  till (journey 11 decision 6). There is none, so there is no machine total
-  to match. Asked of Jack, not invented.
+- **Step 5, the card check**, waits for a real card machine connected to
+  the till, then is built as drawn; the report still shows the till's card
+  total (Jack's answer 4, 27 Oct).
+- **Jack's answers 5 to 8 (27 Oct, `docs/decisions/2026-10-27-answers.md`)**
+  settle the rest: a drawer below the float says how much to put in; a day
+  runs from the previous close; takings is till money only, with online
+  money on its own line; a float nobody checked is looked at, never counted,
+  at closing.
 
 ## What Changes
 
@@ -79,8 +84,8 @@ it differs:
 - Reopening a closed day and the list of closed days (Reports, WP-5.3).
 - Report rows with nothing behind them yet: Cycle to Work (WP-7.1), Refunds
   and Voids (the till's refunds, WP-3.1), Discounts given and VAT (the new
-  till records neither yet), and the online money figure with its "see
-  Reports" link (the report still says online money isn't in the till's
-  takings).
+  till records neither yet), and the online money line's "see Reports"
+  link until Reports exists.
+- Closing after midnight (review, 27 Oct): logged for Jack, not handled.
 - "Email it" on the report (who it goes to isn't settled), and opening the
   cash drawer (there is no drawer connection).
