@@ -3187,3 +3187,31 @@ pills and "Works with or without an order" are built.
 9. **No lock**: nothing here reads a row and writes it back (one column for
    the float, one insert that keeps the day's first check, one update for
    Seen), so the settings-saves-dont-clash lock isn't used.
+
+### 27 Oct 2026: opening the shop with a float check, the screens (`openspec/changes/opening-float-check`, `op-float-check`, `op-float-check-first`, `op-float-count`, `op-float-matched`, `op-float-short`, `op-float-over`, `op-today-short`, `set-eod`)
+
+1. **The pop-ups have no "Till B1"**: the subtitles read "first in today to
+   take payments", "first in on the first day on Wheelhouse", "count every
+   note and coin" and "counted by Jo Taylor", and the message "Float
+   checked · counted by Jo Taylor". Today's line reads "The float was [£]
+   short this morning". Till names come with step C.
+2. **The count uses the built note-and-coin counter**, with its "Cash
+   counted" box that can be typed over (26 Oct entry 2), not the drawing's
+   read-only "Counted" line. It never shows the float (blind counting).
+3. **"Float checked · …" stays until "Close the message"**, in the drawing's
+   dark colours. *Pattern:* the diary's floating message (20 Oct, entry 1),
+   since the drawing doesn't say when it goes and Jack's "Don't close things
+   by themselves" (24 Oct) keeps messages from going by themselves.
+4. **Start the day after a difference shows no message**: none is drawn;
+   the pop-up closes and the till is ready.
+5. **"Any idea why?" has no placeholder**: the drawing's "[reason]" is a
+   placeholder for an example, not words to show.
+6. **If someone else checked the float first**, the pop-up just goes (the
+   day is checked). A save that fails says "Wheelhouse couldn’t save that.
+   Try again in a moment." in the pop-up. *Pattern:* the settings boxes.
+7. **The Float fold's summary is the float, or "Not set yet"**; the box
+   takes pounds and pence ("£150", "150.00") and saves when it's left, as
+   the Receipts box. A wrong amount says "Pounds and pence, like 150.00",
+   the counter's words. *Pattern:* the Receipts fold.
+8. **End of day is the fourth area of Front desk**, after Messages, as the
+   drawn rooms order it; only its Float fold is built.

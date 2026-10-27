@@ -14,6 +14,7 @@ import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-setti
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
+import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -949,6 +950,7 @@ function OwnerSettings() {
   const storageSlots = useStorageSlotsSummary();
   const customerGroups = useCustomerGroupsSummary();
   const collection = useCollectionSummary();
+  const float = useFloatSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
@@ -965,6 +967,10 @@ function OwnerSettings() {
         ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
+        ] },
+        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
+        { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
+          { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
         ] },
       ],
     },

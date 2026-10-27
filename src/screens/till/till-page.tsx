@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
 import { PayDialog } from './pay-dialog.tsx';
+import { FloatCheck } from './float-check.tsx';
 import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
 import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
 
@@ -26,7 +27,13 @@ let nextKey = 1;
 export function TillPage() {
   const [params, setParams] = useSearchParams();
   const jobId = Number(params.get('job')) || null;
-  return jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} /> : <SaleTill />;
+  // The first person in who takes payments checks the float (opening the shop decision 2).
+  return (
+    <>
+      {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} /> : <SaleTill />}
+      <FloatCheck />
+    </>
+  );
 }
 
 function SaleTill() {

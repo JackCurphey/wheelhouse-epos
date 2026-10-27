@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
 import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { penceText } from '@/lib/cash-count.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,8 @@ import { due, startOf, useBookIn, useNow, useWorkshopDay } from '@/screens/overv
 type Attention =
   | { kind: 'quote_no_answer'; jobId: number; reference: string; customerName: string | null; phone: string | null; sentAt: string | null; reminderSentAt: string | null }
   | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string }
-  | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null };
+  | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
+  | { kind: 'float_short'; checkId: number; shortPence: number; countedByName: string; checkedAt: string; reason: string };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
 
 // The drawing's card: a labelled section, its rows a list (opening.mjs `section`).
@@ -71,6 +73,7 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   const items = list.data?.items ?? [];
   const queryClient = useQueryClient();
   const [contacting, setContacting] = useState<ReadonlySet<number>>(new Set());
+  const [seeing, setSeeing] = useState<ReadonlySet<number>>(new Set());
   const [refused, setRefused] = useState<string | null>(null);
   // Contacted (cp-today-uncollected; H4): recorded, and the line goes; the
   // focus goes to the card's heading, not the top of the page (fresh review).
@@ -89,7 +92,32 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
     }
     if (done) document.getElementById('today-attention')?.focus();
   }
+  // Seen on a short float (op-today-seen; H3): one click, and the line goes.
+  async function seen(checkId: number) {
+    setSeeing((c) => new Set(c).add(checkId));
+    setRefused(null);
+    let done = false;
+    try {
+      await apiMutate(`/api/float-check/${checkId}/seen`, {}, { method: 'POST' });
+      done = true;
+    } catch {
+      setRefused('Wheelhouse couldn’t record that. Try again in a moment.');
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      setSeeing((c) => { const next = new Set(c); next.delete(checkId); return next; });
+    }
+    if (done) document.getElementById('today-attention')?.focus();
+  }
   const lines = items.map((i) => {
+    // op-today-short, without "Till B1’s" until tills have names.
+    if (i.kind === 'float_short') {
+      return (
+        <Line key={`f${i.checkId}`} lead={warn}
+          title={`The float was ${penceText(i.shortPence)} short this morning`}
+          sub={`Counted by ${i.countedByName} at ${clock(i.checkedAt)}${i.reason ? ` · “${i.reason}”` : ''}`}
+          right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeing.has(i.checkId)} onClick={() => void seen(i.checkId)}>Seen</Button>} />
+      );
+    }
     if (i.kind === 'uncollected') {
       const sub = [i.bikeLabel, i.reminderSentAt ? `reminder sent ${shortDate(i.reminderSentAt)}` : null].filter(Boolean).join(' · ');
       return (
