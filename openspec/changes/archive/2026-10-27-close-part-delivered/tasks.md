@@ -9,4 +9,4 @@
 - [x] 1.7 Break each rule on purpose, confirm the break landed, see its test go red, restore
 - [x] 1.8 Log the gaps in Jack's section of `decided-while-building.md`
 - [x] 1.9 The touched tests, the purchase-orders, deliveries and receive tests, `tests/route-list.test.js`, `tests/owner-only-routes.test.js`, `tests/browser-coverage.test.js`, the deliveries browser specs, `npm run lint`, `npx tsc --noEmit`
-- [ ] 1.10 Self-review and `/review` (money and stock); `npm test`, `npm run test:browser`; archive as the last commit
+- [x] 1.10 Self-review and `/review` (money and stock); `npm test`, `npm run test:browser`; archive as the last commit
