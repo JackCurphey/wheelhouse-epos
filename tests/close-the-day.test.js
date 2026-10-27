@@ -55,11 +55,11 @@ async function teamMember(owner, name) {
 const earlierCheck = (owner, d, expected, counted) => runWithShop(owner.shop.id, () => prepare(
   'INSERT INTO float_checks (day, login_id, expected_pence, counted_pence) VALUES (?, ?, ?, ?) RETURNING id'
 ).get(d, owner.loginId, expected, counted));
-const earlierClose = (owner, d, checkId) => runWithShop(owner.shop.id, () => prepare(
-  `INSERT INTO day_closes (day, login_id, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
+const earlierClose = (owner, d, checkId, closedAt = `${d}T17:00:00Z`) => runWithShop(owner.shop.id, () => prepare(
+  `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
      float_pence, banked_pence, takings_pence, card_pence, other_pence)
-   VALUES (?, ?, ?, 15000, 0, 0, 15000, 15000, 15000, 0, 0, 0, 0)`
-).run(d, owner.loginId, checkId));
+   VALUES (?, ?, ?, ?, 15000, 0, 0, 15000, 15000, 15000, 0, 0, 0, 0)`
+).run(d, owner.loginId, closedAt, checkId));
 
 // A sale in the old record (pounds, as the till's /api/sales saves it), with
 // extra tenders, at a moment.
@@ -164,17 +164,21 @@ test('closing the day keeps its figures: the count, the difference, the banking 
   const owner = await shop();
   await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74, card: 20, extra: [{ tenderType: 'Cyclescheme', amount: 6 }] });
   await tillSale(owner, '2026-09-01T12:00:00Z', [{ method: 'cash', pence: 1000 }, { method: 'card', pence: 300 }, { method: 'gift_card', pence: 500 }]);
+  // Online money is not till money (Jack's answer 7): a Shopify order and a deposit paid online.
+  await oldSale(owner, '2026-09-01T11:00:00Z', { extra: [{ tenderType: 'Shopify', amount: 30 }] });
+  await oldSale(owner, '2026-09-01T11:30:00Z', { card: 15, extra: [{ tenderType: 'Deposit paid online', amount: 10 }] });
   assert.equal((await post(owner, '/api/paid-outs', { amountPence: 500, reason: 'Other' })).status, 201);
   // Expected: 150.00 + 84.00 − 5.00 = 229.00; counted £2.10 short.
-  const res = await post(owner, '/api/close-the-day', { countedPence: 22690, reason: '  change given wrongly ' });
+  const res = await post(owner, '/api/close-the-day', { countedPence: 22690, expectedPence: 22900, reason: '  change given wrongly ' });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const { close } = res.body;
   assert.deepEqual({ ...close, id: 0, closedAt: 0, floatStart: { ...close.floatStart, at: 0 } }, {
     id: 0, day: '2026-09-01', closedByName: 'Jack Lewis', closedAt: 0,
     floatStart: { pence: FLOAT, how: 'looked', expectedPence: FLOAT, byName: 'Jack Lewis', at: 0 },
     cashPence: 8400, paidOutsPence: 500, expectedPence: 22900, countedPence: 22690, differencePence: -210, reason: 'change given wrongly',
-    floatPence: FLOAT, bankedPence: 7690, leftPence: FLOAT,
-    takingsPence: 7400 + 2000 + 600 + 1000 + 300 + 500, cardPence: 2300, otherPence: 1100,
+    floatPence: FLOAT, bankedPence: 7690, leftPence: FLOAT, topUpPence: 0,
+    // Takings is card + cash + other, so it always adds up (review fix 5).
+    takingsPence: 3800 + 8400 + 1100, cardPence: 3800, otherPence: 1100, onlinePence: 4000,
   });
   assert.equal(close.floatStart.at, (await day(owner)).floatStart.at);
   // Today now shows the close; the figures stay as they were after a later sale.
@@ -188,11 +192,51 @@ test('closing the day keeps its figures: the count, the difference, the banking 
   assert.deepEqual([late.status, late.body.code], [409, 'day_closed']);
 });
 
-test('a count below the float banks nothing and leaves what was counted', async () => {
+// Jack's answer 5: a count below the float banks nothing, and the difference
+// is put in to make the float up.
+test('a count below the float banks nothing, and says how much to put in', async () => {
   const owner = await shop();
   const res = await post(owner, '/api/close-the-day', { countedPence: FLOAT - 1000 });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.deepEqual([res.body.close.bankedPence, res.body.close.leftPence, res.body.close.differencePence], [0, FLOAT - 1000, -1000]);
+  const c = res.body.close;
+  assert.deepEqual([c.bankedPence, c.topUpPence, c.leftPence, c.differencePence], [0, 1000, FLOAT, -1000]);
+});
+
+// Jack's answer 6: a day runs from the previous close, so a sale after
+// yesterday's close is today's, and a closed day's report never changes.
+test('a sale after the previous close counts today; one after today\'s close doesn\'t change the report', async () => {
+  const owner = await shop({ check: false });
+  const yesterday = await earlierCheck(owner, '2026-08-31', FLOAT, null);
+  await earlierClose(owner, '2026-08-31', yesterday.id, '2026-08-31T17:00:00Z');
+  await oldSale(owner, '2026-08-31T16:00:00Z', { cash: 11 }); // before yesterday's close: yesterday's
+  await oldSale(owner, '2026-08-31T18:00:00Z', { cash: 22 }); // after it: today's
+  await tillSale(owner, '2026-08-31T18:30:00Z', [{ method: 'card', pence: 700 }]); // after it: today's
+  await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74 });
+  await runWithShop(owner.shop.id, () => prepare("INSERT INTO paid_outs (day, login_id, amount_pence, reason) VALUES ('2026-08-31', ?, 900, 'Other')").run(owner.loginId));
+  assert.equal((await post(owner, '/api/float-check', { countedPence: null })).status, 201);
+  const d = await day(owner);
+  assert.deepEqual([d.cashPence, d.paidOutsPence, d.expectedPence], [9600, 0, FLOAT + 9600]);
+  const res = await post(owner, '/api/close-the-day', { countedPence: FLOAT + 9600, expectedPence: FLOAT + 9600 });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual([res.body.close.cashPence, res.body.close.cardPence, res.body.close.takingsPence], [9600, 700, 10300]);
+  // A sale just after today's close belongs to tomorrow: today's report stays as it was.
+  const after = new Date(Date.parse(res.body.close.closedAt) + 60_000).toISOString();
+  await oldSale(owner, after, { cash: 5 });
+  assert.deepEqual((await day(owner)).close, res.body.close);
+});
+
+// Review fix 3: the screen sends the expected figure it showed; if a sale or
+// cash taken out changed it meanwhile, the close is refused with the new one.
+test('a close made against an out-of-date expected figure is refused with the new one', async () => {
+  const owner = await shop();
+  await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74 });
+  const shown = (await day(owner)).expectedPence;
+  await oldSale(owner, '2026-09-01T11:00:00Z', { cash: 6 });
+  const res = await post(owner, '/api/close-the-day', { countedPence: shown, expectedPence: shown });
+  assert.deepEqual([res.status, res.body.code, res.body.expectedPence], [409, 'expected_changed', shown + 600]);
+  assert.equal((await day(owner)).close, null);
+  for (const bad of [1.5, '22400']) assert.equal((await post(owner, '/api/close-the-day', { countedPence: shown, expectedPence: bad })).status, 400);
+  assert.equal((await post(owner, '/api/close-the-day', { countedPence: shown, expectedPence: shown + 600 })).status, 201);
 });
 
 test('a count must be whole pence and a reason short text', async () => {
@@ -225,7 +269,7 @@ test('cash taken out at the moment of closing is in the close, never lost', asyn
   try {
     await other.query('BEGIN');
     await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
-    await other.query('SELECT id FROM shops WHERE id = $1 FOR UPDATE', [owner.shop.id]);
+    await other.query('SELECT id FROM shops WHERE id = $1 FOR NO KEY UPDATE', [owner.shop.id]);
     let settled = false;
     const closing = post(owner, '/api/close-the-day', { countedPence: FLOAT }).finally(() => { settled = true; });
     await new Promise((r) => setTimeout(r, 400));
@@ -241,6 +285,58 @@ test('cash taken out at the moment of closing is in the close, never lost', asyn
   }
   const late = await post(owner, '/api/paid-outs', { amountPence: 100, reason: 'Other' });
   assert.deepEqual([late.status, late.body.code], [409, 'day_closed']);
+});
+
+// The mirror (review fix 7): cash taken out while a close is in progress
+// waits for it, then is told the day is closed. Here another connection
+// holds the shop's row as a close does, saves the close and lets go.
+test('cash taken out while the day is closing waits, then is refused', async () => {
+  const owner = await shop();
+  const { id: checkId } = await runWithShop(owner.shop.id, () => prepare("SELECT id FROM float_checks WHERE day = '2026-09-01'").get());
+  const other = await pool.connect();
+  try {
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    await other.query('SELECT id FROM shops WHERE id = $1 FOR NO KEY UPDATE', [owner.shop.id]);
+    let settled = false;
+    const out = post(owner, '/api/paid-outs', { amountPence: 300, reason: 'Other' }).finally(() => { settled = true; });
+    await new Promise((r) => setTimeout(r, 400));
+    assert.equal(settled, false, 'the paid-out waits for the close');
+    await other.query(
+      `INSERT INTO day_closes (day, login_id, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
+         float_pence, banked_pence, takings_pence, card_pence, other_pence)
+       VALUES ('2026-09-01', $1, $2, 15000, 0, 0, 15000, 15000, 15000, 0, 0, 0, 0)`, [owner.loginId, checkId]);
+    await other.query('COMMIT');
+    const res = await out;
+    assert.deepEqual([res.status, res.body.code], [409, 'day_closed']);
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
+  }
+  const n = await runWithShop(owner.shop.id, () => prepare('SELECT count(*)::int AS n FROM paid_outs').get());
+  assert.equal(n.n, 0);
+});
+
+// Review fix 4: the close locks the shop's row without blocking a sale. A
+// sale takes a key-share lock on the shop (its foreign key); here one is
+// being saved, not yet finished, and the close still goes through.
+test('closing the day doesn\'t wait for a sale being saved', async () => {
+  const owner = await shop();
+  const other = await pool.connect();
+  try {
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    await other.query("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES ('2026-09-01T12:00:00Z', 5, 5, 'Cash', 5)");
+    const closed = await Promise.race([
+      post(owner, '/api/close-the-day', { countedPence: FLOAT }),
+      new Promise((r) => setTimeout(() => r('still waiting'), 3000)),
+    ]);
+    assert.notEqual(closed, 'still waiting', 'the close waited for the sale');
+    assert.equal(closed.status, 201, JSON.stringify(closed.body));
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
+  }
 });
 
 test('closing the day and cash taken out are for the Owner, until roles', async () => {

@@ -95,8 +95,11 @@ export function register(route) {
     if (reason.length > 500) return badRequest(res, 'The reason can be up to 500 characters');
     const { float_pence: expected } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
     if (expected === null) return sendJson(res, 409, { error: 'The shop has no float set', code: 'no_float' });
-    // The first day on Wheelhouse is counted, never looked at (UX walk-through 4 M4).
-    if (counted === null && !(await prepare('SELECT 1 FROM float_checks LIMIT 1').get())) {
+    // The first day on Wheelhouse is counted, never looked at (UX walk-through 4 M4),
+    // except when the Owner closes a day nobody checked: then it's only looked
+    // at (Jack's answer 8, 27 Oct; openspec/changes/close-the-day).
+    const atClose = body.atClose === true && ctx.login.is_owner;
+    if (counted === null && !atClose && !(await prepare('SELECT 1 FROM float_checks LIMIT 1').get())) {
       return sendJson(res, 400, { error: 'Count the float on the first day', code: 'count_needed' });
     }
     const day = await today();

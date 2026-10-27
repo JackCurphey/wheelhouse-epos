@@ -76,6 +76,7 @@ test('096 adds paid-outs and one close a day, and keeps each shop to its own', a
     const { rows: [made] } = await close('2026-09-01');
     assert.equal(made.shop_id, ids.shop);
     assert.ok(made.closed_at instanceof Date);
+    assert.equal(made.online_pence, 0, 'online money is kept beside the takings');
     await assert.rejects(close('2026-09-01'), /unique|duplicate/i, 'one close a day');
     await assert.rejects(close('2026-09-02', -1, 0), /check/i, 'a count is never below nothing');
     await assert.rejects(close('2026-09-03', 100, -1), /check/i, 'banking is never below nothing');
