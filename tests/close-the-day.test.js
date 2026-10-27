@@ -9,7 +9,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
-import { runWithShop, prepare } from '../server/db.js';
+import { runWithShop, prepare, pool } from '../server/db.js';
 import { entryFor } from '../server/routes/close-the-day.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
@@ -216,14 +216,31 @@ test('two closes at the same moment keep one', async () => {
   assert.equal(n.n, 1);
 });
 
-test('cash taken out at the moment of closing is in the close or refused, never lost', async () => {
-  for (let round = 0; round < 4; round += 1) {
-    const owner = await shop();
-    const [closed, out] = await Promise.all([post(owner, '/api/close-the-day', { countedPence: FLOAT }), post(owner, '/api/paid-outs', { amountPence: 300, reason: 'Other' })]);
+// The close waits for anything else holding the shop's row, such as cash
+// being taken out at that moment, and then counts it: here another
+// connection holds the row, adds a paid-out and lets go while the close waits.
+test('cash taken out at the moment of closing is in the close, never lost', async () => {
+  const owner = await shop();
+  const other = await pool.connect();
+  try {
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    await other.query('SELECT id FROM shops WHERE id = $1 FOR UPDATE', [owner.shop.id]);
+    let settled = false;
+    const closing = post(owner, '/api/close-the-day', { countedPence: FLOAT }).finally(() => { settled = true; });
+    await new Promise((r) => setTimeout(r, 400));
+    assert.equal(settled, false, 'the close waits for the shop’s row');
+    await other.query("INSERT INTO paid_outs (day, login_id, amount_pence, reason) VALUES ('2026-09-01', $1, 300, 'Other')", [owner.loginId]);
+    await other.query('COMMIT');
+    const closed = await closing;
     assert.equal(closed.status, 201, JSON.stringify(closed.body));
-    if (out.status === 201) assert.equal(closed.body.close.paidOutsPence, 300, `round ${round}: a paid-out kept after the close was counted`);
-    else assert.deepEqual([out.status, out.body.code, closed.body.close.paidOutsPence], [409, 'day_closed', 0]);
+    assert.equal(closed.body.close.paidOutsPence, 300);
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
   }
+  const late = await post(owner, '/api/paid-outs', { amountPence: 100, reason: 'Other' });
+  assert.deepEqual([late.status, late.body.code], [409, 'day_closed']);
 });
 
 test('closing the day and cash taken out are for the Owner, until roles', async () => {
@@ -285,6 +302,13 @@ test('an over float after a day nobody closed is not listed, and nor is one on t
   await earlierClose(gap, '2026-08-29', sat.id);
   assert.equal((await post(gap, '/api/float-check', { countedPence: FLOAT + 50 })).status, 201);
   assert.equal((await overLines(gap)).length, 1, 'Saturday closed, Sunday shut: listed');
+  // An older closed day doesn't count when the last one wasn't closed.
+  const older = await shop({ check: false });
+  const sat2 = await earlierCheck(older, '2026-08-29', FLOAT, null);
+  await earlierClose(older, '2026-08-29', sat2.id);
+  await earlierCheck(older, '2026-08-31', FLOAT, null);
+  assert.equal((await post(older, '/api/float-check', { countedPence: FLOAT + 50 })).status, 201);
+  assert.equal((await overLines(older)).length, 0, 'Saturday closed, Monday not: not listed');
   const first = await staffSignup(server.baseUrl, { shopName: 'First Day Cycles', ownerName: 'Jack Lewis' });
   shops.push(first);
   assert.equal((await call(first, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: FLOAT } })).status, 200);
