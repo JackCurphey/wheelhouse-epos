@@ -18,42 +18,43 @@ test('the build board’s script runs and every section has content', () => {
   }
 });
 
-// How far through the current stage (Jack, 20 Oct): worked out from the
-// stage's own steps in the BOARD block (split plan §9), never typed in.
-test('the board shows how far through the current stage, from its steps', () => {
-  const win = new JSDOM(html, { runScripts: 'dangerously' }).window;
-  const doc = win.document;
-  const steps = [...doc.querySelectorAll('#ov-stage-steps li')];
-  assert.ok(steps.length > 0, 'the stage lists its steps');
-  const done = steps.filter((li) => li.dataset.done === 'true').length;
-  const bar = doc.getElementById('ov-stage-bar');
-  assert.ok(bar !== null, 'a progress bar');
-  const pct = Math.round((done / steps.length) * 100);
-  assert.equal(bar.getAttribute('aria-valuenow'), String(pct));
-  assert.match(doc.getElementById('ov-stage-sum').textContent, new RegExp(`${done} of ${steps.length} steps done · ${pct}%`));
-});
-
-// How far through the whole of Release 2 (Jack, 23 Oct: the stage alone
-// "doesn't really help when we're working on other stages as well"): worked
-// out from every work package in the build plan, each marked done, partly
-// done or to do, a partly done one counting half. Never typed in.
-test('the board shows how far through the whole project, from its work packages', () => {
-  const win = new JSDOM(html, { runScripts: 'dangerously' }).window;
-  const doc = win.document;
-  const rows = [...doc.querySelectorAll('#ov-project-packages li[data-status]')];
-  assert.ok(rows.length >= 30, `the packages are listed (${rows.length})`);
-  const count = (s) => rows.filter((li) => li.dataset.status === s).length;
-  const [done, part, todo] = [count('done'), count('part'), count('todo')];
-  assert.equal(done + part + todo, rows.length, 'every package is done, part or todo');
-  const pct = Math.round(((done + part / 2) / rows.length) * 100);
-  const bar = doc.getElementById('ov-project-bar');
-  assert.equal(bar.getAttribute('role'), 'progressbar');
-  assert.equal(bar.getAttribute('aria-valuenow'), String(pct));
-  assert.equal(bar.firstElementChild.style.width, `${pct}%`);
-  assert.match(doc.getElementById('ov-project-sum').textContent, new RegExp(`Release 2: ${done} done, ${part} partly done, ${todo} to do of ${rows.length} work packages · about ${pct}%`));
-  // Grouped by stage, each with its own count.
-  const stages = [...doc.querySelectorAll('#ov-project-packages > li')];
-  assert.ok(stages.length >= 9, 'stages 0 to 8');
-  assert.match(stages[0].textContent, /^Stage 0/);
+// Slices instead of stages (Jack, 27 Oct: "Instead of having the stages and
+// the percentage we are through the current stage, we'll just have slices
+// instead"). Release 2 is built in six slices, A to F (Mark's replan, #499,
+// accepted 26 Oct). Each slice's bar is worked out from its own items, done
+// counting 1 and partly done half; the summary line is worked out from the
+// slices' states. Never typed in.
+test('the board shows Release 2 as six slices, each with its own bar', () => {
+  const doc = new JSDOM(html, { runScripts: 'dangerously' }).window.document;
+  assert.ok(doc.getElementById('ov-project-bar') === null, 'the whole-project bar is gone');
+  assert.ok(doc.getElementById('ov-stage-bar') === null, 'the stage bar is gone');
+  const cards = [...doc.querySelectorAll('#ov-slices > li')];
+  assert.deepEqual(cards.map((c) => c.dataset.letter), ['A', 'B', 'C', 'D', 'E', 'F']);
+  const LABELS = { build: 'Being built', next: 'Next', later: 'Later', played: 'Played' };
+  for (const card of cards) {
+    const rows = [...card.querySelectorAll('details li[data-status]')];
+    assert.ok(rows.length > 0, `slice ${card.dataset.letter} lists its items`);
+    const count = (s) => rows.filter((li) => li.dataset.status === s).length;
+    assert.equal(count('done') + count('part') + count('todo'), rows.length, 'every item is done, part or todo');
+    const pct = Math.round(((count('done') + count('part') / 2) / rows.length) * 100);
+    const bar = card.querySelector('[role="progressbar"]');
+    assert.equal(bar.getAttribute('aria-valuenow'), String(pct), `slice ${card.dataset.letter}'s bar`);
+    assert.equal(bar.firstElementChild.style.width, `${pct}%`);
+    assert.equal(card.querySelector('.pill').textContent, LABELS[card.dataset.state]);
+    assert.match(card.textContent, /You can play: /);
+  }
+  // The summary line follows the states, not typed text.
+  const name = (s) => cards.filter((c) => c.dataset.state === s).map((c) => c.dataset.letter);
+  const join = (ls) => ls.length > 1 ? `${ls.slice(0, -1).join(', ')} and ${ls.at(-1)}` : ls[0];
+  const phrase = (ls, words) => ls.length ? [`${join(ls)} ${ls.length > 1 ? 'are' : 'is'} ${words}`] : [];
+  const parts = [...phrase(name('build'), 'being built'), ...phrase(name('next'), 'next')];
+  const n = cards.length;
+  const expected = `Release 2 in ${n} slices${parts.length ? `: ${parts.join(', ')}` : ''} · ${name('played').length} of ${n} played`;
+  assert.equal(doc.getElementById('ov-slices-sum').textContent, expected);
+  // Every work package is in a slice or in the Not in a slice fold, once.
+  const ids = [...doc.querySelectorAll('#ov-slices li[data-id], #ov-outside li[data-id]')].map((li) => li.dataset.id);
+  assert.equal(new Set(ids).size, ids.length, 'no package twice');
+  assert.equal(ids.length, 38, 'all 38 work packages');
+  assert.ok(doc.querySelectorAll('#ov-outside li').length === 8, 'eight packages in no slice');
 });
 
