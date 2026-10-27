@@ -69,6 +69,10 @@ export async function floatsToSee() {
   });
 }
 
+// The Owner closing a day whose float nobody checked: a look only, on any
+// day, the first included (Jack's answer 8, 27 Oct; close-the-day).
+const lookAtClose = (login, body) => body.atClose === true && login.is_owner === true;
+
 export function register(route) {
   route('GET', '/api/float-check', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
@@ -98,8 +102,7 @@ export function register(route) {
     // The first day on Wheelhouse is counted, never looked at (UX walk-through 4 M4),
     // except when the Owner closes a day nobody checked: then it's only looked
     // at (Jack's answer 8, 27 Oct; openspec/changes/close-the-day).
-    const atClose = body.atClose === true && ctx.login.is_owner;
-    if (counted === null && !atClose && !(await prepare('SELECT 1 FROM float_checks LIMIT 1').get())) {
+    if (counted === null && !lookAtClose(ctx.login, body) &&!(await prepare('SELECT 1 FROM float_checks LIMIT 1').get())) {
       return sendJson(res, 400, { error: 'Count the float on the first day', code: 'count_needed' });
     }
     const day = await today();

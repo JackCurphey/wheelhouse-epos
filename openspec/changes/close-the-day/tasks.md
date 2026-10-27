@@ -6,7 +6,7 @@
 - [x] 1.2 Migration 096, `server/routes/close-the-day.js`, the over float in `float-check.js` and `today.js`
 - [x] 1.3 The route list snapshot, the owner-only list
 - [x] 1.4 Break each key rule on purpose, see its test go red, and restore
-- [ ] 1.5 Lint, typecheck, the touched tests; `/review` (migration, money)
+- [x] 1.5 Lint, typecheck, the touched tests; `/review` (migration, money) — /review 27 Oct: nothing blocking; fixes and Jack's answers 4 to 8 done
 
 ## 2. Screens (pull request 2, `jack/close-the-day-screens`, stacked on 1)
 
