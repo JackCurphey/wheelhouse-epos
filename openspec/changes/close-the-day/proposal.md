@@ -12,8 +12,10 @@ section 1), straight after the float check (WP-3.3, archived as
 27 Oct. Taken by Jack.
 
 **Risky areas:** a migration (096), and money (the cash count, cash taken
-out, the banking and the day's takings, whole pence throughout). `/review`
-runs before each pull request merges.
+out, the banking and the day's takings, whole pence throughout). **It
+changes the sales tables**: `sales` and `till_sales` gain `day_close_id`,
+the close that counted each sale (second review, 27 Oct). `/review` runs
+before each pull request merges.
 
 ## What it is built on, and what it isn't
 
@@ -36,11 +38,11 @@ it differs:
 - **Step 5, the card check**, waits for a real card machine connected to
   the till, then is built as drawn; the report still shows the till's card
   total (Jack's answer 4, 27 Oct).
-- **Jack's answers 5 to 8 (27 Oct, `docs/decisions/2026-10-27-answers.md`)**
+- **Jack's answers 5 to 9 (27 Oct, `docs/decisions/2026-10-27-answers.md`)**
   settle the rest: a drawer below the float says how much to put in; a day
   runs from the previous close; takings is till money only, with online
   money on its own line; a float nobody checked is looked at, never counted,
-  at closing.
+  at closing; and the drawer trusts the morning check.
 
 ## What Changes
 
