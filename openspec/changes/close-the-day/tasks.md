@@ -13,5 +13,5 @@
 - [x] 2.1 Tests first: the Close the day page, the paid-out and report pop-ups, the till's button, Today's over float line (`tests/screens/`); a browser spec for `/workshop/till/close`. Watch each fail
 - [x] 2.2 Build them to the drawings
 - [x] 2.3 Break each key rule on purpose, see its test go red, and restore
-- [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review`
+- [x] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review` — /review 27 Oct: nothing blocking; fixes and Jack's answers 4 to 8 done
 - [ ] 2.5 `/opsx:archive` as the last commit

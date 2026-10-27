@@ -3346,8 +3346,10 @@ but no closed order. Decided here, for Jack to overrule:
    right · [Name] at [time]", or "counted by" for a count, with "[£] short,"
    first for a short count (the j16 line on `eod-z`).
 7. **Leave in the drawer and Bank show once the cash is counted**, worked
-   out from the count. A count under the float leaves the count and banks
-   £0.00 (server entry 5).
+   out from the count. Leave in the drawer is always the float. A count
+   under the float banks £0.00 and adds "Put £[n] in to make the float up to
+   £[float]" under them (Jack's answer 5), in the warning colours of the
+   page's other notices. *Pattern:* the till's stock warning.
 8. **Cash taken out** (`eod-paidout`): "What it was for" is a box to type
    in, since Settings › Till › Reasons isn't built (the drawing's "Other…");
    the subtitle is "From the drawer" and the button "Take it out", as there
@@ -3357,9 +3359,10 @@ but no closed order. Decided here, for Jack to overrule:
    note.
 9. **The report** shows Takings, Card, Cash, "Gift cards, store credit,
    customer accounts, other", Float at the start, Cash difference and
-   Banked, and "Online money is not in this till’s takings." (walk-through
-   11 H2). Cycle to Work, Refunds, Voids, Discounts given, VAT, the online
-   money figure and "Email it" wait for what they stand on. Print uses the
+   Banked, and "Online money is not in this till’s takings: £[n] today"
+   (walk-through 11 H2; Jack's answer 7), without the drawing's "see
+   Reports" until Reports exists. Cycle to Work, Refunds, Voids, Discounts
+   given, VAT and "Email it" wait for what they stand on. Print uses the
    till's own printing (the receipt's).
 10. **A closed day** opens with every step done and "Show the report" under
     End-of-day report, so the report can be seen again. *Pattern:* none
@@ -3369,8 +3372,19 @@ but no closed order. Decided here, for Jack to overrule:
     has no till bar yet; the drawing gives this strip to a phone. It reads
     "closes at" rather than "It's after", as it shows from an hour before.
     Only the Owner sees it, until roles.
-12. **The float check comes first on Close the day** when it's due, the
-    till's own pop-up, and saving it refreshes the day's figures.
+12. **The float check comes first on Close the day** when it's due, and
+    saving it refreshes the day's figures. It offers Looks right only, even
+    on the first day (Jack's answer 8): "Hello, [first name]", "the float
+    wasn’t checked this morning" (the subtitle isn't drawn), "The drawer
+    should have [£ float]", "The shop’s float", and no note, since the
+    till's note asks for a count.
+15. **Done counting reads the till's figures again** before showing the
+    difference. If a sale or cash taken out changes them before the close,
+    the close is refused: Count the cash opens again with the new
+    difference and the server's words ("The till’s figures changed while
+    you were counting. Check the difference again.") in the warning
+    colours, and the count is kept again and the banking bagged again
+    before closing (review, 27 Oct).
 13. **Someone who isn't the Owner** opening the address is told "Only the
     shop’s owner can close the day."; with no float set the page says "Set
     the shop’s float in Settings › Front desk › End of day first: Close the
