@@ -3154,3 +3154,26 @@ pills and "Works with or without an order" are built.
      the supplier this order is from." (was "That line is on another
      supplier’s order"). The screen doesn't send one; the old wording was
      wrong for it.
+
+### 27 Oct 2026: closing an order that has partly arrived (`openspec/changes/close-part-delivered`, `rs-order-ordered`, `rs-order-close`; Jack's answer 1, `docs/decisions/2026-10-27-answers.md`)
+
+The drawings show "Close the order" on a partly delivered order, and its box,
+but no closed order. Decided here, for Jack to overrule:
+
+1. **A closed order's line says "[n] not coming"** where the rest didn't
+   come, in the same grey tag as "[n] to come" (Jack's words: "marks the rest
+   as not coming"). A line that all arrived still says "All arrived". The
+   order's tag says "Closed", as a closed order with nothing in already did.
+   No buttons, as before.
+2. **Stored as a status, nothing per line:** a partly delivered order closes
+   to `closed`; one with nothing in is still `cancelled`. The lines keep what
+   arrived; "not coming" is worked out from ordered − arrived − set aside. No
+   migration.
+3. **Two new refusals** on a close that can't happen: "This purchase order is
+   already closed", and "Everything on this purchase order has arrived" (it
+   used to say "already has items booked in and cannot be cancelled", which is
+   no longer the reason). The screen doesn't offer Close the order on either,
+   so they're seen only when two people act at once.
+4. **The note "Closing the order drops anything still to come."** shows under
+   every open order for the Owner, as `rs-order-ordered` draws it; the job
+   warning in `rs-order-close` waits until jobs are linked to order lines.
