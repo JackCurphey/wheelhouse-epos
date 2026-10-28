@@ -24,10 +24,10 @@ type Attention =
   | { kind: 'quote_no_answer'; jobId: number; reference: string; customerName: string | null; phone: string | null; sentAt: string | null; reminderSentAt: string | null }
   | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string }
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
-  | { kind: 'float_short'; checkId: number; day: string; shortPence: number; countedByName: string; checkedAt: string; reason: string }
-  | { kind: 'float_over'; checkId: number; day: string; overPence: number; countedByName: string; checkedAt: string; reason: string };
+  | { kind: 'float_short'; checkId: number; day: string; shortPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
+  | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
-type TillToday = { openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
+type TillToday = { code: string | null; openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
 
 // The drawing's card: a labelled section, its rows a list (opening.mjs `section`).
@@ -83,18 +83,22 @@ const loading = (q: { isError: boolean; isSuccess: boolean }, what: string) => q
   ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load {what}. It tries again in a minute.</p>
   : <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>;
 
-// Tills (op-today, op-today-short, op-today-seen): one line for the shop's
-// till, no name until tills have names (27 Oct, float check entry 2).
-function Tills() {
-  const q = useQuery({ queryKey: ['today-tills'], queryFn: () => apiGet<{ till: TillToday }>('/api/today/tills'), refetchInterval: 60_000, refetchOnWindowFocus: true });
-  const t = q.data?.till;
-  const f = t?.floatCheck;
+// Tills (op-today, op-today-short, op-today-seen): a line per till, "Till B1",
+// and "Till" with no number for a browser that isn't a set-up till
+// (openspec/changes/till-setup, design 2).
+function TillLine({ t }: { t: TillToday }) {
+  const f = t.floatCheck;
   // "Open" only once someone checked in: the Owner's look at closing alone doesn't open the till (review, 28 Oct).
-  const sub = !t?.openedAt ? 'Not open yet' : f ? `Open · float checked by ${f.byName} at ${clock(f.at)}` : `Open · ${t.openedBy} checked in at ${clock(t.openedAt)}`;
+  const sub = !t.openedAt ? 'Not open yet' : f ? `Open · float checked by ${f.byName} at ${clock(f.at)}` : `Open · ${t.openedBy} checked in at ${clock(t.openedAt)}`;
   const tag = f?.short ? (f.seenByName ? <Tag tone="grey">Float short · seen by {f.seenByName}</Tag> : <Tag tone="warn">Float short</Tag>) : null;
+  return <Line title={t.code ? `Till ${t.code}` : 'Till'} sub={sub} right={tag} />;
+}
+function Tills() {
+  const q = useQuery({ queryKey: ['today-tills'], queryFn: () => apiGet<{ tills: TillToday[] }>('/api/today/tills'), refetchInterval: 60_000, refetchOnWindowFocus: true });
+  const tills = q.data?.tills;
   return (
     <Card id="today-tills" title="Tills">
-      {t ? <ul className="m-0 list-none p-0"><Line title="Till" sub={sub} right={tag} /></ul> : loading(q, 'the till')}
+      {tills ? <ul className="m-0 list-none p-0">{tills.map((t) => <TillLine key={t.code ?? ''} t={t} />)}</ul> : loading(q, 'the tills')}
     </Card>
   );
 }
@@ -161,14 +165,15 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
     if (done) document.getElementById('today-attention')?.focus();
   }
   const lines = items.map((i) => {
-    // op-today-short, without "Till B1’s" until tills have names; it stays until
-    // Seen, so an earlier day's gives its date (review, 27 Oct). An over float
-    // reads the same, once yesterday was closed (decision 8 H1; close-the-day).
+    // op-today-short, "Till B1’s float…" when counted on a set-up till
+    // (till-setup); it stays until Seen, so an earlier day's gives its date
+    // (review, 27 Oct). An over float reads the same, once yesterday was
+    // closed (decision 8 H1; close-the-day).
     if (i.kind === 'float_short' || i.kind === 'float_over') {
       const by = i.kind === 'float_short' ? `${penceText(i.shortPence)} short` : `${penceText(i.overPence)} over`;
       return (
         <Line key={`f${i.checkId}`} lead={warn}
-          title={`The float was ${by} ${londonDay(i.checkedAt) === today ? 'this morning' : `on ${shortDate(i.checkedAt)}`}`}
+          title={`${i.tillCode ? `Till ${i.tillCode}’s float` : 'The float'} was ${by} ${londonDay(i.checkedAt) === today ? 'this morning' : `on ${shortDate(i.checkedAt)}`}`}
           sub={`Counted by ${i.countedByName} at ${clock(i.checkedAt)}${i.reason ? ` · “${i.reason}”` : ''}`}
           right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeing.has(i.checkId)} onClick={() => void seen(i.checkId)}>Seen</Button>} />
       );
