@@ -17,9 +17,16 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 
 const WEBHOOK_SECRET = 'refund-stock-test-secret';
+// Not imported here: importing it would swap this process's fetch too.
+const FAKE_SHOPIFY_SUFFIX = '.fake-shopify.invalid';
+const FAKE_SHOPIFY = new URL('./helpers/fake-shopify-fetch.js', import.meta.url).href;
 let server;
 
-before(async () => { server = await startLiveServer(); });
+// Shopify is faked inside the server (helpers/fake-shopify-fetch.js), so what
+// the refund sends back to Shopify can be read from the server's stderr.
+before(async () => {
+  server = await startLiveServer({ env: { NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import=${FAKE_SHOPIFY}`.trim() } });
+});
 after(async () => {
   if (server) await server.stop();
   await pool.end();
@@ -41,24 +48,50 @@ async function asShop(shopId, fn) {
   }
 }
 
-// A shop connected to Shopify, with one product Shopify knows as variant
-// `variantId`. No inventory item id, so the webhook makes no outside call.
-async function setUp({ stockQty, variantId }) {
+// A shop connected to (a fake) Shopify, with one product Shopify knows as
+// variant `variantId`. Without `inventoryItemId` the refund sends nothing
+// back to Shopify.
+async function setUp({ stockQty, variantId, inventoryItemId = null }) {
   const shop = await createTestShop();
-  const productId = await asShop(shop.id, async (c) => {
-    await c.query(
-      `INSERT INTO shopify_connections (shop_id, shop_domain, access_token, storefront_api_token, webhook_secret, location_id, status)
-       VALUES ($1, 'refund-stock-test.invalid', $2, $3, $4, '1', 'connected')`,
-      [shop.id, encryptSecret('fake-access-token'), encryptSecret('fake-storefront-token'), encryptSecret(WEBHOOK_SECRET)]
-    );
-    const { rows: [p] } = await c.query(
-      `INSERT INTO products (shop_id, sku, name, price, stock_qty, shopify_variant_id)
-       VALUES ($1, $2, 'Inner tube', 5, $3, $4) RETURNING id`,
-      [shop.id, `TUBE-${randomUUID().slice(0, 8)}`, stockQty, String(variantId)]
-    );
-    return p.id;
-  });
+  await asShop(shop.id, (c) => c.query(
+    `INSERT INTO shopify_connections (shop_id, shop_domain, access_token, storefront_api_token, webhook_secret, location_id, status)
+     VALUES ($1, $2, $3, $4, $5, '1', 'connected')`,
+    [shop.id, `refund-stock-${shop.id}${FAKE_SHOPIFY_SUFFIX}`, encryptSecret('fake-access-token'), encryptSecret('fake-storefront-token'), encryptSecret(WEBHOOK_SECRET)]
+  ));
+  const productId = await addProduct(shop.id, { stockQty, variantId, inventoryItemId });
   return { shop, productId };
+}
+
+async function addProduct(shopId, { stockQty, variantId, inventoryItemId = null }) {
+  return asShop(shopId, async (c) => (await c.query(
+    `INSERT INTO products (shop_id, sku, name, price, stock_qty, shopify_variant_id, shopify_inventory_item_id)
+     VALUES ($1, $2, 'Inner tube', 5, $3, $4, $5) RETURNING id`,
+    [shopId, `TUBE-${randomUUID().slice(0, 8)}`, stockQty, String(variantId), inventoryItemId]
+  )).rows[0].id);
+}
+
+const newVariant = () => 10_000_000 + Math.floor(Math.random() * 1e9);
+const eventsOf = (shopId, refundId) => asShop(shopId, async (c) => (await c.query(
+  "SELECT status, error_message FROM shopify_processed_events WHERE shopify_order_id = $1 AND kind = 'refund'", [String(refundId)]
+)).rows);
+
+// Waits until `n` database sessions are queued behind `pid`, directly or
+// behind one that is; resolves to how many were.
+async function waitQueuedBehind(pid, n, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  let count = 0;
+  while (Date.now() < deadline) {
+    const { rows: [row] } = await pool.query(
+      `WITH direct AS (SELECT pid FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))
+       SELECT (SELECT count(*) FROM direct)
+            + (SELECT count(*) FROM pg_stat_activity s WHERE EXISTS (SELECT 1 FROM direct d WHERE d.pid = ANY(pg_blocking_pids(s.pid)))) AS n`,
+      [pid]
+    );
+    count = Number(row.n);
+    if (count >= n) return count;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  return count;
 }
 
 function sendRefund(shopId, refund) {
@@ -172,6 +205,141 @@ test('a refund of two products takes their rows in id order, so it cannot deadlo
     assert.equal(res.status, 200, await res.text());
     assert.equal(await stockOf(shop.id, lowId), 10, 'one sold, one refunded');
     assert.equal(await stockOf(shop.id, highId), 10, 'one sold, one refunded');
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
+    if (refund) await refund.catch(() => {});
+    await deleteTestShop(shop.id);
+  }
+});
+
+// ---- 28 Oct review fixes ----
+
+// The claim on a refund is made inside its transaction, so a refund that
+// fails partway leaves nothing behind but an error record, and Shopify's
+// retry of the same delivery applies it.
+test('a refund that fails partway changes nothing, and the same delivery retried applies it', async () => {
+  const variantA = newVariant();
+  const variantB = newVariant();
+  const { shop, productId: a } = await setUp({ stockQty: 5, variantId: variantA });
+  // The largest whole number the column holds: adding one fails, after line A.
+  const b = await addProduct(shop.id, { stockQty: 2147483647, variantId: variantB });
+  try {
+    assert.ok(b > a, 'line B is written after line A');
+    const refund = { id: 9401, refund_line_items: [
+      { quantity: 1, line_item: { variant_id: variantA } },
+      { quantity: 1, line_item: { variant_id: variantB } },
+    ] };
+    const failed = await sendRefund(shop.id, refund);
+    assert.equal(failed.status, 500, await failed.text());
+    assert.equal(await stockOf(shop.id, a), 5, 'line A rolled back with line B');
+    assert.deepEqual(await movementsOf(shop.id, a), []);
+    const [event] = await eventsOf(shop.id, 9401);
+    assert.equal(event?.status, 'error', 'the failure is recorded');
+    assert.match(event.error_message, /out of range/);
+
+    await asShop(shop.id, (c) => c.query('UPDATE products SET stock_qty = 10 WHERE id = $1', [b]));
+    const retried = await sendRefund(shop.id, refund);
+    assert.equal(retried.status, 200, await retried.text());
+    assert.equal(await stockOf(shop.id, a), 6, 'the retry applied line A');
+    assert.equal(await stockOf(shop.id, b), 11, 'the retry applied line B');
+    assert.deepEqual(await eventsOf(shop.id, 9401), [{ status: 'ok', error_message: null }]);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the same refund delivered twice puts stock back once', async () => {
+  const variantId = newVariant();
+  const { shop, productId } = await setUp({ stockQty: 20, variantId });
+  try {
+    const refund = { id: 9501, refund_line_items: [{ quantity: 1, line_item: { variant_id: variantId } }] };
+    for (let i = 0; i < 2; i++) {
+      const res = await sendRefund(shop.id, refund);
+      assert.equal(res.status, 200, await res.text());
+    }
+    assert.equal(await stockOf(shop.id, productId), 21);
+    assert.equal((await movementsOf(shop.id, productId)).length, 1);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the same refund arriving twice at the same moment puts stock back once', async () => {
+  const variantId = newVariant();
+  const { shop, productId } = await setUp({ stockQty: 20, variantId });
+  const other = await pool.connect();
+  let both;
+  try {
+    // Hold the product so both deliveries are in flight together: the first
+    // waits on the product, the second on the first's claim.
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(shop.id)]);
+    const { rows: [{ pid }] } = await other.query('SELECT pg_backend_pid() AS pid');
+    await other.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [productId]);
+    const refund = { id: 9601, refund_line_items: [{ quantity: 1, line_item: { variant_id: variantId } }] };
+    both = Promise.all([sendRefund(shop.id, refund), sendRefund(shop.id, refund)]);
+    assert.equal(await waitQueuedBehind(pid, 2), 2, 'both deliveries were waiting at once');
+    await other.query('COMMIT');
+    const replies = await both;
+    assert.deepEqual(replies.map((r) => r.status), [200, 200]);
+    assert.equal(await stockOf(shop.id, productId), 21);
+    assert.equal((await movementsOf(shop.id, productId)).length, 1);
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
+    if (both) await both.catch(() => {});
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Shopify's refunds/create payload marks each line with restock_type;
+// "no_restock" means "Refunding these items won't affect inventory"
+// (shopify.dev, Refund resource), so Wheelhouse's stock is left alone too.
+test('a refund line Shopify marks no_restock leaves stock alone; the others go back', async () => {
+  const variantA = newVariant();
+  const variantB = newVariant();
+  const { shop, productId: a } = await setUp({ stockQty: 5, variantId: variantA });
+  const b = await addProduct(shop.id, { stockQty: 5, variantId: variantB });
+  try {
+    const res = await sendRefund(shop.id, { id: 9701, refund_line_items: [
+      { quantity: 1, restock_type: 'no_restock', line_item: { variant_id: variantA } },
+      { quantity: 2, restock_type: 'return', line_item: { variant_id: variantB } },
+    ] });
+    assert.equal(res.status, 200, await res.text());
+    assert.equal(await stockOf(shop.id, a), 5, 'no_restock: unchanged');
+    assert.deepEqual(await movementsOf(shop.id, a), []);
+    assert.equal(await stockOf(shop.id, b), 7);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the figure sent to Shopify is the stock after a change made during the refund', async () => {
+  const variantId = newVariant();
+  const inventoryItemId = String(newVariant());
+  const { shop, productId } = await setUp({ stockQty: 20, variantId, inventoryItemId });
+  const other = await pool.connect();
+  let refund;
+  try {
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(shop.id)]);
+    const { rows: [{ pid }] } = await other.query('SELECT pg_backend_pid() AS pid');
+    await other.query('UPDATE products SET stock_qty = stock_qty - 3 WHERE id = $1', [productId]);
+    const logFrom = server.stderr.length;
+    refund = sendRefund(shop.id, { id: 9801, refund_line_items: [{ quantity: 1, line_item: { variant_id: variantId } }] });
+    assert.equal(await waitQueuedBehind(pid, 1), 1, 'the refund waited on the held row');
+    await other.query('COMMIT');
+    const res = await refund;
+    assert.equal(res.status, 200, await res.text());
+
+    const sent = server.stderr.slice(logFrom).split('\n')
+      .filter((line) => line.startsWith('FAKE_SHOPIFY '))
+      .map((line) => JSON.parse(line.slice('FAKE_SHOPIFY '.length)))
+      .filter((call) => call.path.endsWith('/inventory_levels/set.json') && call.body?.inventory_item_id === inventoryItemId);
+    assert.equal(sent.length, 1, 'one push for the refunded product');
+    assert.equal(sent[0].body.available, 18, 'Shopify is told 18: 20, three taken off, one refunded');
+    assert.equal(await stockOf(shop.id, productId), 18);
   } finally {
     await other.query('ROLLBACK').catch(() => {});
     other.release();

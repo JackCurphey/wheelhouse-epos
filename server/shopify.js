@@ -334,6 +334,10 @@ export async function matchRefundLineItemsToProducts(refund) {
   for (const refundLineItem of refund.refund_line_items || []) {
     const variantId = refundLineItem.line_item?.variant_id;
     if (!variantId) continue;
+    // Shopify: no_restock "Refunding these items won't affect inventory"
+    // (Refund resource, refund_line_items[].restock_type). Money back, stock
+    // stays out, so Wheelhouse's stock is left alone too (shopify-refund-stock).
+    if (refundLineItem.restock_type === 'no_restock') continue;
     const product = await prepare('SELECT * FROM products WHERE shopify_variant_id = ?').get(String(variantId));
     if (product) items.push({ product, qty: refundLineItem.quantity });
   }
@@ -346,6 +350,32 @@ export async function claimShopifyEvent(shopifyEventId, kind) {
      ON CONFLICT (shop_id, shopify_order_id, kind) DO NOTHING`
   ).run(String(shopifyEventId), kind);
   return result.changes > 0;
+}
+
+// For a claim made inside the transaction that does the event's work (the
+// refund webhook): a rollback takes the claim with it, so Shopify's retry can
+// claim again. An event whose earlier attempt failed (status 'error') is
+// claimed again too, back to 'ok'. A second delivery arriving while the first
+// is still in its transaction waits on the first's claim and, once that
+// commits, is told it's already claimed.
+export async function claimShopifyEventInTransaction(shopifyEventId, kind) {
+  const result = await prepare(
+    `INSERT INTO shopify_processed_events (shopify_order_id, kind) VALUES (?, ?)
+     ON CONFLICT (shop_id, shopify_order_id, kind)
+     DO UPDATE SET status = 'ok', error_message = NULL WHERE shopify_processed_events.status = 'error'`
+  ).run(String(shopifyEventId), kind);
+  return result.changes > 0;
+}
+
+// Records a failed attempt after its transaction rolled back (the claim went
+// with it), keeping an earlier error record. Never overwrites a delivery of
+// the same event that went through ('ok').
+export async function recordShopifyEventError(shopifyEventId, kind, errorMessage) {
+  await prepare(
+    `INSERT INTO shopify_processed_events (shopify_order_id, kind, status, error_message) VALUES (?, ?, 'error', ?)
+     ON CONFLICT (shop_id, shopify_order_id, kind)
+     DO UPDATE SET error_message = EXCLUDED.error_message WHERE shopify_processed_events.status = 'error'`
+  ).run(String(shopifyEventId), kind, errorMessage);
 }
 
 export async function markShopifyEventError(shopifyEventId, kind, errorMessage) {
