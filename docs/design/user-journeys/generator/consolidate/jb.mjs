@@ -21,6 +21,10 @@ export default {
   'pin-first': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "First-time version: 'Welcome to North Street Cycles, Jo'; no close; adds 'Skip for now'"),
   'pin-cleared': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "'Your old PIN was cleared, so here’s a new one'; no close; adds 'Skip for now'"),
   'till-give-pin': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "'[Name]’s till PIN' over the till: 'Turn the screen to [Name]'"),
+  // Jack's answers 28 Oct, 3 and 4: the way in to till-give-pin (App map 13; walk-through 4 M2, M3; Roles and switches 1).
+  'till-serving-menu': into('till-checkin', "App map 13; walk-through 4 M2, M3; Roles and switches 1; Jack's answers 28 Oct, 3 and 4", "Owner's 'Serving: Jack Lewis' opens a menu: 'Switch who’s serving' (back to Enter your PIN) and 'Give [Name] their PIN' (Till only · no PIN yet)"),
+  'till-serving-menu-several': into('till-checkin', "App map 13; walk-through 4 M2, M3; Jack's answers 28 Oct, 3 and 4", "The same menu with 'Give someone their PIN' · '2 people have no PIN yet'"),
+  'till-give-pin-pick': into('pin-change', "Walk-through 4 M2, M3; Jack's answers 28 Oct, 3 and 4", "'Who’s getting a PIN?' over the till: Jo Taylor and [Name] (Staff · till only) to tap; then '[Name]’s till PIN'"),
   'till-checkin-practice': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'cust-signin': keep(42),
   'cust-code': keep(42),

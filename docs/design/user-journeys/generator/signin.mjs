@@ -191,7 +191,7 @@ screens['till-checkin-workshop'] = each((size) => checkinWorkshop(size));
 // each taps their own name and carries on. Owner and Manager pages still ask
 // for the PIN every time, and anyone else types it as usual. The names are
 // the drawings' own (Alex Morgan, mechanic; Jo Taylor, staff).
-const nameTile = (name, role, P) => `<button type="button" style="display: flex; align-items: center; gap: 14px; width: 100%; box-sizing: border-box; min-height: ${P ? 56 : 64}px; padding: 10px 16px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left"><span aria-hidden="true" style="display: inline-flex; width: 40px; height: 40px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-weight: 700">${name[0]}</span><span style="display: flex; flex-direction: column"><span style="font-size: 17px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${role}</span></span></button>`;
+const nameTile = (name, role, P, ini = name[0]) => `<button type="button" style="display: flex; align-items: center; gap: 14px; width: 100%; box-sizing: border-box; min-height: ${P ? 56 : 64}px; padding: 10px 16px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left"><span aria-hidden="true" style="display: inline-flex; width: 40px; height: 40px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-weight: 700">${ini}</span><span style="display: flex; flex-direction: column"><span style="font-size: 17px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${role}</span></span></button>`;
 function checkinWorkshopNames(size) {
   const [W, H] = SIZE[size];
   const bar = workshopBar(size).replace('Nobody working — enter your PIN', 'Nobody working — tap your name');
@@ -265,6 +265,71 @@ screens['pin-cleared'] = pinBoard('cleared', (size) => diaryScreens.diary[size])
 // checked in (the till behind is his; the sale screen itself isn't redrawn).
 screens['till-give-pin'] = pinBoard('give', (size) => { const [W, H] = SIZE[size]; return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${tillBar({ serving: 'Jack Lewis' })}<main style="flex-grow: 1"></main></div>`; });
 
+// Jack's answers 28 Oct, 3 and 4: the way in to till-give-pin, drawn for
+// Jack's approval. App map 13: "Serving: [name]" switches who is serving
+// (the built till: straight back to Enter your PIN). For the Owner, a Manager
+// or anyone with "Give everything a Manager can do" (Roles and switches 1),
+// and only while someone at the shop has no PIN, it opens a short menu
+// instead: Switch who's serving, and the PIN to give (j11's written line;
+// walk-through 4 M2 and M3: a till-only person, or anyone's first PIN; a
+// cleared PIN counts as none). Decided here, for Jack to overrule: with
+// nobody to give a PIN to, and for Staff and Mechanics always, Serving stays
+// one tap to Enter your PIN, as built, so nobody gets a menu of one item.
+// Nobody gives their own PIN, and the Owner's stays the Owner's (Signing in,
+// 5 Oct later change), so neither is ever on the list.
+// One person with no PIN: the menu names them and opens their PIN straight
+// away. Several: "Give someone their PIN" opens a short list of names.
+// Jo Taylor (invited, not joined) and the till-only [Name] are the two
+// people with no PIN on set-staff-invited.
+const OWNER_SERVING = 'Serving: Jack Lewis';
+function ownerTillBar(size) {
+  const bar = size === 'phone' ? tillPhoneBar('Jack Lewis') : tillBar({ serving: 'Jack Lewis' });
+  const from = `aria-label="${OWNER_SERVING} — switch who’s serving"`;
+  if (!bar.includes(from)) throw new Error('signin.mjs: the till bar’s Serving button label moved');
+  // The button now opens the menu, and says so to a screen reader.
+  return bar.replace(from, `aria-label="${OWNER_SERVING}" aria-haspopup="menu" aria-expanded="true"`);
+}
+const menuItem = (label, sub, ic) => `<button type="button" role="menuitem" aria-label="${esc(label)}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span aria-hidden="true" style="display: inline-flex; width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}">${icon(ic, 18)}</span><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 700">${label}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span></button>`;
+const servingItems = (several) => `${menuItem('Switch who’s serving', 'Back to Enter your PIN', 'user')}
+<div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>
+${several ? menuItem('Give someone their PIN', '2 people have no PIN yet', 'lock') : menuItem('Give [Name] their PIN', 'Till only · no PIN yet', 'lock')}`;
+function servingMenu(size, several) {
+  const [W, H] = SIZE[size];
+  const frame = (over) => `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden; display: flex; flex-direction: column; background: ${C.bg}">${ownerTillBar(size)}<main style="flex-grow: 1"></main>${over}</div>`;
+  if (size !== 'phone') {
+    return frame(`<div role="menu" aria-label="${OWNER_SERVING}" style="position: absolute; right: 20px; top: 60px; z-index: 5; width: 320px; box-sizing: border-box; padding: 6px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); display: flex; flex-direction: column; gap: 2px">${servingItems(several)}</div>`);
+  }
+  // On a phone the menu is a sheet from the bottom, as the diary's menus are.
+  return frame(`<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="serving-title" style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.panel}; border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(28,30,25,0.3); overflow: hidden">
+<div aria-hidden="true" style="display: flex; justify-content: center; padding: 8px 0 0"><span style="width: 40px; height: 4px; border-radius: 999px; background: ${C.border}"></span></div>
+<header style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 8px 10px 16px; border-bottom: 1px solid ${C.border}"><h2 id="serving-title" style="margin: 0; font-size: 17px; font-weight: 700">${OWNER_SERVING}</h2><button type="button" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${C.ink}">${icon('close', 20)}</button></header>
+<div role="menu" aria-labelledby="serving-title" style="padding: 8px 8px 20px; display: flex; flex-direction: column; gap: 2px">${servingItems(several)}</div>
+</div>`);
+}
+screens['till-serving-menu'] = each((size) => servingMenu(size, false));
+screens['till-serving-menu-several'] = each((size) => servingMenu(size, true));
+
+// Choosing who: the names of everyone at the shop with no PIN, as the
+// workshop computer's "Who's working?" names (nameTile). Tapping one opens
+// their PIN (till-give-pin); closing gives nobody a PIN. A pop-up like the
+// PIN's own, so the two read as one step; full screen on a phone.
+function pickDialog(size) {
+  const P = size === 'phone';
+  return `<div role="dialog" aria-modal="true" aria-labelledby="pick-title-${size}" style="${P ? 'width: 100%; height: 100%;' : `width: 440px; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28);`} box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 72px; box-sizing: border-box; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><h2 id="pick-title-${size}" style="margin: 0; font-size: 20px; font-weight: 700; flex-grow: 1">Who’s getting a PIN?</h2><button type="button" aria-label="Close without giving a PIN" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${C.ink}">${icon('close', 20)}</button></div>
+<div style="padding: 24px ${P ? 20 : 28}px 28px; display: flex; flex-direction: column; gap: 12px">
+${p('These people have no PIN yet. Tap a name, then turn the screen to them.', 14)}
+${nameTile('Jo Taylor', 'Staff', P)}${nameTile('[Name]', 'Staff · till only', P, icon('user', 18))}
+</div>
+</div>`;
+}
+screens['till-give-pin-pick'] = each((size) => {
+  const [W, H] = SIZE[size];
+  if (size === 'phone') return `<div style="width: ${W}px; height: ${H}px; display: flex">${pickDialog(size)}</div>`;
+  return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden"><div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${ownerTillBar(size).replace(' aria-expanded="true"', ' aria-expanded="false"')}<main style="flex-grow: 1"></main></div><div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">${pickDialog(size)}</div></div>`;
+});
+
 // ---------- Customers (decision 5) ----------
 // On the shop's own website, in its theme: Wheelhouse's own "email me a
 // code" screens; WorkOS sends and checks the six-digit code (valid 10
@@ -318,6 +383,10 @@ export const TITLES = {
   'pin-first': 'First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer)',
   'pin-cleared': 'First sign-in after a PIN was cleared — a new PIN, the same way',
   'till-give-pin': 'Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person',
+  // Jack's answers 28 Oct, 3 and 4: the way in, drawn for Jack's approval.
+  'till-serving-menu': 'Serving: [name] menu for the Owner or a manager, one person with no PIN — Switch who’s serving, Give [Name] their PIN (proposed, 28 Oct)',
+  'till-serving-menu-several': 'Serving: [name] menu, several people with no PIN — Give someone their PIN (proposed, 28 Oct)',
+  'till-give-pin-pick': 'Who’s getting a PIN? — the names with no PIN yet; tap one for their PIN (proposed, 28 Oct)',
   'till-checkin-practice': 'Till check-in while running alongside — the practice band before anyone checks in',
   'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
   'cust-code': 'Customer sign-in — enter the code (checks itself on the 6th digit)',
@@ -329,6 +398,6 @@ export const ROWS = [
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
   { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-checkin-workshop-names', 'workshop-working-pills', 'till-pin-wrong', 'pin-change'] },
   // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
-  { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-give-pin', 'till-checkin-practice'] },
+  { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-serving-menu', 'till-serving-menu-several', 'till-give-pin-pick', 'till-give-pin', 'till-checkin-practice'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },
 ];

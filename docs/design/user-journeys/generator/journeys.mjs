@@ -114,6 +114,9 @@ export const journeys = [
       { label: 'A new person’s first PIN', screens: [
         sb('pin-first', "First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer)", 'Staff'),
         sb('pin-cleared', "First sign-in after a PIN was cleared — a new PIN, the same way", 'Staff'),
+        sb('till-serving-menu', "Serving: [name] menu — Switch who’s serving, Give [Name] their PIN (one person with no PIN; proposed, 28 Oct)", 'Owner'),
+        sb('till-serving-menu-several', "Serving: [name] menu — Give someone their PIN (several with no PIN; proposed, 28 Oct)", 'Owner'),
+        sb('till-give-pin-pick', "Who’s getting a PIN? — pick from the people with no PIN (proposed, 28 Oct)", 'Owner'),
         sb('till-give-pin', "No PIN yet — the Owner or a manager gives it at the till, screen turned to the person", 'Owner'),
         sb('till-checkin-practice', "Till check-in while running alongside — the practice band before anyone checks in", 'Staff'),
       ] },
