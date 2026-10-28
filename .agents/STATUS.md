@@ -56,10 +56,14 @@ here before starting it, so two people never build the same one):
   closing a part-delivered order (#546); the build board shows slices (#544).
   Merged 27-28 Oct: Google's official G on Continue with Google (#550);
   closing the day, WP-3.4 (#551, #552, migration 096; Jack's answers 4 to 9).
-  **Now on (28 Oct): WP-1.7, sign-in and PINs**, starting with PINs and the
-  PIN check-in at the till, which the float check then moves onto (slice B;
-  branch `jack/pins-and-checkin`). Mark had 1.7's server half queued after
-  step C; taken whole here under the working agreement, so Mark is not on it.
+  Merged 28 Oct: PINs and the till check-in (#554, #555, migration
+  097); the give-a-PIN drawings (#556); CI once a day and by hand on risky
+  pull requests (#557, Jack's choice; main's required check turned off).
+  **Now on (28 Oct):** giving a PIN at the till (#558, in review); Who's in
+  on Today and a first sign-in opening Your till PIN (WP-1.10 and 1.7 task
+  3.2, branch `jack/whos-in-and-first-pin`); stock take (WP-2.2, slice C,
+  branch `jack/stock-take`). Roles and the settings store (WP-1.1, 1.2) stay
+  Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
