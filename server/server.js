@@ -27,7 +27,6 @@ export { serializeWorkshopService } from './routes/workshop-settings.js';
 import { parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
 import { hashLinkCode } from './booking-link.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
-import { pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
   decryptSecret,
@@ -38,6 +37,7 @@ import {
   claimShopifyEventInTransaction,
   markShopifyEventError,
   recordShopifyEventError,
+  pushStockToShopify,
 } from './shopify.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -221,13 +221,8 @@ async function processShopifyRefundWebhook(shopId, refund) {
       .catch((recordErr) => console.error('Shopify refund error record failed', recordErr));
     throw err;
   }
-  if (pushes.length === 0) return;
   // After COMMIT, so a slow Shopify never holds the product's row.
-  await runWithShop(shopId, async () => {
-    for (const { product, newQty } of pushes) {
-      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
-    }
-  });
+  await pushStockToShopify(shopId, pushes);
 }
 
 // ---------- Uploaded images, served to anyone ----------

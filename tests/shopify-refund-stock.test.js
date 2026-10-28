@@ -11,8 +11,8 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
 import '../server/load-env.js';
-import { pool } from '../server/db.js';
-import { encryptSecret } from '../server/shopify.js';
+import { pool, runWithShop } from '../server/db.js';
+import { encryptSecret, recordShopifyEventError, pushStockToShopify } from '../server/shopify.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 
@@ -346,4 +346,118 @@ test('the figure sent to Shopify is the stock after a change made during the ref
     if (refund) await refund.catch(() => {});
     await deleteTestShop(shop.id);
   }
+});
+
+// ---- 28 Oct second review ----
+
+// A refund that fails on its second product (at the column's largest number)
+// and so leaves this change's error record; then the product is put right,
+// so the next delivery can go through.
+async function failOnce(shop, refund, highProductId) {
+  const res = await sendRefund(shop.id, refund);
+  assert.equal(res.status, 500, await res.text());
+  assert.equal((await eventsOf(shop.id, refund.id))[0]?.status, 'error');
+  await asShop(shop.id, (c) => c.query('UPDATE products SET stock_qty = 10 WHERE id = $1', [highProductId]));
+}
+
+// Before this change, a refund could fail after putting some of its stock
+// back and still be marked 'error'. Taking such a row again would put that
+// stock back twice, so a row this change didn't write stays taken, as before.
+test('an error record from before this change is not taken again; one this change wrote is', async () => {
+  const variantId = newVariant();
+  const { shop, productId } = await setUp({ stockQty: 5, variantId });
+  try {
+    await asShop(shop.id, (c) => c.query(
+      "INSERT INTO shopify_processed_events (shop_id, shopify_order_id, kind, status, error_message) VALUES ($1, '9901', 'refund', 'error', 'integer out of range')",
+      [shop.id]
+    ));
+    const old = await sendRefund(shop.id, { id: 9901, refund_line_items: [{ quantity: 1, line_item: { variant_id: variantId } }] });
+    assert.equal(old.status, 200, await old.text());
+    assert.equal(await stockOf(shop.id, productId), 5, 'the old error row stays taken');
+    assert.deepEqual(await eventsOf(shop.id, 9901), [{ status: 'error', error_message: 'integer out of range' }]);
+    // A later failure (one before its claim) doesn't mark the old row either,
+    // which would make it claimable.
+    await runWithShop(shop.id, () => recordShopifyEventError(9901, 'refund', 'connection terminated'));
+    assert.deepEqual(await eventsOf(shop.id, 9901), [{ status: 'error', error_message: 'integer out of range' }]);
+
+    const variantB = newVariant();
+    const b = await addProduct(shop.id, { stockQty: 2147483647, variantId: variantB });
+    const refund = { id: 9902, refund_line_items: [
+      { quantity: 1, line_item: { variant_id: variantId } },
+      { quantity: 1, line_item: { variant_id: variantB } },
+    ] };
+    await failOnce(shop, refund, b);
+    const retried = await sendRefund(shop.id, refund);
+    assert.equal(retried.status, 200, await retried.text());
+    assert.equal(await stockOf(shop.id, productId), 6, 'this change\'s error row is taken again');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('two retries of a failed refund arriving at the same moment put stock back once', async () => {
+  const variantA = newVariant();
+  const variantB = newVariant();
+  const { shop, productId: a } = await setUp({ stockQty: 5, variantId: variantA });
+  const b = await addProduct(shop.id, { stockQty: 2147483647, variantId: variantB });
+  const other = await pool.connect();
+  let both;
+  try {
+    const refund = { id: 9903, refund_line_items: [
+      { quantity: 1, line_item: { variant_id: variantA } },
+      { quantity: 1, line_item: { variant_id: variantB } },
+    ] };
+    await failOnce(shop, refund, b);
+
+    await other.query('BEGIN');
+    await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(shop.id)]);
+    const { rows: [{ pid }] } = await other.query('SELECT pg_backend_pid() AS pid');
+    await other.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [a]);
+    both = Promise.all([sendRefund(shop.id, refund), sendRefund(shop.id, refund)]);
+    assert.equal(await waitQueuedBehind(pid, 2), 2, 'both retries were waiting at once');
+    await other.query('COMMIT');
+    const replies = await both;
+    assert.deepEqual(replies.map((r) => r.status), [200, 200]);
+    assert.equal(await stockOf(shop.id, a), 6);
+    assert.equal(await stockOf(shop.id, b), 11);
+    assert.equal((await movementsOf(shop.id, a)).length, 1);
+    assert.deepEqual(await eventsOf(shop.id, 9903), [{ status: 'ok', error_message: null }]);
+  } finally {
+    await other.query('ROLLBACK').catch(() => {});
+    other.release();
+    if (both) await both.catch(() => {});
+    await deleteTestShop(shop.id);
+  }
+});
+
+// A failure recorded after another delivery of the same refund went through
+// (say one that failed before reaching its claim) must not undo the 'ok'.
+test('an error record arriving after the refund went through leaves it done', async () => {
+  const variantId = newVariant();
+  const { shop } = await setUp({ stockQty: 5, variantId });
+  try {
+    const res = await sendRefund(shop.id, { id: 9904, refund_line_items: [{ quantity: 1, line_item: { variant_id: variantId } }] });
+    assert.equal(res.status, 200, await res.text());
+    await runWithShop(shop.id, () => recordShopifyEventError(9904, 'refund', 'connection terminated'));
+    assert.deepEqual(await eventsOf(shop.id, 9904), [{ status: 'ok', error_message: null }]);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Once the refund's stock has committed, a failure to even open the push's
+// database scope (the pool full for 5 s, say) is logged, like a failed push,
+// and never fails the webhook: a 500 would have Shopify retry a refund that
+// is already done, and the retry is told so and pushes nothing.
+test('a push to Shopify that cannot get a database connection is logged, not thrown', async (t) => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const connect = t.mock.method(pool, 'connect', async () => { throw new Error('timeout exceeded when trying to connect'); });
+  try {
+    await pushStockToShopify(1, [{ product: { id: 1, shopify_inventory_item_id: '1' }, newQty: 3 }]);
+  } finally {
+    connect.mock.restore();
+    logged.mock.restore();
+  }
+  assert.equal(connect.mock.callCount(), 1, 'the push tried to open its scope');
+  assert.ok(logged.mock.calls.some((c) => /Shopify/.test(String(c.arguments[0])) && /timeout exceeded/.test(String(c.arguments[1]?.message))), 'the failure is logged');
 });
