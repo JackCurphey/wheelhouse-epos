@@ -67,8 +67,15 @@ const REACT_SOURCES = globSync('{src/components/ui,registry,src/screens,src/staf
 const COLOUR_FUNCTION = /(?<![a-zA-Z-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/g;
 const PALETTE_CLASS = /\b(?:bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|outline|fill|stroke|from|via|to|shadow|accent|caret|decoration|divide|placeholder)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})\b/g;
 const NAMED_IN_ARBITRARY = /[[(_,](?:white|black)(?=[\])_,])/g;
-// Genuine exceptions, each with its reason: 'file:literal' -> reason. None yet.
-const ALLOWED_REACT_COLOURS = new Map([]);
+// Genuine exceptions, each with its reason: 'file:literal' -> reason.
+const GOOGLE_G = 'Google’s official G keeps Google’s own colours (Google’s brand rules; Jack, 27 Oct)';
+const ALLOWED_REACT_COLOURS = new Map([
+  ['src/staff/google-g.tsx:#E94FFF', GOOGLE_G],
+  ['src/staff/google-g.tsx:#3186FF', GOOGLE_G],
+  ['src/staff/google-g.tsx:#FF4641', GOOGLE_G],
+  ['src/staff/google-g.tsx:#FF5B8B', GOOGLE_G],
+  ['src/staff/google-g.tsx:rgba(', GOOGLE_G],
+]);
 
 function rawColoursIn(file, source) {
   const found = [];
