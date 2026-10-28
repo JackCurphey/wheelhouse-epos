@@ -6,7 +6,7 @@
 // person in on the till's browser for the shop's day. Staff routes: they run
 // with the shop's row-level security already bound. No PIN is ever logged.
 import { randomInt } from 'node:crypto';
-import { attachRoles } from '../team.js';
+import { TeamError, attachRoles } from '../team.js';
 import { dbExec, prepare } from '../db.js';
 import { shopToday } from '../clock.js';
 import { hashLinkCode, newLinkCode } from '../booking-link.js';
@@ -14,7 +14,7 @@ import { isHttpsRequest } from '../proxy-trust.js';
 import { notFound, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
-import { makeFailureLimiter } from '../till/failure-limiter.js';
+import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
 
 export const CHECKIN_COOKIE = 'wh_till_checkin';
@@ -59,7 +59,12 @@ async function teamMemberOf(login) {
 async function teamMemberForPin(login, shopId) {
   const me = await teamMemberOf(login);
   if (me || login.is_owner !== true) return me;
-  await attachRoles({ shopId, loginId: login.id, isMechanic: false, isCashier: true, workingDays: undefined });
+  try {
+    await attachRoles({ shopId, loginId: login.id, isMechanic: false, isCashier: true, workingDays: undefined });
+  } catch (err) {
+    // Another offer made the Owner's team member first: use that one.
+    if (!(err instanceof TeamError)) throw err;
+  }
   return teamMemberOf(login);
 }
 
@@ -84,13 +89,39 @@ const checkinCookie = (req, token, maxAge) =>
   `${CHECKIN_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${isHttpsRequest(req) ? '; Secure' : ''}`;
 
 // Signing in 8: no lock after wrong PINs. Guessing is slowed instead: after
-// 10 wrong PINs at a shop in 10 minutes, each try waits its turn, one at a
-// time, 3 seconds each. A second try while one is waiting is turned away, so
-// waiting never holds more than one database connection per shop.
+// 10 tries at a shop in 10 minutes, each further try waits 3 seconds before
+// it is checked. Every try is counted before its PIN is checked, so a burst
+// sent at once can't all slip in under the limit; a right PIN is then taken
+// off the count. The wait is one at a time per sign-in and browser: a second
+// try from the same one while one waits is turned away, so one person
+// guessing never holds up another till, and waiting never holds more than
+// one database connection per browser (review, 28 Oct, item 4).
 const SLOW_MS = 3000;
-const wrongPins = makeFailureLimiter(10, 10 * 60 * 1000);
+const WINDOW_MS = 10 * 60 * 1000;
+function makeCounter(max) {
+  const seen = new Map();
+  const entry = (key) => {
+    const found = seen.get(key);
+    if (found && Date.now() - found.start < WINDOW_MS) return found;
+    const fresh = { count: 0, start: Date.now() };
+    seen.set(key, fresh);
+    return fresh;
+  };
+  return {
+    /** Counts one more; true while that is within the limit. */
+    take(key) { const e = entry(key); e.count += 1; return e.count <= max; },
+    /** Takes one back (a right PIN). */
+    giveBack(key) { const e = seen.get(key); if (e && e.count > 0) e.count -= 1; },
+  };
+}
+const tries = makeCounter(10);
+// "Give me a different one": 10 offers a sign-in in 10 minutes (review, 28 Oct, item 5).
+const offers = makeCounter(10);
 const waiting = new Set();
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const SLOW_DOWN = { error: 'Wait a moment, then try again', code: 'slow_down' };
+// This sign-in on this browser: the session cookie's hash (a dev sign-in has none).
+const browserKey = (req, ctx) => `${ctx.login.id}|${hashLinkCode(parseCookies(req)[SESSION_COOKIE] ?? '')}`;
 
 export function register(route) {
   // Your settings › Till PIN (yourSettingsDialog's pinBlock).
@@ -108,10 +139,13 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin/offer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!offers.take(String(ctx.login.id))) return sendJson(res, 429, SLOW_DOWN);
     const me = await teamMemberForPin(ctx.login, shopId);
     if (!me) return sendJson(res, 409, { error: 'Ask the owner to add you to the team first', code: 'no_team_member' });
     const pin = await pickPin((p) => takenByOthers(p, me.id));
     await prepare('UPDATE employees SET pin_offer_hash = ?, pin_offer_at = now() WHERE id = ?').run(await hashPinAsync(pin), me.id);
+    // Shown once: never kept by the browser or anything between.
+    res.setHeader('Cache-Control', 'no-store');
     sendJson(res, 201, { pin });
   });
 
@@ -156,11 +190,14 @@ export function register(route) {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     if (!ctx.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner can clear a PIN", code: 'owner_only' });
+    // A made-up id never gets here: the dispatcher answers 404 first (idParamsWellFormed).
     const id = Number(params.id);
     const own = await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, id);
     if (own) return sendJson(res, 403, { error: 'Nobody clears their own PIN', code: 'own_pin' });
     const cleared = await prepare('UPDATE employees SET pin_hash = NULL, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ? RETURNING id').get(id);
     if (!cleared) return notFound(res, 'Team member not found');
+    // Whoever forgot it is no longer serving on any till today.
+    await prepare('UPDATE pin_checkins SET ended_at = now() WHERE employee_id = ? AND ended_at IS NULL').run(id);
     sendJson(res, 200, { ok: true });
   });
 
@@ -189,19 +226,18 @@ export function register(route) {
     const body = await readJsonBody(req);
     const pin = body?.pin;
     if (typeof pin !== 'string' || !FOUR_DIGITS.test(pin)) return sendJson(res, 400, { error: 'A PIN is four digits', code: 'not_a_pin' });
-    const key = String(shopId);
-    if (wrongPins.isBlocked(key)) {
-      if (waiting.has(key)) return sendJson(res, 429, { error: 'Wait a moment, then try again', code: 'slow_down' });
-      waiting.add(key);
-      try { await pause(SLOW_MS); } finally { waiting.delete(key); }
+    const shop = String(shopId);
+    if (!tries.take(shop)) {
+      const mine = browserKey(req, ctx);
+      if (waiting.has(mine)) return sendJson(res, 429, SLOW_DOWN);
+      waiting.add(mine);
+      try { await pause(SLOW_MS); } finally { waiting.delete(mine); }
     }
     const people = await prepare('SELECT id, name, pin_hash FROM employees WHERE active = 1 AND pin_hash IS NOT NULL').all();
     const hits = await Promise.all(people.map((p) => verifyPinAsync(pin, p.pin_hash)));
     const who = people[hits.indexOf(true)];
-    if (!who) {
-      wrongPins.recordFailure(key);
-      return sendJson(res, 400, WRONG_PIN);
-    }
+    if (!who) return sendJson(res, 400, WRONG_PIN);
+    tries.giveBack(shop);
     // Taking over: whoever was checked in on this browser stops serving.
     const previous = parseCookies(req)[CHECKIN_COOKIE];
     if (previous && /^[0-9a-f]{64}$/.test(previous)) {

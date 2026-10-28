@@ -988,14 +988,17 @@ silent:
 
 ### 28 Oct 2026: till PINs and the PIN check-in (WP-1.7, `openspec/changes/pins-and-checkin`)
 
-1. **Guessing PINs is slowed, never locked** (`till-pin-wrong`). Signing in
-   8 says no lock, and roles 2 relies on that. To stop someone trying all
-   10,000 PINs quickly, after 10 wrong PINs at a shop within 10 minutes each
-   further try waits 3 seconds before it's checked, one at a time; a second
-   try sent while one is waiting gets "Wait a moment, then try again". The
-   right PIN still works, after its wait. Nobody sees a lock. *Pattern:* the
-   till's own token check (`server/till/failure-limiter.js`), which counts
-   only failures.
+1. **Guessing PINs is slowed, never locked** (`till-pin-wrong`; Jack
+   confirmed it 28 Oct, `2026-10-28-answers.md` answer 1). After 10 tries at
+   a shop within 10 minutes each further try waits 3 seconds before it's
+   checked. Every try is counted before its PIN is checked, and a right one
+   is taken off the count, so a burst can't slip through. The wait is one at
+   a time per sign-in and browser: a second try from the same browser while
+   one waits gets "Wait a moment, then try again", and another till isn't
+   held up. "Give me a different one" is limited to 10 PINs a sign-in in 10
+   minutes, with the same words. Offers are counted on their own, not with
+   the shop's tries, so setting up the staff's PINs never slows the tills.
+   *Pattern:* the till's own token check (`server/till/failure-limiter.js`).
 2. **PINs are kept as a slow, salted hash** (PBKDF2, 100,000 rounds), the
    format the offline till already uses (`server/till/pin.js`), so it can
    check PINs without the internet later. The PIN just offered is kept the
@@ -1015,10 +1018,17 @@ silent:
    server only; the button and its pop-up (`set-staff-person`,
    `set-staff-clear-pin`) come with Staff and roles. *Pattern:* the 19 Oct
    owner-only rule; roles and switches 5.
-6. **Found, not changed:** the offline core's `PUT /api/employees/:id/pin`
-   lets the Owner type any PIN for someone (migration 036, used by no
-   screen). Signing in 6 and 7 chose Wheelhouse-picked PINs over
-   manager-set ones, so it should go or change; left for Jack to decide.
+6. **The offline core's `PUT /api/employees/:id/pin` is removed** (Jack,
+   28 Oct, answer 2): Wheelhouse picks every PIN.
+6a. **Known limit, for Jack and Mark: the till's offline copy carries every
+    cashier's PIN hash** (`server/till/snapshot.js:33`), so the till can
+    check PINs without the internet (signing in 3). Anyone holding a till's
+    token could fetch that copy and try all 10,000 four-digit PINs against
+    the hashes on their own computer in minutes; the slow-down above can't
+    stop that. Not changed here: it is step C's design (the offline till).
+    Worth settling when step C is built, for example by keeping the token
+    to the till and treating a PIN as "who's serving" only.
+6b. **Clearing a PIN also ends that person's check-in** on any till that day.
 
 ## Decided here, for Jack to overrule
 

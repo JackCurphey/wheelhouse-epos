@@ -3,9 +3,8 @@
 // - /api/till/:shopSlug/snapshot and /sync are till routes: the till's own
 //   token authenticates them, the shop comes from :shopSlug, and a handler
 //   gets (req, res, params, query, till).
-// - the rest (/api/sites, /api/tills, /api/till-attention and
-//   PUT /api/employees/:id/pin) are staff routes, under the /api/ branch: a
-//   handler gets (req, res, params, query, afterRelease, shopId) and needs a
+// - the rest (/api/sites, /api/tills and /api/till-attention) are staff
+//   routes, under the /api/ branch: a handler gets (req, res, params, query, afterRelease, shopId) and needs a
 //   staff session. /api/tills and /api/till-attention are staff routes, not
 //   till routes.
 // Row-level security is bound to the shop in both.
@@ -15,7 +14,6 @@ import { hashLinkCode, newLinkCode } from '../booking-link.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { listOpen as listOpenAttention, resolve as resolveAttention } from '../till/attention.js';
-import { hashPin, isValidPin } from '../till/pin.js';
 import { buildSnapshot } from '../till/snapshot.js';
 import { TransientSyncError, batchProblem, processSyncItems } from '../till/sync.js';
 
@@ -89,16 +87,6 @@ export function register(route) {
     const { changes } = await db.prepare('UPDATE tills SET active = false WHERE id = ?').run(Number(params.id));
     if (!changes) return notFound(res, 'Till not found');
     sendJson(res, 200, { id: Number(params.id), active: false });
-  });
-
-  route('PUT', '/api/employees/:id/pin', async (req, res, params) => {
-    const ctx = await currentSession(req);
-    if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can set a PIN' });
-    const { pin } = await readJsonBody(req);
-    if (!isValidPin(pin)) return badRequest(res, 'A PIN is 4 to 6 digits');
-    const { changes } = await db.prepare('UPDATE employees SET pin_hash = ?, updated_at = now() WHERE id = ?').run(hashPin(pin), Number(params.id));
-    if (!changes) return notFound(res, 'Team member not found');
-    res.writeHead(204).end();
   });
 
   // A till authenticates with its bearer token (see the /api/till/ dispatcher

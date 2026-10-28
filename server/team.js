@@ -148,7 +148,11 @@ export async function attachRoles({ shopId, loginId, isMechanic, isCashier, work
     const empInfo = await prepare(
       'INSERT INTO employees (name, is_mechanic, is_cashier, working_days, updated_at) VALUES (?, ?, ?, ?, ?)'
     ).run(login.name, mechanic, cashier, days, new Date().toISOString());
-    await prepare('UPDATE logins SET employee_id = ? WHERE id = ? AND shop_id = ?').run(empInfo.lastInsertRowid, loginId, shopId);
+    // Only a login still without a team member: two at once (two PIN offers
+    // for the Owner) make one, and the other's new row is rolled back
+    // (pins-and-checkin, review 28 Oct item 6).
+    const linked = await prepare('UPDATE logins SET employee_id = ? WHERE id = ? AND shop_id = ? AND employee_id IS NULL RETURNING id').get(empInfo.lastInsertRowid, loginId, shopId);
+    if (!linked) throw new TeamError('This person already has roster roles');
     await dbExec('COMMIT');
     return empInfo.lastInsertRowid;
   } catch (err) {

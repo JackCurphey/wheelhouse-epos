@@ -8,6 +8,8 @@
 - [x] 1.4 Break each key rule on purpose, see its test go red, and restore
 - [ ] 1.5 Lint, typecheck, the touched tests; `/review` (sign-in, migration, money)
 
+- [x] 1.6 Review, 28 Oct, and Jack's answers (`docs/decisions/2026-10-28-answers.md`): the old `PUT /api/employees/:id/pin` removed; tries counted before checking, the wait per sign-in and browser; offers limited and `no-store`; the Owner made once; clearing ends the check-in. Tests first, each fix broken on purpose
+
 ## 2. Screens (pull request 2, `jack/pins-and-checkin-screens`, stacked on 1)
 
 - [ ] 2.1 Tests first: the PIN screen (dots, the 4th digit checks at once, a wrong PIN, Checked in today, No PIN yet), Serving and switch, the pay box's serving name, the float check after the check-in, Your settings' Till PIN and the pop-up (`tests/screens/`); a browser spec; the till's existing tests check in first. Watch each fail
@@ -20,7 +22,7 @@
 
 - [ ] 3.1 Clearing a PIN on screen: "Clear a forgotten PIN" and "Clear Jo Taylor's till PIN?" (`set-staff-person`, `set-staff-clear-pin`), with Staff and roles (WP-1.1)
 - [ ] 3.2 A first sign-in opens "Your till PIN" by itself, and the cleared wording (`pin-first`, `pin-cleared`)
-- [ ] 3.3 Giving a PIN at the till, screen turned to the person (`till-give-pin`), and a one-time PIN given by phone (signing in, later change 3 Oct)
+- [ ] 3.3 Giving a PIN at the till, screen turned to the person (`till-give-pin`; Jack, 28 Oct, answer 3: build it now, waiting for the Serving menu and the till-only form to be drawn), and a one-time PIN given by phone (signing in, later change 3 Oct)
 - [ ] 3.4 Set up this till and the shop switcher (`till-setup`, `auth-site`); check-ins per till; the till bar's till name
 - [ ] 3.5 The start-up status line and checking PINs offline (`till-checkin-offline`, `till-checkin-stale`), with step C
 - [ ] 3.6 The shared workshop computer: Enter your PIN with no till number, back to it after 10 minutes idle; trust PIN with "Who's working?" and the Working pills, and the till's Serving pills (`till-checkin-workshop`, `till-checkin-workshop-names`, `workshop-working-pills`, `till-serving-pills`; roles 3, 9, 10); the two lines on `set-till-quick`

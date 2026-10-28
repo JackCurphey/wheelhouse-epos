@@ -13,6 +13,13 @@ A person's till PIN SHALL be four digits picked at random by Wheelhouse, which n
 - **WHEN** someone tries to keep a PIN Wheelhouse didn't show them
 - **THEN** it is refused
 
+### Requirement: Nobody types a PIN, and asking for others is limited
+Nobody SHALL type a PIN for someone else (Jack, 28 Oct, answer 2). "Give me a different one" SHALL be limited to 10 PINs a sign-in in 10 minutes, after which it says "Wait a moment, then try again".
+
+#### Scenario: Pressing it over and over
+- **WHEN** Jo Taylor asks for an eleventh PIN within 10 minutes
+- **THEN** she is told to wait a moment
+
 ### Requirement: PINs are never kept in plain text
 The server SHALL keep only a slow, salted hash of each PIN and of each PIN offered, and SHALL never write a PIN to its log.
 
@@ -21,7 +28,7 @@ The server SHALL keep only a slow, salted hash of each PIN and of each PIN offer
 - **THEN** they see a hash, not the PIN
 
 ### Requirement: The Owner clears a forgotten PIN
-The Owner SHALL be able to clear someone else's till PIN, so they can't check in until they get a new one (signing in 6; roles and switches 5: nobody clears their own). Until roles, only the Owner SHALL clear a PIN.
+The Owner SHALL be able to clear someone else's till PIN, so they can't check in until they get a new one, and they stop serving on any till that day (signing in 6; roles and switches 5: nobody clears their own). Until roles, only the Owner SHALL clear a PIN.
 
 #### Scenario: Jo forgot her PIN
 - **WHEN** Jack Lewis clears Jo Taylor's PIN
@@ -39,7 +46,7 @@ The till SHALL ask "Enter your PIN" when nobody is serving on it, and the PIN al
 - **THEN** Alex Morgan is serving
 
 ### Requirement: A wrong PIN says so, with no lock
-A PIN nobody has SHALL clear the dots and say "That PIN isn’t anyone’s — try again", and SHALL never lock the till (signing in 8 and 9; `till-pin-wrong`). After 10 wrong PINs in 10 minutes at one shop, each further try SHALL be slowed, so a PIN can't be found by trying them all quickly.
+A PIN nobody has SHALL clear the dots and say "That PIN isn’t anyone’s — try again", and SHALL never lock the till (signing in 8 and 9; `till-pin-wrong`). After 10 tries in 10 minutes at one shop, each further try SHALL wait 3 seconds, one at a time per till, so a PIN can't be found by trying them all quickly and one till's guessing never holds up another (Jack, 28 Oct, answer 1).
 
 #### Scenario: A slip of the finger
 - **WHEN** Jo Taylor types a PIN nobody has
