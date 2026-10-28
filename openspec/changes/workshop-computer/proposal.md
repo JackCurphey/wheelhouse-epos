@@ -80,8 +80,8 @@ PIN and the pills are listed as later tasks.
   minutes.
 - **Owner and Manager pages asking for a PIN every time** on a workshop
   computer (walk-through 8 decision 3; stage-1 gaps 1), and pages following
-  the person working's role (WP-1.1, roles). Until then a workshop computer
-  shows the pages of whoever signed it in, as a till does today.
+  the person working's role (WP-1.1, roles). Until then (design 9) Owner
+  pages there are the Owner's only while the Owner is the person working.
 - **Work recorded under the person working** (task 3.8): until then the
   drawn line "What you do on this computer is recorded under your name and
   role." isn't shown.
