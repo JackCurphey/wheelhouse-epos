@@ -255,3 +255,16 @@ POST /api/till-checkin/end
 POST /api/till-checkin/give-pin/:id/offer
 DELETE /api/till-checkin/give-pin/:id/offer
 POST /api/till-checkin/give-pin/:id
+GET /api/stock-takes
+POST /api/stock-takes
+GET /api/stock-takes/:id
+GET /api/stock-takes/:id/products
+POST /api/stock-takes/:id/join
+POST /api/stock-takes/:id/counts
+POST /api/stock-takes/:id/finish
+GET /api/stock-takes/:id/check
+POST /api/stock-takes/:id/recount
+POST /api/stock-takes/:id/none
+POST /api/stock-takes/:id/apply
+POST /api/stock-takes/:id/undo
+GET /api/stock-takes/:id/download

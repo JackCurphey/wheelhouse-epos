@@ -51,6 +51,13 @@ export const ROUTES = {
   // Set up this till (till-setup), from Settings › Till › Tills; outside the
   // staff frame, as drawn (openspec/changes/till-setup).
   'till-setup': '/workshop/till/setup',
+  // Counting in a stock take (tk-count), from Stock take's Join and Start the
+  // count (openspec/changes/stock-take).
+  'tk-count': '/workshop/stocktake/:id',
+  // Check the count (tk-diff) and Count applied (tk-applied), from Stock
+  // take's Check it and a finished count's Open.
+  'tk-diff': '/workshop/stocktake/:id/check',
+  'tk-applied': '/workshop/stocktake/:id/applied',
   // "You've signed out" (auth-signedout), where Sign out and WorkOS's sign-out
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.

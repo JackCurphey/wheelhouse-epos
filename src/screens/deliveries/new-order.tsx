@@ -36,16 +36,18 @@ const costOf = (l: Line) => recorded(l.product) ?? typedCost(l.typed);
 /**
  * A count: type it, or step it with − and + (audit H2). Repeated buttons name their row.
  * `max` caps it (receiving: what's still to come); `onBelowOne` lets − at 1 take the line off.
+ * A null value is a count not made yet (a stock take's recount): the box is
+ * empty, − does nothing and + makes it 1.
  */
-export function Count({ name, value, onChange, max = MAX_COUNT, onBelowOne }: { name: string; value: number; onChange: (n: number) => void; max?: number; onBelowOne?: () => void }) {
+export function Count({ name, value, onChange, max = MAX_COUNT, onBelowOne }: { name: string; value: number | null; onChange: (n: number) => void; max?: number; onBelowOne?: () => void }) {
   const step = 'size-11 shrink-0 border-0 bg-[var(--wh-panel)] text-xl text-[var(--wh-ink)]';
   return (
     <span role="group" aria-label={name} className="inline-flex shrink-0 items-center overflow-hidden rounded-lg border border-[var(--wh-border)]">
-      <button type="button" aria-label={`One fewer: ${name}`} className={step} onClick={() => (value <= 1 && onBelowOne ? onBelowOne() : onChange(Math.max(1, value - 1)))}>−</button>
-      <input inputMode="numeric" aria-label={`How many: ${name}`} value={String(value)}
+      <button type="button" aria-label={`One fewer: ${name}`} className={step} onClick={() => (value === null ? undefined : value <= 1 && onBelowOne ? onBelowOne() : onChange(Math.max(1, value - 1)))}>−</button>
+      <input inputMode="numeric" aria-label={`How many: ${name}`} value={value === null ? '' : String(value)}
         onChange={(e) => { const n = Math.trunc(Number(e.target.value)); if (n >= 1) onChange(Math.min(max, n)); }}
         className={`h-11 w-[52px] border-x border-y-0 border-[var(--wh-border)] bg-[var(--wh-panel)] text-center text-size-15 ${mono}`} />
-      <button type="button" aria-label={`One more: ${name}`} className={step} onClick={() => onChange(Math.min(max, value + 1))}>+</button>
+      <button type="button" aria-label={`One more: ${name}`} className={step} onClick={() => onChange(Math.min(max, (value ?? 0) + 1))}>+</button>
     </span>
   );
 }
