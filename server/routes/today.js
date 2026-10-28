@@ -102,11 +102,13 @@ async function tillsToday() {
       WHERE c.day = ? ORDER BY c.till_id, c.checked_in_at, c.id`
   ).all(day);
   const f = await prepare(
-    `SELECT f.till_id, f.checked_at, f.counted_pence < f.expected_pence AS short, COALESCE(e.name, l.name) AS by_name, s.name AS seen_by
+    `SELECT f.till_id, f.employee_id, f.checked_at, f.counted_pence < f.expected_pence AS short, COALESCE(e.name, l.name) AS by_name, s.name AS seen_by
        FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id
        LEFT JOIN logins s ON s.id = f.seen_by_login_id WHERE f.day = ?`
   ).get(day);
-  const used = [...firsts.map((c) => c.till_id), ...(f ? [f.till_id] : [])];
+  // The Owner's look at closing (no person checked in, no till) adds no line
+  // of its own (second review, 28 Oct); a check made at a till does.
+  const used = [...firsts.map((c) => c.till_id), ...(f && f.employee_id !== null ? [f.till_id] : [])];
   const usedTills = used.filter((id) => id !== null);
   const lines = await prepare(`SELECT id, code FROM tills WHERE active = true OR id = ANY(?::int[]) ORDER BY ${TILL_ORDER}`).all(usedTills);
   if (!lines.length || used.includes(null)) lines.push({ id: null, code: null });

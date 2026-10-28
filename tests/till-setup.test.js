@@ -307,6 +307,31 @@ test('the Owner\'s look at closing records no till, even checked in on one', asy
   const look = await b.send('/api/float-check', { method: 'POST', body: { countedPence: null, atClose: true } });
   assert.equal(look.status, 201, JSON.stringify(look.body));
   assert.equal(look.body.check.tillCode, null);
+  // Today: no stray "Till · Not open yet" line for it when every till is set up (second review).
+  assert.deepEqual((await call(owner.cookie, '/api/today/tills')).body.tills.map((l) => l.code), ['B1']);
+  // The same with nobody checked in: the look alone adds no line.
+  const quiet = await shop();
+  await setUp(browser(quiet), quiet, 1);
+  assert.equal((await call(quiet.cookie, '/api/workshop-settings', { method: 'PUT', body: { openingHours: [{ weekday: 1, open: '09:00', close: '17:00' }] } })).status, 200);
+  assert.equal((await post(quiet.cookie, '/api/float-check', { countedPence: null, atClose: true })).status, 201);
+  assert.deepEqual((await call(quiet.cookie, '/api/today/tills')).body.tills.map((l) => [l.code, l.openedAt]), [['B1', null]]);
+});
+
+test('re-claiming: not a switched-off till, not another shop\'s site; a switched-off till\'s cookie isn\'t renewed (second review)', async () => {
+  const owner = await shop();
+  const old = browser(owner);
+  const made = (await setUp(old, owner, 1)).body.till;
+  assert.equal((await post(owner.cookie, `/api/tills/${made.id}/deactivate`)).status, 200);
+  const off = await old.send('/api/till-checkin');
+  assert.equal(off.body.till, null);
+  assert.equal(off.setCookie.some((l) => l.startsWith('wh_till=')), false, 'a switched-off till\'s cookie is not renewed');
+  const fresh = browser(owner);
+  const switchedOff = await fresh.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1, reclaim: true } });
+  assert.deepEqual([switchedOff.status, switchedOff.body.code], [409, 'taken']);
+  const elsewhere = await shop();
+  const foreign = await fresh.send('/api/till-setup', { method: 'POST', body: { siteId: elsewhere.site.id, number: 1, reclaim: true } });
+  assert.equal(foreign.status, 400);
+  assert.equal(fresh.jar.has('wh_till'), false);
 });
 
 test('tills go in number order: B2 before B10', async () => {
