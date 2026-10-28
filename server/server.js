@@ -27,7 +27,6 @@ export { serializeWorkshopService } from './routes/workshop-settings.js';
 import { parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
 import { hashLinkCode } from './booking-link.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
-import { pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
   decryptSecret,
@@ -35,7 +34,10 @@ import {
   matchOrderLineItemsToProducts,
   matchRefundLineItemsToProducts,
   claimShopifyEvent,
+  claimShopifyEventInTransaction,
   markShopifyEventError,
+  recordShopifyEventError,
+  pushStockToShopify,
 } from './shopify.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -171,31 +173,56 @@ async function processShopifyOrderWebhook(shopId, order) {
   });
 }
 
+// Three database scopes, each committed or rolled back on its own in either
+// tenant mode (shopify-refund-stock): the refund's work, then on failure its
+// error record, then on success the push to Shopify.
 async function processShopifyRefundWebhook(shopId, refund) {
-  return runWithShop(shopId, async () => {
-    const claimed = await claimShopifyEvent(refund.id, 'refund');
-    if (!claimed) return;
-
-    try {
+  let pushes;
+  try {
+    pushes = await runWithShop(shopId, async () => {
       const items = await matchRefundLineItemsToProducts(refund);
-      for (const { product, qty } of items) {
-        const newQty = product.stock_qty + qty;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
-        ).run(product.id, qty, `Shopify refund #${refund.id}`);
-        if (product.shopify_inventory_item_id) {
-          await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      // Relative, in one transaction with its movement lines, as adjust
+      // stock does (routes/products.js): `product` was read without a lock,
+      // so writing `product.stock_qty + qty` back would undo a sale or
+      // adjustment made in between. Rows are taken in product id order, as
+      // a sale does, so the two can't deadlock.
+      items.sort((a, b) => a.product.id - b.product.id);
+      const toPush = [];
+      await db.exec('BEGIN');
+      try {
+        // The claim is the transaction's first statement, so a rollback takes
+        // it too and Shopify's retry applies the refund. A duplicate arriving
+        // meanwhile waits here on this claim, then finds it taken.
+        if (!(await claimShopifyEventInTransaction(refund.id, 'refund'))) {
+          await db.exec('ROLLBACK');
+          return [];
         }
+        for (const { product, qty } of items) {
+          const updated = await db
+            .prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING stock_qty')
+            .get(qty, nowIso(), product.id);
+          await db.prepare(
+            `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
+          ).run(product.id, qty, `Shopify refund #${refund.id}`);
+          if (product.shopify_inventory_item_id) toPush.push({ product, newQty: updated.stock_qty });
+        }
+        await db.exec('COMMIT');
+      } catch (err) {
+        await db.exec('ROLLBACK').catch(() => {});
+        throw err;
       }
-    } catch (err) {
-      // Same claim-before-work reasoning as processShopifyOrderWebhook above -
-      // an unexpected failure here (e.g. a DB blip) must still leave an
-      // honest status='error' record, not the misleading default 'ok'.
-      await markShopifyEventError(refund.id, 'refund', err.message);
-      throw err;
-    }
-  });
+      return toPush;
+    });
+  } catch (err) {
+    // The claim rolled back, so this is a record for whoever investigates,
+    // not a claim: the retry still applies the refund. Its own failure is
+    // logged and never hides the refund's.
+    await runWithShop(shopId, () => recordShopifyEventError(refund.id, 'refund', err.message))
+      .catch((recordErr) => console.error('Shopify refund error record failed', recordErr));
+    throw err;
+  }
+  // After COMMIT, so a slow Shopify never holds the product's row.
+  await pushStockToShopify(shopId, pushes);
 }
 
 // ---------- Uploaded images, served to anyone ----------

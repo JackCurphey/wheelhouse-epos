@@ -3894,3 +3894,22 @@ From the independent review, 28 Oct:
     counting page's matches; a category typed in full counts as picked.
 26. **Download the count** puts a ' before a name or supplier code that starts
     like a spreadsheet formula (=, +, −, @), so it opens as text.
+
+### 28 Oct 2026: a Shopify refund's stock (`openspec/changes/shopify-refund-stock`; no screen)
+
+1. **A refund line Shopify marks `no_restock` leaves Wheelhouse's stock
+   alone.** Shopify's refund carries `restock_type` on each line, and
+   `no_restock` means "Refunding these items won't affect inventory"
+   (shopify.dev, Refund resource); the money goes back but the item doesn't
+   go back on the shelf. Other lines (`return`, `cancel`, or none given) are
+   put back as before.
+2. **Noted for Jack, not changed: importing a supplier item has no stock
+   history line.** Stockroom's import from a supplier's catalogue
+   (`server/routes/suppliers.js:147-150`) starts the new product's stock at
+   the supplier's own stock figure, and writes no line in the product's stock
+   history. Stock control decision 6
+   (`docs/decisions/2026-10-01-stock-control-review.md`) has every change to
+   stock in the history; a product made with stock and no line may not fit
+   it, and the figure is the one in the supplier's own feed, not a count of
+   the shop's shelf. Adding a product by hand with stock does write a line
+   (`server/routes/products.js:170-173`). Left as it is for Jack to say.
