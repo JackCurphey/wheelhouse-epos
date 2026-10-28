@@ -103,7 +103,7 @@ test('only the PIN offered can be kept, and a new offer replaces the last', asyn
   let second = first;
   while (second === first) second = (await post(jo.cookie, '/api/your-settings/till-pin/offer')).body.pin;
   const old = await post(jo.cookie, '/api/your-settings/till-pin', { pin: first });
-  assert.deepEqual([old.status, old.body.code], [400, 'no_offer'], 'Give me a different one replaced it');
+  assert.deepEqual([old.status, old.body.code], [400, 'offer_replaced'], 'Give me a different one replaced it');
   for (const bad of ['12345', '12a4', 1234, null]) {
     assert.equal((await post(jo.cookie, '/api/your-settings/till-pin', { pin: bad })).status, 400, JSON.stringify(bad));
   }

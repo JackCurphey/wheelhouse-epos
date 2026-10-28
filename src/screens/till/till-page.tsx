@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { markSaleOpen, useHoldScreen } from '@/lib/screen-clear.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
 import { Banknote } from 'lucide-react';
@@ -41,6 +42,8 @@ export function TillPage() {
   // not by a failed re-check, nor by the check-in ending (review, 28 Oct, item 1).
   const [saleOpen, setSaleOpen] = useState(false);
   const data = checkin.data;
+  // Nothing opens by itself over the till until it knows who's serving (whos-in-and-first-pin).
+  useHoldScreen(!data && !checkin.isError);
   if (!data) return checkin.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p> : null;
   const { serving, checkedInToday, givePin } = data;
   if (!serving && !saleOpen) return <PinCheckin checkedInToday={checkedInToday} />;
@@ -80,8 +83,8 @@ function CloseTheDayEntry() {
 
 /** Tells the till page while a sale is open, and that it isn't once it goes. */
 function useSaleOpen(open: boolean, onOpenChange: (open: boolean) => void) {
-  useEffect(() => { onOpenChange(open); }, [open, onOpenChange]);
-  useEffect(() => () => onOpenChange(false), [onOpenChange]);
+  useEffect(() => { onOpenChange(open); markSaleOpen(open); }, [open, onOpenChange]);
+  useEffect(() => () => { onOpenChange(false); markSaleOpen(false); }, [onOpenChange]);
 }
 
 function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {

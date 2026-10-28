@@ -220,6 +220,8 @@ PUT /api/sale-documents/:id/items/:itemId/progress
 GET /api/sale-documents/:id/due
 POST /api/sale-documents/:id/convert
 GET /api/dashboard
+GET /api/today/whos-in
+GET /api/today/tills
 GET /api/needs-attention
 POST /api/workshop-jobs/:id/contacted
 GET /api/your-settings
@@ -240,6 +242,8 @@ GET /api/close-the-day
 POST /api/paid-outs
 POST /api/close-the-day
 GET /api/your-settings/till-pin
+GET /api/your-settings/till-pin/ask
+POST /api/your-settings/till-pin/ask
 POST /api/your-settings/till-pin/offer
 POST /api/your-settings/till-pin
 POST /api/team/:id/clear-pin

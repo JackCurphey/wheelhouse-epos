@@ -140,7 +140,7 @@ test('one message waiting reads in the singular', async () => {
   assert.ok((await ui.findByText('1 message needs a reply')) !== null);
 });
 
-test('Staff see Workshop today only, and the list behind Needs attention isn\'t asked for', async () => {
+test('Staff see no Needs attention, and the list behind it isn\'t asked for', async () => {
   const { ui } = await openToday({ who: JO });
   await new Promise((r) => setTimeout(r, 20));
   assert.ok(ui.queryByRole('heading', { name: /^Needs attention/ }) === null);
@@ -151,7 +151,8 @@ test('on a phone the cards are one column, Needs attention first', async () => {
   const { ui } = await openToday({ phone: true });
   await ui.findByRole('heading', { name: 'Needs attention · 2' });
   const regions = ui.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'));
-  assert.deepEqual(regions.slice(0, 2), ['today-attention', 'today-workshop']);
+  // Tills and Who's in come between (whos-in-and-first-pin; op-today's left column first).
+  assert.deepEqual(regions, ['today-attention', 'today-tills', 'today-whos-in', 'today-workshop']);
   const [attention, work] = ['today-attention', 'today-workshop'].map((id) => ui.container.querySelector(`[aria-labelledby="${id}"]`));
   assert.ok(attention.parentElement === work.parentElement, 'the two cards should share one column');
 });
