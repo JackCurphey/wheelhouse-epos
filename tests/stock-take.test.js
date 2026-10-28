@@ -565,3 +565,87 @@ test('Download the count: a name or code that starts like a formula is written a
   const lines = (await res.text()).trim().split('\r\n');
   assert.equal(lines[1], "'=SUM(A1),'@cmd,6,5,-1,-14.00", 'text guarded; numbers left as numbers');
 });
+
+// ---------- The second review, 28 Oct ----------
+
+// A till sale as the till sends it: made online or offline, at the till's own clock.
+let receipt = 9100;
+let reviewTill;
+async function tillSale(productId, { tillClockAt, madeOffline }) {
+  reviewTill ??= await registerTill(server.baseUrl, owner, { siteCode: 'R', number: 4 });
+  cashier ??= (await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
+  receipt += 1;
+  const res = await tillRequest(server.baseUrl, owner.shop.slug, reviewTill.token, '/sync', { method: 'POST', body: { pendingCount: 0, items: [{
+    kind: 'sale', clientId: randomUUID(), receiptNumber: receipt, tillClockAt, madeOffline, employeeId: cashier.employeeId,
+    lines: [{ productId, description: 'Shimano brake pads', qty: 1, unitPricePence: 2800, vatRateBp: 2000 }], payments: [{ method: 'cash', amountPence: 2800 }],
+  }] } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+}
+const HOUR_AHEAD = () => new Date(Date.now() + 3_600_000).toISOString();
+
+test('an online till sale on a till whose clock is an hour fast counts from when it arrived', async () => {
+  const pads = await product({ stockQty: 6 });
+  const take = await areaTake();
+  await tillSale(pads.id, { tillClockAt: HOUR_AHEAD(), madeOffline: false }); // arrives at once
+  await count(take.id, { productId: pads.id, qty: 5 }, jo); // then a correct count
+  assert.equal((await check(take.id)).body.productsDiffering, 0);
+  await act(take.id, 'apply');
+  assert.equal((await stockAndHistory(pads.id)).stock, 5);
+});
+
+test('an offline till sale whose clock is ahead of when it arrived counts from when it arrived, at the latest', async () => {
+  const pads = await product({ stockQty: 6 });
+  const take = await areaTake();
+  await tillSale(pads.id, { tillClockAt: HOUR_AHEAD(), madeOffline: true }); // arrives before the count
+  await count(take.id, { productId: pads.id, qty: 5 }, jo);
+  assert.equal((await check(take.id)).body.productsDiffering, 0);
+  await act(take.id, 'apply');
+  assert.equal((await stockAndHistory(pads.id)).stock, 5);
+});
+
+test('Undo is refused after a later count of the same product, even one that matched', async () => {
+  const pads = await product({ stockQty: 10 });
+  const a = await areaTake();
+  await count(a.id, { productId: pads.id, qty: 7 }, jo);
+  await act(a.id, 'apply');
+  const b = await areaTake();
+  await count(b.id, { productId: pads.id, qty: 7 }, jo);
+  assert.equal((await act(b.id, 'apply')).body.productsChanged, 0, 'B matched: no history line');
+  const refused = await act(a.id, 'undo');
+  assert.deepEqual([refused.status, refused.body.error], [409, 'A later count has corrected Shimano brake pads; undo that one first.']);
+  assert.equal((await stockAndHistory(pads.id)).stock, 7);
+  assert.equal((await act(b.id, 'undo')).status, 200);
+  assert.equal((await act(a.id, 'undo')).status, 200);
+  assert.equal((await stockAndHistory(pads.id)).stock, 10);
+});
+
+test('applying several products changes each by its own difference, each with its own Counted line', async () => {
+  const p1 = await product({ stockQty: 6 });
+  const p2 = await product({ name: '[Product]', stockQty: 3 });
+  const p3 = await product({ name: '[Product 2]', stockQty: 2 });
+  const take = await areaTake();
+  await count(take.id, { productId: p1.id, qty: 4 }, jo);
+  await count(take.id, { productId: p2.id, qty: 5 }, alex);
+  await count(take.id, { productId: p3.id, qty: 2 }, jo);
+  const lines3 = (await historyOf(p3.id)).length;
+  const res = await act(take.id, 'apply');
+  assert.deepEqual([res.status, res.body.productsChanged, res.body.valuePence], [200, 2, (-2 + 2) * 1400]);
+  assert.deepEqual([(await stockAndHistory(p1.id)).stock, (await stockAndHistory(p2.id)).stock, (await stockAndHistory(p3.id)).stock], [4, 5, 2]);
+  const [l1] = await historyOf(p1.id);
+  const [l2] = await historyOf(p2.id);
+  assert.deepEqual([l1.type, l1.change, l1.note], ['count', -2, 'Stock take of [Area] · counted 4, expected 6 · counted by Jo Taylor']);
+  assert.deepEqual([l2.type, l2.change, l2.note], ['count', 2, 'Stock take of [Area] · counted 5, expected 3 · counted by Alex Morgan']);
+  assert.equal((await historyOf(p3.id)).length, lines3, 'a match writes no line');
+});
+
+test('the counting page’s search on a below-zero count finds only the products on its list', async () => {
+  const listed = await product({ name: 'Shimano brake pads, below', stockQty: 1 });
+  const notListed = await product({ name: 'Shimano brake pads, fine', stockQty: 1 });
+  await setStock(listed.id, -1);
+  const take = (await start({ kind: 'below_zero' })).body;
+  await setStock(listed.id, 0);
+  for (const p of [listed, notListed]) {
+    const found = (await staff(`/api/stock-takes/${take.id}/products?search=${encodeURIComponent(p.sku)}`, undefined, jo)).body.map((x) => x.id);
+    assert.deepEqual(found, p === listed ? [listed.id] : [], p.name);
+  }
+});

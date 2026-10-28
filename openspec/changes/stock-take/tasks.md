@@ -10,9 +10,9 @@
 
 ## 2. Screens (pull request 2, `jack/stock-take-screens`, stacked on 1)
 
-- [x] 2.1 Tests first: Stock take for the Owner and Staff, Start a count, counting and below zero (`tests/screens/stock-take.test.js`); the shell no longer shows the placeholder; a browser spec. Watch each fail
-- [x] 2.2 Build them to the drawings
-- [x] 2.3 Break each key rule on purpose, see its test go red, and restore
+- [ ] 2.1 Tests first: Stock take for the Owner and Staff, Start a count, counting and below zero (`tests/screens/stock-take.test.js`); the shell no longer shows the placeholder; a browser spec. Watch each fail
+- [ ] 2.2 Build them to the drawings
+- [ ] 2.3 Break each key rule on purpose, see its test go red, and restore
 - [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review`
 - [ ] 2.5 `/opsx:archive` as the last commit
 
@@ -25,7 +25,8 @@
 - [x] 3.5 `node scripts/ci/check-migrations.mjs pr origin/main` once #561 has merged
 - [x] 3.6 The independent review (28 Oct), tests first: Undo refused after a later count; the counting page's own blind search; till sales by when they were made; the download's text cells; the history line tied to its shop's take; the apply in bulk statements; a held-lock deadlock test
 - [x] 3.7 Screens from the review: the counting page on its own search; arrow keys and Enter in the category picker and the match list; drawn words shortened until true
-- [ ] 3.8 `/review`; CI by hand
+- [x] 3.8 The second review (28 Oct), tests first: till sales by close-the-day's rule (an online sale on a fast till clock; an offline sale whose clock is ahead of when it arrived); Undo refused after a later count that matched; an apply of several products; the below-zero search scope
+- [ ] 3.9 `/review`; CI by hand
 
 ## 4. Later (waits for other pieces)
 
