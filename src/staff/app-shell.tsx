@@ -23,6 +23,10 @@ import { DeliveriesPage } from '@/screens/deliveries/deliveries-page.tsx';
 import { NewOrderPage } from '@/screens/deliveries/new-order.tsx';
 import { OrderPage } from '@/screens/deliveries/order-page.tsx';
 import { ReceivePage } from '@/screens/deliveries/receive-page.tsx';
+import { StockTakePage } from '@/screens/stock-take/stock-take-page.tsx';
+import { CountPage } from '@/screens/stock-take/count-page.tsx';
+import { CheckPage } from '@/screens/stock-take/check-page.tsx';
+import { AppliedPage } from '@/screens/stock-take/applied-page.tsx';
 
 /**
  * The staff app: query client, router, error boundary. The rooms sidebar
@@ -40,10 +44,10 @@ function SignedInAlready() {
   return <Navigate to="/workshop" replace />;
 }
 
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'eod-count': CloseTheDayPage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'eod-count': CloseTheDayPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', 'st-product', 'rs-order', 'rs-order-ordered', 'rs-receive', 'eod-count', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', 'st-product', 'rs-order', 'rs-order-ordered', 'rs-receive', 'eod-count', 'tk-count', 'tk-diff', 'tk-applied', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 

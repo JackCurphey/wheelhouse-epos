@@ -181,8 +181,10 @@ async function recordSale(till, item) {
       await raise('unknown_product', { detail: `${label}: "${l.description}" is not a product we hold`, tillSaleId: saleId });
       continue;
     }
-    await prepare("INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'till_sale', ?)")
-      .run(productId, -l.qty, `Till sale ${label}`);
+    // The line names its sale, so a stock take can allow for it by when it
+    // was made at the till, not when it synced (openspec/changes/stock-take).
+    await prepare("INSERT INTO stock_movements (product_id, change_qty, type, note, till_sale_id) VALUES (?, ?, 'till_sale', ?, ?)")
+      .run(productId, -l.qty, `Till sale ${label}`, saleId);
     if (updated.stock_qty < 0) await raise('stock_below_zero', { detail: `"${l.description}" is at ${updated.stock_qty} after ${label}`, productId });
   }
 
