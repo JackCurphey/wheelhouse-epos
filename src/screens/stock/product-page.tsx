@@ -31,6 +31,9 @@ const WHAT: Record<string, [string, Show | null]> = {
   po_receipt: ['Received', 'Received'],
   intake: ['Booked in', 'Received'],
   adjustment: ['Adjusted', 'Counted and adjusted'],
+  // A stock take applied, and undone (openspec/changes/stock-take).
+  count: ['Counted', 'Counted and adjusted'],
+  count_undone: ['Count undone', 'Counted and adjusted'],
 };
 const SHOWS: Show[] = ['Everything', 'Sold', 'Received', 'Counted and adjusted'];
 const change = (n: number) => (n > 0 ? `+${n}` : count(n));
@@ -111,7 +114,7 @@ export function ProductPage() {
                     <li key={m.id} className="grid min-h-14 grid-cols-[minmax(0,1fr)_72px] items-center gap-3 border-t border-[var(--wh-border)] py-1.5 max-md:grid-cols-[minmax(0,1fr)_auto]">
                       <span className="flex min-w-0 flex-col">
                         <span className="text-size-15 font-semibold">{[WHAT[m.type]?.[0] ?? 'Stock changed', m.reason ? REASON_LABEL[m.reason] : null].filter(Boolean).join(' · ')}</span>
-                        <span className="text-size-13 text-[var(--wh-muted)]">{[m.reason && m.note ? `Note: ${m.note}` : m.note, m.who, when(m.at)].filter(Boolean).join(' · ')}</span>
+                        <span className="text-size-13 text-[var(--wh-muted)]">{[m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)].filter(Boolean).join(' · ')}</span>
                       </span>
                       <span className={`${mono} text-right text-size-15 font-bold`}>{change(m.change)}</span>
                     </li>

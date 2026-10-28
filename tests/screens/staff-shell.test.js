@@ -86,10 +86,10 @@ test('staff do not see Reports, Website or Settings', async () => {
 });
 
 test('each page is titled with its name and shows the placeholder until it is built', async () => {
-  // Stock take: not built yet (the stock list is, since the stock-list change).
-  const { ui } = await renderAt('/workshop/stocktake', OWNER);
-  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Stock take' }));
-  assert.ok(ui.getByText('Not built yet: stocktake'));
+  // Reports: not built yet (Stock take is, since the stock-take change).
+  const { ui } = await renderAt('/workshop/reports', OWNER);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Reports' }));
+  assert.ok(ui.getByText('Not built yet: reports'));
 });
 
 test('the owner lands on Today', async () => {
