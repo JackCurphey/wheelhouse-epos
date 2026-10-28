@@ -1,4 +1,4 @@
-# Proposal: stock take, the counting half
+# Proposal: stock take
 
 ## Why
 
@@ -8,41 +8,41 @@ while the shop stays open (stock control decision 5,
 take (`docs/superpowers/plans/2026-10-03-release-2-build-plan.md`), in slice
 C, "stock you can trust". Taken by Jack, 28 Oct.
 
-**Risky areas:** a migration (098), and stock. `/review` runs before each
+**Risky areas:** a migration (099), and stock. `/review` runs before each
 pull request merges, and CI is run by hand on the branch (Jack, 28 Oct,
 `docs/decisions/2026-10-28-ci-once-a-day.md`).
 
-## What this change builds, and what waits
+## What this change builds
 
-This change builds **starting a count, joining it, and counting** — the
-part that never changes anyone's stock. It records every count with who
-counted and when, so the second half can work out the differences whatever
-rule Jack picks for it.
+Starting a count, joining it and counting blind; checking the differences,
+with Recount and Count them as none; applying with Undo; Finished counts;
+and Download the count.
 
-**Checking the count and applying it wait for Jack's answer** on what
-applying does with stock that moved after the count started (see the
-question in `design.md`). The drawings say anything sold, booked in, used,
-sent or adjusted during the count "is allowed for", but not how, and the two
-ways give different stock figures.
+What "allowed for" means for stock that moves during a count was not
+settled by a decision. It was decided here for Jack to overrule (design 8,
+`decided-while-building.md`): each product is measured at its last count.
 
 Built on today's products: WP-1.5 (sizes and colours) is Mark's and isn't
 built, so a product with sizes is counted as one product.
 
 ## What Changes
 
-- **Server:** migration 098 (stock takes, who is counting, and each
-  person's count of each product); start a count (the Owner, until "Can
-  order stock"); join it; scan or type a count; "I've finished my part";
-  the counts in progress, with areas used before.
-- **Screens** (second pull request, stacked): Stockroom › Stock take for the
-  Owner and for Staff; Start a count; the counting page, with the below-zero
-  count's "still to find" list.
+- **Server** (pull request 1): migration 099; start, join, count, finish;
+  check, recount, count them as none, apply, undo, download; the counts in
+  progress and finished.
+- **Screens** (pull request 2, stacked): Stockroom › Stock take for the
+  Owner and for Staff, with Finished counts; Start a count; the counting
+  page, with recounts asked and the below-zero "still to find" list; Check
+  the count; Count applied, with Undo and Download the count; "Counted"
+  lines in a product's stock history.
 
 ## Drawings and decisions
 
 - Drawings (`docs/design/user-journeys/generator/stock.mjs` lines 262–290):
   `tk-hub`, `tk-hub-staff`, `tk-start`, `tk-start-category`, `tk-count`,
-  `tk-count-below`; the links in `mockup/links/j14.mjs` lines 60–66.
+  `tk-count-below`, `tk-diff`, `tk-applied`; the links in
+  `mockup/links/j14.mjs` lines 60–66; the product history's "Counted · stock
+  take of [Category]" line (`stock.mjs` line 170).
 - Decisions: stock control 5 (counted a section at a time, blind; staff join
   on a phone; each scan adds one or a number is typed; sales carry on), 9
   (below zero: a count of just those products), 11 (areas used before; the
@@ -54,9 +54,6 @@ built, so a product with sizes is counted as one product.
 
 ## Out of scope
 
-- `tk-diff` and `tk-applied`: checking the differences, Recount, Count them
-  as none, applying with Undo, Download the count, and the hub's Finished
-  counts — they wait for Jack's answer.
 - Stock held for online orders and jobs, left out of Expected: nothing holds
   stock yet.
 - Today's "products below zero" line with Count them (`st-today-below`),

@@ -58,3 +58,45 @@ Each counter SHALL be able to say they have finished their part. When everyone w
 #### Scenario: Everyone finished
 - **WHEN** Jo Taylor and Alex Morgan have both pressed I’ve finished my part
 - **THEN** Stock take shows the count as "everyone has finished" and "Ready to check"
+
+### Requirement: The manager checks the differences
+When counting is done, the Owner (anyone with "Can order stock", once roles exist) SHALL see each counted product that differs, largest value first, with what was expected, what was counted and by whom, and the difference over or under with its value at cost; how many products were counted, matched and differ; and the total at cost (decision 5; `tk-diff`). Products that match SHALL NOT be listed. Staff SHALL NOT see costs.
+
+#### Scenario: Pads under
+- **WHEN** Jo Taylor counted 2 and Alex Morgan 1 of the pads, and Wheelhouse expected 6
+- **THEN** the pads read expected 6, counted 3 ("Jo Taylor 2 + Alex Morgan 1"), 3 under, with their value at cost
+
+### Requirement: Stock that moves during the count is allowed for
+Each product SHALL be measured at the moment of its last count: whatever was sold, booked in, used, sent or adjusted after it SHALL be allowed for, and named under the product ("[n] sold during the count, allowed for"); whatever moved before it is already in the count (decided here for Jack to overrule, 28 Oct).
+
+#### Scenario: Sold after it was counted
+- **WHEN** Jo Taylor counted 6 pads and one was sold afterwards
+- **THEN** the pads match, and applying leaves 5
+
+### Requirement: Recount sends a line back to the counters
+Recount SHALL take a product's counts away, show it on every counter's page as "Recount asked by [Name]" with no number, and put everyone back to counting. A line not counted again SHALL be left as it is when the count is applied.
+
+#### Scenario: Recount asked
+- **WHEN** Jack Lewis asks for the pads to be recounted
+- **THEN** Jo Taylor's page shows the pads with "Recount asked by Jack Lewis", and the count reads Counting again on Stock take
+
+### Requirement: Count them as none
+Products the count covers that nobody counted SHALL be left as they are unless the manager presses Count them as none, which counts each as 0 (decision 11). An area count covers only what was scanned, so it SHALL have no such list.
+
+#### Scenario: A category with something not counted
+- **WHEN** nobody counted one product in the category and Jack Lewis presses Count them as none
+- **THEN** it shows as counted 0, under by what was expected
+
+### Requirement: Applying corrects stock, safely, with its history
+Apply SHALL add each product's difference to its stock as it is then, and write a "Counted" line in its stock history with who counted it and who applied it, in one step that a sale at the same moment can't break: whichever goes first, the other waits and adds its own change on top. A count SHALL be applied once; counting after it is applied SHALL be refused.
+
+#### Scenario: A sale while applying
+- **WHEN** Jo Taylor counted 4 pads, 6 were expected, and a sale of one pad happens while Jack Lewis applies the count
+- **THEN** the pads end at 3, whichever went first
+
+### Requirement: Undo, Finished counts and Download the count
+After applying, the manager SHALL see "Count applied" with Undo and Download the count (`tk-applied`). Undo SHALL take each change off again with its own history line and put the count back to counting. Stock take SHALL list Finished counts for the Owner: when, by whom, products changed and the value at cost. Download the count SHALL give a spreadsheet of every counted product.
+
+#### Scenario: Undo
+- **WHEN** Jack Lewis presses Undo after applying a count that added 3 pads
+- **THEN** the 3 come off again, with "Undid the stock take of [Area]" in the pads' history
