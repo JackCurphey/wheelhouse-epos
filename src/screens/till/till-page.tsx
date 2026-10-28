@@ -42,13 +42,13 @@ export function TillPage() {
   const [saleOpen, setSaleOpen] = useState(false);
   const data = checkin.data;
   if (!data) return checkin.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p> : null;
-  const { serving, checkedInToday } = data;
+  const { serving, checkedInToday, givePin } = data;
   if (!serving && !saleOpen) return <PinCheckin checkedInToday={checkedInToday} />;
   // The first person to check in who takes payments checks the float (opening
   // the shop decision 2; Jack's answer 3, 27 Oct).
   return (
     <>
-      {serving ? <ServingButton serving={serving} /> : null}
+      {serving ? <ServingButton serving={serving} givePin={givePin} /> : null}
       <CloseTheDayEntry />
       {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} onOpenChange={setSaleOpen} /> : <SaleTill onOpenChange={setSaleOpen} />}
       {serving ? <FloatCheck /> : null}
