@@ -3,6 +3,7 @@ import { useLocation } from 'react-router';
 import { Lock } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { GoogleG } from './google-g.tsx';
 
 /**
  * The staff app when nobody is signed in (openspec/changes/staff-signin-workos-screens,
@@ -80,10 +81,7 @@ function SignIn({ pathname, search }: { pathname: string; search: string }) {
     <Frame>
       <h1 className={heading}>Sign in to Wheelhouse</h1>
       <a href={withFrom(`${START}?provider=google`, from, '&')} className={cn(buttonVariants({ block: true }), 'min-h-11 gap-2.5 border-[var(--input)]')}>
-        {/* Google's official "G" logo goes here; no file of it yet (staff-signin-google, out of scope). */}
-        <span aria-hidden="true" className="inline-flex size-5 items-center justify-center rounded border border-dashed border-[var(--wh-border)] text-size-10 text-[var(--wh-muted)]">
-          [G]
-        </span>
+        <GoogleG />
         Continue with Google
       </a>
       <div className="flex items-center gap-3 text-size-13 text-[var(--wh-muted)]">

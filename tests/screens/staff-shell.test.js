@@ -168,6 +168,19 @@ test('signed out on the diary: “Sign in to Wheelhouse”, Google or email, bot
   assert.deepEqual(went, [], 'no jump to WorkOS');
 });
 
+// Google's official G (signin-assets.zip, Google's Sign in with Google branding
+// kit, 27 Oct; Jack chose the kit), not the "[G]" stand-in: its outline is the
+// kit's own path, unchanged, and it's hidden from screen readers as the words say it.
+test('Continue with Google carries Google’s own G, not a stand-in', async () => {
+  const { ui } = await renderAt('/workshop/diary', null);
+  const google = await ui.findByRole('link', { name: 'Continue with Google' });
+  assert.ok(!google.textContent.includes('[G]'), 'the stand-in is gone');
+  const g = google.querySelector('svg[data-google-g]');
+  assert.ok(g !== null, 'the G is in the button');
+  assert.equal(g.getAttribute('aria-hidden'), 'true');
+  assert.ok(g.querySelector('path[d^="M29.3987 18.1814H19.9849V22.0445H25.3598"]') !== null, 'Google’s own G outline');
+});
+
 test('/workshop/sign-in shows it even with a session that has run out, so Sign in again can’t go round in a loop', async () => {
   const { ui } = await renderAt(`${SIGN_IN}?from=%2Fworkshop%2Fdiary`, 'expired');
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Sign in to Wheelhouse' }));
