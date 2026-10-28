@@ -307,6 +307,20 @@ test('a sale between counting and closing: the close is refused and the new diff
   assert.deepEqual(posts('/api/close-the-day').map((b) => b.expectedPence), [22400, 23000]);
 });
 
+// Third review, item 4: once closed, the page shows the saved close, never
+// the live figures the server still sends beside it (a later sale moves those).
+test('a closed day shows its saved report, not the live figures', async () => {
+  const saved = closeFrom({ countedPence: 22400 }, DAY);
+  const t = await openClose({ day: { ...DAY, cashPence: 99900, expectedPence: 114900, paidOutsPence: 0, entry: { show: false, closesAt: '18:00' }, close: saved } });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Show the report' }));
+  const report = await popUp(t, 'Day closed');
+  const rows = report.getAllByRole('listitem').map(text);
+  assert.ok(rows.includes('Cash £74.00'), rows.join(' | '));
+  assert.ok(rows.includes('Cash difference £0.00'), rows.join(' | '));
+  assert.ok(t.ui.queryByText(/£999\.00|£1149\.00/) === null);
+  assert.ok(t.ui.queryByRole('group', { name: 'How the till worked out what it expected' }) === null);
+});
+
 test('with no float set, the page says where to set it', async () => {
   const t = await openClose({ day: { ...DAY, floatPence: null, floatStart: null, expectedPence: null }, floatCheck: { ...CHECKED, floatPence: null, check: null } });
   assert.ok(await t.ui.findByText('Set the shop’s float in Settings › Front desk › End of day first: Close the day leaves it in the drawer and banks the rest.'));
