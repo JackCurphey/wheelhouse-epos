@@ -184,9 +184,11 @@ test('it deploys the commit the merge made, through pick-deploy.sh, never an old
 });
 
 const TESTS_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'test.yml');
-test('Tests runs on each pull request and once a day, not after each merge', () => {
+// Once a day and by hand, not on each pull request (Jack, 28 Oct:
+// docs/decisions/2026-10-28-ci-once-a-day.md).
+test('Tests runs once a day and by hand, not on each pull request or after each merge', () => {
   const on = (readFileSync(TESTS_WORKFLOW, 'utf8').match(/^on:\n((?: .*\n|\n)*)/m) || [])[1] ?? '';
-  assert.match(on, /^\s+pull_request:/m);
+  assert.doesNotMatch(on, /^\s+pull_request:/m, 'not on each pull request');
   assert.match(on, /^\s+schedule:\s*\n\s+- cron: '0 3 \* \* \*'/m, 'once a day, at 03:00 UTC');
   assert.match(on, /^\s+workflow_dispatch:/m, 'and by hand');
   assert.doesNotMatch(on, /^\s+push:/m, 'not after each merge');

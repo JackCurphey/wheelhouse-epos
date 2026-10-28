@@ -64,9 +64,13 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 2. Make the database changes the plan lists.
 3. Where a drawing is silent, follow the closest pattern already built, log
    it in `decided-while-building.md`, and carry on.
-4. Merge your own pull request once CI has passed on its final commit and you
-   have read your own diff against the spec and the drawings (a self-review).
-   **Four risky areas also need `/review` run first**, and go in the weekly
+4. Merge your own pull request once `npm test` and `npm run test:browser`
+   have passed locally on its final commit (after merging the latest main) and
+   you have read your own diff against the spec and the drawings (a
+   self-review). CI runs once a day, not on each pull request (Jack, 28 Oct,
+   `docs/decisions/2026-10-28-ci-once-a-day.md`); in a risky area, also run it
+   by hand on the branch (`gh workflow run test.yml --ref <branch>`) and merge
+   when it is green. **Four risky areas also need `/review` run first**, and go in the weekly
    digest issue for the other person to read afterwards; their comments never
    block a merge, a problem found becomes a task either can fix:
    (1) migrations; (2) money and stock (sales, payments, refunds, `stock_qty`,
@@ -103,7 +107,9 @@ the drawings and Jack's decisions) → tests first, each watched failing for the
 → build to the drawings → self-review (and `/review` in a risky area) → `npm test` and
 `npm run test:browser` pass locally → pull request → `/opsx:archive` as the
 last commit in that pull request, before it merges, so `openspec/specs/`
-describes what was built → merge when CI is green on that final commit.
+describes what was built → merge when the local runs pass on that final
+commit (and, in a risky area, the hand-run CI is green). A failed nightly run
+on main is fixed first thing, before new work.
 The board and STATUS catch up in the day's status pull request. Where a
 piece has a server and a screen part, one person builds both; the contract
 in `design.md` is a note for the reader, not a handoff. Pull requests aim for 250–600 changed lines.
