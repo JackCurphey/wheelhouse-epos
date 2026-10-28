@@ -22,9 +22,17 @@ float check.
   close, so the report never changes afterwards.
 - Row-level security on both, as 095.
 - **It changes the sales tables.** `sales.day_close_id` and
-  `till_sales.day_close_id`, nullable, referencing `day_closes(id)`, each
-  with an index on `(shop_id, day_close_id)`: which close counted the sale,
-  null until one does. The tables keep their row-level security; a close
+  `till_sales.day_close_id`, nullable: which close counted the sale, null
+  until one does. Each links `(shop_id, day_close_id)` to `day_closes
+  (shop_id, id)` (a new `UNIQUE (shop_id, id)`), so the database refuses a
+  sale pointing at another shop's close; the links are added `NOT VALID`,
+  since checking existing rows would read the sales tables under forced
+  row-level security with no shop set, and every existing row has no close.
+  Indexes: `(shop_id, day_close_id)` on each, and the uncounted sales
+  `(shop_id, created_at) WHERE day_close_id IS NULL` on `sales` and
+  `(shop_id, received_at) WHERE day_close_id IS NULL` on `till_sales`.
+  **A future import of a shop's sales history must mark the imported sales
+  as already counted**, or the next close would count them. The tables keep their row-level security; a close
   marks sales as the shop's own request, so it can only see and mark its
   own shop's. The `all_sales` view (083) names its columns and is
   unchanged, and the dashboard reads the view; no other code writes the
@@ -89,9 +97,12 @@ float check.
    counted, or the float when it looked right), plus the cash sales since
    the float check, minus the cash taken out since it. Cash from before
    the check was in the morning count, so it isn't added again; cash left
-   over from a day nobody closed shows tonight as over. "Since" is the old
-   record's saved time and the till record's own clock (when the cash went
-   in the drawer). There are no cash refunds to take off: the till has no
+   over from a day nobody closed shows tonight as over. "Since" is the
+   server's clock: the old record's saved time, and a till sale's time
+   received, or its till's own clock only when it was made offline (third
+   review, 27 Oct). A sale still being saved at the close shows tonight as
+   over and lands in the next day's report: counted once, the difference
+   split across two days. There are no cash refunds to take off: the till has no
    refunds yet (WP-3.1).
 2. **Banking:** leave the shop's float, bank the rest (decision 4). When the
    count is less than the float, nothing is banked and the page says "Put

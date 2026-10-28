@@ -3268,9 +3268,10 @@ but no closed order. Decided here, for Jack to overrule:
    (walk-through 2 M2's rows; Jack's answer 9, "trust the morning check",
    which replaced "the day's cash sales" after the second review found cash
    counted twice). This morning's float is what was counted, or the shop's
-   float when it looked right. "Since the check" is by the old record's
-   saved time and the till record's own clock (when the cash went in the
-   drawer). There is no "minus cash refunds" yet: the till has no refunds
+   float when it looked right. "Since the check" is by the server's clock:
+   the old record's saved time, and a till sale's time received, or its
+   till's own clock only when it was made offline (third review, 27 Oct),
+   so an online till whose clock is wrong doesn't move its cash. There is no "minus cash refunds" yet: the till has no refunds
    (WP-3.1).
 4. **The day can't close without this morning's float check**, so the
    expected figure starts from a real one. The Close the day page asks for
@@ -3311,7 +3312,10 @@ but no closed order. Decided here, for Jack to overrule:
     server received it), so the history from before Close the day isn't
     swept into the first close; a sale from before that never counts.
     Cash taken out is listed and taken off from the morning's check on
-    (entry 3).
+    (entry 3). A sale still being saved at the close shows tonight as over
+    and lands in the next day's report, so its cash is counted once but the
+    difference is split across two days (third review, 27 Oct). A sale can
+    only point at its own shop's close: the database refuses another's.
 12. **Closing after midnight isn't handled** (review, 27 Oct: logged, not
     fixed). The day is the shop's date when the close is made, so a close
     made at 00:30 closes the new day, and the evening's sales after the
