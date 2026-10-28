@@ -51,4 +51,24 @@ export default {
   'pin-cleared': { 'Keep this PIN': go('till-sale'), 'Skip for now': go('op-today-staff') },
   // Given at the till: then back to the PIN screen
   'till-give-pin': { 'Keep this PIN': go('till-checkin'), 'Close without giving a PIN': BACK },
+  // The way in (Jack's answers 28 Oct, 3 and 4): the Owner's Serving menu,
+  // then the person's PIN, straight away for one or from the list for several.
+  'till-serving-menu': {
+    'Serving: Jack Lewis': STAY,
+    'Switch who’s serving': go('till-checkin'),
+    'Give [Name] their PIN': go('till-give-pin'),
+    Close: BACK,
+  },
+  'till-serving-menu-several': {
+    'Serving: Jack Lewis': STAY,
+    'Switch who’s serving': go('till-checkin'),
+    'Give someone their PIN': go('till-give-pin-pick'),
+    Close: BACK,
+  },
+  'till-give-pin-pick': {
+    'Serving: Jack Lewis': go('till-serving-menu-several'),
+    'J Jo Taylor Staff': go('till-give-pin'),
+    '[Name] Staff · till only': go('till-give-pin'),
+    'Close without giving a PIN': BACK,
+  },
 };
