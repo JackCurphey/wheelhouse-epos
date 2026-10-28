@@ -54,8 +54,12 @@ here before starting it, so two people never build the same one):
   jobs (#542), and services, groups, time off, team, suppliers and purchase
   orders (#543). Merged 27 Oct: the float check, WP-3.3 (#547, #548, migration 095);
   closing a part-delivered order (#546); the build board shows slices (#544).
-  **Now on (27 Oct): WP-3.4, closing the day with the cash count** (slice B;
-  branches `jack/close-the-day` and `jack/close-the-day-screens`).
+  Merged 27-28 Oct: Google's official G on Continue with Google (#550);
+  closing the day, WP-3.4 (#551, #552, migration 096; Jack's answers 4 to 9).
+  **Now on (28 Oct): WP-1.7, sign-in and PINs**, starting with PINs and the
+  PIN check-in at the till, which the float check then moves onto (slice B;
+  branch `jack/pins-and-checkin`). Mark had 1.7's server half queued after
+  step C; taken whole here under the working agreement, so Mark is not on it.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
