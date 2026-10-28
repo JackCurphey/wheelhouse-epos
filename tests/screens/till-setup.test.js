@@ -29,7 +29,7 @@ afterEach(async () => {
   current = undefined;
 });
 
-async function open(path, { me = JACK, sites = [BOLTON], thisTill = null, tills = [], setup = null, till = null, serving = null, floatCheck = { ...DUE, floatPence: null }, todayTills = [OPEN_B1], items = [] } = {}) {
+async function open(path, { me = JACK, sites = [BOLTON], thisTill = null, tills = [], setup = null, till = null, serving = null, floatCheck = { ...DUE, floatPence: null }, todayTills = [OPEN_B1], items = [], setupFails = false } = {}) {
   const calls = [];
   const realFetch = globalThis.fetch;
   mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-01T10:00:00+01:00') });
@@ -44,6 +44,7 @@ async function open(path, { me = JACK, sites = [BOLTON], thisTill = null, tills 
       const r = setup ?? { status: 201, body: { till: { id: 3, code: `${sites[0].code}${body.number}`, name: body.name || null, siteName: sites[0].name } } };
       return reply(r.status, r.body);
     }
+    if (u.pathname === '/api/till-setup' && setupFails) return reply(500, { error: 'Internal server error' });
     if (u.pathname === '/api/till-setup') return me.isOwner ? reply(200, { sites, thisTill, tills }) : reply(403, { error: 'Only the owner can set up a till', code: 'owner_only' });
     if (u.pathname === '/api/till-checkin') return reply(200, { serving, checkedInToday: serving ? [serving] : [], givePin: [], till });
     if (u.pathname === '/api/float-check' && method === 'POST') return reply(201, { check: { id: 9, how: 'counted', expectedPence: 15000, countedPence: 15000, reason: '', checkedByName: 'Jo Taylor', checkedAt: '2026-09-01T07:55:00Z', tillCode: 'B1' } });
@@ -178,4 +179,13 @@ test('Today: a line per till, and the short float names its till', async () => {
     'Till B2Not open yet',
   ]);
   assert.ok(await t.ui.findByText('Till B1’s float was £10.00 short this morning'));
+});
+
+test('Settings › Till › Tills says so when the tills can\'t be loaded (review, 28 Oct)', async () => {
+  const t = await open('/workshop/settings?room=front-desk', { setupFails: true });
+  const fold = await t.ui.findByRole('button', { name: /^Tills/ });
+  if (fold.getAttribute('aria-expanded') !== 'true') t.fireEvent.click(fold);
+  const region = t.within(document.getElementById(fold.getAttribute('aria-controls')));
+  assert.equal((await region.findByRole('alert')).textContent, 'Wheelhouse couldn’t load the tills. Try again in a moment.');
+  assert.ok(region.queryByRole('link', { name: 'Make this computer a till' }) === null);
 });

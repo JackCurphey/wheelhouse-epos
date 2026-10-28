@@ -25,6 +25,8 @@ export function TillsSettings() {
   return (
     <div className="flex flex-col items-start gap-2.5 pt-1">
       <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Do this on the computer that will be the till. It doesn’t show on a computer that’s already a till.</p>
+      {/* A load that fails says so (review, 28 Oct), in the settings boxes' words. */}
+      {setup.isError ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load the tills. Try again in a moment.</p> : null}
       {data && !data.thisTill && data.sites?.length ? (
         <Link to={ROUTES['till-setup']} className={buttonVariants({ variant: 'default' })}>Make this computer a till</Link>
       ) : null}
