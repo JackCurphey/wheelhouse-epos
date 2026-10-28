@@ -258,3 +258,68 @@ test('signed out: refused', async () => {
   assert.equal((await offerTo('', sam)).status, 401);
   assert.equal((await keepFor('', sam, '1234')).status, 401);
 });
+
+// ---- Review, 28 Oct: the check-in changing under an offer, and offers kept to their person ----
+
+test('the Owner offers, then his check-in is taken over: keep is refused and no PIN is stored', async () => {
+  const owner = await shop();
+  const id = await tillOnly(owner, '[Name]');
+  const jo = await member(owner, 'Jo Taylor');
+  const { pin: joPin } = await checkInAtTill(server.baseUrl, jo.cookie);
+  const pin = (await offerTo(owner.till, id)).body.pin;
+  // Jo types her PIN on the same browser: the Owner's check-in ends there.
+  const res = await fetch(`${server.baseUrl}/api/till-checkin`, { method: 'POST', headers: { cookie: owner.till, 'content-type': 'application/json' }, body: JSON.stringify({ pin: joPin }) });
+  assert.equal(res.status, 201);
+  const kept = await keepFor(owner.till, id, pin);
+  assert.deepEqual([kept.status, kept.body.code], [403, 'not_giver']);
+  assert.equal((await row(owner, 'SELECT pin_hash FROM employees WHERE id = ?', id)).pin_hash, null);
+});
+
+test('the Owner offers, then Switches: keep is refused and no PIN is stored', async () => {
+  const owner = await shop();
+  const id = await tillOnly(owner, '[Name]');
+  const pin = (await offerTo(owner.till, id)).body.pin;
+  assert.equal((await post(owner.till, '/api/till-checkin/end')).status, 200);
+  const kept = await keepFor(owner.till, id, pin);
+  assert.deepEqual([kept.status, kept.body.code], [403, 'not_giver']);
+  assert.equal((await row(owner, 'SELECT pin_hash FROM employees WHERE id = ?', id)).pin_hash, null);
+});
+
+test('a PIN offered to one person cannot be kept for another', async () => {
+  const owner = await shop();
+  const a = await tillOnly(owner, '[Name]');
+  const b = await tillOnly(owner, '[Name 2]');
+  const pin = (await offerTo(owner.till, a)).body.pin;
+  const kept = await keepFor(owner.till, b, pin);
+  assert.deepEqual([kept.status, kept.body.code], [400, 'no_offer']);
+  const rows = await runWithShop(owner.shop.id, () => prepare('SELECT pin_hash FROM employees WHERE id IN (?, ?)').all(a, b));
+  assert.deepEqual(rows.map((r) => r.pin_hash), [null, null]);
+});
+
+test('yesterday’s Owner check-in cannot offer a PIN', async () => {
+  const owner = await shop();
+  const id = await tillOnly(owner, '[Name]');
+  await runWithShop(owner.shop.id, () => prepare("UPDATE pin_checkins SET day = '2026-08-31'").run());
+  const offer = await offerTo(owner.till, id);
+  assert.deepEqual([offer.status, offer.body.code], [403, 'not_giver']);
+  assert.equal(offer.body.pin, undefined);
+  assert.equal((await row(owner, 'SELECT pin_offer_hash FROM employees WHERE id = ?', id)).pin_offer_hash, null);
+});
+
+test('Close without giving a PIN withdraws the offer, so it can no longer be kept', async () => {
+  const owner = await shop();
+  const id = await tillOnly(owner, '[Name]');
+  const pin = (await offerTo(owner.till, id)).body.pin;
+  const withdrawn = await call(owner.till, `/api/till-checkin/give-pin/${id}/offer`, { method: 'DELETE' });
+  assert.deepEqual([withdrawn.status, withdrawn.body], [200, { ok: true }]);
+  const offered = await row(owner, 'SELECT pin_hash, pin_offer_hash, pin_offer_at FROM employees WHERE id = ?', id);
+  assert.deepEqual({ ...offered }, { pin_hash: null, pin_offer_hash: null, pin_offer_at: null });
+  assert.equal((await keepFor(owner.till, id, pin)).body.code, 'no_offer');
+  // Only the Owner checked in can withdraw, and only for someone with no PIN.
+  const jo = await member(owner, 'Jo Taylor');
+  const { cookie: joTill } = await checkInAtTill(server.baseUrl, jo.cookie);
+  assert.equal((await offerTo(owner.till, id)).status, 201);
+  assert.equal((await call(joTill, `/api/till-checkin/give-pin/${id}/offer`, { method: 'DELETE' })).status, 403);
+  assert.notEqual((await row(owner, 'SELECT pin_offer_hash FROM employees WHERE id = ?', id)).pin_offer_hash, null);
+  assert.equal((await call(owner.till, `/api/till-checkin/give-pin/${jo.employeeId}/offer`, { method: 'DELETE' })).status, 409, 'Jo has a PIN');
+});

@@ -342,6 +342,21 @@ export function register(route) {
     sendJson(res, 201, { pin });
   });
 
+  // Close without giving a PIN: the PIN shown is withdrawn, so nobody can
+  // keep it afterwards (review, 28 Oct, item 3).
+  // screens: till-give-pin
+  route('DELETE', '/api/till-checkin/give-pin/:id/offer', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const giver = await giverHere(req);
+    if (!giver) return sendJson(res, 403, NOT_GIVER);
+    const id = Number(params.id);
+    const refused = await pinTarget(giver, id);
+    if (refused) return sendJson(res, ...refused);
+    await prepare('UPDATE employees SET pin_offer_hash = NULL, pin_offer_at = NULL WHERE id = ? AND pin_hash IS NULL').run(id);
+    sendJson(res, 200, { ok: true });
+  });
+
   // Keep this PIN, given at the till: keepPin's rules, for someone who still
   // has none; then the till goes back to Enter your PIN, ready for them.
   // screens: till-give-pin, till-checkin

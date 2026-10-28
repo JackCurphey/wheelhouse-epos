@@ -128,7 +128,8 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/till-checkin/end', 'day-to-day: Switch, back to Enter your PIN (signing in 4)'],
   // The Owner checked in by PIN, not the sign-in: the check is giverHere, tested in give-pin-at-till.test.js.
   ['POST /api/till-checkin/give-pin/:id/offer', 'the Owner checked in at the till by PIN, whoever the browser is signed in as (giving a PIN, Jack 28 Oct)'],
-  ['POST /api/till-checkin/give-pin/:id', 'the Owner checked in at the till by PIN, whoever the browser is signed in as (giving a PIN, Jack 28 Oct)'],
+  ['DELETE /api/till-checkin/give-pin/:id/offer', 'the Owner checked in at the till by PIN: Close without giving a PIN withdraws the PIN shown (review, 28 Oct)'],
+  ['POST /api/till-checkin/give-pin/:id','the Owner checked in at the till by PIN, whoever the browser is signed in as (giving a PIN, Jack 28 Oct)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
