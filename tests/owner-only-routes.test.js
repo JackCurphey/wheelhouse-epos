@@ -72,7 +72,6 @@ const ROUTES = [
   ['POST', '/api/sites', {}],
   ['POST', '/api/tills', {}],
   ['POST', `/api/tills/${MISSING}/deactivate`, {}],
-  ['PUT', `/api/employees/${MISSING}/pin`, {}],
   // Purchase orders: making, changing, ordering and closing one is for the
   // Owner until "Can order stock" comes with roles (receiving decision 4,
   // openspec/changes/deliveries-orders).

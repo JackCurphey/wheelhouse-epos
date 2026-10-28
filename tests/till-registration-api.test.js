@@ -78,15 +78,13 @@ test('a till cannot be registered to another shop\'s site', async () => {
   }
 });
 
-test('the owner sets a staff PIN; it is stored hashed and never returned', async () => {
-  const { verifyPin } = await import('../server/till/pin.js');
+// Wheelhouse picks each PIN; nobody types one for someone else (signing in
+// 6 and 7; Jack, 28 Oct, answer 2: the old route is removed).
+test('nobody can type a PIN for someone else: the old route is gone', async () => {
   const empId = await runWithShop(owner.shop.id, async () =>
     (await prepare("INSERT INTO employees (name, is_cashier) VALUES ('Alex', 1)").run()).lastInsertRowid);
-  assert.equal((await as(owner, `/api/employees/${empId}/pin`, { method: 'PUT', body: { pin: '12' } })).status, 400);
-  assert.equal((await as(staff, `/api/employees/${empId}/pin`, { method: 'PUT', body: { pin: '4821' } })).status, 403);
   const res = await as(owner, `/api/employees/${empId}/pin`, { method: 'PUT', body: { pin: '4821' } });
-  assert.equal(res.status, 204);
+  assert.equal(res.status, 404);
   const row = await runWithShop(owner.shop.id, () => prepare('SELECT pin_hash FROM employees WHERE id = ?').get(empId));
-  assert.equal(verifyPin('4821', row.pin_hash), true);
-  assert.equal((await as(owner, '/api/employees/999999/pin', { method: 'PUT', body: { pin: '4821' } })).status, 404);
+  assert.equal(row.pin_hash, null);
 });

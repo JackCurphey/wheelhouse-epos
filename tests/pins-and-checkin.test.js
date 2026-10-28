@@ -250,6 +250,71 @@ test('a wrong PIN says so and never locks; after 10 wrong, guessing is slowed', 
   assert.ok(Date.now() - started < 2500);
 });
 
+// Review, 28 Oct, item 4: each try is counted before its PIN is checked, so a
+// burst sent at once can't all slip in under the limit.
+test('a burst of 60 wrong PINs gets no more than the limit through', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const pin = await givePin(jo);
+  const wrong = pin === '0000' ? '0001' : '0000';
+  const burst = await Promise.all(Array.from({ length: 60 }, () => checkIn(owner, wrong)));
+  const checked = burst.filter((r) => r.body.code === 'wrong_pin').length;
+  // The 10 the limit allows, and at most the one try that waited its turn.
+  assert.ok(checked <= 11, `${checked} were checked`);
+  assert.equal(burst.filter((r) => r.status === 429).length, 60 - checked);
+});
+
+// Review, 28 Oct, item 4: the waiting turn is per sign-in and browser, so one
+// person guessing can't hold up another till.
+test('someone guessing on one till does not block another till’s right PIN', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const pin = await givePin(jo);
+  const wrong = pin === '0000' ? '0001' : '0000';
+  for (let i = 0; i < 10; i += 1) await checkIn(owner, wrong);
+  // The guesser has a try waiting its turn; Jo, on her own till, types hers.
+  const guessing = checkIn(owner, wrong);
+  await new Promise((r) => setTimeout(r, 200));
+  const right = await checkIn(jo, pin);
+  assert.equal(right.status, 201, JSON.stringify(right.body));
+  assert.equal((await guessing).body.code, 'wrong_pin');
+});
+
+// Review, 28 Oct, item 5: "Give me a different one" can't be pressed for ever.
+test('PIN offers are limited per sign-in, and never kept by a browser cache', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const first = await fetch(`${server.baseUrl}/api/your-settings/till-pin/offer`, { method: 'POST', headers: { cookie: jo.cookie } });
+  assert.equal(first.status, 201);
+  assert.equal(first.headers.get('cache-control'), 'no-store');
+  for (let i = 0; i < 9; i += 1) assert.equal((await post(jo.cookie, '/api/your-settings/till-pin/offer')).status, 201);
+  const refused = await post(jo.cookie, '/api/your-settings/till-pin/offer');
+  assert.deepEqual([refused.status, refused.body.code], [429, 'slow_down']);
+  // Another person's sign-in isn't affected.
+  assert.equal((await post(owner.cookie, '/api/your-settings/till-pin/offer')).status, 201);
+});
+
+// Review, 28 Oct, item 6: two offers at once never make the Owner twice.
+test('two offers at once give the Owner one team member', async () => {
+  const owner = await shop();
+  const both = await Promise.all([post(owner.cookie, '/api/your-settings/till-pin/offer'), post(owner.cookie, '/api/your-settings/till-pin/offer')]);
+  assert.deepEqual(both.map((r) => r.status), [201, 201], JSON.stringify(both.map((r) => r.body)));
+  const people = await runWithShop(owner.shop.id, () => prepare("SELECT count(*)::int AS n FROM employees WHERE name = 'Jack Lewis'").get());
+  assert.equal(people.n, 1);
+});
+
+// Review, 28 Oct, item 9.
+test('clearing a PIN ends that person’s check-in, and a made-up id is not found', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const pin = await givePin(jo);
+  const { cookie } = await checkIn(owner, pin);
+  assert.equal((await call(withCheckin(owner, cookie), '/api/till-checkin')).body.serving.name, 'Jo Taylor');
+  assert.equal((await post(owner.cookie, `/api/team/${jo.employeeId}/clear-pin`)).status, 200);
+  assert.equal((await call(withCheckin(owner, cookie), '/api/till-checkin')).body.serving, null);
+  assert.equal((await post(owner.cookie, '/api/team/abc/clear-pin')).status, 404);
+});
+
 test('the float check waits for a check-in and is made by the person checked in', async () => {
   const owner = await shop();
   const jo = await member(owner, 'Jo Taylor');

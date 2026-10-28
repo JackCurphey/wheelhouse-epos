@@ -22,20 +22,25 @@ need a signed-in staff session (the till computer's sign-in).
 
 - `GET /api/your-settings/till-pin` → `{ canHavePin, hasPin }`. `canHavePin`
   is false for a sign-in with no team member, other than the Owner's.
-- `POST /api/your-settings/till-pin/offer` → 201 `{ pin }`: four digits
-  nobody else at the shop has. Each call replaces the last offer ("Give me a
-  different one"). The Owner with no team member gets one first, marked as
-  taking payments. 409 `no_team_member` otherwise.
+- `POST /api/your-settings/till-pin/offer` → 201 `{ pin }`, `Cache-Control:
+  no-store`: four digits nobody else at the shop has. Each call replaces the
+  last offer ("Give me a different one"). 429 `slow_down` after 10 offers a
+  sign-in in 10 minutes. The Owner with no team member gets one first,
+  marked as taking payments (two offers at once make one). 409
+  `no_team_member` otherwise.
 - `POST /api/your-settings/till-pin` `{ pin }` → 200 `{ hasPin: true }`:
   keeps the offered PIN. 400 `no_offer` unless `pin` is the PIN offered in
   the last 15 minutes; 409 `pin_taken` if someone kept it meanwhile.
-- `POST /api/team/:id/clear-pin` → 200 `{ ok: true }`. The Owner only, never
-  their own (roles 5); 404 for nobody.
+- `POST /api/team/:id/clear-pin` → 200 `{ ok: true }`, and that person's
+  check-ins end. The Owner only, never their own (roles 5); 404 for nobody.
+- `PUT /api/employees/:id/pin` (migration 036's, the Owner typing a PIN) is
+  removed (Jack, 28 Oct, answer 2).
 - `GET /api/till-checkin` → `{ serving: { id, name } | null, checkedInToday:
   [{ id, name }] }`.
 - `POST /api/till-checkin` `{ pin }` → 201 `{ serving }` and the
   `wh_till_checkin` cookie. 400 `wrong_pin`, "That PIN isn’t anyone’s — try
-  again", for four digits nobody has; 400 for anything else.
+  again", for four digits nobody has; 400 for anything else; 429 `slow_down`
+  for a second try from the same browser while one waits (decision 3).
 - `POST /api/till-checkin/end` → 200 `{ serving: null }` and the cookie
   cleared.
 - `GET /api/float-check`: `takesPayments` is the checked-in person's when
@@ -57,10 +62,15 @@ need a signed-in staff session (the till computer's sign-in).
    tries the PIN against everyone's. No PIN is written to a log or sent back
    except the one being offered, to its own person.
 3. **No lock after wrong PINs** (signing in 8; roles 2), but guessing is
-   slowed: after 10 wrong PINs in 10 minutes at one shop, each further try
-   waits 3 seconds and they are answered one at a time, until 10 minutes
-   after the first. The right PIN still works. Nobody sees a "locked"
-   message. (Logged for Jack.)
+   slowed (Jack, 28 Oct, answer 1): after 10 tries in 10 minutes at one
+   shop, each further try waits 3 seconds. Each try is counted before its
+   PIN is checked, and a right PIN is taken off the count. The wait is one
+   at a time per sign-in and browser, so a burst from one browser gets at
+   most one try through every 3 seconds and another till isn't held up.
+   The right PIN still works. Nobody sees a "locked" message.
+7. **Known limit:** the offline copy carries every cashier's PIN hash
+   (`server/till/snapshot.js`), which a till token's holder could try
+   offline. Left for step C (`decided-while-building.md`, 28 Oct, 6a).
 4. **A check-in lasts the shop's day, on that browser, for that sign-in.**
    The cookie holds a random token; only its hash is kept. It stops at
    Switch, when someone else checks in on that browser, at the end of the
