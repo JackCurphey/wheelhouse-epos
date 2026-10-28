@@ -134,7 +134,9 @@ export function CheckPage() {
             </div>
           </>
         ) : null}
-        <p className="m-0 text-sm text-[var(--wh-muted)]">Expected leaves out stock held for online orders and jobs. Bikes held for Cycle to Work orders are expected on the shelf and counted. Anything sold, booked in, used on a job, sent or adjusted during the count is allowed for.</p>
+        {/* The drawn note, shortened until it is true (review, 28 Oct): nothing
+            holds stock yet, jobs don't move stock, nothing is sent between shops. */}
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Anything sold, booked in or adjusted during the count is allowed for.</p>
         {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
         <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--wh-border)] pt-1.5">
           <span className="text-sm text-[var(--wh-muted)]">Products that match aren’t listed. Recount sends a line back to the counters.</span>

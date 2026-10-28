@@ -9,7 +9,7 @@ import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { Card, Page, Row, Tag, linkClass } from '@/screens/deliveries/deliveries-bits.tsx';
-import { appliedHref, atCost, checkHref, countHref, names, plural, started, type Applied, type Kind, type Take } from './stock-take-bits.ts';
+import { appliedHref, atCost, checkHref, countHref, names, plural, started, useActiveOption, type Applied, type Kind, type Take } from './stock-take-bits.ts';
 import { day } from '@/screens/deliveries/deliveries-bits.tsx';
 
 /**
@@ -102,7 +102,11 @@ function StartCount({ areasUsed, onCancel }: { areasUsed: string[]; onCancel: ()
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => apiGet<string[]>('/api/categories'), enabled: kind === 'category' });
   const typed = category.trim().toLowerCase();
   const matches = typed && picked !== category ? (categories.data ?? []).filter((c) => c.toLowerCase().includes(typed)).slice(0, 8) : [];
-  const target = kind === 'area' ? area.trim() : kind === 'category' ? picked : '';
+  // A category typed in full, in any case, counts as picked (review, 28 Oct).
+  const exact = (categories.data ?? []).find((c) => c.toLowerCase() === typed);
+  const keys = useActiveOption(matches.length);
+  const pick = (c: string) => { setCategory(c); setPicked(c); keys.reset(); };
+  const target = kind === 'area' ? area.trim() : kind === 'category' ? picked || exact || '' : '';
   const ready = (kind !== 'area' && kind !== 'category') || target !== '';
 
   async function start() {
@@ -133,14 +137,16 @@ function StartCount({ areasUsed, onCancel }: { areasUsed: string[]; onCancel: ()
             <span className="flex min-h-11 items-center gap-2 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-[var(--wh-muted)]">
               <NavIcon name="search" size={15} />
               <input id="tk-cat" role="combobox" aria-expanded={matches.length > 0} aria-controls="tk-cat-matches" aria-autocomplete="list" value={category}
-                onChange={(e) => { setCategory(e.target.value); setPicked(''); }}
+                aria-activedescendant={keys.index >= 0 ? `tk-cat-${keys.index}` : undefined}
+                onKeyDown={(e) => { keys.onKeyDown(e, (i) => pick(matches[i])); }}
+                onChange={(e) => { setCategory(e.target.value); setPicked(''); keys.reset(); }}
                 className="min-w-0 grow border-0 bg-transparent text-size-15 text-[var(--wh-ink)] focus:outline-none" />
             </span>
             {matches.length > 0 ? (
               <ul id="tk-cat-matches" role="listbox" aria-label="Matching categories" className="m-0 list-none rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-0">
-                {matches.map((c) => (
-                  <li key={c} role="option" aria-selected={picked === c} tabIndex={-1} onClick={() => { setCategory(c); setPicked(c); }}
-                    className="flex min-h-11 cursor-pointer items-center border-t border-[var(--wh-border)] px-3 text-size-15 first:border-t-0 hover:bg-[var(--wh-hover)]">{c}</li>
+                {matches.map((c, i) => (
+                  <li key={c} id={`tk-cat-${i}`} role="option" aria-selected={keys.index === i} tabIndex={-1} onClick={() => pick(c)}
+                    className={`flex min-h-11 cursor-pointer items-center border-t border-[var(--wh-border)] px-3 text-size-15 first:border-t-0 hover:bg-[var(--wh-hover)] ${keys.index === i ? 'bg-[var(--wh-hover)] font-semibold' : ''}`}>{c}</li>
                 ))}
               </ul>
             ) : null}
@@ -163,7 +169,10 @@ function StartCount({ areasUsed, onCancel }: { areasUsed: string[]; onCancel: ()
             <p className="m-0 text-sm text-[var(--wh-muted)]">Only what’s scanned in this area is compared — products nobody scans are left as they are.</p>
           </div>
         ) : null}
-        <p className="m-0 text-sm text-[var(--wh-muted)]">Counters don’t see what Wheelhouse expects, so they count what’s really there. Anything sold, booked in, used on a job, sent or adjusted during the count is allowed for, and stock held for online orders or jobs isn’t expected on the shelf. Bikes held for Cycle to Work orders are expected on the shelf and counted.</p>
+        {/* The drawn note, shortened until it is true (review, 28 Oct): jobs
+            don't move stock, nothing is sent between shops, and nothing holds
+            stock for orders, jobs or Cycle to Work yet. */}
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Counters don’t see what Wheelhouse expects, so they count what’s really there. Anything sold, booked in or adjusted during the count is allowed for.</p>
         {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
       </DialogBody>
       <DialogFooter>

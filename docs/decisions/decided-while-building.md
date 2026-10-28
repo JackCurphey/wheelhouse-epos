@@ -3688,3 +3688,31 @@ but no closed order. Decided here, for Jack to overrule:
 19. **Later, not built here:** held stock left out of Expected (nothing
     holds stock yet), sizes and colours on a line (WP-1.5), Today's
     below-zero line, and sending stock to another shop.
+
+From the independent review, 28 Oct:
+
+20. **Drawn words shortened until true** (the PIN screen's precedent). The
+    drawings say anything "sold, booked in, used on a job, sent or adjusted"
+    is allowed for, that "stock held for online orders or jobs isn't
+    expected on the shelf", and that Cycle to Work bikes are counted. Jobs
+    don't move stock, nothing is sent between shops, and nothing holds stock
+    yet, so Start a count, the counting page and Check the count say only
+    "Anything sold, booked in or adjusted … is allowed for." The drawn words
+    come back as each of those is built.
+21. **A later scan by the same person moves "last count" on.** Jo scans one
+    shelf of pads, a pad sells, then she scans another shelf an hour later:
+    the sale falls before her last count, so it's taken as already counted,
+    though the second shelf never had it. Logged, not changed; the fix would
+    be to keep each scan's time, not just the first and last.
+22. **Undo is refused once a later count has corrected the same product**
+    ("A later count has corrected [Product]; undo that one first."), since
+    taking the earlier change off would leave stock wrong. Undo the later
+    count first.
+23. **Till sales count from when they were made at the till**, so a sale made
+    offline before the count, and synced after it, is already in the count.
+24. **The counting page searches only the count's own products** (the
+    category, or the below-zero list), with names and codes only.
+25. **Arrow keys and Enter** pick from the category picker's matches and the
+    counting page's matches; a category typed in full counts as picked.
+26. **Download the count** puts a ' before a name or supplier code that starts
+    like a spreadsheet formula (=, +, −, @), so it opens as text.

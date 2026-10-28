@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { Card, Page, Row, Tag } from '@/screens/deliveries/deliveries-bits.tsx';
-import { Count, useSearch } from '@/screens/deliveries/new-order.tsx';
-import { names, type Take } from './stock-take-bits.ts';
+import { Count } from '@/screens/deliveries/new-order.tsx';
+import { names, useActiveOption, type Take } from './stock-take-bits.ts';
 
 /**
  * Counting in a stock take (tk-count, tk-count-below in stock.mjs; stock
@@ -24,6 +24,20 @@ type Product = { id: number; sku: string | null; barcode: string | null; name: s
 type Recount = { productId: number; name: string; sku: string | null; askedBy: string };
 type CountView = Take & { mine: Line[]; myItems: number; othersCounting: string[]; recountAsked?: Recount[]; stillToFind: { productId: number; name: string; sku: string | null }[] | null };
 type Body = { productId: number; add: 1 } | { productId: number; qty: number };
+
+// The count's own search (review, 28 Oct): names and codes only, never stock
+// or cost, and only the count's own products. As receiving's, it waits for
+// typing to pause.
+const findIn = (id: number, search: string) => apiGet<Product[]>(`/api/stock-takes/${id}/products?${new URLSearchParams({ search })}`);
+function useTakeSearch(id: number, text: string) {
+  const [asked, setAsked] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setAsked(text.trim()), 150);
+    return () => clearTimeout(t);
+  }, [text]);
+  const found = useQuery({ queryKey: ['stock-take-products', id, asked], queryFn: () => findIn(id, asked), enabled: asked.length > 0 });
+  return asked && asked === text.trim() ? found.data ?? [] : [];
+}
 
 // This person's lines with one changed: a new one first, 0 taken off.
 function withLine(v: CountView, line: Line): CountView {
@@ -44,7 +58,8 @@ export function CountPage() {
   const [said, setSaid] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const matches = useSearch(text);
+  const matches = useTakeSearch(id, text).slice(0, 8);
+  const keys = useActiveOption(matches.length);
   const chain = useRef<Promise<void>>(Promise.resolve());
   const pending = useRef(0);
 
@@ -88,7 +103,7 @@ export function CountPage() {
     if (!code) return;
     let found: Product[];
     try {
-      found = await apiGet<Product[]>(`/api/products?${new URLSearchParams({ search: code })}`);
+      found = await findIn(id, code);
     } catch {
       setProblem('Wheelhouse couldn’t look that up. Try again in a moment.');
       return;
@@ -135,14 +150,19 @@ export function CountPage() {
             <NavIcon name="search" size={20} />
             <input type="search" aria-label="Scan each item, or type to find it" placeholder="Scan each item, or type to find it" value={text}
               aria-controls="tk-matches" aria-expanded={matches.length > 0}
-              onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void onEnter(); } }}
+              aria-activedescendant={keys.index >= 0 ? `tk-match-${keys.index}` : undefined}
+              onChange={(e) => { setText(e.target.value); keys.reset(); }}
+              onKeyDown={(e) => {
+                if (keys.onKeyDown(e, (i) => take(matches[i]))) return;
+                if (e.key === 'Enter') { e.preventDefault(); void onEnter(); }
+              }}
               className="min-w-0 grow border-0 bg-transparent text-base text-[var(--wh-ink)] placeholder:text-[var(--wh-muted)] focus:outline-none" />
           </label>
           {matches.length > 0 ? (
             <ul id="tk-matches" role="listbox" aria-label="Matching products" className="m-0 mt-1 list-none rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-0">
-              {matches.slice(0, 8).map((p) => (
-                <li key={p.id} role="option" aria-selected="false" tabIndex={-1} onClick={() => take(p)}
-                  className="flex min-h-11 cursor-pointer items-center justify-between gap-3 border-t border-[var(--wh-border)] px-3 first:border-t-0 hover:bg-[var(--wh-hover)]">
+              {matches.map((p, i) => (
+                <li key={p.id} id={`tk-match-${i}`} role="option" aria-selected={keys.index === i} tabIndex={-1} onClick={() => take(p)}
+                  className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 border-t border-[var(--wh-border)] px-3 first:border-t-0 hover:bg-[var(--wh-hover)] ${keys.index === i ? 'bg-[var(--wh-hover)]' : ''}`}>
                   <span className="text-size-15 font-semibold">{p.name}</span>
                   <span className="text-size-13 text-[var(--wh-muted)]">{p.sku}</span>
                 </li>
@@ -185,7 +205,7 @@ export function CountPage() {
           <span className="text-sm text-[var(--wh-muted)]">{`${v.myItems} ${v.myItems === 1 ? 'item' : 'items'} counted by you${others.length ? ` · ${names(others)} ${others.length === 1 ? 'is' : 'are'} counting too` : ''}`}</span>
           <Button variant="accent" disabled={busy} onClick={() => void finish()}>I’ve finished my part</Button>
         </div>
-        <p className="m-0 text-sm text-[var(--wh-muted)]">{below ? `Started by ${v.startedBy}. Staff can join from Stock take. Numbers aren’t shown — count what you find.` : 'Count what’s on the shelf. Anything sold, booked in, used or sent while you count is allowed for.'}</p>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">{below ? `Started by ${v.startedBy}. Staff can join from Stock take. Numbers aren’t shown — count what you find.` : 'Count what’s on the shelf. Anything sold, booked in or adjusted while you count is allowed for.'}</p>
       </Card>
     </Page>
   );

@@ -24,7 +24,7 @@
 - [ ] 3.4 Screens: Check the count (`tk-diff`), Count applied (`tk-applied`), Finished counts, recounts on the counting page, "Counted" in a product's history; a browser spec
 - [x] 3.5 `node scripts/ci/check-migrations.mjs pr origin/main` once #561 has merged
 - [x] 3.6 The independent review (28 Oct), tests first: Undo refused after a later count; the counting page's own blind search; till sales by when they were made; the download's text cells; the history line tied to its shop's take; the apply in bulk statements; a held-lock deadlock test
-- [ ] 3.7 Screens from the review: the counting page on its own search; arrow keys and Enter in the category picker and the match list; drawn words shortened until true
+- [x] 3.7 Screens from the review: the counting page on its own search; arrow keys and Enter in the category picker and the match list; drawn words shortened until true
 - [ ] 3.8 `/review`; CI by hand
 
 ## 4. Later (waits for other pieces)

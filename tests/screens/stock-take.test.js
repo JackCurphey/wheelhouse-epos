@@ -12,6 +12,7 @@ const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: t
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
 // A stock figure no counter should ever see.
 const PADS = { id: 11, sku: 'B05S-RX', barcode: '4524667000001', name: 'Shimano brake pads', category: 'Brakes', stockQty: 4321 };
+const CAT2 = { id: 16, sku: '[Supplier code 2]', barcode: null, name: '[Product 5]', category: 'Brakes', stockQty: 4321 };
 const MECH = { id: 12, sku: '[Supplier code]', barcode: null, name: '[Product]', category: 'Drivetrain › Derailleurs', stockQty: -1 };
 const STARTED = '2026-09-01T09:30:00.000Z';
 const take = (over) => ({ id: 5, kind: 'area', target: '[Area]', label: '[Area]', startedAt: STARTED, startedBy: 'Jack Lewis', counting: ['Jo Taylor', 'Alex Morgan'], finished: [], itemsCounted: 3, everyoneFinished: false, ...over });
@@ -52,6 +53,12 @@ async function open(path, { me = OWNER, hub = HUB, page, countReply, checked = C
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, me);
+    const own = u.pathname.match(/^\/api\/stock-takes\/\d+\/products$/);
+    if (own) {
+      const q = (u.searchParams.get('search') ?? '').toLowerCase();
+      return reply(200, [PADS, MECH, CAT2].filter((p) => q && [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q)))
+        .map((p) => ({ id: p.id, name: p.name, sku: p.sku, barcode: p.barcode })));
+    }
     if (u.pathname === '/api/products') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
       return reply(200, [PADS, MECH].filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))));
@@ -80,6 +87,7 @@ async function open(path, { me = OWNER, hub = HUB, page, countReply, checked = C
       if (m[2] === 'undo') return reply(200, take({ id: Number(m[1]) }));
       return reply(200, { ok: true });
     }
+    if (/^\/api\/stock-takes\/\d+\/products$/.test(u.pathname)) return reply(200, []);
     if (u.pathname.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });
   };
@@ -146,7 +154,7 @@ test('Start a count: an area, picked from those used before, then counting', asy
   assert.ok(dialog.getByText('Staff can join it from Stock take on any device'));
   assert.equal(dialog.getByRole('radio', { name: 'An area' }).checked, true, 'an area, as drawn');
   assert.ok(dialog.getByText('Only what’s scanned in this area is compared — products nobody scans are left as they are.'));
-  assert.ok(dialog.getByText(/^Counters don’t see what Wheelhouse expects, so they count what’s really there\./));
+  assert.ok(dialog.getByText('Counters don’t see what Wheelhouse expects, so they count what’s really there. Anything sold, booked in or adjusted during the count is allowed for.'));
   const start = dialog.getByRole('button', { name: 'Start the count' });
   assert.equal(start.disabled, true, 'not until the area is named');
   fireEvent.click(dialog.getByRole('button', { name: '[Area 2]' }));
@@ -196,7 +204,7 @@ test('counting: joins, a scan adds one, nothing shows the stock figure', async (
   const card = within(await ui.findByRole('region', { name: 'Counting [Area]' }));
   await waitFor(r, () => posts(r.calls, '/api/stock-takes/5/join').length === 1);
   assert.ok(card.getByRole('heading', { level: 3, name: 'Scan what’s here' }));
-  assert.ok(card.getByText('Count what’s on the shelf. Anything sold, booked in, used or sent while you count is allowed for.'));
+  assert.ok(card.getByText('Count what’s on the shelf. Anything sold, booked in or adjusted while you count is allowed for.'));
   scan(r, '4524667000001');
   await waitFor(r, () => card.queryByRole('group', { name: 'Shimano brake pads' }) !== null);
   assert.deepEqual(posts(r.calls, '/api/stock-takes/5/counts').map((c) => c.body), [{ productId: 11, add: 1 }]);
@@ -206,6 +214,8 @@ test('counting: joins, a scan adds one, nothing shows the stock figure', async (
   await waitFor(r, () => card.getByRole('textbox', { name: 'How many: Shimano brake pads' }).value === '2');
   assert.ok(card.getByText('2 items counted by you · Alex Morgan is counting too'));
   assert.ok(!document.body.textContent.includes('4321'), 'blind');
+  assert.ok(r.calls.some((c) => c.url.startsWith('/api/stock-takes/5/products?')), 'searched through the count');
+  assert.ok(!r.calls.some((c) => c.url.startsWith('/api/products')), 'never the product list, which carries stock and cost');
   assert.equal(within(ui.getByRole('main')).getByRole('link', { name: 'Stock take' }).getAttribute('href'), '/workshop/stocktake');
 });
 
@@ -294,6 +304,8 @@ test('Check the count: the summary, differences largest first, who counted, what
   assert.match(rows[2].textContent, /\[Product 2\].*Recount asked/);
   assert.ok(card.getByText('Not counted · 2 products · expected 5 in all'));
   assert.ok(card.getByText('Products nobody scanned are left as they are.'));
+  assert.ok(card.getByText('Anything sold, booked in or adjusted during the count is allowed for.'));
+  assert.ok(card.queryByText(/held for online orders|used on a job|Cycle to Work/) === null, 'only what is true yet');
   assert.ok(card.getByRole('button', { name: 'Apply to 2 products' }));
 });
 
@@ -364,4 +376,59 @@ test('a product’s history says Counted, and who applied it', async () => {
   assert.match(lines[0].textContent, /Stock take of \[Area\] · counted 4, expected 6 · counted by Jo Taylor · applied by Jack Lewis/);
   assert.match(lines[1].textContent, /^Count undone/);
   assert.match(lines[1].textContent, /Undid the stock take of \[Area\] · Jack Lewis/);
+});
+
+// ---- Keyboard (review, 28 Oct) ----
+
+test('the category picker: arrow keys move through the matches and Enter picks one', async () => {
+  const r = await open('/workshop/stocktake');
+  const { ui, within, fireEvent } = r;
+  fireEvent.click(await ui.findByRole('button', { name: 'Start a count' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Start a count' }));
+  fireEvent.click(dialog.getByRole('radio', { name: 'A category' }));
+  const box = dialog.getByRole('combobox', { name: 'Which category' });
+  fireEvent.change(box, { target: { value: 'drive' } });
+  await dialog.findByRole('option', { name: 'Drivetrain' }, { timeout: 5000 });
+  assert.ok(box.getAttribute('aria-activedescendant') === null, 'nothing active until an arrow is pressed');
+  fireEvent.keyDown(box, { key: 'ArrowDown' });
+  fireEvent.keyDown(box, { key: 'ArrowDown' });
+  const active = document.getElementById(box.getAttribute('aria-activedescendant'));
+  assert.equal(active.textContent, 'Drivetrain › Derailleurs');
+  assert.equal(active.getAttribute('aria-selected'), 'true');
+  fireEvent.keyDown(box, { key: 'ArrowUp' });
+  assert.equal(document.getElementById(box.getAttribute('aria-activedescendant')).textContent, 'Drivetrain');
+  fireEvent.keyDown(box, { key: 'ArrowDown' });
+  fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(box.value, 'Drivetrain › Derailleurs');
+  assert.equal(dialog.getByRole('button', { name: 'Start the count' }).disabled, false);
+});
+
+test('the category picker: a category typed in full counts as picked', async () => {
+  const r = await open('/workshop/stocktake');
+  const { ui, within, fireEvent } = r;
+  fireEvent.click(await ui.findByRole('button', { name: 'Start a count' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Start a count' }));
+  fireEvent.click(dialog.getByRole('radio', { name: 'A category' }));
+  await r.waitFor(() => assert.ok(r.calls.some((c) => c.url === '/api/categories')));
+  fireEvent.change(dialog.getByRole('combobox', { name: 'Which category' }), { target: { value: 'brakes' } });
+  await r.waitFor(() => assert.equal(dialog.getByRole('button', { name: 'Start the count' }).disabled, false));
+  fireEvent.click(dialog.getByRole('button', { name: 'Start the count' }));
+  await waitFor(r, () => posts(r.calls, '/api/stock-takes').length === 1);
+  assert.deepEqual(posts(r.calls, '/api/stock-takes')[0].body, { kind: 'category', target: 'Brakes' });
+  await ui.findByRole('searchbox', { name: 'Scan each item, or type to find it' });
+});
+
+test('counting: arrow keys and Enter pick from the matches', async () => {
+  const r = await open('/workshop/stocktake/5');
+  const { ui, fireEvent } = r;
+  const box = await ui.findByRole('searchbox', { name: 'Scan each item, or type to find it' });
+  fireEvent.change(box, { target: { value: 'product' } });
+  await ui.findByRole('option', { name: /\[Product 5\]/ }, { timeout: 5000 });
+  fireEvent.keyDown(box, { key: 'ArrowDown' });
+  fireEvent.keyDown(box, { key: 'ArrowDown' });
+  const active = document.getElementById(box.getAttribute('aria-activedescendant'));
+  assert.match(active.textContent, /\[Product 5\]/);
+  fireEvent.keyDown(box, { key: 'Enter' });
+  await waitFor(r, () => posts(r.calls, '/counts').length === 1);
+  assert.deepEqual(posts(r.calls, '/counts')[0].body, { productId: 16, add: 1 });
 });
