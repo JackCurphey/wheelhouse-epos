@@ -255,3 +255,9 @@ GET /api/stock-takes/:id
 POST /api/stock-takes/:id/join
 POST /api/stock-takes/:id/counts
 POST /api/stock-takes/:id/finish
+GET /api/stock-takes/:id/check
+POST /api/stock-takes/:id/recount
+POST /api/stock-takes/:id/none
+POST /api/stock-takes/:id/apply
+POST /api/stock-takes/:id/undo
+GET /api/stock-takes/:id/download
