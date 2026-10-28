@@ -23,7 +23,12 @@
    sends the `RETURNING stock_qty` value, from its own database scope once
    the refund's has committed (in either tenant mode), so a Shopify call (up
    to about 15 s with retries) never holds the product's row lock. It still
-   runs before the webhook replies, as it did.
+   runs before the webhook replies, as it did. That step
+   (`pushStockToShopify`, `server/shopify.js`) never fails the webhook
+   (second /review, 28 Oct): the stock has committed, so a 500 would only have
+   Shopify retry a refund that is done and then be told so, and the push
+   would never go. A failed push was already logged; now a scope that can't
+   open (the pool full for 5 s) is logged too, and the webhook answers 200.
 5. **The claim is inside the transaction** (/review, 28 Oct). The claim on
    the event used to commit on its own before the work, so a refund that
    failed partway stayed claimed and Shopify's retry was dropped as already
@@ -36,10 +41,19 @@
      changes nothing. A delivery after a commit is told the same at once.
    - **The error record.** After the rollback, the failure is recorded in a
      fresh database scope (`recordShopifyEventError`) as `status 'error'`
-     with the message, as before, so it survives in either tenant mode. It
-     keeps an earlier error record (updating its message) and never
-     overwrites an `ok` row, a delivery that went through. An `error` row
-     does not block: the next delivery's claim takes it back to `ok`.
+     with the message, as before, so it survives in either tenant mode. Its
+     message starts "Rolled back, safe to retry: "
+     (`ROLLED_BACK_ERROR_PREFIX`). It updates only an earlier record of its
+     own (marked) kind, and never an `ok` row, a delivery that went through.
+     A marked `error` row does not block: the next delivery's claim takes it
+     back to `ok`.
+   - **Old error rows stay taken** (second /review, 28 Oct). On main the
+     claim committed first and a refund's lines were written one by one, so
+     a failure could leave part of a refund applied with an `error` row.
+     Taking such a row again would apply that part twice. So only marked rows
+     are claimed again; an unmarked `error` row written before this change
+     stays taken, exactly as on main, and a later error record never marks
+     it. A prefix in `error_message` instead of a new column: no migration.
    - **Orders are unchanged.** The order webhook keeps `claimShopifyEvent`
      outside `createSale`'s transaction; it isn't part of this change.
 6. **`no_restock` lines are skipped** (/review, 28 Oct). Shopify's

@@ -8,6 +8,7 @@
 - [x] 1.5 The touched tests, the Shopify tests, sales-concurrency, `npm test`, lint and `tsc`
 - [ ] 1.6 Self-review and `/review` (server.js, stock); CI by hand on the branch; archive as the last commit
   - [x] /review 28 Oct: nothing blocking; fixes done (tasks 2.1 to 2.5)
+  - [x] Second /review 28 Oct: nothing serious; fixes done (tasks 3.1 to 3.4)
   - [ ] CI by hand on the branch
   - [ ] Archive as the last commit
 
@@ -19,3 +20,10 @@
 - [x] 2.4 The refund's rollback is `.catch(() => {})`
 - [x] 2.5 Logged for Jack in `decided-while-building.md`, not changed: importing a supplier item starts its stock with no history line
 - [x] 2.6 The touched tests, the Shopify tests, sales-concurrency, `npm test`, `npm run test:browser`, lint and `tsc`
+
+## 3. Fixes from the second /review, 28 Oct
+
+- [x] 3.1 Error records this change writes start "Rolled back, safe to retry: " (`ROLLED_BACK_ERROR_PREFIX`), and only those are claimed again; an old unmarked 'error' row (main's handler could fail after applying part of a refund) stays taken, as on main, and a later error record never marks it. No migration. Test watched failing (old row taken again, 6 not 5). Breaks: the claim without the mark (red, 6 not 5); the error record marking an old row (red)
+- [x] 3.2 The push's own database scope failing (the pool full) is logged and the webhook still answers 200, as a failed push already did (`pushStockToShopify`, `server/shopify.js`). Test watched failing (the error was thrown); removing the catch turns it red again
+- [x] 3.3 Tests: two retries of a failed refund at the same moment apply once; an error record after the refund went through leaves it 'ok'. Both passed first (they guard the claim and the record's conditions); breaks turn them red (7 not 6; 'ok' given a message)
+- [x] 3.4 The touched tests, the Shopify tests, `npm test`, lint and `tsc`
