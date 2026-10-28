@@ -1260,7 +1260,12 @@ silent:
     in by PIN on that computer, "Make this computer Till B1" is refused,
     even though the Owner is the one signed in: they switch to the Owner
     first. *Pattern:* giving a PIN at the till (`giverHere`); roles and
-    switches 2.
+    switches 2. **For Jack (second review, 28 Oct), not changed:** a staff
+    member can still get round this by ending their own check-in (Switch)
+    first, then the Owner's sign-in sets up the till as before. That is
+    design decision 7 as written (the Owner's sign-in is what's needed);
+    whether to tighten it, for example by asking for the Owner's PIN too, is
+    Jack's call.
 16. **Re-claiming a till number is on the server only** (review, 28 Oct):
     the Owner can make a new computer Till B1 again, for a lost cookie or a
     replaced computer, and the old one stops being Till B1. The drawing's
@@ -1269,6 +1274,10 @@ silent:
 17. **A till switched off today keeps its line on Today**, with what
     happened on it; tills go in number order, B2 before B10, on Today and
     in Settings; the Owner's look at closing records no till (review, 28 Oct).
+    It also records no person checked in, only the Owner's sign-in (its
+    name is the same), so it adds no "Till · Not open yet" line to Today
+    when every till is set up (second review, 28 Oct). *Pattern:* the float
+    check's own "the sign-in's own name for a look at closing".
 
 ## Decided here, for Jack to overrule
 

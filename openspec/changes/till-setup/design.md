@@ -20,7 +20,10 @@ routes take), and the offline token is never put in a cookie: the browser
 token only says which till a signed-in browser is, so copied out of the
 browser it opens nothing without a staff sign-in (review, 28 Oct). How the
 offline till gets its own token is step C's to decide; setting up a till
-here stores an offline token's hash that nobody is shown. `thisTill(req)`
+here stores an offline token's hash that nobody is shown. **For step C:** it
+needs an Owner route that issues a new offline key for a till that is
+already set up, since `POST /api/tills` refuses an existing code and the
+stored offline key is shown to nobody (second review, 28 Oct). `thisTill(req)`
 (`server/till/this-till.js`) is the active till whose browser hash matches,
 in the request's shop, or null: a switched-off till, another shop's till, an
 offline till's token or a made-up one is no till. Tills are listed in
@@ -101,4 +104,8 @@ number order (B2 before B10), on Today and in Settings.
    are "In use" and can't be picked, so no screen offers it; it waits for a
    drawing (a lost cookie or a replaced computer).
 9. **The Owner's look at closing records no till**, even when the Owner is
-   checked in on one: closing is the whole shop's.
+   checked in on one: closing is the whole shop's. It records no person
+   checked in either, only the sign-in, so Today adds no "Till · Not open
+   yet" line for it when every till is set up (second review, 28 Oct).
+   A staff member can still end their check-in and let the Owner's sign-in
+   set up a till (decision 7 as written); tightening that is Jack's call.
