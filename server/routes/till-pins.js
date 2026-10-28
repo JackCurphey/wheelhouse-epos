@@ -14,7 +14,7 @@ import { shopToday } from '../clock.js';
 import { hashLinkCode, newLinkCode } from '../booking-link.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { notFound, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
-import { currentSession } from '../lib/session.js';
+import { currentSession, signedInSession } from '../lib/session.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
@@ -139,7 +139,8 @@ async function thisComputer(req) {
 export async function currentCheckin(req) {
   const token = parseCookies(req)[CHECKIN_COOKIE];
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
-  const ctx = await currentSession(req);
+  // The sign-in as stored: whether it counts as the Owner here is decided from this check-in.
+  const ctx = await signedInSession(req);
   if (!ctx) return null;
   const { till, workshop } = await thisComputer(req);
   const row = await prepare(
@@ -167,7 +168,7 @@ async function giverHere(req) {
   if (!mine || mine.workshop_computer_id) return null;
   return (await isTheOwner(mine)) ? mine : null;
 }
-const isTheOwner = async (checkin) => Boolean(await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(checkin.employee_id));
+export const isTheOwner = async (checkin) => Boolean(await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(checkin.employee_id));
 
 // Someone checked in by PIN on this browser who isn't the Owner: then the
 // Owner's sign-in doesn't set up a till or a workshop computer here

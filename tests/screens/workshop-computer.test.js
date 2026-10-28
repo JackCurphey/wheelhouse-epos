@@ -13,6 +13,8 @@ const JACK = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: tr
 const BOLTON = { id: 7, name: 'Bolton', code: 'B', taken: [] };
 const WORKSHOP = { name: null, siteName: 'Bolton' };
 const ALEX = { id: 31, name: 'Alex Morgan' };
+// Jack Lewis's own team member: his PIN makes the Owner the person working.
+const JACK_WORKING = { id: 11, name: 'Jack Lewis' };
 const B1 = { code: 'B1', name: null, siteName: 'Bolton' };
 const MINUTE = 60_000;
 
@@ -39,14 +41,15 @@ async function open(path, { workshop = WORKSHOP, till = null, serving = null, pi
     calls.push({ url, method, body });
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
-    if (u.pathname === '/api/auth/me') return reply(200, JACK);
+    // On a workshop computer the server says Owner only while the Owner is working (design 9).
+    if (u.pathname === '/api/auth/me') return reply(200, { ...JACK, isOwner: !state.workshop || state.serving?.id === JACK_WORKING.id });
     if (u.pathname === '/api/till-setup/workshop') state.workshop = { name: body.name || null, siteName: 'Bolton' };
     if (u.pathname === '/api/till-setup/workshop') return reply(201, { workshop: { id: 4, name: body.name || null, siteName: 'Bolton' } });
     if (u.pathname === '/api/till-setup') return reply(200, { sites: [BOLTON], thisTill: till ? { id: 3, ...till } : null, thisWorkshop: state.workshop ? { id: 4, ...state.workshop } : null, tills: till ? [till.code] : [] });
     if (u.pathname === '/api/till-checkin' && method === 'POST') {
       if (!pinOk) return reply(400, { error: 'That PIN isn’t anyone’s — try again', code: 'wrong_pin' });
-      state.serving = ALEX;
-      return reply(201, { serving: ALEX });
+      state.serving = body.pin === '1111' ? JACK_WORKING : ALEX;
+      return reply(201, { serving: state.serving });
     }
     if (u.pathname === '/api/till-checkin/end') { state.serving = null; return reply(200, { serving: null }); }
     if (u.pathname === '/api/till-checkin/active') return reply(200, { serving: state.serving });
@@ -97,7 +100,7 @@ test('a computer that is already a workshop computer goes to it, and Settings of
   const t = await open('/workshop/till/setup');
   await t.waitFor(() => assert.equal(window.location.pathname, '/workshop'));
   t.cleanup(); restart(); current.uninstall(); mock.timers.reset(); current = undefined;
-  const s = await open('/workshop/settings?room=front-desk', { serving: ALEX });
+  const s = await open('/workshop/settings?room=front-desk', { serving: JACK_WORKING });
   const fold = await s.ui.findByRole('button', { name: /^Tills/ });
   if (fold.getAttribute('aria-expanded') !== 'true') s.fireEvent.click(fold);
   await s.ui.findByText(/Do this on the computer that will be the till/);
@@ -187,6 +190,36 @@ test('the server ending it brings back Enter your PIN', async () => {
   later(MINUTE);
   t.fireEvent.keyDown(document.body, { key: 'a' });
   await t.ui.findByRole('heading', { name: 'Enter your PIN' }, { timeout: 3000 });
+});
+
+test('Owner pages only while the Owner is working: Alex sees what staff see, Jack Lewis sees his own', async () => {
+  const t = await open('/workshop/settings');
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  typePin(t, '7305');
+  await t.ui.findByRole('region', { name: 'Who’s working' });
+  // What a staff sign-in sees at Settings, and no Owner rooms in the menu.
+  await t.ui.findByText(/isn’t part of your role|aren’t part of your role/);
+  const nav = t.ui.getAllByRole('navigation', { name: 'Main' })[0];
+  await t.waitFor(() => assert.ok(t.within(nav).queryByRole('link', { name: 'Settings' }) === null));
+  t.fireEvent.click(t.within(t.ui.getByRole('region', { name: 'Who’s working' })).getByRole('button', { name: 'Switch' }));
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  typePin(t, '1111');
+  await t.waitFor(() => assert.match(t.ui.getByRole('region', { name: 'Who’s working' }).textContent, /Jack Lewis/));
+  const nav2 = t.ui.getAllByRole('navigation', { name: 'Main' })[0];
+  await t.waitFor(() => assert.ok(t.within(nav2).queryByRole('link', { name: 'Settings' })));
+  assert.ok(t.ui.queryByText(/isn’t part of your role|aren’t part of your role/) === null);
+});
+
+test('after the Owner, the next person never sees the Owner’s menu, not even for a moment', async () => {
+  const t = await open('/workshop/diary', { serving: JACK_WORKING });
+  const nav = () => t.ui.getAllByRole('navigation', { name: 'Main' })[0];
+  await t.waitFor(() => assert.ok(t.within(nav()).queryByRole('link', { name: 'Settings' })));
+  t.fireEvent.click(t.within(t.ui.getByRole('region', { name: 'Who’s working' })).getByRole('button', { name: 'Switch' }));
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  typePin(t, '7305');
+  await t.ui.findByRole('region', { name: 'Who’s working' });
+  // The moment the page is back, its menu is already Alex's.
+  assert.ok(t.within(nav()).queryByRole('link', { name: 'Settings' }) === null);
 });
 
 test('a till is not a workshop computer: no Working bar, and it never goes back by itself', async () => {

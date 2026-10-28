@@ -1339,12 +1339,22 @@ silent:
    workshop computer**; its drawn note keeps its words ("It doesn’t show on
    a computer that’s already a till."). Opening the setup page there goes
    to Enter your PIN.
-10. **For Jack: pages on a workshop computer are the sign-in's**, as on a
-    till today. A workshop computer the Owner signed in shows the Owner's
-    pages to whoever is working, until Owner and Manager pages ask for a
-    PIN (stage-1 gaps 1) and pages follow the person working's role (WP-1.1,
-    task 3.8). The Till page also still opens there, as on a browser that
-    isn't a till; whether a workshop computer may sell isn't decided.
+10. **Decided here, for Jack to overrule: on a workshop computer, Owner
+    pages are the Owner's only while the Owner is the person working**
+    (the lead, 28 Oct; it stands in for stage-1 gaps 1, an Owner or Manager
+    PIN pop-up every time, until roles are built). A workshop computer is
+    usually signed in as the Owner. There, the Owner's sign-in counts as the
+    Owner only while the person checked in by PIN is the Owner; with nobody
+    working, someone else working, or the Owner gone idle, it counts as
+    staff. The server refuses every Owner-only route (`ownerOnly` and the
+    routes' own Owner checks alike), and the screens show exactly what a
+    staff sign-in sees: the Staff rooms in the menu, and "Settings aren’t
+    part of your role" on Settings. When the Owner types his PIN, the Owner's
+    pages are back. Tills and other browsers are unchanged. *Pattern:*
+    giving a PIN at the till (`giverHere`, 28 Oct entries 1 and 2: the PIN
+    says who you are), and a staff sign-in's own pages. The Till page still
+    opens on a workshop computer, as on a browser that isn't a till; whether
+    a workshop computer may sell isn't decided.
 11. **Giving a PIN is the till's**: the Serving menu's "Give a PIN" isn't
     offered on a workshop computer, and the server refuses it there.
 

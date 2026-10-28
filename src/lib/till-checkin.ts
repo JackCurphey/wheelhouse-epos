@@ -19,6 +19,8 @@ export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn
 export const CHECKIN_QUERY = ['till-checkin'];
 // The float check asks the person checked in, so it is read again when that changes.
 const FLOAT_QUERY = ['float-check'];
+// useSession's (src/lib/auth/use-session.ts).
+const SESSION_QUERY = ['session'];
 
 export function useTillCheckin(enabled = true) {
   // Read again when the till comes back into view, so a till left overnight
@@ -39,10 +41,15 @@ export function useCheckinActions() {
     });
     void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     void queryClient.invalidateQueries({ queryKey: FLOAT_QUERY });
+    void queryClient.invalidateQueries({ queryKey: SESSION_QUERY });
   };
   return {
     async checkIn(pin: string) {
       const { serving } = await apiMutate<{ serving: CheckedIn }>('/api/till-checkin', { pin });
+      // Who is signed in is read again first: on a workshop computer the
+      // Owner's pages follow the person working (workshop-computer design 9),
+      // so the menu never shows the last person's for a moment.
+      await queryClient.refetchQueries({ queryKey: SESSION_QUERY }).catch(() => {});
       settle(serving);
     },
     async switchServing() {

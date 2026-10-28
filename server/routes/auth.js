@@ -8,6 +8,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, createShop, destroySession, getSessionContext, loginForWorkosUser } from '../auth.js';
 import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
+import { ownerHere } from '../lib/workshop-owner.js';
 import { devAutologinOn, DEV_SIGNED_OUT_COOKIE } from '../lib/dev-autologin.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { staffSigninProvider } from '../staff-signin/provider.js';
@@ -209,8 +210,11 @@ export function register(route) {
       ? await runWithShop(ctx.shop.id, () =>
           db.prepare('SELECT id, name, is_cashier FROM employees WHERE id = ? AND active = 1').get(ctx.login.employee_id))
       : null;
+    // On a workshop computer the Owner's sign-in shows the Owner's pages only
+    // while the Owner is checked in by PIN (openspec/changes/workshop-computer design 9).
+    const isOwner = ctx.login.is_owner ? await runWithShop(ctx.shop.id, () => ownerHere(req, ctx)) : false;
     sendJson(res, 200, {
-      ...serializeSession(ctx),
+      ...serializeSession({ ...ctx, login: { ...ctx.login, is_owner: isOwner } }),
       employee: employee ? { id: employee.id, name: employee.name, isCashier: !!employee.is_cashier } : null,
     });
   });

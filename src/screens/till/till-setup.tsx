@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from 'react-router';
 import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import { SETUP_QUERY, useTillSetup } from '@/lib/till-setup.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
-import { CHECKIN_QUERY } from '@/lib/till-checkin.ts';
+import { CHECKIN_QUERY, useTillCheckin } from '@/lib/till-checkin.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
@@ -30,7 +30,11 @@ const LINE = 'm-0 text-size-15 leading-normal text-[var(--wh-muted)]';
 
 export function TillSetupPage() {
   const session = useSession();
+  const checkin = useTillCheckin(session.status === 'signed-in');
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
+  // A workshop computer goes to its own Enter your PIN, whoever is working
+  // there: its Owner pages are the Owner's only while the Owner is (design 9).
+  if (checkin.data?.workshop) return <Navigate to={ROUTES.desk} replace />;
   if (session.status === 'signed-out') return <SignedOut expired={session.expired} />;
   if (session.status === 'error') return <Frame><p role="alert" className={LINE}>Wheelhouse couldn’t load this page. Try again in a moment.</p></Frame>;
   // The drawn note from Settings › Till › Tills (set-till-tills).

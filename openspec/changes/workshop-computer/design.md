@@ -85,6 +85,17 @@ active workshop computer whose hash matches, in the request's shop, or null.
    computer"; the line "This computer becomes a workshop computer: staff
    work on it with their PIN."; and "Make this computer a workshop
    computer". Not drawn; decided here for Jack to overrule.
-8. **Pages on a workshop computer are the sign-in's**, as on a till today:
-   Owner and Manager pages asking for a PIN (stage-1 gaps 1) and pages by
-   the person working's role need roles (WP-1.1) and task 3.8.
+8. **Pages on a workshop computer follow the sign-in's role**, as on a
+   till today, except the Owner's (decision 9). Owner and Manager pages
+   asking for a PIN every time (stage-1 gaps 1) and pages by the person
+   working's role need roles (WP-1.1) and task 3.8.
+9. **Owner pages only while the Owner is working** (the lead, 28 Oct,
+   standing in for stage-1 gaps 1 until roles). On a workshop computer the
+   Owner's sign-in counts as the Owner only while the person checked in by
+   PIN is the Owner (`giverHere`'s rule); otherwise as staff.
+   `currentSession` (`server/lib/session.js`) applies it inside the
+   request's shop scope, so `ownerOnly` and every route's own Owner check
+   refuse; `GET /api/auth/me` says `isOwner: false`, so the screens show
+   what a staff sign-in sees. `server/lib/workshop-owner.js` decides it once
+   per request. After a PIN the screens read the sign-in again before the
+   page shows. Decided for Jack to overrule.

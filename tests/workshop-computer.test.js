@@ -90,8 +90,9 @@ test('make this computer a workshop computer: the Owner only, the cookie holds i
   assert.equal(stored.browser_token_hash, hashLinkCode(token));
   assert.equal(stored.site_id, owner.site.id);
   assert.ok(!JSON.stringify(made.body).includes(token), 'the key is never in the reply');
-  // The setup and the check-in both know it; it is no till.
-  assert.deepEqual((await b.send('/api/till-setup')).body.thisWorkshop, { id: made.body.workshop.id, name: 'Back bench', siteName: 'Bolton' });
+  // The check-in knows it; it is no till. The setup is the Owner's, and with
+  // nobody working here the Owner's sign-in isn't the Owner (design 9).
+  assert.equal((await b.send('/api/till-setup')).status, 403);
   const checkin = (await b.send('/api/till-checkin')).body;
   assert.deepEqual([checkin.workshop, checkin.till], [{ name: 'Back bench', siteName: 'Bolton' }, null]);
   // Signing in as someone else on that computer leaves it a workshop computer.
@@ -106,10 +107,9 @@ test('a computer is one till or one workshop computer; bad details are refused',
   const owner = await shop();
   const b = browser(owner);
   assert.equal((await makeWorkshop(b, owner)).status, 201);
+  // With nobody working there, the Owner's sign-in can't set up anything on it.
   const again = await makeWorkshop(b, owner);
-  assert.deepEqual([again.status, again.body.code], [409, 'already_a_workshop']);
-  const till = await b.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } });
-  assert.deepEqual([till.status, till.body.code], [409, 'already_a_workshop']);
+  assert.deepEqual([again.status, again.body.code], [403, 'owner_only']);
   const t = browser(owner);
   assert.equal((await t.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
   const onTill = await makeWorkshop(t, owner);
@@ -188,17 +188,48 @@ test('left alone for 10 minutes, the server stops counting the check-in; using i
   assert.equal(await serving(w), null);
 });
 
-test('an idle check-in counts for nothing that asks who is checked in: setting up is the Owner\'s again', async () => {
+// Owner pages on a workshop computer (the lead, 28 Oct, standing in for
+// stage-1 gaps 1 until roles): the Owner's sign-in counts as the Owner there
+// only while the person checked in by PIN is the Owner (giverHere's rule).
+test('on a workshop computer the Owner\'s sign-in is the Owner only while the Owner is checked in', async () => {
   const owner = await shop();
   const jo = await member(owner, 'Jo Taylor');
+  const ownerPin = (await post(owner.cookie, '/api/your-settings/till-pin/offer')).body.pin;
+  assert.equal((await post(owner.cookie, '/api/your-settings/till-pin', { pin: ownerPin })).status, 200);
   const w = browser(owner);
-  await makeWorkshop(w, owner);
+  assert.equal((await makeWorkshop(w, owner)).status, 201);
+  // An Owner-only route (ownerOnly), one checked inline (the setup), and /api/auth/me.
+  const owners = async () => {
+    const service = await w.send('/api/workshop-services', { method: 'POST', body: {} });
+    const setup = await w.send('/api/till-setup');
+    const me = await w.send('/api/auth/me');
+    return { service: service.status === 403 ? service.body.code : 'allowed', setup: setup.status === 403 ? setup.body.code : 'allowed', isOwner: me.body.isOwner };
+  };
+  const refused = { service: 'owner_only', setup: 'owner_only', isOwner: false };
+  const allowed = { service: 'allowed', setup: 'allowed', isOwner: true };
+  assert.deepEqual(await owners(), refused, 'nobody working');
   assert.equal((await checkIn(w, jo.pin)).status, 201);
-  // Jo checked in on the workshop computer, idle: a till set up there is
-  // refused for being a workshop computer, not for Jo.
-  await idleFor(owner, w, 11);
+  assert.deepEqual(await owners(), refused, 'Jo working');
+  assert.equal((await checkIn(w, ownerPin)).status, 201);
+  assert.deepEqual(await owners(), allowed, 'Jack Lewis, the Owner, working');
+  // The Owner working there: the setup knows it, and it is one workshop computer.
+  assert.equal((await w.send('/api/till-setup')).body.thisWorkshop.siteName, 'Bolton');
+  const again = await makeWorkshop(w, owner);
+  assert.deepEqual([again.status, again.body.code], [409, 'already_a_workshop']);
   const till = await w.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } });
-  assert.equal(till.body.code, 'already_a_workshop');
+  assert.deepEqual([till.status, till.body.code], [409, 'already_a_workshop']);
+  // Left alone 10 minutes: nobody working, so no Owner pages.
+  await idleFor(owner, w, 11);
+  assert.deepEqual(await owners(), refused, 'the Owner gone idle');
+  // Elsewhere nothing changes: a till with Jo serving, and a plain browser.
+  const t = browser(owner);
+  assert.equal((await t.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
+  assert.equal((await checkIn(t, jo.pin)).status, 201);
+  assert.equal((await t.send('/api/auth/me')).body.isOwner, true, 'a till');
+  assert.equal((await call(owner.cookie, '/api/auth/me')).body.isOwner, true, 'a plain browser');
+  // Staff signed in on the workshop computer stay staff, whoever is working.
+  const asJo = await fetch(`${server.baseUrl}/api/workshop-services`, { method: 'POST', headers: { cookie: `${jo.cookie}; wh_workshop=${w.jar.get('wh_workshop')}`, 'content-type': 'application/json' }, body: '{}' });
+  assert.equal(asJo.status, 403);
 });
 
 test('a till never goes back by itself', async () => {

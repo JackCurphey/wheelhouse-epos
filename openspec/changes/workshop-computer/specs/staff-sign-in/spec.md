@@ -45,6 +45,17 @@ A workshop computer SHALL go back to Enter your PIN after 10 minutes with nobody
 - **WHEN** Alex Morgan keeps using the workshop computer
 - **THEN** it stays his
 
+### Requirement: Owner pages on a workshop computer only while the Owner is working
+On a workshop computer, Owner-only pages and routes SHALL be refused unless the person checked in by PIN is the Owner, even when the computer is signed in as the Owner; anyone else working SHALL see what a staff sign-in sees. Tills and other browsers SHALL be unchanged.
+
+#### Scenario: Alex is working
+- **WHEN** the workshop computer is signed in as Jack Lewis, the Owner, and Alex Morgan is working
+- **THEN** Settings says "Settings aren’t part of your role", and Owner-only changes are refused
+
+#### Scenario: Jack Lewis is working
+- **WHEN** Jack Lewis types his own PIN on the workshop computer
+- **THEN** his Owner pages are there
+
 ## MODIFIED Requirements
 
 ### Requirement: A check-in belongs to its shop and its till
