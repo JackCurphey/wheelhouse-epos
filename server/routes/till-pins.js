@@ -79,6 +79,8 @@ async function offerPin(employeeId) {
 }
 
 const NO_OFFER = { error: 'Ask for a new PIN', code: 'no_offer' };
+// A newer PIN was offered (another window's Give me a different one) after this one was shown (review, 28 Oct).
+const REPLACED = { error: 'Your PIN was offered in another window. Pick again.', code: 'offer_replaced' };
 const HAS_PIN = { error: 'They already have a PIN', code: 'has_pin' };
 
 /**
@@ -98,7 +100,8 @@ async function keepPin(employeeId, pin, { firstOnly = false } = {}) {
     ).get(employeeId);
     let refusal = null;
     if (firstOnly && offer?.pin_hash) refusal = [409, HAS_PIN];
-    else if (!offer?.pin_offer_hash || !(await verifyPinAsync(pin, offer.pin_offer_hash))) refusal = [400, NO_OFFER];
+    else if (!offer?.pin_offer_hash) refusal = [400, NO_OFFER];
+    else if (!(await verifyPinAsync(pin, offer.pin_offer_hash))) refusal = [400, REPLACED];
     else if (await takenByOthers(pin, employeeId)) refusal = [409, { error: 'Someone has just been given that PIN. Ask for a different one.', code: 'pin_taken' }];
     if (refusal) {
       await dbExec('ROLLBACK');
@@ -214,6 +217,33 @@ export function register(route) {
     sendJson(res, 200, { canHavePin: Boolean(me) || ctx.login.is_owner === true, hasPin: Boolean(me?.pin_hash) });
   });
 
+  // Whether "Your till PIN" opens by itself (pin-first, pin-cleared; UX
+  // walk-through 4 H1; whos-in-and-first-pin): for a team member with no
+  // PIN, never asked ("first"), or asked before their PIN was last cleared
+  // ("cleared"). Not the Owner's own sign-in: they made the shop.
+  // screens: pin-first, pin-cleared
+  route('GET', '/api/your-settings/till-pin/ask', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const row = ctx.login.is_owner ? null : await prepare(
+      `SELECT l.till_pin_asked_at AS asked, e.pin_cleared_at AS cleared FROM logins l JOIN employees e ON e.id = l.employee_id
+        WHERE l.id = ? AND e.pin_hash IS NULL AND e.active = 1`
+    ).get(ctx.login.id);
+    const ask = !row ? null
+      : row.cleared && (!row.asked || row.asked < row.cleared) ? 'cleared'
+        : !row.asked ? 'first' : null;
+    sendJson(res, 200, { ask });
+  });
+
+  // Skip for now, or Keep this PIN: asked, until the PIN is next cleared.
+  // screens: pin-first, pin-cleared
+  route('POST', '/api/your-settings/till-pin/ask', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    await prepare('UPDATE logins SET till_pin_asked_at = now() WHERE id = ?').run(ctx.login.id);
+    sendJson(res, 200, { ask: null });
+  });
+
   // "Your new till PIN": four digits nobody else has, shown once; each call
   // replaces the last ("Give me a different one"). Kept only hashed.
   // screens: pin-change, pin-first
@@ -253,7 +283,7 @@ export function register(route) {
     const id = Number(params.id);
     const own = await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, id);
     if (own) return sendJson(res, 403, { error: 'Nobody clears their own PIN', code: 'own_pin' });
-    const cleared = await prepare('UPDATE employees SET pin_hash = NULL, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ? RETURNING id').get(id);
+    const cleared = await prepare('UPDATE employees SET pin_hash = NULL, pin_offer_hash = NULL, pin_offer_at = NULL, pin_cleared_at = now(), updated_at = now() WHERE id = ? RETURNING id').get(id);
     if (!cleared) return notFound(res, 'Team member not found');
     // Whoever forgot it is no longer serving on any till today.
     await prepare('UPDATE pin_checkins SET ended_at = now() WHERE employee_id = ? AND ended_at IS NULL').run(id);
@@ -367,7 +397,9 @@ export function register(route) {
     if (!giver) return sendJson(res, 403, NOT_GIVER);
     const id = Number(params.id);
     const body = await readJsonBody(req);
-    const refused = (await pinTarget(giver, id)) ?? (await keepPin(id, body?.pin, { firstOnly: true }));
+    const found = (await pinTarget(giver, id)) ?? (await keepPin(id, body?.pin, { firstOnly: true }));
+    // "Your PIN…" is Your settings' words; at the till it stays "Ask for a new PIN".
+    const refused = found?.[1] === REPLACED ? [400, NO_OFFER] : found;
     if (refused) return sendJson(res, ...refused);
     await endCheckinHere(req, res, ctx);
     sendJson(res, 200, { serving: null });

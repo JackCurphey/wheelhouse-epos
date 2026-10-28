@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Floating } from '@/screens/diary/diary-bits.tsx';
 import { NoteCoinCounter } from './note-coin-counter.tsx';
+import { useHoldScreen } from '@/lib/screen-clear.ts';
 
 /**
  * Opening the shop with a float check (journey 10; opening the shop
@@ -37,6 +38,8 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
   // Read again every minute and when the till comes back into view, so a till
   // left open overnight asks the next morning (review, 27 Oct; Today's pattern).
   const today = useQuery({ queryKey: QUERY, queryFn: () => apiGet<Today>('/api/float-check'), retry: false, refetchInterval: 60_000, refetchOnWindowFocus: true });
+  // Nothing opens by itself over the till until this knows whether to ask (whos-in-and-first-pin).
+  useHoldScreen(today.isPending);
   const [step, setStep] = useState<Step>({ at: 'check' });
   const [counted, setCounted] = useState<number | null>(null);
   const [reason, setReason] = useState('');

@@ -17,8 +17,8 @@ import { due, startOf, useBookIn, useNow, useWorkshopDay } from '@/screens/overv
  * Office › Today (drawn as op-today and op-today-staff in generator/opening.mjs;
  * Jack, 30 Sep, opening the shop decisions 3 and 4; openspec/changes/today-page):
  * the day and the shop, Needs attention for the Owner, and Workshop today,
- * which shares the Overview's rules. Tills and Who's in wait for their
- * packages (WP-1.7 check-ins).
+ * which shares the Overview's rules; Tills for the Owner and Who's in for
+ * everyone, from the PIN check-ins (openspec/changes/whos-in-and-first-pin).
  */
 type Attention =
   | { kind: 'quote_no_answer'; jobId: number; reference: string; customerName: string | null; phone: string | null; sentAt: string | null; reminderSentAt: string | null }
@@ -26,6 +26,8 @@ type Attention =
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
   | { kind: 'float_short'; checkId: number; day: string; shortPence: number; countedByName: string; checkedAt: string; reason: string }
   | { kind: 'float_over'; checkId: number; day: string; overPence: number; countedByName: string; checkedAt: string; reason: string };
+type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
+type TillToday = { openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
 
 // The drawing's card: a labelled section, its rows a list (opening.mjs `section`).
@@ -67,6 +69,55 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
 const warn = <span aria-hidden="true" className="inline-flex text-[var(--wh-warn-ink)]"><AlertTriangle size={18} /></span>;
 const mono = (t: string) => <span className="font-[family-name:var(--wh-font-mono)]">{t}</span>;
 const linkButton = (touch: boolean) => `inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-sm font-semibold text-[var(--wh-ink)] hover:bg-[var(--wh-surface-muted)] ${touch ? 'min-h-11' : 'min-h-9'}`;
+
+// The drawing's tag (opening.mjs `tag`): a tick for good news, a warning, or grey.
+function Tag({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: ReactNode }) {
+  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : tone === 'warn' ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]';
+  return (
+    <span className={`inline-flex min-h-[26px] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold whitespace-nowrap ${look}`}>
+      {tone === 'ok' ? <Check size={13} aria-hidden="true" /> : tone === 'warn' ? <AlertTriangle size={13} aria-hidden="true" /> : null}{children}
+    </span>
+  );
+}
+const loading = (q: { isError: boolean; isSuccess: boolean }, what: string) => q.isError
+  ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load {what}. It tries again in a minute.</p>
+  : <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>;
+
+// Tills (op-today, op-today-short, op-today-seen): one line for the shop's
+// till, no name until tills have names (27 Oct, float check entry 2).
+function Tills() {
+  const q = useQuery({ queryKey: ['today-tills'], queryFn: () => apiGet<{ till: TillToday }>('/api/today/tills'), refetchInterval: 60_000, refetchOnWindowFocus: true });
+  const t = q.data?.till;
+  const f = t?.floatCheck;
+  // "Open" only once someone checked in: the Owner's look at closing alone doesn't open the till (review, 28 Oct).
+  const sub = !t?.openedAt ? 'Not open yet' : f ? `Open · float checked by ${f.byName} at ${clock(f.at)}` : `Open · ${t.openedBy} checked in at ${clock(t.openedAt)}`;
+  const tag = f?.short ? (f.seenByName ? <Tag tone="grey">Float short · seen by {f.seenByName}</Tag> : <Tag tone="warn">Float short</Tag>) : null;
+  return (
+    <Card id="today-tills" title="Tills">
+      {t ? <ul className="m-0 list-none p-0"><Line title="Till" sub={sub} right={tag} /></ul> : loading(q, 'the till')}
+    </Card>
+  );
+}
+
+// Who's in (op-today, op-today-late; decisions 5 and 6): checked in today,
+// then mechanics due, "Not in yet" turning "Late" by the page's own clock.
+function WhosIn({ now }: { now: Date }) {
+  const q = useQuery({ queryKey: ['today-whos-in'], queryFn: () => apiGet<{ people: Person[] }>('/api/today/whos-in'), refetchInterval: 60_000, refetchOnWindowFocus: true });
+  const people = q.data?.people;
+  const time = clock(now.toISOString());
+  return (
+    <Card id="today-whos-in" title="Who’s in">
+      {!people ? loading(q, 'who’s in')
+        : people.length ? (
+          <ul className="m-0 list-none p-0">
+            {people.map((p) => (p.checkedInAt
+              ? <Line key={p.id} title={p.name} sub={`Checked in at ${clock(p.checkedInAt)} · ${p.role}`} right={<Tag tone="ok">In</Tag>} />
+              : <Line key={p.id} title={p.name} sub={`Due in at ${p.dueAt} · ${p.role}`} right={<Tag tone="grey">{p.dueAt && time > p.dueAt ? 'Late' : 'Not in yet'}</Tag>} />))}
+          </ul>
+        ) : <p className="m-0 border-t border-[var(--wh-border)] py-2 text-sm text-[var(--wh-muted)]">Nobody has checked in yet.</p>}
+    </Card>
+  );
+}
 
 function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
   // Read again every minute and when the window comes back, until live updates (design 6).
@@ -218,17 +269,18 @@ export function TodayPage() {
   const owner = Boolean(signedIn?.user.isOwner);
   const dateLine = [dayLabel(today), signedIn?.shop.name, hours ? `open ${hours.open}–${hours.close}` : null].filter(Boolean).join(' · ');
 
-  const attention = owner ? <NeedsAttention today={today} touch={touch} /> : null;
+  // The Owner: Needs attention, Tills, Who's in; Staff: Who's in (decision 4, op-today-staff).
+  const left = <>{owner ? <><NeedsAttention today={today} touch={touch} /><Tills /></> : null}<WhosIn now={now} /></>;
   const work = <WorkshopToday today={today} now={now} touch={touch} />;
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
       <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{dateLine}</p>
-      {/* Two columns on a computer or tablet, Needs attention on the left; one on a phone, Needs attention first. */}
-      {isPhone || !attention ? (
-        <div className="flex flex-col gap-3.5">{attention}{work}</div>
+      {/* Two columns on a computer or tablet, the left one first on a phone. */}
+      {isPhone ? (
+        <div className="flex flex-col gap-3.5">{left}{work}</div>
       ) : (
         <div className="grid grid-cols-2 items-start gap-3.5">
-          <div className="flex flex-col gap-3.5">{attention}</div>
+          <div className="flex flex-col gap-3.5">{left}</div>
           <div className="flex flex-col gap-3.5">{work}</div>
         </div>
       )}
