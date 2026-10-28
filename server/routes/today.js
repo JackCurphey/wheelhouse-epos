@@ -12,6 +12,7 @@ import { floatsToSee } from './float-check.js';
 import { loadCapacity, currentShopTimeZone } from '../workshop/jobs.js';
 import { shopToday } from '../clock.js';
 import { toHHMM } from '../capacity.js';
+import { TILL_ORDER } from '../till/this-till.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -88,10 +89,12 @@ async function whosIn() {
 }
 
 // Tills (op-today, op-today-short, op-today-seen; openspec/changes/till-setup):
-// a line per active till, by code, and one with no number for a browser that
-// isn't a set-up till, when no till is set up or one was used today (design
-// 2). Each line: who opened it with its first check-in today; and the day's
-// float check, one a shop, on the line it was checked at (design 4).
+// a line per till, in number order: every active one, and one switched off
+// that was used today (review, 28 Oct); and one with no number for a browser
+// that isn't a set-up till, when no till is set up or one was used today
+// (design 2). Each line: who opened it with its own earliest check-in today;
+// and the day's float check, one a shop, on the line it was checked at
+// (design 4). A deleted till's check-ins have no till, so they join that line.
 async function tillsToday() {
   const day = shopToday(await currentShopTimeZone());
   const firsts = await prepare(
@@ -103,16 +106,13 @@ async function tillsToday() {
        FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id
        LEFT JOIN logins s ON s.id = f.seen_by_login_id WHERE f.day = ?`
   ).get(day);
-  const tills = await prepare('SELECT id, code FROM tills WHERE active = true ORDER BY code').all();
-  const lines = tills.map((t) => ({ id: t.id, code: t.code }));
-  // A till switched off today still shows what happened on it; an unknown one counts as no till.
-  const known = new Set(lines.map((l) => l.id));
   const used = [...firsts.map((c) => c.till_id), ...(f ? [f.till_id] : [])];
-  if (!lines.length || used.some((id) => !known.has(id))) lines.push({ id: null, code: null });
-  const lineOf = (id) => (known.has(id) ? id : null);
+  const usedTills = used.filter((id) => id !== null);
+  const lines = await prepare(`SELECT id, code FROM tills WHERE active = true OR id = ANY(?::int[]) ORDER BY ${TILL_ORDER}`).all(usedTills);
+  if (!lines.length || used.includes(null)) lines.push({ id: null, code: null });
   return lines.map(({ id, code }) => {
-    const opened = firsts.find((c) => lineOf(c.till_id) === id);
-    const float = f && lineOf(f.till_id) === id ? f : null;
+    const opened = firsts.find((c) => c.till_id === id);
+    const float = f && f.till_id === id ? f : null;
     return {
       code, openedAt: iso(opened?.at), openedBy: opened?.name ?? null,
       floatCheck: float ? { byName: float.by_name, at: iso(float.checked_at), short: Boolean(float.short), seenByName: float.seen_by ?? null } : null,

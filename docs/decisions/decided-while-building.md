@@ -1203,12 +1203,15 @@ silent:
    sales carry their till (WP-1.7 task 3.8, step C), the float and close go
    per till. *Pattern:* the 27 Oct float check entry 2.
 3. **The computer keeps its till in a cookie of its own**, apart from the
-   sign-in, holding the token the offline core already gives a till (only
-   its hash is stored), for 400 days, the longest a browser keeps one.
-   Signing out or someone else signing in leaves it the till; another shop's
-   sign-in, or a till switched off, sees no till. *Pattern:* the check-in's
-   own cookie (28 Oct, PINs entry 3). For step C: the offline till will need
-   to send that token itself; this cookie can't be read by the page.
+   sign-in, holding a key of the browser's own (only its hash is stored),
+   for 400 days, the longest a browser keeps one, renewed each time the till
+   is read. Signing out or someone else signing in leaves it the till;
+   another shop's sign-in, or a till switched off, sees no till. *Pattern:*
+   the check-in's own cookie (28 Oct, PINs entry 3). *Review, 28 Oct:* it
+   first held the offline till's own key, which opens the till's copy of
+   every customer and PIN hash, and takes sales, with no sign-in; now the
+   browser's key only says which till a signed-in browser is, and never
+   opens those. How the offline till gets its own key is step C's.
 4. **A browser that isn't set up still works as the till, as before**, with
    check-ins that belong to no till, and Today shows it as "Till" with no
    number. Only Set up this till makes a numbered till; making it the only
@@ -1252,6 +1255,20 @@ silent:
     a computer that's already a till only the drawn note. The list with
     Rename and Remove is WP-5.1. *Pattern:* `set-till-empty`'s "None yet".
 14. **A name is up to 60 characters**; a blank one is none.
+15. **Decided here, for Jack to overrule: nobody else checked in sets up a
+    till** (review, 28 Oct). When someone other than the Owner is checked
+    in by PIN on that computer, "Make this computer Till B1" is refused,
+    even though the Owner is the one signed in: they switch to the Owner
+    first. *Pattern:* giving a PIN at the till (`giverHere`); roles and
+    switches 2.
+16. **Re-claiming a till number is on the server only** (review, 28 Oct):
+    the Owner can make a new computer Till B1 again, for a lost cookie or a
+    replaced computer, and the old one stops being Till B1. The drawing's
+    taken numbers are "In use" and can't be picked, so the screen waits for
+    a drawing.
+17. **A till switched off today keeps its line on Today**, with what
+    happened on it; tills go in number order, B2 before B10, on Today and
+    in Settings; the Owner's look at closing records no till (review, 28 Oct).
 
 ## Decided here, for Jack to overrule
 

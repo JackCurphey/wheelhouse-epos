@@ -18,7 +18,7 @@ import { currentSession } from '../lib/session.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
-import { thisTill } from '../till/this-till.js';
+import { thisTill, tillCookie, tillCookieToken } from '../till/this-till.js';
 
 export const CHECKIN_COOKIE = 'wh_till_checkin';
 const OFFER_MINUTES = 15;
@@ -145,6 +145,14 @@ async function giverHere(req) {
   if (!mine) return null;
   const owner = await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(mine.employee_id);
   return owner ? mine : null;
+}
+
+// Someone checked in by PIN on this browser who isn't the Owner: then the
+// Owner's sign-in doesn't set up a till here (giverHere's rule; roles and
+// switches 2; till-setup, review, 28 Oct).
+export async function someoneElseCheckedIn(req) {
+  const mine = await currentCheckin(req);
+  return Boolean(mine) && !(await giverHere(req));
 }
 
 // The people the giver can give a PIN to: active, no PIN, never the giver
@@ -302,6 +310,9 @@ export function register(route) {
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const mine = await currentCheckin(req);
     const till = await thisTill(req);
+    // A till's cookie is renewed each time it's read, so a till in use never
+    // loses it (review, 28 Oct).
+    if (till) res.setHeader('Set-Cookie', tillCookie(req, tillCookieToken(req)));
     const people = await prepare(
       `SELECT DISTINCT e.id, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
         WHERE c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int AND e.active = 1 ORDER BY e.name, e.id`
