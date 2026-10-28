@@ -4,7 +4,8 @@
 // check, not strong security: anyone holding the till's copy could work it
 // out. It protects nothing beyond the till.
 // Spec: docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md §4
-import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
+import { pbkdf2, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
 
 const ITERATIONS = 100000;
 const PREFIX = 'pbkdf2-sha256';
@@ -17,6 +18,27 @@ export function hashPin(pin) {
   const salt = randomBytes(16);
   const hash = pbkdf2Sync(pin, salt, ITERATIONS, 32, 'sha256');
   return `${PREFIX}$${ITERATIONS}$${salt.toString('hex')}$${hash.toString('hex')}`;
+}
+
+// The same hashes, worked out off the server's main thread: a check-in tries
+// a PIN against everyone's, and 100,000 rounds each would otherwise stall
+// every other request meanwhile (openspec/changes/pins-and-checkin design 2).
+const pbkdf2Async = promisify(pbkdf2);
+
+export async function hashPinAsync(pin) {
+  const salt = randomBytes(16);
+  const hash = await pbkdf2Async(pin, salt, ITERATIONS, 32, 'sha256');
+  return `${PREFIX}$${ITERATIONS}$${salt.toString('hex')}$${hash.toString('hex')}`;
+}
+
+export async function verifyPinAsync(pin, stored) {
+  const parts = typeof stored === 'string' ? stored.split('$') : [];
+  if (parts.length !== 4 || parts[0] !== PREFIX) return false;
+  const [, iterations, saltHex, hashHex] = parts;
+  if (!/^[1-9][0-9]*$/.test(iterations) || !/^[0-9a-f]{32}$/.test(saltHex) || !/^[0-9a-f]{64}$/.test(hashHex)) return false;
+  const expected = Buffer.from(hashHex, 'hex');
+  const actual = await pbkdf2Async(pin, Buffer.from(saltHex, 'hex'), Number(iterations), expected.length, 'sha256');
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 export function verifyPin(pin, stored) {

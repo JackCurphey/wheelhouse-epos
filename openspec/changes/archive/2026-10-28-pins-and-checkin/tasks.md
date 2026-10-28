@@ -1,0 +1,31 @@
+# Tasks
+
+## 1. Server (pull request 1, `jack/pins-and-checkin`)
+
+- [x] 1.1 Tests first: migration 097 from an empty scratch database and run twice (`tests/migration-097.test.js`); the routes (`tests/pins-and-checkin.test.js`: a PIN offered, different each time, kept only as offered, unique, stored hashed; the Owner gets a team member; the Owner clears someone else's, not their own; check in by PIN, a wrong PIN, Switch, someone else taking over, a check-in from another sign-in or another shop not counting; guessing slowed; the float check needs a check-in and names its person). Watch each fail
+- [x] 1.2 Migration 097, `server/routes/till-pins.js`, the float check's changes
+- [x] 1.3 The route list snapshot, the owner-only list
+- [x] 1.4 Break each key rule on purpose, see its test go red, and restore
+- [x] 1.5 Lint, typecheck, the touched tests; `/review` (sign-in, migration, money): 28 Oct, two serious and five medium findings, all fixed
+
+- [x] 1.6 Review, 28 Oct, and Jack's answers (`docs/decisions/2026-10-28-answers.md`): the old `PUT /api/employees/:id/pin` removed; tries counted before checking, the wait per sign-in and browser; offers limited and `no-store`; the Owner made once; clearing ends the check-in. Tests first, each fix broken on purpose
+
+## 2. Screens (pull request 2, `jack/pins-and-checkin-screens`, stacked on 1)
+
+- [x] 2.1 Tests first: the PIN screen (dots, the 4th digit checks at once, a wrong PIN, Checked in today, No PIN yet), Serving and switch, the pay box's serving name, the float check after the check-in, Your settings' Till PIN and the pop-up (`tests/screens/`); a browser spec; the till's existing tests check in first. Watch each fail
+- [x] 2.2 Build them to the drawings
+- [x] 2.3 Break each key rule on purpose, see its test go red, and restore
+- [x] 2.3a Review, 28 Oct: the till kept while a sale is open (failed re-check, check-in ended); keys in the search, with modifiers or held down ignored; the pad busy without `disabled`; the dots and the new PIN as words for screen readers; one offer at a time. Tests first, each fix broken on purpose
+- [x] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review`
+- [x] 2.5 `/opsx:archive` as the last commit
+
+## 3. Later pieces of WP-1.7 (each its own change when taken)
+
+- Later, not in this change: 3.1 Clearing a PIN on screen: "Clear a forgotten PIN" and "Clear Jo Taylor's till PIN?" (`set-staff-person`, `set-staff-clear-pin`), with Staff and roles (WP-1.1)
+- Later, not in this change: 3.2 A first sign-in opens "Your till PIN" by itself, and the cleared wording (`pin-first`, `pin-cleared`)
+- Later, not in this change: 3.3 Giving a PIN at the till, screen turned to the person (`till-give-pin`; Jack, 28 Oct, answer 3: build it now, waiting for the Serving menu and the till-only form to be drawn), and a one-time PIN given by phone (signing in, later change 3 Oct)
+- Later, not in this change: 3.4 Set up this till and the shop switcher (`till-setup`, `auth-site`); check-ins per till; the till bar's till name
+- Later, not in this change: 3.5 The start-up status line and checking PINs offline (`till-checkin-offline`, `till-checkin-stale`), with step C
+- Later, not in this change: 3.6 The shared workshop computer: Enter your PIN with no till number, back to it after 10 minutes idle; trust PIN with "Who's working?" and the Working pills, and the till's Serving pills (`till-checkin-workshop`, `till-checkin-workshop-names`, `workshop-working-pills`, `till-serving-pills`; roles 3, 9, 10); the two lines on `set-till-quick`
+- Later, not in this change: 3.7 The practice band on the PIN screen (`till-checkin-practice`), with running alongside
+- Later, not in this change: 3.8 Sales recorded under the checked-in person on the server, instead of the name the till sends

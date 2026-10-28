@@ -6,7 +6,7 @@ import '../../server/load-env.js';
 import { randomUUID } from 'node:crypto';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -50,9 +50,15 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByText('Saved.')).toBeVisible();
     await expect(fold).toContainText('£150.00');
 
-    // Jo is first in: the float check, a count, and it's short.
+    // Jo has a till PIN (Wheelhouse picked it), and is first in: she
+    // checks in with it, then the float check, a count, and it's short.
+    const offer = await staffRequest(server!.baseUrl, jo, '/api/your-settings/till-pin/offer', { method: 'POST' });
+    expect((await staffRequest(server!.baseUrl, jo, '/api/your-settings/till-pin', { method: 'POST', body: { pin: offer.body.pin } })).status).toBe(200);
     await signIn(jo);
     await page.goto(`${server!.baseUrl}/workshop/till`);
+    await expect(page.getByRole('heading', { name: 'Enter your PIN' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    for (const digit of offer.body.pin) await page.getByRole('button', { name: digit, exact: true }).click();
     const check = page.getByRole('dialog', { name: 'Hello, Jo' });
     await expect(check).toBeVisible();
     await expect(check).toContainText('£150.00');
@@ -81,6 +87,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     // The Owner opening the till isn't asked again today.
     await line.getByRole('button', { name: 'Seen' }).click();
     await expect(line).toHaveCount(0);
+    await context.addCookies(await tillCookies(server!.baseUrl, owner.cookie));
     await page.goto(`${server!.baseUrl}/workshop/till`);
     await expect(page.getByRole('region', { name: 'Sale' })).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -94,8 +101,7 @@ test('Escape pressed three times leaves the float check open', async ({ page, co
   const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   owners.push(owner);
   expect((await staffRequest(server!.baseUrl, owner.cookie, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 15000 } })).status).toBe(200);
-  const [name, value] = owner.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await context.addCookies(await tillCookies(server!.baseUrl, owner.cookie));
   await page.goto(`${server!.baseUrl}/workshop/till`);
   const check = page.getByRole('dialog', { name: 'Hello, Jack' });
   await expect(check).toBeVisible();

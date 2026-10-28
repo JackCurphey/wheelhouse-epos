@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession, type SessionEmployee } from '@/lib/auth/use-session.ts';
 import { useYourSettings } from '@/lib/your-settings.ts';
+import { useTillCheckin } from '@/lib/till-checkin.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
@@ -55,7 +56,9 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
   const shopDetails = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<ShopDetails & { name: string }>('/api/shop-details') });
   // The signed-in person's Don't close things by themselves (Your settings).
   const wait = Boolean(useYourSettings().data?.accessibility?.noAutoClose);
-  const [serving, setServing] = useState<SessionEmployee | null>(me && me.isCashier ? me : null);
+  // The person checked in at the till is serving (pins-and-checkin); before that, the sign-in's own.
+  const checkedIn = useTillCheckin().data?.serving ?? null;
+  const [serving, setServing] = useState<SessionEmployee | null>(checkedIn ? { ...checkedIn, isCashier: true } : me && me.isCashier ? me : null);
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

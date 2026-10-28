@@ -25,6 +25,7 @@ let saleReply;
 let a11y;
 let emailReply;
 let customerReply;
+let checkedIn;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -43,6 +44,8 @@ function stubServer(employee) {
     if (method === 'POST' && u.pathname === '/api/sales') return saleReply ?? reply(201, { id: 501 });
     if (method === 'POST' && u.pathname === '/api/sales/501/email-receipt') return emailReply ?? reply(200, { id: 9, to: JSON.parse(init.body).email });
     if (method === 'POST' && u.pathname === '/api/customers') return customerReply ?? reply(201, { id: 77, ...JSON.parse(init.body) });
+    // Checked in at the till with a PIN (pins-and-checkin).
+    if (u.pathname === '/api/till-checkin') return reply(200, { serving: checkedIn, checkedInToday: [] });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
     if (u.pathname === '/api/your-settings' && a11y) return reply(200, { accessibility: a11y });
     if (u.pathname === '/api/employees') return reply(200, CASHIERS);
@@ -52,7 +55,8 @@ function stubServer(employee) {
   };
 }
 
-async function openTill({ employee = JO, accessibility = null } = {}) {
+async function openTill({ employee = JO, accessibility = null, serving = { id: 21, name: 'Jo Taylor' } } = {}) {
+  checkedIn = serving;
   saleReply = null;
   emailReply = null;
   customerReply = null;
@@ -236,18 +240,18 @@ test('if the sale can’t be saved, staff are told and the sale stays', async ()
   assert.ok(has(t.sale.queryByText('Labour · 30 min')));
 });
 
-test('a login that isn’t a staff member who takes sales is asked who’s serving', async () => {
-  const t = await openTill({ employee: null });
+// The person checked in with their PIN serves, whoever the till is signed in
+// as (openspec/changes/pins-and-checkin); Who's serving? isn't asked.
+test('the person checked in serves, whoever the till is signed in as', async () => {
+  const t = await openTill({ employee: null, serving: { id: 31, name: 'Sam Lee' } });
   await addService(t);
   const pay = await openPay(t);
-  assert.ok(has(await pay.findByText('Who’s serving?')));
-  t.fireEvent.click(await pay.findByRole('button', { name: 'Sam Lee' }));
   assert.ok(has(await pay.findByText('Sam Lee serving · 1 item')));
+  assert.equal(has(pay.queryByText('Who’s serving?')), false);
   t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
   await pay.findByText('Paid');
   assert.equal(sales()[0].cashierId, 31);
-  assert.ok(calls.some((c) => c.url === '/api/employees?role=cashier'));
 });
 
 // Fresh review of #111, 4 Oct: closing the window mid-save hid a sale that

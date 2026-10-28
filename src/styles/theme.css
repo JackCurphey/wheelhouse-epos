@@ -228,6 +228,7 @@ html.wh-larger-text {
   --text-size-17: calc(17px * var(--wh-text-scale));
   --text-size-22: calc(22px * var(--wh-text-scale));
   --text-size-26: calc(26px * var(--wh-text-scale));
+  --text-size-28: calc(28px * var(--wh-text-scale));
   --text-size-30: calc(30px * var(--wh-text-scale));
   --text-size-34: calc(34px * var(--wh-text-scale));
   --color-background: var(--background);

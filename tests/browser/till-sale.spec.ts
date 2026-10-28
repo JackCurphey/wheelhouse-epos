@@ -5,7 +5,7 @@
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -37,8 +37,8 @@ test.afterAll(async () => {
 const stockOfPads = async () => (await staff('/api/products?search=Shimano')).body.find((p: { id: number }) => p.id === padsId).stockQty;
 
 test('a card sale and a cash sale, saved, with stock taken off', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   await page.goto(`${server!.baseUrl}/workshop/till`);
   const sale = page.getByRole('region', { name: 'Sale' });
 

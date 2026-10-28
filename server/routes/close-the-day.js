@@ -24,7 +24,7 @@ const iso = (v) => new Date(v).toISOString();
 // This morning's float check: what the drawer started with (what was counted,
 // or the float when it looked right), by whom and when (walk-through 2 M2).
 async function floatStartOn(day) {
-  const row = await prepare(`SELECT f.*, l.name AS by_name FROM float_checks f JOIN logins l ON l.id = f.login_id WHERE f.day = ?`).get(day);
+  const row = await prepare(`SELECT f.*, COALESCE(e.name, l.name) AS by_name FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id WHERE f.day = ?`).get(day);
   if (!row) return null;
   return {
     id: row.id,

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check } from 'lucide-react';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
+import { useTillCheckin } from '@/lib/till-checkin.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
@@ -17,8 +18,9 @@ import { NoteCoinCounter } from './note-coin-counter.tsx';
  * day who takes payments checks the drawer holds the shop's float: Looks
  * right, or Count it with the note-and-coin counter. No ✕ and no Escape:
  * every way out is an answer (audit M1, walk-through 2 L3).
- * Until the PIN check-in and named tills, "first in" is the first to open the
- * till page, and there is no "Till B1" (openspec/changes/opening-float-check).
+ * "First in" is the first to check in at the till with their PIN, who is
+ * asked by name (openspec/changes/pins-and-checkin); there is no "Till B1"
+ * until tills are named (openspec/changes/opening-float-check).
  */
 type Check = { id: number; how: 'looked' | 'counted'; expectedPence: number; countedPence: number | null; reason: string; checkedByName: string; checkedAt: string };
 type Today = { day: string; floatPence: number | null; takesPayments: boolean; firstDay: boolean; check: Check | null };
@@ -41,7 +43,10 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const name = session.status === 'signed-in' ? session.user.name : '';
+  // The person checked in at the till; at closing, the Owner signed in (pins-and-checkin).
+  const checkedIn = useTillCheckin().data?.serving ?? null;
+  const signedIn = session.status === 'signed-in' ? session.user.name : '';
+  const name = !atClose && checkedIn ? checkedIn.name : signedIn;
   const t = today.data;
   // The counter starts empty each time, so what it says starts as nothing counted.
   const toCount = () => { setCounted(null); setStep({ at: 'count' }); };

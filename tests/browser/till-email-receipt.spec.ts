@@ -7,7 +7,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { runWithShop, prepare } from '../../server/db.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, seedMechanic, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -45,8 +45,8 @@ test.afterAll(async () => {
 });
 
 test('Email on Paid: Maya’s address filled in, the countdown waits, and the receipt is queued to it', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   await page.goto(`${server!.baseUrl}/workshop/till?job=${jobId}`);
   const sale = page.getByRole('region', { name: 'Sale' });
   await sale.getByRole('button', { name: 'Take payment · £65.00' }).click();

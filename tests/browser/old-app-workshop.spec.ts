@@ -3,7 +3,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import type { BrowserContext } from '@playwright/test';
 import { startLiveServer, TEST_CLOCK_PIN } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 import { futureDate } from '../helpers/workshopFixtures.js';
 
@@ -46,8 +46,8 @@ function staff(path: string, options?: object) {
 }
 
 async function signIn(context: BrowserContext) {
-  const [name, value] = owner.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, owner.cookie));
 }
 
 test('an old #workshop address opens the new diary', async ({ page, context }) => {

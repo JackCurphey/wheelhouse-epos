@@ -12,7 +12,7 @@ import '../server/load-env.js';
 import { runWithShop, prepare, pool } from '../server/db.js';
 import { entryFor } from '../server/routes/close-the-day.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, checkInAtTill, checkInWithPin } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -38,6 +38,9 @@ const day = async (who) => {
 async function shop({ float = FLOAT, check = 'looked' } = {}) {
   const owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   shops.push(owner);
+  // Checked in at the till with a PIN: the float check follows the check-in (pins-and-checkin).
+  const till = await checkInAtTill(server.baseUrl, owner.cookie);
+  Object.assign(owner, { session: owner.cookie, cookie: till.cookie, pin: till.pin });
   if (float !== null) assert.equal((await call(owner, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: float } })).status, 200);
   // Not the first day, so the float can be looked at; on an earlier day that wasn't closed.
   if (check) {
@@ -291,7 +294,9 @@ const nextDayServer = async () => {
 after(async () => { if (nextDay) await nextDay.stop(); });
 async function closeNextDay(owner, countedPence) {
   const srv = await nextDayServer();
-  const check = await staffRequest(srv.baseUrl, owner.cookie, '/api/float-check', { method: 'POST', body: { countedPence: null } });
+  // A new day: checked in again.
+  const checkedIn = await checkInWithPin(srv.baseUrl, owner.session, owner.pin);
+  const check = await staffRequest(srv.baseUrl, checkedIn, '/api/float-check', { method: 'POST', body: { countedPence: null } });
   assert.equal(check.status, 201, JSON.stringify(check.body));
   await morning(owner, check.body.check.id, '2026-09-02T06:00:00Z');
   const res = await staffRequest(srv.baseUrl, owner.cookie, '/api/close-the-day', { method: 'POST', body: { countedPence } });
@@ -520,6 +525,7 @@ test('an over float after a day nobody closed is not listed, and nor is one on t
   assert.equal((await overLines(older)).length, 0, 'Saturday closed, Monday not: not listed');
   const first = await staffSignup(server.baseUrl, { shopName: 'First Day Cycles', ownerName: 'Jack Lewis' });
   shops.push(first);
+  first.cookie = (await checkInAtTill(server.baseUrl, first.cookie)).cookie;
   assert.equal((await call(first, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: FLOAT } })).status, 200);
   assert.equal((await post(first, '/api/float-check', { countedPence: FLOAT + 50 })).status, 201);
   assert.equal((await overLines(first)).length, 0);

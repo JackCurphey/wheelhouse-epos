@@ -63,3 +63,33 @@ export async function setOpeningDays(shopId, days) {
     prepare('UPDATE workshop_settings SET opening_days = ?, updated_at = now()').run(JSON.stringify(days))
   );
 }
+
+// Gives a signed-in person a till PIN, as Your settings does (Wheelhouse
+// picks it, they keep it), and checks them in at the till on their own
+// sign-in (openspec/changes/pins-and-checkin). Returns the cookie to send
+// from then on, the sign-in's and the check-in's together, and the PIN.
+export async function checkInAtTill(baseUrl, cookie) {
+  const offer = await jsonRequest(baseUrl, cookie, '/api/your-settings/till-pin/offer', { method: 'POST' });
+  if (offer.status !== 201) throw new Error(`no PIN offered: ${offer.status} ${JSON.stringify(offer.body)}`);
+  const kept = await jsonRequest(baseUrl, cookie, '/api/your-settings/till-pin', { method: 'POST', body: { pin: offer.body.pin } });
+  if (kept.status !== 200) throw new Error(`PIN not kept: ${kept.status} ${JSON.stringify(kept.body)}`);
+  return { cookie: await checkInWithPin(baseUrl, cookie, offer.body.pin), pin: offer.body.pin };
+}
+
+// Checks in with a PIN the person already has; the cookie to send from then on.
+export async function checkInWithPin(baseUrl, cookie, pin) {
+  const res = await fetch(`${baseUrl}/api/till-checkin`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ pin }) });
+  if (res.status !== 201) throw new Error(`not checked in: ${res.status} ${await res.text()}`);
+  const pair = res.headers.getSetCookie().map((line) => line.split(';')[0]).find((p) => p.startsWith('wh_till_checkin='));
+  return `${cookie}; ${pair}`;
+}
+
+// A browser's cookies for someone signed in and checked in at the till, ready
+// for Playwright's context.addCookies (openspec/changes/pins-and-checkin).
+export async function tillCookies(baseUrl, cookie) {
+  const { cookie: both } = await checkInAtTill(baseUrl, cookie);
+  return both.split('; ').map((pair) => {
+    const at = pair.indexOf('=');
+    return { name: pair.slice(0, at), value: pair.slice(at + 1), url: baseUrl };
+  });
+}

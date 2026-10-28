@@ -72,7 +72,6 @@ const ROUTES = [
   ['POST', '/api/sites', {}],
   ['POST', '/api/tills', {}],
   ['POST', `/api/tills/${MISSING}/deactivate`, {}],
-  ['PUT', `/api/employees/${MISSING}/pin`, {}],
   // Purchase orders: making, changing, ordering and closing one is for the
   // Owner until "Can order stock" comes with roles (receiving decision 4,
   // openspec/changes/deliveries-orders).
@@ -87,6 +86,9 @@ const ROUTES = [
   // decision 5), so the Owner until roles (openspec/changes/close-the-day).
   ['POST', '/api/close-the-day', {}],
   ['POST', '/api/paid-outs', {}],
+  // Clearing a forgotten till PIN, for owners and managers (signing in 6;
+  // roles and switches 5), so the Owner until roles (openspec/changes/pins-and-checkin).
+  ['POST', `/api/team/${MISSING}/clear-pin`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
@@ -120,10 +122,14 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/purchase-orders/:id/receive', 'day-to-day: everyone can receive deliveries (receiving decision 4)'],
   ['POST /api/deliveries/receive', 'day-to-day: everyone can receive deliveries, with or without an order (receiving decisions 2 and 4)'],
   ['POST /api/float-check', 'day-to-day: the first person in who takes payments checks the float (opening the shop decision 2)'],
+  ['POST /api/your-settings/till-pin/offer', 'each person their own: Wheelhouse picks their till PIN (signing in 6 and 7)'],
+  ['POST /api/your-settings/till-pin', 'each person their own: keeping the PIN Wheelhouse picked (signing in 6 and 7)'],
+  ['POST /api/till-checkin', 'day-to-day: checking in at the till with a PIN (signing in 4)'],
+  ['POST /api/till-checkin/end', 'day-to-day: Switch, back to Enter your PIN (signing in 4)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.

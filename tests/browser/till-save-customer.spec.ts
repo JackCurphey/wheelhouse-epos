@@ -6,7 +6,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { runWithShop, prepare } from '../../server/db.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -33,8 +33,8 @@ test.afterAll(async () => {
 });
 
 test('ticked: the receipt goes, then Add a customer saves Maya, with no offers', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   await page.goto(`${server!.baseUrl}/workshop/till`);
   await page.getByRole('button', { name: /^Fit & adjust brakes/ }).click();
   await page.getByRole('region', { name: 'Sale' }).getByRole('button', { name: 'Take payment · £18.00' }).click();

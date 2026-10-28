@@ -5,7 +5,7 @@
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, seedMechanic, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -44,8 +44,8 @@ test.afterAll(async () => {
 });
 
 test('paying for work in progress asks who is signing it off, and the job records it', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   await page.goto(`${server!.baseUrl}/workshop/till?job=${jobId}`);
   await page.getByRole('region', { name: 'Sale' }).getByRole('button', { name: 'Take payment · £65.00' }).click();
   const pop = page.getByRole('dialog', { name: 'Who’s signing this off?' });

@@ -986,6 +986,81 @@ silent:
 4. **Online bookings' messages print on their receipts too**, being the same
    thing. *Pattern:* the decision's answer 1.
 
+### 28 Oct 2026: till PINs and the PIN check-in (WP-1.7, `openspec/changes/pins-and-checkin`)
+
+1. **Guessing PINs is slowed, never locked** (`till-pin-wrong`; Jack
+   confirmed it 28 Oct, `2026-10-28-answers.md` answer 1). After 10 tries at
+   a shop within 10 minutes each further try waits 3 seconds before it's
+   checked. Every try is counted before its PIN is checked, and a right one
+   is taken off the count, so a burst can't slip through. The wait is one at
+   a time per sign-in and browser: a second try from the same browser while
+   one waits gets "Wait a moment, then try again", and another till isn't
+   held up. "Give me a different one" is limited to 10 PINs a sign-in in 10
+   minutes, with the same words. Offers are counted on their own, not with
+   the shop's tries, so setting up the staff's PINs never slows the tills.
+   *Pattern:* the till's own token check (`server/till/failure-limiter.js`).
+2. **PINs are kept as a slow, salted hash** (PBKDF2, 100,000 rounds), the
+   format the offline till already uses (`server/till/pin.js`), so it can
+   check PINs without the internet later. The PIN just offered is kept the
+   same way until it is kept or replaced; an offer lasts 15 minutes.
+   *Pattern:* migration 036's `pin_hash`.
+3. **A check-in lasts the shop's day, on that browser, under that sign-in**,
+   until Switch or someone else checks in there. Until "Set up this till"
+   (step C), the till is the browser, and "Checked in today" lists everyone
+   who checked in at the shop today, not one till's. *Pattern:* the float
+   check's one-a-shop-a-day until named tills.
+4. **The Owner gets a team member when they first get a PIN**, marked as
+   taking payments, since a PIN belongs to a team member (till-only people
+   have no sign-in). A staff sign-in with no team member can't get a PIN
+   until the Owner adds them. *Pattern:* the team's existing "attach roles"
+   for a login-only Owner (`server/team.js`).
+5. **Clearing a PIN is the Owner's until roles, never their own**, with the
+   server only; the button and its pop-up (`set-staff-person`,
+   `set-staff-clear-pin`) come with Staff and roles. *Pattern:* the 19 Oct
+   owner-only rule; roles and switches 5.
+6. **The offline core's `PUT /api/employees/:id/pin` is removed** (Jack,
+   28 Oct, answer 2): Wheelhouse picks every PIN.
+6a. **Known limit, for Jack and Mark: the till's offline copy carries every
+    cashier's PIN hash** (`server/till/snapshot.js:33`), so the till can
+    check PINs without the internet (signing in 3). Anyone holding a till's
+    token could fetch that copy and try all 10,000 four-digit PINs against
+    the hashes on their own computer in minutes; the slow-down above can't
+    stop that. Not changed here: it is step C's design (the offline till).
+    Worth settling when step C is built, for example by keeping the token
+    to the till and treating a PIN as "who's serving" only.
+6b. **Clearing a PIN also ends that person's check-in** on any till that day.
+7. **No till bar yet, so "Serving: [name]" is a button at the top right of
+   the till** (`till-checkin`, tillBar's "Serving: Jo Taylor — switch who’s
+   serving"); pressing it goes back to Enter your PIN. *Pattern:* Close the
+   day's entry, in a strip on the till until the till bar is built.
+8. **Enter your PIN says only what works today**: no "It works even when
+   the internet is down" until the till works offline (step C), and "No PIN
+   yet? Sign in on your phone." without "or ask the owner or a manager to
+   give you one here" until giving a PIN at the till (`till-give-pin`) is
+   built. No start-up status line until step C. *Pattern:* 20 Oct, Settings
+   frame 6, show only what works.
+9. **"Get your PIN" in Your settings opens the first-time "Your till PIN"**
+   (Welcome …, Skip for now), as drawn for someone with no PIN; Keep and Skip
+   go back to Your settings. Change PIN opens "Your new till PIN" with its ✕.
+   *Pattern:* the drawing's links (`yourSettingsDialog` → `pin-first`,
+   `pin-change`).
+10. **A check-in that fails for any other reason says "Wheelhouse couldn’t
+    check that PIN. Try again in a moment."** and clears the dots, so it is
+    never mistaken for a wrong PIN. *Pattern:* the float check's "couldn’t
+    save that" line.
+11. **The pay box's "Who’s serving?" no longer comes up at the till**: the
+    person checked in is serving. *Pattern:* signing in 4, the PIN says who
+    you are.
+12. **A sale that's open stays on the till** (review, 28 Oct): if the
+    check-in ends mid-sale (the day ends, or the PIN is cleared) or the till
+    can't re-check who is serving, the sale and its pay box stay, still under
+    the name they started with, and Enter your PIN comes once the sale is
+    paid or cleared. The Serving button and the float check wait for a
+    check-in. *Pattern:* the pay box's own "can't close while saving".
+13. **The PIN pad answers keys only when nothing else has them**: not in a
+    box like the header search, not with Ctrl, Alt or Cmd held, and not a key
+    held down. *Pattern:* none built; the review's item 2, 28 Oct.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

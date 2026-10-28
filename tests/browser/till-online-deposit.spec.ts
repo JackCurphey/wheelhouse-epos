@@ -7,7 +7,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { runWithShop, prepare } from '../../server/db.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, seedMechanic, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -49,8 +49,8 @@ test.afterAll(async () => {
 });
 
 test('the deposit comes off, the receipt shows it, and the job then offers no refund', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   let printed = '';
   await page.exposeFunction('whPrinted', (text: string) => { printed = text; });
   await page.addInitScript(() => { window.print = () => { (window as unknown as { whPrinted: (t: string) => void }).whPrinted(document.getElementById('wh-print')?.textContent ?? ''); }; });

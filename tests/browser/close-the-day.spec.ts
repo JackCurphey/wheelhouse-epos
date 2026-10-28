@@ -7,7 +7,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { runWithShop, prepare } from '../../server/db.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest } from '../helpers/staff.js';
+import { staffSignup, staffRequest, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -37,8 +37,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     // Tuesday morning, and the float can be looked at when closing.
     const hours = await staffRequest(server!.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { openingHours: [{ weekday: 1, open: '09:00', close: '17:00' }] } });
     expect(hours.status).toBe(200);
-    const [name, value] = owner.cookie.split('=');
-    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+    await context.addCookies(await tillCookies(server!.baseUrl, owner.cookie));
 
     await page.goto(`${server!.baseUrl}/workshop/till/close`);
     // Nobody has checked the float today: that comes first, Looks right only,

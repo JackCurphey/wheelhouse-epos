@@ -36,6 +36,8 @@ async function open(path, { me = JO, floatCheck = DUE, saveStatus = 201, float =
     calls.push({ url, method, body });
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
+    // Checked in at the till with a PIN (pins-and-checkin).
+    if (u.pathname === '/api/till-checkin') return reply(200, { serving: me.employee ? { id: me.employee.id, name: me.employee.name } : { id: 11, name: me.name }, checkedInToday: [] });
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/float-check' && method === 'POST') {
       if (saveStatus !== 201) return reply(saveStatus, { error: saveStatus === 400 ? 'The count must be pounds and pence' : 'Internal error' });
