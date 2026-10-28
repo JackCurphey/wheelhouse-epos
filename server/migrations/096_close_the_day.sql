@@ -72,7 +72,37 @@ END $$;
 -- close counts the sale. The sales tables keep their row-level security; the
 -- marking runs as the shop's own request. The all_sales view (083) names
 -- its columns, so it is unchanged.
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS day_close_id INTEGER REFERENCES day_closes(id);
-ALTER TABLE till_sales ADD COLUMN IF NOT EXISTS day_close_id INTEGER REFERENCES day_closes(id);
+--
+-- A sale can only point at its own shop's close (third review, 27 Oct): the
+-- link is (shop_id, day_close_id) to day_closes (shop_id, id), so the
+-- database itself refuses another shop's close. Each constraint is added
+-- only if missing, and the single-column link of an earlier draft of this
+-- file is dropped, so the file runs twice and from empty. The links are
+-- added NOT VALID: checking the existing rows would read the sales tables
+-- under their forced row-level security with no shop set, which fails.
+-- Every existing row has no close yet (null is never checked), and every
+-- new or changed row is checked as usual.
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS day_close_id INTEGER;
+ALTER TABLE till_sales ADD COLUMN IF NOT EXISTS day_close_id INTEGER;
+ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_day_close_id_fkey;
+ALTER TABLE till_sales DROP CONSTRAINT IF EXISTS till_sales_day_close_id_fkey;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'day_closes_shop_id_id_key') THEN
+    ALTER TABLE day_closes ADD CONSTRAINT day_closes_shop_id_id_key UNIQUE (shop_id, id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sales_day_close_fkey') THEN
+    ALTER TABLE sales ADD CONSTRAINT sales_day_close_fkey FOREIGN KEY (shop_id, day_close_id) REFERENCES day_closes (shop_id, id) NOT VALID;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'till_sales_day_close_fkey') THEN
+    ALTER TABLE till_sales ADD CONSTRAINT till_sales_day_close_fkey FOREIGN KEY (shop_id, day_close_id) REFERENCES day_closes (shop_id, id) NOT VALID;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_sales_day_close ON sales(shop_id, day_close_id);
 CREATE INDEX IF NOT EXISTS idx_till_sales_day_close ON till_sales(shop_id, day_close_id);
+-- The sales no close has counted yet, found by the time a close starts
+-- counting from (third review, 27 Oct). A future import of a shop's sales
+-- history must mark the imported sales as already counted, or the next
+-- close would count them.
+CREATE INDEX IF NOT EXISTS idx_sales_uncounted ON sales(shop_id, created_at) WHERE day_close_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_till_sales_uncounted ON till_sales(shop_id, received_at) WHERE day_close_id IS NULL;

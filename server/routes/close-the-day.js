@@ -64,11 +64,13 @@ const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till
 // cash and card columns and extra tenders (pounds, converted as the all_sales
 // view does), and the till record's payments (pence). Takings is card + cash
 // + other, so the report always adds up (review, 27 Oct). `after`, when
-// given, keeps only sales made after that moment (the till's own clock for a
-// till sale: when the cash went in the drawer).
+// given, keeps only sales made after that moment, on the server's clock: a
+// till sale by when the server received it, or by the till's own clock only
+// when it was made offline (third review, 27 Oct: an online till's clock
+// running slow or fast mustn't move its cash in or out of the drawer).
 async function takingsIn({ old, till }, after = null) {
   const o = after ? { sql: `${old.sql} AND s.created_at > ?`, args: [...old.args, after] } : old;
-  const t = after ? { sql: `${till.sql} AND t.till_clock_at > ?`, args: [...till.args, after] } : till;
+  const t = after ? { sql: `${till.sql} AND (CASE WHEN t.made_offline THEN t.till_clock_at ELSE t.received_at END) > ?`, args: [...till.args, after] } : till;
   const os = await prepare(
     `SELECT COALESCE(SUM(ROUND(s.cash_amount * 100)), 0)::int AS cash, COALESCE(SUM(ROUND(s.card_amount * 100)), 0)::int AS card,
             COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type <> ALL(?)), 0)::int AS other,

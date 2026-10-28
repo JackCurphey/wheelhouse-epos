@@ -77,7 +77,9 @@ async function oldSale(owner, at, { cash = 0, card = 0, extra = [] }) {
   });
 }
 // A sale in the till record (pence), with its payments, on the till's clock.
-async function tillSale(owner, at, payments) {
+// `offline`: made while the till was offline and sent later; the server
+// received it now either way.
+async function tillSale(owner, at, payments, { offline = false } = {}) {
   await runWithShop(owner.shop.id, async () => {
     await prepare("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') ON CONFLICT (shop_id, code) DO NOTHING").run();
     const site = await prepare("SELECT id FROM sites WHERE code = 'B'").get();
@@ -86,8 +88,8 @@ async function tillSale(owner, at, payments) {
     const total = payments.reduce((n, p) => n + p.pence, 0);
     const { id } = await prepare(
       `INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, made_offline, till_clock_at, total_pence, vat_pence)
-       VALUES (?, ?, ?, 1, false, ?, ?, 0) RETURNING id`
-    ).get(randomUUID(), till.id, site.id, at, total);
+       VALUES (?, ?, ?, 1, ?, ?, ?, 0) RETURNING id`
+    ).get(randomUUID(), till.id, site.id, offline, at, total);
     for (const p of payments) await prepare('INSERT INTO till_sale_payments (till_sale_id, method, amount_pence) VALUES (?, ?, ?)').run(id, p.method, p.pence);
   });
 }
@@ -260,6 +262,21 @@ test('cash counted in this morning\'s float isn\'t counted twice', async () => {
   await lookedRightThisMorning(owner, FLOAT + 2200);
   const d = await day(owner);
   assert.deepEqual([d.floatStart.pence, d.cashPence, d.expectedPence], [FLOAT + 2200, 0, FLOAT + 2200]);
+});
+
+// Third review, item 1: whether a till sale came after the morning check is
+// decided by the server's clock when the till was online (when it received
+// the sale), and by the till's clock only for a sale made offline.
+test('a till with a slow clock still puts its cash in tonight\'s drawer figure', async () => {
+  const owner = await shop(); // checked at 07:00, London time
+  // Online, received after the check, though the till's clock says 05:00.
+  await tillSale(owner, '2026-09-01T04:00:00Z', [{ method: 'cash', pence: 400 }]);
+  // Made offline yesterday evening, before the check, and sent after it.
+  await tillSale(owner, '2026-08-31T20:00:00Z', [{ method: 'cash', pence: 900 }], { offline: true });
+  // Made offline after the check.
+  await tillSale(owner, '2026-09-01T09:00:00Z', [{ method: 'cash', pence: 250 }], { offline: true });
+  const d = await day(owner);
+  assert.deepEqual([d.cashPence, d.expectedPence], [650, FLOAT + 650]);
 });
 
 // ---- Which close counts a sale (second review, item 2) ----
