@@ -24,6 +24,27 @@ Nobody but the signed-in Owner SHALL set up a till, never by PIN alone (roles an
 - **WHEN** Jo Taylor asks the server to set up a till
 - **THEN** it is refused
 
+### Requirement: The till's browser key opens nothing on its own
+The computer SHALL keep its till as a key of its own, apart from the offline till's, stored only hashed. It SHALL only say which till a signed-in browser is: copied out of the browser, it SHALL never open the till's offline copy or send sales, and the offline till's key SHALL never be kept by the browser. It SHALL be renewed whenever the till is used.
+
+#### Scenario: Copied from the browser
+- **WHEN** someone copies Till B1's key from the browser and asks for the till's offline copy with it
+- **THEN** it is refused
+
+### Requirement: The Owner can make a new computer an existing till
+The Owner SHALL be able to make this computer an existing till, in place of the one that had it (a lost key or a replaced computer); the computer that had it SHALL stop being that till. No screen SHALL offer it until it is drawn.
+
+#### Scenario: A replaced computer
+- **WHEN** the Owner makes a new computer Till B1 again
+- **THEN** the new computer is Till B1 and the old one is no till
+
+### Requirement: Nobody else checked in sets up a till
+When someone other than the Owner is checked in by PIN on a computer, a till SHALL not be set up on it, even under the Owner's sign-in.
+
+#### Scenario: Jo is serving
+- **WHEN** Jo Taylor is checked in on the computer and a till is asked for there
+- **THEN** it is refused
+
 ## MODIFIED Requirements
 
 ### Requirement: The PIN screen shows who's checked in today

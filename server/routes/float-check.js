@@ -129,10 +129,12 @@ export function register(route) {
       return sendJson(res, 400, { error: 'Count the float on the first day', code: 'count_needed' });
     }
     const day = await today();
+    // The till it was checked at; the Owner's look at closing is the whole
+    // shop's, so it records none (review, 28 Oct).
     const made = await prepare(
       `INSERT INTO float_checks (day, login_id, employee_id, expected_pence, counted_pence, reason, till_id) VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (shop_id, day) DO NOTHING RETURNING id`
-    ).get(day, ctx.login.id, checkin?.employee_id ?? null, expected, counted, reason, checkin?.till_id ?? null);
+    ).get(day, ctx.login.id, checkin?.employee_id ?? null, expected, counted, reason, closing ? null : (checkin?.till_id ?? null));
     if (!made) return sendJson(res, 409, { error: 'The float was already checked today', code: 'already_checked', check: await checkOn(day) });
     sendJson(res, 201, { check: await checkOn(day) });
   });

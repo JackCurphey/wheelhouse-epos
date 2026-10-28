@@ -7,6 +7,7 @@
 - [x] 1.3 The route list snapshot, the owner-only list
 - [x] 1.4 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.5 Lint, typecheck, the touched tests, `npm test`, `npm run test:browser`
+- [x] 1.6 Review, 28 Oct: the browser's own key, never the offline till's (`browser_token_hash`); the cookie renewed; re-claiming a till number (server only); nobody else checked in sets up a till; a till switched off today keeps its line; the look at closing records no till; number order; tests for a race and Secure over HTTPS. Tests first, each fix broken on purpose
 
 ## 2. Screens (pull request 2, `jack/till-setup-screens`, stacked on 1)
 

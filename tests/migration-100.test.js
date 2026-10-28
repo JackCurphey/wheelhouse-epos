@@ -70,6 +70,10 @@ test('100 makes a till name optional and records the till of a check-in and a fl
     // A till with no name.
     const { rows: [unnamed] } = await c.query("INSERT INTO tills (site_id, code, name, token_hash) VALUES ($1, 'B2', NULL, 'till-hash-2') RETURNING name", [ids.site]);
     assert.equal(unnamed.name, null);
+    // The browser's own token, hashed, apart from the offline till's; one till each.
+    await c.query("UPDATE tills SET browser_token_hash = 'browser-hash-1' WHERE code = 'B2'");
+    await assert.rejects(c.query("UPDATE tills SET browser_token_hash = 'browser-hash-1' WHERE code = 'B1'"), /unique|duplicate/i, 'a browser token is one till');
+    assert.equal((await c.query("SELECT count(*)::int AS n FROM tills WHERE browser_token_hash IS NULL")).rows[0].n, 1, 'a till may have none');
     // A check-in and a float check on Till B1.
     const { rows: [made] } = await c.query("INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id) VALUES ($1, $2, 'checkin-2', '2026-09-01', $3) RETURNING till_id", [ids.jo, ids.jack, ids.till]);
     assert.equal(made.till_id, ids.till);
