@@ -3704,12 +3704,15 @@ From the independent review, 28 Oct:
     the sale falls before her last count, so it's taken as already counted,
     though the second shelf never had it. Logged, not changed; the fix would
     be to keep each scan's time, not just the first and last.
-22. **Undo is refused once a later count has corrected the same product**
-    ("A later count has corrected [Product]; undo that one first."), since
-    taking the earlier change off would leave stock wrong. Undo the later
-    count first.
-23. **Till sales count from when they were made at the till**, so a sale made
-    offline before the count, and synced after it, is already in the count.
+22. **Undo is refused once a later count has counted the same product**
+    ("A later count has corrected [Product]; undo that one first."), even a
+    later count that found it right, since taking the earlier change off
+    would leave stock wrong. Undo the later count first.
+23. **Till sales are timed as Close the day times them**: a sale made online
+    from when it reached Wheelhouse, so a till with a wrong clock can't move
+    it; a sale made offline from when the till says it was made, so one made
+    before the count and synced after is already in the count, but never
+    later than when it arrived.
 24. **The counting page searches only the count's own products** (the
     category, or the below-zero list), with names and codes only.
 25. **Arrow keys and Enter** pick from the category picker's matches and the
