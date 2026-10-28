@@ -14,5 +14,5 @@
 - [x] 2.1 Tests first: Set up this till (pills, In use, the button's words, a refusal), Settings' Tills fold, the till's name on the till, the float check's pop-ups and Today's Tills lines and short float (`tests/screens/`); a browser spec. Watch each fail
 - [x] 2.2 Build them to the drawings
 - [x] 2.3 Break each key rule on purpose, see its test go red, and restore
-- [ ] 2.4 Log choices in Jack’s section of `decided-while-building.md`, updating the stand-ins this replaces (done, 28 Oct); lint, typecheck, `npm test`, the browser specs (done, 28 Oct); `/review` (not run yet)
-- [ ] 2.5 `/opsx:archive` as the last commit
+- [x] 2.4 Log choices in Jack’s section of `decided-while-building.md`, updating the stand-ins this replaces (done, 28 Oct); lint, typecheck, `npm test`, the browser specs (done, 28 Oct); `/review` (28 Oct, two rounds; all findings fixed)
+- [x] 2.5 `/opsx:archive` as the last commit
