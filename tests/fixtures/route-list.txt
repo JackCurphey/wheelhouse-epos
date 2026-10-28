@@ -246,3 +246,9 @@ POST /api/team/:id/clear-pin
 GET /api/till-checkin
 POST /api/till-checkin
 POST /api/till-checkin/end
+GET /api/stock-takes
+POST /api/stock-takes
+GET /api/stock-takes/:id
+POST /api/stock-takes/:id/join
+POST /api/stock-takes/:id/counts
+POST /api/stock-takes/:id/finish
