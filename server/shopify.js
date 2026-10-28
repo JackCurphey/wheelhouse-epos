@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHmac, timingSafeEqual, randomBytes, scryptSync } from 'node:crypto';
-import { prepare } from './db.js';
+import { prepare, runWithShop } from './db.js';
 
 // SHOPIFY_TOKEN_ENCRYPTION_KEY derives the key used to encrypt stored
 // Shopify tokens (see README.md). The 'dev-only-insecure-key' fallback below
@@ -305,6 +305,20 @@ export async function pushInventoryLevel(product, quantity) {
   }
 }
 
+// The refund webhook's push, once its stock change has committed: from its
+// own database scope, so it holds no product's row (shopify-refund-stock).
+// Never throws. The stock is already changed, so a 500 here would only have
+// Shopify retry a refund that is done (and be told so, pushing nothing); a
+// scope that can't open (the pool full for 5 s) is logged, as a failed push is.
+export async function pushStockToShopify(shopId, pushes) {
+  if (pushes.length === 0) return;
+  await runWithShop(shopId, async () => {
+    for (const { product, newQty } of pushes) {
+      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+    }
+  }).catch((err) => console.error('Shopify inventory push scope failed', err));
+}
+
 export async function unpublishProductFromShopify(product) {
   const connection = await getShopifyConnection();
   // Matches syncProductToShopify/pushInventoryLevel's gate: 'sync_error' still
@@ -334,6 +348,10 @@ export async function matchRefundLineItemsToProducts(refund) {
   for (const refundLineItem of refund.refund_line_items || []) {
     const variantId = refundLineItem.line_item?.variant_id;
     if (!variantId) continue;
+    // Shopify: no_restock "Refunding these items won't affect inventory"
+    // (Refund resource, refund_line_items[].restock_type). Money back, stock
+    // stays out, so Wheelhouse's stock is left alone too (shopify-refund-stock).
+    if (refundLineItem.restock_type === 'no_restock') continue;
     const product = await prepare('SELECT * FROM products WHERE shopify_variant_id = ?').get(String(variantId));
     if (product) items.push({ product, qty: refundLineItem.quantity });
   }
@@ -346,6 +364,43 @@ export async function claimShopifyEvent(shopifyEventId, kind) {
      ON CONFLICT (shop_id, shopify_order_id, kind) DO NOTHING`
   ).run(String(shopifyEventId), kind);
   return result.changes > 0;
+}
+
+// Starts the message of every error record recordShopifyEventError writes:
+// the attempt rolled back whole, so applying the event again is safe. An
+// 'error' row without it was written by the old claim-first handler
+// (markShopifyEventError), which could fail after applying part of a refund,
+// so that row stays taken, as it always was (second review, 28 Oct).
+export const ROLLED_BACK_ERROR_PREFIX = 'Rolled back, safe to retry: ';
+
+// For a claim made inside the transaction that does the event's work (the
+// refund webhook): a rollback takes the claim with it, so Shopify's retry can
+// claim again. An event whose earlier attempt rolled back (an 'error' row
+// with ROLLED_BACK_ERROR_PREFIX) is claimed again too, back to 'ok'. A second
+// delivery arriving while the first is still in its transaction waits on the
+// first's claim and, once that commits, is told it's already claimed.
+export async function claimShopifyEventInTransaction(shopifyEventId, kind) {
+  const result = await prepare(
+    `INSERT INTO shopify_processed_events (shopify_order_id, kind) VALUES (?, ?)
+     ON CONFLICT (shop_id, shopify_order_id, kind)
+     DO UPDATE SET status = 'ok', error_message = NULL
+     WHERE shopify_processed_events.status = 'error' AND starts_with(shopify_processed_events.error_message, ?)`
+  ).run(String(shopifyEventId), kind, ROLLED_BACK_ERROR_PREFIX);
+  return result.changes > 0;
+}
+
+// Records a failed attempt after its transaction rolled back (the claim went
+// with it), marked with ROLLED_BACK_ERROR_PREFIX. It updates only an earlier
+// record of its own kind: never an 'ok' row (a delivery that went through),
+// and never an old unmarked 'error' row, which would make that row
+// claimable.
+export async function recordShopifyEventError(shopifyEventId, kind, errorMessage) {
+  await prepare(
+    `INSERT INTO shopify_processed_events (shopify_order_id, kind, status, error_message) VALUES (?, ?, 'error', ? || ?)
+     ON CONFLICT (shop_id, shopify_order_id, kind)
+     DO UPDATE SET error_message = EXCLUDED.error_message
+     WHERE shopify_processed_events.status = 'error' AND starts_with(shopify_processed_events.error_message, ?)`
+  ).run(String(shopifyEventId), kind, ROLLED_BACK_ERROR_PREFIX, errorMessage, ROLLED_BACK_ERROR_PREFIX);
 }
 
 export async function markShopifyEventError(shopifyEventId, kind, errorMessage) {
