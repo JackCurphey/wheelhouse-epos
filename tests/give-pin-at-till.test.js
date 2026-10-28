@@ -64,14 +64,14 @@ test('the Owner serving sees who has no PIN: not himself, not anyone with one, n
   const owner = await shop();
   const jo = await member(owner, 'Jo Taylor');
   const alex = await member(owner, 'Alex Morgan', { isCashier: false });
-  const sam = await tillOnly(owner, 'Sam Till');
-  const gone = await tillOnly(owner, 'Old Hand');
+  const sam = await tillOnly(owner, '[Name]');
+  const gone = await tillOnly(owner, '[Name 3]');
   await runWithShop(owner.shop.id, () => prepare('UPDATE employees SET active = 0 WHERE id = ?').run(gone));
   // Alex has a PIN already.
   await runWithShop(owner.shop.id, () => prepare('UPDATE employees SET pin_hash = ? WHERE id = ?').run(hashPin(owner.pin === '1111' ? '2222' : '1111'), alex.employeeId));
   assert.deepEqual(await givePinList(owner.till), [
     { id: jo.employeeId, name: 'Jo Taylor', role: 'Staff', tillOnly: false },
-    { id: sam, name: 'Sam Till', role: 'Staff', tillOnly: true },
+    { id: sam, name: '[Name]', role: 'Staff', tillOnly: true },
   ]);
 });
 
@@ -83,7 +83,7 @@ test('a till-only mechanic is listed as a Mechanic', async () => {
 
 test('nobody is listed unless the Owner is the one checked in on this browser', async () => {
   const owner = await shop();
-  await tillOnly(owner, 'Sam Till');
+  await tillOnly(owner, '[Name]');
   // Signed in as the Owner, but nobody checked in.
   assert.deepEqual(await givePinList(owner.cookie), []);
   // Jo checked in on the Owner's own sign-in.
@@ -104,7 +104,7 @@ test('the Owner never lists himself for a PIN, even after his is cleared', async
 
 test('the Owner gives a till-only person their PIN: offered once, kept hashed, and the till goes back to Enter your PIN', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
+  const sam = await tillOnly(owner, '[Name]');
   const res = await fetch(`${server.baseUrl}/api/till-checkin/give-pin/${sam}/offer`, { method: 'POST', headers: { cookie: owner.till, 'content-type': 'application/json' }, body: '{}' });
   assert.equal(res.status, 201);
   assert.equal(res.headers.get('cache-control'), 'no-store', 'shown once: never kept by a cache');
@@ -125,14 +125,14 @@ test('the Owner gives a till-only person their PIN: offered once, kept hashed, a
   assert.match(after.pin_hash, /^pbkdf2-sha256\$100000\$/);
   // The Owner's check-in on this browser ended: nobody is serving.
   assert.equal((await call(owner.till, '/api/till-checkin')).body.serving, null);
-  // And the PIN checks Sam in.
+  // And the PIN checks [Name] in.
   const samIn = await post(owner.cookie, '/api/till-checkin', { pin });
-  assert.deepEqual([samIn.status, samIn.body.serving?.name], [201, 'Sam Till']);
+  assert.deepEqual([samIn.status, samIn.body.serving?.name], [201, '[Name]']);
 });
 
 test('Give me a different one replaces the offer; only the last one shown can be kept, within 15 minutes', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
+  const sam = await tillOnly(owner, '[Name]');
   const first = (await offerTo(owner.till, sam)).body.pin;
   assert.match(String(first), /^[0-9]{4}$/);
   let second = first;
@@ -147,7 +147,7 @@ test('Give me a different one replaces the offer; only the last one shown can be
 
 test('only the checked-in Owner can give a PIN: not Jo checked in, not the Owner without a check-in', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
+  const sam = await tillOnly(owner, '[Name]');
   const jo = await member(owner, 'Jo Taylor');
   const { cookie: joTill } = await checkInAtTill(server.baseUrl, jo.cookie);
   for (const cookie of [joTill, owner.cookie, jo.cookie]) {
@@ -197,8 +197,8 @@ test('a PIN given meanwhile by another way stops the keep', async () => {
 
 test('keeping a PIN someone else kept meanwhile is refused', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
-  const kim = await tillOnly(owner, 'Kim Till');
+  const sam = await tillOnly(owner, '[Name]');
+  const kim = await tillOnly(owner, '[Name 2]');
   const pin = (await offerTo(owner.till, sam)).body.pin;
   await runWithShop(owner.shop.id, () => prepare('UPDATE employees SET pin_hash = ? WHERE id = ?').run(hashPin(pin), kim));
   const kept = await keepFor(owner.till, sam, pin);
@@ -210,10 +210,10 @@ test('keeping a PIN someone else kept meanwhile is refused', async () => {
 
 test('two keeps of the same PIN for two people at once give it to one only', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
-  const kim = await tillOnly(owner, 'Kim Till');
+  const sam = await tillOnly(owner, '[Name]');
+  const kim = await tillOnly(owner, '[Name 2]');
   const pin = (await offerTo(owner.till, sam)).body.pin;
-  // Kim is offered the same digits (as two tills could be): put the same offer on her row.
+  // [Name 2] is offered the same digits (as two tills could be): the same offer on their row.
   await runWithShop(owner.shop.id, () => prepare("UPDATE employees SET pin_offer_hash = ?, pin_offer_at = now() WHERE id = ?").run(hashPin(pin), kim));
   const second = await checkInWithPin(server.baseUrl, await staffFreshCookie(owner.loginId), owner.pin);
   const [a, b] = await Promise.all([keepFor(owner.till, sam, pin), keepFor(second, kim, pin)]);
@@ -225,7 +225,7 @@ test('two keeps of the same PIN for two people at once give it to one only', asy
 test('someone in another shop is not found', async () => {
   const owner = await shop();
   const other = await shop();
-  const theirs = await tillOnly(other, 'Sam Till');
+  const theirs = await tillOnly(other, '[Name]');
   const offer = await offerTo(owner.till, theirs);
   assert.deepEqual([offer.status, offer.body.error], [404, 'Team member not found'], 'the route answers, and finds nobody');
   assert.equal(offer.body.pin, undefined);
@@ -236,14 +236,14 @@ test('someone in another shop is not found', async () => {
 
 test('someone no longer active is not found', async () => {
   const owner = await shop();
-  const gone = await tillOnly(owner, 'Old Hand');
+  const gone = await tillOnly(owner, '[Name 3]');
   await runWithShop(owner.shop.id, () => prepare('UPDATE employees SET active = 0 WHERE id = ?').run(gone));
   assert.deepEqual([(await offerTo(owner.till, gone)).status, (await offerTo(owner.till, gone)).body.error], [404, 'Team member not found']);
 });
 
 test('offers given at the till share Your settings’ limit of 10 a sign-in in 10 minutes', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
+  const sam = await tillOnly(owner, '[Name]');
   // checkInAtTill used one offer of the Owner's sign-in.
   for (let i = 0; i < 9; i += 1) assert.equal((await offerTo(owner.till, sam)).status, 201, `offer ${i + 2}`);
   const limited = await offerTo(owner.till, sam);
@@ -254,7 +254,7 @@ test('offers given at the till share Your settings’ limit of 10 a sign-in in 1
 
 test('signed out: refused', async () => {
   const owner = await shop();
-  const sam = await tillOnly(owner, 'Sam Till');
+  const sam = await tillOnly(owner, '[Name]');
   assert.equal((await offerTo('', sam)).status, 401);
   assert.equal((await keepFor('', sam, '1234')).status, 401);
 });

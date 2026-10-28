@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { User } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
-import { useCheckinActions, type CheckedIn } from '@/lib/till-checkin.ts';
+import { useCheckinActions, type CheckedIn, type GiveTo } from '@/lib/till-checkin.ts';
+import { ServingMenuButton } from './give-pin.tsx';
 
 /**
  * Enter your PIN (drawn as till-checkin and till-pin-wrong in
@@ -10,8 +11,8 @@ import { useCheckinActions, type CheckedIn } from '@/lib/till-checkin.ts';
  * once, with no OK button. A wrong PIN clears the dots and says so; there is
  * no lock. Who has checked in today is listed under the pad.
  * Not here yet (openspec/changes/pins-and-checkin): the till bar with the
- * till's name and the start-up status line (step C), and giving a PIN at
- * the till (till-give-pin), so "No PIN yet?" says only what works today.
+ * till's name and the start-up status line (step C). "No PIN yet?" is the
+ * drawn line now the Owner can give a PIN here (openspec/changes/give-pin-at-till).
  */
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const FAILED = 'Wheelhouse couldn’t check that PIN. Try again in a moment.';
@@ -91,7 +92,7 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
           {key('0')}
           {key('Delete', 'Delete the last digit')}
         </div>
-        <p className="m-0 text-size-13 leading-[1.45] text-[var(--wh-muted)] md:text-sm"><strong className="text-[var(--wh-ink)]">No PIN yet?</strong> Sign in on your phone.</p>
+        <p className="m-0 text-size-13 leading-[1.45] text-[var(--wh-muted)] md:text-sm"><strong className="text-[var(--wh-ink)]">No PIN yet?</strong> Sign in on your phone, or ask the owner or a manager to give you one here.</p>
       </div>
       {checkedInToday.length ? (
         <div className="flex flex-col gap-2.5 md:w-[360px]">
@@ -110,18 +111,22 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
   );
 }
 
-/** "Serving: [name]" (tillBar's switch): back to Enter your PIN. */
-export function ServingButton({ serving }: { serving: CheckedIn }) {
+/**
+ * "Serving: [name]" (tillBar's switch): back to Enter your PIN. For the
+ * Owner, while someone has no PIN, it opens the Serving menu instead
+ * (till-serving-menu; give-pin.tsx).
+ */
+export function ServingButton({ serving, givePin = [] }: { serving: CheckedIn; givePin?: GiveTo[] }) {
   const { switchServing } = useCheckinActions();
   const [failed, setFailed] = useState(false);
   return (
     <div className="mb-3.5 flex items-center justify-end gap-2.5">
       {failed ? <span role="alert" className="text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t switch. Try again in a moment.</span> : null}
-      <button type="button" aria-label={`Serving: ${serving.name} — switch who’s serving`}
+      {givePin.length ? <ServingMenuButton serving={serving} givePin={givePin} onFailed={() => setFailed(true)} /> : <button type="button" aria-label={`Serving: ${serving.name} — switch who’s serving`}
         onClick={() => { setFailed(false); switchServing().catch(() => setFailed(true)); }}
         className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold hover:bg-[var(--wh-hover)]">
         <User size={16} aria-hidden="true" />{`Serving: ${serving.name}`}
-      </button>
+      </button>}
     </div>
   );
 }
