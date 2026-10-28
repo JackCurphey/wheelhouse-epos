@@ -19,7 +19,10 @@
    - `stock_take_recounts`: a line sent back to the counters, by whom, when.
    - `stock_take_results`: once applied, each counted product's expected,
      counted and difference, its cost then, and the history line written.
-   It also adds `stock_movements.stock_take_id`. It is safe to run twice and
+   It also adds `stock_movements.stock_take_id`, tied to its own shop's take
+   by `(shop_id, stock_take_id)` (added `NOT VALID`, as 096's links are), and
+   `stock_movements.till_sale_id`, which the till's sync now fills, so a
+   count can tell when a till sale was made. It is safe to run twice and
    onto the shared development database, which ran the first draft as 098:
    tables and columns are added only when missing, and the draft's checks
    are dropped and made again.
@@ -53,9 +56,15 @@
    applying adds the difference to stock as it is then. The other way
    (measured from when the count started) would leave stock one too low for
    every unit sold between the count starting and the shelf being scanned.
-   This way can't place a sale that falls between two people's counts of
-   the same product; nor a sale whose transaction began before a count and
-   finished after it (its time is when it began).
+   A till sale counts from when it was made at the till (`till_clock_at`,
+   also its time when made offline), not when it synced: one made offline
+   before the count and synced after it was already off the shelf (review,
+   28 Oct). This way can't place a sale that falls between two people's
+   counts of the same product; nor a sale whose transaction began before a
+   count and finished after it (its time is when it began). And a later scan
+   by the same person moves that product's "last count" on: a scan of a
+   second shelf an hour later means a sale in between is taken as already
+   counted (review, 28 Oct; logged, not changed).
 9. **Applying** locks the take (`FOR UPDATE`), then its counted products in
    id order (`FOR NO KEY UPDATE`, the order sales and the till take them
    in, so they queue rather than deadlock), works out the differences with
@@ -64,11 +73,17 @@
    line in `stock_movements` (who applied it as `login_id`; the note "Stock
    take of [Area] · counted [n], expected [n] · counted by [Name]"), all in
    one transaction. A sale waiting on a product's lock then applies its own
-   relative change on top, so neither is lost. A line asked to be recounted
-   and not counted again is left as it is. Shopify is told after the reply.
+   relative change on top, so neither is lost. The stock, the history lines
+   and the results are each one statement (`UPDATE … FROM unnest(…)`, bulk
+   inserts), so the locks are held briefly. A line asked to be recounted and
+   not counted again is left as it is. Shopify is told after the reply.
 10. **Undo** locks the same way, takes each difference off with a
     `count_undone` line ("Undid the stock take of [Area]"), removes the
-    results and puts the count back to counting, to be checked again.
+    results and puts the count back to counting, to be checked again. It is
+    refused (409, "A later count has corrected [Product]; undo that one
+    first.") when a count applied later corrected one of its products:
+    taking the first one off would leave stock wrong (review, 28 Oct: 10,
+    counted 7, then 8, Undo the first gave 11).
 11. **Recount** removes the line's counts, adds it to every counter's page as
     "Recount asked by [Name]" and puts every counter back to counting.
 12. **Count them as none** counts as 0, by the Owner, each product the count
@@ -78,6 +93,13 @@
     is compared").
 13. **Money** is at cost, in whole pence (`ROUND(cost * 100)`), never shown
     to Staff: Finished counts and checking are for the Owner.
+14. **The counting page searches through the take** (`/api/stock-takes/:id/
+    products`): names and codes only, never stock or cost, so counting stays
+    blind, and only within the take's category or below-zero list (review,
+    28 Oct).
+15. **Download the count** writes a name or supplier code that starts with
+    =, +, −, @, a tab or a return with a ' in front, so a spreadsheet reads it
+    as text, not a formula. Numbers stay numbers.
 
 ## Contract
 
@@ -101,5 +123,7 @@
 - `POST /api/stock-takes/:id/recount` `{ productId }`, `/none`, `/apply`,
   `/undo` (Owner) → 200; 400; 403; 404; 409. `apply` returns `{ …take,
   productsChanged, valuePence }`; `undo` the take.
+- `GET /api/stock-takes/:id/products?search=` → `[{ id, name, sku, barcode }]`,
+  up to 20, exact codes first; 404.
 - `GET /api/stock-takes/:id/download` (Owner) → `text/csv`, "Product,
   Supplier code, Expected, Counted, Difference, At cost".

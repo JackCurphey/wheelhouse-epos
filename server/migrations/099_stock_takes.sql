@@ -124,5 +124,18 @@ CREATE POLICY stock_take_results_shop_isolation ON stock_take_results
   USING (shop_id = current_setting('app.current_shop_id')::int)
   WITH CHECK (shop_id = current_setting('app.current_shop_id')::int);
 
--- A stock-history line written by applying a count, or by undoing one.
-ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS stock_take_id INTEGER REFERENCES stock_takes(id);
+-- A stock-history line written by applying a count, or by undoing one, tied
+-- to its own shop's take like every other row of a take (review, 28 Oct).
+-- The draft linked it by id alone; that link is dropped and made again. It
+-- is added NOT VALID, as 096's are: checking the existing rows would read
+-- stock_movements under its forced row-level security with no shop set,
+-- which fails. New and changed rows are checked as usual.
+ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS stock_take_id INTEGER;
+ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_stock_take_id_fkey;
+ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_stock_take_fkey;
+ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_stock_take_fkey
+  FOREIGN KEY (shop_id, stock_take_id) REFERENCES stock_takes(shop_id, id) NOT VALID;
+-- A till sale's history line names its sale, so a count can allow for it by
+-- when it was made at the till, not when it reached the server (review, 28
+-- Oct). Older lines, and every other kind, leave it empty.
+ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS till_sale_id INTEGER REFERENCES till_sales(id);

@@ -112,6 +112,9 @@ test('099 adds stock takes and their counts, and keeps each shop to its own', as
     await assert.rejects(c.query('INSERT INTO stock_take_counts (stock_take_id, product_id, login_id, qty) VALUES ($1, $2, $3, 1)', [ids.take, theirPads.id, theirs.id]), /foreign key/i, 'no count against another shop’s take');
     await assert.rejects(c.query('INSERT INTO stock_take_recounts (stock_take_id, product_id, asked_by_login_id) VALUES ($1, $2, $3)', [ids.take, theirPads.id, theirs.id]), /foreign key/i, 'no recount of another shop’s take');
     await assert.rejects(c.query('INSERT INTO stock_take_results (stock_take_id, product_id, expected, counted, difference, cost_pence) VALUES ($1, $2, 1, 1, 0, 0)', [ids.take, theirPads.id]), /foreign key/i, 'no result on another shop’s take');
+    await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, note, stock_take_id) VALUES ($1, 1, 'count', '', $2)", [theirPads.id, ids.take]), /foreign key/i, 'no history line on another shop’s take');
+    // A till sale's history line says which sale it was, so a count can tell when it was made.
+    assert.equal((await c.query("SELECT count(*)::int AS n FROM information_schema.columns WHERE table_name = 'stock_movements' AND column_name = 'till_sale_id'")).rows[0].n, 1);
   });
   // Run again on a database that already has it: what was kept stays.
   await withClient(url.href, (c) => c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]));

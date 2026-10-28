@@ -256,6 +256,7 @@ POST /api/till-checkin/give-pin/:id
 GET /api/stock-takes
 POST /api/stock-takes
 GET /api/stock-takes/:id
+GET /api/stock-takes/:id/products
 POST /api/stock-takes/:id/join
 POST /api/stock-takes/:id/counts
 POST /api/stock-takes/:id/finish
