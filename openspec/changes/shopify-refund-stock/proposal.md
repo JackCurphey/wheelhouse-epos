@@ -20,12 +20,21 @@ figure is wrong and no longer matches the product's stock history.
 - The figure sent back to Shopify is the stock after the write, and it is sent
   after the transaction ends, so a slow Shopify never holds the product's row
   while a till waits to sell it.
+- From the review (28 Oct): a refund that fails partway is no longer left
+  marked as done, so Shopify's retry puts the stock back; the same refund
+  delivered twice, even at the same moment, still counts once; and a line
+  Shopify marks `no_restock` (money back, item not back on the shelf) leaves
+  the stock alone.
+- Logged for Jack, not changed: importing a supplier item starts its stock
+  with no line in its stock history (`decided-while-building.md`, 28 Oct).
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `stock`: a Shopify refund and another stock change at the same moment both count.
+- `stock`: a Shopify refund and another stock change at the same moment both
+  count; a failed refund is applied when Shopify retries it, a repeated one
+  once; a `no_restock` line leaves stock alone.
 
 ## Work package, owner, risky areas
 
@@ -44,7 +53,8 @@ line is now written in the same transaction as its stock change.
 ## Out of scope
 
 - The Shopify order webhook: it sells through `createSale`
-  (`server/lib/sales.js`), which already writes relatively.
+  (`server/lib/sales.js`), which already writes relatively. Its claim still
+  commits before the sale; that is not changed here.
 - Pulling stock levels from Shopify: Wheelhouse doesn't do this; it registers
   only the `orders/paid` and `refunds/create` webhooks.
 - Moving the refund's Shopify push to after the webhook's reply (as sales and
