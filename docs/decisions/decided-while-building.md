@@ -1350,7 +1350,10 @@ silent:
     routes' own Owner checks alike), and the screens show exactly what a
     staff sign-in sees: the Staff rooms in the menu, and "Settings aren’t
     part of your role" on Settings. When the Owner types his PIN, the Owner's
-    pages are back. Tills and other browsers are unchanged. *Pattern:*
+    pages are back. Tills and other browsers are unchanged. **For Jack:**
+    the menu's footer still names the sign-in, so while Alex works on a
+    computer the Owner signed in it reads "Jack Lewis · Staff"; Your settings
+    belonging to the person working is walk-through 8 M3, a later task. *Pattern:*
     giving a PIN at the till (`giverHere`, 28 Oct entries 1 and 2: the PIN
     says who you are), and a staff sign-in's own pages. The Till page still
     opens on a workshop computer, as on a browser that isn't a till; whether
