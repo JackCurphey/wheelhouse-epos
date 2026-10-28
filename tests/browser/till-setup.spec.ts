@@ -57,6 +57,10 @@ for (const [viewport, device] of [[{ width: 1440, height: 900 }, 'computer'], [{
     // Still Till B1 after a reload: the browser keeps it.
     await page.reload();
     await expect(page.getByText('Till B1', { exact: true })).toBeVisible();
+    // Set up this till's own address, on a computer that's already a till, goes to the till.
+    await page.goto(`${server!.baseUrl}/workshop/till/setup`);
+    await expect(page).toHaveURL(/\/workshop\/till$/);
+    await expect(page.getByText('Till B1', { exact: true })).toBeVisible();
 
     // Settings: Tills reads Till B1, and the button is gone on this computer.
     await page.goto(`${server!.baseUrl}/workshop/settings?room=front-desk`);

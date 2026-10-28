@@ -13,8 +13,10 @@ import { ROUTES } from '@/staff/routes.ts';
  */
 export function useTillsSummary(): string {
   const setup = useTillSetup();
-  if (!setup.data) return '';
-  return setup.data.tills.length ? setup.data.tills.map((code) => `Till ${code}`).join(', ') : 'None yet';
+  // Read as loading until the reply has its tills (a reply of another shape breaks nothing).
+  const tills = setup.data?.tills;
+  if (!Array.isArray(tills)) return '';
+  return tills.length ? tills.map((code) => `Till ${code}`).join(', ') : 'None yet';
 }
 
 export function TillsSettings() {
@@ -23,7 +25,7 @@ export function TillsSettings() {
   return (
     <div className="flex flex-col items-start gap-2.5 pt-1">
       <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Do this on the computer that will be the till. It doesn’t show on a computer that’s already a till.</p>
-      {data && !data.thisTill && data.sites.length ? (
+      {data && !data.thisTill && data.sites?.length ? (
         <Link to={ROUTES['till-setup']} className={buttonVariants({ variant: 'default' })}>Make this computer a till</Link>
       ) : null}
     </div>
