@@ -1,0 +1,227 @@
+// The shared workshop computer, first part (openspec/changes/workshop-computer;
+// drawn as till-checkin-workshop in signin.mjs; walk-through 8 decisions 1
+// and 3; build plan Q6; stage-1 gaps 4). The Owner makes a computer a
+// workshop computer; the browser keeps it in a cookie of its own, the server
+// only its hash; a check-in belongs to the workshop computer it was made on;
+// and the server stops counting it 10 minutes after it was last used.
+// The server's clock is pinned to 1 Sep 2026.
+import test, { before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import '../server/load-env.js';
+import { runWithShop, prepare } from '../server/db.js';
+import { hashLinkCode } from '../server/booking-link.js';
+import { startLiveServer } from './helpers/liveServer.js';
+import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { deleteTestShop } from './helpers/testShop.js';
+
+let server;
+const shops = [];
+before(async () => {
+  server = await startLiveServer({ env: { TRUST_PROXY: '1' } });
+});
+after(async () => {
+  for (const s of shops) await deleteTestShop(s.shop.id);
+  if (server) await server.stop();
+});
+
+const call = (cookie, path, options) => staffRequest(server.baseUrl, cookie, path, options);
+const post = (cookie, path, body) => call(cookie, path, { method: 'POST', body });
+const row = (owner, sql, ...args) => runWithShop(owner.shop.id, () => prepare(sql).get(...args));
+const run = (owner, sql, ...args) => runWithShop(owner.shop.id, () => prepare(sql).run(...args));
+
+async function shop() {
+  const owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+  shops.push(owner);
+  owner.site = (await post(owner.cookie, '/api/sites', { name: 'Bolton', code: 'B' })).body;
+  return owner;
+}
+async function member(owner, name, { mechanic = false } = {}) {
+  const made = await post(owner.cookie, '/api/team', { name, isCashier: !mechanic, isMechanic: mechanic, email: `${randomUUID().slice(0, 8)}@example.test`, password: 'password123' });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const cookie = await staffFreshCookie(made.body.loginId);
+  const offer = await post(cookie, '/api/your-settings/till-pin/offer');
+  assert.equal((await post(cookie, '/api/your-settings/till-pin', { pin: offer.body.pin })).status, 200);
+  return { cookie, pin: offer.body.pin, loginId: made.body.loginId };
+}
+
+// A browser: the Owner's sign-in plus whatever cookies the server gives it.
+function browser(owner) {
+  const jar = new Map();
+  const cookie = () => [owner.cookie, ...[...jar].filter(([, v]) => v).map(([k, v]) => `${k}=${v}`)].join('; ');
+  async function send(path, { method = 'GET', body, headers = {} } = {}) {
+    const res = await fetch(`${server.baseUrl}${path}`, {
+      method, headers: { cookie: cookie(), ...headers, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const lines = res.headers.getSetCookie();
+    for (const line of lines) {
+      const [pair] = line.split(';');
+      const at = pair.indexOf('=');
+      jar.set(pair.slice(0, at), pair.slice(at + 1));
+    }
+    const text = await res.text();
+    return { status: res.status, body: text ? JSON.parse(text) : null, setCookie: lines };
+  }
+  return { send, jar, cookie };
+}
+const makeWorkshop = (b, owner, name = '') => b.send('/api/till-setup/workshop', { method: 'POST', body: { siteId: owner.site.id, name } });
+const checkIn = (b, pin) => b.send('/api/till-checkin', { method: 'POST', body: { pin } });
+const serving = async (b) => (await b.send('/api/till-checkin')).body.serving;
+// The check-in on this browser was last used `minutes` ago.
+const idleFor = (owner, b, minutes) => run(owner, `UPDATE pin_checkins SET last_active_at = now() - interval '${minutes} minutes' WHERE token_hash = ?`, hashLinkCode(b.jar.get('wh_till_checkin')));
+
+test('make this computer a workshop computer: the Owner only, the cookie holds it, the server only its hash', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const refused = await post(jo.cookie, '/api/till-setup/workshop', { siteId: owner.site.id });
+  assert.deepEqual([refused.status, refused.body.code], [403, 'owner_only']);
+  const b = browser(owner);
+  const made = await makeWorkshop(b, owner, '  Back bench ');
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  assert.deepEqual({ ...made.body.workshop, id: 0 }, { id: 0, name: 'Back bench', siteName: 'Bolton' });
+  const line = made.setCookie.find((l) => l.startsWith('wh_workshop='));
+  assert.match(line, /HttpOnly/);
+  assert.match(line, /SameSite=Lax/);
+  assert.match(line, /Max-Age=34560000/);
+  const token = b.jar.get('wh_workshop');
+  assert.match(token, /^[0-9a-f]{64}$/);
+  const stored = await row(owner, 'SELECT browser_token_hash, site_id FROM workshop_computers WHERE id = ?', made.body.workshop.id);
+  assert.equal(stored.browser_token_hash, hashLinkCode(token));
+  assert.equal(stored.site_id, owner.site.id);
+  assert.ok(!JSON.stringify(made.body).includes(token), 'the key is never in the reply');
+  // The setup and the check-in both know it; it is no till.
+  assert.deepEqual((await b.send('/api/till-setup')).body.thisWorkshop, { id: made.body.workshop.id, name: 'Back bench', siteName: 'Bolton' });
+  const checkin = (await b.send('/api/till-checkin')).body;
+  assert.deepEqual([checkin.workshop, checkin.till], [{ name: 'Back bench', siteName: 'Bolton' }, null]);
+  // Signing in as someone else on that computer leaves it a workshop computer.
+  const asJo = await fetch(`${server.baseUrl}/api/till-checkin`, { headers: { cookie: `${jo.cookie}; wh_workshop=${token}` } });
+  assert.deepEqual((await asJo.json()).workshop, { name: 'Back bench', siteName: 'Bolton' });
+  // A blank name is none.
+  const other = browser(owner);
+  assert.equal((await makeWorkshop(other, owner, '   ')).body.workshop.name, null);
+});
+
+test('a computer is one till or one workshop computer; bad details are refused', async () => {
+  const owner = await shop();
+  const b = browser(owner);
+  assert.equal((await makeWorkshop(b, owner)).status, 201);
+  const again = await makeWorkshop(b, owner);
+  assert.deepEqual([again.status, again.body.code], [409, 'already_a_workshop']);
+  const till = await b.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } });
+  assert.deepEqual([till.status, till.body.code], [409, 'already_a_workshop']);
+  const t = browser(owner);
+  assert.equal((await t.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
+  const onTill = await makeWorkshop(t, owner);
+  assert.deepEqual([onTill.status, onTill.body.code], [409, 'already_a_till']);
+  const fresh = browser(owner);
+  assert.equal((await fresh.send('/api/till-setup/workshop', { method: 'POST', body: { siteId: 999999 } })).status, 400);
+  assert.equal((await makeWorkshop(fresh, owner, 'x'.repeat(61))).status, 400);
+  assert.equal((await row(owner, 'SELECT count(*)::int AS n FROM workshop_computers')).n, 1);
+  // Another shop's workshop computer is no workshop computer here.
+  const elsewhere = await shop();
+  const theirs = await fetch(`${server.baseUrl}/api/till-checkin`, { headers: { cookie: `${elsewhere.cookie}; wh_workshop=${b.jar.get('wh_workshop')}` } });
+  assert.equal((await theirs.json()).workshop, null);
+});
+
+test('nobody but the Owner checked in on that computer sets up a workshop computer there', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const b = browser(owner);
+  assert.equal((await checkIn(b, jo.pin)).status, 201);
+  const refused = await makeWorkshop(b, owner);
+  assert.deepEqual([refused.status, refused.body.code], [403, 'not_owner_checked_in']);
+});
+
+test('a check-in counts only on the workshop computer it was made on; Checked in today is its own; no giving a PIN there', async () => {
+  const owner = await shop();
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  const jo = await member(owner, 'Jo Taylor');
+  const ownerPin = (await post(owner.cookie, '/api/your-settings/till-pin/offer')).body.pin;
+  assert.equal((await post(owner.cookie, '/api/your-settings/till-pin', { pin: ownerPin })).status, 200);
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  const plain = browser(owner);
+  assert.equal((await checkIn(plain, jo.pin)).status, 201);
+  assert.equal(await serving(w), null, 'a check-in on a browser that is neither doesn\'t count here');
+  assert.equal((await checkIn(w, alex.pin)).status, 201);
+  assert.equal((await serving(w)).name, 'Alex Morgan');
+  assert.deepEqual((await w.send('/api/till-checkin')).body.checkedInToday.map((p) => p.name), ['Alex Morgan']);
+  assert.ok((await row(owner, 'SELECT workshop_computer_id FROM pin_checkins WHERE employee_id = (SELECT id FROM employees WHERE name = ?)', 'Alex Morgan')).workshop_computer_id);
+  // The workshop computer's check-in cookie, carried to a browser that is neither, counts for nobody.
+  const moved = await fetch(`${server.baseUrl}/api/till-checkin`, { headers: { cookie: `${owner.cookie}; wh_till_checkin=${w.jar.get('wh_till_checkin')}` } });
+  assert.equal((await moved.json()).serving, null);
+  // The Owner checked in on the workshop computer gives no PIN here: that is the till's.
+  await member(owner, 'Sam Price');
+  await run(owner, "UPDATE employees SET pin_hash = NULL WHERE name = 'Sam Price'");
+  assert.equal((await checkIn(w, ownerPin)).status, 201);
+  assert.deepEqual((await w.send('/api/till-checkin')).body.givePin, []);
+  const sam = await row(owner, "SELECT id FROM employees WHERE name = 'Sam Price'");
+  assert.equal((await w.send(`/api/till-checkin/give-pin/${sam.id}/offer`, { method: 'POST' })).status, 403);
+});
+
+test('left alone for 10 minutes, the server stops counting the check-in; using it keeps it', async () => {
+  const owner = await shop();
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  assert.equal((await checkIn(w, alex.pin)).status, 201);
+  // Used 9 minutes ago: still Alex; and using it now starts the 10 minutes again.
+  await idleFor(owner, w, 9);
+  const used = await w.send('/api/till-checkin/active', { method: 'POST' });
+  assert.deepEqual([used.status, used.body.serving?.name], [200, 'Alex Morgan']);
+  const last = await row(owner, 'SELECT last_active_at > now() - interval \'1 minute\' AS fresh FROM pin_checkins WHERE token_hash = ?', hashLinkCode(w.jar.get('wh_till_checkin')));
+  assert.equal(last.fresh, true);
+  // Reading the check-in is not using it.
+  await idleFor(owner, w, 9);
+  assert.equal((await serving(w)).name, 'Alex Morgan');
+  const after9 = await row(owner, 'SELECT last_active_at < now() - interval \'8 minutes\' AS old FROM pin_checkins WHERE token_hash = ?', hashLinkCode(w.jar.get('wh_till_checkin')));
+  assert.equal(after9.old, true, 'reading it didn\'t move the time');
+  // 10 minutes: nobody, and it is ended for good; using it now brings nobody back.
+  await idleFor(owner, w, 10);
+  assert.equal(await serving(w), null);
+  const ended = await row(owner, 'SELECT ended_at FROM pin_checkins WHERE token_hash = ?', hashLinkCode(w.jar.get('wh_till_checkin')));
+  assert.ok(ended.ended_at, 'the check-in is ended');
+  await run(owner, 'UPDATE pin_checkins SET last_active_at = now() WHERE token_hash = ?', hashLinkCode(w.jar.get('wh_till_checkin')));
+  const late = await w.send('/api/till-checkin/active', { method: 'POST' });
+  assert.deepEqual([late.status, late.body.serving], [200, null]);
+  assert.equal(await serving(w), null);
+});
+
+test('an idle check-in counts for nothing that asks who is checked in: setting up is the Owner\'s again', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  assert.equal((await checkIn(w, jo.pin)).status, 201);
+  // Jo checked in on the workshop computer, idle: a till set up there is
+  // refused for being a workshop computer, not for Jo.
+  await idleFor(owner, w, 11);
+  const till = await w.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } });
+  assert.equal(till.body.code, 'already_a_workshop');
+});
+
+test('a till never goes back by itself', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const t = browser(owner);
+  assert.equal((await t.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
+  assert.equal((await checkIn(t, jo.pin)).status, 201);
+  await idleFor(owner, t, 120);
+  assert.equal((await serving(t)).name, 'Jo Taylor');
+  const plain = browser(owner);
+  assert.equal((await checkIn(plain, jo.pin)).status, 201);
+  await idleFor(owner, plain, 120);
+  assert.equal((await serving(plain)).name, 'Jo Taylor');
+});
+
+test('the workshop computer\'s cookie is renewed whenever it matches, and is Secure over HTTPS', async () => {
+  const owner = await shop();
+  const b = browser(owner);
+  const made = await b.send('/api/till-setup/workshop', { method: 'POST', body: { siteId: owner.site.id }, headers: { 'x-forwarded-proto': 'https' } });
+  assert.match(made.setCookie.find((l) => l.startsWith('wh_workshop=')), /; Secure/);
+  const read = await b.send('/api/till-checkin');
+  assert.ok(read.setCookie.some((l) => l.startsWith(`wh_workshop=${b.jar.get('wh_workshop')}`)), 'renewed');
+  const none = await browser(owner).send('/api/till-checkin');
+  assert.ok(!none.setCookie.some((l) => l.startsWith('wh_workshop=')), 'no cookie for a browser that isn\'t one');
+});
