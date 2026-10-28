@@ -240,3 +240,10 @@ POST /api/float-check/:id/seen
 GET /api/close-the-day
 POST /api/paid-outs
 POST /api/close-the-day
+GET /api/your-settings/till-pin
+POST /api/your-settings/till-pin/offer
+POST /api/your-settings/till-pin
+POST /api/team/:id/clear-pin
+GET /api/till-checkin
+POST /api/till-checkin
+POST /api/till-checkin/end

@@ -1,0 +1,230 @@
+// Till PINs and the PIN check-in (openspec/changes/pins-and-checkin; drawn as
+// pin-change, till-checkin and till-pin-wrong in signin.mjs; signing in
+// decisions 4, 6, 7, 8 and 9; roles and switches 5). Wheelhouse picks each
+// person's four-digit PIN, nobody else at the shop has it, and only its hash
+// is kept; the Owner clears someone else's; typing a PIN alone checks a
+// person in on the till's browser for the shop's day. Staff routes: they run
+// with the shop's row-level security already bound. No PIN is ever logged.
+import { randomInt } from 'node:crypto';
+import { attachRoles } from '../team.js';
+import { dbExec, prepare } from '../db.js';
+import { shopToday } from '../clock.js';
+import { hashLinkCode, newLinkCode } from '../booking-link.js';
+import { isHttpsRequest } from '../proxy-trust.js';
+import { notFound, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
+import { currentSession } from '../lib/session.js';
+import { currentShopTimeZone } from '../workshop/jobs.js';
+import { makeFailureLimiter } from '../till/failure-limiter.js';
+import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
+
+export const CHECKIN_COOKIE = 'wh_till_checkin';
+const OFFER_MINUTES = 15;
+const FOUR_DIGITS = /^[0-9]{4}$/;
+const WRONG_PIN = { error: 'That PIN isn’t anyone’s — try again', code: 'wrong_pin' };
+// Keeping PINs one at a time per shop, so two can't keep the same one.
+const PIN_LOCK = -97;
+
+const today = async () => shopToday(await currentShopTimeZone());
+
+/**
+ * A four-digit PIN nobody else has (signing in 7): draw at random until one
+ * isn't taken. `isTaken` and `draw` are passed in so the rule can be tested.
+ */
+export async function pickPin(isTaken, draw = () => randomInt(0, 10_000)) {
+  for (let i = 0; i < 100; i += 1) {
+    const pin = String(draw()).padStart(4, '0');
+    if (!(await isTaken(pin))) return pin;
+  }
+  throw new Error('No free PIN found');
+}
+
+// Whether anyone at the shop but this person has the PIN, active or not
+// (someone made active again keeps theirs).
+async function takenByOthers(pin, employeeId) {
+  const rows = await prepare('SELECT pin_hash FROM employees WHERE pin_hash IS NOT NULL AND id <> ?').all(employeeId);
+  const hits = await Promise.all(rows.map((r) => verifyPinAsync(pin, r.pin_hash)));
+  return hits.includes(true);
+}
+
+// The team member behind the sign-in, read fresh (an Owner's may just have been made).
+async function teamMemberOf(login) {
+  const row = await prepare('SELECT employee_id FROM logins WHERE id = ?').get(login.id);
+  if (!row?.employee_id) return null;
+  return prepare('SELECT id, name, pin_hash, pin_offer_hash, pin_offer_at, active FROM employees WHERE id = ?').get(row.employee_id);
+}
+
+// A PIN belongs to a team member; the Owner with only a sign-in becomes one,
+// taking payments, when they first get a PIN (design 6). Anyone else needs
+// adding to the team first.
+async function teamMemberForPin(login, shopId) {
+  const me = await teamMemberOf(login);
+  if (me || login.is_owner !== true) return me;
+  await attachRoles({ shopId, loginId: login.id, isMechanic: false, isCashier: true, workingDays: undefined });
+  return teamMemberOf(login);
+}
+
+/**
+ * The person checked in on this browser, or null: the cookie's check-in,
+ * made under this same sign-in, today, not ended, by someone still active.
+ * Row-level security keeps it to the request's shop.
+ */
+export async function currentCheckin(req) {
+  const token = parseCookies(req)[CHECKIN_COOKIE];
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
+  const ctx = await currentSession(req);
+  if (!ctx) return null;
+  const row = await prepare(
+    `SELECT c.id, c.employee_id, e.name, e.is_cashier FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.token_hash = ? AND c.login_id = ? AND c.day = ? AND c.ended_at IS NULL AND e.active = 1`
+  ).get(hashLinkCode(token), ctx.login.id, await today());
+  return row ?? null;
+}
+
+const checkinCookie = (req, token, maxAge) =>
+  `${CHECKIN_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${isHttpsRequest(req) ? '; Secure' : ''}`;
+
+// Signing in 8: no lock after wrong PINs. Guessing is slowed instead: after
+// 10 wrong PINs at a shop in 10 minutes, each try waits its turn, one at a
+// time, 3 seconds each. A second try while one is waiting is turned away, so
+// waiting never holds more than one database connection per shop.
+const SLOW_MS = 3000;
+const wrongPins = makeFailureLimiter(10, 10 * 60 * 1000);
+const waiting = new Set();
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function register(route) {
+  // Your settings › Till PIN (yourSettingsDialog's pinBlock).
+  // screens: your-settings, pin-change, pin-first
+  route('GET', '/api/your-settings/till-pin', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const me = await teamMemberOf(ctx.login);
+    sendJson(res, 200, { canHavePin: Boolean(me) || ctx.login.is_owner === true, hasPin: Boolean(me?.pin_hash) });
+  });
+
+  // "Your new till PIN": four digits nobody else has, shown once; each call
+  // replaces the last ("Give me a different one"). Kept only hashed.
+  // screens: pin-change, pin-first
+  route('POST', '/api/your-settings/till-pin/offer', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const me = await teamMemberForPin(ctx.login, shopId);
+    if (!me) return sendJson(res, 409, { error: 'Ask the owner to add you to the team first', code: 'no_team_member' });
+    const pin = await pickPin((p) => takenByOthers(p, me.id));
+    await prepare('UPDATE employees SET pin_offer_hash = ?, pin_offer_at = now() WHERE id = ?').run(await hashPinAsync(pin), me.id);
+    sendJson(res, 201, { pin });
+  });
+
+  // Keep this PIN: only the one offered, within 15 minutes, and only if
+  // nobody kept it meanwhile. The old PIN stops working.
+  // screens: pin-change, pin-first
+  route('POST', '/api/your-settings/till-pin', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req);
+    const pin = body?.pin;
+    const me = await teamMemberOf(ctx.login);
+    const noOffer = () => sendJson(res, 400, { error: 'Ask for a new PIN', code: 'no_offer' });
+    if (typeof pin !== 'string' || !FOUR_DIGITS.test(pin) || !me) return noOffer();
+    await dbExec('BEGIN');
+    try {
+      await prepare("SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, ?::int)").get(PIN_LOCK);
+      const offer = await prepare(
+        `SELECT pin_offer_hash FROM employees WHERE id = ? AND pin_offer_at > now() - interval '${OFFER_MINUTES} minutes'`
+      ).get(me.id);
+      if (!offer?.pin_offer_hash || !(await verifyPinAsync(pin, offer.pin_offer_hash))) {
+        await dbExec('ROLLBACK');
+        return noOffer();
+      }
+      if (await takenByOthers(pin, me.id)) {
+        await dbExec('ROLLBACK');
+        return sendJson(res, 409, { error: 'Someone has just been given that PIN. Ask for a different one.', code: 'pin_taken' });
+      }
+      await prepare('UPDATE employees SET pin_hash = pin_offer_hash, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ?').run(me.id);
+      await dbExec('COMMIT');
+    } catch (err) {
+      await dbExec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, { hasPin: true });
+  });
+
+  // A forgotten PIN, cleared from the staff list (signing in 6). The Owner
+  // only until roles; nobody clears their own (roles and switches 5).
+  // screens: set-staff-clear-pin
+  route('POST', '/api/team/:id/clear-pin', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!ctx.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner can clear a PIN", code: 'owner_only' });
+    const id = Number(params.id);
+    const own = await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, id);
+    if (own) return sendJson(res, 403, { error: 'Nobody clears their own PIN', code: 'own_pin' });
+    const cleared = await prepare('UPDATE employees SET pin_hash = NULL, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ? RETURNING id').get(id);
+    if (!cleared) return notFound(res, 'Team member not found');
+    sendJson(res, 200, { ok: true });
+  });
+
+  // Who is serving on this browser, and who has checked in today (till-checkin).
+  // screens: till-checkin
+  route('GET', '/api/till-checkin', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const mine = await currentCheckin(req);
+    const people = await prepare(
+      `SELECT DISTINCT e.id, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+        WHERE c.day = ? AND e.active = 1 ORDER BY e.name, e.id`
+    ).all(await today());
+    sendJson(res, 200, {
+      serving: mine ? { id: mine.employee_id, name: mine.name } : null,
+      checkedInToday: people.map((p) => ({ id: p.id, name: p.name })),
+    });
+  });
+
+  // Check in, or take over, by PIN alone (signing in 4). A wrong PIN says so
+  // and never locks (8, 9); guessing is slowed (above).
+  // screens: till-checkin, till-pin-wrong
+  route('POST', '/api/till-checkin', async (req, res, params, query, afterRelease, shopId) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req);
+    const pin = body?.pin;
+    if (typeof pin !== 'string' || !FOUR_DIGITS.test(pin)) return sendJson(res, 400, { error: 'A PIN is four digits', code: 'not_a_pin' });
+    const key = String(shopId);
+    if (wrongPins.isBlocked(key)) {
+      if (waiting.has(key)) return sendJson(res, 429, { error: 'Wait a moment, then try again', code: 'slow_down' });
+      waiting.add(key);
+      try { await pause(SLOW_MS); } finally { waiting.delete(key); }
+    }
+    const people = await prepare('SELECT id, name, pin_hash FROM employees WHERE active = 1 AND pin_hash IS NOT NULL').all();
+    const hits = await Promise.all(people.map((p) => verifyPinAsync(pin, p.pin_hash)));
+    const who = people[hits.indexOf(true)];
+    if (!who) {
+      wrongPins.recordFailure(key);
+      return sendJson(res, 400, WRONG_PIN);
+    }
+    // Taking over: whoever was checked in on this browser stops serving.
+    const previous = parseCookies(req)[CHECKIN_COOKIE];
+    if (previous && /^[0-9a-f]{64}$/.test(previous)) {
+      await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND ended_at IS NULL').run(hashLinkCode(previous));
+    }
+    const token = newLinkCode();
+    await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day) VALUES (?, ?, ?, ?)')
+      .run(who.id, ctx.login.id, hashLinkCode(token), await today());
+    // The server ends it with the shop's day; the cookie lasts no longer than a day.
+    res.setHeader('Set-Cookie', checkinCookie(req, token, 24 * 60 * 60));
+    sendJson(res, 201, { serving: { id: who.id, name: who.name } });
+  });
+
+  // Switch: nobody serving on this browser, back to Enter your PIN.
+  // screens: till-checkin
+  route('POST', '/api/till-checkin/end', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const token = parseCookies(req)[CHECKIN_COOKIE];
+    if (token && /^[0-9a-f]{64}$/.test(token)) {
+      await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND login_id = ? AND ended_at IS NULL').run(hashLinkCode(token), ctx.login.id);
+    }
+    res.setHeader('Set-Cookie', checkinCookie(req, '', 0));
+    sendJson(res, 200, { serving: null });
+  });
+}

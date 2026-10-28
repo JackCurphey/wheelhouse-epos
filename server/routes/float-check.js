@@ -10,11 +10,15 @@ import { currentSession } from '../lib/session.js';
 import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { closeEntryNow } from '../lib/close-entry.js';
+import { currentCheckin } from './till-pins.js';
 
 export const MAX_PENCE = 10_000_000; // £100,000, as migration 095
 export const isPence = (v) => Number.isSafeInteger(v) && v >= 0 && v <= MAX_PENCE;
 
-const CHECK_SELECT = `SELECT f.*, l.name AS checked_by_name FROM float_checks f JOIN logins l ON l.id = f.login_id`;
+// Who checked: the person checked in at the till (pins-and-checkin), or the
+// sign-in's own name for a look at closing.
+const BY_NAME = 'COALESCE(e.name, l.name)';
+const CHECK_SELECT = `SELECT f.*, ${BY_NAME} AS checked_by_name FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id`;
 
 function serializeCheck(row) {
   return {
@@ -42,6 +46,11 @@ async function takesPayments(login) {
   const row = await prepare('SELECT is_cashier FROM employees WHERE id = ?').get(login.employee_id);
   return !!row?.is_cashier;
 }
+// The same for the person checked in: a cashier, or the Owner's own team member.
+async function checkedInTakesPayments(checkin) {
+  if (checkin.is_cashier) return true;
+  return Boolean(await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true').get(checkin.employee_id));
+}
 
 // A float counted short and not yet Seen, for Today's Needs attention
 // (op-today-short): it stays until the Owner's one click clears it, whatever
@@ -57,8 +66,8 @@ const OVER_AFTER_CLOSED = `f.counted_pence > f.expected_pence AND EXISTS (SELECT
 const WAITING_TO_BE_SEEN = `f.seen_at IS NULL AND (${SHORT} OR (${OVER_AFTER_CLOSED}))`;
 
 export async function floatsToSee() {
-  const rows = await prepare(`SELECT f.*, to_char(f.day, 'YYYY-MM-DD') AS day_text, l.name AS checked_by_name
-    FROM float_checks f JOIN logins l ON l.id = f.login_id
+  const rows = await prepare(`SELECT f.*, to_char(f.day, 'YYYY-MM-DD') AS day_text, ${BY_NAME} AS checked_by_name
+    FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id
     WHERE ${WAITING_TO_BE_SEEN} ORDER BY f.day, f.id`).all();
   return rows.map((r) => {
     const short = r.counted_pence < r.expected_pence;
@@ -83,7 +92,10 @@ export function register(route) {
     const day = await today();
     const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
     const any = await prepare('SELECT 1 FROM float_checks LIMIT 1').get();
-    sendJson(res, 200, { day, floatPence, takesPayments: await takesPayments(ctx.login), firstDay: !any, check: await checkOn(day) });
+    // At the till, the person checked in is asked (Jack's answer 3, 27 Oct: the check moves to the check-in).
+    const checkin = await currentCheckin(req);
+    const takes = checkin ? await checkedInTakesPayments(checkin) : await takesPayments(ctx.login);
+    sendJson(res, 200, { day, floatPence, takesPayments: takes, firstDay: !any, check: await checkOn(day) });
   });
 
   // Looks right (countedPence null) or a count, with an optional reason.
@@ -94,7 +106,12 @@ export function register(route) {
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
     if (body === null || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the float check');
-    if (!(await takesPayments(ctx.login))) return sendJson(res, 403, { error: 'Only someone who takes payments checks the float', code: 'not_taking_payments' });
+    // The morning check is made by whoever checked in with their PIN; only
+    // the Owner's look at closing needs no check-in (pins-and-checkin design 5).
+    const checkin = await currentCheckin(req);
+    const closing = await lookAtClose(ctx.login, body);
+    if (!checkin && !closing) return sendJson(res, 409, { error: 'Check in at the till with your PIN first', code: 'check_in_first' });
+    if (!(checkin ? await checkedInTakesPayments(checkin) : await takesPayments(ctx.login))) return sendJson(res, 403, { error: 'Only someone who takes payments checks the float', code: 'not_taking_payments' });
     const counted = body.countedPence;
     if (counted !== null && !isPence(counted)) return badRequest(res, 'The count must be pounds and pence');
     if (body.reason !== undefined && typeof body.reason !== 'string') return badRequest(res, 'The reason must be text');
@@ -105,14 +122,14 @@ export function register(route) {
     // The first day on Wheelhouse is counted, never looked at (UX walk-through 4 M4),
     // except when the Owner closes a day nobody checked: then it's only looked
     // at (Jack's answer 8, 27 Oct; openspec/changes/close-the-day).
-    if (counted === null && !(await lookAtClose(ctx.login, body)) && !(await prepare('SELECT 1 FROM float_checks LIMIT 1').get())) {
+    if (counted === null && !closing && !(await prepare('SELECT 1 FROM float_checks LIMIT 1').get())) {
       return sendJson(res, 400, { error: 'Count the float on the first day', code: 'count_needed' });
     }
     const day = await today();
     const made = await prepare(
-      `INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, reason) VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO float_checks (day, login_id, employee_id, expected_pence, counted_pence, reason) VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT (shop_id, day) DO NOTHING RETURNING id`
-    ).get(day, ctx.login.id, expected, counted, reason);
+    ).get(day, ctx.login.id, checkin?.employee_id ?? null, expected, counted, reason);
     if (!made) return sendJson(res, 409, { error: 'The float was already checked today', code: 'already_checked', check: await checkOn(day) });
     sendJson(res, 201, { check: await checkOn(day) });
   });

@@ -986,6 +986,40 @@ silent:
 4. **Online bookings' messages print on their receipts too**, being the same
    thing. *Pattern:* the decision's answer 1.
 
+### 28 Oct 2026: till PINs and the PIN check-in (WP-1.7, `openspec/changes/pins-and-checkin`)
+
+1. **Guessing PINs is slowed, never locked** (`till-pin-wrong`). Signing in
+   8 says no lock, and roles 2 relies on that. To stop someone trying all
+   10,000 PINs quickly, after 10 wrong PINs at a shop within 10 minutes each
+   further try waits 3 seconds before it's checked, one at a time; a second
+   try sent while one is waiting gets "Wait a moment, then try again". The
+   right PIN still works, after its wait. Nobody sees a lock. *Pattern:* the
+   till's own token check (`server/till/failure-limiter.js`), which counts
+   only failures.
+2. **PINs are kept as a slow, salted hash** (PBKDF2, 100,000 rounds), the
+   format the offline till already uses (`server/till/pin.js`), so it can
+   check PINs without the internet later. The PIN just offered is kept the
+   same way until it is kept or replaced; an offer lasts 15 minutes.
+   *Pattern:* migration 036's `pin_hash`.
+3. **A check-in lasts the shop's day, on that browser, under that sign-in**,
+   until Switch or someone else checks in there. Until "Set up this till"
+   (step C), the till is the browser, and "Checked in today" lists everyone
+   who checked in at the shop today, not one till's. *Pattern:* the float
+   check's one-a-shop-a-day until named tills.
+4. **The Owner gets a team member when they first get a PIN**, marked as
+   taking payments, since a PIN belongs to a team member (till-only people
+   have no sign-in). A staff sign-in with no team member can't get a PIN
+   until the Owner adds them. *Pattern:* the team's existing "attach roles"
+   for a login-only Owner (`server/team.js`).
+5. **Clearing a PIN is the Owner's until roles, never their own**, with the
+   server only; the button and its pop-up (`set-staff-person`,
+   `set-staff-clear-pin`) come with Staff and roles. *Pattern:* the 19 Oct
+   owner-only rule; roles and switches 5.
+6. **Found, not changed:** the offline core's `PUT /api/employees/:id/pin`
+   lets the Owner type any PIN for someone (migration 036, used by no
+   screen). Signing in 6 and 7 chose Wheelhouse-picked PINs over
+   manager-set ones, so it should go or change; left for Jack to decide.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

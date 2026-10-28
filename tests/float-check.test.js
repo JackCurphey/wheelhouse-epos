@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, checkInAtTill } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -32,12 +32,14 @@ async function shop({ float = FLOAT } = {}) {
   const owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   shops.push(owner);
   if (float !== null) assert.equal((await call(owner, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: float } })).status, 200);
+  // Checked in at the till with a PIN: the float check follows the check-in (pins-and-checkin).
+  owner.cookie = (await checkInAtTill(server.baseUrl, owner.cookie)).cookie;
   return owner;
 }
 async function teamMember(owner, name, { isCashier }) {
   const made = await post(owner, '/api/team', { name, isCashier, isMechanic: !isCashier, email: `${randomUUID().slice(0, 8)}@example.test`, password: 'password123' });
   assert.equal(made.status, 201, JSON.stringify(made.body));
-  return { cookie: await staffFreshCookie(made.body.loginId) };
+  return { cookie: (await checkInAtTill(server.baseUrl, await staffFreshCookie(made.body.loginId))).cookie };
 }
 // A float check on an earlier day, as the till would have saved it then.
 const earlier = (owner, day, expected, counted) => runWithShop(owner.shop.id, () => prepare(
