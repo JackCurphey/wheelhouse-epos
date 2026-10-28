@@ -93,6 +93,8 @@ test('098 adds stock takes and their counts, and keeps each shop to its own', as
     }
     const { rows: [theirs] } = await c.query("INSERT INTO logins (shop_id, name, email, password_hash) VALUES ($1, '[Owner]', 'owner@example.test', 'x') RETURNING id", [other.id]);
     await assert.rejects(c.query('INSERT INTO stock_take_counters (stock_take_id, login_id) VALUES ($1, $2)', [ids.take, theirs.id]), /foreign key/i, 'not another shop’s take');
+    const { rows: [theirPads] } = await c.query("INSERT INTO products (name) VALUES ('[Product]') RETURNING id");
+    await assert.rejects(c.query('INSERT INTO stock_take_counts (stock_take_id, product_id, login_id, qty) VALUES ($1, $2, $3, 1)', [ids.take, theirPads.id, theirs.id]), /foreign key/i, 'no count against another shop’s take');
   });
   // Run again on a database that already has it: what was kept stays.
   await withClient(url.href, (c) => c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]));
