@@ -160,9 +160,12 @@ test('Escape closes the PIN pop-up as its ✕ does', async () => {
   t.fireEvent.click(t.ui.getByRole('menuitem', { name: 'Give [Name] their PIN' }));
   const pop = await t.ui.findByRole('dialog', { name: '[Name]’s till PIN' });
   await t.within(pop).findByText('[Name]’s PIN 7 3 0 5');
-  // The browser closes a native dialog on Escape (the 'close' event).
+  // The browser closes a native dialog on Escape (the 'close' event). Closed
+  // for good: the focus goes back to Serving, and no pop-up opens again.
   pop.close();
-  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog', { name: '[Name]’s till PIN' }) === null));
+  const button = await serving(t);
+  await t.waitFor(() => assert.ok(document.activeElement === button, 'the focus is back on Serving'));
+  assert.ok(t.ui.queryByRole('dialog', { name: '[Name]’s till PIN' }) === null);
   assert.equal(posts(t, '/api/till-checkin/give-pin/31').length, 0);
 });
 
@@ -186,7 +189,8 @@ test('the menu by keyboard: focus on the first item, arrows move, Escape back to
   assert.equal(document.activeElement?.getAttribute('aria-label'), 'Switch who’s serving', 'round to the top');
   t.fireEvent.keyDown(menu, { key: 'Escape' });
   assert.ok(t.ui.queryByRole('menu') === null);
-  assert.equal(document.activeElement, button);
+  // Compared with ===: assert.equal on a DOM node hangs on failure (CLAUDE.md).
+  assert.ok(document.activeElement === button, 'the focus is back on Serving');
   assert.equal(button.getAttribute('aria-expanded'), 'false');
 });
 
