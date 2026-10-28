@@ -1,11 +1,11 @@
 name: Tests
 
-# On each pull request, which GitHub makes include the latest main before it
-# can merge, so what merges has just been tested; once a day on main, at 03:00
-# UTC, as a safety net; and by hand. Not again after each merge (Jack, 25 Oct,
-# option 3: docs/decisions/2026-10-25-ci-on-pull-requests-and-daily.md).
+# Once a day on main, at 03:00 UTC, and by hand on any branch (Actions › Tests
+# › Run workflow, or `gh workflow run test.yml --ref <branch>`): run by hand on
+# a pull request in a risky area before it merges. Not on every pull request
+# (Jack, 28 Oct: docs/decisions/2026-10-28-ci-once-a-day.md, replacing the
+# 25 Oct choice).
 on:
-  pull_request:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
