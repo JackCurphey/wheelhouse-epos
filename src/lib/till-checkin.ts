@@ -8,7 +8,9 @@ import { apiGet, apiMutate } from './api/client.ts';
  * until "Set up this till" names tills.
  */
 export type CheckedIn = { id: number; name: string };
-export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[] };
+/** Someone with no PIN yet, for the Owner serving to give one (openspec/changes/give-pin-at-till). */
+export type GiveTo = { id: number; name: string; role: 'Staff' | 'Mechanic'; tillOnly: boolean };
+export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[] };
 
 export const CHECKIN_QUERY = ['till-checkin'];
 // The float check asks the person checked in, so it is read again when that changes.
@@ -20,13 +22,14 @@ export function useTillCheckin() {
   return useQuery({ queryKey: CHECKIN_QUERY, queryFn: () => apiGet<TillCheckin>('/api/till-checkin'), retry: false, refetchInterval: 60_000, refetchOnWindowFocus: true });
 }
 
-/** Check in, or take over, with a PIN alone; and Switch, back to Enter your PIN. */
+/** Check in, or take over, with a PIN alone; Switch, back to Enter your PIN; and after giving a PIN. */
 export function useCheckinActions() {
   const queryClient = useQueryClient();
   const settle = (serving: CheckedIn | null) => {
     queryClient.setQueryData<TillCheckin>(CHECKIN_QUERY, (old) => {
       const today = old?.checkedInToday ?? [];
-      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today };
+      // Who can be given a PIN is the Owner's to see, so it goes with whoever was serving.
+      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [] };
     });
     void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     void queryClient.invalidateQueries({ queryKey: FLOAT_QUERY });
@@ -38,6 +41,10 @@ export function useCheckinActions() {
     },
     async switchServing() {
       await apiMutate('/api/till-checkin/end', {});
+      settle(null);
+    },
+    /** A PIN was given at the till: the server ended this check-in, back to Enter your PIN. */
+    gaveAPin() {
       settle(null);
     },
   };
