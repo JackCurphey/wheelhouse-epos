@@ -178,15 +178,32 @@ async function processShopifyRefundWebhook(shopId, refund) {
 
     try {
       const items = await matchRefundLineItemsToProducts(refund);
-      for (const { product, qty } of items) {
-        const newQty = product.stock_qty + qty;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
-        ).run(product.id, qty, `Shopify refund #${refund.id}`);
-        if (product.shopify_inventory_item_id) {
-          await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      // Relative, in one transaction with its movement lines, as adjust
+      // stock does (routes/products.js): `product` was read without a lock,
+      // so writing `product.stock_qty + qty` back would undo a sale or
+      // adjustment made in between (shopify-refund-stock). Rows are taken in
+      // product id order, as a sale does, so the two can't deadlock.
+      items.sort((a, b) => a.product.id - b.product.id);
+      const pushes = [];
+      await db.exec('BEGIN');
+      try {
+        for (const { product, qty } of items) {
+          const updated = await db
+            .prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING stock_qty')
+            .get(qty, nowIso(), product.id);
+          await db.prepare(
+            `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
+          ).run(product.id, qty, `Shopify refund #${refund.id}`);
+          if (product.shopify_inventory_item_id) pushes.push({ product, newQty: updated.stock_qty });
         }
+        await db.exec('COMMIT');
+      } catch (err) {
+        await db.exec('ROLLBACK');
+        throw err;
+      }
+      // After COMMIT, so a slow Shopify never holds the product's row.
+      for (const { product, newQty } of pushes) {
+        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
       }
     } catch (err) {
       // Same claim-before-work reasoning as processShopifyOrderWebhook above -
