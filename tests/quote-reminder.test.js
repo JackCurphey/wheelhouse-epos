@@ -100,12 +100,26 @@ test('once the reminder has gone, the customer’s quote says when', async () =>
   await runWithShop(owner.shop.id, () => prepare(
     "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE job_id = ? AND template_key = 'quote_reminder'"
   ).run(job.id));
-  let sentAt = null;
-  for (let i = 0; i < 50 && !sentAt; i++) {
+  // Waits on the database, not the customer's page: the page shares the
+  // booking-link limiter (30 reads in 15 minutes), and polling it 10 times a
+  // second used that up before a slow sender round got to this shop, so every
+  // later read was a 429 and the test failed (28 Oct). One sender round walks
+  // every shop in the test database, a few seconds on a long-lived one, so
+  // up to 20 seconds.
+  const sent = async () => (await runWithShop(owner.shop.id, () => prepare(
+    "SELECT sent_at FROM customer_messages WHERE job_id = ? AND template_key = 'quote_reminder'"
+  ).get(job.id)))?.sent_at ?? null;
+  const end = Date.now() + 20_000;
+  let sentAt = await sent();
+  while (!sentAt && Date.now() < end) {
     await new Promise((r) => setTimeout(r, 100));
-    sentAt = (await read()).reminderSentAt;
+    sentAt = await sent();
   }
-  assert.ok(sentAt, 'reminderSentAt once the reminder went');
+  assert.ok(sentAt, 'the sender sent the reminder');
+  // Then the customer's quote says when, once.
+  const shown = (await read()).reminderSentAt;
+  assert.ok(shown, 'reminderSentAt once the reminder went');
+  assert.equal(Date.parse(shown), new Date(sentAt).getTime());
 });
 
 // From the fresh review: the reminder goes only for a quote still waiting on

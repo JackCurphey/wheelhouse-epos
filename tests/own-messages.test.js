@@ -271,7 +271,9 @@ test('checked again as it goes: a customer who took back their yes gets nothing'
   const [row] = (await queued(m.id)).filter((r) => r.job_id === j);
   await inShop(() => prepare('UPDATE customers SET marketing_permission = false WHERE id = ?').run(c.id));
   await inShop(() => prepare("UPDATE customer_messages SET send_after = now() - interval '1 second' WHERE id = ?").run(row.id));
-  const end = Date.now() + 8000;
+  // Up to 20 seconds: one sender round walks every shop in the test database,
+  // 3 to 4 seconds when two test files run at once on a long-lived one (28 Oct).
+  const end = Date.now() + 20_000;
   let state;
   do {
     await new Promise((r) => setTimeout(r, 150));
