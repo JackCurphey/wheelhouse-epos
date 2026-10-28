@@ -8,13 +8,14 @@ import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { BLOCK } from '@/screens/diary/diary-model.ts';
 import { StatusShape } from '@/screens/diary/status-shape.tsx';
+import { TillPinBlock } from './till-pin.tsx';
 
 /**
  * Your settings (drawn as your-settings, app-map.mjs yourSettingsDialog;
  * workshop day 57; app map review 9: each applies at once, no Save). A
  * pop-up over the page you came from, at the address your name links to;
- * Close goes back. Only the switches built show (design 5); the Till PIN
- * waits for PINs (WP-1.7).
+ * Close goes back. Only the switches built show (design 5). The Till PIN
+ * block comes first, as drawn (openspec/changes/pins-and-checkin).
  */
 // Larger text scales the text sizes themselves, not the page (Jack, 24 Oct
 // answer 8; openspec/changes/larger-text): after Reduce motion, as drawn.
@@ -122,6 +123,7 @@ export function YourSettingsPage() {
         </button>
       </div>
       <div className="flex flex-col gap-3 overflow-y-auto bg-[var(--wh-bg)] p-[22px] max-md:p-3.5">
+        <TillPinBlock />
         <span className="text-xs font-bold tracking-[0.8px] text-[var(--wh-muted)] uppercase">Accessibility</span>
         {settings.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load your settings. Try again in a moment.</p> : null}
         {rows.map((r) => (

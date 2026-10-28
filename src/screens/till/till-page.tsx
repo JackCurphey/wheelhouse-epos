@@ -12,6 +12,8 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDesc
 import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
 import { PayDialog } from './pay-dialog.tsx';
 import { FloatCheck } from './float-check.tsx';
+import { PinCheckin, ServingButton } from './pin-checkin.tsx';
+import { useTillCheckin } from '@/lib/till-checkin.ts';
 import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
 import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
 
@@ -27,13 +29,23 @@ import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } fro
 
 let nextKey = 1;
 
-/** `?job=` opens a workshop job's order to pay (Jack, 18 Oct). */
+/**
+ * `?job=` opens a workshop job's order to pay (Jack, 18 Oct). Nobody serving:
+ * Enter your PIN first (signing in decision 4; openspec/changes/pins-and-checkin).
+ */
 export function TillPage() {
   const [params, setParams] = useSearchParams();
   const jobId = Number(params.get('job')) || null;
-  // The first person in who takes payments checks the float (opening the shop decision 2).
+  const checkin = useTillCheckin();
+  if (checkin.isPending) return null;
+  if (checkin.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p>;
+  const { serving, checkedInToday } = checkin.data;
+  if (!serving) return <PinCheckin checkedInToday={checkedInToday} />;
+  // The first person to check in who takes payments checks the float (opening
+  // the shop decision 2; Jack's answer 3, 27 Oct).
   return (
     <>
+      <ServingButton serving={serving} />
       <CloseTheDayEntry />
       {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} /> : <SaleTill />}
       <FloatCheck />

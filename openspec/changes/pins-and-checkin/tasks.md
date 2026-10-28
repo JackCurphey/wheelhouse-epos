@@ -10,9 +10,9 @@
 
 ## 2. Screens (pull request 2, `jack/pins-and-checkin-screens`, stacked on 1)
 
-- [ ] 2.1 Tests first: the PIN screen (dots, the 4th digit checks at once, a wrong PIN, Checked in today, No PIN yet), Serving and switch, the pay box's serving name, the float check after the check-in, Your settings' Till PIN and the pop-up (`tests/screens/`); a browser spec; the till's existing tests check in first. Watch each fail
-- [ ] 2.2 Build them to the drawings
-- [ ] 2.3 Break each key rule on purpose, see its test go red, and restore
+- [x] 2.1 Tests first: the PIN screen (dots, the 4th digit checks at once, a wrong PIN, Checked in today, No PIN yet), Serving and switch, the pay box's serving name, the float check after the check-in, Your settings' Till PIN and the pop-up (`tests/screens/`); a browser spec; the till's existing tests check in first. Watch each fail
+- [x] 2.2 Build them to the drawings
+- [x] 2.3 Break each key rule on purpose, see its test go red, and restore
 - [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review`
 - [ ] 2.5 `/opsx:archive` as the last commit
 

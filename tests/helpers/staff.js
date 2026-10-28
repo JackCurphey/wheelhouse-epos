@@ -83,3 +83,13 @@ export async function checkInWithPin(baseUrl, cookie, pin) {
   const pair = res.headers.getSetCookie().map((line) => line.split(';')[0]).find((p) => p.startsWith('wh_till_checkin='));
   return `${cookie}; ${pair}`;
 }
+
+// A browser's cookies for someone signed in and checked in at the till, ready
+// for Playwright's context.addCookies (openspec/changes/pins-and-checkin).
+export async function tillCookies(baseUrl, cookie) {
+  const { cookie: both } = await checkInAtTill(baseUrl, cookie);
+  return both.split('; ').map((pair) => {
+    const at = pair.indexOf('=');
+    return { name: pair.slice(0, at), value: pair.slice(at + 1), url: baseUrl };
+  });
+}

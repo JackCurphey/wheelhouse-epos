@@ -3,7 +3,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import type { BrowserContext, Page } from '@playwright/test';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest } from '../helpers/staff.js';
+import { staffSignup, staffRequest, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 // Folded sidebar in a real browser (openspec/changes/folded-sidebar; app map
@@ -31,8 +31,8 @@ test.afterAll(async () => {
 
 const folded = (on: boolean) => staffRequest(server!.baseUrl, owner.cookie, '/api/your-settings', { method: 'PUT', body: { accessibility: { foldedSidebar: on } } });
 async function signIn(page: Page, context: BrowserContext, path: string) {
-  const [name, value] = owner.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, owner.cookie));
   await page.goto(`${server!.baseUrl}${path}`);
 }
 const panel = (page: Page) => page.locator('nav[data-unfolded]');

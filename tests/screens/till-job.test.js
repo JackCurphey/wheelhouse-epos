@@ -70,6 +70,8 @@ function stubServer(employee) {
       return reply(201, SALE);
     }
     if (method === 'POST' && u.pathname === '/api/workshop-jobs/1/collect') return reply(200, changed({ ...JOB, custodyState: 'collected', version: JOB.version + 1 }));
+    // Checked in at the till with a PIN (pins-and-checkin).
+    if (u.pathname === '/api/till-checkin') return reply(200, { serving: { id: 21, name: 'Jo Taylor' }, checkedInToday: [] });
     if (u.pathname === '/api/auth/me') return reply(200, me(employee));
     if (u.pathname === '/api/employees') return reply(200, u.searchParams.get('role') === 'mechanic' ? MECHANICS : CASHIERS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);

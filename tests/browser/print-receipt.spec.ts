@@ -6,7 +6,7 @@
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, seedMechanic, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -49,8 +49,8 @@ type Printed = { text: string; bars: number };
 declare global { interface Window { __printed: Printed[] } }
 
 test('Print on Paid prints the job’s receipt; then the diary menu prints it again', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   await page.addInitScript(() => {
     window.__printed = [];
     window.print = () => {

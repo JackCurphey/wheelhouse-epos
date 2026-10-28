@@ -1019,6 +1019,28 @@ silent:
    lets the Owner type any PIN for someone (migration 036, used by no
    screen). Signing in 6 and 7 chose Wheelhouse-picked PINs over
    manager-set ones, so it should go or change; left for Jack to decide.
+7. **No till bar yet, so "Serving: [name]" is a button at the top right of
+   the till** (`till-checkin`, tillBar's "Serving: Jo Taylor — switch who’s
+   serving"); pressing it goes back to Enter your PIN. *Pattern:* Close the
+   day's entry, in a strip on the till until the till bar is built.
+8. **Enter your PIN says only what works today**: no "It works even when
+   the internet is down" until the till works offline (step C), and "No PIN
+   yet? Sign in on your phone." without "or ask the owner or a manager to
+   give you one here" until giving a PIN at the till (`till-give-pin`) is
+   built. No start-up status line until step C. *Pattern:* 20 Oct, Settings
+   frame 6, show only what works.
+9. **"Get your PIN" in Your settings opens the first-time "Your till PIN"**
+   (Welcome …, Skip for now), as drawn for someone with no PIN; Keep and Skip
+   go back to Your settings. Change PIN opens "Your new till PIN" with its ✕.
+   *Pattern:* the drawing's links (`yourSettingsDialog` → `pin-first`,
+   `pin-change`).
+10. **A check-in that fails for any other reason says "Wheelhouse couldn’t
+    check that PIN. Try again in a moment."** and clears the dots, so it is
+    never mistaken for a wrong PIN. *Pattern:* the float check's "couldn’t
+    save that" line.
+11. **The pay box's "Who’s serving?" no longer comes up at the till**: the
+    person checked in is serving. *Pattern:* signing in 4, the PIN says who
+    you are.
 
 ## Decided here, for Jack to overrule
 

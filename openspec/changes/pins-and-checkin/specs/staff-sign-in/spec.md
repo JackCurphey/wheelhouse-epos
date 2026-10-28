@@ -46,7 +46,7 @@ A PIN nobody has SHALL clear the dots and say "That PIN isn’t anyone’s — t
 - **THEN** the dots clear and the till says "That PIN isn’t anyone’s — try again"
 
 ### Requirement: The PIN screen shows who's checked in today
-The PIN screen SHALL list "Checked in today" with everyone who has checked in at the shop that day, and say "No PIN yet? Sign in on your phone, or ask the owner or a manager to give you one here." (signing in 4; UX walk-through 4 H1).
+The PIN screen SHALL list "Checked in today" with everyone who has checked in at the shop that day, and say "No PIN yet? Sign in on your phone." (signing in 4; UX walk-through 4 H1; the drawn "or ask the owner or a manager to give you one here" comes with giving a PIN at the till, `till-give-pin`).
 
 #### Scenario: Second in
 - **WHEN** Alex Morgan checked in this morning and Jo Taylor comes to the till

@@ -53,6 +53,8 @@ async function open(path, { me = JACK, day = DAY, floatCheck = CHECKED, items = 
     calls.push({ url, method, body });
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
+    // Checked in at the till with a PIN (pins-and-checkin).
+    if (u.pathname === '/api/till-checkin') return reply(200, { serving: { id: 11, name: me.name }, checkedInToday: [] });
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/close-the-day' && method === 'POST') {
       // The server's own check: the expected figure the screen showed must still be right.

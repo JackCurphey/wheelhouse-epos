@@ -5,7 +5,7 @@
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie, seedMechanic, tillCookies } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -47,8 +47,8 @@ test.afterAll(async () => {
 });
 
 test('Take payment on the job page pays the order at the till and hands the bike over', async ({ page, context }) => {
-  const [name, value] = jo.cookie.split('=');
-  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  // Signed in, and checked in at the till with a PIN (pins-and-checkin).
+  await context.addCookies(await tillCookies(server!.baseUrl, jo.cookie));
   await page.goto(`${server!.baseUrl}/workshop/diary?date=${TUE}`);
   await page.getByRole('button', { name: /^Bike, Brake service/ }).click();
   await page.getByRole('dialog', { name: /Brake service/ }).getByRole('button', { name: 'Take payment' }).click();

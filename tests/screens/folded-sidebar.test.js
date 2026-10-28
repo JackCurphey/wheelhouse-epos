@@ -33,6 +33,8 @@ async function open(path, { foldedSidebar = false, media = null } = {}) {
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/your-settings' && init.method === 'PUT') { saved = { ...saved, ...JSON.parse(init.body).accessibility }; return reply(200, { accessibility: saved }); }
     if (u.pathname === '/api/your-settings') return reply(200, { accessibility: saved });
+    // Checked in at the till with a PIN (pins-and-checkin).
+    if (u.pathname === '/api/till-checkin') return reply(200, { serving: { id: 11, name: 'Jack Lewis' }, checkedInToday: [] });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });
   };
