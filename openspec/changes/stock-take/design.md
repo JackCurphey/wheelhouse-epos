@@ -56,10 +56,13 @@
    applying adds the difference to stock as it is then. The other way
    (measured from when the count started) would leave stock one too low for
    every unit sold between the count starting and the shelf being scanned.
-   A till sale counts from when it was made at the till (`till_clock_at`,
-   also its time when made offline), not when it synced: one made offline
-   before the count and synced after it was already off the shelf (review,
-   28 Oct). This way can't place a sale that falls between two people's
+   A till sale counts by close-the-day's rule (second review, 28 Oct): an
+   online sale from when it reached the server (`received_at`), so a till
+   clock that is wrong can't move it; an offline sale from when it was made
+   at the till (`till_clock_at`), since one made before the count and synced
+   after was already off the shelf, but never later than when it arrived
+   (`LEAST(till_clock_at, received_at)`), so a fast till clock can't push it
+   past the count. This way can't place a sale that falls between two people's
    counts of the same product; nor a sale whose transaction began before a
    count and finished after it (its time is when it began). And a later scan
    by the same person moves that product's "last count" on: a scan of a
@@ -81,9 +84,12 @@
     `count_undone` line ("Undid the stock take of [Area]"), removes the
     results and puts the count back to counting, to be checked again. It is
     refused (409, "A later count has corrected [Product]; undo that one
-    first.") when a count applied later corrected one of its products:
-    taking the first one off would leave stock wrong (review, 28 Oct: 10,
-    counted 7, then 8, Undo the first gave 11).
+    first.") when a count applied later counted one of its products, even
+    one that matched and so wrote no history line: taking the first one off
+    would leave stock wrong (review, 28 Oct: 10, counted 7, then 8, Undo the
+    first gave 11; second review: 10, 7, then 7 gave 10). "Later" is by the
+    results' own id (`stock_take_results.id`), in the order they were
+    written.
 11. **Recount** removes the line's counts, adds it to every counter's page as
     "Recount asked by [Name]" and puts every counter back to counting.
 12. **Count them as none** counts as 0, by the Owner, each product the count

@@ -25,7 +25,8 @@
 - [x] 3.5 `node scripts/ci/check-migrations.mjs pr origin/main` once #561 has merged
 - [x] 3.6 The independent review (28 Oct), tests first: Undo refused after a later count; the counting page's own blind search; till sales by when they were made; the download's text cells; the history line tied to its shop's take; the apply in bulk statements; a held-lock deadlock test
 - [ ] 3.7 Screens from the review: the counting page on its own search; arrow keys and Enter in the category picker and the match list; drawn words shortened until true
-- [ ] 3.8 `/review`; CI by hand
+- [x] 3.8 The second review (28 Oct), tests first: till sales by close-the-day's rule (an online sale on a fast till clock; an offline sale whose clock is ahead of when it arrived); Undo refused after a later count that matched; an apply of several products; the below-zero search scope
+- [ ] 3.9 `/review`; CI by hand
 
 ## 4. Later (waits for other pieces)
 

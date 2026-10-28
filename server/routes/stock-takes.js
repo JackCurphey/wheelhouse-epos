@@ -391,12 +391,16 @@ export function register(route) {
       await lockProducts(changed.map((r) => r.product_id));
       // A later count of the same product has measured stock that already
       // includes this one's change; taking it off now would leave stock wrong
-      // (review, 28 Oct: 10, counted 7, then 8, Undo the first gave 11).
+      // (review, 28 Oct: 10, counted 7, then 8, Undo the first gave 11). A
+      // later count that matched writes no history line, so it is found by
+      // its results, written in order after this count's (second review:
+      // 10, counted 7, then 7, Undo the first gave 10).
       const later = changed.length === 0 ? null : await db.prepare(
-        `SELECT p.name FROM stock_movements m JOIN products p ON p.id = m.product_id JOIN stock_takes t ON t.id = m.stock_take_id
-          WHERE m.product_id = ANY(?) AND m.type = 'count' AND m.stock_take_id <> ? AND t.status = 'applied' AND m.created_at > ?
-          ORDER BY m.created_at, m.id LIMIT 1`
-      ).get(changed.map((r) => r.product_id), id, take.applied_at);
+        `SELECT p.name FROM stock_take_results r JOIN products p ON p.id = r.product_id JOIN stock_takes t ON t.id = r.stock_take_id
+          WHERE r.product_id = ANY(?) AND r.stock_take_id <> ? AND t.status = 'applied'
+            AND r.id > (SELECT MAX(id) FROM stock_take_results WHERE stock_take_id = ?)
+          ORDER BY r.id LIMIT 1`
+      ).get(changed.map((r) => r.product_id), id, id);
       if (later) return [409, `A later count has corrected ${later.name}; undo that one first.`];
       for (const r of changed) {
         const product = await db.prepare('UPDATE products SET stock_qty = stock_qty - ?, updated_at = ? WHERE id = ? RETURNING *').get(r.difference, nowIso(), r.product_id);

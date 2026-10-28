@@ -117,6 +117,10 @@ CREATE TABLE IF NOT EXISTS stock_take_results (
   CHECK (difference = counted - expected),
   CHECK ((difference = 0) = (stock_movement_id IS NULL))
 );
+-- In the order results were written, so Undo can tell a count applied later
+-- (second review, 28 Oct). Added after the table, so a database that ran the
+-- draft gets it too.
+ALTER TABLE stock_take_results ADD COLUMN IF NOT EXISTS id BIGSERIAL;
 ALTER TABLE stock_take_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_take_results FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS stock_take_results_shop_isolation ON stock_take_results;
@@ -137,5 +141,8 @@ ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_stock_take_fkey
   FOREIGN KEY (shop_id, stock_take_id) REFERENCES stock_takes(shop_id, id) NOT VALID;
 -- A till sale's history line names its sale, so a count can allow for it by
 -- when it was made at the till, not when it reached the server (review, 28
--- Oct). Older lines, and every other kind, leave it empty.
+-- Oct). Older lines, and every other kind, leave it empty. It links by id
+-- alone, not by (shop_id, till_sale_id) like the take's link: till_sales has
+-- no unique (shop_id, id) to point at, and the till's sync writes both rows
+-- for one shop in one transaction.
 ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS till_sale_id INTEGER REFERENCES till_sales(id);
