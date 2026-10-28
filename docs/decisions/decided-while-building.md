@@ -1061,6 +1061,63 @@ silent:
     box like the header search, not with Ctrl, Alt or Cmd held, and not a key
     held down. *Pattern:* none built; the review's item 2, 28 Oct.
 
+### 28 Oct 2026: giving a PIN at the till (WP-1.7, `openspec/changes/give-pin-at-till`, `till-serving-menu`, `till-serving-menu-several`, `till-give-pin-pick`, `till-give-pin`; Jack's answers 28 Oct, 3 to 5)
+
+1. **Only the Owner gives a PIN, until roles.** The drawings say the Owner,
+   a Manager, or anyone with "Give everything a Manager can do" (roles and
+   switches 1). Neither the Manager role nor that switch is stored anywhere
+   yet (WP-1.1, Staff and roles), so the Serving menu and the server's check
+   are the Owner's alone, and Managers join the same check
+   (`giverHere`, `server/routes/till-pins.js`) when roles are built.
+   *Pattern:* clearing a PIN and closing the day, Owner only until roles.
+2. **"The Owner" is the person checked in at the till by PIN, not the
+   computer's sign-in.** A till signed in as Jo still lets Jack give a PIN
+   once he types his; a till signed in as Jack doesn't let Jo. *Pattern:*
+   signing in 4, the PIN says who you are.
+3. **Keeping the PIN ends the Owner's check-in on that till**, so the till
+   goes back to Enter your PIN (as drawn) and the person the screen is turned
+   to is never left serving as the Owner. Closing without giving a PIN leaves
+   him serving. *Pattern:* Switch.
+4. **Who counts as "no PIN"**: active team members with no PIN, never the
+   person giving and never the Owner (the drawing's note). This includes
+   people who have a sign-in but no PIN yet, as Jo Taylor on the drawing. A
+   cleared PIN counts as none. *Pattern:* the drawing's comment, "a cleared
+   PIN counts as none".
+5. **The labels under a name**: "Staff" or "Mechanic" from the team's
+   mechanic switch, with " · till only" for someone with no sign-in
+   ("[Name] Staff · till only" on `till-give-pin-pick`). The one-person menu
+   line reads "Till only · no PIN yet" for a till-only person, as drawn, and
+   "[Staff or Mechanic] · no PIN yet" for someone with a sign-in, which isn't
+   drawn. *Pattern:* the drawn tiles.
+6. **A name's round badge shows its first letter; the drawing's [Name] has
+   a person icon** because a placeholder has no letter, so a name that
+   doesn't start with a letter shows the icon too. *Pattern:* the workshop
+   computer's name tiles (`till-checkin-workshop-names`).
+7. **"No PIN yet?" now reads as drawn**: "Sign in on your phone, or ask the
+   owner or a manager to give you one here." (replaces 28 Oct item 8's
+   shorter line). It says "a manager" as drawn, though only the Owner can
+   until roles.
+8. **Giving a PIN shares Your settings' limit**: 10 PINs shown a sign-in in
+   10 minutes, counted together, so a till can't be used to see PINs faster.
+   *Pattern:* the 28 Oct limit on "Give me a different one".
+9. **The PIN pop-up is one piece for both**: Your settings' "Your new till
+   PIN" and the till's "[Name]’s till PIN" share their buttons, focus and
+   Escape. With a ✕, Escape closes it like the ✕; the first-time version
+   still ignores Escape. *Pattern:* the float check's Escape and focus fixes.
+10. **Adding a till-only person** (`set-staff-invite-till-only`, the note
+    on setup.mjs:280) isn't built: Staff and roles isn't in the new app yet,
+    and the team's add route (`POST /api/team`) needs an email and password,
+    so today only team members made before sign-ins were linked (migration
+    013's roster-only staff) have no sign-in. Until Staff and roles, the menu
+    mostly gives first PINs to people with a sign-in who haven't got one.
+11. **Close without giving a PIN withdraws the PIN shown** (review, 28 Oct),
+    so it can't be kept afterwards; Escape does the same. *Pattern:* the
+    drawing's own words, "Close without giving a PIN".
+12. **The Serving menu by keyboard**: the first item has the focus, also in
+    the phone's sheet; the arrows move it; Escape and Tab close the menu with
+    the focus back on Serving (review, 28 Oct). *Pattern:* the diary's job
+    menu, except Tab, which there leaves the focus where the page puts it.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
