@@ -43,11 +43,16 @@ export async function differencesOf(take) {
       WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.stock_qty, p.cost ORDER BY c.product_id`
   ).all(take.id);
   if (counted.length === 0) return [];
+  // A till sale counts from when it was made at the till (its till_clock_at,
+  // which is when it was made offline too), not when it synced: one made
+  // before the count and synced after it was already off the shelf (review,
+  // 28 Oct). Everything else counts from when it was recorded.
   const moved = await prepare(
     `SELECT m.product_id, m.type, SUM(m.change_qty)::int AS change FROM stock_movements m
        JOIN (SELECT product_id, MAX(last_counted_at) AS last_at FROM stock_take_counts WHERE stock_take_id = ? GROUP BY product_id) l
          ON l.product_id = m.product_id
-      WHERE m.created_at > l.last_at GROUP BY m.product_id, m.type ORDER BY m.product_id, m.type`
+       LEFT JOIN till_sales ts ON ts.id = m.till_sale_id
+      WHERE COALESCE(ts.till_clock_at, m.created_at) > l.last_at GROUP BY m.product_id, m.type ORDER BY m.product_id, m.type`
   ).all(take.id);
   const by = await prepare(
     `SELECT c.product_id, l.name, c.qty FROM stock_take_counts c JOIN logins l ON l.id = c.login_id

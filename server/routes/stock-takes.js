@@ -92,6 +92,10 @@ const lockProducts = (ids) => (ids.length
   : Promise.resolve([]));
 
 const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+// A name or code a spreadsheet would read as a formula is written as text
+// (review, 28 Oct): a ' before =, +, -, @, a tab or a return. Numbers stay numbers.
+const textCell = (v) => csvCell(/^[=+\-@\t\r]/.test(String(v)) ? `'${v}` : v);
+const MATCHES = 20;
 const pounds = (pence) => `${pence < 0 ? '-' : ''}${(Math.abs(pence) / 100).toFixed(2)}`;
 const names = (ns) => (ns.length < 2 ? ns.join('') : `${ns.slice(0, -1).join(', ')} and ${ns[ns.length - 1]}`);
 
@@ -184,6 +188,25 @@ export function register(route) {
       recountAsked: recounts.map((r) => ({ productId: r.product_id, name: r.name, sku: r.sku, askedBy: r.asked_by })),
       stillToFind,
     });
+  });
+
+  // The counting page's search (tk-count; review, 28 Oct): names and codes
+  // only, never stock or cost, so counting stays blind; within the take's
+  // category or below-zero list. Anyone signed in, as counting is.
+  route('GET', '/api/stock-takes/:id/products', async (req, res, params, query) => {
+    const take = await takeOf(Number(params.id));
+    if (!take) return notFound(res, 'Count not found');
+    const search = String(query.get('search') ?? '').trim();
+    if (!search) return sendJson(res, 200, []);
+    const like = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const scope = take.kind === 'category' ? ' AND category = ?' : take.kind === 'below_zero' ? ' AND id = ANY(?)' : '';
+    const args = take.kind === 'category' ? [take.target] : take.kind === 'below_zero' ? [take.product_ids] : [];
+    const rows = await db.prepare(
+      `SELECT id, name, sku, barcode FROM products WHERE active = 1${scope}
+         AND (name ILIKE ? ESCAPE '\\' OR sku ILIKE ? ESCAPE '\\' OR barcode ILIKE ? ESCAPE '\\')
+       ORDER BY COALESCE(lower(barcode) = lower(?) OR lower(sku) = lower(?), false) DESC, name, id LIMIT ${MATCHES}`
+    ).all(...args, like, like, like, search, search);
+    sendJson(res, 200, rows.map((p) => ({ id: p.id, name: p.name, sku: p.sku, barcode: p.barcode })));
   });
 
   // Join (tk-hub-staff's Join), or come back to counting.
@@ -322,21 +345,31 @@ export function register(route) {
       if (ids.length === 0) return [400, 'Nothing has been counted yet'];
       await lockProducts(ids);
       const what = label(take);
-      for (const r of await differencesOf(take)) {
-        let movementId = null;
-        if (r.difference !== 0) {
-          const product = await db.prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING *').get(r.difference, nowIso(), r.productId);
+      const rows = await differencesOf(take);
+      const changed = rows.filter((r) => r.difference !== 0);
+      // One statement each for the stock, the history lines and the results,
+      // so the products' locks are held as briefly as can be (review, 28 Oct).
+      const movementOf = new Map();
+      if (changed.length > 0) {
+        const updated = await db.prepare(
+          `UPDATE products p SET stock_qty = p.stock_qty + v.d, updated_at = ? FROM unnest(?::int[], ?::int[]) AS v(id, d) WHERE p.id = v.id RETURNING p.*`
+        ).all(nowIso(), changed.map((r) => r.productId), changed.map((r) => r.difference));
+        for (const product of updated) if (product.shopify_inventory_item_id) pushes.push({ product, newQty: product.stock_qty });
+        const notes = changed.map((r) => {
           const by = names([...new Set(r.byCounter.filter((b) => b.qty > 0).map((b) => b.name))]);
-          const note = `Stock take of ${what} · counted ${r.counted}, expected ${r.expected}${by ? ` · counted by ${by}` : ''}`;
-          ({ id: movementId } = await db.prepare(
-            "INSERT INTO stock_movements (product_id, change_qty, type, note, login_id, stock_take_id) VALUES (?, ?, 'count', ?, ?, ?) RETURNING id"
-          ).get(r.productId, r.difference, note, ctx.login.id, id));
-          if (product.shopify_inventory_item_id) pushes.push({ product, newQty: product.stock_qty });
-        }
-        await db.prepare(
-          'INSERT INTO stock_take_results (stock_take_id, product_id, expected, counted, difference, cost_pence, stock_movement_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING product_id'
-        ).run(id, r.productId, r.expected, r.counted, r.difference, r.costPence, movementId);
+          return `Stock take of ${what} · counted ${r.counted}, expected ${r.expected}${by ? ` · counted by ${by}` : ''}`;
+        });
+        const lines = await db.prepare(
+          `INSERT INTO stock_movements (product_id, change_qty, type, note, login_id, stock_take_id)
+           SELECT v.p, v.d, 'count', v.n, ?, ? FROM unnest(?::int[], ?::int[], ?::text[]) AS v(p, d, n) RETURNING id, product_id`
+        ).all(ctx.login.id, id, changed.map((r) => r.productId), changed.map((r) => r.difference), notes);
+        for (const l of lines) movementOf.set(l.product_id, l.id);
       }
+      await db.prepare(
+        `INSERT INTO stock_take_results (stock_take_id, product_id, expected, counted, difference, cost_pence, stock_movement_id)
+         SELECT ?, v.p, v.e, v.c, v.d, v.k, v.m FROM unnest(?::int[], ?::int[], ?::int[], ?::int[], ?::int[], ?::int[]) AS v(p, e, c, d, k, m) RETURNING product_id`
+      ).all(id, rows.map((r) => r.productId), rows.map((r) => r.expected), rows.map((r) => r.counted), rows.map((r) => r.difference),
+        rows.map((r) => r.costPence), rows.map((r) => movementOf.get(r.productId) ?? null));
       await db.prepare("UPDATE stock_takes SET status = 'applied', applied_at = now(), applied_by_login_id = ? WHERE id = ?").run(ctx.login.id, id);
       return [200, await withSummary(await takeOf(id))];
     });
@@ -356,6 +389,15 @@ export function register(route) {
       if (take.status !== 'applied') return [409, 'This count isn’t applied'];
       const changed = await db.prepare('SELECT product_id, difference FROM stock_take_results WHERE stock_take_id = ? AND difference <> 0 ORDER BY product_id').all(id);
       await lockProducts(changed.map((r) => r.product_id));
+      // A later count of the same product has measured stock that already
+      // includes this one's change; taking it off now would leave stock wrong
+      // (review, 28 Oct: 10, counted 7, then 8, Undo the first gave 11).
+      const later = changed.length === 0 ? null : await db.prepare(
+        `SELECT p.name FROM stock_movements m JOIN products p ON p.id = m.product_id JOIN stock_takes t ON t.id = m.stock_take_id
+          WHERE m.product_id = ANY(?) AND m.type = 'count' AND m.stock_take_id <> ? AND t.status = 'applied' AND m.created_at > ?
+          ORDER BY m.created_at, m.id LIMIT 1`
+      ).get(changed.map((r) => r.product_id), id, take.applied_at);
+      if (later) return [409, `A later count has corrected ${later.name}; undo that one first.`];
       for (const r of changed) {
         const product = await db.prepare('UPDATE products SET stock_qty = stock_qty - ?, updated_at = ? WHERE id = ? RETURNING *').get(r.difference, nowIso(), r.product_id);
         await db.prepare(
@@ -377,11 +419,12 @@ export function register(route) {
     if (!take) return notFound(res, 'Count not found');
     const { all } = await checkOf(take);
     const lines = [['Product', 'Supplier code', 'Expected', 'Counted', 'Difference', 'At cost'],
-      ...all.map((r) => [r.name, r.sku ?? '', r.expected, r.counted, r.difference, pounds(r.valuePence)])];
+      ...all.map((r) => [textCell(r.name), textCell(r.sku ?? ''), r.expected, r.counted, r.difference, pounds(r.valuePence)])];
     res.writeHead(200, {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="stock-take-${take.id}.csv"`,
     });
-    res.end(`${lines.map((l) => l.map(csvCell).join(',')).join('\r\n')}\r\n`);
+    // Text cells are made safe above; the headings and numbers need only quoting.
+    res.end(`${lines.map((l, i) => l.map((v, j) => (i > 0 && j < 2 ? v : csvCell(v))).join(',')).join('\r\n')}\r\n`);
   });
 }

@@ -11,6 +11,7 @@ import { hashPassword, createSession, SESSION_COOKIE } from '../server/auth.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { registerTill, tillRequest } from './helpers/till.js';
 
 let server;
 let owner;
@@ -442,6 +443,37 @@ for (const first of ['sale', 'apply']) {
   });
 }
 
+// Made certain rather than left to timing (review, 28 Oct): another
+// connection holds the higher product while applying starts, then a sale of
+// both arrives. Taking products in id order, applying holds the lower one and
+// the sale queues behind it; out of order, applying would hold neither, the
+// sale would take the lower one, and the two would deadlock.
+test('applying while a sale waits on the same products: they queue, and never deadlock', async () => {
+  const p1 = await product({ stockQty: 9 });
+  const p2 = await product({ name: '[Product]', stockQty: 9 });
+  const take = await areaTake();
+  await count(take.id, { productId: p1.id, qty: 5 }, jo);
+  await count(take.id, { productId: p2.id, qty: 5 }, jo);
+  const client = await pool.connect();
+  let results;
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    await client.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [p2.id]);
+    const applied = act(take.id, 'apply');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const sale = sell(null, 0, [{ productId: p2.id, qty: 1 }, { productId: p1.id, qty: 1 }]);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await client.query('COMMIT');
+    results = await Promise.all([applied, sale]);
+  } finally {
+    await client.query('ROLLBACK').catch(() => {});
+    client.release();
+  }
+  assert.deepEqual(results.map((r) => r.status), [200, 201], JSON.stringify(results.map((r) => r.body)));
+  assert.deepEqual([(await stockAndHistory(p1.id)).stock, (await stockAndHistory(p2.id)).stock], [4, 4]);
+});
+
 test('applying takes products in id order, so a sale of them in another order never deadlocks', async () => {
   for (let round = 0; round < 4; round += 1) {
     const p1 = await product({ stockQty: 9 });
@@ -462,4 +494,74 @@ test('another shop can’t check, apply, undo, recount or download this shop’s
   assert.equal((await check(take.id, other)).status, 404);
   for (const what of ['apply', 'undo', 'none']) assert.equal((await act(take.id, what, {}, other)).status, 404, what);
   assert.equal((await act(take.id, 'recount', { productId: pads.id }, other)).status, 404);
+});
+
+// ---------- The independent review, 28 Oct ----------
+
+test('Undo is refused once a later count has corrected the same product; undo that one first', async () => {
+  const pads = await product({ stockQty: 10 });
+  const a = await areaTake();
+  await count(a.id, { productId: pads.id, qty: 7 }, jo);
+  assert.equal((await act(a.id, 'apply')).status, 200);
+  const b = await areaTake();
+  await count(b.id, { productId: pads.id, qty: 8 }, jo);
+  assert.equal((await act(b.id, 'apply')).status, 200);
+  assert.equal((await stockAndHistory(pads.id)).stock, 8);
+  const refused = await act(a.id, 'undo');
+  assert.deepEqual([refused.status, refused.body.error], [409, 'A later count has corrected Shimano brake pads; undo that one first.']);
+  assert.equal((await stockAndHistory(pads.id)).stock, 8, 'nothing changed');
+  assert.equal((await act(b.id, 'undo')).status, 200);
+  assert.equal((await stockAndHistory(pads.id)).stock, 7);
+  assert.equal((await act(a.id, 'undo')).status, 200, 'the later count is undone, so this one can be');
+  assert.equal((await stockAndHistory(pads.id)).stock, 10);
+});
+
+test('the counting page’s search sends only names and codes, within the count’s own products', async () => {
+  const pads = await product({ category: '[Category 2]', stockQty: 98765 });
+  const other2 = await product({ name: 'Shimano brake pads, other', category: '[Category 3]', stockQty: 98765 });
+  const take = (await start({ kind: 'category', target: '[Category 2]' })).body;
+  const res = await staff(`/api/stock-takes/${take.id}/products?search=shimano`, undefined, jo);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.map((p) => p.id), [pads.id], 'only the category’s');
+  assert.deepEqual(Object.keys(res.body[0]).sort(), ['barcode', 'id', 'name', 'sku']);
+  assert.ok(!JSON.stringify(res.body).includes('98765'));
+  const bySku = await staff(`/api/stock-takes/${take.id}/products?search=${encodeURIComponent(pads.sku)}`, undefined, jo);
+  assert.deepEqual(bySku.body.map((p) => p.id), [pads.id]);
+  const area = await areaTake();
+  for (const p of [pads, other2]) {
+    const wide = (await staff(`/api/stock-takes/${area.id}/products?search=${encodeURIComponent(p.sku)}`, undefined, jo)).body.map((x) => x.id);
+    assert.ok(wide.includes(p.id), 'an area count searches every product');
+  }
+  assert.deepEqual((await staff(`/api/stock-takes/${area.id}/products?search=`, undefined, jo)).body, []);
+  assert.equal((await staff(`/api/stock-takes/${take.id}/products?search=shimano`, undefined, other)).status, 404);
+});
+
+test('a till sale made offline before the count, synced after it, is already in the count', async () => {
+  const till = await registerTill(server.baseUrl, owner, { siteCode: 'S', number: 3 });
+  cashier ??= (await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
+  const pads = await product({ stockQty: 6 });
+  const take = await areaTake();
+  const madeAt = new Date(Date.now() - 60_000).toISOString(); // sold a minute ago, offline
+  await count(take.id, { productId: pads.id, qty: 5 }, jo); // the shelf had 5 when counted
+  const synced = await tillRequest(server.baseUrl, owner.shop.slug, till.token, '/sync', { method: 'POST', body: { pendingCount: 0, items: [{
+    kind: 'sale', clientId: randomUUID(), receiptNumber: 9001, tillClockAt: madeAt, madeOffline: true, employeeId: cashier.employeeId,
+    lines: [{ productId: pads.id, description: 'Shimano brake pads', qty: 1, unitPricePence: 2800, vatRateBp: 2000 }], payments: [{ method: 'cash', amountPence: 2800 }],
+  }] } });
+  assert.equal(synced.status, 200, JSON.stringify(synced.body));
+  assert.equal((await stockAndHistory(pads.id)).stock, 5);
+  const d = (await check(take.id)).body;
+  assert.equal(d.productsDiffering, 0, 'counted 5, and the sale was made before the count');
+  assert.equal((await act(take.id, 'apply')).status, 200);
+  assert.equal((await stockAndHistory(pads.id)).stock, 5);
+});
+
+test('Download the count: a name or code that starts like a formula is written as text', async () => {
+  const p = await product({ name: '=SUM(A1)', stockQty: 6 });
+  await runWithShop(owner.shop.id, () => prepare("UPDATE products SET sku = '@cmd' WHERE id = ?").run(p.id));
+  const take = await areaTake();
+  await count(take.id, { productId: p.id, qty: 5 }, jo);
+  await act(take.id, 'apply');
+  const res = await fetch(`${server.baseUrl}/api/stock-takes/${take.id}/download`, { headers: { cookie: owner.cookie } });
+  const lines = (await res.text()).trim().split('\r\n');
+  assert.equal(lines[1], "'=SUM(A1),'@cmd,6,5,-1,-14.00", 'text guarded; numbers left as numbers');
 });

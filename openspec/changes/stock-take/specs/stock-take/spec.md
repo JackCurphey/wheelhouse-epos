@@ -73,6 +73,10 @@ Each product SHALL be measured at the moment of its last count: whatever was sol
 - **WHEN** Jo Taylor counted 6 pads and one was sold afterwards
 - **THEN** the pads match, and applying leaves 5
 
+#### Scenario: Sold offline before the count, synced after
+- **WHEN** a till sold a pad while offline, Jo Taylor then counted 5, and the sale reached Wheelhouse afterwards
+- **THEN** the pads match: the sale was made before the count
+
 ### Requirement: Recount sends a line back to the counters
 Recount SHALL take a product's counts away, show it on every counter's page as "Recount asked by [Name]" with no number, and put everyone back to counting. A line not counted again SHALL be left as it is when the count is applied.
 
@@ -100,3 +104,7 @@ After applying, the manager SHALL see "Count applied" with Undo and Download the
 #### Scenario: Undo
 - **WHEN** Jack Lewis presses Undo after applying a count that added 3 pads
 - **THEN** the 3 come off again, with "Undid the stock take of [Area]" in the pads' history
+
+#### Scenario: A later count came first
+- **WHEN** a later count has corrected the pads and Jack Lewis presses Undo on the earlier one
+- **THEN** he's told "A later count has corrected Shimano brake pads; undo that one first." and nothing changes
