@@ -103,18 +103,18 @@ test('Tills is the Owner\'s: not open, open, float checked, short, and seen', as
   const owner = await shop();
   const jo = await member(owner, 'Jo Taylor');
   assert.equal((await call(jo.cookie, '/api/today/tills')).status, 403, 'Staff never get the till\'s line');
-  assert.deepEqual((await call(owner.cookie, '/api/today/tills')).body, { till: { openedAt: null, openedBy: null, floatCheck: null } });
+  assert.deepEqual((await call(owner.cookie, '/api/today/tills')).body, { tills: [{ code: null, openedAt: null, openedBy: null, floatCheck: null }] });
   const till = await checkIn(owner, await givePin(jo));
-  const open = (await call(owner.cookie, '/api/today/tills')).body.till;
+  const open = (await call(owner.cookie, '/api/today/tills')).body.tills[0];
   assert.match(open.openedAt, /^2026-/);
   assert.deepEqual(open.openedBy, 'Jo Taylor');
   assert.equal(open.floatCheck, null);
   assert.equal((await post(till, '/api/float-check', { countedPence: 14000, reason: '' })).status, 201);
-  const checked = (await call(owner.cookie, '/api/today/tills')).body.till.floatCheck;
+  const checked = (await call(owner.cookie, '/api/today/tills')).body.tills[0].floatCheck;
   assert.deepEqual([checked.byName, checked.short, checked.seenByName], ['Jo Taylor', true, null]);
   const id = (await call(owner.cookie, '/api/needs-attention')).body.items.find((i) => i.kind === 'float_short').checkId;
   assert.equal((await post(owner.cookie, `/api/float-check/${id}/seen`)).status, 200);
-  assert.equal((await call(owner.cookie, '/api/today/tills')).body.till.floatCheck.seenByName, 'Jack Lewis');
+  assert.equal((await call(owner.cookie, '/api/today/tills')).body.tills[0].floatCheck.seenByName, 'Jack Lewis');
 });
 
 test('a team member\'s first sign-in is asked for a PIN once; Skip or Keep stops it', async () => {
