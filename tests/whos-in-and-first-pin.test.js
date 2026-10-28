@@ -127,7 +127,11 @@ test('a team member\'s first sign-in is asked for a PIN once; Skip or Keep stops
   const alex = await member(owner, 'Alex Morgan', { mechanic: true });
   await givePin(alex);
   assert.deepEqual((await call(alex.cookie, '/api/your-settings/till-pin/ask')).body, { ask: null });
-  // The Owner made the shop: not asked.
+  // The Owner made the shop: not asked, even once on the team without a PIN
+  // (an offer made the Owner's team member, then nothing was kept).
+  assert.deepEqual((await call(owner.cookie, '/api/your-settings/till-pin/ask')).body, { ask: null });
+  assert.equal((await post(owner.cookie, '/api/your-settings/till-pin/offer')).status, 201);
+  assert.ok(await runWithShop(owner.shop.id, () => prepare('SELECT 1 AS yes FROM logins l JOIN employees e ON e.id = l.employee_id WHERE l.shop_id = ? AND l.is_owner AND e.pin_hash IS NULL').get(owner.shop.id)), 'the Owner is on the team with no PIN');
   assert.deepEqual((await call(owner.cookie, '/api/your-settings/till-pin/ask')).body, { ask: null });
   assert.equal((await fetch(`${server.baseUrl}/api/your-settings/till-pin/ask`)).status, 401);
 });
