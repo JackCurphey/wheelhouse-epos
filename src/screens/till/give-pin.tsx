@@ -61,7 +61,7 @@ export function ServingMenuButton({ serving, givePin, onFailed }: { serving: Che
           className="max-md:mt-auto max-md:mb-0 max-md:max-w-none max-md:rounded-t-2xl max-md:rounded-b-none bg-[var(--wh-panel)]">
           <div aria-hidden="true" className="flex justify-center pt-2"><span className="h-1 w-10 rounded-full bg-[var(--wh-border)]" /></div>
           <header className="flex items-center justify-between gap-2.5 border-b border-[var(--wh-border)] py-1.5 pr-2 pl-4">
-            <h2 id="serving-title" className="m-0 text-[17px] font-bold">{label}</h2>
+            <h2 id="serving-title" className="m-0 text-size-17 font-bold">{label}</h2>
             <button type="button" aria-label="Close" onClick={() => close(true)} className="inline-flex size-11 items-center justify-center rounded-lg">
               <NavIcon name="close" size={20} />
             </button>
@@ -162,7 +162,7 @@ function PickDialog({ people, onPick, onClose }: { people: GiveTo[]; onPick: (pe
             className="flex min-h-14 w-full items-center gap-3.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-2.5 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)] md:min-h-16">
             <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] font-bold">{initialOf(p.name)}</span>
             <span className="flex flex-col">
-              <span className="text-[17px] font-semibold">{p.name}</span>
+              <span className="text-size-17 font-semibold">{p.name}</span>
               <span className="text-size-13 text-[var(--wh-muted)]">{p.tillOnly ? `${p.role} · till only` : p.role}</span>
             </span>
           </button>
