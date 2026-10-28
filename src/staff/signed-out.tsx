@@ -59,11 +59,12 @@ function messageFor(pathname: string, search: string, expired: boolean): Message
   return null;
 }
 
-function Frame({ children }: { children: ReactNode }) {
+/** signin.mjs's centred() frame; Set up this till's card is wider (480, till-setup). */
+export function Frame({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <main className="flex min-h-screen flex-col gap-7 bg-[var(--wh-panel)] px-5 py-7 sm:items-center sm:justify-center sm:gap-6 sm:bg-[var(--wh-bg)] sm:p-8">
       <p className="text-lg font-bold text-[var(--wh-ink)] sm:text-xl">Wheelhouse</p>
-      <div className="flex flex-col gap-4 sm:w-[440px] sm:rounded-xl sm:border sm:border-[var(--wh-border)] sm:bg-[var(--wh-panel)] sm:p-8 sm:shadow-[var(--wh-shadow)]">
+      <div className={`flex flex-col gap-4 ${wide ? 'sm:w-[480px]' : 'sm:w-[440px]'} sm:rounded-xl sm:border sm:border-[var(--wh-border)] sm:bg-[var(--wh-panel)] sm:p-8 sm:shadow-[var(--wh-shadow)]`}>
         {children}
       </div>
     </main>

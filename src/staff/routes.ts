@@ -48,6 +48,9 @@ export const ROUTES = {
   // Close the day (eod-count), from the till after closing time
   // (openspec/changes/close-the-day).
   'eod-count': '/workshop/till/close',
+  // Set up this till (till-setup), from Settings › Till › Tills; outside the
+  // staff frame, as drawn (openspec/changes/till-setup).
+  'till-setup': '/workshop/till/setup',
   // "You've signed out" (auth-signedout), where Sign out and WorkOS's sign-out
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.

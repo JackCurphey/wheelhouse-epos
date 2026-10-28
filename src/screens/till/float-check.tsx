@@ -20,8 +20,9 @@ import { useHoldScreen } from '@/lib/screen-clear.ts';
  * right, or Count it with the note-and-coin counter. No ✕ and no Escape:
  * every way out is an answer (audit M1, walk-through 2 L3).
  * "First in" is the first to check in at the till with their PIN, who is
- * asked by name (openspec/changes/pins-and-checkin); there is no "Till B1"
- * until tills are named (openspec/changes/opening-float-check).
+ * asked by name (openspec/changes/pins-and-checkin), and the pop-ups say
+ * "Till B1 · …" on a set-up till (openspec/changes/till-setup). One check a
+ * shop a day, as before.
  */
 type Check = { id: number; how: 'looked' | 'counted'; expectedPence: number; countedPence: number | null; reason: string; checkedByName: string; checkedAt: string };
 type Today = { day: string; floatPence: number | null; takesPayments: boolean; firstDay: boolean; check: Check | null };
@@ -47,7 +48,11 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
   const [failed, setFailed] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   // The person checked in at the till; at closing, the Owner signed in (pins-and-checkin).
-  const checkedIn = useTillCheckin().data?.serving ?? null;
+  const tillCheckin = useTillCheckin().data;
+  const checkedIn = tillCheckin?.serving ?? null;
+  // "Till B1 · …" on a set-up till (op-float-check; openspec/changes/till-setup);
+  // not at closing, which counts the whole shop.
+  const at = !atClose && tillCheckin?.till ? `Till ${tillCheckin.till.code} · ` : '';
   const signedIn = session.status === 'signed-in' ? session.user.name : '';
   const name = !atClose && checkedIn ? checkedIn.name : signedIn;
   const t = today.data;
@@ -64,8 +69,8 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
       // Close the day's figures start from this morning's float (close-the-day.tsx).
       void queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
       // A count that matches, or a look, says so; only a count says "counted by" (j10 line).
-      if (countedPence === null) setMessage(`Float checked · looked right · ${check.checkedByName}`);
-      else if (countedPence === check.expectedPence) setMessage(`Float checked · counted by ${check.checkedByName}`);
+      if (countedPence === null) setMessage(`Float checked · ${at}looked right · ${check.checkedByName}`);
+      else if (countedPence === check.expectedPence) setMessage(`Float checked · ${at}counted by ${check.checkedByName}`);
     } catch (err) {
       // Someone else checked it first: the day is checked, so the pop-up goes.
       if (err instanceof ApiError && err.status === 409 && (err.body as { code?: string } | null)?.code === 'already_checked') {
@@ -96,7 +101,7 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
 
   if (step.at === 'count') {
     return (
-      <Box key="count" id="cnt" title="Count the float" sub="count every note and coin" wide focus='input[aria-label="Number of £50"]'
+      <Box key="count" id="cnt" title="Count the float" sub={`${at}count every note and coin`} wide focus='input[aria-label="Number of £50"]'
         footer={<>
           <Button onClick={() => setStep({ at: 'check' })}>Back</Button>
           <Button variant="primary" disabled={counted === null || saving} onClick={() => {
@@ -115,7 +120,7 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
     const over = step.counted > expected;
     const diff = Math.abs(step.counted - expected);
     return (
-      <Box key="diff" id="diff" focus="#diff-why" title={`The float is ${over ? 'over' : 'short'}`} sub={`counted by ${name}`}
+      <Box key="diff" id="diff" focus="#diff-why" title={`The float is ${over ? 'over' : 'short'}`} sub={`${at}counted by ${name}`}
         footer={<>
           <Button onClick={toCount}>Count again</Button>
           <Button variant="primary" disabled={saving} onClick={() => void save(step.counted, reason.trim() || undefined)}>Start the day</Button>
@@ -155,7 +160,7 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
   // UX walk-through 4 M4: the first day on Wheelhouse is counted, never looked at.
   const first = t.firstDay;
   return (
-    <Box key="check" id="fc" title={`Hello, ${name.split(' ')[0]}`} sub={first ? 'first in on the first day on Wheelhouse' : 'first in today to take payments'}
+    <Box key="check" id="fc" title={`Hello, ${name.split(' ')[0]}`} sub={`${at}${first ? 'first in on the first day on Wheelhouse' : 'first in today to take payments'}`}
       footer={first ? <Button variant="primary" onClick={toCount}>Count it</Button> : <>
         <Button onClick={toCount}>Count it</Button>
         <Button variant="primary" disabled={saving} onClick={() => void save(null)}>Looks right</Button>
