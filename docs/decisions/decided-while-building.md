@@ -1118,6 +1118,53 @@ silent:
     the focus back on Serving (review, 28 Oct). *Pattern:* the diary's job
     menu, except Tab, which there leaves the focus where the page puts it.
 
+### 28 Oct 2026: Who's in and Tills on Today, and the first PIN by itself (`openspec/changes/whos-in-and-first-pin`, `op-today`, `op-today-staff`, `op-today-late`, `op-today-short`, `op-today-seen`, `pin-first`, `pin-cleared`; WP-1.10, WP-1.7 3.2)
+
+1. **Who's in lists everyone who checked in today, even after Switch**, at
+   the time of their first check-in that day: checking in only records who's
+   in and when (opening the shop decision 5, no check-out). A check-in covers
+   the whole shop until tills have names (28 Oct, PINs entry 3).
+2. **Who's due is a mechanic with time in today's diary**: their working
+   days, the shop's hours that day, and time off, as the diary and booking
+   count them. "Due in at" is when that time starts (the shop's opening time,
+   or later after a morning off). Till staff have no working hours in
+   Wheelhouse yet, so only mechanics are ever "Not in yet". *Pattern:* the
+   diary's capacity (`server/capacity.js`).
+3. **"Not in yet" turns "Late" by the page's own clock**, without a reload.
+   *Pattern:* Today's Book in, which appears when a booking is due.
+4. **Role words are Owner, Mechanic or Staff**: the Owner's own team member,
+   a team member marked mechanic, everyone else. *Pattern:* giving a PIN's
+   "Who's getting a PIN?" (Mechanic or Staff), with Owner as drawn.
+5. **Nobody checked in and nobody due: "Nobody has checked in yet."** in the
+   empty-list style. *Pattern:* Workshop today's "Every bike booked for
+   today is in."
+6. **Tills is one line headed "Till"**, no number, until tills have names
+   (27 Oct, float check entry 2). It reads "Open · float checked by [Name]
+   at [time]" (drawn); before the float is checked, or with no float set,
+   "Open · [Name] checked in at [time]" from the day's first check-in; and
+   "Not open yet" before anyone has. "Float short" (warning) and "Float
+   short · seen by [Name]" (grey) are drawn; no "All sales sent" or "sales
+   waiting to send": the till has no send queue until step C. *Pattern:* the
+   drawn line, saying only what's true (20 Oct, Settings frame 6).
+7. **No "Closed" on Tills yet**: after Close the day the line still says
+   how the day opened. Not drawn; left for Jack.
+8. **Staff see Who's in beside Workshop today, in two columns**, as
+   `op-today-staff` draws it (decision 4). Tills stays the Owner's, as Needs
+   attention is, until roles.
+9. **"Your till PIN" by itself is for team members, not the Owner's own
+   sign-in**: the drawing is Jo's first sign-in after her invite, and the
+   Owner made the shop rather than joining it. *Pattern:* walk-through 4 H1.
+10. **Asked once**: Skip for now or Keep this PIN records it on the sign-in
+    (migration 098); clearing the PIN asks again in the cleared words, even
+    for someone never asked before. Someone already on the team with no PIN
+    is asked the next time they open Wheelhouse after this is built.
+11. **It opens over whatever page they land on and leaves them there** ("then
+    she lands in her room", walk-through 4 H1), not the mockup's links to the
+    till or Today. *Pattern:* the drawing, over the diary.
+12. **If recording the ask fails**, the pop-up still closes; they're asked
+    again next time. *Pattern:* none built; a lost record costs one more
+    ask, while keeping the pop-up open would block the page.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
