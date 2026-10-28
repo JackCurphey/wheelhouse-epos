@@ -237,3 +237,6 @@ POST /api/portal/:shopSlug/pretend-payments/:ref/card
 GET /api/float-check
 POST /api/float-check
 POST /api/float-check/:id/seen
+GET /api/close-the-day
+POST /api/paid-outs
+POST /api/close-the-day

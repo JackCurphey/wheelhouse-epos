@@ -45,6 +45,9 @@ export const ROUTES = {
   // Receive a delivery (rs-receive), from the hub and an order; ?order=[id]
   // picks the order (openspec/changes/receive-delivery).
   'rs-receive': '/workshop/deliveries/receive',
+  // Close the day (eod-count), from the till after closing time
+  // (openspec/changes/close-the-day).
+  'eod-count': '/workshop/till/close',
   // "You've signed out" (auth-signedout), where Sign out and WorkOS's sign-out
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.

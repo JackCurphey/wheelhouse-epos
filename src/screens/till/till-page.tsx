@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { Banknote } from 'lucide-react';
+import { useSession } from '@/lib/auth/use-session.ts';
+import { ROUTES } from '@/staff/routes.ts';
+import { CLOSE_DAY_QUERY, type Day } from './close-the-day.tsx';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
@@ -30,9 +34,32 @@ export function TillPage() {
   // The first person in who takes payments checks the float (opening the shop decision 2).
   return (
     <>
+      <CloseTheDayEntry />
       {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} /> : <SaleTill />}
       <FloatCheck />
     </>
+  );
+}
+
+/**
+ * "Close the day" for the Owner from an hour before closing (cash-up
+ * decision 5; eod-entry). The new till has no till bar yet, so it sits in
+ * the strip the drawing gives a phone, on every size
+ * (openspec/changes/close-the-day).
+ */
+function CloseTheDayEntry() {
+  const session = useSession();
+  const owner = session.status === 'signed-in' && session.user.isOwner;
+  const day = useQuery({ queryKey: CLOSE_DAY_QUERY, queryFn: () => apiGet<Day>('/api/close-the-day'), enabled: owner, retry: false, refetchInterval: 60_000, refetchOnWindowFocus: true });
+  const entry = day.data?.entry;
+  if (!owner || !entry?.show) return null;
+  return (
+    <div className="mb-3.5 flex items-center justify-between gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-3.5 py-2">
+      <span className="text-sm">{entry.closesAt ? `The shop closes at ${entry.closesAt}` : ''}</span>
+      <Link to={ROUTES['eod-count']} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--wh-ink)] px-3.5 text-sm font-bold text-[var(--wh-panel)] no-underline">
+        <Banknote size={16} aria-hidden="true" />Close the day
+      </Link>
+    </div>
   );
 }
 

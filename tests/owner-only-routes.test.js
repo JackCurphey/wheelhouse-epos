@@ -83,6 +83,10 @@ const ROUTES = [
   // The float, and Seen on a short float (openspec/changes/opening-float-check).
   ['PUT', '/api/end-of-day-settings', { floatPence: 15000 }],
   ['POST', `/api/float-check/${MISSING}/seen`, {}],
+  // Close the day and cash taken out, for owners and managers (cash-up
+  // decision 5), so the Owner until roles (openspec/changes/close-the-day).
+  ['POST', '/api/close-the-day', {}],
+  ['POST', '/api/paid-outs', {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
@@ -119,7 +123,7 @@ const NOT_OWNER_ONLY = new Map([
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.

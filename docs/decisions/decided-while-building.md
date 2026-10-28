@@ -3255,3 +3255,158 @@ but no closed order. Decided here, for Jack to overrule:
      settings boxes do.
    - **An earlier day's short float reads "The float was [£] short on [date]"**
      ("on Mon 31 Aug"), as the uncollected bike line gives its date.
+
+### 27 Oct 2026: Close the day, the server (`openspec/changes/close-the-day`, `eod-count`, `eod-count-result`, `eod-banking`, `eod-paidout`, `eod-finish`, `eod-z`; WP-3.4, slice B; cash-up decisions 2 to 6; opening the shop decision 8 H1)
+
+1. **One close a shop a day, no till name**, as the float check: tills get
+   names with Mark's step C, and a shop has one drawer until then.
+2. **Only the Owner closes the day and takes cash out**, until roles
+   (WP-1.1) bring managers and "Can close the day" (decision 5; roles answer
+   6 of 5 Oct). *Pattern:* Needs attention and Seen.
+3. **What the drawer should hold is this morning's float, plus the cash
+   sales since the float check, minus cash taken out since it**
+   (walk-through 2 M2's rows; Jack's answer 9, "trust the morning check",
+   which replaced "the day's cash sales" after the second review found cash
+   counted twice). This morning's float is what was counted, or the shop's
+   float when it looked right. "Since the check" is by the server's clock:
+   the old record's saved time, and a till sale's time received, or its
+   till's own clock only when it was made offline (third review, 27 Oct),
+   so an online till whose clock is wrong doesn't move its cash. There is no "minus cash refunds" yet: the till has no refunds
+   (WP-3.1).
+4. **The day can't close without this morning's float check**, so the
+   expected figure starts from a real one. The Close the day page asks for
+   the float check first, as the till does.
+5. **A count under the float banks nothing**, and the close says how much
+   to put in to make the float up (`topUpPence`), so the float is left
+   either way. Settled by Jack's answer 5 (27 Oct,
+   `docs/decisions/2026-10-27-answers.md`), replacing "leave what was
+   counted".
+6. **The close keeps its figures as they were**: the float, cash sales,
+   cash taken out, expected, counted, reason, banked, and the takings by
+   card, cash and everything else. A sale made after closing doesn't change
+   the report.
+7. **"Yesterday" for an over float is the last day the till opened** (the
+   last day with a float check before it), so a shop shut on Sundays looks
+   back to Saturday. A shop's first day has no yesterday, so an over float
+   that day isn't listed (decision 8 H1 lists it only when yesterday was
+   closed). Seen clears an over float as it does a short one.
+8. **"Close the day" shows an hour before closing** (`set-eod-close` draws
+   "1 hour before" chosen) until that setting is built, all day on a day
+   the opening hours say the shop is shut, and not once the day is closed.
+9. **Cash taken out needs what it was for** (1 to 100 characters), as the
+   drawing has no "(optional)" on it, and takes an optional note up to 500.
+   From 1p to £100,000. Not once the day is closed.
+10. **The close and cash taken out lock the shop's row** before they read
+    and write (the settings-saves-dont-clash pattern), so two closes keep
+    one and cash taken out at the moment of closing is counted in it or
+    refused. The lock is `FOR NO KEY UPDATE`, so a sale being saved at the
+    same moment isn't held up (review, 27 Oct).
+11. **A close counts every sale no close has counted yet** (Jack's answer
+    6), and marks each one with its own id (`day_close_id` on both sales
+    records, migration 096) under the shop's lock; the report comes from
+    exactly the sales it marked. No sale is placed in a day by its time
+    (second review, 27 Oct): a sale still being saved at the close is left
+    for the next close, and a till whose clock runs fast or slow still has
+    each sale counted once. Counting starts at the start of the shop's
+    first close's day, by the server's clock (a till sale by when the
+    server received it), so the history from before Close the day isn't
+    swept into the first close; a sale from before that never counts.
+    Cash taken out is listed and taken off from the morning's check on
+    (entry 3). A sale still being saved at the close shows tonight as over
+    and lands in the next day's report, so its cash is counted once but the
+    difference is split across two days (third review, 27 Oct). A sale can
+    only point at its own shop's close: the database refuses another's.
+12. **Closing after midnight isn't handled** (review, 27 Oct: logged, not
+    fixed). The day is the shop's date when the close is made, so a close
+    made at 00:30 closes the new day, and the evening's sales after the
+    last close count in it. *For Jack to decide.*
+13. **The close can carry the expected figure the screen showed**; if a
+    sale or cash taken out changed it meanwhile, it's refused with the new
+    figure ("The till’s figures changed while you were counting. Check the
+    difference again."), so the owner sees the new difference before the
+    day closes (review, 27 Oct).
+14. **Online money is kept beside the takings, not in them** (Jack's answer
+    7): the old record's `Shopify` and `Deposit paid online` tenders. Till
+    sales have no online tender. Takings is card + cash + other, so it
+    always adds up (review, 27 Oct).
+15. **At closing, a float nobody checked is looked at, never counted**
+    (Jack's answer 8), on the first day on Wheelhouse too. The server
+    allows that look only for the Owner, only when the close page asks for
+    it, and only while "Close the day" is showing (second review, 27 Oct);
+    anywhere else the first day is still counted.
+16. **The report and the drawer can differ on purpose**: the report's Cash
+    is every cash sale this close counted, the drawer's figure only those
+    since the morning check (both kept on the close). Cash from a day
+    nobody closed is in the report and shows in the drawer as over.
+
+### 27 Oct 2026: Close the day, the screens (`openspec/changes/close-the-day`, `eod-entry`, `eod-count`, `eod-count-result`, `eod-count-exact`, `eod-banking`, `eod-banking-none`, `eod-paidout`, `eod-finish`, `eod-z`, `op-today-short`)
+
+1. **Three steps, numbered 1 to 3**: Count the cash, Paid-outs and banking,
+   End-of-day report. The drawing's other three (the till has sent its
+   sales, Needs attention, the card machine check) wait for what they stand
+   on (step C, Park, a connected card machine), so they aren't shown, and
+   the steps that are shown are numbered in order rather than 3, 4 and 6.
+2. **No "Till B1 · Bolton"** beside the title: the date only ("Tuesday 1
+   September"), until tills and sites have names. The report reads "Day
+   closed" and "[date] · closed by [Name]", without "saved to Reports"
+   until Reports exists.
+3. **The page is at `/workshop/till/close`**, inside the till's folded
+   frame, so the header still says Till; the page's own heading is "Close
+   the day".
+4. **The count is always blind** (the drawings assume blind; decision 2's
+   setting isn't built), with the built note-and-coin counter and its
+   "Cash counted" box, as the float check.
+5. **The count's status shows as soon as the count is done** ("Spot on" or
+   "Counted", as `eod-count-exact` and `eod-count-result` draw it); "Keep
+   this count and go on" opens Paid-outs and banking. "Banking bagged —
+   next step" stays off until the count is kept.
+6. **"How the till worked it out" has no "minus cash refunds" row**: there
+   are no refunds yet. Its float row reads "Float this morning · looked
+   right · [Name] at [time]", or "counted by" for a count, with "[£] short,"
+   first for a short count (the j16 line on `eod-z`).
+7. **Leave in the drawer and Bank show once the cash is counted**, worked
+   out from the count. Leave in the drawer is always the float. A count
+   under the float banks £0.00 and adds "Put £[n] in to make the float up to
+   £[float]" under them (Jack's answer 5), in the warning colours of the
+   page's other notices. *Pattern:* the till's stock warning.
+8. **Cash taken out** (`eod-paidout`): "What it was for" is a box to type
+   in, since Settings › Till › Reasons isn't built (the drawing's "Other…");
+   the subtitle is "From the drawer" and the button "Take it out", as there
+   is no cash drawer to open from Wheelhouse yet. A wrong amount says
+   "Pounds and pence, like 5.00" (the counter's words); a missing reason
+   says "Say what it was for." Each paid-out lists "[time] · [Name]" and its
+   note.
+9. **The report** shows Takings, Card, Cash, "Gift cards, store credit,
+   customer accounts, other", Float at the start, Cash difference and
+   Banked, and "Online money is not in this till’s takings: £[n] today"
+   (walk-through 11 H2; Jack's answer 7), without the drawing's "see
+   Reports" until Reports exists. Cycle to Work, Refunds, Voids, Discounts
+   given, VAT and "Email it" wait for what they stand on. Print uses the
+   till's own printing (the receipt's).
+10. **A closed day** opens with every step done and "Show the report" under
+    End-of-day report, so the report can be seen again. *Pattern:* none
+    drawn; the smallest way back to `eod-z`.
+11. **"Close the day" on the till sits in a strip above the sale on every
+    size**, "The shop closes at [time]" with the button, since the new till
+    has no till bar yet; the drawing gives this strip to a phone. It reads
+    "closes at" rather than "It's after", as it shows from an hour before.
+    Only the Owner sees it, until roles.
+12. **The float check comes first on Close the day** when it's due, and
+    saving it refreshes the day's figures. It offers Looks right only, even
+    on the first day (Jack's answer 8): "Hello, [first name]", "the float
+    wasn’t checked this morning" (the subtitle isn't drawn), "The drawer
+    should have [£ float]", "The shop’s float", and no note, since the
+    till's note asks for a count.
+15. **Done counting reads the till's figures again** before showing the
+    difference. If a sale or cash taken out changes them before the close,
+    the close is refused: Count the cash opens again with the new
+    difference and the server's words ("The till’s figures changed while
+    you were counting. Check the difference again.") in the warning
+    colours, and the count is kept again and the banking bagged again
+    before closing (review, 27 Oct).
+13. **Someone who isn't the Owner** opening the address is told "Only the
+    shop’s owner can close the day."; with no float set the page says "Set
+    the shop’s float in Settings › Front desk › End of day first: Close the
+    day leaves it in the drawer and banks the rest."
+14. **An over float on Today** reads as the short one: "The float was [£]
+    over this morning", "Counted by [Name] at [time]", the reason, and Seen.

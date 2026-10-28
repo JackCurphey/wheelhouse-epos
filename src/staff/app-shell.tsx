@@ -9,6 +9,7 @@ import { Landing, StaffLayout } from './staff-layout.tsx';
 import { OverviewPage } from '@/screens/overview/overview-page.tsx';
 import { DiaryPage } from '@/screens/diary/diary-page.tsx';
 import { TillPage } from '@/screens/till/till-page.tsx';
+import { CloseTheDayPage } from '@/screens/till/close-the-day.tsx';
 import { SettingsPage } from '@/screens/settings/settings-page.tsx';
 import { MessagesPage } from '@/screens/messages/messages-page.tsx';
 import { TodayPage } from '@/screens/today/today-page.tsx';
@@ -39,10 +40,10 @@ function SignedInAlready() {
   return <Navigate to="/workshop" replace />;
 }
 
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'eod-count': CloseTheDayPage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', 'st-product', 'rs-order', 'rs-order-ordered', 'rs-receive', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', 'st-product', 'rs-order', 'rs-order-ordered', 'rs-receive', 'eod-count', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 
