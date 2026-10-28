@@ -140,7 +140,7 @@ test('one message waiting reads in the singular', async () => {
   assert.ok((await ui.findByText('1 message needs a reply')) !== null);
 });
 
-test('Staff see Workshop today only, and the list behind Needs attention isn\'t asked for', async () => {
+test('Staff see no Needs attention, and the list behind it isn\'t asked for', async () => {
   const { ui } = await openToday({ who: JO });
   await new Promise((r) => setTimeout(r, 20));
   assert.ok(ui.queryByRole('heading', { name: /^Needs attention/ }) === null);

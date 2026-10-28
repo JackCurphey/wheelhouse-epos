@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useScreenClear } from '@/lib/screen-clear.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
@@ -55,8 +56,14 @@ export function FirstPinPrompt() {
   const queryClient = useQueryClient();
   const ask = useQuery({ queryKey: QUESTION, queryFn: () => apiGet<{ ask: 'first' | 'cleared' | null }>('/api/your-settings/till-pin/ask'), staleTime: Infinity, retry: false });
   const [done, setDone] = useState(false);
+  // Never over another pop-up, an open sale or the pay box: an ask that comes
+  // while one is showing waits until the screen is clear (review, 28 Oct).
+  const clear = useScreenClear();
+  const [shown, setShown] = useState(false);
   const mode = ask.data?.ask;
-  if (!mode || done) return null;
+  // Once open it stays open (it is itself a pop-up), so the clear screen is latched.
+  if (mode && clear && !shown) setShown(true);
+  if (!mode || done || !shown) return null;
   const answered = () => {
     setDone(true);
     // Asked: not again until the PIN is next cleared. A failed save only means asking again next time.

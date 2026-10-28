@@ -79,6 +79,8 @@ async function offerPin(employeeId) {
 }
 
 const NO_OFFER = { error: 'Ask for a new PIN', code: 'no_offer' };
+// A newer PIN was offered (another window's Give me a different one) after this one was shown (review, 28 Oct).
+const REPLACED = { error: 'Your PIN was offered in another window. Pick again.', code: 'offer_replaced' };
 const HAS_PIN = { error: 'They already have a PIN', code: 'has_pin' };
 
 /**
@@ -98,7 +100,8 @@ async function keepPin(employeeId, pin, { firstOnly = false } = {}) {
     ).get(employeeId);
     let refusal = null;
     if (firstOnly && offer?.pin_hash) refusal = [409, HAS_PIN];
-    else if (!offer?.pin_offer_hash || !(await verifyPinAsync(pin, offer.pin_offer_hash))) refusal = [400, NO_OFFER];
+    else if (!offer?.pin_offer_hash) refusal = [400, NO_OFFER];
+    else if (!(await verifyPinAsync(pin, offer.pin_offer_hash))) refusal = [400, REPLACED];
     else if (await takenByOthers(pin, employeeId)) refusal = [409, { error: 'Someone has just been given that PIN. Ask for a different one.', code: 'pin_taken' }];
     if (refusal) {
       await dbExec('ROLLBACK');
@@ -394,7 +397,9 @@ export function register(route) {
     if (!giver) return sendJson(res, 403, NOT_GIVER);
     const id = Number(params.id);
     const body = await readJsonBody(req);
-    const refused = (await pinTarget(giver, id)) ?? (await keepPin(id, body?.pin, { firstOnly: true }));
+    const found = (await pinTarget(giver, id)) ?? (await keepPin(id, body?.pin, { firstOnly: true }));
+    // "Your PIN…" is Your settings' words; at the till it stays "Ask for a new PIN".
+    const refused = found?.[1] === REPLACED ? [400, NO_OFFER] : found;
     if (refused) return sendJson(res, ...refused);
     await endCheckinHere(req, res, ctx);
     sendJson(res, 200, { serving: null });

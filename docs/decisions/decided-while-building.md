@@ -1147,7 +1147,10 @@ silent:
    waiting to send": the till has no send queue until step C. *Pattern:* the
    drawn line, saying only what's true (20 Oct, Settings frame 6).
 7. **No "Closed" on Tills yet**: after Close the day the line still says
-   how the day opened. Not drawn; left for Jack.
+   how the day opened. Not drawn; left for Jack. A day nobody checked in on
+   stays "Not open yet" even when the Owner's look at closing recorded a
+   float check: "Open" needs someone to have checked in that day (review,
+   28 Oct).
 8. **Staff see Who's in beside Workshop today, in two columns**, as
    `op-today-staff` draws it (decision 4). Tills stays the Owner's, as Needs
    attention is, until roles.
@@ -1164,6 +1167,20 @@ silent:
 12. **If recording the ask fails**, the pop-up still closes; they're asked
     again next time. *Pattern:* none built; a lost record costs one more
     ask, while keeping the pop-up open would block the page.
+13. **It never opens over another pop-up, an open sale or the pay box**
+    (review, 28 Oct): it waits until the screen is clear, for example once
+    the sale is paid or cleared or the float check is answered, then opens.
+    On the till it also waits while the till is still finding out who's
+    serving and whether the float check is due. *Pattern:* the float check
+    waiting for the check-in (28 Oct, PINs entry 12).
+14. **"Late" only once the start time has passed**: at the minute itself
+    it still says "Not in yet" (review, 28 Oct).
+15. **Keep refused because "Give me a different one" was pressed in another
+    window says "Your PIN was offered in another window. Pick again."** in
+    Your settings and the first-time pop-up (review, 28 Oct); an offer that
+    ran out still says "Ask for a new PIN", and giving a PIN at the till
+    keeps "Ask for a new PIN". *Pattern:* the pop-up's other refusals, in
+    the server's words.
 
 ## Decided here, for Jack to overrule
 

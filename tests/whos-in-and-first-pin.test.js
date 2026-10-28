@@ -151,3 +151,25 @@ test('after the Owner clears a PIN, the next sign-in is asked again, in the clea
   await post(owner.cookie, `/api/team/${kim.employeeId}/clear-pin`);
   assert.deepEqual((await call(kim.cookie, '/api/your-settings/till-pin/ask')).body, { ask: 'cleared' });
 });
+
+test('another shop\'s mechanics due today never appear in Who\'s in', async () => {
+  const owner = await shop();
+  const other = await shop();
+  await member(owner, 'Alex Morgan', { mechanic: true });
+  await member(other, 'Sam Reed', { mechanic: true });
+  assert.deepEqual((await call(owner.cookie, '/api/today/whos-in')).body.people.map((p) => p.name), ['Alex Morgan']);
+  assert.deepEqual((await call(other.cookie, '/api/today/whos-in')).body.people.map((p) => p.name), ['Sam Reed']);
+});
+
+test('Keep refused after the PIN was offered again in another window says so', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const first = (await post(jo.cookie, '/api/your-settings/till-pin/offer')).body.pin;
+  let second = first;
+  while (second === first) second = (await post(jo.cookie, '/api/your-settings/till-pin/offer')).body.pin;
+  const kept = await post(jo.cookie, '/api/your-settings/till-pin', { pin: first });
+  assert.deepEqual([kept.status, kept.body], [400, { error: 'Your PIN was offered in another window. Pick again.', code: 'offer_replaced' }]);
+  // With no offer at all (or an old one) it is still "Ask for a new PIN".
+  await runWithShop(owner.shop.id, () => prepare("UPDATE employees SET pin_offer_at = now() - interval '16 minutes' WHERE id = ?").run(jo.employeeId));
+  assert.equal((await post(jo.cookie, '/api/your-settings/till-pin', { pin: second })).body.code, 'no_offer');
+});

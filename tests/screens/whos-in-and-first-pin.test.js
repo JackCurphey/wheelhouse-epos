@@ -31,8 +31,13 @@ afterEach(async () => {
   current = undefined;
 });
 
-async function open(path, { who = OWNER, now = at('10:00'), people = PEOPLE, till = OPEN, ask = null, offers = ['7305', '4182'] } = {}) {
+const SERVICES = [{ id: 1, name: 'Fit & adjust brakes', price: 18, minutes: 30, active: true }];
+const FLOAT_DUE = { day: '2026-10-21', floatPence: 15000, takesPayments: true, firstDay: false, check: null };
+const LOOKED = { id: 9, how: 'looked', expectedPence: 15000, countedPence: null, reason: '', checkedByName: 'Jo Taylor', checkedAt: '2026-10-21T07:55:00Z' };
+
+async function open(path, { who = OWNER, now = at('10:00'), people = PEOPLE, till = OPEN, ask = null, offers = ['7305', '4182'], floatCheck = { ...FLOAT_DUE, check: LOOKED } } = {}) {
   const calls = [];
+  let float = floatCheck;
   const realFetch = globalThis.fetch;
   mock.timers.enable({ apis: ['Date'], now });
   globalThis.fetch = async (url, init = {}) => {
@@ -49,6 +54,10 @@ async function open(path, { who = OWNER, now = at('10:00'), people = PEOPLE, til
     if (u.pathname === '/api/your-settings/till-pin' && method === 'POST') return reply(200, { hasPin: true });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [{ weekday: 3, open: '09:00', close: '17:30' }] });
     if (u.pathname === '/api/workshop-jobs') return reply(200, []);
+    if (u.pathname === '/api/till-checkin') return reply(200, { serving: { id: 21, name: 'Jo Taylor' }, checkedInToday: [{ id: 21, name: 'Jo Taylor' }], givePin: [] });
+    if (u.pathname === '/api/float-check' && method === 'POST') { float = { ...float, check: LOOKED }; return reply(201, { check: LOOKED }); }
+    if (u.pathname === '/api/float-check') return reply(200, float);
+    if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     return reply(404, { error: 'Not found' });
   };
   const uninstall = installDom(`http://localhost${path}`);
@@ -149,6 +158,64 @@ test('after a PIN was cleared it opens in the cleared words; Keep this PIN keeps
   await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog', { name: 'Your till PIN' }) === null));
   assert.deepEqual(t.calls.filter((c) => c.method === 'POST' && c.url === '/api/your-settings/till-pin').map((c) => c.body), [{ pin: '7305' }]);
   assert.equal(t.calls.filter((c) => c.method === 'POST' && c.url === '/api/your-settings/till-pin/ask').length, 1);
+});
+
+const pinPopUp = (t) => t.ui.queryByRole('dialog', { name: 'Your till PIN' });
+const settle = () => new Promise((r) => setTimeout(r, 60));
+
+test('the PIN pop-up waits while the float check is showing, then opens once it\'s done', async () => {
+  const t = await open('/workshop/till', { who: JO, ask: 'first', floatCheck: FLOAT_DUE });
+  const check = t.within(await t.ui.findByRole('dialog', { name: 'Hello, Jo' }));
+  await t.waitFor(() => assert.ok(t.calls.some((c) => c.url === '/api/your-settings/till-pin/ask')));
+  await settle();
+  assert.ok(pinPopUp(t) === null, 'never over another pop-up');
+  t.fireEvent.click(check.getByRole('button', { name: 'Looks right' }));
+  assert.ok(await t.ui.findByRole('dialog', { name: 'Your till PIN' }));
+  assert.ok(t.ui.queryByRole('dialog', { name: 'Hello, Jo' }) === null);
+});
+
+test('the PIN pop-up waits while a sale is open, then opens once it\'s cleared', async () => {
+  const t = await open('/workshop/till', { who: JO, ask: null });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: /Fit & adjust brakes/ }));
+  await t.ui.findByRole('button', { name: 'Take payment · £18.00' });
+  // The ask arrives late, with the sale open.
+  current.shell.queryClient.setQueryData(['till-pin-ask'], { ask: 'first' });
+  await settle();
+  assert.ok(pinPopUp(t) === null, 'never over an open sale');
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Clear' }));
+  assert.ok(await t.ui.findByRole('dialog', { name: 'Your till PIN' }));
+});
+
+test('the PIN pop-up waits while the pay box is open', async () => {
+  const t = await open('/workshop/till', { who: JO, ask: null });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: /Fit & adjust brakes/ }));
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Take payment · £18.00' }));
+  await t.ui.findAllByRole('dialog');
+  current.shell.queryClient.setQueryData(['till-pin-ask'], { ask: 'first' });
+  await settle();
+  assert.ok(pinPopUp(t) === null, 'never over the pay box');
+});
+
+test('Late only once the due time has passed: at 09:30 exactly it is still Not in yet', async () => {
+  const t = await open('/workshop/today', { now: at('09:30') });
+  const who = await card(t, 'Who’s in');
+  assert.ok(await who.findByText('Not in yet'));
+  assert.ok(who.queryByText('Late') === null);
+});
+
+test('Tills: a float look at closing with nobody checked in is still Not open yet', async () => {
+  const t = await open('/workshop/today', { till: { openedAt: null, openedBy: null, floatCheck: { byName: 'Jack Lewis', at: '2026-10-21T16:55:00Z', short: false, seenByName: null } } });
+  const tills = await card(t, 'Tills');
+  assert.ok(await tills.findByText('Not open yet'));
+  assert.ok(tills.queryByText(/float checked/) === null);
+});
+
+test('the PIN pop-up is described by its intro', async () => {
+  const t = await open('/workshop/today', { who: JO, ask: 'first' });
+  const pop = await t.ui.findByRole('dialog', { name: 'Your till PIN' });
+  const id = pop.getAttribute('aria-describedby');
+  assert.ok(id, 'aria-describedby is set');
+  assert.match(document.getElementById(id)?.textContent ?? '', /^Welcome to North Street Cycles, Jo\./);
 });
 
 test('nobody to ask: no pop-up, and no PIN asked for', async () => {

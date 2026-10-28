@@ -89,7 +89,8 @@ function Tills() {
   const q = useQuery({ queryKey: ['today-tills'], queryFn: () => apiGet<{ till: TillToday }>('/api/today/tills'), refetchInterval: 60_000, refetchOnWindowFocus: true });
   const t = q.data?.till;
   const f = t?.floatCheck;
-  const sub = f ? `Open · float checked by ${f.byName} at ${clock(f.at)}` : t?.openedAt ? `Open · ${t.openedBy} checked in at ${clock(t.openedAt)}` : 'Not open yet';
+  // "Open" only once someone checked in: the Owner's look at closing alone doesn't open the till (review, 28 Oct).
+  const sub = !t?.openedAt ? 'Not open yet' : f ? `Open · float checked by ${f.byName} at ${clock(f.at)}` : `Open · ${t.openedBy} checked in at ${clock(t.openedAt)}`;
   const tag = f?.short ? (f.seenByName ? <Tag tone="grey">Float short · seen by {f.seenByName}</Tag> : <Tag tone="warn">Float short</Tag>) : null;
   return (
     <Card id="today-tills" title="Tills">
@@ -111,7 +112,7 @@ function WhosIn({ now }: { now: Date }) {
           <ul className="m-0 list-none p-0">
             {people.map((p) => (p.checkedInAt
               ? <Line key={p.id} title={p.name} sub={`Checked in at ${clock(p.checkedInAt)} · ${p.role}`} right={<Tag tone="ok">In</Tag>} />
-              : <Line key={p.id} title={p.name} sub={`Due in at ${p.dueAt} · ${p.role}`} right={<Tag tone="grey">{p.dueAt && time >= p.dueAt ? 'Late' : 'Not in yet'}</Tag>} />))}
+              : <Line key={p.id} title={p.name} sub={`Due in at ${p.dueAt} · ${p.role}`} right={<Tag tone="grey">{p.dueAt && time > p.dueAt ? 'Late' : 'Not in yet'}</Tag>} />))}
           </ul>
         ) : <p className="m-0 border-t border-[var(--wh-border)] py-2 text-sm text-[var(--wh-muted)]">Nobody has checked in yet.</p>}
     </Card>
