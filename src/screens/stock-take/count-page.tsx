@@ -16,11 +16,13 @@ import { names, type Take } from './stock-take-bits.ts';
  * scan adds one; a typed number sets the count; − at 1 takes the line off.
  * Counts go to the server one at a time, in order, so a typed 12 can't land
  * before the 1 typed on the way to it. A below-zero count lists what's still
- * to find, by name. Recount and sizes come later.
+ * to find, by name; a line the manager asked to be recounted shows with no
+ * number until someone counts it. Sizes come later (WP-1.5).
  */
 type Line = { productId: number; name: string; sku: string | null; qty: number };
 type Product = { id: number; sku: string | null; barcode: string | null; name: string };
-type CountView = Take & { mine: Line[]; myItems: number; othersCounting: string[]; stillToFind: { productId: number; name: string; sku: string | null }[] | null };
+type Recount = { productId: number; name: string; sku: string | null; askedBy: string };
+type CountView = Take & { mine: Line[]; myItems: number; othersCounting: string[]; recountAsked?: Recount[]; stillToFind: { productId: number; name: string; sku: string | null }[] | null };
 type Body = { productId: number; add: 1 } | { productId: number; qty: number };
 
 // This person's lines with one changed: a new one first, 0 taken off.
@@ -28,7 +30,8 @@ function withLine(v: CountView, line: Line): CountView {
   const had = v.mine.some((l) => l.productId === line.productId);
   const mine = line.qty === 0 ? v.mine.filter((l) => l.productId !== line.productId)
     : had ? v.mine.map((l) => (l.productId === line.productId ? line : l)) : [line, ...v.mine];
-  return { ...v, mine, myItems: mine.reduce((n, l) => n + l.qty, 0), stillToFind: v.stillToFind && v.stillToFind.filter((s) => s.productId !== line.productId) };
+  const counted = (s: { productId: number }) => s.productId !== line.productId || line.qty === 0;
+  return { ...v, mine, myItems: mine.reduce((n, l) => n + l.qty, 0), stillToFind: v.stillToFind && v.stillToFind.filter((s) => s.productId !== line.productId), recountAsked: v.recountAsked?.filter(counted) };
 }
 
 export function CountPage() {
@@ -118,8 +121,10 @@ export function CountPage() {
   if (view.isError) return <Page>{back}<p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load this count. Try again in a moment.</p></Page>;
   const v = view.data;
   if (!v) return <Page>{back}<p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></Page>;
+  if (v.status === 'applied') return <Page>{back}<p className="m-0 text-sm">This count has been applied.</p></Page>;
   const below = v.kind === 'below_zero';
   const others = v.othersCounting;
+  const recounts = v.recountAsked ?? [];
   return (
     <Page>
       {back}
@@ -157,6 +162,15 @@ export function CountPage() {
             ) : null}
             <h3 className="m-0 mt-1 text-size-15 font-bold">Counted</h3>
           </>
+        ) : null}
+        {recounts.length > 0 ? (
+          <ul aria-label="Recounts asked" className="m-0 list-none p-0">
+            {recounts.map((r) => (
+              <Row key={r.productId} title={r.name} sub={<>{r.sku ? `${r.sku} · ` : ''}<strong className="text-[var(--wh-ink)]">{`Recount asked by ${r.askedBy}`}</strong></>}>
+                <Count name={r.name} value={null} onChange={(n) => setQty({ productId: r.productId, name: r.name, sku: r.sku, qty: n }, n)} />
+              </Row>
+            ))}
+          </ul>
         ) : null}
         {v.mine.length > 0 ? (
           <ul aria-label="Counted" className="m-0 list-none p-0">

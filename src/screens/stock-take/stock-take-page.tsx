@@ -9,17 +9,19 @@ import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { Card, Page, Row, Tag, linkClass } from '@/screens/deliveries/deliveries-bits.tsx';
-import { countHref, names, started, type Kind, type Take } from './stock-take-bits.ts';
+import { appliedHref, atCost, checkHref, countHref, names, plural, started, type Applied, type Kind, type Take } from './stock-take-bits.ts';
+import { day } from '@/screens/deliveries/deliveries-bits.tsx';
 
 /**
  * Stockroom › Stock take (tk-hub, tk-hub-staff, tk-start, tk-start-category
  * in stock.mjs; stock control decisions 5, 9 and 11;
  * openspec/changes/stock-take). The Owner starts a count (until "Can order
- * stock"); everyone sees the counts in progress and joins one. Checking and
- * applying a count, and Finished counts, wait for Jack (design.md).
+ * stock"); everyone sees the counts in progress and joins one. The Owner
+ * checks a count (Check it) and sees the Finished counts.
  */
 type InProgress = Take & { counting: string[]; finished: string[]; itemsCounted: number; everyoneFinished: boolean };
-type Hub = { canStart: boolean; areasUsed: string[]; inProgress: InProgress[] };
+// `finished` comes for the Owner only: it carries costs (Staff see none).
+type Hub = { canStart: boolean; areasUsed: string[]; inProgress: InProgress[]; finished?: Applied[] };
 
 export function StockTakePage() {
   const session = useSession();
@@ -50,11 +52,27 @@ export function StockTakePage() {
                   ].filter(Boolean).join(' · ')}>
                   <Tag>{t.everyoneFinished ? 'Ready to check' : 'Counting'}</Tag>
                   <Link to={countHref(t.id)} className={linkClass} aria-label={`Join the count of ${t.label}`}>Join</Link>
+                  {canStart ? <Link to={checkHref(t.id)} className={linkClass} aria-label={`Check the count of ${t.label}`}>Check it</Link> : null}
                 </Row>
               ))}
             </ul>
           )}
       </Card>
+      {canStart && hub.data?.finished ? (
+        <Card id="t-finished-counts" title="Finished counts">
+          {hub.data.finished.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">No finished counts yet.</p> : (
+            <ul aria-labelledby="t-finished-counts" className="m-0 list-none p-0">
+              {hub.data.finished.map((t) => (
+                <Row key={t.id} title={t.label}
+                  sub={`Applied ${day(t.appliedAt!)} by ${t.appliedBy} · ${plural(t.productsChanged, 'product')} changed · ${atCost(t.valuePence)}`}>
+                  <Link to={appliedHref(t.id)} className={linkClass}
+                    aria-label={t.kind === 'whole_shop' ? `Open the whole-shop count from ${day(t.appliedAt!)}` : `Open the count of ${t.label} from ${day(t.appliedAt!)}`}>Open</Link>
+                </Row>
+              ))}
+            </ul>
+          )}
+        </Card>
+      ) : null}
       {hub.data && !canStart ? <p className="m-0 text-sm text-[var(--wh-muted)]">Starting a count, and checking and applying it, are for the shop’s owner for now.</p> : null}
       {starting && hub.data ? <StartCount areasUsed={hub.data.areasUsed} onCancel={() => setStarting(false)} /> : null}
     </Page>

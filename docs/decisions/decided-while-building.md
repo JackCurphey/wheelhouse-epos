@@ -3543,18 +3543,30 @@ but no closed order. Decided here, for Jack to overrule:
 14. **An over float on Today** reads as the short one: "The float was [£]
     over this morning", "Counted by [Name] at [time]", the reason, and Seen.
 
-### 28 Oct 2026: stock take, the counting half (`openspec/changes/stock-take`, `tk-hub`, `tk-hub-staff`, `tk-start`, `tk-start-category`, `tk-count`, `tk-count-below`; WP-2.2, slice C; stock control decisions 5, 9 and 11)
+### 28 Oct 2026: stock take (`openspec/changes/stock-take`, `tk-hub`, `tk-hub-staff`, `tk-start`, `tk-start-category`, `tk-count`, `tk-count-below`, `tk-diff`, `tk-applied`; WP-2.2, slice C; stock control decisions 5, 9 and 11)
 
-1. **Starting a count is for the Owner** until roles bring "Can order
+1. **Starting, checking and applying a count is for the Owner** until roles bring "Can order
    stock" (the 5 Oct later change to decision 5). *Pattern:* Deliveries and
    orders' owner-only orders. Staff see "Starting a count, and checking and
    applying it, are for the shop’s owner for now." where the drawing says
    "are for managers" (Deliveries' "Orders are for the shop’s owner for now").
-2. **Checking and applying wait for Jack** (what "allowed for" means for
-   stock that moves during the count; the question is in the change's
-   `design.md`). So the hub has no "Check it" link and no Finished counts box
-   yet; a count everyone has finished shows "Ready to check", and Join stays
-   for everyone, the Owner included.
+2. **Decided here, for Jack to overrule: what "allowed for" means.** Decision
+   5 and the drawings say anything sold, booked in, used, sent or adjusted
+   during a count "is allowed for", but not how. There were two ways:
+   1. *From when the count started.* Expected is the stock when the count
+      began, and applying adds the difference to stock as it is then. Right
+      when a pad is sold after it was scanned; one too few when it was sold
+      between the count starting and the shelf being scanned.
+   2. *From when each product was counted.* Expected is the stock at the
+      moment that product was last counted, and anything after that is
+      added on top. Right in both cases for one counter; when two people
+      count the same product at different times, a sale between their counts
+      can't be placed.
+   **Taken: option 2, at the product's last count** (the lead's default
+   while Jack works without being asked, 28 Oct). The check page names what
+   was allowed for under each product ("1 sold during the count, allowed
+   for"). Stock held for online orders or jobs isn't left out of Expected
+   yet: nothing holds stock.
 3. **Who is counting** on the hub line: "[n] items counted · Jo Taylor and
    Alex Morgan counting", or "everyone has finished" once everyone who joined
    has pressed I’ve finished my part. A count nobody has joined isn't ready.
@@ -3580,7 +3592,35 @@ but no closed order. Decided here, for Jack to overrule:
    their own number. Typing 0, or − at 1, takes the person's line off.
 9. **The below-zero note** reads "Started by [Name]. …" without "from
    Today": Today's Count them isn't built yet.
-10. **Later, not built here:** Recount, Check the count, Count them as none,
-    Apply with Undo, Download the count, held stock left out of Expected
-    (nothing holds stock yet), sizes and colours on a line (WP-1.5), Today's
+10. **Check it and Join** both show to the Owner on a count in progress (the
+    drawing shows Check it on a ready count only); Staff have Join only.
+11. **Recount** takes the line's counts away, shows it on every counter's
+    page as "Recount asked by [Name]" with an empty box, and puts everyone
+    back to counting. A recount nobody did is left as it is when applied.
+12. **Count them as none** counts each product the count covers that nobody
+    counted as 0: the whole shop's products, the category's, or the
+    below-zero list. **An area count has no "Not counted" list**: decision 5
+    compares only what's scanned in an area, and a product doesn't belong to
+    an area. The Not counted line folds open to list them by name.
+13. **"Apply to [n] products"** counts the products that differ; applying
+    works the differences out again at that moment, under lock, so a count
+    or sale since the page loaded is included. A count is applied once;
+    counting, joining or applying again afterwards is refused.
+14. **Undo** is in the dark "Count applied" bar straight after applying, as
+    drawn, and stays until the page is left (Jack's "don't close things by
+    themselves"). Opened later from Finished counts, the page has no Undo.
+    Undo takes each change off with a "Count undone" history line and puts
+    the count back to checking.
+15. **Finished counts** (Owner only, as they carry costs): the last 20,
+    "Applied [date] by [Name] · [n] products changed · £[value] under, at
+    cost", with Open ("Open the whole-shop count from [date]").
+16. **Download the count** is a spreadsheet (CSV): product, supplier code,
+    expected, counted, difference, at cost.
+17. **A product's history** reads "Counted" with the note "Stock take of
+    [Area] · counted [n], expected [n] · counted by [Name]" and "applied by
+    [Name]"; the line doesn't link to the count yet.
+18. **On a phone**, the differences show the product and its difference
+    only, as drawn; Recount is on the tablet and computer layouts.
+19. **Later, not built here:** held stock left out of Expected (nothing
+    holds stock yet), sizes and colours on a line (WP-1.5), Today's
     below-zero line, and sending stock to another shop.

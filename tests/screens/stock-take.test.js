@@ -15,7 +15,16 @@ const PADS = { id: 11, sku: 'B05S-RX', barcode: '4524667000001', name: 'Shimano 
 const MECH = { id: 12, sku: '[Supplier code]', barcode: null, name: '[Product]', category: 'Drivetrain › Derailleurs', stockQty: -1 };
 const STARTED = '2026-09-01T09:30:00.000Z';
 const take = (over) => ({ id: 5, kind: 'area', target: '[Area]', label: '[Area]', startedAt: STARTED, startedBy: 'Jack Lewis', counting: ['Jo Taylor', 'Alex Morgan'], finished: [], itemsCounted: 3, everyoneFinished: false, ...over });
-const HUB = { canStart: true, areasUsed: ['[Area]', '[Area 2]'], inProgress: [take(), take({ id: 6, label: 'Whole shop', kind: 'whole_shop', target: '', counting: [], finished: ['Jo Taylor'], itemsCounted: 9, everyoneFinished: true })] };
+// Applied on the pinned day, as the drawings' "[date]".
+const APPLIED = { ...take({ id: 6, kind: 'whole_shop', target: '', label: 'Whole shop' }), status: 'applied', appliedAt: STARTED, appliedBy: 'Jack Lewis', productsChanged: 1, valuePence: -2800 };
+const ROW = (over) => ({ productId: 11, name: 'Shimano brake pads', sku: 'B05S-RX', expected: 6, counted: 3, difference: -3, costPence: 1400, valuePence: -4200, byCounter: [{ name: 'Jo Taylor', qty: 2 }, { name: 'Alex Morgan', qty: 1 }], allowedFor: [{ kind: 'sold', change: -1 }], ...over });
+const CHECK = {
+  productsCounted: 3, productsMatching: 1, productsDiffering: 2, valuePence: -2800,
+  rows: [ROW(), ROW({ productId: 12, name: '[Product]', sku: '[Supplier code]', expected: -1, counted: 0, difference: 1, valuePence: 1400, byCounter: [{ name: 'Jo Taylor', qty: 0 }], allowedFor: [] })],
+  recountAsked: [{ productId: 13, name: '[Product 2]', sku: null, askedBy: 'Jack Lewis' }],
+  notCounted: { products: 2, expected: 5, list: [{ productId: 14, name: '[Product 3]', sku: null }, { productId: 15, name: '[Product 4]', sku: null }] },
+};
+const HUB = { canStart: true, areasUsed: ['[Area]', '[Area 2]'], inProgress: [take(), take({ id: 6, label: 'Whole shop', kind: 'whole_shop', target: '', counting: [], finished: ['Jo Taylor'], itemsCounted: 9, everyoneFinished: true })], finished: [APPLIED] };
 
 let current;
 afterEach(async () => {
@@ -31,7 +40,7 @@ afterEach(async () => {
 
 // The server, pretended: a take's page holds this person's lines, and counts
 // change them as the real one does.
-async function open(path, { me = OWNER, hub = HUB, page, countReply } = {}) {
+async function open(path, { me = OWNER, hub = HUB, page, countReply, checked = CHECK, product } = {}) {
   const calls = [];
   const realFetch = globalThis.fetch;
   let mine = [...(page?.mine ?? [])];
@@ -48,7 +57,8 @@ async function open(path, { me = OWNER, hub = HUB, page, countReply } = {}) {
       return reply(200, [PADS, MECH].filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))));
     }
     if (u.pathname === '/api/categories') return reply(200, ['Brakes', 'Drivetrain', 'Drivetrain › Derailleurs']);
-    if (u.pathname === '/api/stock-takes' && method === 'GET') return reply(200, { ...hub, canStart: me.isOwner });
+    if (u.pathname === '/api/stock-takes' && method === 'GET') return reply(200, me.isOwner ? hub : { ...hub, canStart: false, finished: undefined });
+    if (product && u.pathname === `/api/products/${product.id}`) return reply(200, product);
     if (u.pathname === '/api/stock-takes' && method === 'POST') return reply(201, take({ id: 8, kind: body.kind, target: body.target ?? '', label: body.target ?? 'Whole shop' }));
     const m = u.pathname.match(/^\/api\/stock-takes\/(\d+)(?:\/(\w+))?$/);
     if (m) {
@@ -65,6 +75,9 @@ async function open(path, { me = OWNER, hub = HUB, page, countReply } = {}) {
         if (stillToFind) stillToFind = stillToFind.filter((s) => s.productId !== p.id);
         return reply(200, { productId: p.id, name: p.name, sku: p.sku, qty });
       }
+      if (m[2] === 'check') return reply(200, { ...take({ id: Number(m[1]) }), ...checked });
+      if (m[2] === 'apply') return reply(200, { ...take({ id: Number(m[1]) }), status: 'applied', appliedAt: STARTED, appliedBy: 'Jack Lewis', productsChanged: 2, valuePence: -2800 });
+      if (m[2] === 'undo') return reply(200, take({ id: Number(m[1]) }));
       return reply(200, { ok: true });
     }
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -152,7 +165,7 @@ test('Start a count: a category, picked by searching', async () => {
   fireEvent.click(dialog.getByRole('radio', { name: 'A category' }));
   assert.ok(dialog.getByText('Everything in this category — and nothing else — is compared.'));
   fireEvent.change(dialog.getByRole('combobox', { name: 'Which category' }), { target: { value: 'derail' } });
-  fireEvent.click(await dialog.findByRole('option', { name: 'Drivetrain › Derailleurs' }));
+  fireEvent.click(await dialog.findByRole('option', { name: 'Drivetrain › Derailleurs' }, { timeout: 5000 }));
   assert.equal(dialog.getByRole('combobox', { name: 'Which category' }).value, 'Drivetrain › Derailleurs');
   fireEvent.click(dialog.getByRole('button', { name: 'Start the count' }));
   await waitFor(r, () => posts(r.calls, '/api/stock-takes').length === 1);
@@ -242,4 +255,113 @@ test('below zero: what’s still to find, by name, until it’s counted', async 
   await waitFor(r, () => card.queryByRole('heading', { level: 3, name: 'Still to find · 1' }) !== null);
   assert.ok(card.getByRole('heading', { level: 3, name: 'Counted' }));
   assert.ok(!document.body.textContent.includes('-1'), 'blind');
+});
+
+// ---- Checking and applying (tk-hub's Check it and Finished counts, tk-diff, tk-applied) ----
+
+test('the Owner has Check it on a count in progress, and Finished counts with Open', async () => {
+  const { ui, within } = await open('/workshop/stocktake');
+  const list = within(await ui.findByRole('list', { name: 'Counts in progress' }));
+  assert.equal(list.getByRole('link', { name: 'Check the count of [Area]' }).getAttribute('href'), '/workshop/stocktake/5/check');
+  const done = within(ui.getByRole('list', { name: 'Finished counts' }));
+  const [row] = done.getAllByRole('listitem');
+  assert.match(row.textContent, /Whole shop/);
+  assert.match(row.textContent, /Applied Tue 1 Sep by Jack Lewis · 1 product changed · £28\.00 under, at cost/);
+  assert.equal(done.getByRole('link', { name: 'Open the whole-shop count from Tue 1 Sep' }).getAttribute('href'), '/workshop/stocktake/6/applied');
+});
+
+test('Staff have neither Check it nor Finished counts', async () => {
+  const { ui } = await open('/workshop/stocktake', { me: JO });
+  await ui.findByRole('list', { name: 'Counts in progress' });
+  assert.ok(ui.queryByRole('link', { name: 'Check the count of [Area]' }) === null);
+  assert.ok(ui.queryByRole('region', { name: 'Finished counts' }) === null);
+});
+
+test('Check the count: the summary, differences largest first, who counted, what was allowed for', async () => {
+  const r = await open('/workshop/stocktake/5/check');
+  const { ui, within } = r;
+  const card = within(await ui.findByRole('region', { name: 'Check the count of [Area]' }));
+  assert.ok(card.getByText((_, el) => el?.tagName === 'P' && el.textContent === '3 products counted · 1 match · 2 differ · £28.00 under, at cost, in all'));
+  const table = within(card.getByRole('table', { name: 'Differences, largest value first' }));
+  const rows = table.getAllByRole('row').slice(1);
+  assert.equal(rows.length, 3, 'two differences and a recount asked');
+  assert.match(rows[0].textContent, /Shimano brake pads/);
+  assert.match(rows[0].textContent, /1 sold during the count, allowed for/);
+  assert.match(rows[0].textContent, /Jo Taylor 2 \+ Alex Morgan 1/);
+  assert.match(rows[0].textContent, /3 under · £42\.00/);
+  assert.match(rows[1].textContent, /was below zero/);
+  assert.match(rows[1].textContent, /1 over · £14\.00/);
+  assert.match(rows[2].textContent, /\[Product 2\].*Recount asked/);
+  assert.ok(card.getByText('Not counted · 2 products · expected 5 in all'));
+  assert.ok(card.getByText('Products nobody scanned are left as they are.'));
+  assert.ok(card.getByRole('button', { name: 'Apply to 2 products' }));
+});
+
+test('Recount and Count them as none ask the server, then show the count again', async () => {
+  const r = await open('/workshop/stocktake/5/check');
+  const { ui, fireEvent } = r;
+  fireEvent.click(await ui.findByRole('button', { name: 'Ask for Shimano brake pads to be recounted' }));
+  await waitFor(r, () => posts(r.calls, '/recount').length === 1);
+  assert.deepEqual(posts(r.calls, '/recount')[0].body, { productId: 11 });
+  fireEvent.click(ui.getByRole('button', { name: 'Count them as none' }));
+  await waitFor(r, () => posts(r.calls, '/none').length === 1);
+  await waitFor(r, () => r.calls.filter((c) => c.url.endsWith('/check')).length >= 3);
+});
+
+test('an area count has no “not counted” list', async () => {
+  const { ui } = await open('/workshop/stocktake/5/check', { checked: { ...CHECK, notCounted: null } });
+  await ui.findByRole('button', { name: 'Apply to 2 products' });
+  assert.ok(ui.queryByRole('button', { name: 'Count them as none' }) === null);
+  assert.ok(ui.queryByText(/^Not counted/) === null);
+});
+
+test('Apply goes to Count applied, with Undo in its bar; Undo takes it back to checking', async () => {
+  const r = await open('/workshop/stocktake/5/check');
+  const { ui, within, fireEvent } = r;
+  fireEvent.click(await ui.findByRole('button', { name: 'Apply to 2 products' }));
+  await waitFor(r, () => window.location.pathname === '/workshop/stocktake/5/applied');
+  const bar = await ui.findByText('Count applied · [Area] · 2 products corrected');
+  const card = within(await ui.findByRole('region', { name: 'Count applied' }));
+  assert.ok(card.getByText('[Area] · stock corrected for 2 products'));
+  assert.ok(card.getByText(/^Each change is in its product’s stock history as “Counted”/));
+  assert.equal(card.getByRole('link', { name: 'Download the count' }).getAttribute('href'), '/api/stock-takes/5/download');
+  fireEvent.click(within(bar.closest('[role="status"]')).getByRole('button', { name: 'Undo' }));
+  await waitFor(r, () => posts(r.calls, '/undo').length === 1);
+  await waitFor(r, () => window.location.pathname === '/workshop/stocktake/5/check');
+  await ui.findByRole('button', { name: 'Apply to 2 products' });
+});
+
+test('Count applied opened later has Download but no Undo bar', async () => {
+  const { ui, within } = await open('/workshop/stocktake/6/applied', { page: { ...APPLIED } });
+  const card = within(await ui.findByRole('region', { name: 'Count applied' }));
+  assert.ok(card.getByText('Whole shop · stock corrected for 1 product'));
+  assert.ok(ui.queryByRole('button', { name: 'Undo' }) === null);
+});
+
+test('counting: a recount asked shows with no number until it is counted', async () => {
+  const r = await open('/workshop/stocktake/5', { page: { recountAsked: [{ productId: 11, name: 'Shimano brake pads', sku: 'B05S-RX', askedBy: 'Jack Lewis' }] } });
+  const { ui, fireEvent } = r;
+  assert.ok(await ui.findByText(/Recount asked by Jack Lewis/));
+  const box = ui.getByRole('textbox', { name: 'How many: Shimano brake pads' });
+  assert.equal(box.value, '');
+  fireEvent.change(box, { target: { value: '5' } });
+  await waitFor(r, () => posts(r.calls, '/counts').length === 1);
+  assert.deepEqual(posts(r.calls, '/counts')[0].body, { productId: 11, qty: 5 });
+});
+
+test('counting: an applied count can’t be counted any more', async () => {
+  const { ui } = await open('/workshop/stocktake/6', { page: { ...APPLIED } });
+  assert.ok(await ui.findByText('This count has been applied.'));
+  assert.ok(ui.queryByRole('searchbox', { name: 'Scan each item, or type to find it' }) === null);
+});
+
+test('a product’s history says Counted, and who applied it', async () => {
+  const pads = { ...PADS, price: 28, cost: 14, active: true, history: [{ id: 1, type: 'count', change: -2, reason: null, note: 'Stock take of [Area] · counted 4, expected 6 · counted by Jo Taylor', who: 'Jack Lewis', at: STARTED }, { id: 2, type: 'count_undone', change: 2, reason: null, note: 'Undid the stock take of [Area]', who: 'Jack Lewis', at: STARTED }] };
+  const { ui, within } = await open('/workshop/stock/11', { product: pads });
+  const history = within(await ui.findByRole('region', { name: /history/i }));
+  const lines = await history.findAllByRole('listitem');
+  assert.match(lines[0].textContent, /^Counted/);
+  assert.match(lines[0].textContent, /Stock take of \[Area\] · counted 4, expected 6 · counted by Jo Taylor · applied by Jack Lewis/);
+  assert.match(lines[1].textContent, /^Count undone/);
+  assert.match(lines[1].textContent, /Undid the stock take of \[Area\] · Jack Lewis/);
 });
