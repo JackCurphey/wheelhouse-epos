@@ -317,8 +317,8 @@ later packages.
 - **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
 - **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.
 - **`till-setup`** (block 1, Settings page) — its one situation comes with a later package; plus 1 written line.
-- **`till-checkin`** (block 43, PIN pad) — 6 situations: `till-checkin-offline`, `till-checkin-stale`, `till-checkin-workshop`, `till-checkin-workshop-names`, `workshop-working-pills`, `till-pin-wrong`; plus 6 written lines.
-- **`pin-change`** (block 43, PIN pad) — 3 situations: `pin-first`, `pin-cleared`, `till-give-pin`.
+- **`till-checkin`** (block 43, PIN pad) — 8 situations: `till-checkin-offline`, `till-checkin-stale`, `till-checkin-workshop`, `till-checkin-workshop-names`, `workshop-working-pills`, `till-pin-wrong`, `till-serving-menu`, `till-serving-menu-several`; plus 6 written lines.
+- **`pin-change`** (block 43, PIN pad) — 4 situations: `pin-first`, `pin-cleared`, `till-give-pin-pick`, `till-give-pin`.
 - **`cust-signin`** (block 42, Emailed-code sign-in) — no other situations; plus 2 written lines.
 - **`cust-code`** (block 42, Emailed-code sign-in) — 1 situation: `cust-code-expired`.
 - Added to the `set-till-quick` board (built in WP-1.3) — plus 2 written lines (trust PIN, and when a workshop computer goes back to the start).
