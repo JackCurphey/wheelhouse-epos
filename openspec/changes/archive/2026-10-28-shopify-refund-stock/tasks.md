@@ -6,11 +6,11 @@
 - [x] 1.3a Self-review: one transaction holds several rows, so a two-line refund could deadlock with a sale. Test first (a refund listing the higher id first, while another transaction holds the lower then takes the higher), watched failing (Postgres deadlock, 500); the refund takes rows in product id order; removing the sort turns it red again
 - [x] 1.4 Search `server/` for every absolute `stock_qty` write; record what was left and why in `design.md`
 - [x] 1.5 The touched tests, the Shopify tests, sales-concurrency, `npm test`, lint and `tsc`
-- [ ] 1.6 Self-review and `/review` (server.js, stock); CI by hand on the branch; archive as the last commit
+- [x] 1.6 Self-review and `/review` (server.js, stock); CI by hand on the branch; archive as the last commit
   - [x] /review 28 Oct: nothing blocking; fixes done (tasks 2.1 to 2.5)
   - [x] Second /review 28 Oct: nothing serious; fixes done (tasks 3.1 to 3.4)
-  - [ ] CI by hand on the branch
-  - [ ] Archive as the last commit
+  - [x] CI by hand on the branch
+  - [x] Archive as the last commit
 
 ## 2. Fixes from /review, 28 Oct
 
