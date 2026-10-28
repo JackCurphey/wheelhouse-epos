@@ -1110,6 +1110,13 @@ silent:
     so today only team members made before sign-ins were linked (migration
     013's roster-only staff) have no sign-in. Until Staff and roles, the menu
     mostly gives first PINs to people with a sign-in who haven't got one.
+11. **Close without giving a PIN withdraws the PIN shown** (review, 28 Oct),
+    so it can't be kept afterwards; Escape does the same. *Pattern:* the
+    drawing's own words, "Close without giving a PIN".
+12. **The Serving menu by keyboard**: the first item has the focus, also in
+    the phone's sheet; the arrows move it; Escape and Tab close the menu with
+    the focus back on Serving (review, 28 Oct). *Pattern:* the diary's job
+    menu, except Tab, which there leaves the focus where the page puts it.
 
 ## Decided here, for Jack to overrule
 

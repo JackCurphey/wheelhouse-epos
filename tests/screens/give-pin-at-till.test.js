@@ -43,6 +43,7 @@ async function open({ givePin = [NAME], offers = ['7305', '4182'], keep = null, 
     if (u.pathname === '/api/till-checkin/end') { server.serving = null; return reply(200, { serving: null }); }
     if (u.pathname === '/api/till-checkin') return reply(200, { serving: server.serving, checkedInToday: [JACK_SERVING], givePin: server.serving ? server.givePin : [] });
     const give = u.pathname.match(/^\/api\/till-checkin\/give-pin\/(\d+)(\/offer)?$/);
+    if (give && give[2] && method === 'DELETE') return reply(200, { ok: true });
     if (give && give[2]) return reply(201, { pin: server.offers.shift() });
     if (give) {
       const k = keep ?? { status: 200, body: { serving: null } };
@@ -69,6 +70,7 @@ async function open({ givePin = [NAME], offers = ['7305', '4182'], keep = null, 
   return { ...rtl, ui, calls, server };
 }
 const posts = (t, path) => t.calls.filter((c) => c.method === 'POST' && c.url === path);
+const withdrawn = (t, id) => t.calls.filter((c) => c.method === 'DELETE' && c.url === `/api/till-checkin/give-pin/${id}/offer`).length;
 const serving = (t) => t.ui.findByRole('button', { name: 'Serving: Jack Lewis' });
 
 test('with nobody to give a PIN to, Serving switches at once, as built', async () => {
@@ -150,6 +152,8 @@ test('Close without giving a PIN gives nobody a PIN, and the Owner is still serv
   t.fireEvent.click(t.within(pop).getByRole('button', { name: 'Close without giving a PIN' }));
   await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog', { name: '[Name]’s till PIN' }) === null));
   assert.equal(posts(t, '/api/till-checkin/give-pin/31').length, 0);
+  // The PIN shown is withdrawn, so nobody can keep it afterwards (review, 28 Oct).
+  await t.waitFor(() => assert.equal(withdrawn(t, 31), 1));
   assert.ok(await serving(t));
   assert.ok(t.ui.getByRole('region', { name: 'Sale' }));
 });
@@ -167,6 +171,7 @@ test('Escape closes the PIN pop-up as its ✕ does', async () => {
   await t.waitFor(() => assert.ok(document.activeElement === button, 'the focus is back on Serving'));
   assert.ok(t.ui.queryByRole('dialog', { name: '[Name]’s till PIN' }) === null);
   assert.equal(posts(t, '/api/till-checkin/give-pin/31').length, 0);
+  await t.waitFor(() => assert.equal(withdrawn(t, 31), 1));
 });
 
 test('Switch who’s serving from the menu goes back to Enter your PIN', async () => {
@@ -192,6 +197,17 @@ test('the menu by keyboard: focus on the first item, arrows move, Escape back to
   // Compared with ===: assert.equal on a DOM node hangs on failure (CLAUDE.md).
   assert.ok(document.activeElement === button, 'the focus is back on Serving');
   assert.equal(button.getAttribute('aria-expanded'), 'false');
+});
+
+test('Tab leaves the menu with the focus back on Serving', async () => {
+  const t = await open();
+  const button = await serving(t);
+  t.fireEvent.click(button);
+  const menu = t.ui.getByRole('menu', { name: 'Serving: Jack Lewis' });
+  await t.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Switch who’s serving'));
+  t.fireEvent.keyDown(menu, { key: 'Tab' });
+  assert.ok(t.ui.queryByRole('menu') === null);
+  assert.ok(document.activeElement === button, 'the focus is back on Serving');
 });
 
 test('a click away closes the menu', async () => {

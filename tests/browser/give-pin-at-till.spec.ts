@@ -54,6 +54,18 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(menu.getByRole('menuitem', { name: 'Switch who’s serving' })).toBeVisible();
     const someone = menu.getByRole('menuitem', { name: 'Give someone their PIN' });
     await expect(someone).toContainText('2 people have no PIN yet');
+    // By keyboard (review, 28 Oct): the first item has the focus, also in the
+    // phone's sheet, and the arrows move it.
+    await expect(menu.getByRole('menuitem', { name: 'Switch who’s serving' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(someone).toBeFocused();
+    if (viewport.width >= 768) {
+      // Tab leaves the menu back on Serving, not on the page.
+      await page.keyboard.press('Tab');
+      await expect(menu).toHaveCount(0);
+      await expect(serving).toBeFocused();
+      await serving.click();
+    }
     expect(await fits(page)).toBe(true);
     await someone.click();
 

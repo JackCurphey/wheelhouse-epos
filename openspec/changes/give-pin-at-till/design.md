@@ -20,6 +20,9 @@ cookie (`wh_till_checkin`). No migration: the PIN offer columns are 097's.
   Owner; 404 for nobody in this shop or someone not active; 409 `has_pin`
   for someone who has a PIN; 429 `slow_down` after 10 offers a sign-in in 10
   minutes (the same count as Your settings').
+- `DELETE /api/till-checkin/give-pin/:id/offer` → 200 `{ ok: true }`: Close
+  without giving a PIN; the PIN shown is withdrawn and can't be kept. The
+  same refusals as the offer, without the limit (review, 28 Oct).
 - `POST /api/till-checkin/give-pin/:id` `{ pin }` → 200 `{ serving: null }`:
   keeps the PIN offered to that person in the last 15 minutes, under the
   shop's PIN lock; then ends this browser's check-in and clears its cookie.

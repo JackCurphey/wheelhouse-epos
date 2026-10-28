@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { Lock, User } from 'lucide-react';
+import { apiMutate } from '@/lib/api/client.ts';
 import { useCheckinActions, type CheckedIn, type GiveTo } from '@/lib/till-checkin.ts';
 import { Dialog } from '@/components/ui/dialog.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
@@ -82,7 +83,11 @@ export function ServingMenuButton({ serving, givePin, onFailed }: { serving: Che
           offerPath={`/api/till-checkin/give-pin/${open.person.id}/offer`}
           keepPath={`/api/till-checkin/give-pin/${open.person.id}`}
           onKept={() => { setOpen(null); gaveAPin(); }}
-          onClose={() => close(true)}
+          onClose={() => {
+            // Close without giving a PIN: the PIN shown is withdrawn (review, 28 Oct).
+            apiMutate(`/api/till-checkin/give-pin/${open.person.id}/offer`, {}, { method: 'DELETE' }).catch(() => {});
+            close(true);
+          }}
         />
       ) : null}
     </div>
@@ -105,7 +110,12 @@ function MenuItem({ label, sub, icon, onClick }: { label: string; sub: string; i
 /** The menu's items: the first takes the focus; arrows, Home and End move it; Escape closes back to Serving. */
 function MenuList({ label, onClose, className, children }: { label: string; onClose: (refocus: boolean) => void; className: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus(); }, []);
+  // After this render's effects, so the phone sheet's showModal() (its
+  // parent's effect, which runs later) can't take the focus to Close (review, 28 Oct).
+  useEffect(() => {
+    const t = setTimeout(() => ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus(), 0);
+    return () => clearTimeout(t);
+  }, []);
   function onKey(e: KeyboardEvent<HTMLDivElement>) {
     const items = [...(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
     const i = items.indexOf(document.activeElement as HTMLElement);
@@ -119,7 +129,9 @@ function MenuList({ label, onClose, className, children }: { label: string; onCl
       e.preventDefault();
       onClose(true);
     } else if (e.key === 'Tab') {
-      onClose(false);
+      // Back on Serving, rather than lost on the page (review, 28 Oct).
+      e.preventDefault();
+      onClose(true);
     }
   }
   return <div ref={ref} role="menu" aria-label={label} onKeyDown={onKey} className={className}>{children}</div>;
