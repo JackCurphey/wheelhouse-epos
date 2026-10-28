@@ -3,8 +3,10 @@
 // decisions 4, 6, 7, 8 and 9; roles and switches 5). Wheelhouse picks each
 // person's four-digit PIN, nobody else at the shop has it, and only its hash
 // is kept; the Owner clears someone else's; typing a PIN alone checks a
-// person in on the till's browser for the shop's day. Staff routes: they run
-// with the shop's row-level security already bound. No PIN is ever logged.
+// person in on the till's browser for the shop's day; and the Owner, checked
+// in at the till, gives a PIN to someone with none (openspec/changes/give-pin-at-till).
+// Staff routes: they run with the shop's row-level security already bound.
+// No PIN is ever logged.
 import { randomInt } from 'node:crypto';
 import { TeamError, attachRoles } from '../team.js';
 import { dbExec, prepare } from '../db.js';
@@ -68,6 +70,49 @@ async function teamMemberForPin(login, shopId) {
   return teamMemberOf(login);
 }
 
+// Offers a team member a PIN nobody else at the shop has, kept only hashed
+// until it is kept; each offer replaces the last ("Give me a different one").
+async function offerPin(employeeId) {
+  const pin = await pickPin((p) => takenByOthers(p, employeeId));
+  await prepare('UPDATE employees SET pin_offer_hash = ?, pin_offer_at = now() WHERE id = ?').run(await hashPinAsync(pin), employeeId);
+  return pin;
+}
+
+const NO_OFFER = { error: 'Ask for a new PIN', code: 'no_offer' };
+const HAS_PIN = { error: 'They already have a PIN', code: 'has_pin' };
+
+/**
+ * Keep this PIN: only the one offered, within 15 minutes, and only if nobody
+ * kept it meanwhile; the old PIN stops working. One at a time per shop, so
+ * two people can't keep the same PIN. `firstOnly` (giving a PIN at the till)
+ * also refuses someone who got a PIN meanwhile. Returns null once kept, or
+ * the refusal as [status, body].
+ */
+async function keepPin(employeeId, pin, { firstOnly = false } = {}) {
+  if (typeof pin !== 'string' || !FOUR_DIGITS.test(pin)) return [400, NO_OFFER];
+  await dbExec('BEGIN');
+  try {
+    await prepare("SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, ?::int)").get(PIN_LOCK);
+    const offer = await prepare(
+      `SELECT pin_hash, pin_offer_hash FROM employees WHERE id = ? AND pin_offer_at > now() - interval '${OFFER_MINUTES} minutes'`
+    ).get(employeeId);
+    let refusal = null;
+    if (firstOnly && offer?.pin_hash) refusal = [409, HAS_PIN];
+    else if (!offer?.pin_offer_hash || !(await verifyPinAsync(pin, offer.pin_offer_hash))) refusal = [400, NO_OFFER];
+    else if (await takenByOthers(pin, employeeId)) refusal = [409, { error: 'Someone has just been given that PIN. Ask for a different one.', code: 'pin_taken' }];
+    if (refusal) {
+      await dbExec('ROLLBACK');
+      return refusal;
+    }
+    await prepare('UPDATE employees SET pin_hash = pin_offer_hash, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ?').run(employeeId);
+    await dbExec('COMMIT');
+    return null;
+  } catch (err) {
+    await dbExec('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
 /**
  * The person checked in on this browser, or null: the cookie's check-in,
  * made under this same sign-in, today, not ended, by someone still active.
@@ -84,6 +129,42 @@ export async function currentCheckin(req) {
   ).get(hashLinkCode(token), ctx.login.id, await today());
   return row ?? null;
 }
+
+// Who may give PINs at the till: the person checked in on this browser by
+// PIN (not the browser's sign-in), if they are the Owner. Manager and "Give
+// everything a Manager can do" aren't stored yet; they join here with roles
+// (WP-1.1; decided-while-building.md, 28 Oct, giving a PIN at the till).
+async function giverHere(req) {
+  const mine = await currentCheckin(req);
+  if (!mine) return null;
+  const owner = await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(mine.employee_id);
+  return owner ? mine : null;
+}
+
+// The people the giver can give a PIN to: active, no PIN, never the giver
+// and never the Owner (whose PIN stays the Owner's: signing in, 5 Oct).
+async function peopleWithNoPin(giver) {
+  const rows = await prepare(
+    `SELECT e.id, e.name, e.is_mechanic, l.id AS login_id FROM employees e LEFT JOIN logins l ON l.employee_id = e.id
+      WHERE e.active = 1 AND e.pin_hash IS NULL AND e.id <> ? AND (l.id IS NULL OR l.is_owner = false)
+      ORDER BY e.name, e.id`
+  ).all(giver.employee_id);
+  return rows.map((r) => ({ id: r.id, name: r.name, role: r.is_mechanic ? 'Mechanic' : 'Staff', tillOnly: r.login_id === null }));
+}
+
+// The person a PIN is given to, or the refusal as [status, body].
+async function pinTarget(giver, id) {
+  if (id === giver.employee_id) return [403, { error: 'Nobody gives their own PIN', code: 'own_pin' }];
+  const person = await prepare(
+    `SELECT e.id, e.pin_hash, EXISTS (SELECT 1 FROM logins l WHERE l.employee_id = e.id AND l.is_owner = true) AS is_owner
+       FROM employees e WHERE e.id = ? AND e.active = 1`
+  ).get(id);
+  if (!person) return [404, { error: 'Team member not found' }];
+  if (person.is_owner) return [403, { error: "The owner's PIN is the owner's own", code: 'owner_pin' }];
+  if (person.pin_hash) return [409, HAS_PIN];
+  return null;
+}
+const NOT_GIVER = { error: 'Only the owner, checked in at the till, can give a PIN', code: 'not_giver' };
 
 const checkinCookie = (req, token, maxAge) =>
   `${CHECKIN_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${isHttpsRequest(req) ? '; Secure' : ''}`;
@@ -142,44 +223,22 @@ export function register(route) {
     if (!offers.take(String(ctx.login.id))) return sendJson(res, 429, SLOW_DOWN);
     const me = await teamMemberForPin(ctx.login, shopId);
     if (!me) return sendJson(res, 409, { error: 'Ask the owner to add you to the team first', code: 'no_team_member' });
-    const pin = await pickPin((p) => takenByOthers(p, me.id));
-    await prepare('UPDATE employees SET pin_offer_hash = ?, pin_offer_at = now() WHERE id = ?').run(await hashPinAsync(pin), me.id);
+    const pin = await offerPin(me.id);
     // Shown once: never kept by the browser or anything between.
     res.setHeader('Cache-Control', 'no-store');
     sendJson(res, 201, { pin });
   });
 
-  // Keep this PIN: only the one offered, within 15 minutes, and only if
-  // nobody kept it meanwhile. The old PIN stops working.
+  // Keep this PIN (keepPin's rules).
   // screens: pin-change, pin-first
   route('POST', '/api/your-settings/till-pin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const body = await readJsonBody(req);
-    const pin = body?.pin;
     const me = await teamMemberOf(ctx.login);
-    const noOffer = () => sendJson(res, 400, { error: 'Ask for a new PIN', code: 'no_offer' });
-    if (typeof pin !== 'string' || !FOUR_DIGITS.test(pin) || !me) return noOffer();
-    await dbExec('BEGIN');
-    try {
-      await prepare("SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, ?::int)").get(PIN_LOCK);
-      const offer = await prepare(
-        `SELECT pin_offer_hash FROM employees WHERE id = ? AND pin_offer_at > now() - interval '${OFFER_MINUTES} minutes'`
-      ).get(me.id);
-      if (!offer?.pin_offer_hash || !(await verifyPinAsync(pin, offer.pin_offer_hash))) {
-        await dbExec('ROLLBACK');
-        return noOffer();
-      }
-      if (await takenByOthers(pin, me.id)) {
-        await dbExec('ROLLBACK');
-        return sendJson(res, 409, { error: 'Someone has just been given that PIN. Ask for a different one.', code: 'pin_taken' });
-      }
-      await prepare('UPDATE employees SET pin_hash = pin_offer_hash, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ?').run(me.id);
-      await dbExec('COMMIT');
-    } catch (err) {
-      await dbExec('ROLLBACK').catch(() => {});
-      throw err;
-    }
+    if (!me) return sendJson(res, 400, NO_OFFER);
+    const refused = await keepPin(me.id, body?.pin);
+    if (refused) return sendJson(res, ...refused);
     sendJson(res, 200, { hasPin: true });
   });
 
@@ -201,8 +260,9 @@ export function register(route) {
     sendJson(res, 200, { ok: true });
   });
 
-  // Who is serving on this browser, and who has checked in today (till-checkin).
-  // screens: till-checkin
+  // Who is serving on this browser, who has checked in today (till-checkin),
+  // and who the Owner serving here can give a PIN to.
+  // screens: till-checkin, till-serving-menu, till-serving-menu-several
   route('GET', '/api/till-checkin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
@@ -211,9 +271,12 @@ export function register(route) {
       `SELECT DISTINCT e.id, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
         WHERE c.day = ? AND e.active = 1 ORDER BY e.name, e.id`
     ).all(await today());
+    // Only for the Owner serving here: who has no PIN (till-serving-menu).
+    const giver = mine ? await giverHere(req) : null;
     sendJson(res, 200, {
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
       checkedInToday: people.map((p) => ({ id: p.id, name: p.name })),
+      givePin: giver ? await peopleWithNoPin(giver) : [],
     });
   });
 
@@ -256,11 +319,51 @@ export function register(route) {
   route('POST', '/api/till-checkin/end', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-    const token = parseCookies(req)[CHECKIN_COOKIE];
-    if (token && /^[0-9a-f]{64}$/.test(token)) {
-      await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND login_id = ? AND ended_at IS NULL').run(hashLinkCode(token), ctx.login.id);
-    }
-    res.setHeader('Set-Cookie', checkinCookie(req, '', 0));
+    await endCheckinHere(req, res, ctx);
     sendJson(res, 200, { serving: null });
   });
+
+  // "[Name]’s till PIN" at the till: the Owner checked in here offers a PIN
+  // to someone with none, the screen turned to them (Jack's answers 28 Oct,
+  // 3 to 5). Shown once, only in this reply; never logged.
+  // screens: till-give-pin, till-give-pin-pick
+  route('POST', '/api/till-checkin/give-pin/:id/offer', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const giver = await giverHere(req);
+    if (!giver) return sendJson(res, 403, NOT_GIVER);
+    // The same count as Your settings' offers, for this sign-in.
+    if (!offers.take(String(ctx.login.id))) return sendJson(res, 429, SLOW_DOWN);
+    const id = Number(params.id);
+    const refused = await pinTarget(giver, id);
+    if (refused) return sendJson(res, ...refused);
+    const pin = await offerPin(id);
+    res.setHeader('Cache-Control', 'no-store');
+    sendJson(res, 201, { pin });
+  });
+
+  // Keep this PIN, given at the till: keepPin's rules, for someone who still
+  // has none; then the till goes back to Enter your PIN, ready for them.
+  // screens: till-give-pin, till-checkin
+  route('POST', '/api/till-checkin/give-pin/:id', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const giver = await giverHere(req);
+    if (!giver) return sendJson(res, 403, NOT_GIVER);
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    const refused = (await pinTarget(giver, id)) ?? (await keepPin(id, body?.pin, { firstOnly: true }));
+    if (refused) return sendJson(res, ...refused);
+    await endCheckinHere(req, res, ctx);
+    sendJson(res, 200, { serving: null });
+  });
+}
+
+// Switch: this browser's check-in ends, and its cookie goes.
+async function endCheckinHere(req, res, ctx) {
+  const token = parseCookies(req)[CHECKIN_COOKIE];
+  if (token && /^[0-9a-f]{64}$/.test(token)) {
+    await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND login_id = ? AND ended_at IS NULL').run(hashLinkCode(token), ctx.login.id);
+  }
+  res.setHeader('Set-Cookie', checkinCookie(req, '', 0));
 }
