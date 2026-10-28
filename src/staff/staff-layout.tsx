@@ -9,6 +9,7 @@ import { NavIcon } from './nav-icon.tsx';
 import { HeaderSlotContext } from './header-slot.ts';
 import { HeaderSearch } from './header-search.tsx';
 import { SignedOut } from './signed-out.tsx';
+import { FirstPinPrompt } from '@/screens/your-settings/till-pin.tsx';
 
 /**
  * The frame every staff page sits in (journey A; Workshop day decision 68):
@@ -329,6 +330,8 @@ export function StaffLayout() {
           </HeaderSlotContext.Provider>
         </main>
       </div>
+      {/* A first sign-in, or the first after a PIN was cleared, opens Your till PIN by itself (pin-first, pin-cleared). */}
+      <FirstPinPrompt />
       {menuOpen ? (
         <PhoneMenu user={user} shopName={shop.name} role={role} roleName={roleName} onClose={closeMenu} />
       ) : null}

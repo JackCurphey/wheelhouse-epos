@@ -73,7 +73,7 @@ export function PinOfferDialog({ title, intro, foot, pinWords, closeLabel, offer
   }
 
   return (
-    <Dialog key={opened} open dismissOnBackdrop={false} aria-labelledby="pin-title"
+    <Dialog key={opened} open dismissOnBackdrop={false} aria-labelledby="pin-title" aria-describedby="pin-intro"
       onOpenChange={(o) => { if (!o) { if (closeLabel) onClose(); else setOpened((n) => n + 1); } }}
       onCancel={closeLabel ? undefined : (e) => e.preventDefault()}
       className="md:max-w-[440px] max-md:h-full max-md:max-h-none max-md:w-full max-md:max-w-none max-md:rounded-none max-md:bg-[var(--wh-bg)]">
@@ -86,7 +86,7 @@ export function PinOfferDialog({ title, intro, foot, pinWords, closeLabel, offer
         ) : null}
       </div>
       <div className="flex flex-col items-center gap-5 bg-[var(--wh-bg)] px-5 pt-6 pb-7 text-center md:px-7">
-        <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">{intro}</p>
+        <p id="pin-intro" className="m-0 text-sm leading-normal text-[var(--wh-muted)]">{intro}</p>
         <div className="flex min-h-[72px] gap-2.5">
           {/* The PIN read out as words; the boxes are for the eye (review, 28 Oct, item 7). */}
           <span className="sr-only">{pin ? `${pinWords} ${pin.split('').join(' ')}` : 'Picking a PIN'}</span>

@@ -22,6 +22,8 @@ test.beforeAll(async () => {
   const made = await staffRequest(server.baseUrl, owner.cookie, '/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } });
   expect(made.status).toBe(201);
   jo = await staffFreshCookie(made.body.loginId);
+  // Not Jo's first sign-in: Your till PIN would open by itself over the page (whos-in-and-first-pin).
+  expect((await staffRequest(server.baseUrl, jo, '/api/your-settings/till-pin/ask', { method: 'POST' })).status).toBe(200);
 });
 
 test.afterAll(async () => {
