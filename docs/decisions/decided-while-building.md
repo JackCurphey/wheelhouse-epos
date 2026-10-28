@@ -1051,6 +1051,15 @@ silent:
 11. **The pay box's "Who’s serving?" no longer comes up at the till**: the
     person checked in is serving. *Pattern:* signing in 4, the PIN says who
     you are.
+12. **A sale that's open stays on the till** (review, 28 Oct): if the
+    check-in ends mid-sale (the day ends, or the PIN is cleared) or the till
+    can't re-check who is serving, the sale and its pay box stay, still under
+    the name they started with, and Enter your PIN comes once the sale is
+    paid or cleared. The Serving button and the float check wait for a
+    check-in. *Pattern:* the pay box's own "can't close while saving".
+13. **The PIN pad answers keys only when nothing else has them**: not in a
+    box like the header search, not with Ctrl, Alt or Cmd held, and not a key
+    held down. *Pattern:* none built; the review's item 2, 28 Oct.
 
 ## Decided here, for Jack to overrule
 

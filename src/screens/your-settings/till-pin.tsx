@@ -57,11 +57,17 @@ function PinDialog({ first, onClose }: { first: boolean; onClose: () => void }) 
   const firstName = session.status === 'signed-in' ? session.user.name.split(' ')[0] : '';
 
   // A PIN Wheelhouse picked, shown once: one on opening, another for "Give me a different one".
+  // One at a time: another can't be asked for until this one comes (review, 28 Oct, item 5).
+  const [asking, setAsking] = useState(true);
+  const asked = useRef(true);
   const ask = () => apiMutate<{ pin: string }>('/api/your-settings/till-pin/offer', {}).then(
     (r) => setPin(r.pin),
     (err) => setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t pick a PIN. Try again in a moment.'),
-  );
+  ).finally(() => { asked.current = false; setAsking(false); });
   function offer() {
+    if (asked.current) return;
+    asked.current = true;
+    setAsking(true);
     setError(null);
     setPin(null);
     void ask();
@@ -104,7 +110,9 @@ function PinDialog({ first, onClose }: { first: boolean; onClose: () => void }) 
       </div>
       <div className="flex flex-col items-center gap-5 bg-[var(--wh-bg)] px-5 pt-6 pb-7 text-center md:px-7">
         <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">{intro}</p>
-        <div aria-label={pin ? `New PIN ${pin.split('').join(' ')}` : 'Picking a PIN'} className="flex min-h-[72px] gap-2.5">
+        <div className="flex min-h-[72px] gap-2.5">
+          {/* The PIN read out as words; the boxes are for the eye (review, 28 Oct, item 7). */}
+          <span className="sr-only">{pin ? `New PIN ${pin.split('').join(' ')}` : 'Picking a PIN'}</span>
           {(pin ?? '    ').split('').map((d, i) => (
             <span key={i} aria-hidden="true" className="inline-flex h-[72px] w-[60px] items-center justify-center rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] font-[family-name:var(--wh-font-mono)] text-size-34 text-[var(--wh-ink)]">{d}</span>
           ))}
@@ -112,7 +120,7 @@ function PinDialog({ first, onClose }: { first: boolean; onClose: () => void }) 
         {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
         <div className="flex w-full flex-col gap-2.5">
           <Button ref={keepRef} variant="primary" block disabled={!pin || saving} onClick={() => void keep()}>Keep this PIN</Button>
-          <Button block disabled={saving} onClick={offer}>Give me a different one</Button>
+          <Button block aria-disabled={saving || asking} onClick={() => { if (!saving) offer(); }}>Give me a different one</Button>
           {first ? <Button variant="ghost" block onClick={onClose}>Skip for now</Button> : null}
         </div>
         <span className="text-size-13 text-[var(--wh-muted)]">{foot}</span>

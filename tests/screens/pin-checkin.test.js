@@ -41,12 +41,15 @@ async function open(path, { me = JACK, serving = null, today = [ALEX], checkin =
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/till-checkin/end') { server.serving = null; return reply(200, { serving: null }); }
     if (u.pathname === '/api/till-checkin' && method === 'POST') {
-      const answer = checkin ? checkin(body.pin) : { status: 201, body: { serving: JO } };
+      const answer = checkin ? await checkin(body.pin) : { status: 201, body: { serving: JO } };
       if (answer.status === 201) { server.serving = answer.body.serving; server.today = [...server.today, answer.body.serving]; }
       return reply(answer.status, answer.body);
     }
-    if (u.pathname === '/api/till-checkin') return reply(200, { serving: server.serving, checkedInToday: server.today });
-    if (u.pathname === '/api/your-settings/till-pin/offer') return reply(201, { pin: server.offers.shift() });
+    if (u.pathname === '/api/till-checkin') return server.failCheckin ? reply(500, { error: 'Internal server error' }) : reply(200, { serving: server.serving, checkedInToday: server.today });
+    if (u.pathname === '/api/your-settings/till-pin/offer') {
+      if (server.offerReply) { const r = await server.offerReply(); return reply(r.status, r.body); }
+      return reply(201, { pin: server.offers.shift() });
+    }
     if (u.pathname === '/api/your-settings/till-pin' && method === 'POST') { const k = keep ?? { status: 200, body: { hasPin: true } }; return reply(k.status, k.body); }
     if (u.pathname === '/api/your-settings/till-pin') return reply(200, tillPin);
     if (u.pathname === '/api/your-settings') return reply(200, { accessibility: {} });
@@ -69,13 +72,15 @@ async function open(path, { me = JACK, serving = null, today = [ALEX], checkin =
   return { ...rtl, ui, calls, server };
 }
 const press = (t, name) => t.fireEvent.click(t.ui.getByRole('button', { name }));
+// The dots' status: hidden words a screen reader reads out (review, 28 Oct, item 7).
+const dotsSay = () => document.querySelector('[data-pin-dots]')?.textContent;
 const checkins = (t) => t.calls.filter((c) => c.method === 'POST' && c.url === '/api/till-checkin').map((c) => c.body);
 
 test('nobody serving: the till asks Enter your PIN, with the pad and who’s checked in today', async () => {
   const t = await open('/workshop/till');
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
   assert.ok(t.ui.queryByText('Your PIN checks you in and puts your name on sales and workshop work.'));
-  assert.equal(t.ui.getByRole('status', { name: '0 of 4 digits entered' }).getAttribute('aria-label'), '0 of 4 digits entered');
+  assert.equal(dotsSay(), '0 of 4 digits');
   for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Clear', 'Delete the last digit']) assert.ok(t.ui.getByRole('button', { name: k }), k);
   assert.ok(t.ui.queryByText('Checked in today'));
   assert.ok(t.ui.queryByText('Alex Morgan'));
@@ -89,7 +94,7 @@ test('the fourth digit checks in at once, and the till is Jo’s', async () => {
   const t = await open('/workshop/till');
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
   for (const d of ['7', '3', '0']) press(t, d);
-  assert.ok(t.ui.getByRole('status', { name: '3 of 4 digits entered' }));
+  assert.equal(dotsSay(), '3 of 4 digits');
   assert.deepEqual(checkins(t), [], 'nothing sent before the fourth digit');
   press(t, '5');
   await t.waitFor(() => assert.deepEqual(checkins(t), [{ pin: '7305' }]));
@@ -101,13 +106,13 @@ test('typed on the keyboard too, with Delete and Clear', async () => {
   const t = await open('/workshop/till');
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
   for (const key of ['7', '3']) t.fireEvent.keyDown(window, { key });
-  assert.ok(t.ui.getByRole('status', { name: '2 of 4 digits entered' }));
+  assert.equal(dotsSay(), '2 of 4 digits');
   t.fireEvent.keyDown(window, { key: 'Backspace' });
-  assert.ok(t.ui.getByRole('status', { name: '1 of 4 digits entered' }));
+  assert.equal(dotsSay(), '1 of 4 digits');
   press(t, 'Delete the last digit');
-  assert.ok(t.ui.getByRole('status', { name: '0 of 4 digits entered' }));
+  assert.equal(dotsSay(), '0 of 4 digits');
   press(t, '1'); press(t, '2'); press(t, 'Clear');
-  assert.ok(t.ui.getByRole('status', { name: '0 of 4 digits entered' }));
+  assert.equal(dotsSay(), '0 of 4 digits');
   for (const key of ['1', '2', '3', '4']) t.fireEvent.keyDown(window, { key });
   await t.waitFor(() => assert.deepEqual(checkins(t), [{ pin: '1234' }]));
 });
@@ -117,7 +122,7 @@ test('a wrong PIN clears the dots and says so, with no lock', async () => {
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
   for (const d of ['1', '1', '1', '1']) press(t, d);
   assert.equal((await t.ui.findByRole('alert')).textContent, WRONG);
-  assert.ok(t.ui.getByRole('status', { name: '0 of 4 digits entered' }));
+  assert.equal(dotsSay(), '0 of 4 digits');
   // Straight on to the right one.
   for (const d of ['7', '3', '0', '5']) press(t, d);
   await t.ui.findByRole('region', { name: 'Sale' });
@@ -128,7 +133,7 @@ test('a check-in that fails says so without blaming the PIN', async () => {
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
   for (const d of ['7', '3', '0', '5']) press(t, d);
   assert.equal((await t.ui.findByRole('alert')).textContent, 'Wheelhouse couldn’t check that PIN. Try again in a moment.');
-  assert.ok(t.ui.getByRole('status', { name: '0 of 4 digits entered' }));
+  assert.equal(dotsSay(), '0 of 4 digits');
 });
 
 test('Serving: Jo Taylor switches back to Enter your PIN', async () => {
@@ -164,13 +169,13 @@ test('Your settings: Change PIN shows a PIN Wheelhouse picked, another on reques
   assert.ok(t.ui.queryByText('Checks you in at the till and puts your name on sales and workshop work. Only you know it.'));
   t.fireEvent.click(t.ui.getByRole('button', { name: 'Change PIN' }));
   const pop = t.within(await t.ui.findByRole('dialog', { name: 'Your new till PIN' }));
-  assert.ok(await pop.findByLabelText('New PIN 7 3 0 5'));
+  assert.ok(await pop.findByText('New PIN 7 3 0 5'));
   assert.ok(pop.queryByText('Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.'));
   assert.ok(pop.queryByText('Your old PIN stops working when you keep this one.'));
   assert.ok(pop.getByRole('button', { name: 'Close without changing your PIN' }));
   assert.ok(pop.queryByRole('button', { name: 'Skip for now' }) === null);
   t.fireEvent.click(pop.getByRole('button', { name: 'Give me a different one' }));
-  assert.ok(await pop.findByLabelText('New PIN 4 1 8 2'));
+  assert.ok(await pop.findByText('New PIN 4 1 8 2'));
   t.fireEvent.click(pop.getByRole('button', { name: 'Keep this PIN' }));
   await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog', { name: 'Your new till PIN' }) === null));
   assert.deepEqual(t.calls.filter((c) => c.method === 'POST' && c.url === '/api/your-settings/till-pin').map((c) => c.body), [{ pin: '4182' }]);
@@ -182,7 +187,7 @@ test('Your settings: no PIN yet, Get your PIN, with Skip for now', async () => {
   assert.ok(t.ui.queryByText('You need one to check in at the till. Wheelhouse picks it, and only you see it.'));
   t.fireEvent.click(t.ui.getByRole('button', { name: 'Get your PIN' }));
   const pop = t.within(await t.ui.findByRole('dialog', { name: 'Your till PIN' }));
-  assert.ok(await pop.findByLabelText('New PIN 7 3 0 5'));
+  assert.ok(await pop.findByText('New PIN 7 3 0 5'));
   assert.ok(pop.queryByText(/^Welcome to North Street Cycles, Jo\. This PIN checks you in/));
   assert.ok(pop.queryByText('Not using the till? Skip it — you can get a PIN later in Your settings.'));
   t.fireEvent.click(pop.getByRole('button', { name: 'Skip for now' }));
@@ -194,7 +199,7 @@ test('Your settings: a PIN someone kept meanwhile says so; no Till block without
   const t = await open('/workshop/your-settings', { me: JO_ME, keep: { status: 409, body: { error: 'Someone has just been given that PIN. Ask for a different one.', code: 'pin_taken' } } });
   t.fireEvent.click(await t.ui.findByRole('button', { name: 'Change PIN' }));
   const pop = t.within(await t.ui.findByRole('dialog', { name: 'Your new till PIN' }));
-  await pop.findByLabelText('New PIN 7 3 0 5');
+  await pop.findByText('New PIN 7 3 0 5');
   t.fireEvent.click(pop.getByRole('button', { name: 'Keep this PIN' }));
   assert.equal((await pop.findByRole('alert')).textContent, 'Someone has just been given that PIN. Ask for a different one.');
   t.cleanup();
@@ -206,4 +211,91 @@ test('Your settings: a PIN someone kept meanwhile says so; no Till block without
   await s.ui.findByText('Accessibility');
   await s.waitFor(() => assert.ok(s.calls.some((c) => c.url === '/api/your-settings/till-pin')));
   assert.ok(s.ui.queryByText('Till PIN') === null);
+});
+
+// Review, 28 Oct, item 2: only keys meant for the PIN pad count.
+test('keys typed into the search, with Ctrl, Alt or Cmd held, or held down, are not PIN digits', async () => {
+  const t = await open('/workshop/till');
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  const search = t.ui.getByLabelText('Search jobs, customers and bikes');
+  for (const key of ['1', '2', '3', '4']) t.fireEvent.keyDown(search, { key });
+  t.fireEvent.keyDown(window, { key: '5', ctrlKey: true });
+  t.fireEvent.keyDown(window, { key: '6', metaKey: true });
+  t.fireEvent.keyDown(window, { key: '7', altKey: true });
+  t.fireEvent.keyDown(window, { key: '8', repeat: true });
+  assert.equal(dotsSay(), '0 of 4 digits');
+  t.fireEvent.keyDown(window, { key: '9' });
+  assert.equal(dotsSay(), '1 of 4 digits');
+  assert.deepEqual(checkins(t), []);
+});
+
+// Review, 28 Oct, item 7: the pad stays focusable while a PIN is checked.
+test('while a PIN is being checked the pad says it is busy without losing focus', async () => {
+  let answer;
+  const t = await open('/workshop/till', { checkin: () => new Promise((resolve) => { answer = resolve; }) });
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  for (const d of ['7', '3', '0']) press(t, d);
+  const last = t.ui.getByRole('button', { name: '5' });
+  last.focus();
+  t.fireEvent.click(last);
+  await t.waitFor(() => assert.equal(last.getAttribute('aria-disabled'), 'true'));
+  assert.equal(last.hasAttribute('disabled'), false);
+  assert.ok(document.activeElement === last);
+  press(t, '1');
+  assert.equal(dotsSay(), '4 of 4 digits', 'nothing typed while checking');
+  answer({ status: 201, body: { serving: JO } });
+  await t.ui.findByRole('region', { name: 'Sale' });
+});
+
+// Review, 28 Oct, item 1: the till is never taken away mid-sale.
+test('a failed re-check of who is serving keeps the till and its sale', async () => {
+  const t = await open('/workshop/till', { serving: JO, today: [JO] });
+  await t.ui.findByRole('region', { name: 'Sale' });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: /Fit & adjust brakes/ }));
+  t.server.failCheckin = true;
+  await current.shell.queryClient.invalidateQueries({ queryKey: ['till-checkin'] });
+  await t.waitFor(() => assert.ok(current.shell.queryClient.getQueryState(['till-checkin']).status === 'error'));
+  assert.ok(t.ui.queryByRole('region', { name: 'Sale' }));
+  assert.ok(t.ui.getByRole('button', { name: 'Take payment · £18.00' }));
+  assert.ok(t.ui.queryByText('Wheelhouse couldn’t load the till. Try again in a moment.') === null);
+});
+
+test('nobody serving any more mid-sale: the sale and the pay box stay until the sale is done', async () => {
+  const t = await open('/workshop/till', { serving: JO, today: [JO] });
+  await t.ui.findByRole('region', { name: 'Sale' });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: /Fit & adjust brakes/ }));
+  press(t, 'Take payment · £18.00');
+  await t.ui.findByRole('dialog');
+  // The check-in ends elsewhere (the day ends, or it was cleared).
+  t.server.serving = null;
+  await current.shell.queryClient.invalidateQueries({ queryKey: ['till-checkin'] });
+  await t.waitFor(() => assert.ok(current.shell.queryClient.getQueryData(['till-checkin']).serving === null));
+  assert.ok(t.ui.queryByRole('dialog'), 'the pay box stays');
+  assert.ok(t.within(t.ui.getByRole('dialog')).queryByText('Jo Taylor serving · 1 item'));
+  assert.ok(t.ui.queryByRole('heading', { name: 'Enter your PIN' }) === null);
+  // Closing the pay box and clearing the sale: then Enter your PIN.
+  t.fireEvent.keyDown(t.ui.getByRole('dialog'), { key: 'Escape' });
+  t.ui.getByRole('dialog').close();
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.ok(t.ui.queryByRole('region', { name: 'Sale' }), 'a line still in the sale');
+  press(t, 'Clear');
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+});
+
+// Review, 28 Oct, item 5.
+test('Give me a different one waits for the PIN it asked for, and says when to wait', async () => {
+  let answer;
+  const t = await open('/workshop/your-settings', { me: JO_ME });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Change PIN' }));
+  const pop = t.within(await t.ui.findByRole('dialog', { name: 'Your new till PIN' }));
+  await pop.findByText('New PIN 7 3 0 5');
+  t.server.offerReply = () => new Promise((resolve) => { answer = resolve; });
+  const again = pop.getByRole('button', { name: 'Give me a different one' });
+  t.fireEvent.click(again);
+  await t.waitFor(() => assert.equal(again.getAttribute('aria-disabled'), 'true'));
+  t.fireEvent.click(again);
+  assert.equal(t.calls.filter((c) => c.url === '/api/your-settings/till-pin/offer').length, 2, 'one more asked for, not two');
+  answer({ status: 429, body: { error: 'Wait a moment, then try again', code: 'slow_down' } });
+  assert.equal((await pop.findByRole('alert')).textContent, 'Wait a moment, then try again');
+  assert.equal(again.getAttribute('aria-disabled'), 'false');
 });

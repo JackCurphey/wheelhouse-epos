@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
 import { Banknote } from 'lucide-react';
@@ -37,18 +37,21 @@ export function TillPage() {
   const [params, setParams] = useSearchParams();
   const jobId = Number(params.get('job')) || null;
   const checkin = useTillCheckin();
-  if (checkin.isPending) return null;
-  if (checkin.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p>;
-  const { serving, checkedInToday } = checkin.data;
-  if (!serving) return <PinCheckin checkedInToday={checkedInToday} />;
+  // A sale with something in it, or its pay box open, is never taken away:
+  // not by a failed re-check, nor by the check-in ending (review, 28 Oct, item 1).
+  const [saleOpen, setSaleOpen] = useState(false);
+  const data = checkin.data;
+  if (!data) return checkin.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p> : null;
+  const { serving, checkedInToday } = data;
+  if (!serving && !saleOpen) return <PinCheckin checkedInToday={checkedInToday} />;
   // The first person to check in who takes payments checks the float (opening
   // the shop decision 2; Jack's answer 3, 27 Oct).
   return (
     <>
-      <ServingButton serving={serving} />
+      {serving ? <ServingButton serving={serving} /> : null}
       <CloseTheDayEntry />
-      {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} /> : <SaleTill />}
-      <FloatCheck />
+      {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} onOpenChange={setSaleOpen} /> : <SaleTill onOpenChange={setSaleOpen} />}
+      {serving ? <FloatCheck /> : null}
     </>
   );
 }
@@ -75,11 +78,18 @@ function CloseTheDayEntry() {
   );
 }
 
-function SaleTill() {
+/** Tells the till page while a sale is open, and that it isn't once it goes. */
+function useSaleOpen(open: boolean, onOpenChange: (open: boolean) => void) {
+  useEffect(() => { onOpenChange(open); }, [open, onOpenChange]);
+  useEffect(() => () => onOpenChange(false), [onOpenChange]);
+}
+
+function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const services = useQuery({ queryKey: ['workshop-services'], queryFn: () => apiGet<Service[]>('/api/workshop-services') });
   const [lines, setLines] = useState<TillLine[]>([]);
   const [editing, setEditing] = useState<TillLine | null>(null);
   const [paying, setPaying] = useState(false);
+  useSaleOpen(lines.length > 0 || paying, onOpenChange);
   const total = saleTotal(lines);
 
   function add(p: Picked) {
@@ -258,7 +268,7 @@ const PAYABLE = new Set(['in_progress', 'complete']);
  * openspec/changes/till-online-deposit). The job-changed warning comes later; extras are
  * added on the job's Work and parts, since paying the order charges its lines.
  */
-function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
+function JobTill({ jobId, onDone, onOpenChange }: { jobId: number; onDone: () => void; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient();
   const jobQuery = useQuery({ queryKey: ['workshop-job', jobId], queryFn: () => apiGet<WorkshopJob>(`/api/workshop-jobs/${jobId}`) });
   const job = jobQuery.data;
@@ -281,6 +291,7 @@ function JobTill({ jobId, onDone }: { jobId: number; onDone: () => void }) {
   // Work still in progress is finished by paying, so the till asks who is
   // signing it off first (Jack, 16 Oct, mechanic sign-off answer 5).
   const [signing, setSigning] = useState(false);
+  useSaleOpen(paying || signing, onOpenChange);
   const [signedOffBy, setSignedOffBy] = useState<number | null>(null);
   const [signerName, setSignerName] = useState<string | null>(null);
   // "Checked by [name]" on the receipt, if the shop shows who signed off (piece 3).

@@ -51,11 +51,15 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
     show(next);
     if (next.length === 4) void send(next);
   }
-  // The keyboard's digits and Backspace work too.
+  // The keyboard's digits and Backspace work too, but not keys meant for a
+  // box (the header search), shortcuts, or a key held down (review, 28 Oct, item 2).
   const typeRef = useRef(type);
   useEffect(() => { typeRef.current = type; });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
+      const at = e.target instanceof HTMLElement ? e.target : null;
+      if (at && (at.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(at.tagName))) return;
       if (/^[0-9]$/.test(e.key)) typeRef.current(e.key);
       else if (e.key === 'Backspace') typeRef.current('Delete');
     };
@@ -64,7 +68,8 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
   }, []);
 
   const key = (k: string, label = k) => (
-    <button key={k} type="button" aria-label={label !== k ? label : undefined} disabled={busy} onClick={() => type(k === 'Delete' ? 'Delete' : k)}
+    // Not `disabled` while a PIN is checked: that would take the focus away (review, 28 Oct, item 7).
+    <button key={k} type="button" aria-label={label !== k ? label : undefined} aria-disabled={busy} onClick={() => type(k === 'Delete' ? 'Delete' : k)}
       className={`min-h-14 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] font-semibold text-[var(--wh-ink)] hover:bg-[var(--wh-hover)] md:min-h-16 ${/^\d$/.test(k) ? 'text-size-26' : 'text-base'}`}>
       {k}
     </button>
@@ -75,8 +80,9 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
       <div className="flex flex-col gap-3.5 text-center md:w-[360px] md:gap-[18px]">
         <h1 className="m-0 text-2xl font-bold md:text-size-28">Enter your PIN</h1>
         <p className="m-0 text-sm leading-normal text-[var(--wh-muted)] md:text-size-15">Your PIN checks you in and puts your name on sales and workshop work.</p>
-        <div role="status" aria-label={`${shown} of 4 digits entered`} className="flex justify-center gap-4">
-          {[0, 1, 2, 3].map((i) => <span key={i} className={`size-[18px] rounded-full border-2 border-[var(--wh-ink)] ${i < shown ? 'bg-[var(--wh-ink)]' : 'bg-transparent'}`} />)}
+        <div role="status" data-pin-dots="" className="flex justify-center gap-4">
+          <span className="sr-only">{`${shown} of 4 digits`}</span>
+          {[0, 1, 2, 3].map((i) => <span key={i} aria-hidden="true" className={`size-[18px] rounded-full border-2 border-[var(--wh-ink)] ${i < shown ? 'bg-[var(--wh-ink)]' : 'bg-transparent'}`} />)}
         </div>
         {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
         <div className="grid grid-cols-3 gap-2.5">

@@ -15,6 +15,7 @@
 - [x] 2.1 Tests first: the PIN screen (dots, the 4th digit checks at once, a wrong PIN, Checked in today, No PIN yet), Serving and switch, the pay box's serving name, the float check after the check-in, Your settings' Till PIN and the pop-up (`tests/screens/`); a browser spec; the till's existing tests check in first. Watch each fail
 - [x] 2.2 Build them to the drawings
 - [x] 2.3 Break each key rule on purpose, see its test go red, and restore
+- [x] 2.3a Review, 28 Oct: the till kept while a sale is open (failed re-check, check-in ended); keys in the search, with modifiers or held down ignored; the pad busy without `disabled`; the dots and the new PIN as words for screen readers; one offer at a time. Tests first, each fix broken on purpose
 - [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review`
 - [ ] 2.5 `/opsx:archive` as the last commit
 

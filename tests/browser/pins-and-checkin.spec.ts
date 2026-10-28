@@ -38,9 +38,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.getByRole('button', { name: 'Get your PIN' }).click();
     const pop = page.getByRole('dialog', { name: 'Your till PIN' });
     await expect(pop).toContainText('Welcome to North Street Cycles');
-    const digits = pop.getByLabel(/^New PIN \d \d \d \d$/);
-    await expect(digits).toBeVisible();
-    const pin = ((await digits.getAttribute('aria-label')) ?? '').replace('New PIN ', '').replaceAll(' ', '');
+    // The PIN as words for a screen reader; the boxes show the same digits.
+    const words = pop.getByText(/^New PIN \d \d \d \d$/);
+    await expect(words).toHaveCount(1);
+    const pin = ((await words.textContent()) ?? '').replace('New PIN ', '').replaceAll(' ', '');
     expect(pin).toMatch(/^\d{4}$/);
     await pop.getByRole('button', { name: 'Keep this PIN' }).click();
     await expect(pop).toHaveCount(0);
@@ -53,7 +54,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     const wrong = pin === '0000' ? '1111' : '0000';
     for (const d of wrong) await page.getByRole('button', { name: d, exact: true }).click();
     await expect(page.getByRole('alert')).toHaveText('That PIN isn’t anyone’s — try again');
-    await expect(page.getByRole('status', { name: '0 of 4 digits entered' })).toBeVisible();
+    await expect(page.locator('[data-pin-dots]')).toHaveText('0 of 4 digits');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     // The right one, typed on the keyboard: the till is his.
