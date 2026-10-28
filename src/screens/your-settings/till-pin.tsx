@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client.ts';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { PinOfferDialog } from '@/screens/till/pin-offer-dialog.tsx';
@@ -37,32 +37,59 @@ export function TillPinBlock() {
           : 'You need one to check in at the till. Wheelhouse picks it, and only you see it.'}</span>
         <Button variant={has ? 'default' : 'primary'} block onClick={() => setOpen(true)}>{has ? 'Change PIN' : 'Get your PIN'}</Button>
       </div>
-      {open ? <PinDialog first={!has} onClose={() => setOpen(false)} /> : null}
+      {open ? <PinDialog mode={has ? 'change' : 'first'} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
 
-function PinDialog({ first, onClose }: { first: boolean; onClose: () => void }) {
+type Mode = 'change' | 'first' | 'cleared';
+const QUESTION = ['till-pin-ask'];
+
+/**
+ * "Your till PIN" by itself (pin-first, pin-cleared; UX walk-through 4 H1;
+ * openspec/changes/whos-in-and-first-pin): a team member with no PIN, never
+ * asked or asked before their PIN was cleared, gets it over the page they
+ * land on. Skip for now or Keep this PIN records the ask and leaves them there.
+ */
+export function FirstPinPrompt() {
+  const queryClient = useQueryClient();
+  const ask = useQuery({ queryKey: QUESTION, queryFn: () => apiGet<{ ask: 'first' | 'cleared' | null }>('/api/your-settings/till-pin/ask'), staleTime: Infinity, retry: false });
+  const [done, setDone] = useState(false);
+  const mode = ask.data?.ask;
+  if (!mode || done) return null;
+  const answered = () => {
+    setDone(true);
+    // Asked: not again until the PIN is next cleared. A failed save only means asking again next time.
+    void apiMutate('/api/your-settings/till-pin/ask', {}).catch(() => {}).finally(() => queryClient.invalidateQueries({ queryKey: QUESTION }));
+  };
+  return <PinDialog mode={mode} onClose={answered} />;
+}
+
+function PinDialog({ mode, onClose }: { mode: Mode; onClose: () => void }) {
   const session = useSession();
   const queryClient = useQueryClient();
   const shop = session.status === 'signed-in' ? session.shop.name : '';
   const firstName = session.status === 'signed-in' ? session.user.name.split(' ')[0] : '';
-  const intro = first
+  const later = mode !== 'change';
+  // signin.mjs PIN_TEXT: first, cleared and change.
+  const intro = mode === 'first'
     ? `Welcome to ${shop}, ${firstName}. This PIN checks you in at the till and puts your name on sales and workshop work. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.`
-    : 'Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.';
-  // The first-time version has no ✕ (pin-first), so Escape does nothing.
+    : mode === 'cleared'
+      ? 'Your old PIN was cleared, so here’s a new one. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.'
+      : 'Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.';
+  // The first-time versions have no ✕ (pin-first, pin-cleared), so Escape does nothing.
   return (
     <PinOfferDialog
-      title={first ? 'Your till PIN' : 'Your new till PIN'}
+      title={later ? 'Your till PIN' : 'Your new till PIN'}
       intro={intro}
-      foot={first ? 'Not using the till? Skip it — you can get a PIN later in Your settings.' : 'Your old PIN stops working when you keep this one.'}
+      foot={later ? 'Not using the till? Skip it — you can get a PIN later in Your settings.' : 'Your old PIN stops working when you keep this one.'}
       pinWords="New PIN"
-      closeLabel={first ? null : 'Close without changing your PIN'}
+      closeLabel={later ? null : 'Close without changing your PIN'}
       offerPath="/api/your-settings/till-pin/offer"
       keepPath="/api/your-settings/till-pin"
       onKept={async () => { await queryClient.invalidateQueries({ queryKey: QUERY }); onClose(); }}
       onClose={onClose}
-      extra={first ? <Button variant="ghost" block onClick={onClose}>Skip for now</Button> : null}
+      extra={later ? <Button variant="ghost" block onClick={onClose}>Skip for now</Button> : null}
     />
   );
 }

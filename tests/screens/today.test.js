@@ -151,7 +151,8 @@ test('on a phone the cards are one column, Needs attention first', async () => {
   const { ui } = await openToday({ phone: true });
   await ui.findByRole('heading', { name: 'Needs attention · 2' });
   const regions = ui.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'));
-  assert.deepEqual(regions.slice(0, 2), ['today-attention', 'today-workshop']);
+  // Tills and Who's in come between (whos-in-and-first-pin; op-today's left column first).
+  assert.deepEqual(regions, ['today-attention', 'today-tills', 'today-whos-in', 'today-workshop']);
   const [attention, work] = ['today-attention', 'today-workshop'].map((id) => ui.container.querySelector(`[aria-labelledby="${id}"]`));
   assert.ok(attention.parentElement === work.parentElement, 'the two cards should share one column');
 });

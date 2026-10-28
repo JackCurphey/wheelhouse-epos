@@ -9,6 +9,9 @@ import { sendJson } from '../lib/http.js';
 import { WORKSHOP_JOB_SELECT } from '../workshop/jobs.js';
 import { customerConversations } from '../workshop/job-notes.js';
 import { floatsToSee } from './float-check.js';
+import { loadCapacity, currentShopTimeZone } from '../workshop/jobs.js';
+import { shopToday } from '../clock.js';
+import { toHHMM } from '../capacity.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -63,7 +66,63 @@ async function uncollectedBikes() {
   }));
 }
 
+// Who's in (op-today, op-today-late; opening the shop decisions 5 and 6;
+// whos-in-and-first-pin): everyone who checked in by PIN today, ended or not
+// (no check-out), by their first check-in; then each mechanic with free time
+// today in the diary's capacity who hasn't, due from its start. A check-in
+// covers the whole shop until tills have names (28 Oct). No PIN, hash or token.
+const ROLE = `CASE WHEN EXISTS (SELECT 1 FROM logins o WHERE o.employee_id = e.id AND o.is_owner) THEN 'Owner'
+  WHEN e.is_mechanic = 1 THEN 'Mechanic' ELSE 'Staff' END`;
+async function whosIn() {
+  const day = shopToday(await currentShopTimeZone());
+  const inToday = await prepare(
+    `SELECT e.id, e.name, ${ROLE} AS role, min(c.checked_in_at) AS at FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.day = ? AND e.active = 1 GROUP BY e.id ORDER BY at, e.id`
+  ).all(day);
+  const here = new Set(inToday.map((p) => p.id));
+  const working = (await loadCapacity(day, day)).days[0].mechanics.filter((m) => m.working && !here.has(m.mechanicId));
+  const names = new Map((await prepare('SELECT id, name FROM employees WHERE is_mechanic = 1 AND active = 1').all()).map((e) => [e.id, e.name]));
+  const due = working.map((m) => ({ id: m.mechanicId, name: names.get(m.mechanicId), role: 'Mechanic', dueAt: toHHMM(m.availableWindows[0][0]) }))
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt) || a.name.localeCompare(b.name));
+  return [...inToday.map((p) => ({ id: p.id, name: p.name, role: p.role, checkedInAt: iso(p.at) })), ...due];
+}
+
+// Tills (op-today, op-today-short, op-today-seen): the shop's one till until
+// tills have names: who opened it with the day's first check-in, and the
+// day's float check, short or not, and who saw it.
+async function tillToday() {
+  const day = shopToday(await currentShopTimeZone());
+  const opened = await prepare(
+    `SELECT c.checked_in_at AS at, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.day = ? ORDER BY c.checked_in_at, c.id LIMIT 1`
+  ).get(day);
+  const f = await prepare(
+    `SELECT f.checked_at, f.counted_pence < f.expected_pence AS short, COALESCE(e.name, l.name) AS by_name, s.name AS seen_by
+       FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id
+       LEFT JOIN logins s ON s.id = f.seen_by_login_id WHERE f.day = ?`
+  ).get(day);
+  return {
+    openedAt: iso(opened?.at), openedBy: opened?.name ?? null,
+    floatCheck: f ? { byName: f.by_name, at: iso(f.checked_at), short: Boolean(f.short), seenByName: f.seen_by ?? null } : null,
+  };
+}
+
 export function register(route) {
+  // Anyone who can open Today (decision 4: Staff see Who's in).
+  // screens: op-today, op-today-staff, op-today-late
+  route('GET', '/api/today/whos-in', async (req, res) => {
+    if (!(await currentSession(req))) return sendJson(res, 401, { error: 'Not signed in' });
+    sendJson(res, 200, { people: await whosIn() });
+  });
+
+  // The Owner only, as Needs attention, until roles (decision 4).
+  // screens: op-today, op-today-short, op-today-seen
+  route('GET', '/api/today/tills', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees the tills", code: 'owner_only' });
+    sendJson(res, 200, { till: await tillToday() });
+  });
+
   // Owner only until roles (decision 4: Tills and Needs attention are for
   // owners, managers and anyone who can close the day; WP-1.1 opens it to them).
   route('GET', '/api/needs-attention', async (req, res) => {
