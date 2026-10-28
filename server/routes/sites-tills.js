@@ -16,6 +16,10 @@ import { currentSession } from '../lib/session.js';
 import { listOpen as listOpenAttention, resolve as resolveAttention } from '../till/attention.js';
 import { buildSnapshot } from '../till/snapshot.js';
 import { TransientSyncError, batchProblem, processSyncItems } from '../till/sync.js';
+import { TILL_ORDER, serializeThisTill, thisTill, tillCookie } from '../till/this-till.js';
+import { someoneElseCheckedIn } from './till-pins.js';
+
+const OWNER_ONLY = { error: 'Only the owner can set up a till', code: 'owner_only' };
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -79,6 +83,70 @@ export function register(route) {
     ).run(site.id, code, name.trim(), hashLinkCode(token));
     const till = await db.prepare('SELECT * FROM tills WHERE id = ?').get(lastInsertRowid);
     sendJson(res, 201, { till: serializeTill(till), token });
+  });
+
+  // Set up this till (till-setup; openspec/changes/till-setup): the Owner,
+  // signed in, makes this computer a till. Never by PIN (roles and switches 2).
+  // screens: till-setup, set-till-tills-owner
+  route('GET', '/api/till-setup', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, OWNER_ONLY);
+    const sites = await db.prepare('SELECT * FROM sites ORDER BY id').all();
+    const tills = await db.prepare(`SELECT site_id, code, active FROM tills ORDER BY ${TILL_ORDER}`).all();
+    // Every number used at a site, switched off or not: codes stay unique.
+    const taken = (site) => tills.filter((t) => t.site_id === site.id).map((t) => Number(t.code.slice(site.code.length))).sort((a, b) => a - b);
+    const mine = await thisTill(req);
+    sendJson(res, 200, {
+      sites: sites.map((s) => ({ ...serializeSite(s), taken: taken(s) })),
+      thisTill: mine ? serializeThisTill(mine) : null,
+      tills: tills.filter((t) => t.active).map((t) => t.code),
+    });
+  });
+
+  route('POST', '/api/till-setup', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, OWNER_ONLY);
+    // The Owner's sign-in, but someone else checked in here by PIN: not them
+    // (roles and switches 2; the giverHere rule; review, 28 Oct).
+    if (await someoneElseCheckedIn(req)) return sendJson(res, 403, { error: 'Only the owner can set up a till. Switch to the owner first.', code: 'not_owner_checked_in' });
+    if (await thisTill(req)) return sendJson(res, 409, { error: 'This computer is already a till', code: 'already_a_till' });
+    const { siteId, number, name, reclaim } = (await readJsonBody(req)) ?? {};
+    // RLS hides other shops' sites, so a foreign siteId reads as missing.
+    const site = Number.isInteger(siteId) ? await db.prepare('SELECT * FROM sites WHERE id = ?').get(siteId) : null;
+    if (!site) return badRequest(res, 'Choose one of your shops');
+    if (!Number.isInteger(number) || number < 1 || number > 99) return badRequest(res, 'A till number is 1 to 99');
+    if (name !== undefined && name !== null && typeof name !== 'string') return badRequest(res, 'The name must be text');
+    const named = (name ?? '').trim();
+    if (named.length > 60) return badRequest(res, 'A till name can be up to 60 characters');
+    const code = `${site.code}${number}`;
+    const TAKEN = { error: `Till ${code} is in use. Choose another number.`, code: 'taken' };
+    // The browser's own token; the offline till's is another, never shown here
+    // (step C decides how the offline till gets its own; review, 28 Oct).
+    const browserToken = newLinkCode();
+    // Re-claiming: this computer becomes that till instead of a lost or
+    // replaced one, whose browser stops being it. Its name stays. Server only
+    // until it is drawn (the drawing's taken numbers can't be picked).
+    if (reclaim === true) {
+      const claimed = await db.prepare(
+        'UPDATE tills SET browser_token_hash = ? WHERE site_id = ? AND code = ? AND active = true RETURNING id, name'
+      ).get(hashLinkCode(browserToken), site.id, code);
+      if (claimed) {
+        res.setHeader('Set-Cookie', tillCookie(req, browserToken));
+        return sendJson(res, 200, { till: { id: claimed.id, code, name: claimed.name, siteName: site.name } });
+      }
+    }
+    if (await db.prepare('SELECT 1 FROM tills WHERE code = ?').get(code)) return sendJson(res, 409, TAKEN);
+    let made;
+    try {
+      made = await db.prepare('INSERT INTO tills (site_id, code, name, token_hash, browser_token_hash) VALUES (?, ?, ?, ?, ?) RETURNING id')
+        .get(site.id, code, named || null, hashLinkCode(newLinkCode()), hashLinkCode(browserToken));
+    } catch (err) {
+      // Two set up the same number at once: the code's unique index keeps one.
+      if (err.code === '23505') return sendJson(res, 409, TAKEN);
+      throw err;
+    }
+    res.setHeader('Set-Cookie', tillCookie(req, browserToken));
+    sendJson(res, 201, { till: { id: made.id, code, name: named || null, siteName: site.name } });
   });
 
   route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {

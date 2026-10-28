@@ -12,6 +12,7 @@ import { floatsToSee } from './float-check.js';
 import { loadCapacity, currentShopTimeZone } from '../workshop/jobs.js';
 import { shopToday } from '../clock.js';
 import { toHHMM } from '../capacity.js';
+import { TILL_ORDER } from '../till/this-till.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -69,8 +70,8 @@ async function uncollectedBikes() {
 // Who's in (op-today, op-today-late; opening the shop decisions 5 and 6;
 // whos-in-and-first-pin): everyone who checked in by PIN today, ended or not
 // (no check-out), by their first check-in; then each mechanic with free time
-// today in the diary's capacity who hasn't, due from its start. A check-in
-// covers the whole shop until tills have names (28 Oct). No PIN, hash or token.
+// today in the diary's capacity who hasn't, due from its start. On every
+// till: Who's in is who is at work (till-setup design 3). No PIN, hash or token.
 const ROLE = `CASE WHEN EXISTS (SELECT 1 FROM logins o WHERE o.employee_id = e.id AND o.is_owner) THEN 'Owner'
   WHEN e.is_mechanic = 1 THEN 'Mechanic' ELSE 'Staff' END`;
 async function whosIn() {
@@ -87,24 +88,38 @@ async function whosIn() {
   return [...inToday.map((p) => ({ id: p.id, name: p.name, role: p.role, checkedInAt: iso(p.at) })), ...due];
 }
 
-// Tills (op-today, op-today-short, op-today-seen): the shop's one till until
-// tills have names: who opened it with the day's first check-in, and the
-// day's float check, short or not, and who saw it.
-async function tillToday() {
+// Tills (op-today, op-today-short, op-today-seen; openspec/changes/till-setup):
+// a line per till, in number order: every active one, and one switched off
+// that was used today (review, 28 Oct); and one with no number for a browser
+// that isn't a set-up till, when no till is set up or one was used today
+// (design 2). Each line: who opened it with its own earliest check-in today;
+// and the day's float check, one a shop, on the line it was checked at
+// (design 4). A deleted till's check-ins have no till, so they join that line.
+async function tillsToday() {
   const day = shopToday(await currentShopTimeZone());
-  const opened = await prepare(
-    `SELECT c.checked_in_at AS at, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-      WHERE c.day = ? ORDER BY c.checked_in_at, c.id LIMIT 1`
-  ).get(day);
+  const firsts = await prepare(
+    `SELECT DISTINCT ON (c.till_id) c.till_id, c.checked_in_at AS at, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.day = ? ORDER BY c.till_id, c.checked_in_at, c.id`
+  ).all(day);
   const f = await prepare(
-    `SELECT f.checked_at, f.counted_pence < f.expected_pence AS short, COALESCE(e.name, l.name) AS by_name, s.name AS seen_by
+    `SELECT f.till_id, f.employee_id, f.checked_at, f.counted_pence < f.expected_pence AS short, COALESCE(e.name, l.name) AS by_name, s.name AS seen_by
        FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id
        LEFT JOIN logins s ON s.id = f.seen_by_login_id WHERE f.day = ?`
   ).get(day);
-  return {
-    openedAt: iso(opened?.at), openedBy: opened?.name ?? null,
-    floatCheck: f ? { byName: f.by_name, at: iso(f.checked_at), short: Boolean(f.short), seenByName: f.seen_by ?? null } : null,
-  };
+  // The Owner's look at closing (no person checked in, no till) adds no line
+  // of its own (second review, 28 Oct); a check made at a till does.
+  const used = [...firsts.map((c) => c.till_id), ...(f && f.employee_id !== null ? [f.till_id] : [])];
+  const usedTills = used.filter((id) => id !== null);
+  const lines = await prepare(`SELECT id, code FROM tills WHERE active = true OR id = ANY(?::int[]) ORDER BY ${TILL_ORDER}`).all(usedTills);
+  if (!lines.length || used.includes(null)) lines.push({ id: null, code: null });
+  return lines.map(({ id, code }) => {
+    const opened = firsts.find((c) => c.till_id === id);
+    const float = f && f.till_id === id ? f : null;
+    return {
+      code, openedAt: iso(opened?.at), openedBy: opened?.name ?? null,
+      floatCheck: float ? { byName: float.by_name, at: iso(float.checked_at), short: Boolean(float.short), seenByName: float.seen_by ?? null } : null,
+    };
+  });
 }
 
 export function register(route) {
@@ -120,7 +135,7 @@ export function register(route) {
   route('GET', '/api/today/tills', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees the tills", code: 'owner_only' });
-    sendJson(res, 200, { till: await tillToday() });
+    sendJson(res, 200, { tills: await tillsToday() });
   });
 
   // Owner only until roles (decision 4: Tills and Needs attention are for

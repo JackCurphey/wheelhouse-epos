@@ -89,6 +89,10 @@ const ROUTES = [
   // Clearing a forgotten till PIN, for owners and managers (signing in 6;
   // roles and switches 5), so the Owner until roles (openspec/changes/pins-and-checkin).
   ['POST', `/api/team/${MISSING}/clear-pin`, {}],
+  // Set up this till: the Owner until roles, never by PIN (roles and
+  // switches 2; openspec/changes/till-setup).
+  ['GET', '/api/till-setup'],
+  ['POST', '/api/till-setup', {}],
 ];
 
 for (const [method, path, body] of ROUTES) {

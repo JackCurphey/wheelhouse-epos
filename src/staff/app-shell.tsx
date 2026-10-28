@@ -10,6 +10,7 @@ import { OverviewPage } from '@/screens/overview/overview-page.tsx';
 import { DiaryPage } from '@/screens/diary/diary-page.tsx';
 import { TillPage } from '@/screens/till/till-page.tsx';
 import { CloseTheDayPage } from '@/screens/till/close-the-day.tsx';
+import { TillSetupPage } from '@/screens/till/till-setup.tsx';
 import { SettingsPage } from '@/screens/settings/settings-page.tsx';
 import { MessagesPage } from '@/screens/messages/messages-page.tsx';
 import { TodayPage } from '@/screens/today/today-page.tsx';
@@ -44,7 +45,7 @@ function SignedInAlready() {
   return <Navigate to="/workshop" replace />;
 }
 
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'eod-count': CloseTheDayPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'eod-count': CloseTheDayPage, 'till-setup': TillSetupPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
 const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-bike', 'st-product', 'rs-order', 'rs-order-ordered', 'rs-receive', 'eod-count', 'tk-count', 'tk-diff', 'tk-applied', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);

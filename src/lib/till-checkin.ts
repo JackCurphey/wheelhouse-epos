@@ -2,15 +2,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate } from './api/client.ts';
 
 /**
- * Who is serving on this till, and who has checked in at the shop today
- * (openspec/changes/pins-and-checkin; signing in decision 4). The server
- * keeps the check-in in a cookie of its own, so this browser is the till
- * until "Set up this till" names tills.
+ * Who is serving on this till, who has checked in on it today, and which
+ * till this browser is (openspec/changes/pins-and-checkin, till-setup;
+ * signing in decision 4). The server keeps the check-in and the till in
+ * cookies of their own; a browser that isn't a set-up till has no till.
  */
 export type CheckedIn = { id: number; name: string };
 /** Someone with no PIN yet, for the Owner serving to give one (openspec/changes/give-pin-at-till). */
 export type GiveTo = { id: number; name: string; role: 'Staff' | 'Mechanic'; tillOnly: boolean };
-export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[] };
+/** This browser's till, from Set up this till (openspec/changes/till-setup). */
+export type ThisTillName = { code: string; name: string | null; siteName: string };
+export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[]; till?: ThisTillName | null };
 
 export const CHECKIN_QUERY = ['till-checkin'];
 // The float check asks the person checked in, so it is read again when that changes.
@@ -29,7 +31,7 @@ export function useCheckinActions() {
     queryClient.setQueryData<TillCheckin>(CHECKIN_QUERY, (old) => {
       const today = old?.checkedInToday ?? [];
       // Who can be given a PIN is the Owner's to see, so it goes with whoever was serving.
-      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [] };
+      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [], till: old?.till ?? null };
     });
     void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     void queryClient.invalidateQueries({ queryKey: FLOAT_QUERY });

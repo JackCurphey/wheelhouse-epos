@@ -47,7 +47,7 @@ async function open(path, { who = OWNER, now = at('10:00'), people = PEOPLE, til
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, who);
     if (u.pathname === '/api/today/whos-in') return reply(200, { people });
-    if (u.pathname === '/api/today/tills') return who.isOwner ? reply(200, { till }) : reply(403, { error: 'no', code: 'owner_only' });
+    if (u.pathname === '/api/today/tills') return who.isOwner ? reply(200, { tills: [{ code: null, ...till }] }) : reply(403, { error: 'no', code: 'owner_only' });
     if (u.pathname === '/api/needs-attention') return who.isOwner ? reply(200, { items: [] }) : reply(403, { error: 'no', code: 'owner_only' });
     if (u.pathname === '/api/your-settings/till-pin/ask') return method === 'POST' ? reply(200, { ask: null }) : reply(200, { ask });
     if (u.pathname === '/api/your-settings/till-pin/offer') return reply(201, { pin: offers.shift() });

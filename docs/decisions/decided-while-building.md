@@ -1008,7 +1008,9 @@ silent:
    until Switch or someone else checks in there. Until "Set up this till"
    (step C), the till is the browser, and "Checked in today" lists everyone
    who checked in at the shop today, not one till's. *Pattern:* the float
-   check's one-a-shop-a-day until named tills.
+   check's one-a-shop-a-day until named tills. *Later (28 Oct, till-setup
+   entries 4 and 5):* on a set-up till a check-in belongs to that till, and
+   Checked in today is that till's.
 4. **The Owner gets a team member when they first get a PIN**, marked as
    taking payments, since a PIN belongs to a team member (till-only people
    have no sign-in). A staff sign-in with no team member can't get a PIN
@@ -1123,7 +1125,9 @@ silent:
 1. **Who's in lists everyone who checked in today, even after Switch**, at
    the time of their first check-in that day: checking in only records who's
    in and when (opening the shop decision 5, no check-out). A check-in covers
-   the whole shop until tills have names (28 Oct, PINs entry 3).
+   the whole shop until tills have names (28 Oct, PINs entry 3). *Later
+   (28 Oct, till-setup entry 5):* check-ins belong to a till now; Who's in
+   still lists every till's, as who is at work.
 2. **Who's due is a mechanic with time in today's diary**: their working
    days, the shop's hours that day, and time off, as the diary and booking
    count them. "Due in at" is when that time starts (the shop's opening time,
@@ -1139,7 +1143,9 @@ silent:
    empty-list style. *Pattern:* Workshop today's "Every bike booked for
    today is in."
 6. **Tills is one line headed "Till"**, no number, until tills have names
-   (27 Oct, float check entry 2). It reads "Open · float checked by [Name]
+   (27 Oct, float check entry 2). *Later (28 Oct, till-setup entry 6):* a
+   line per till, "Till B1"; "Till" with no number only for a browser that
+   isn't a set-up till. It reads "Open · float checked by [Name]
    at [time]" (drawn); before the float is checked, or with no float set,
    "Open · [Name] checked in at [time]" from the day's first check-in; and
    "Not open yet" before anyone has. "Float short" (warning) and "Float
@@ -1181,6 +1187,97 @@ silent:
     ran out still says "Ask for a new PIN", and giving a PIN at the till
     keeps "Ask for a new PIN". *Pattern:* the pop-up's other refusals, in
     the server's words.
+
+### 28 Oct 2026: Set up this till, check-ins per till, the till's name (`openspec/changes/till-setup`, `till-setup`, `set-till-tills-owner`, `op-float-check`, `op-float-count`, `op-float-matched`, `op-today`, `op-today-short`; WP-1.7 task 3.4)
+
+1. **The shop switcher and "Where are you working today?" (`auth-site`)
+   aren't built.** Stage-1 gaps decision 23 (Jack, 7 Oct) puts switching
+   shops in WP-5.2, "when a shop can have more than one"; it also needs the
+   shop on the sign-in (WP-1.4). Not reopened.
+2. **One float check and one close a shop a day stay.** Cash-up decision 6
+   says each till closes on its own, but neither sales record knows which
+   till a sale was on (26 Oct, a sale from a customer's history, entry 2), so
+   a till's own drawer can't be worked out yet. The float check now records
+   the till it was counted at, so its pop-ups and Today say "Till B1"; Close
+   the day keeps no till name, since it counts the whole shop's cash. When
+   sales carry their till (WP-1.7 task 3.8, step C), the float and close go
+   per till. *Pattern:* the 27 Oct float check entry 2.
+3. **The computer keeps its till in a cookie of its own**, apart from the
+   sign-in, holding a key of the browser's own (only its hash is stored),
+   for 400 days, the longest a browser keeps one, renewed each time the till
+   is read. Signing out or someone else signing in leaves it the till;
+   another shop's sign-in, or a till switched off, sees no till. *Pattern:*
+   the check-in's own cookie (28 Oct, PINs entry 3). *Review, 28 Oct:* it
+   first held the offline till's own key, which opens the till's copy of
+   every customer and PIN hash, and takes sales, with no sign-in; now the
+   browser's key only says which till a signed-in browser is, and never
+   opens those. How the offline till gets its own key is step C's.
+4. **A browser that isn't set up still works as the till, as before**, with
+   check-ins that belong to no till, and Today shows it as "Till" with no
+   number. Only Set up this till makes a numbered till; making it the only
+   way waits for step C. *Pattern:* show only what works; nothing that works
+   today stops.
+5. **A check-in belongs to the till it was made on.** "Checked in today" on
+   the PIN screen is that till's. After "Make this computer Till B1",
+   whoever was checked in on that browser checks in again. Who's in on
+   Today stays the whole shop's: it's about who is at work.
+6. **Today's Tills has a line per till**, by code, "Till B1"; plus "Till"
+   with no number when no till is set up, or something was done today on a
+   browser that isn't one. The day's float check shows on the line it was
+   checked at. The short float reads "Till B1’s float was [£] short this
+   morning" when counted on a set-up till.
+7. **Till numbers as pills: 1 to 3, or one past the highest in use**,
+   whichever is more, taken ones "In use", the lowest free one chosen. That
+   gives both drawings: Bolton with none taken (B1, B2, B3) and [Second
+   site] with 1 and 2 taken ([code]3 chosen). A till switched off keeps its
+   number in use, as the server keeps codes unique.
+8. **Set up this till says only what works**: "This computer becomes a till:
+   staff check in with their PIN." without "it stays signed in, works
+   offline" (step C), and the name has no hint about receipt numbers
+   (receipts aren't numbered by till yet). "computer" at desktop width,
+   "device" narrower, as drawn. *Pattern:* 28 Oct, PINs entry 8.
+9. **The setup offers only a till**, not "a till or a workshop computer"
+   (stage-1 gaps 4): the workshop computer is WP-1.7 task 3.6.
+10. **A business with no shop set up yet** (WP-1.4 gives every business its
+    first) sees no "Make this computer a till", and the setup page says
+    "This business has no shops set up in Wheelhouse yet, so a till can’t
+    be added here." Not drawn. New businesses have no site until WP-1.4;
+    the test shop has Bolton.
+11. **Staff opening the setup page see "Only the owner can add or remove
+    tills."**, the drawn note from `set-till-tills`; on a computer that is
+    already a till the page goes to the till. Registering a till needs the
+    Owner's own sign-in, never a PIN (roles and switches 2).
+12. **The till's name sits in the till's strip**, "Till B1" over "Bolton ·
+    North Street Cycles", on the left, as the till bar draws it; the
+    charcoal till bar itself (Online, Past sales) isn't built. *Pattern:*
+    28 Oct, PINs entry 7.
+13. **Tills in Settings shows the tills ("Till B1") or "None yet"**, and on
+    a computer that's already a till only the drawn note. The list with
+    Rename and Remove is WP-5.1. *Pattern:* `set-till-empty`'s "None yet".
+14. **A name is up to 60 characters**; a blank one is none.
+15. **Decided here, for Jack to overrule: nobody else checked in sets up a
+    till** (review, 28 Oct). When someone other than the Owner is checked
+    in by PIN on that computer, "Make this computer Till B1" is refused,
+    even though the Owner is the one signed in: they switch to the Owner
+    first. *Pattern:* giving a PIN at the till (`giverHere`); roles and
+    switches 2. **For Jack (second review, 28 Oct), not changed:** a staff
+    member can still get round this by ending their own check-in (Switch)
+    first, then the Owner's sign-in sets up the till as before. That is
+    design decision 7 as written (the Owner's sign-in is what's needed);
+    whether to tighten it, for example by asking for the Owner's PIN too, is
+    Jack's call.
+16. **Re-claiming a till number is on the server only** (review, 28 Oct):
+    the Owner can make a new computer Till B1 again, for a lost cookie or a
+    replaced computer, and the old one stops being Till B1. The drawing's
+    taken numbers are "In use" and can't be picked, so the screen waits for
+    a drawing.
+17. **A till switched off today keeps its line on Today**, with what
+    happened on it; tills go in number order, B2 before B10, on Today and
+    in Settings; the Owner's look at closing records no till (review, 28 Oct).
+    It also records no person checked in, only the Owner's sign-in (its
+    name is the same), so it adds no "Till · Not open yet" line to Today
+    when every till is set up (second review, 28 Oct). *Pattern:* the float
+    check's own "the sign-in's own name for a look at closing".
 
 ## Decided here, for Jack to overrule
 
@@ -3382,7 +3479,9 @@ but no closed order. Decided here, for Jack to overrule:
    check-in arrives it becomes the trigger. Jack chose it, 27 Oct
    (`docs/decisions/2026-10-27-answers.md`, answer 3).
 2. **No till name** ("Till B1") until tills have names in the new app (Mark's
-   step C); a shop has one float check a day, not one a till.
+   step C); a shop has one float check a day, not one a till. *Later (28
+   Oct, till-setup entry 2):* the check records the till it was counted at;
+   still one a shop a day until sales carry their till.
 3. **"Takes payments" is the Owner, or a team member marked as a cashier**
    (the team's existing switch), until roles (WP-1.1). *Pattern:* UX
    walk-through 2 M1's "Staff, Manager, Owner" read as the switches there are.
@@ -3411,7 +3510,10 @@ but no closed order. Decided here, for Jack to overrule:
 
 ### 27 Oct 2026: opening the shop with a float check, the screens (`openspec/changes/opening-float-check`, `op-float-check`, `op-float-check-first`, `op-float-count`, `op-float-matched`, `op-float-short`, `op-float-over`, `op-today-short`, `set-eod`)
 
-1. **The pop-ups have no "Till B1"**: the subtitles read "first in today to
+1. **The pop-ups have no "Till B1"** (*later, 28 Oct, till-setup entry 2:*
+   on a set-up till they read "Till B1 · first in today to take payments",
+   "Till B1 · count every note and coin", "Float checked · Till B1 ·
+   counted by Jo Taylor", and Today "Till B1’s float was [£] short"): the subtitles read "first in today to
    take payments", "first in on the first day on Wheelhouse", "count every
    note and coin" and "counted by Jo Taylor", and the message "Float
    checked · counted by Jo Taylor". Today's line reads "The float was [£]
@@ -3455,7 +3557,9 @@ but no closed order. Decided here, for Jack to overrule:
 ### 27 Oct 2026: Close the day, the server (`openspec/changes/close-the-day`, `eod-count`, `eod-count-result`, `eod-banking`, `eod-paidout`, `eod-finish`, `eod-z`; WP-3.4, slice B; cash-up decisions 2 to 6; opening the shop decision 8 H1)
 
 1. **One close a shop a day, no till name**, as the float check: tills get
-   names with Mark's step C, and a shop has one drawer until then.
+   names with Mark's step C, and a shop has one drawer until then. *Later
+   (28 Oct, till-setup entry 2):* tills have names now, but sales don't
+   carry their till, so the close stays the shop's, with no till name.
 2. **Only the Owner closes the day and takes cash out**, until roles
    (WP-1.1) bring managers and "Can close the day" (decision 5; roles answer
    6 of 5 Oct). *Pattern:* Needs attention and Seen.
@@ -3543,7 +3647,9 @@ but no closed order. Decided here, for Jack to overrule:
    on (step C, Park, a connected card machine), so they aren't shown, and
    the steps that are shown are numbered in order rather than 3, 4 and 6.
 2. **No "Till B1 · Bolton"** beside the title: the date only ("Tuesday 1
-   September"), until tills and sites have names. The report reads "Day
+   September"), until tills and sites have names. *Later (28 Oct,
+   till-setup entry 2):* still none, since the close counts the whole
+   shop's cash until sales carry their till. The report reads "Day
    closed" and "[date] · closed by [Name]", without "saved to Reports"
    until Reports exists.
 3. **The page is at `/workshop/till/close`**, inside the till's folded

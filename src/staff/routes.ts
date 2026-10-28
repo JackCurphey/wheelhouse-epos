@@ -48,6 +48,9 @@ export const ROUTES = {
   // Close the day (eod-count), from the till after closing time
   // (openspec/changes/close-the-day).
   'eod-count': '/workshop/till/close',
+  // Set up this till (till-setup), from Settings › Till › Tills; outside the
+  // staff frame, as drawn (openspec/changes/till-setup).
+  'till-setup': '/workshop/till/setup',
   // Counting in a stock take (tk-count), from Stock take's Join and Start the
   // count (openspec/changes/stock-take).
   'tk-count': '/workshop/stocktake/:id',

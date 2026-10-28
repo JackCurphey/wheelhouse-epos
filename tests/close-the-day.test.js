@@ -499,7 +499,7 @@ test('an over float goes to Needs attention when yesterday was closed, until See
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const [line, ...more] = await overLines(owner);
   assert.equal(more.length, 0);
-  assert.deepEqual({ ...line, checkedAt: 0 }, { kind: 'float_over', checkId: res.body.check.id, day: '2026-09-01', overPence: 300, countedByName: 'Jack Lewis', reason: 'a £5 note found', checkedAt: 0 });
+  assert.deepEqual({ ...line, checkedAt: 0 }, { kind: 'float_over', checkId: res.body.check.id, day: '2026-09-01', overPence: 300, countedByName: 'Jack Lewis', reason: 'a £5 note found', checkedAt: 0, tillCode: null });
   // Not a short float as well.
   assert.equal((await call(owner, '/api/needs-attention')).body.items.filter((i) => i.kind === 'float_short').length, 0);
   assert.deepEqual((await post(owner, `/api/float-check/${line.checkId}/seen`, {})).status, 200);

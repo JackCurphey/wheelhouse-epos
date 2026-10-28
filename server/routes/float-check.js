@@ -18,7 +18,9 @@ export const isPence = (v) => Number.isSafeInteger(v) && v >= 0 && v <= MAX_PENC
 // Who checked: the person checked in at the till (pins-and-checkin), or the
 // sign-in's own name for a look at closing.
 const BY_NAME = 'COALESCE(e.name, l.name)';
-const CHECK_SELECT = `SELECT f.*, ${BY_NAME} AS checked_by_name FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id`;
+// Where: the till it was checked at, if a set-up one (till-setup).
+const CHECK_SELECT = `SELECT f.*, ${BY_NAME} AS checked_by_name, t.code AS till_code FROM float_checks f JOIN logins l ON l.id = f.login_id
+  LEFT JOIN employees e ON e.id = f.employee_id LEFT JOIN tills t ON t.id = f.till_id`;
 
 function serializeCheck(row) {
   return {
@@ -29,6 +31,7 @@ function serializeCheck(row) {
     reason: row.reason,
     checkedByName: row.checked_by_name,
     checkedAt: new Date(row.checked_at).toISOString(),
+    tillCode: row.till_code ?? null,
   };
 }
 
@@ -66,15 +69,15 @@ const OVER_AFTER_CLOSED = `f.counted_pence > f.expected_pence AND EXISTS (SELECT
 const WAITING_TO_BE_SEEN = `f.seen_at IS NULL AND (${SHORT} OR (${OVER_AFTER_CLOSED}))`;
 
 export async function floatsToSee() {
-  const rows = await prepare(`SELECT f.*, to_char(f.day, 'YYYY-MM-DD') AS day_text, ${BY_NAME} AS checked_by_name
-    FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id
+  const rows = await prepare(`SELECT f.*, to_char(f.day, 'YYYY-MM-DD') AS day_text, ${BY_NAME} AS checked_by_name, t.code AS till_code
+    FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id LEFT JOIN tills t ON t.id = f.till_id
     WHERE ${WAITING_TO_BE_SEEN} ORDER BY f.day, f.id`).all();
   return rows.map((r) => {
     const short = r.counted_pence < r.expected_pence;
     return {
       kind: short ? 'float_short' : 'float_over', checkId: r.id, day: r.day_text,
       ...(short ? { shortPence: r.expected_pence - r.counted_pence } : { overPence: r.counted_pence - r.expected_pence }),
-      countedByName: r.checked_by_name, checkedAt: new Date(r.checked_at).toISOString(), reason: r.reason,
+      tillCode: r.till_code ?? null, countedByName: r.checked_by_name, checkedAt: new Date(r.checked_at).toISOString(), reason: r.reason,
     };
   });
 }
@@ -126,10 +129,14 @@ export function register(route) {
       return sendJson(res, 400, { error: 'Count the float on the first day', code: 'count_needed' });
     }
     const day = await today();
+    // The till it was checked at; the Owner's look at closing is the whole
+    // shop's, so it records none (review, 28 Oct), and is the sign-in's own,
+    // not the person checked in (BY_NAME), so Today can tell it from a check
+    // made at a till (second review, 28 Oct).
     const made = await prepare(
-      `INSERT INTO float_checks (day, login_id, employee_id, expected_pence, counted_pence, reason) VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO float_checks (day, login_id, employee_id, expected_pence, counted_pence, reason, till_id) VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (shop_id, day) DO NOTHING RETURNING id`
-    ).get(day, ctx.login.id, checkin?.employee_id ?? null, expected, counted, reason);
+    ).get(day, ctx.login.id, closing ? null : (checkin?.employee_id ?? null), expected, counted, reason, closing ? null : (checkin?.till_id ?? null));
     if (!made) return sendJson(res, 409, { error: 'The float was already checked today', code: 'already_checked', check: await checkOn(day) });
     sendJson(res, 201, { check: await checkOn(day) });
   });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { User } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
 import { useCheckinActions, type CheckedIn, type GiveTo } from '@/lib/till-checkin.ts';
@@ -10,8 +10,8 @@ import { ServingMenuButton } from './give-pin.tsx';
  * and 9). The PIN alone says who you are: the fourth digit is checked at
  * once, with no OK button. A wrong PIN clears the dots and says so; there is
  * no lock. Who has checked in today is listed under the pad.
- * Not here yet (openspec/changes/pins-and-checkin): the till bar with the
- * till's name and the start-up status line (step C). "No PIN yet?" is the
+ * Not here yet (openspec/changes/pins-and-checkin): the till bar and the
+ * start-up status line (step C); the till's name sits above (till-setup). "No PIN yet?" is the
  * drawn line now the Owner can give a PIN here (openspec/changes/give-pin-at-till).
  */
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -116,11 +116,13 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
  * Owner, while someone has no PIN, it opens the Serving menu instead
  * (till-serving-menu; give-pin.tsx).
  */
-export function ServingButton({ serving, givePin = [] }: { serving: CheckedIn; givePin?: GiveTo[] }) {
+export function ServingButton({ serving, givePin = [], lead = null }: { serving: CheckedIn; givePin?: GiveTo[]; lead?: ReactNode }) {
   const { switchServing } = useCheckinActions();
   const [failed, setFailed] = useState(false);
   return (
     <div className="mb-3.5 flex items-center justify-end gap-2.5">
+      {/* The till's name on the left, as the till bar has it (till-setup). */}
+      {lead ? <span className="mr-auto">{lead}</span> : null}
       {failed ? <span role="alert" className="text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t switch. Try again in a moment.</span> : null}
       {givePin.length ? <ServingMenuButton serving={serving} givePin={givePin} onFailed={() => setFailed(true)} /> : <button type="button" aria-label={`Serving: ${serving.name} — switch who’s serving`}
         onClick={() => { setFailed(false); switchServing().catch(() => setFailed(true)); }}

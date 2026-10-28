@@ -14,7 +14,7 @@ import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-sear
 import { PayDialog } from './pay-dialog.tsx';
 import { FloatCheck } from './float-check.tsx';
 import { PinCheckin, ServingButton } from './pin-checkin.tsx';
-import { useTillCheckin } from '@/lib/till-checkin.ts';
+import { useTillCheckin, type ThisTillName } from '@/lib/till-checkin.ts';
 import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
 import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
 
@@ -46,16 +46,33 @@ export function TillPage() {
   useHoldScreen(!data && !checkin.isError);
   if (!data) return checkin.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p> : null;
   const { serving, checkedInToday, givePin } = data;
-  if (!serving && !saleOpen) return <PinCheckin checkedInToday={checkedInToday} />;
+  const name = data.till ? <TillName till={data.till} /> : null;
+  if (!serving && !saleOpen) return <>{name ? <div className="mb-3.5">{name}</div> : null}<PinCheckin checkedInToday={checkedInToday} /></>;
   // The first person to check in who takes payments checks the float (opening
   // the shop decision 2; Jack's answer 3, 27 Oct).
   return (
     <>
-      {serving ? <ServingButton serving={serving} givePin={givePin} /> : null}
+      {serving ? <ServingButton serving={serving} givePin={givePin} lead={name} /> : name ? <div className="mb-3.5">{name}</div> : null}
       <CloseTheDayEntry />
       {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} onOpenChange={setSaleOpen} /> : <SaleTill onOpenChange={setSaleOpen} />}
       {serving ? <FloatCheck /> : null}
     </>
+  );
+}
+
+/**
+ * The till's name, as the till bar draws it on the left ("Till B1",
+ * "Bolton · North Street Cycles"; app-map.mjs tillBar). The till bar isn't
+ * built, so it sits in the till's strip (openspec/changes/till-setup).
+ */
+function TillName({ till }: { till: ThisTillName }) {
+  const session = useSession();
+  const shop = session.status === 'signed-in' ? session.shop.name : '';
+  return (
+    <span className="flex flex-col gap-px">
+      <span className="font-[family-name:var(--wh-font-mono)] text-base font-bold">{`Till ${till.code}`}</span>
+      <span className="text-xs text-[var(--wh-muted)]">{shop ? `${till.siteName} · ${shop}` : till.siteName}</span>
+    </span>
   );
 }
 

@@ -31,6 +31,8 @@ GET /api/sites
 POST /api/sites
 GET /api/tills
 POST /api/tills
+GET /api/till-setup
+POST /api/till-setup
 POST /api/tills/:id/deactivate
 GET /api/till/:shopSlug/snapshot
 POST /api/till/:shopSlug/sync

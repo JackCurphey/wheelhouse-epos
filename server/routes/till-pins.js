@@ -18,6 +18,7 @@ import { currentSession } from '../lib/session.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
+import { thisTill, tillCookie, tillCookieToken } from '../till/this-till.js';
 
 export const CHECKIN_COOKIE = 'wh_till_checkin';
 const OFFER_MINUTES = 15;
@@ -118,18 +119,20 @@ async function keepPin(employeeId, pin, { firstOnly = false } = {}) {
 
 /**
  * The person checked in on this browser, or null: the cookie's check-in,
- * made under this same sign-in, today, not ended, by someone still active.
- * Row-level security keeps it to the request's shop.
+ * made under this same sign-in, on this browser's till (or, on a browser
+ * that isn't a set-up till, on none: till-setup design 3), today, not ended,
+ * by someone still active. Row-level security keeps it to the request's shop.
  */
 export async function currentCheckin(req) {
   const token = parseCookies(req)[CHECKIN_COOKIE];
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const ctx = await currentSession(req);
   if (!ctx) return null;
+  const till = await thisTill(req);
   const row = await prepare(
-    `SELECT c.id, c.employee_id, e.name, e.is_cashier FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-      WHERE c.token_hash = ? AND c.login_id = ? AND c.day = ? AND c.ended_at IS NULL AND e.active = 1`
-  ).get(hashLinkCode(token), ctx.login.id, await today());
+    `SELECT c.id, c.employee_id, c.till_id, e.name, e.is_cashier FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.token_hash = ? AND c.login_id = ? AND c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int AND c.ended_at IS NULL AND e.active = 1`
+  ).get(hashLinkCode(token), ctx.login.id, await today(), till?.id ?? null);
   return row ?? null;
 }
 
@@ -142,6 +145,14 @@ async function giverHere(req) {
   if (!mine) return null;
   const owner = await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(mine.employee_id);
   return owner ? mine : null;
+}
+
+// Someone checked in by PIN on this browser who isn't the Owner: then the
+// Owner's sign-in doesn't set up a till here (giverHere's rule; roles and
+// switches 2; till-setup, review, 28 Oct).
+export async function someoneElseCheckedIn(req) {
+  const mine = await currentCheckin(req);
+  return Boolean(mine) && !(await giverHere(req));
 }
 
 // The people the giver can give a PIN to: active, no PIN, never the giver
@@ -290,21 +301,27 @@ export function register(route) {
     sendJson(res, 200, { ok: true });
   });
 
-  // Who is serving on this browser, who has checked in today (till-checkin),
-  // and who the Owner serving here can give a PIN to.
+  // Who is serving on this browser, who has checked in on this till today
+  // (till-checkin), which till this browser is (till-setup), and who the
+  // Owner serving here can give a PIN to.
   // screens: till-checkin, till-serving-menu, till-serving-menu-several
   route('GET', '/api/till-checkin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const mine = await currentCheckin(req);
+    const till = await thisTill(req);
+    // A till's cookie is renewed each time it's read, so a till in use never
+    // loses it (review, 28 Oct).
+    if (till) res.setHeader('Set-Cookie', tillCookie(req, tillCookieToken(req)));
     const people = await prepare(
       `SELECT DISTINCT e.id, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-        WHERE c.day = ? AND e.active = 1 ORDER BY e.name, e.id`
-    ).all(await today());
+        WHERE c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int AND e.active = 1 ORDER BY e.name, e.id`
+    ).all(await today(), till?.id ?? null);
     // Only for the Owner serving here: who has no PIN (till-serving-menu).
     const giver = mine ? await giverHere(req) : null;
     sendJson(res, 200, {
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
+      till: till ? { code: till.code, name: till.name, siteName: till.site_name } : null,
       checkedInToday: people.map((p) => ({ id: p.id, name: p.name })),
       givePin: giver ? await peopleWithNoPin(giver) : [],
     });
@@ -337,8 +354,10 @@ export function register(route) {
       await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND ended_at IS NULL').run(hashLinkCode(previous));
     }
     const token = newLinkCode();
-    await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day) VALUES (?, ?, ?, ?)')
-      .run(who.id, ctx.login.id, hashLinkCode(token), await today());
+    // On this browser's till, if it is one (till-setup design 3).
+    const till = await thisTill(req);
+    await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id) VALUES (?, ?, ?, ?, ?)')
+      .run(who.id, ctx.login.id, hashLinkCode(token), await today(), till?.id ?? null);
     // The server ends it with the shop's day; the cookie lasts no longer than a day.
     res.setHeader('Set-Cookie', checkinCookie(req, token, 24 * 60 * 60));
     sendJson(res, 201, { serving: { id: who.id, name: who.name } });
