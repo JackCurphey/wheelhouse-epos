@@ -8,4 +8,4 @@
 - [x] 1.4 Route list and the owner-only allow-list
 - [x] 1.5 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.6 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, `npm run test:browser`; self-review (sign-in, migration)
-- [ ] 1.7 `/opsx:archive` as the last commit, before merging (not in this push: Jack opens the pull request)
+- [x] 1.7 `/opsx:archive` as the last commit, before merging
