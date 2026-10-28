@@ -84,6 +84,10 @@ test('096 adds paid-outs and one close a day, and keeps each shop to its own', a
     await c.query('UPDATE sales SET day_close_id = $1', [made.id]);
     await assert.rejects(c.query('UPDATE sales SET day_close_id = 999999'), /foreign key/i, 'a sale is marked only by a real close');
     assert.equal((await c.query("SELECT count(*)::int AS n FROM information_schema.columns WHERE table_name = 'till_sales' AND column_name = 'day_close_id'")).rows[0].n, 1);
+    // The sales no close has counted yet are found by an index each (third review, item 3).
+    const idx = (await c.query("SELECT indexname FROM pg_indexes WHERE indexname IN ('idx_sales_uncounted', 'idx_till_sales_uncounted') ORDER BY 1")).rows.map((r) => r.indexname);
+    assert.deepEqual(idx, ['idx_sales_uncounted', 'idx_till_sales_uncounted']);
+    ids.close = made.id;
     await assert.rejects(close('2026-09-01'), /unique|duplicate/i, 'one close a day');
     await assert.rejects(close('2026-09-02', -1, 0), /check/i, 'a count is never below nothing');
     await assert.rejects(close('2026-09-03', 100, -1), /check/i, 'banking is never below nothing');
@@ -94,6 +98,8 @@ test('096 adds paid-outs and one close a day, and keeps each shop to its own', a
     await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(other.id)]);
     assert.equal((await c.query('SELECT count(*)::int AS n FROM paid_outs')).rows[0].n, 0);
     assert.equal((await c.query('SELECT count(*)::int AS n FROM day_closes')).rows[0].n, 0);
+    // The database stops a sale pointing at another shop's close (third review, item 2).
+    await assert.rejects(c.query("INSERT INTO sales (subtotal, total, payment_method, day_close_id) VALUES (5, 5, 'Cash', $1)", [ids.close]), /foreign key/i, 'not another shop\'s close');
   });
   // Run again on a database that already has it: it runs without failing,
   // and what was kept stays, each shop still seeing only its own.
@@ -106,5 +112,11 @@ test('096 adds paid-outs and one close a day, and keeps each shop to its own', a
     await c.query("SELECT set_config('app.current_shop_id', (SELECT id::text FROM shops WHERE slug = 'other-cycles'), false)");
     assert.equal((await c.query('SELECT count(*)::int AS n FROM paid_outs')).rows[0].n, 0);
     assert.equal((await c.query('SELECT count(*)::int AS n FROM day_closes')).rows[0].n, 0);
+    // Still one link from each sales table to the closes, by shop and close.
+    const links = (await c.query(`SELECT conrelid::regclass::text AS t, pg_get_constraintdef(oid) AS def FROM pg_constraint
+      WHERE contype = 'f' AND confrelid = 'day_closes'::regclass AND conrelid IN ('sales'::regclass, 'till_sales'::regclass) ORDER BY 1`)).rows;
+    assert.deepEqual(links.map((l) => l.t), ['sales', 'till_sales']);
+    for (const l of links) assert.match(l.def, /FOREIGN KEY \(shop_id, day_close_id\) REFERENCES day_closes\(shop_id, id\)/);
+    await assert.rejects(c.query("INSERT INTO sales (subtotal, total, payment_method, day_close_id) VALUES (5, 5, 'Cash', $1)", [ids.close]), /foreign key/i);
   });
 });
