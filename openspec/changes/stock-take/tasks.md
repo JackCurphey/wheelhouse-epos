@@ -2,17 +2,17 @@
 
 ## 1. Server (pull request 1, `jack/stock-take`)
 
-- [ ] 1.1 Tests first: migration 098 from an empty scratch database and run twice (`tests/migration-098.test.js`); the routes (`tests/stock-take.test.js`: start for the Owner only, each kind and its checks; areas used before; join, scan, type, take off; blind; twenty scans at once; stock untouched; a count's own products only; still to find; finished and back to counting; each shop sees only its own). Watch each fail
-- [ ] 1.2 Migration 098, `server/routes/stock-takes.js`, registered in `server/routes/index.js`
-- [ ] 1.3 The route list snapshot, the owner-only list
-- [ ] 1.4 Break each key rule on purpose, see its test go red, and restore
+- [x] 1.1 Tests first: migration 098 from an empty scratch database and run twice (`tests/migration-098.test.js`); the routes (`tests/stock-take.test.js`: start for the Owner only, each kind and its checks; areas used before; join, scan, type, take off; blind; twenty scans at once; stock untouched; a count's own products only; still to find; finished and back to counting; each shop sees only its own). Watch each fail
+- [x] 1.2 Migration 098, `server/routes/stock-takes.js`, registered in `server/routes/index.js`
+- [x] 1.3 The route list snapshot, the owner-only list
+- [x] 1.4 Break each key rule on purpose, see its test go red, and restore
 - [ ] 1.5 Lint, typecheck, the touched tests; `/review` (migration, stock)
 
 ## 2. Screens (pull request 2, `jack/stock-take-screens`, stacked on 1)
 
-- [ ] 2.1 Tests first: Stock take for the Owner and Staff, Start a count, counting and below zero (`tests/screens/stock-take.test.js`); the shell no longer shows the placeholder; a browser spec. Watch each fail
-- [ ] 2.2 Build them to the drawings
-- [ ] 2.3 Break each key rule on purpose, see its test go red, and restore
+- [x] 2.1 Tests first: Stock take for the Owner and Staff, Start a count, counting and below zero (`tests/screens/stock-take.test.js`); the shell no longer shows the placeholder; a browser spec. Watch each fail
+- [x] 2.2 Build them to the drawings
+- [x] 2.3 Break each key rule on purpose, see its test go red, and restore
 - [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, the browser specs; `/review`
 - [ ] 2.5 `/opsx:archive` as the last commit
 

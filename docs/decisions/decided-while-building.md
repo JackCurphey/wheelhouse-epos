@@ -3485,3 +3485,45 @@ but no closed order. Decided here, for Jack to overrule:
     day leaves it in the drawer and banks the rest."
 14. **An over float on Today** reads as the short one: "The float was [£]
     over this morning", "Counted by [Name] at [time]", the reason, and Seen.
+
+### 28 Oct 2026: stock take, the counting half (`openspec/changes/stock-take`, `tk-hub`, `tk-hub-staff`, `tk-start`, `tk-start-category`, `tk-count`, `tk-count-below`; WP-2.2, slice C; stock control decisions 5, 9 and 11)
+
+1. **Starting a count is for the Owner** until roles bring "Can order
+   stock" (the 5 Oct later change to decision 5). *Pattern:* Deliveries and
+   orders' owner-only orders. Staff see "Starting a count, and checking and
+   applying it, are for the shop’s owner for now." where the drawing says
+   "are for managers" (Deliveries' "Orders are for the shop’s owner for now").
+2. **Checking and applying wait for Jack** (what "allowed for" means for
+   stock that moves during the count; the question is in the change's
+   `design.md`). So the hub has no "Check it" link and no Finished counts box
+   yet; a count everyone has finished shows "Ready to check", and Join stays
+   for everyone, the Owner included.
+3. **Who is counting** on the hub line: "[n] items counted · Jo Taylor and
+   Alex Morgan counting", or "everyone has finished" once everyone who joined
+   has pressed I’ve finished my part. A count nobody has joined isn't ready.
+   Counting again after finishing puts the person back to counting.
+4. **No counts in progress** says "No counts in progress." (Deliveries' "No
+   orders." pattern; not drawn).
+5. **"Started [time]"** is the time today, or "Tue 1 Sep, 10:30" on an
+   earlier day, as a count can run over days.
+6. **Areas used before** are the last five area names, newest first, as
+   buttons that fill "Which area". **A category is picked by searching**
+   (decision 11): the box lists matching categories under it, as the scan
+   boxes list products. The kind starts on "An area", as `tk-start` draws.
+7. **A category count takes only that category's products, and a below-zero
+   count only the products below zero when it started**; scanning anything
+   else says "[Product] isn’t in [Category]" or "[Product] isn’t below zero"
+   and isn't counted ("and nothing else is compared"). A below-zero count is
+   refused when nothing is below zero.
+8. **The counting page**: the room's title stays "Stock take"; the card is
+   headed with the drawn page title ("Counting [Area]", "Counting: below
+   zero", "Counting the whole shop") and the drawn box title under it ("Scan
+   what’s here", "Find and scan these"), with "‹ Stock take" to go back
+   (receiving's pattern). Two people counting the same product each keep
+   their own number. Typing 0, or − at 1, takes the person's line off.
+9. **The below-zero note** reads "Started by [Name]. …" without "from
+   Today": Today's Count them isn't built yet.
+10. **Later, not built here:** Recount, Check the count, Count them as none,
+    Apply with Undo, Download the count, held stock left out of Expected
+    (nothing holds stock yet), sizes and colours on a line (WP-1.5), Today's
+    below-zero line, and sending stock to another shop.

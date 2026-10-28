@@ -48,6 +48,9 @@ export const ROUTES = {
   // Close the day (eod-count), from the till after closing time
   // (openspec/changes/close-the-day).
   'eod-count': '/workshop/till/close',
+  // Counting in a stock take (tk-count), from Stock take's Join and Start the
+  // count (openspec/changes/stock-take).
+  'tk-count': '/workshop/stocktake/:id',
   // "You've signed out" (auth-signedout), where Sign out and WorkOS's sign-out
   // end (staff-signin-workos-screens design 5). StaffLayout draws it while
   // signed out; signed in, it goes on to /workshop.
