@@ -131,10 +131,13 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/till-checkin/give-pin/:id/offer', 'the Owner checked in at the till by PIN, whoever the browser is signed in as (giving a PIN, Jack 28 Oct)'],
   ['DELETE /api/till-checkin/give-pin/:id/offer', 'the Owner checked in at the till by PIN: Close without giving a PIN withdraws the PIN shown (review, 28 Oct)'],
   ['POST /api/till-checkin/give-pin/:id','the Owner checked in at the till by PIN, whoever the browser is signed in as (giving a PIN, Jack 28 Oct)'],
+  ['POST /api/stock-takes/:id/join', 'day-to-day: anyone joins a stock take (stock control decisions 5 and 11)'],
+  ['POST /api/stock-takes/:id/counts', 'day-to-day: anyone counts in a stock take (stock control decisions 5 and 11)'],
+  ['POST /api/stock-takes/:id/finish', 'day-to-day: I’ve finished my part of a stock take (stock control decision 5)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js', 'stock-takes.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.
