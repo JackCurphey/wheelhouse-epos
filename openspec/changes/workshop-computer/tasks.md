@@ -2,12 +2,12 @@
 
 ## 1. Server and screens (one pull request, `jack/workshop-computer`, on `jack/till-setup-screens`)
 
-- [ ] 1.1 Tests first: migration 101 from an empty scratch database and run twice (`tests/migration-101.test.js`); the routes (`tests/workshop-computer.test.js`: the Owner only; the cookie holds the workshop computer, the server only its hash; already a till or a workshop computer; a check-in counts only on its workshop computer; idle 10 minutes ends it on the server, used keeps it, a till never; Checked in today is the computer's; no giving a PIN there). Watch each fail
-- [ ] 1.2 Migration 101, `server/till/this-workshop.js`, the routes
-- [ ] 1.3 The route list snapshot, the owner-only list
-- [ ] 1.4 Tests first: Set up this computer's choice, the workshop PIN screen and its bar, the PIN opening the diary, Working and Switch, idle back to the PIN screen, used keeps it (`tests/screens/workshop-computer.test.js`); a browser spec. Watch each fail
-- [ ] 1.5 Build the screens to the drawings
-- [ ] 1.6 Break each key rule on purpose, see its test go red, and restore
+- [x] 1.1 Tests first: migration 101 from an empty scratch database and run twice (`tests/migration-101.test.js`); the routes (`tests/workshop-computer.test.js`: the Owner only; the cookie holds the workshop computer, the server only its hash; already a till or a workshop computer; a check-in counts only on its workshop computer; idle 10 minutes ends it on the server, used keeps it, a till never; Checked in today is the computer's; no giving a PIN there). Watch each fail
+- [x] 1.2 Migration 101, `server/till/this-workshop.js`, the routes
+- [x] 1.3 The route list snapshot, the owner-only list
+- [x] 1.4 Tests first: Set up this computer's choice, the workshop PIN screen and its bar, the PIN opening the diary, Working and Switch, idle back to the PIN screen, used keeps it (`tests/screens/workshop-computer.test.js`); a browser spec. Watch each fail
+- [x] 1.5 Build the screens to the drawings
+- [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [ ] 1.7 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, `npm run test:browser`; `/review` (sign-in, migration)
 - [ ] 1.8 `/opsx:archive` as the last commit
 

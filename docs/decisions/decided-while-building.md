@@ -1279,6 +1279,75 @@ silent:
     when every till is set up (second review, 28 Oct). *Pattern:* the float
     check's own "the sign-in's own name for a look at closing".
 
+### 28 Oct 2026: the shared workshop computer, first part (`openspec/changes/workshop-computer`, `till-checkin-workshop`, the Working bar, `till-setup`; WP-1.7 task 3.6; walk-through 8 decisions 1, 3 and 4; build plan Q6; stage-1 gaps 4 and 10)
+
+1. **This is the first playable part of task 3.6.** Built: a computer
+   becomes a workshop computer, Enter your PIN with no till number,
+   "Working: [name] · Switch" on every page, and back to Enter your PIN
+   after 10 minutes idle. Listed as later tasks in the change: trust PIN and
+   its settings (the two lines on `set-till-quick`), "Who's working?"
+   (`till-checkin-workshop-names`), the Working pills
+   (`workshop-working-pills`), the till's Serving pills
+   (`till-serving-pills`), Owner and Manager pages asking for a PIN (stage-1
+   gaps 1), and the diary's "Me" as the person working. The whole of 3.6
+   was about 1,800 lines, over one piece.
+2. **Trust PIN isn't built, so it is off for every shop**, which roles and
+   switches 9 says means a workshop computer always goes back after 10
+   minutes. Nothing about trust PIN shows yet. *Pattern:* show only what
+   works (20 Oct, Settings frame 6).
+3. **The server enforces the 10 minutes.** Each check-in on a workshop
+   computer records when it was last used; 10 minutes later the server ends
+   it, whatever the screen does, so nothing more is done as that person. The
+   screen counts a press, click, tap, key or scroll as using it and tells
+   the server at most every 30 seconds; it also goes back to Enter your PIN
+   by itself at 10 minutes, and reads the check-in every minute. Just
+   looking at the screen doesn't count as using it. Tills never go back by
+   themselves. *Pattern:* the check-in's own day (28 Oct, PINs entry 3).
+4. **A workshop computer is kept apart from tills**, in its own table and
+   its own cookie (`wh_workshop`, 400 days, renewed when read, only its hash
+   stored), so tills' numbers, float checks and Today's lines don't change.
+   A computer is a till or a workshop computer, never both. *Pattern:* the
+   till's own browser key (28 Oct, till-setup entry 3).
+5. **Before anyone is working, Enter your PIN takes the place of every
+   page**, with the bar and no sidebar, as drawn. The address stays, so the
+   PIN opens the page that was asked for; the front page opens the diary
+   (third walk, answer 8). Anything on screen that wasn't saved isn't kept
+   when it goes back: pages save as they go. *Pattern:* the till's PIN
+   screen in place of the till.
+6. **The workshop PIN screen says only what works.** The bar reads
+   "Workshop computer", "Bolton · North Street Cycles" ("Bolton" on a
+   phone) and "Nobody working — enter your PIN" ("Nobody working" on a
+   phone), with no Online pill (the till bar's isn't built either). The
+   drawn line "What you do on this computer is recorded under your name and
+   role." isn't shown: until task 3.8 the server records the sign-in, not
+   the person working. No "Checked in today" and no "No PIN yet?", as drawn.
+   *Pattern:* 28 Oct, PINs entry 8.
+7. **"Working: Alex Morgan · Switch" runs across the top of every page**
+   (stage-1 gaps 10), above the page's header, as the job pop-up draws it.
+   Switch ends the check-in and goes back to Enter your PIN; a screen reader
+   hears "Now working: Alex Morgan" (second walk, answer 10).
+8. **Decided here, for Jack to overrule: Set up this computer offers "A
+   till" or "A workshop computer"** (stage-1 gaps 4 says it offers both;
+   not drawn) as pills under "This computer becomes", the till first and
+   chosen. With the workshop computer chosen: the heading "Set up a
+   workshop computer", the line "This computer becomes a workshop computer:
+   staff work on it with their PIN.", the shop pills, "Name (optional)" and
+   "Make this computer a workshop computer"; no till number. The name is
+   kept but shown nowhere yet, as a till's. *Pattern:* the setup's own shop
+   pills.
+9. **Settings › Till › Tills doesn't offer "Make this computer a till" on a
+   workshop computer**; its drawn note keeps its words ("It doesn’t show on
+   a computer that’s already a till."). Opening the setup page there goes
+   to Enter your PIN.
+10. **For Jack: pages on a workshop computer are the sign-in's**, as on a
+    till today. A workshop computer the Owner signed in shows the Owner's
+    pages to whoever is working, until Owner and Manager pages ask for a
+    PIN (stage-1 gaps 1) and pages follow the person working's role (WP-1.1,
+    task 3.8). The Till page also still opens there, as on a browser that
+    isn't a till; whether a workshop computer may sell isn't decided.
+11. **Giving a PIN is the till's**: the Serving menu's "Give a PIN" isn't
+    offered on a workshop computer, and the server refuses it there.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

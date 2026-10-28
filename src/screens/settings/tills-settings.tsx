@@ -8,8 +8,9 @@ import { ROUTES } from '@/staff/routes.ts';
  * set-till-tills-owner in generator/setup.mjs, tillsOpen; stage-1 gaps
  * decision 4: only "Make this computer a till" until the list of tills with
  * Rename and Remove, WP-5.1; openspec/changes/till-setup). The button doesn't
- * show on a computer that's already a till, nor for a business with no shop
- * set up yet (design 6).
+ * show on a computer that's already a till or a workshop computer
+ * (openspec/changes/workshop-computer), nor for a business with no shop set
+ * up yet (design 6).
  */
 export function useTillsSummary(): string {
   const setup = useTillSetup();
@@ -27,7 +28,7 @@ export function TillsSettings() {
       <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Do this on the computer that will be the till. It doesn’t show on a computer that’s already a till.</p>
       {/* A load that fails says so (review, 28 Oct), in the settings boxes' words. */}
       {setup.isError ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t load the tills. Try again in a moment.</p> : null}
-      {data && !data.thisTill && data.sites?.length ? (
+      {data && !data.thisTill && !data.thisWorkshop && data.sites?.length ? (
         <Link to={ROUTES['till-setup']} className={buttonVariants({ variant: 'default' })}>Make this computer a till</Link>
       ) : null}
     </div>
