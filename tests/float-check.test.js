@@ -76,7 +76,7 @@ test('on the first day the float must be counted; the count is kept with who and
   const counted = await post(owner, '/api/float-check', { countedPence: FLOAT });
   assert.equal(counted.status, 201, JSON.stringify(counted.body));
   const { check } = counted.body;
-  assert.deepEqual({ ...check, id: 0, checkedAt: 0 }, { id: 0, how: 'counted', expectedPence: FLOAT, countedPence: FLOAT, reason: '', checkedByName: 'Jack Lewis', checkedAt: 0 });
+  assert.deepEqual({ ...check, id: 0, checkedAt: 0 }, { id: 0, how: 'counted', expectedPence: FLOAT, countedPence: FLOAT, reason: '', checkedByName: 'Jack Lewis', checkedAt: 0, tillCode: null });
   assert.ok(Number.isInteger(check.id));
   assert.ok(!Number.isNaN(Date.parse(check.checkedAt)));
   const after = (await call(owner, '/api/float-check')).body;
@@ -168,7 +168,7 @@ test('a short float is on the Owner\'s Needs attention until Seen, by the Owner 
   assert.equal(res.body.check.reason, 'change given wrong');
   const [line, ...more] = await shortLines(owner);
   assert.equal(more.length, 0);
-  assert.deepEqual({ ...line, checkedAt: 0 }, { kind: 'float_short', checkId: res.body.check.id, day: '2026-09-01', shortPence: 420, countedByName: 'Jo Taylor', reason: 'change given wrong', checkedAt: 0 });
+  assert.deepEqual({ ...line, checkedAt: 0 }, { kind: 'float_short', checkId: res.body.check.id, day: '2026-09-01', shortPence: 420, countedByName: 'Jo Taylor', reason: 'change given wrong', checkedAt: 0, tillCode: null });
   assert.equal(line.checkedAt, res.body.check.checkedAt);
   assert.equal((await post(jo, `/api/float-check/${line.checkId}/seen`, {})).status, 403);
   assert.equal((await shortLines(owner)).length, 1);
