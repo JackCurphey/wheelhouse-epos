@@ -1515,8 +1515,11 @@ silent:
    Mechanic or Staff from the team list, as the drawing's do, until roles.
    *Pattern:* show only what works (workshop-computer entry 6).
 7. **Only a typed PIN puts someone on the names.** A check-in made by a
-   tap doesn't count as having typed a PIN there, and a PIN cleared since
-   takes them off until they type their new one. *Pattern:* clearing a PIN
+   tap doesn't count as having typed a PIN there, and a PIN cleared or
+   changed since takes them off until they type their new one (changed:
+   the review, 29 Oct, so someone who saw the old PIN can't keep tapping
+   the name). The names come only from check-ins made under the computer's
+   own sign-in, as a check-in only counts under it. *Pattern:* clearing a PIN
    ends that person's check-ins (28 Oct, PINs entry).
 8. **"Who's working?" shows after Switch too**, not only after the
    computer is left alone (stage-1 gaps 10: "Switch opens the existing

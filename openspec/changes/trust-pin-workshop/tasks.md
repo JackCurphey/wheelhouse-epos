@@ -15,6 +15,7 @@
 - [x] 2.2 The names and the tap route
 - [x] 2.3 Tests first: "Who's working?" after Switch and left alone, a tap making the person working, "Someone else — enter your PIN". Watch each fail. A browser spec, written after the screen and watched failing with the names hidden
 - [x] 2.4 Build the screen to `till-checkin-workshop-names`
+- [x] 2.5 Review, 29 Oct: a changed PIN takes someone off the names; the names only under the same sign-in; tests that another workshop computer and someone inactive aren't offered. Tests first, each watched failing, each rule broken on purpose
 
 ## 3. Finish
 

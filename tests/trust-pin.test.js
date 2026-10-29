@@ -50,9 +50,10 @@ async function member(owner, name, { mechanic = false } = {}) {
 }
 
 // A browser: the Owner's sign-in plus whatever cookies the server gives it.
-function browser(owner) {
+// `signIn`: another sign-in's cookie in place of the Owner's.
+function browser(owner, signIn = owner.cookie) {
   const jar = new Map();
-  const cookie = () => [owner.cookie, ...[...jar].filter(([, v]) => v).map(([k, v]) => `${k}=${v}`)].join('; ');
+  const cookie = () => [signIn, ...[...jar].filter(([, v]) => v).map(([k, v]) => `${k}=${v}`)].join('; ');
   async function send(path, { method = 'GET', body } = {}) {
     const res = await fetch(`${server.baseUrl}${path}`, {
       method, headers: { cookie: cookie(), ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
@@ -235,4 +236,49 @@ test('the Owner’s own check-in on a workshop computer ends after 10 minutes at
   assert.equal((await checkin(w)).idleMinutes, 5);
   await idleFor(owner, w, 5);
   assert.equal((await checkin(w)).serving, null, 'the Owner gone after 5 minutes with 5 chosen');
+});
+
+test('the names come only from this workshop computer, active people, and this sign-in', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  const w = await workshop(owner);
+  const other = await workshop(owner);
+  await put(owner.cookie, { trustPin: true });
+  // Alex typed his PIN only on the other workshop computer at the same shop.
+  const alexId = (await checkIn(other, alex.pin)).id;
+  await switchOff(other);
+  assert.deepEqual((await checkin(w)).names, []);
+  assert.equal((await tap(w, alexId)).status, 403);
+  assert.deepEqual((await checkin(other)).names.map((n) => n.name), ['Alex Morgan']);
+  // Taken off the team: not offered, and a tap is refused.
+  await run(owner, 'UPDATE employees SET active = 0 WHERE id = ?', alexId);
+  assert.deepEqual((await checkin(other)).names, []);
+  assert.equal((await tap(other, alexId)).status, 403);
+  // Jo typed hers on this workshop computer, but under Jo's own sign-in:
+  // the Owner's sign-in there isn't offered her name.
+  const asJo = browser(owner, jo.cookie);
+  asJo.jar.set('wh_workshop', w.jar.get('wh_workshop'));
+  const joId = (await checkIn(asJo, jo.pin)).id;
+  await switchOff(asJo);
+  assert.deepEqual((await checkin(asJo)).names.map((n) => n.name), ['Jo Taylor']);
+  assert.deepEqual((await checkin(w)).names, []);
+  assert.equal((await tap(w, joId)).status, 403);
+});
+
+test('a changed PIN takes someone off the names until they type the new one', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const w = await workshop(owner);
+  await put(owner.cookie, { trustPin: true });
+  const joId = (await checkIn(w, jo.pin)).id;
+  await switchOff(w);
+  assert.deepEqual((await checkin(w)).names.map((n) => n.name), ['Jo Taylor']);
+  // Jo changes her PIN in Your settings: the PIN typed this morning no longer earns a tap.
+  const fresh = await newPin(jo.cookie);
+  assert.deepEqual((await checkin(w)).names, []);
+  assert.equal((await tap(w, joId)).status, 403);
+  await checkIn(w, fresh);
+  await switchOff(w);
+  assert.equal((await tap(w, joId)).status, 201);
 });

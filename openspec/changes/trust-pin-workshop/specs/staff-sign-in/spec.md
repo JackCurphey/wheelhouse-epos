@@ -37,7 +37,7 @@ On a workshop computer with trust PIN on and nobody working, when anyone has typ
 - **THEN** it shows Enter your PIN
 
 ### Requirement: A tap counts only for someone who typed their PIN there today
-The server SHALL check someone in by a tap only on a workshop computer, with trust PIN on, for someone active who typed their PIN on that same workshop computer on the shop's day, since their PIN was last cleared, and who is not the Owner. Any other tap SHALL be refused and nobody SHALL be checked in by it.
+The server SHALL check someone in by a tap only on a workshop computer, with trust PIN on, for someone active, not the Owner, who typed their PIN on that same workshop computer under the same sign-in on the shop's day, since their PIN was last cleared or changed. Any other tap SHALL be refused and nobody SHALL be checked in by it.
 
 #### Scenario: Never typed here
 - **WHEN** Jo Taylor typed her PIN only on Till B1 today and her name is sent as a tap on the workshop computer
@@ -50,6 +50,10 @@ The server SHALL check someone in by a tap only on a workshop computer, with tru
 #### Scenario: Not on a workshop computer
 - **WHEN** a tap is sent from a till
 - **THEN** it is refused
+
+#### Scenario: A changed PIN
+- **WHEN** Jo Taylor typed her PIN on the workshop computer this morning, then changed it in Your settings
+- **THEN** "Who’s working?" doesn't list her, and a tap for her is refused, until she types her new PIN there
 
 ## MODIFIED Requirements
 

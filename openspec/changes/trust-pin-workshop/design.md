@@ -45,7 +45,9 @@ Owner's own check-in after `ownerIdleMinutes()`, 10 minutes at most
 
 **Who a tap checks in.** Someone active, with a PIN, who isn't the Owner,
 with a check-in made by typing their PIN (`by_tap` false) on this
-workshop computer on the shop's day, after their PIN was last cleared. The
+workshop computer, under this browser's sign-in (as `currentCheckin`), on
+the shop's day, after their PIN was last cleared or changed
+(`pin_set_at`, set by Keep this PIN). The
 tap locks the shop's row (`FOR SHARE`) and the person's row (`FOR UPDATE`)
 in one transaction, checks, ends the old check-in, records the new one and
 commits before replying, so trust PIN switched off or a PIN cleared at the
@@ -70,7 +72,8 @@ same moment can't slip in between.
 4. **Only a typed PIN earns a tap.** A check-in made by a tap doesn't count
    as having typed a PIN there, so the names are always people who typed
    their PIN on that computer today; and clearing a PIN takes the person
-   off the names.
+   off the names, and so does changing it (the review, 29 Oct): someone
+   who saw the old PIN can't keep tapping the name.
 5. **"Who's working?" shows whenever nobody is working** on a workshop
    computer with trust PIN on and a name to tap: after it is left alone,
    and after Switch (stage-1 gaps 10: "Switch opens the existing Enter
