@@ -29,10 +29,11 @@ const zipReply = () => new Response(new Uint8Array([0x50, 0x4b, 5, 6]), {
 // Caught on the screen's own window, so after it opens.
 function catchDownloads() {
   const saved = [];
+  saved.revoked = [];
   const { createObjectURL, revokeObjectURL } = URL;
   const click = window.HTMLAnchorElement.prototype.click;
   URL.createObjectURL = () => 'blob:copy-1';
-  URL.revokeObjectURL = () => {};
+  URL.revokeObjectURL = (url) => { saved.revoked.push(url); };
   window.HTMLAnchorElement.prototype.click = function clicked() { saved.push({ href: this.getAttribute('href'), name: this.getAttribute('download') }); };
   restore = () => {
     URL.createObjectURL = createObjectURL;
@@ -73,7 +74,7 @@ test('pressing it downloads the zip and says so, naming the file, with Download 
   const bar = await ui.findByRole('status');
   assert.equal(bar.textContent, `Your data is downloading as one file, ${FILE} — details, bikes, jobs, purchases, messages and what you agreed to. Not started? Download it again`);
   assert.deepEqual(posts, ['POST']);
-  assert.deepEqual(saved, [{ href: 'blob:copy-1', name: FILE }]);
+  assert.deepEqual([...saved], [{ href: 'blob:copy-1', name: FILE }]);
   // Again: the same file, not another request.
   const again = ui.getByRole('link', { name: 'Not started? Download it again' });
   assert.equal(again.getAttribute('href'), 'blob:copy-1');
@@ -101,4 +102,14 @@ test('signed out by the time it’s pressed, it goes to sign in', async () => {
   catchDownloads();
   (await ui.findByRole('button', { name: 'Download a copy of your data' })).click();
   assert.ok(await ui.findByText(`At /book/north/sign-in?from=${encodeURIComponent('/book/north/account')}`));
+});
+
+test('leaving the account lets go of the downloaded file', async () => {
+  const { ui } = await open(zipReply);
+  const saved = catchDownloads();
+  (await ui.findByRole('button', { name: 'Download a copy of your data' })).click();
+  await ui.findByRole('status');
+  assert.deepEqual(saved.revoked, []);
+  ui.unmount();
+  assert.deepEqual(saved.revoked, ['blob:copy-1']);
 });

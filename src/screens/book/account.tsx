@@ -147,10 +147,7 @@ type Copy = { state: 'idle' | 'busy' | 'failed' | 'signed-out' } | { state: 'don
 function useDataCopy(base: string) {
   const [copy, setCopy] = React.useState<Copy>({ state: 'idle' });
   const download = React.useCallback(async () => {
-    setCopy((was) => {
-      if (was.state === 'done') URL.revokeObjectURL(was.url);
-      return { state: 'busy' };
-    });
+    setCopy({ state: 'busy' });
     try {
       const res = await fetch(`${base}/me/data-copy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
       if (res.status === 401) { setCopy({ state: 'signed-out' }); return; }
@@ -168,6 +165,9 @@ function useDataCopy(base: string) {
       setCopy({ state: 'failed' });
     }
   }, [base]);
+  // Leaving the account lets go of the file the browser held for "Download it again" (review).
+  const held = copy.state === 'done' ? copy.url : null;
+  React.useEffect(() => () => { if (held) URL.revokeObjectURL(held); }, [held]);
   return { ...copy, download };
 }
 type CopyState = ReturnType<typeof useDataCopy>;
