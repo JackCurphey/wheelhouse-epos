@@ -11,7 +11,7 @@ import { HeaderSearch } from './header-search.tsx';
 import { SignedOut } from './signed-out.tsx';
 import { FirstPinPrompt } from '@/screens/your-settings/till-pin.tsx';
 import { useTillCheckin } from '@/lib/till-checkin.ts';
-import { WorkingBar, WorkingStatus, WorkshopPinScreen, useWorkshopIdle } from '@/screens/till/workshop-computer.tsx';
+import { WorkingBar, WorkingPills, WorkingStatus, WorkshopPinScreen, useWorkshopIdle } from '@/screens/till/workshop-computer.tsx';
 
 /**
  * The frame every staff page sits in (journey A; Workshop day decision 68):
@@ -275,6 +275,7 @@ export function StaffLayout() {
   const checkin = useTillCheckin(session.status === 'signed-in');
   const workshop = checkin.data?.workshop ?? null;
   const working = workshop ? checkin.data?.serving ?? null : null;
+  const pills = checkin.data?.trustPin === true;
   useWorkshopIdle(Boolean(working), checkin.data?.idleMinutes === undefined ? 10 : checkin.data.idleMinutes);
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
@@ -331,7 +332,8 @@ export function StaffLayout() {
       {/* Tablet, and a folded computer: the icon rail, a label under every icon (decision 68). */}
       <Rail user={user} shopName={shop.name} role={role} roleName={roleName} folded={folded} />
       <div className="flex min-w-0 grow flex-col">
-        {working ? <WorkingBar working={working} /> : null}
+        {/* With trust PIN on, the Working pills at the bottom instead (working-pills). */}
+        {working && !pills ? <WorkingBar working={working} /> : null}
         {/* One header: on a phone the charcoal top bar with the menu button;
             on a tablet or computer the page title on the panel. */}
         <header className="flex h-14 shrink-0 items-center gap-1.5 bg-[var(--sidebar)] px-1.5 text-[var(--sidebar-foreground)] md:h-[60px] md:gap-4 md:border-b md:border-[var(--wh-border)] md:bg-[var(--wh-panel)] md:px-[22px] md:text-[var(--wh-ink)] lg:h-16 lg:px-7">
@@ -356,6 +358,7 @@ export function StaffLayout() {
             <Outlet />
           </HeaderSlotContext.Provider>
         </main>
+        {working && pills ? <WorkingPills working={working} names={checkin.data?.names ?? []} /> : null}
       </div>
       {/* A first sign-in, or the first after a PIN was cleared, opens Your till PIN by itself (pin-first, pin-cleared). */}
       <FirstPinPrompt />

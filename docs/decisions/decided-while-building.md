@@ -1526,6 +1526,25 @@ silent:
    Enter your PIN screen (with trust PIN on, the names to tap)"). With
    nobody on the names yet today, it is Enter your PIN.
 
+### 29 Oct 2026: the Working pills (`openspec/changes/working-pills`, `workshop-working-pills`; WP-1.7 task 3.6, later task 2.3; roles and switches 9)
+
+1. **The person working always has the highlighted pill, even when they
+   aren't a name to tap**: the Owner, who never is (trust PIN entry 5), or
+   someone whose PIN changed since they typed it. Their pill is first and
+   does nothing when tapped; the others are "Who's working?"'s names.
+   *Pattern:* the drawing highlights the person working.
+2. **"Someone else" ends the check-in and shows the PIN pad straight
+   away**, not "Who's working?": whoever pressed it isn't on the list. The
+   drawing says only that it "asks for a PIN". *Pattern:* "Someone else —
+   enter your PIN" on "Who's working?".
+3. **A pill the server refuses says why above the strip**, in the server's
+   words, and the person working stays. *Pattern:* "Who's working?"'s own
+   refusal line.
+4. **The strip sits at the bottom of the page column**, beside the sidebar
+   on a computer as drawn, and stays on screen as a long page scrolls
+   (sticky), so it never covers the page's last lines. With trust PIN off,
+   the Working bar with Switch stays as before.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

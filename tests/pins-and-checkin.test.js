@@ -171,7 +171,7 @@ test('a PIN alone checks someone in on that browser, and Switch checks them out'
   const alex = await member(owner, 'Alex Morgan', { isCashier: false });
   const joPin = await givePin(jo);
   const alexPin = await givePin(alex);
-  assert.deepEqual((await call(owner.cookie, '/api/till-checkin')).body, { serving: null, checkedInToday: [], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [] });
+  assert.deepEqual((await call(owner.cookie, '/api/till-checkin')).body, { serving: null, checkedInToday: [], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [], trustPin: false });
 
   const joIn = await checkIn(owner, joPin);
   assert.equal(joIn.status, 201);
@@ -181,9 +181,9 @@ test('a PIN alone checks someone in on that browser, and Switch checks them out'
   const stored = await row(owner, 'SELECT token_hash, day::text AS day FROM pin_checkins WHERE employee_id = ?', jo.employeeId);
   assert.notEqual(stored.token_hash, token, 'only the hash is kept');
   assert.equal(stored.day, '2026-09-01');
-  assert.deepEqual((await call(withCheckin(owner, joIn.cookie), '/api/till-checkin')).body, { serving: { id: jo.employeeId, name: 'Jo Taylor' }, checkedInToday: [{ id: jo.employeeId, name: 'Jo Taylor' }], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [] });
+  assert.deepEqual((await call(withCheckin(owner, joIn.cookie), '/api/till-checkin')).body, { serving: { id: jo.employeeId, name: 'Jo Taylor' }, checkedInToday: [{ id: jo.employeeId, name: 'Jo Taylor' }], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [], trustPin: false });
   // Without the cookie, another browser has nobody serving, but sees who's in.
-  assert.deepEqual((await call(owner.cookie, '/api/till-checkin')).body, { serving: null, checkedInToday: [{ id: jo.employeeId, name: 'Jo Taylor' }], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [] });
+  assert.deepEqual((await call(owner.cookie, '/api/till-checkin')).body, { serving: null, checkedInToday: [{ id: jo.employeeId, name: 'Jo Taylor' }], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [], trustPin: false });
 
   // Alex takes over on the same browser: Jo's check-in there ends.
   const alexIn = await checkIn(owner, alexPin, joIn.cookie);
@@ -211,7 +211,7 @@ test('a check-in counts only for its own sign-in, its own shop and its own day',
   assert.equal((await call(withCheckin(other, cookie), '/api/till-checkin')).body.serving, null);
   // Yesterday's check-in.
   await runWithShop(owner.shop.id, () => prepare("UPDATE pin_checkins SET day = '2026-08-31'").run());
-  assert.deepEqual((await call(withCheckin(owner, cookie), '/api/till-checkin')).body, { serving: null, checkedInToday: [], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [] });
+  assert.deepEqual((await call(withCheckin(owner, cookie), '/api/till-checkin')).body, { serving: null, checkedInToday: [], givePin: [], till: null, workshop: null, idleMinutes: 10, names: [], trustPin: false });
   // Not signed in at all.
   assert.equal((await call('', '/api/till-checkin')).status, 401);
   assert.equal((await checkIn({ cookie: '' }, pin)).status, 401);
