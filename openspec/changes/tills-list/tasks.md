@@ -7,7 +7,8 @@
 - [x] 1.3 The route list snapshot, the owner-only list
 - [x] 1.4 Tests first: the rows, Rename's box, Remove asking first, Keep, Remove, a workshop computer's words, a refusal shown (`tests/screens/tills-list.test.js`); a browser spec. Watch each fail
 - [x] 1.5 Build the screen to `set-till-tills-owner` and `set-till-remove`
-- [x] 1.5a Review, 29 Oct: a removed workshop computer's Owner sign-in isn't the Owner until signing in again, which clears the old key; the older switch-off route takes the same rules; tests that a removed till's offline key, check-ins and taps are refused. Tests first, each watched failing, each rule broken on purpose
+- [x] 1.5a Review, 29 Oct: a removed workshop computer's Owner sign-in isn't the Owner until signing out there, which clears the old key; the older switch-off route takes the same rules; tests that a removed till's offline key, check-ins and taps are refused. Tests first, each watched failing, each rule broken on purpose
+- [x] 1.5b Second review, 29 Oct: signing in leaves a removed workshop computer's key (WorkOS may offer a one-press Continue); signing out clears it. Tests first, each watched failing, each rule broken on purpose
 - [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.7 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
 - [ ] 1.8 `/opsx:archive` as the last commit

@@ -52,7 +52,7 @@ export async function thisWorkshop(req) {
  * Whether this browser's workshop key is one of this shop's workshop
  * computers that has been removed (switched off; openspec/changes/tills-list,
  * the review, 29 Oct). Such a browser was a shared computer: its Owner
- * sign-in doesn't count as the Owner until someone signs in again there.
+ * sign-in doesn't count as the Owner until someone signs out there.
  */
 export async function removedWorkshopHere(req) {
   const token = workshopCookieToken(req);
@@ -61,7 +61,7 @@ export async function removedWorkshopHere(req) {
   return Boolean(row);
 }
 
-/** Expires this browser's workshop key (a fresh sign-in on a removed workshop computer). */
+/** Expires this browser's workshop key (signing out of a removed workshop computer). */
 export const workshopCookieExpired = (req) =>
   `${WORKSHOP_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttpsRequest(req) ? '; Secure' : ''}`;
 
