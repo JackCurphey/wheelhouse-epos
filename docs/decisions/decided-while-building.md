@@ -1617,6 +1617,35 @@ silent:
    straight away. The Remove pop-up's words are unchanged, as drawn.
    *Pattern:* a mechanic working on a workshop computer.
 
+### 29 Oct 2026: the workshop computer's Owner lock, held on the server (`openspec/changes/workshop-lock-server`; 29 Oct answer 4; WP-1.7 task 3.6; walk-through 8 decision 3)
+
+1. **The lock belongs to the sign-in, not the browser's cookie.** A signed-in
+   session used on a workshop computer (set up there, or its first request
+   there) is recorded on the server as that computer's. From then on it
+   counts as the Owner only while the Owner is checked in by PIN on that
+   same workshop computer. Deleting or changing the workshop cookie, or
+   sending a till's key, can only lock it further. *Pattern:* the removed
+   workshop computer (Tills list entry 9).
+2. **Decided here, for Jack to overrule: with the cookie gone, the Owner's
+   PIN doesn't open it either.** A browser whose workshop cookie was deleted
+   can't make a check-in on the workshop computer, so its Owner pages stay
+   shut, even if the Owner types their PIN there, until someone signs out
+   on it. Signing out and in again is the way back, as for a removed
+   workshop computer. Stricter than needed; the other way would let a
+   cookie-less browser keep the Owner's pages with no 10-minute limit.
+3. **The screen isn't changed.** With the cookie deleted the browser shows
+   the ordinary app, not Enter your PIN, but every Owner page and route is
+   refused there. Showing the PIN screen again would need the browser to
+   carry on as the workshop computer, a bigger change; not built.
+4. **Local development's automatic sign-in** (off unless asked, refused in
+   production and on the hosted copy) has no stored session, so there the
+   lock still follows the cookie.
+5. **Staff sign-ins aren't recorded**: they never count as the Owner, so
+   the lock has nothing to hold for them.
+6. **Each test browser now signs in on its own**, as each real computer
+   would: the tests that shared one Owner session between a workshop
+   computer and an ordinary browser now give each browser its own.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

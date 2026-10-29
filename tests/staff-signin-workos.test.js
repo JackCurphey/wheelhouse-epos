@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup } from './helpers/staff.js';
+import { staffSignup, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -326,12 +326,14 @@ test('provider=google asks WorkOS for Google; anything else for its own page; fr
 // Continue to whoever is at the computer); signing out clears it, and ends
 // the WorkOS session, so getting back in needs the Owner's own sign-in.
 test('a removed workshop computer: signing in leaves it staff; signing out clears its key, and the next sign-in is the Owner', async () => {
-  const { email, cookie: ownerCookie } = await owner();
+  const { email, cookie: ownerCookie, loginId } = await owner();
   const post = (cookie, path, body) => fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const site = await (await post(ownerCookie, '/api/sites', { name: 'Bolton', code: 'B' })).json();
   const keyOf = (res) => cookieValue(res.headers.getSetCookie(), 'wh_workshop');
-  const stays = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
-  const gone = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
+  // Each set up from its own computer's sign-in (a session used on a
+  // workshop computer stays that computer's: workshop-lock-server).
+  const stays = await post(await staffFreshCookie(loginId), '/api/till-setup/workshop', { siteId: site.id });
+  const gone = await post(await staffFreshCookie(loginId), '/api/till-setup/workshop', { siteId: site.id });
   const [stayKey, goneKey] = [keyOf(stays), keyOf(gone)];
   assert.ok(stayKey && goneKey);
   assert.equal((await post(ownerCookie, `/api/till-setup/workshop/${(await gone.json()).workshop.id}/remove`)).status, 200);

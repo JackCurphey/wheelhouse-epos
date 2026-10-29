@@ -19,6 +19,7 @@ import { TransientSyncError, batchProblem, processSyncItems } from '../till/sync
 import { TILL_ORDER, serializeThisTill, thisTill, tillCookie } from '../till/this-till.js';
 import { someoneElseCheckedIn } from './till-pins.js';
 import { serializeThisWorkshop, thisWorkshop, workshopCookie } from '../till/this-workshop.js';
+import { markSessionWorkshop } from '../lib/workshop-owner.js';
 
 const OWNER_ONLY = { error: 'Only the owner can set up a till', code: 'owner_only' };
 const NOT_OWNER_HERE = { error: 'Only the owner can set up a till. Switch to the owner first.', code: 'not_owner_checked_in' };
@@ -225,6 +226,9 @@ export function register(route) {
     const browserToken = newLinkCode();
     const made = await db.prepare('INSERT INTO workshop_computers (site_id, name, browser_token_hash, registered_by_login_id) VALUES (?, ?, ?, ?) RETURNING id')
       .get(site.id, named || null, hashLinkCode(browserToken), ctx.login.id);
+    // This sign-in is the workshop computer's from now on, whatever its
+    // cookies say later (openspec/changes/workshop-lock-server).
+    await markSessionWorkshop(req, made.id);
     res.setHeader('Set-Cookie', workshopCookie(req, browserToken));
     sendJson(res, 201, { workshop: { id: made.id, name: named || null, siteName: site.name } });
   });

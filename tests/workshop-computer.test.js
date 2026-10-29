@@ -48,8 +48,12 @@ async function member(owner, name, { mechanic = false } = {}) {
 // A browser: the Owner's sign-in plus whatever cookies the server gives it.
 function browser(owner) {
   const jar = new Map();
-  const cookie = () => [owner.cookie, ...[...jar].filter(([, v]) => v).map(([k, v]) => `${k}=${v}`)].join('; ');
+  // Each browser has its own sign-in, as each computer would: a session used
+  // on a workshop computer stays that computer's (workshop-lock-server).
+  let own = null;
+  const cookie = () => [own ?? owner.cookie, ...[...jar].filter(([, v]) => v).map(([k, v]) => `${k}=${v}`)].join('; ');
   async function send(path, { method = 'GET', body, headers = {} } = {}) {
+    own ??= await staffFreshCookie(owner.loginId);
     const res = await fetch(`${server.baseUrl}${path}`, {
       method, headers: { cookie: cookie(), ...headers, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
       body: body === undefined ? undefined : JSON.stringify(body),
