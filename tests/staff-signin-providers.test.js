@@ -92,6 +92,27 @@ test('authenticate gives null when WorkOS refuses the code, or can’t be reache
   assert.equal(await down.authenticate({ code: 'c' }), null);
 });
 
+// A workshop computer keeps no remembered WorkOS session (workshop-lock-server,
+// the review of #578): POST /user_management/sessions/revoke, as WorkOS's API
+// reference shows it (checked 29 Oct, workos.com/docs/reference/user-management/session/revoke).
+test('revoking a WorkOS session sends its id with the API key, and says whether WorkOS took it', async () => {
+  const calls = [];
+  const p = workosProvider({ ...KEYS }, { fetch: async (url, init) => { calls.push({ url, init }); return new Response('{}', { status: 200 }); } });
+  assert.equal(await p.revokeSession({ sessionId: 'session_01' }), true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://api.workos.com/user_management/sessions/revoke');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.headers.authorization, 'Bearer sk_test_abc');
+  assert.equal(calls[0].init.headers['content-type'], 'application/json');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { session_id: 'session_01' });
+  assert.equal(await p.revokeSession({ sessionId: null }), false, 'nothing to revoke');
+  assert.equal(calls.length, 1);
+  const refused = workosProvider({ ...KEYS }, { fetch: async () => new Response('{}', { status: 404 }), log: quietLog().log });
+  assert.equal(await refused.revokeSession({ sessionId: 'session_02' }), false);
+  const down = workosProvider({ ...KEYS }, { fetch: async () => { throw new Error('offline'); }, log: quietLog().log });
+  assert.equal(await down.revokeSession({ sessionId: 'session_03' }), false);
+});
+
 test('the sign-out address ends that WorkOS session and comes back to Wheelhouse', () => {
   const p = workosProvider({ ...KEYS });
   const url = new URL(p.logoutUrl({ sessionId: 'session_01' }));

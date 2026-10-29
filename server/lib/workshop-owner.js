@@ -16,6 +16,7 @@
 import { prepare } from '../db.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { parseCookies } from './http.js';
+import { staffSigninProvider } from '../staff-signin/provider.js';
 import { workshopCookieToken, thisWorkshop, removedWorkshopHere } from '../till/this-workshop.js';
 import { thisTill } from '../till/this-till.js';
 import { currentCheckin } from '../routes/till-pins.js';
@@ -23,11 +24,23 @@ import { currentCheckin } from '../routes/till-pins.js';
 // One answer per request, as session.js keeps one sign-in per request.
 const decided = new WeakMap();
 
-/** Records this request's session as the workshop computer's, unless it already is one's. */
+/**
+ * Records this request's session as the workshop computer's, unless it
+ * already is one's. A WorkOS sign-in's WorkOS session is then ended at WorkOS
+ * (the review of #578): a workshop computer keeps no remembered WorkOS
+ * session, so whoever is at it can't press Continue for a fresh sign-in.
+ * Wheelhouse's own session stays.
+ */
 export async function markSessionWorkshop(req, workshopComputerId) {
   const token = parseCookies(req)[SESSION_COOKIE];
   if (!token) return;
-  await prepare('UPDATE sessions SET workshop_computer_id = ? WHERE token = ? AND workshop_computer_id IS NULL').run(workshopComputerId, token);
+  const marked = await prepare('UPDATE sessions SET workshop_computer_id = ? WHERE token = ? AND workshop_computer_id IS NULL RETURNING workos_session_id')
+    .get(workshopComputerId, token);
+  if (!marked?.workos_session_id) return;
+  const provider = staffSigninProvider();
+  if (provider?.revokeSession && (await provider.revokeSession({ sessionId: marked.workos_session_id }))) {
+    await prepare('UPDATE sessions SET workos_session_id = NULL WHERE token = ?').run(token);
+  }
 }
 
 // The workshop computer this request's sign-in belongs to, once a request:

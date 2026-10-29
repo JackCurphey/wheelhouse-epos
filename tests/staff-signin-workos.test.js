@@ -362,3 +362,36 @@ test('a removed workshop computer: signing in leaves it staff; signing out clear
   assert.equal(outPlain.status, 200);
   assert.ok(!touchesKey(outPlain.headers.getSetCookie()));
 });
+
+// A workshop computer keeps no remembered WorkOS session
+// (openspec/changes/workshop-lock-server, the review of #578, 2): when a
+// WorkOS sign-in becomes a workshop computer's, at setup or its first request
+// there, its WorkOS session is ended at WorkOS, so whoever is at the computer
+// can't press Continue for a fresh Owner sign-in. Wheelhouse's own session
+// stays; signing out there then has no WorkOS session left to end.
+test('a WorkOS sign-in that becomes a workshop computer\'s has its WorkOS session ended, and stays signed in', async () => {
+  const { email, cookie: ownerCookie } = await owner();
+  const json = { 'content-type': 'application/json' };
+  const site = await (await fetch(`${server.baseUrl}/api/sites`, { method: 'POST', headers: { cookie: ownerCookie, ...json }, body: JSON.stringify({ name: 'Bolton', code: 'B' }) })).json();
+  const workosOf = async (session) => (await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [session.split('=')[1]])).rows[0]?.workos_session_id;
+
+  // At setup.
+  const atSetup = await signIn(email);
+  assert.match(await workosOf(atSetup.session), /^session_pretend_/);
+  const made = await fetch(`${server.baseUrl}/api/till-setup/workshop`, { method: 'POST', headers: { cookie: atSetup.session, ...json }, body: JSON.stringify({ siteId: site.id }) });
+  assert.equal(made.status, 201);
+  const key = cookieValue(made.headers.getSetCookie(), 'wh_workshop');
+  assert.equal(await workosOf(atSetup.session), null, 'its WorkOS session is ended');
+  assert.equal((await me(atSetup.session)).status, 200, 'still signed in to Wheelhouse');
+
+  // A WorkOS sign-in made on the workshop computer later: its first request there.
+  const later = await signIn(email, { cookie: key });
+  assert.match(await workosOf(later.session), /^session_pretend_/);
+  assert.equal((await me(`${later.session}; ${key}`)).status, 200);
+  assert.equal(await workosOf(later.session), null, 'ended at its first request there');
+
+  // An ordinary browser's WorkOS sign-in is left alone.
+  const plain = await signIn(email);
+  assert.equal((await me(plain.session)).status, 200);
+  assert.match(await workosOf(plain.session), /^session_pretend_/);
+});
