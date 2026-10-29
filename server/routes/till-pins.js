@@ -109,7 +109,7 @@ async function keepPin(employeeId, pin, { firstOnly = false } = {}) {
       await dbExec('ROLLBACK');
       return refusal;
     }
-    await prepare('UPDATE employees SET pin_hash = pin_offer_hash, pin_offer_hash = NULL, pin_offer_at = NULL, updated_at = now() WHERE id = ?').run(employeeId);
+    await prepare('UPDATE employees SET pin_hash = pin_offer_hash, pin_offer_hash = NULL, pin_offer_at = NULL, pin_set_at = now(), updated_at = now() WHERE id = ?').run(employeeId);
     await dbExec('COMMIT');
     return null;
   } catch (err) {
@@ -209,6 +209,23 @@ async function peopleWithNoPin(giver) {
       ORDER BY e.name, e.id`
   ).all(giver.employee_id);
   return rows.map((r) => ({ id: r.id, name: r.name, role: r.is_mechanic ? 'Mechanic' : 'Staff', tillOnly: r.login_id === null }));
+}
+
+// Who a tap checks in on this workshop computer (trust-pin-workshop design 3
+// and 4): someone active, with a PIN, never the Owner, who typed their PIN
+// (not a tap) on this workshop computer on the shop's day, under this same
+// sign-in (as currentCheckin), since their PIN was last cleared or changed
+// (the review, 29 Oct). `id` narrows it to one person.
+async function tapNames(workshopId, loginId, day, id = null) {
+  const rows = await prepare(
+    `SELECT DISTINCT e.id, e.name, e.is_mechanic FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.workshop_computer_id = ? AND c.login_id = ? AND c.day = ? AND c.by_tap = false AND e.active = 1 AND e.pin_hash IS NOT NULL
+        AND c.checked_in_at > GREATEST(COALESCE(e.pin_cleared_at, '-infinity'::timestamptz), COALESCE(e.pin_set_at, '-infinity'::timestamptz))
+        AND NOT EXISTS (SELECT 1 FROM logins l WHERE l.employee_id = e.id AND l.is_owner = true)
+        AND (?::int IS NULL OR e.id = ?::int)
+      ORDER BY e.name, e.id`
+  ).all(workshopId, loginId, day, id, id);
+  return rows.map((r) => ({ id: r.id, name: r.name, role: r.is_mechanic ? 'Mechanic' : 'Staff' }));
 }
 
 // The person a PIN is given to, or the refusal as [status, body].
@@ -371,11 +388,13 @@ export function register(route) {
     // Only for the Owner serving at a till: who has no PIN (till-serving-menu).
     // Giving a PIN is the till's, never a workshop computer's.
     const giver = mine && !workshop ? await giverHere(req) : null;
-    // The shop's time, for the screen (trust-pin-workshop).
+    // The shop's time, for the screen, and with trust PIN on the names to
+    // tap on a workshop computer (trust-pin-workshop).
     const trust = await trustPinHere();
     sendJson(res, 200, {
       // The Owner working here goes back sooner (design 8), so the screen does too.
       idleMinutes: workshop && mine && (await isTheOwner(mine)) ? ownerIdleMinutes(trust.idleMinutes) : trust.idleMinutes,
+      names: workshop && trust.trustPin ? await tapNames(workshop.id, ctx.login.id, await today()) : [],
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
       till: till ? { code: till.code, name: till.name, siteName: till.site_name } : null,
       workshop: workshop ? { name: workshop.name, siteName: workshop.site_name } : null,
@@ -417,6 +436,52 @@ export function register(route) {
     await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id, workshop_computer_id, last_active_at) VALUES (?, ?, ?, ?, ?, ?, now())')
       .run(who.id, ctx.login.id, hashLinkCode(token), await today(), till?.id ?? null, workshop?.id ?? null);
     // The server ends it with the shop's day; the cookie lasts no longer than a day.
+    res.setHeader('Set-Cookie', checkinCookie(req, token, 24 * 60 * 60));
+    sendJson(res, 201, { serving: { id: who.id, name: who.name } });
+  });
+
+  // "Who’s working?" (till-checkin-workshop-names; roles and switches 3): with
+  // trust PIN on, someone who typed their PIN on this workshop computer today
+  // taps their name instead. The shop's row and the person's are locked
+  // until the check-in is recorded, so trust PIN switched off or a PIN
+  // cleared at that moment can't slip in between (trust-pin-workshop).
+  // screens: till-checkin-workshop-names
+  route('POST', '/api/till-checkin/tap', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req);
+    const id = body?.employeeId;
+    if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { error: 'Choose a name', code: 'not_a_name' });
+    const { workshop } = await thisComputer(req);
+    if (!workshop) return sendJson(res, 403, { error: 'Tapping a name is only on a workshop computer', code: 'not_a_workshop' });
+    const day = await today();
+    const token = newLinkCode();
+    let refusal = null;
+    let who = null;
+    await dbExec('BEGIN');
+    try {
+      const shop = await prepare("SELECT trust_pin FROM shops WHERE id = current_setting('app.current_shop_id')::int FOR SHARE").get();
+      await prepare('SELECT id FROM employees WHERE id = ? FOR UPDATE').get(id);
+      if (shop?.trust_pin !== true) refusal = { error: 'Trust PIN is off: enter your PIN', code: 'trust_pin_off' };
+      else [who] = await tapNames(workshop.id, ctx.login.id, day, id);
+      if (!refusal && !who) refusal = { error: 'Enter your PIN: you haven’t typed it on this computer today', code: 'not_typed_here' };
+      if (refusal) {
+        await dbExec('ROLLBACK');
+      } else {
+        // Taking over: whoever was checked in on this browser stops, as with a PIN.
+        const previous = parseCookies(req)[CHECKIN_COOKIE];
+        if (previous && /^[0-9a-f]{64}$/.test(previous)) {
+          await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND ended_at IS NULL').run(hashLinkCode(previous));
+        }
+        await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, workshop_computer_id, last_active_at, by_tap) VALUES (?, ?, ?, ?, ?, now(), true)')
+          .run(who.id, ctx.login.id, hashLinkCode(token), day, workshop.id);
+        await dbExec('COMMIT');
+      }
+    } catch (err) {
+      await dbExec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    if (refusal) return sendJson(res, 403, refusal);
     res.setHeader('Set-Cookie', checkinCookie(req, token, 24 * 60 * 60));
     sendJson(res, 201, { serving: { id: who.id, name: who.name } });
   });

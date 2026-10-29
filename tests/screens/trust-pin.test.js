@@ -1,7 +1,8 @@
 // Trust PIN on the workshop computer (openspec/changes/trust-pin-workshop;
-// the lines on set-till-quick; roles and switches 3 and 9; stage-1 gaps 9):
-// Settings › Till ›
-// Signing in, and the workshop computer going back at the shop's time.
+// the lines on set-till-quick; till-checkin-workshop-names in signin.mjs;
+// roles and switches 3 and 9; stage-1 gaps 9 and 10): Settings › Till ›
+// Signing in, the workshop computer going back at the shop's time, and
+// "Who's working?" with names to tap.
 import test, { afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
@@ -9,7 +10,10 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const JACK = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street', employee: null };
 const WORKSHOP = { name: null, siteName: 'Bolton' };
+// The drawing's names (till-checkin-workshop-names).
 const ALEX = { id: 31, name: 'Alex Morgan' };
+const JO = { id: 32, name: 'Jo Taylor' };
+const NAMES = [{ ...ALEX, role: 'Mechanic' }, { ...JO, role: 'Staff' }];
 const MINUTE = 60_000;
 
 let current;
@@ -24,9 +28,9 @@ afterEach(async () => {
   current = undefined;
 });
 
-async function open(path, { workshop = WORKSHOP, serving = null, trustPin = false, workshopIdleMinutes = 10 } = {}) {
+async function open(path, { workshop = WORKSHOP, serving = null, trustPin = false, workshopIdleMinutes = 10, names = [] } = {}) {
   const calls = [];
-  const state = { serving, workshop, trustPin, workshopIdleMinutes };
+  const state = { serving, workshop, trustPin, workshopIdleMinutes, names };
   const idle = () => (state.trustPin ? state.workshopIdleMinutes : 10);
   const realFetch = globalThis.fetch;
   mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-01T10:00:00+01:00') });
@@ -39,11 +43,15 @@ async function open(path, { workshop = WORKSHOP, serving = null, trustPin = fals
     if (u.pathname === '/api/auth/me') return reply(200, { ...JACK, isOwner: !state.workshop, workshopComputer: Boolean(state.workshop) });
     if (u.pathname === '/api/signing-in-settings' && method === 'PUT') Object.assign(state, body);
     if (u.pathname === '/api/signing-in-settings') return reply(200, { trustPin: state.trustPin, workshopIdleMinutes: state.workshopIdleMinutes });
+    if (u.pathname === '/api/till-checkin/tap') {
+      state.serving = state.names.find((n) => n.id === body.employeeId);
+      return reply(201, { serving: { id: state.serving.id, name: state.serving.name } });
+    }
     if (u.pathname === '/api/till-checkin' && method === 'POST') { state.serving = ALEX; return reply(201, { serving: ALEX }); }
     if (u.pathname === '/api/till-checkin/end') { state.serving = null; return reply(200, { serving: null }); }
     if (u.pathname === '/api/till-checkin/active') return reply(200, { serving: state.serving });
     if (u.pathname === '/api/till-checkin') {
-      return reply(200, { serving: state.serving ? { id: state.serving.id, name: state.serving.name } : null, checkedInToday: [], givePin: [], till: null, workshop: state.workshop, idleMinutes: idle() });
+      return reply(200, { serving: state.serving ? { id: state.serving.id, name: state.serving.name } : null, checkedInToday: [], givePin: [], till: null, workshop: state.workshop, idleMinutes: idle(), names: state.workshop && state.trustPin ? state.names : [] });
     }
     if (u.pathname === '/api/till-setup') return reply(200, { sites: [], thisTill: null, thisWorkshop: null, tills: [] });
     if (u.pathname === '/api/your-settings/till-pin/ask') return reply(200, { ask: null });
@@ -111,4 +119,35 @@ test('the workshop computer never goes back by itself with Off chosen', async ()
   await tick();
   assert.ok(t.ui.queryByRole('region', { name: 'Who’s working' }), 'still Alex an hour later');
   assert.equal(posts(t, '/api/till-checkin/end').length, 0);
+});
+
+test('Who’s working?: today’s names to tap, as drawn; a tap makes that person the one working', async () => {
+  const t = await open('/workshop/diary', { trustPin: true, names: NAMES });
+  await t.ui.findByRole('heading', { name: 'Who’s working?' });
+  assert.ok(t.ui.getByText('Nobody working', { exact: false }).textContent.includes('Nobody working — tap your name'));
+  assert.ok(t.ui.getByText('You’ve typed your PIN here today, so just tap your name.'));
+  const alex = t.ui.getByRole('button', { name: /Alex Morgan/ });
+  assert.match(alex.textContent, /Alex Morgan.*Mechanic/);
+  assert.match(t.ui.getByRole('button', { name: /Jo Taylor/ }).textContent, /Jo Taylor.*Staff/);
+  assert.ok(t.ui.queryByRole('heading', { name: 'Enter your PIN' }) === null);
+  t.fireEvent.click(alex);
+  const working = await t.ui.findByRole('region', { name: 'Who’s working' });
+  assert.match(working.textContent, /Working: Alex Morgan/);
+  assert.deepEqual(posts(t, '/api/till-checkin/tap').map((c) => c.body), [{ employeeId: 31 }]);
+  // Switch: back to Who's working? (stage-1 gaps 10).
+  t.fireEvent.click(t.within(working).getByRole('button', { name: 'Switch' }));
+  await t.ui.findByRole('heading', { name: 'Who’s working?' });
+});
+
+test('Someone else — enter your PIN shows the PIN pad', async () => {
+  const t = await open('/workshop/diary', { trustPin: true, names: NAMES });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Someone else — enter your PIN' }));
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  assert.ok(t.ui.getByRole('button', { name: '7' }));
+});
+
+test('trust PIN on with nobody yet today, or trust PIN off: Enter your PIN', async () => {
+  const t = await open('/workshop/diary', { trustPin: true, names: [] });
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  assert.ok(t.ui.queryByRole('heading', { name: 'Who’s working?' }) === null);
 });

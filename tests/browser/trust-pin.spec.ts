@@ -1,8 +1,10 @@
 // Trust PIN on the workshop computer (openspec/changes/trust-pin-workshop;
 // the lines on set-till-quick; till-checkin-workshop-names in signin.mjs), in
 // a real browser against the real server: the Owner switches trust PIN on in
-// Settings › Till › Signing in and chooses 5 minutes; the workshop computer
-// then goes back to Enter your PIN after 5 minutes left alone.
+// Settings › Till › Signing in and chooses 5 minutes; on the workshop
+// computer, after Alex Morgan has typed his PIN, Switch and 5 minutes left
+// alone both bring "Who's working?", and tapping his name makes him the one
+// working again.
 import { randomUUID } from 'node:crypto';
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
@@ -26,7 +28,7 @@ test.afterAll(async () => {
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
-  test(`trust PIN: Signing in, then 5 minutes on the workshop computer at ${viewport.width}px`, async ({ page, context }) => {
+  test(`trust PIN: Signing in, then Who’s working? on the workshop computer at ${viewport.width}px`, async ({ page, context }) => {
     await page.clock.install();
     const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
     owners.push(owner);
@@ -55,7 +57,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await times.getByRole('radio', { name: '5 minutes', exact: true }).click();
     await expect(fold).toContainText('Trust PIN on · back after 5 minutes');
 
-    // This computer becomes the workshop computer; Alex types his PIN.
+    // This computer becomes the workshop computer; Alex types his PIN, then Switch.
     await page.setViewportSize(viewport);
     expect((await page.request.post(`${server!.baseUrl}/api/till-setup/workshop`, { data: { siteId: site.body.id } })).status()).toBe(201);
     await page.goto(`${server!.baseUrl}/workshop`);
@@ -63,13 +65,25 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     for (const d of pin) await page.getByRole('button', { name: d, exact: true }).click();
     const working = page.getByRole('region', { name: 'Who’s working' });
     await expect(working).toContainText('Working: Alex Morgan');
-    await noSideScroll();
+    await working.getByRole('button', { name: 'Switch' }).click();
 
-    // Left alone for 5 minutes: back to Enter your PIN, and the server agrees.
+    // Who's working?: Alex's name, as drawn, and the bar says to tap it.
+    await expect(page.getByRole('heading', { name: 'Who’s working?' })).toBeVisible();
+    await expect(page.getByRole('banner')).toContainText(viewport.width < 768 ? 'Nobody working' : 'Nobody working — tap your name');
+    await expect(page.getByRole('button', { name: /Jack Lewis/ })).toHaveCount(0);
+    await noSideScroll();
+    await page.getByRole('button', { name: /Alex Morgan/ }).click();
+    await expect(working).toContainText('Working: Alex Morgan');
+
+    // Left alone for 5 minutes: back to Who's working?, and the server agrees.
     await page.clock.fastForward('04:00');
     await expect(working).toContainText('Working: Alex Morgan');
     await page.clock.fastForward('01:05');
-    await expect(page.getByRole('heading', { name: 'Enter your PIN' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Who’s working?' })).toBeVisible();
     expect((await (await page.request.get(`${server!.baseUrl}/api/till-checkin`)).json()).serving).toBeNull();
+    // "Someone else — enter your PIN": the pad.
+    await page.getByRole('button', { name: 'Someone else — enter your PIN' }).click();
+    await expect(page.getByRole('heading', { name: 'Enter your PIN' })).toBeVisible();
+    await noSideScroll();
   });
 }

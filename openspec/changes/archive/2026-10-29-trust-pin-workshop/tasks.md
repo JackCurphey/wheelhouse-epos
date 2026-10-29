@@ -11,13 +11,14 @@
 
 ## 2. Who's working? (2.2; second pull request, `jack/trust-pin-names`, on the first)
 
-- [ ] 2.1 Tests first: the names (typed here today, not by a tap, not the Owner, not after a cleared PIN), the tap's refusals (not a workshop computer, trust PIN off, not typed here), a tap checks in. Watch each fail
-- [ ] 2.2 The names and the tap route
-- [ ] 2.3 Tests first: "Who's working?" after Switch and left alone, a tap making the person working, "Someone else — enter your PIN". Watch each fail. A browser spec, written after the screen and watched failing with the names hidden
-- [ ] 2.4 Build the screen to `till-checkin-workshop-names`
+- [x] 2.1 Tests first: the names (typed here today, not by a tap, not the Owner, not after a cleared PIN), the tap's refusals (not a workshop computer, trust PIN off, not typed here), a tap checks in. Watch each fail
+- [x] 2.2 The names and the tap route
+- [x] 2.3 Tests first: "Who's working?" after Switch and left alone, a tap making the person working, "Someone else — enter your PIN". Watch each fail. A browser spec, written after the screen and watched failing with the names hidden
+- [x] 2.4 Build the screen to `till-checkin-workshop-names`
+- [x] 2.5 Review, 29 Oct: a changed PIN takes someone off the names; the names only under the same sign-in; tests that another workshop computer and someone inactive aren't offered. Tests first, each watched failing, each rule broken on purpose
 
 ## 3. Finish
 
-- [ ] 3.1 Break each key rule on purpose, see its test go red, and restore
-- [ ] 3.2 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
-- [ ] 3.3 `/opsx:archive` as the last commit
+- [x] 3.1 Break each key rule on purpose, see its test go red, and restore
+- [x] 3.2 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
+- [x] 3.3 `/opsx:archive` as the last commit

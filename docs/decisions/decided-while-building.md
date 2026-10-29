@@ -1500,6 +1500,32 @@ silent:
    time (task 2.5). *Pattern:* trust PIN off's own 10 minutes (build plan
    Q6).
 
+5. **The Owner is never a name to tap on "Who's working?"; the Owner types
+   their PIN** (`till-checkin-workshop-names`). Roles and switches 3 says
+   Owner and Manager pages still ask for that person's PIN every time; that
+   isn't built yet (task 2.5), and on a workshop computer the Owner's pages
+   follow the Owner working (workshop-computer design 9). A tap making the
+   Owner the one working would open the Owner's pages, trust PIN's own
+   setting among them, with no PIN. The server refuses a tap for the Owner
+   too. Managers aren't stored yet. *Pattern:* the till's "Who’s getting a
+   PIN?", which never lists the Owner (28 Oct, giving a PIN entry).
+6. **"Who's working?" drops the drawn "Owner and manager pages still ask
+   for your PIN."** until those pages do (task 2.5); the line is "You’ve
+   typed your PIN here today, so just tap your name." Each name shows
+   Mechanic or Staff from the team list, as the drawing's do, until roles.
+   *Pattern:* show only what works (workshop-computer entry 6).
+7. **Only a typed PIN puts someone on the names.** A check-in made by a
+   tap doesn't count as having typed a PIN there, and a PIN cleared or
+   changed since takes them off until they type their new one (changed:
+   the review, 29 Oct, so someone who saw the old PIN can't keep tapping
+   the name). The names come only from check-ins made under the computer's
+   own sign-in, as a check-in only counts under it. *Pattern:* clearing a PIN
+   ends that person's check-ins (28 Oct, PINs entry).
+8. **"Who's working?" shows after Switch too**, not only after the
+   computer is left alone (stage-1 gaps 10: "Switch opens the existing
+   Enter your PIN screen (with trust PIN on, the names to tap)"). With
+   nobody on the names yet today, it is Enter your PIN.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
