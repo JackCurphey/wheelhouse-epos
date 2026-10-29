@@ -20,7 +20,7 @@ const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && 
 export function ToReturn() {
   const list = useQuery({ queryKey: QUERY, queryFn: () => apiGet<{ suppliers: Group[] }>('/api/deliveries/to-return') });
   // A list that can't be loaded says so, as Orders does, rather than looking
-  // like nothing to return (the review of #582).
+  // like nothing to return (the review of pull request 582).
   if (list.isError) {
     return (
       <Card id="t-to-return-error" title="To return">
@@ -47,7 +47,7 @@ function SupplierSection({ group }: { group: Group }) {
     } catch (err) {
       setError(words(err));
       // Refused (say, already returned elsewhere): read the list again, so a
-      // stale line goes (the review of #582).
+      // stale line goes (the review of pull request 582).
       await queryClient.invalidateQueries({ queryKey: QUERY });
     } finally {
       setBusy(null);
