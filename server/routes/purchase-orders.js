@@ -526,7 +526,7 @@ export function register(route) {
       const row = await db.prepare(
         "SELECT id FROM delivery_problems WHERE id = ? AND kind IN ('damaged', 'wrong_item') AND returned_at IS NULL FOR UPDATE"
       ).get(id);
-      done = row ? await db.prepare('UPDATE delivery_problems SET returned_at = now(), returned_by_login_id = ? WHERE id = ? RETURNING id, returned_at').get(ctx.login.id, id) : null;
+      done = row ? await db.prepare('UPDATE delivery_problems SET returned_at = now(), returned_by_login_id = ? WHERE id = ? AND returned_at IS NULL RETURNING id, returned_at').get(ctx.login.id, id) : null;
       await db.exec(done ? 'COMMIT' : 'ROLLBACK');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});

@@ -59,18 +59,20 @@ test('damaged and wrong items not yet returned, by supplier, the Owner\'s only; 
   const thing = await product(owner, '[Product]');
   const other = await product(owner, '[Product 2]');
   const order = await orderedOrder(owner, pads, 4);
-  // On the order: 1 damaged, 1 missing, 2 booked in.
+  // Oldest first: one with no supplier picked, then a wrong item from
+  // [Supplier 2] not on an order, then [Supplier]'s order (1 damaged, 1
+  // missing, 2 booked in). The no-supplier group still comes last.
+  await deliver(owner.jo.cookie, { items: [], problems: [{ productId: other, kind: 'damaged', qty: 1 }] });
+  await deliver(owner.jo.cookie, { supplierId: owner.supplier2, items: [], problems: [{ productId: thing, kind: 'wrong_item', qty: 2 }] });
   await deliver(owner.jo.cookie, { supplierId: owner.supplier, items: [{ productId: pads, itemId: order.items[0].id, qty: 2 }],
     problems: [{ itemId: order.items[0].id, kind: 'damaged', qty: 1 }, { itemId: order.items[0].id, kind: 'missing', qty: 1 }] });
-  // Not on an order: a wrong item from [Supplier 2], and one with no supplier picked.
-  await deliver(owner.jo.cookie, { supplierId: owner.supplier2, items: [], problems: [{ productId: thing, kind: 'wrong_item', qty: 2 }] });
-  await deliver(owner.jo.cookie, { items: [], problems: [{ productId: other, kind: 'damaged', qty: 1 }] });
   const refused = await toReturn(owner.jo.cookie);
   assert.deepEqual([refused.status, refused.body.code], [403, 'owner_only']);
   const list = (await toReturn(owner.cookie)).body;
   assert.deepEqual(strip(list), [
-    { supplierId: owner.supplier, supplierName: '[Supplier]', items: [{ productName: 'Shimano brake pads', kind: 'damaged', qty: 1 }] },
+    // The supplier waiting longest first, though [Supplier] was added first.
     { supplierId: owner.supplier2, supplierName: '[Supplier 2]', items: [{ productName: '[Product]', kind: 'wrong_item', qty: 2 }] },
+    { supplierId: owner.supplier, supplierName: '[Supplier]', items: [{ productName: 'Shimano brake pads', kind: 'damaged', qty: 1 }] },
     { supplierId: null, supplierName: null, items: [{ productName: '[Product 2]', kind: 'damaged', qty: 1 }] },
   ]);
   // Another shop sees none of them.

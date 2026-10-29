@@ -38,7 +38,9 @@ Stockroom › Deliveries and orders, for the Owner, as drawn in `rs-hub`:
   Tue 1 Sep" (or "Wrong item"), and "Returned" (aria-label
   "Returned: [Product], damaged").
 - Returned marks it at once and the list is read again; the item leaves the
-  list and the card goes when it's empty. A refusal shows in the card.
+  list and the card goes when it's empty. A refusal shows in the card, and
+  the list is read again then too. A list that can't be loaded shows a "To
+  return" card saying so (the review of #582).
 - Staff see the hub as now.
 
 ## 4. Gaps the drawings leave

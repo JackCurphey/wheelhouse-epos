@@ -19,6 +19,15 @@ const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && 
 
 export function ToReturn() {
   const list = useQuery({ queryKey: QUERY, queryFn: () => apiGet<{ suppliers: Group[] }>('/api/deliveries/to-return') });
+  // A list that can't be loaded says so, as Orders does, rather than looking
+  // like nothing to return (the review of #582).
+  if (list.isError) {
+    return (
+      <Card id="t-to-return-error" title="To return">
+        <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the items to return. Try again in a moment.</p>
+      </Card>
+    );
+  }
   // A reply of another shape shows nothing.
   const groups = Array.isArray(list.data?.suppliers) ? list.data.suppliers : [];
   return <>{groups.map((g) => <SupplierSection key={g.supplierId ?? 'none'} group={g} />)}</>;
@@ -37,6 +46,9 @@ function SupplierSection({ group }: { group: Group }) {
       await queryClient.invalidateQueries({ queryKey: QUERY });
     } catch (err) {
       setError(words(err));
+      // Refused (say, already returned elsewhere): read the list again, so a
+      // stale line goes (the review of #582).
+      await queryClient.invalidateQueries({ queryKey: QUERY });
     } finally {
       setBusy(null);
     }

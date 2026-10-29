@@ -1684,6 +1684,11 @@ silent:
 5. **The day reads "Tue 1 Sep"**, as Deliveries and orders writes its days.
 6. **Only the Owner sees and uses it**, as with orders, until roles bring
    "Can order stock" (receiving decision 4). Staff see the hub as before.
+7. **A list that can't be loaded says so** (review of #582): a "To return"
+   section with "Wheelhouse couldn’t load the items to return. Try again in
+   a moment.", rather than looking like nothing to return. A Returned that's
+   refused reads the list again, so a line already returned elsewhere goes.
+   *Pattern:* the Orders section's "couldn’t load" line.
 
 ## Decided here, for Jack to overrule
 

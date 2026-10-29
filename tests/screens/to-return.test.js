@@ -37,7 +37,7 @@ afterEach(async () => {
   rendered = false;
 });
 
-async function open({ me = OWNER, list = LIST, refuse = null } = {}) {
+async function open({ me = OWNER, list = LIST, refuse = null, listFails = false } = {}) {
   calls = [];
   let state = structuredClone(list);
   globalThis.fetch = async (url, init = {}) => {
@@ -46,11 +46,14 @@ async function open({ me = OWNER, list = LIST, refuse = null } = {}) {
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, me);
+    if (u.pathname === '/api/deliveries/to-return' && listFails) return reply(500, { error: 'Internal server error' });
     if (u.pathname === '/api/deliveries/to-return') return me.isOwner ? reply(200, state) : reply(403, { error: "Only the shop's owner can order stock", code: 'owner_only' });
     const m = u.pathname.match(/^\/api\/deliveries\/to-return\/(\d+)\/returned$/);
     if (m && method === 'POST') {
-      if (refuse) return reply(refuse.status, refuse.body);
       const id = Number(m[1]);
+      // Already returned elsewhere: the server has it off the list and says 404.
+      if (refuse?.gone) state = { suppliers: state.suppliers.map((s) => ({ ...s, items: s.items.filter((i) => i.id !== id) })).filter((s) => s.items.length) };
+      if (refuse) return reply(refuse.status, refuse.body);
       state = { suppliers: state.suppliers.map((s) => ({ ...s, items: s.items.filter((i) => i.id !== id) })).filter((s) => s.items.length) };
       return reply(200, { id, returnedAt: AT });
     }
@@ -112,4 +115,23 @@ test('nothing to return: no section; Staff never see it', async () => {
   await staff.ui.findByRole('heading', { name: 'A delivery arrived?' });
   assert.ok(staff.ui.queryByRole('region', { name: /^To return/ }) === null);
   assert.ok(!calls.some((c) => c.url.includes('/to-return')), 'Staff don\'t ask for it');
+});
+
+// The review of #582: a list that can't be loaded says so, as Orders does,
+// rather than looking like nothing to return; and a refused Returned reads
+// the list again, so a line already returned elsewhere goes.
+test('a list that can\'t be loaded says so', async () => {
+  const { ui, within } = await open({ listFails: true });
+  // A server fault is tried three more times first (the app's query rule), so wait.
+  const section = await ui.findByRole('region', { name: 'To return' }, { timeout: 15000 });
+  assert.equal((await within(section).findByRole('alert')).textContent, 'Wheelhouse couldn’t load the items to return. Try again in a moment.');
+});
+
+test('Returned refused as already gone: the message shows and the stale line goes', async () => {
+  const { ui, within, fireEvent, waitFor } = await open({ refuse: { status: 404, gone: true, body: { error: 'Nothing to return with that id' } } });
+  const section = await ui.findByRole('region', { name: 'To return to [Supplier]' });
+  fireEvent.click(within(section).getByRole('button', { name: 'Returned: Shimano brake pads, damaged' }));
+  assert.equal((await within(section).findByRole('alert')).textContent, 'Nothing to return with that id');
+  await waitFor(() => assert.ok(within(section).queryByRole('button', { name: 'Returned: Shimano brake pads, damaged' }) === null));
+  assert.ok(within(section).getByRole('button', { name: 'Returned: [Product], wrong item' }));
 });

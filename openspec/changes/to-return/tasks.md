@@ -9,4 +9,5 @@
 - [x] 1.5 Build the section to `rs-hub`
 - [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.7 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawing and this spec
+- [x] 1.7a Review of #582: a list that can't be loaded says so; a refused Returned reads the list again; the waiting-longest order really tested; Returned's update only while not returned. Tests first, watched failing, each broken on purpose
 - [ ] 1.8 `/opsx:archive` as the last commit
