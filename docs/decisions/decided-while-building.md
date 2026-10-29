@@ -1788,6 +1788,30 @@ silent:
    refused reads the list again, so a line already returned elsewhere goes.
    *Pattern:* the Orders section's "couldn’t load" line.
 
+### 29 Oct 2026: the look at closing on a normal day (`openspec/changes/close-look-normal-day`; Jack's 29 Oct answer 7, "Start from last close")
+
+1. **A shop's first close, with no morning check, starts at the start of
+   today** by the shop's clock: there is no last close to start from. Cash
+   sales and cash taken out from before today aren't in it, as Close the day
+   already starts counting sales at its first close's day. *Pattern:*
+   close-the-day design 6.
+2. **Cash taken out counts from the day after the last close's day**, made
+   after that close, as a day nobody closed already does (the re-review of
+   29 Oct): the last close's own cash taken out is never counted again.
+3. **"How the till worked it out" is unchanged**: its first row still reads
+   "Float this morning · looked right · Jack Lewis at [time]" for the look
+   at closing, and "plus cash sales" is now the whole day's. No screen
+   change was asked for.
+4. **After a late Close it, the look starts from the count it banked from**
+   (money review of #584, 29 Oct): Close it for Tuesday at 17:00 leaves the
+   float plus Wednesday's and Thursday's cash in the drawer, not just the
+   float, so Thursday's figure starts at Wednesday's morning count (£140.00
+   in the review's example), less the £40.00 Close it banked: £150.00. Then
+   "Float this morning" on the page, and "Float at the start" on the report,
+   show that count's figure, not the float, so the rows still add up. The
+   same holds for a day nobody closed. *Pattern:* a day nobody closed's
+   window (unclosed-day design 11).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
