@@ -7,4 +7,4 @@
 - [x] 1.2a Review of #578: one helper for the Owner's pages and the sign-in's own PIN and settings, staff sign-ins marked too; a WorkOS sign-in's WorkOS session ended when it becomes a workshop computer's (revoke). Tests first, each watched failing, each rule broken on purpose
 - [x] 1.3 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.4 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against this spec
-- [x] 1.5 `/opsx:archive` as the last commit
+- [ ] 1.5 `/opsx:archive` as the last commit
