@@ -8,4 +8,4 @@
 - [x] 1.2b Re-review of #578: a revoke WorkOS didn't take is tried again on a later request, at most once a minute for a session. Test first, watched failing, both rules broken on purpose
 - [x] 1.3 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.4 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against this spec
-- [ ] 1.5 `/opsx:archive` as the last commit
+- [x] 1.5 `/opsx:archive` as the last commit
