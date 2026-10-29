@@ -16,11 +16,8 @@ import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-gro
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
-<<<<<<< HEAD
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
-=======
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
->>>>>>> origin/main
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -958,11 +955,8 @@ function OwnerSettings() {
   const collection = useCollectionSummary();
   const float = useFloatSummary();
   const tills = useTillsSummary();
-<<<<<<< HEAD
   const signingIn = useSigningInSummary();
-=======
   const stockAdjustments = useStockAdjustmentsSummary();
->>>>>>> origin/main
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
