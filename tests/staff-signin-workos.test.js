@@ -74,6 +74,13 @@ async function signIn(email, { user, verified = true, ip = newNetwork(), state, 
   return { ...done, session: cookieValue(done.cookies, 'wh_session'), callback: callback.pathname + callback.search, stateCookie, ip };
 }
 
+// The revoke runs on its own after the request: wait for it, or a moment.
+const settle = () => new Promise((r) => setTimeout(r, 300));
+async function eventually(check, what, ms = 5000) {
+  for (const until = Date.now() + ms; Date.now() < until; await settle()) if (await check()) return;
+  assert.fail(`never happened: ${what}`);
+}
+
 async function me(session) {
   const res = await fetch(`${server.baseUrl}/api/auth/me`, { headers: { cookie: session } });
   return { status: res.status, body: await res.json() };
@@ -381,18 +388,19 @@ test('a WorkOS sign-in that becomes a workshop computer\'s has its WorkOS sessio
   const made = await fetch(`${server.baseUrl}/api/till-setup/workshop`, { method: 'POST', headers: { cookie: atSetup.session, ...json }, body: JSON.stringify({ siteId: site.id }) });
   assert.equal(made.status, 201);
   const key = cookieValue(made.headers.getSetCookie(), 'wh_workshop');
-  assert.equal(await workosOf(atSetup.session), null, 'its WorkOS session is ended');
+  await eventually(async () => (await workosOf(atSetup.session)) === null, 'its WorkOS session is ended');
   assert.equal((await me(atSetup.session)).status, 200, 'still signed in to Wheelhouse');
 
   // A WorkOS sign-in made on the workshop computer later: its first request there.
   const later = await signIn(email, { cookie: key });
   assert.match(await workosOf(later.session), /^session_pretend_/);
   assert.equal((await me(`${later.session}; ${key}`)).status, 200);
-  assert.equal(await workosOf(later.session), null, 'ended at its first request there');
+  await eventually(async () => (await workosOf(later.session)) === null, 'ended at its first request there');
 
   // An ordinary browser's WorkOS sign-in is left alone.
   const plain = await signIn(email);
   assert.equal((await me(plain.session)).status, 200);
+  await settle();
   assert.match(await workosOf(plain.session), /^session_pretend_/);
 });
 
@@ -409,15 +417,17 @@ test('a workshop computer\'s WorkOS session still set is ended on a later reques
   const setWorkos = (id) => pool.query('UPDATE sessions SET workos_session_id = $1 WHERE token = $2', [id, token]);
   // Tied at setup, its WorkOS session ended.
   assert.equal((await fetch(`${server.baseUrl}/api/till-setup/workshop`, { method: 'POST', headers: { cookie: signedIn.session, ...json }, body: JSON.stringify({ siteId: site.id }) })).status, 201);
-  assert.equal(await workos(), null);
-  // As if that revoke had failed: WorkOS refuses one it doesn't know (the
-  // pretend one refuses any id it didn't make).
-  await setWorkos('session_unknown_1');
+  await eventually(async () => (await workos()) === null, 'ended at setup');
+  // As if that revoke had failed: WorkOS couldn't be reached (the pretend
+  // one answers so for an id starting session_down_).
+  await setWorkos('session_down_1');
   assert.equal((await me(signedIn.session)).status, 200);
-  assert.equal(await workos(), 'session_unknown_1', 'refused, so kept');
+  await settle();
+  assert.equal(await workos(), 'session_down_1', 'not reached, so kept');
   // Within the minute, not tried again, even for one WorkOS would take.
   await setWorkos('session_pretend_retry');
   assert.equal((await me(signedIn.session)).status, 200);
+  await settle();
   assert.equal(await workos(), 'session_pretend_retry', 'not tried again within the minute');
   // Another tied session whose revoke failed: its first later request tries again.
   const other = await signIn(email);
@@ -425,5 +435,38 @@ test('a workshop computer\'s WorkOS session still set is ended on a later reques
   const key = (await pool.query('SELECT workshop_computer_id FROM sessions WHERE token = $1', [token])).rows[0].workshop_computer_id;
   await pool.query("UPDATE sessions SET workshop_computer_id = $1, workos_session_id = 'session_pretend_later' WHERE token = $2", [key, otherToken]);
   assert.equal((await me(other.session)).status, 200);
-  assert.equal((await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [otherToken])).rows[0].workos_session_id, null, 'tried again and ended');
+  await eventually(async () => (await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [otherToken])).rows[0].workos_session_id === null, 'tried again and ended');
+});
+
+// The review of the retry (#578): the revoke runs on its own, never inside
+// the request, so a slow WorkOS neither delays the answer nor holds the
+// request's database connection; and WorkOS answering that the session is
+// already gone (a 4xx other than 429) counts as ended, with no more retries.
+test('a slow WorkOS doesn\'t hold up the request, and its revoke still ends the session', async () => {
+  const { email, cookie: ownerCookie } = await owner();
+  const json = { 'content-type': 'application/json' };
+  const site = await (await fetch(`${server.baseUrl}/api/sites`, { method: 'POST', headers: { cookie: ownerCookie, ...json }, body: JSON.stringify({ name: 'Bolton', code: 'B' }) })).json();
+  const signedIn = await signIn(email);
+  const token = signedIn.session.split('=')[1];
+  const workos = async () => (await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [token])).rows[0].workos_session_id;
+  // The pretend WorkOS takes 1.5 seconds to answer for an id starting session_slow_.
+  await pool.query("UPDATE sessions SET workos_session_id = 'session_slow_1' WHERE token = $1", [token]);
+  const started = Date.now();
+  const made = await fetch(`${server.baseUrl}/api/till-setup/workshop`, { method: 'POST', headers: { cookie: signedIn.session, ...json }, body: JSON.stringify({ siteId: site.id }) });
+  assert.equal(made.status, 201);
+  assert.ok(Date.now() - started < 1000, `answered without waiting for WorkOS (${Date.now() - started} ms)`);
+  assert.equal(await workos(), 'session_slow_1', 'not ended yet');
+  await eventually(async () => (await workos()) === null, 'ended once WorkOS answered');
+});
+
+test('WorkOS saying the session is already gone counts as ended: no more tries', async () => {
+  const { email, cookie: ownerCookie } = await owner();
+  const json = { 'content-type': 'application/json' };
+  const site = await (await fetch(`${server.baseUrl}/api/sites`, { method: 'POST', headers: { cookie: ownerCookie, ...json }, body: JSON.stringify({ name: 'Bolton', code: 'B' }) })).json();
+  const signedIn = await signIn(email);
+  const token = signedIn.session.split('=')[1];
+  // The pretend WorkOS answers as WorkOS does for a session it doesn't have (404).
+  await pool.query("UPDATE sessions SET workos_session_id = 'session_gone_1' WHERE token = $1", [token]);
+  assert.equal((await fetch(`${server.baseUrl}/api/till-setup/workshop`, { method: 'POST', headers: { cookie: signedIn.session, ...json }, body: JSON.stringify({ siteId: site.id }) })).status, 201);
+  await eventually(async () => (await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [token])).rows[0].workos_session_id === null, 'cleared');
 });

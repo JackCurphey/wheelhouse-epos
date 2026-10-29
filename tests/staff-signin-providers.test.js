@@ -95,7 +95,7 @@ test('authenticate gives null when WorkOS refuses the code, or can’t be reache
 // A workshop computer keeps no remembered WorkOS session (workshop-lock-server,
 // the review of #578): POST /user_management/sessions/revoke, as WorkOS's API
 // reference shows it (checked 29 Oct, workos.com/docs/reference/user-management/session/revoke).
-test('revoking a WorkOS session sends its id with the API key, and says whether WorkOS took it', async () => {
+test('revoking a WorkOS session sends its id with the API key, and says whether it is over (taken, or already gone)', async () => {
   const calls = [];
   const p = workosProvider({ ...KEYS }, { fetch: async (url, init) => { calls.push({ url, init }); return new Response('{}', { status: 200 }); } });
   assert.equal(await p.revokeSession({ sessionId: 'session_01' }), true);
@@ -107,8 +107,14 @@ test('revoking a WorkOS session sends its id with the API key, and says whether 
   assert.deepEqual(JSON.parse(calls[0].init.body), { session_id: 'session_01' });
   assert.equal(await p.revokeSession({ sessionId: null }), false, 'nothing to revoke');
   assert.equal(calls.length, 1);
-  const refused = workosProvider({ ...KEYS }, { fetch: async () => new Response('{}', { status: 404 }), log: quietLog().log });
-  assert.equal(await refused.revokeSession({ sessionId: 'session_02' }), false);
+  // Already gone, or refused for good (a 4xx other than 429): nothing left to
+  // end, so no retry. Not reached, 429 or a WorkOS fault (5xx): try again.
+  // WorkOS's reference (session/revoke, errors) doesn't say what an unknown
+  // or ended session gets; its errors page lists 404 as "The resource was not found".
+  for (const [status, done] of [[404, true], [400, true], [422, true], [429, false], [500, false], [503, false]]) {
+    const p2 = workosProvider({ ...KEYS }, { fetch: async () => new Response('{}', { status }), log: quietLog().log });
+    assert.equal(await p2.revokeSession({ sessionId: 'session_02' }), done, String(status));
+  }
   const down = workosProvider({ ...KEYS }, { fetch: async () => { throw new Error('offline'); }, log: quietLog().log });
   assert.equal(await down.revokeSession({ sessionId: 'session_03' }), false);
 });

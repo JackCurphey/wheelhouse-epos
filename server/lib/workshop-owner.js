@@ -13,7 +13,7 @@
 // first request there, and from then on the cookies don't open it: deleting
 // or changing the workshop cookie, or sending a till's key, can only lock it
 // further. It ends with the session (signing out).
-import { prepare } from '../db.js';
+import { pool, prepare } from '../db.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { parseCookies } from './http.js';
 import { staffSigninProvider } from '../staff-signin/provider.js';
@@ -36,27 +36,32 @@ export async function markSessionWorkshop(req, workshopComputerId) {
   if (!token) return;
   const marked = await prepare('UPDATE sessions SET workshop_computer_id = ? WHERE token = ? AND workshop_computer_id IS NULL RETURNING workos_session_id')
     .get(workshopComputerId, token);
-  if (marked?.workos_session_id) await endWorkosSession(token, marked.workos_session_id);
+  if (marked?.workos_session_id) endWorkosSession(token, marked.workos_session_id);
 }
 
-// A revoke WorkOS didn't take is tried again on a later request, at most once
-// a minute for a session (the re-review of #578), so a WorkOS outage doesn't
-// add a call to every request. Kept in this process's memory: a restart only
-// lets one more try through.
+// The WorkOS session is ended on its own, never inside the request (the
+// review of the retry, #578): the request may be inside a transaction holding
+// row locks and its pooled connection, and WorkOS may be slow. Its sessions
+// update uses its own pool connection (sessions is the sign-in registry, with
+// no shop scope). A revoke that isn't over is tried again on a later request,
+// at most once a minute for a session (the re-review of #578), so a WorkOS
+// outage doesn't add a call to every request. Kept in this process's memory:
+// a restart only lets one more try through.
 const REVOKE_RETRY_MS = 60_000;
 const revokeTried = new Map(); // session token -> when last tried
-async function endWorkosSession(token, workosSessionId) {
+function endWorkosSession(token, workosSessionId) {
   const now = Date.now();
   if (now - (revokeTried.get(token) ?? 0) < REVOKE_RETRY_MS) return;
   if (revokeTried.size > 10_000) {
     for (const [t, at] of revokeTried) if (now - at >= REVOKE_RETRY_MS) revokeTried.delete(t);
   }
   revokeTried.set(token, now);
-  const provider = staffSigninProvider();
-  if (provider?.revokeSession && (await provider.revokeSession({ sessionId: workosSessionId }))) {
-    await prepare('UPDATE sessions SET workos_session_id = NULL WHERE token = ?').run(token);
+  void (async () => {
+    const provider = staffSigninProvider();
+    if (!provider?.revokeSession || !(await provider.revokeSession({ sessionId: workosSessionId }))) return;
+    await pool.query('UPDATE sessions SET workos_session_id = NULL WHERE token = $1 AND workos_session_id = $2', [token, workosSessionId]);
     revokeTried.delete(token);
-  }
+  })().catch((err) => console.error(`Staff sign-in: ending a workshop computer's WorkOS session failed: ${err.message}`));
 }
 
 // The workshop computer this request's sign-in belongs to, once a request:
@@ -74,7 +79,7 @@ async function findTied(req) {
   const session = token ? await prepare('SELECT workshop_computer_id, workos_session_id FROM sessions WHERE token = ?').get(token) : null;
   if (session?.workshop_computer_id) {
     // Still holding a WorkOS session: its revoke failed before; try again.
-    if (session.workos_session_id) await endWorkosSession(token, session.workos_session_id);
+    if (session.workos_session_id) endWorkosSession(token, session.workos_session_id);
     return { id: session.workshop_computer_id };
   }
   if (await thisTill(req)) return null;

@@ -75,10 +75,18 @@ with `session_id`, authorised with the API key as a Bearer token
 (workos.com/docs/reference/user-management/session/revoke, checked 29 Oct:
 "Revoke a user session"). Wheelhouse's own session stays signed in; its
 `workos_session_id` is cleared once WorkOS takes the revoke, so signing out
-there later has no WorkOS session to end. If WorkOS can't be reached or
-refuses, the server logs it and the WorkOS session stays; a later request
-from that sign-in tries again, at most once a minute for a session, so an
-outage doesn't add a call to every request (the re-review of #578). Signing
+there later has no WorkOS session to end. The revoke runs on its own,
+never inside the request (the review of the retry, #578): a request may be
+inside a transaction holding row locks and its pooled connection, and
+WorkOS may be slow, so the answer never waits for it, and the session's
+`workos_session_id` is cleared on its own pool connection once WorkOS
+answers. A 4xx other than 429 counts as over (the session is unknown or
+already ended; WorkOS's reference doesn't say which status that gets, and
+its errors page, workos.com/docs/reference/errors, has 404 "The resource was
+not found"), so it is cleared and not tried again. Not reached, 429 or a
+5xx is logged and the WorkOS session stays; a later request from that
+sign-in tries again, at most once a minute for a session, so an outage
+doesn't add a call to every request (the re-review of #578). Signing
 out still ends it as before. The pretend WorkOS answers the revoke and keeps nothing.
 
 WorkOS's reference doesn't say in so many words that revoking stops its

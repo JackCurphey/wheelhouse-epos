@@ -52,9 +52,16 @@ export const pretend = {
   },
 
   // Ending a session from the server, as WorkOS's revoke does
-  // (workshop-lock-server): the pretend one keeps nothing to end, and, like
-  // WorkOS with an id it doesn't know, refuses one it didn't make.
-  revokeSession: async ({ sessionId }) => typeof sessionId === 'string' && sessionId.startsWith('session_pretend_'),
+  // (workshop-lock-server): true when it is over (taken, or already gone),
+  // false to try again. The pretend one keeps nothing to end, so it is over,
+  // except that, for tests, an id starting session_down_ answers as WorkOS
+  // not reached, and one starting session_slow_ answers after 1.5 seconds.
+  async revokeSession({ sessionId }) {
+    if (typeof sessionId !== 'string' || !sessionId) return false;
+    if (sessionId.startsWith('session_down_')) return false;
+    if (sessionId.startsWith('session_slow_')) await new Promise((r) => setTimeout(r, 1500));
+    return true;
+  },
 
   // WorkOS's sign-out page would come back to the signed-out page; the pretend one goes straight there.
   logoutUrl: ({ sessionId }) => (sessionId ? '/workshop/signed-out' : null),

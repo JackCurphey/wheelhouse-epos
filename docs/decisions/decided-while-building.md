@@ -1659,7 +1659,9 @@ silent:
    say in so many words that its sign-in page stops offering Continue;
    worth checking once on the Staging account. If WorkOS can't be reached,
    the server logs it and tries again on a later request from that sign-in,
-   at most once a minute (re-review of #578).
+   at most once a minute (re-review of #578). The ending runs on its own,
+   so nobody waits for WorkOS; WorkOS answering that the session is
+   already gone (any refusal but "too many requests") counts as ended.
 8. **A sign-in from before this change**, already on a workshop computer,
    is recorded at its first request with the workshop key. The screen asks
    the server who is signed in as soon as it loads, so that window is
