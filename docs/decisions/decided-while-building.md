@@ -1545,6 +1545,28 @@ silent:
    (sticky), so it never covers the page's last lines. With trust PIN off,
    the Working bar with Switch stays as before.
 
+### 29 Oct 2026: the till's Serving pills (`openspec/changes/serving-pills`, `till-serving-pills`, `till-checkin`; WP-1.7 task 3.6, later task 2.4; roles and switches 10; stage-1 gaps 11)
+
+1. **For Jack: the Owner isn't a pill to tap on the till**, though the
+   drawing shows Jack Lewis as one. Every tap keeps the rule that the Owner
+   types their PIN (trust PIN entry 5): on a till a tapped-in Owner could
+   give PINs with no PIN. The Owner's pill shows only while the Owner is
+   serving, highlighted. Showing it to tap is a one-line change if Jack
+   prefers the drawing. *Pattern:* the Working pills, entry 1.
+2. **The sale stays on screen when the person serving changes**, and Take
+   payment sends whoever is serving then (roles and switches 10, proposed).
+   Recording it under the person checked in on the server waits for task
+   3.8 (after Mark's step C), and tapping with the till offline for task
+   3.5. *Pattern:* the pay box's "[name] serving".
+3. **"Someone else" ends the check-in**, as Serving's switch does; with a
+   sale on screen the sale stays, as when a check-in ends today.
+4. **Checked in today's names to tap are buttons in the same chips**, 44
+   pixels tall; the Owner and anyone a tap wouldn't check in stay plain
+   chips. *Pattern:* "Who's working?" (trust PIN entries 5 to 7).
+5. **The Serving button above the till stays**, with its menu for giving
+   PINs: the drawing's till bar still shows who is serving. The pills are
+   added under the quick buttons.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

@@ -37,8 +37,8 @@ No migration. Staff routes, under the request's row-level security.
    till's, with Checked in today), as Serving does today. A sale in
    progress stays, as it does when the check-in ends (review, 28 Oct, item 1).
 6. **Checked in today's tappable names are buttons in the same chips**,
-   with "Tap your name" read before them; the rest stay plain chips. A
-   refused tap says why, and the check-in is read again. *Pattern:*
+   44 pixels tall; the rest stay plain chips. A refused tap says why where
+   a wrong PIN does, and the check-in is read again. *Pattern:*
    "Who's working?" (trust-pin-workshop design 5 and 6).
 7. **The Serving button above the till stays**, with its menu for giving
    PINs: the pills are added, not swapped in, because the till bar's

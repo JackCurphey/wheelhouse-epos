@@ -14,6 +14,7 @@ import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-sear
 import { PayDialog } from './pay-dialog.tsx';
 import { FloatCheck } from './float-check.tsx';
 import { PinCheckin, ServingButton } from './pin-checkin.tsx';
+import { WorkingPills } from './workshop-computer.tsx';
 import { useTillCheckin, type ThisTillName } from '@/lib/till-checkin.ts';
 import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
 import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
@@ -46,8 +47,10 @@ export function TillPage() {
   useHoldScreen(!data && !checkin.isError);
   if (!data) return checkin.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the till. Try again in a moment.</p> : null;
   const { serving, checkedInToday, givePin } = data;
+  // With trust PIN on, Checked in today's names that a tap would check in (stage-1 gaps 11; serving-pills).
+  const tapIds = data.trustPin ? (data.names ?? []).map((n) => n.id) : [];
   const name = data.till ? <TillName till={data.till} /> : null;
-  if (!serving && !saleOpen) return <>{name ? <div className="mb-3.5">{name}</div> : null}<PinCheckin checkedInToday={checkedInToday} /></>;
+  if (!serving && !saleOpen) return <>{name ? <div className="mb-3.5">{name}</div> : null}<PinCheckin checkedInToday={checkedInToday} tapIds={tapIds} /></>;
   // The first person to check in who takes payments checks the float (opening
   // the shop decision 2; Jack's answer 3, 27 Oct).
   return (
@@ -106,6 +109,8 @@ function useSaleOpen(open: boolean, onOpenChange: (open: boolean) => void) {
 
 function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const services = useQuery({ queryKey: ['workshop-services'], queryFn: () => apiGet<Service[]>('/api/workshop-services') });
+  // Who's serving and today's people, for the Serving pills (serving-pills).
+  const checkin = useTillCheckin().data;
   const [lines, setLines] = useState<TillLine[]>([]);
   const [editing, setEditing] = useState<TillLine | null>(null);
   const [paying, setPaying] = useState(false);
@@ -153,6 +158,8 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
             <p className="col-span-full m-0 text-sm text-[var(--wh-muted)]">No workshop services yet. Add them in Settings.</p>
           ) : null}
         </div>
+        {/* With trust PIN on, today's people as pills under the quick buttons (till-serving-pills). */}
+        {checkin?.till && checkin.trustPin && checkin.serving ? <WorkingPills serving working={checkin.serving} names={checkin.names ?? []} /> : null}
       </div>
 
       <section aria-labelledby="sale-title" className="flex w-full shrink-0 flex-col gap-3 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px] md:w-[380px]">

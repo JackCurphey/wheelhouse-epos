@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { User } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
-import { useCheckinActions, type CheckedIn, type GiveTo } from '@/lib/till-checkin.ts';
+import { useQueryClient } from '@tanstack/react-query';
+import { CHECKIN_QUERY, useCheckinActions, type CheckedIn, type GiveTo } from '@/lib/till-checkin.ts';
 import { ServingMenuButton } from './give-pin.tsx';
 
 /**
@@ -23,8 +24,9 @@ const FAILED = 'Wheelhouse couldn’t check that PIN. Try again in a moment.';
  * are the till's; its drawn line waits for work recorded under the person
  * working (openspec/changes/workshop-computer, design 5).
  */
-export function PinCheckin({ checkedInToday, workshop = false }: { checkedInToday: CheckedIn[]; workshop?: boolean }) {
-  const { checkIn } = useCheckinActions();
+export function PinCheckin({ checkedInToday, workshop = false, tapIds = [] }: { checkedInToday: CheckedIn[]; workshop?: boolean; tapIds?: number[] }) {
+  const { checkIn, tapIn } = useCheckinActions();
+  const queryClient = useQueryClient();
   const [digits, setDigits] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,22 @@ export function PinCheckin({ checkedInToday, workshop = false }: { checkedInToda
       // A wrong PIN (or "wait a moment") in the server's own words; anything else, plainly.
       setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : FAILED);
       show('');
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
+  // With trust PIN on, a name in Checked in today checks that person back in (stage-1 gaps 11; serving-pills).
+  async function tap(id: number) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await tapIn(id);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : FAILED);
+      void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -104,12 +122,18 @@ export function PinCheckin({ checkedInToday, workshop = false }: { checkedInToda
         <div className="flex flex-col gap-2.5 md:w-[360px]">
           <span className="text-sm font-bold tracking-[0.8px] uppercase">Checked in today</span>
           <div className="flex flex-wrap gap-2">
-            {checkedInToday.map((p) => (
-              <span key={p.id} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--wh-border)] bg-[var(--wh-panel)] py-0 pr-3 pl-1 text-sm font-semibold">
-                <span aria-hidden="true" className="inline-flex size-7 items-center justify-center rounded-full bg-[var(--wh-ok-bg)] text-xs font-bold text-[var(--wh-status-complete-ink)]">{p.name.split(' ').map((x) => x[0]).join('')}</span>
-                {p.name}
-              </span>
-            ))}
+            {checkedInToday.map((p) => {
+              const chip = (
+                <>
+                  <span aria-hidden="true" className="inline-flex size-7 items-center justify-center rounded-full bg-[var(--wh-ok-bg)] text-xs font-bold text-[var(--wh-status-complete-ink)]">{p.name.split(' ').map((x) => x[0]).join('')}</span>
+                  {p.name}
+                </>
+              );
+              const look = 'inline-flex items-center gap-2 rounded-full border border-[var(--wh-border)] bg-[var(--wh-panel)] py-0 pr-3 pl-1 text-sm font-semibold';
+              return tapIds.includes(p.id)
+                ? <button key={p.id} type="button" aria-disabled={busy} onClick={() => void tap(p.id)} className={`${look} min-h-11 hover:bg-[var(--wh-hover)]`}>{chip}</button>
+                : <span key={p.id} className={`${look} min-h-9`}>{chip}</span>;
+            })}
           </div>
         </div>
       ) : null}
