@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { User } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
-import { useCheckinActions, type CheckedIn, type TapName, type ThisWorkshop } from '@/lib/till-checkin.ts';
+import { useQueryClient } from '@tanstack/react-query';
+import { CHECKIN_QUERY, useCheckinActions, type CheckedIn, type TapName, type ThisWorkshop } from '@/lib/till-checkin.ts';
 import { PinCheckin } from './pin-checkin.tsx';
 
 /**
@@ -111,6 +112,7 @@ const pillClass = (on: boolean) => `inline-flex min-h-11 shrink-0 items-center r
  */
 export function WorkingPills({ working, names }: { working: CheckedIn; names: TapName[] }) {
   const { tapIn, switchServing } = useCheckinActions();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const people = names.some((n) => n.id === working.id) ? names : [working, ...names];
@@ -122,6 +124,8 @@ export function WorkingPills({ working, names }: { working: CheckedIn; names: Ta
       await go();
     } catch (err) {
       setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t change who’s working. Try again in a moment.');
+      // The pills are read again, so a name the server no longer offers goes (design 3).
+      void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     } finally {
       setBusy(false);
     }

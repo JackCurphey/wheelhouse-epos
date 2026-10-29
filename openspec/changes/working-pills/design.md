@@ -28,8 +28,9 @@ No migration. Staff routes, under the request's row-level security.
    and does nothing when tapped. *Pattern:* the drawing highlights the
    person working.
 3. **A pill tap uses the tap route**, so every rule of "Who's working?"
-   holds, and the page stays as it is. A refused tap says why under the
-   strip, in the server's words, and the pills are read again.
+   holds, and the page stays as it is. A refused tap says why above the
+   pills, inside the strip, in the server's words, and the pills are read
+   again.
 4. **"Someone else" ends the check-in and shows the PIN pad**, not "Who's
    working?": the person pressing it has said they aren't on the list.
    *Pattern:* "Someone else — enter your PIN" on "Who's working?".

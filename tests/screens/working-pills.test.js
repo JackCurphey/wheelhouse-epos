@@ -29,7 +29,7 @@ afterEach(async () => {
   current = undefined;
 });
 
-async function open(path, { serving = ALEX, trustPin = true, names = NAMES, refuse = [] } = {}) {
+async function open(path, { serving = ALEX, trustPin = true, names = NAMES, refuse = [], dropRefused = false } = {}) {
   const calls = [];
   const state = { serving, trustPin, names };
   const realFetch = globalThis.fetch;
@@ -42,7 +42,11 @@ async function open(path, { serving = ALEX, trustPin = true, names = NAMES, refu
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, { ...JACK, isOwner: state.serving?.id === JACK_WORKING.id, workshopComputer: true });
     if (u.pathname === '/api/till-checkin/tap') {
-      if (refuse.includes(body.employeeId)) return reply(403, REFUSED);
+      if (refuse.includes(body.employeeId)) {
+        // The server no longer offers them (their PIN changed, say).
+        if (dropRefused) state.names = state.names.filter((n) => n.id !== body.employeeId);
+        return reply(403, REFUSED);
+      }
       state.serving = state.names.find((n) => n.id === body.employeeId);
       return reply(201, { serving: { id: state.serving.id, name: state.serving.name } });
     }
@@ -113,6 +117,14 @@ test('a pill the server refuses says why, and the person working stays', async (
   const alert = await t.ui.findByRole('alert');
   assert.equal(alert.textContent, REFUSED.error);
   assert.deepEqual(pills(t, t.ui.getByRole('group', { name: 'Who’s working' })), ['Alex Morgan (pressed)', 'Jo Taylor', 'Someone else']);
+});
+
+test('a refused pill reads the pills again: a name the server no longer offers goes', async () => {
+  const t = await open('/workshop/diary', { refuse: [32], dropRefused: true });
+  const strip = await t.ui.findByRole('group', { name: 'Who’s working' });
+  t.fireEvent.click(t.within(strip).getByRole('button', { name: 'Jo Taylor' }));
+  await t.ui.findByRole('alert');
+  await t.waitFor(() => assert.deepEqual(pills(t, t.ui.getByRole('group', { name: 'Who’s working' })), ['Alex Morgan (pressed)', 'Someone else']));
 });
 
 test('Someone else ends the check-in and shows the PIN pad, not the names', async () => {
