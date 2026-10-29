@@ -328,6 +328,27 @@ test('a look at closing and then no close: the next morning still expects the wh
   assert.deepEqual([res.body.close.differencePence, res.body.close.bankedPence], [0, 40000]);
 });
 
+// The re-review, 29 Oct: when the window starts at the previous close, cash
+// taken out since that close counts, whatever day it is dated. Sat 29
+// closed; Sun 30 checked, took £50.00 and paid out £10.00, not closed; Mon 31
+// had only the Owner's look at closing, not closed.
+test('a look at closing after an earlier unclosed day: that day\'s cash taken out still counts, once', async () => {
+  const owner = await shop('never');
+  await closed(owner, '2026-08-29', (await check(owner, '2026-08-29')).id);
+  await sql(owner, "DELETE FROM float_checks WHERE day = '2026-08-31' RETURNING id");
+  await check(owner, '2026-08-30');
+  await oldSale(owner, '2026-08-30T10:00:00Z', { cash: 50 });
+  await sql(owner, "INSERT INTO paid_outs (day, login_id, amount_pence, reason, created_at) VALUES ('2026-08-30', ?, 1000, 'Other', '2026-08-30T11:00:00Z') RETURNING id", owner.loginId);
+  // Sat 29's own cash taken out, before its close: Sat's, never again.
+  await sql(owner, "INSERT INTO paid_outs (day, login_id, amount_pence, reason, created_at) VALUES ('2026-08-29', ?, 700, 'Other', '2026-08-29T11:00:00Z') RETURNING id", owner.loginId);
+  await sql(owner, "INSERT INTO float_checks (day, login_id, expected_pence, checked_at) VALUES ('2026-08-31', ?, ?, '2026-08-31T15:30:00Z') RETURNING id", owner.loginId, FLOAT);
+  assert.deepEqual((await floatToday(owner)).unclosed, { day: YESTERDAY, startPence: FLOAT, cashPence: 4000, expectedPence: FLOAT + 4000 });
+  await countThisMorning(owner, FLOAT + 4000);
+  const res = await post(owner, '/api/close-the-day', { day: YESTERDAY });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual([res.body.close.paidOutsPence, res.body.close.differencePence, res.body.close.takingsPence], [1000, 0, 5000]);
+});
+
 // Review 3: cash taken out for the day nobody closed, added at Close it,
 // updates this morning's short float on Today.
 test('cash taken out added at Close it updates this morning\'s short float', async () => {

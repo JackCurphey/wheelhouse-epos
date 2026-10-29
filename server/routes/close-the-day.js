@@ -135,20 +135,25 @@ async function paidOutsWhere({ sql, args }) {
 // count was in the count), as does what is added at its Close it; and the
 // Owner's look at closing never starts the window: then it runs from the
 // previous close, since the day's cash before the look was in the drawer.
+// From the previous close, cash taken out is counted from the day after that
+// close's day, so an earlier unclosed day's is counted (re-review, 29 Oct);
+// that close's own, made before it, is never counted again.
 async function drawer(day, start, sales, until = null, { missed = false } = {}) {
-  const from = missed && start.closingLook ? await previousCloseAt(day) : start.checkedAt;
+  const window = missed && start.closingLook ? await previousClose(day) : { at: start.checkedAt, fromDay: day };
+  const from = window.at;
   const { cashPence } = await takingsIn(sales, from);
   const paidOuts = missed
-    ? await paidOutsWhere({ sql: 'p.day >= ? AND p.created_at > ? AND (?::timestamptz IS NULL OR p.created_at <= ? OR p.day = ?)', args: [day, from, until, until, day] })
+    ? await paidOutsWhere({ sql: 'p.day >= ?::date AND p.created_at > ? AND (?::timestamptz IS NULL OR p.created_at <= ? OR p.day = ?)', args: [window.fromDay, from, until, until, day] })
     : await paidOutsSince(day, start);
   const paidOutsPence = paidOuts.reduce((n, p) => n + p.amountPence, 0);
   const earlierBankedPence = await bankedForEarlier(day, from, until);
   return { cashPence, paidOuts, paidOutsPence, earlierBankedPence, expectedPence: start.start.pence + cashPence - paidOutsPence - earlierBankedPence };
 }
-// When the last close before `day` was made (a day nobody closed always has one).
-async function previousCloseAt(day) {
-  const { at } = await prepare('SELECT max(closed_at) AS at FROM day_closes WHERE day < ?').get(day);
-  return at ?? new Date(0);
+// The last close before `day` (a day nobody closed always has one): when it
+// was made, and the day after its day.
+async function previousClose(day) {
+  const r = await prepare(`SELECT closed_at AS at, to_char(day + 1, 'YYYY-MM-DD') AS from_day FROM day_closes WHERE day < ? ORDER BY closed_at DESC LIMIT 1`).get(day);
+  return r ? { at: r.at, fromDay: r.from_day } : { at: new Date(0), fromDay: '1970-01-01' };
 }
 // What a day nobody closed should have held at its count, from its own
 // window: kept on the count, so Today's short or over float for it follows
