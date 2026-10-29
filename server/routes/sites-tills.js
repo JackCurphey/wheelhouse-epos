@@ -22,6 +22,9 @@ import { serializeThisWorkshop, thisWorkshop, workshopCookie } from '../till/thi
 
 const OWNER_ONLY = { error: 'Only the owner can set up a till', code: 'owner_only' };
 const NOT_OWNER_HERE = { error: 'Only the owner can set up a till. Switch to the owner first.', code: 'not_owner_checked_in' };
+// The Tills list's refusals, in the drawn note's words (set-till-tills).
+const OWNER_ONLY_TILLS = { error: 'Only the owner can add or remove tills.', code: 'owner_only' };
+const NOT_OWNER_TILLS = { error: 'Only the owner can add or remove tills. Switch to the owner first.', code: 'not_owner_checked_in' };
 const ALREADY_A_TILL = { error: 'This computer is already a till', code: 'already_a_till' };
 const ALREADY_A_WORKSHOP = { error: 'This computer is already a workshop computer', code: 'already_a_workshop' };
 
@@ -48,6 +51,51 @@ function serializeTill(row) {
     lastSeenAt: row.last_seen_at ? new Date(row.last_seen_at).toISOString() : null,
     pendingCount: row.last_pending_count,
   };
+}
+
+// A till and a workshop computer, for Rename and Remove (tills-list design 2).
+const TILL_KIND = { table: 'tills', columns: 'id, code, name', missing: 'Till not found' };
+const WORKSHOP_KIND = { table: 'workshop_computers', columns: 'id, name', missing: 'Workshop computer not found' };
+
+// Rename and Remove, after the route's owner check: not while someone else
+// is checked in by PIN on this browser (roles and switches 2).
+async function renameDevice(kind, req, res, rawId) {
+  if (await someoneElseCheckedIn(req)) return sendJson(res, 403, NOT_OWNER_TILLS);
+  const { name } = (await readJsonBody(req)) ?? {};
+  if (name !== undefined && name !== null && typeof name !== 'string') return badRequest(res, 'The name must be text');
+  const named = (name ?? '').trim();
+  if (named.length > 60) return badRequest(res, 'A name can be up to 60 characters');
+  const done = await lockedDevice(kind, rawId, (id) =>
+    db.prepare(`UPDATE ${kind.table} SET name = ? WHERE id = ? RETURNING ${kind.columns}`).get(named || null, id));
+  if (!done) return notFound(res, kind.missing);
+  sendJson(res, 200, done);
+}
+
+// Switched off, not deleted: what was done on it stays, and a till's number
+// stays in use (till-setup entries 7 and 17).
+async function removeDevice(kind, req, res, rawId) {
+  if (await someoneElseCheckedIn(req)) return sendJson(res, 403, NOT_OWNER_TILLS);
+  const done = await lockedDevice(kind, rawId, (id) =>
+    db.prepare(`UPDATE ${kind.table} SET active = false WHERE id = ? RETURNING id`).get(id));
+  if (!done) return notFound(res, kind.missing);
+  sendJson(res, 200, { id: done.id, active: false });
+}
+
+// BEGIN, the row locked while it is on, `write`, COMMIT; null (rolled back)
+// when there is no such row on. The caller replies after this returns.
+async function lockedDevice(kind, rawId, write) {
+  const id = Number(rawId);
+  if (!Number.isInteger(id) || id < 1) return null;
+  await dbExec('BEGIN');
+  try {
+    const row = await db.prepare(`SELECT id FROM ${kind.table} WHERE id = ? AND active = true FOR UPDATE`).get(id);
+    const done = row ? await write(id) : null;
+    await dbExec(done ? 'COMMIT' : 'ROLLBACK');
+    return done;
+  } catch (err) {
+    await dbExec('ROLLBACK').catch(() => {});
+    throw err;
+  }
 }
 
 export function register(route) {
@@ -145,8 +193,8 @@ export function register(route) {
     if (await db.prepare('SELECT 1 FROM tills WHERE code = ?').get(code)) return sendJson(res, 409, TAKEN);
     let made;
     try {
-      made = await db.prepare('INSERT INTO tills (site_id, code, name, token_hash, browser_token_hash) VALUES (?, ?, ?, ?, ?) RETURNING id')
-        .get(site.id, code, named || null, hashLinkCode(newLinkCode()), hashLinkCode(browserToken));
+      made = await db.prepare('INSERT INTO tills (site_id, code, name, token_hash, browser_token_hash, registered_by_login_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
+        .get(site.id, code, named || null, hashLinkCode(newLinkCode()), hashLinkCode(browserToken), ctx.login.id);
     } catch (err) {
       // Two set up the same number at once: the code's unique index keeps one.
       if (err.code === '23505') return sendJson(res, 409, TAKEN);
@@ -175,10 +223,58 @@ export function register(route) {
     const named = (name ?? '').trim();
     if (named.length > 60) return badRequest(res, 'A name can be up to 60 characters');
     const browserToken = newLinkCode();
-    const made = await db.prepare('INSERT INTO workshop_computers (site_id, name, browser_token_hash) VALUES (?, ?, ?) RETURNING id')
-      .get(site.id, named || null, hashLinkCode(browserToken));
+    const made = await db.prepare('INSERT INTO workshop_computers (site_id, name, browser_token_hash, registered_by_login_id) VALUES (?, ?, ?, ?) RETURNING id')
+      .get(site.id, named || null, hashLinkCode(browserToken), ctx.login.id);
     res.setHeader('Set-Cookie', workshopCookie(req, browserToken));
     sendJson(res, 201, { workshop: { id: made.id, name: named || null, siteName: site.name } });
+  });
+
+  // The Tills list (openspec/changes/tills-list; set-till-tills-owner): every
+  // till and workshop computer that's on, with where, when and by whom it was
+  // registered. The Owner's only (owner setup 17).
+  // screens: set-till-tills-owner
+  route('GET', '/api/till-setup/list', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, OWNER_ONLY_TILLS);
+    const registered = (r) => ({ siteName: r.site_name, registeredAt: new Date(r.created_at).toISOString(), registeredBy: r.registered_by ?? null });
+    const tills = await db.prepare(
+      `SELECT t.id, t.code, t.name, t.created_at, s.name AS site_name, l.name AS registered_by
+         FROM tills t JOIN sites s ON s.id = t.site_id LEFT JOIN logins l ON l.id = t.registered_by_login_id
+        WHERE t.active = true ORDER BY ${TILL_ORDER.replaceAll('code', 't.code')}`
+    ).all();
+    const workshops = await db.prepare(
+      `SELECT w.id, w.name, w.created_at, s.name AS site_name, l.name AS registered_by
+         FROM workshop_computers w JOIN sites s ON s.id = w.site_id LEFT JOIN logins l ON l.id = w.registered_by_login_id
+        WHERE w.active = true ORDER BY w.id`
+    ).all();
+    sendJson(res, 200, {
+      tills: tills.map((t) => ({ id: t.id, code: t.code, name: t.name, ...registered(t) })),
+      workshopComputers: workshops.map((w) => ({ id: w.id, name: w.name, ...registered(w) })),
+    });
+  });
+
+  // Rename and Remove (tills-list design 2; set-till-tills-owner,
+  // set-till-remove): the Owner's, and not while someone else is checked in
+  // by PIN here (roles and switches 2). Each locks its row, switched on,
+  // and replies after COMMIT; a till or workshop computer that's off,
+  // missing or another shop's (row-level security) is 404.
+  // screens: set-till-tills-owner, set-till-remove
+  // The owner check is in each route, so the owner-only scan reads it.
+  route('PUT', '/api/till-setup/tills/:id', async (req, res, params) => {
+    if (!(await currentSession(req))?.login.is_owner) return sendJson(res, 403, OWNER_ONLY_TILLS);
+    await renameDevice(TILL_KIND, req, res, params.id);
+  });
+  route('POST', '/api/till-setup/tills/:id/remove', async (req, res, params) => {
+    if (!(await currentSession(req))?.login.is_owner) return sendJson(res, 403, OWNER_ONLY_TILLS);
+    await removeDevice(TILL_KIND, req, res, params.id);
+  });
+  route('PUT', '/api/till-setup/workshop/:id', async (req, res, params) => {
+    if (!(await currentSession(req))?.login.is_owner) return sendJson(res, 403, OWNER_ONLY_TILLS);
+    await renameDevice(WORKSHOP_KIND, req, res, params.id);
+  });
+  route('POST', '/api/till-setup/workshop/:id/remove', async (req, res, params) => {
+    if (!(await currentSession(req))?.login.is_owner) return sendJson(res, 403, OWNER_ONLY_TILLS);
+    await removeDevice(WORKSHOP_KIND, req, res, params.id);
   });
 
   route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {
