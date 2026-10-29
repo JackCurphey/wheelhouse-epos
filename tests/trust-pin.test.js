@@ -205,6 +205,7 @@ test('a tap counts only after a typed PIN: not after another tap alone, nor once
   await checkIn(w, again);
   await switchOff(w);
   assert.equal((await tap(w, alexId)).status, 201);
+});
 
 test('the Owner’s own check-in on a workshop computer ends after 10 minutes at most, whatever the setting (until Owner pages ask for a PIN)', async () => {
   const owner = await shop();
