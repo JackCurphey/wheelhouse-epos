@@ -1600,6 +1600,19 @@ silent:
 8. **The pop-ups sit in the middle of the screen on a phone too**, as
    Customer groups' box does; the drawing's phone pop-up fills the screen.
    *Pattern:* the built Settings boxes.
+9. **Decided here, for Jack to overrule: a removed workshop computer
+   stays closed to the Owner's pages** (review, 29 Oct). A workshop
+   computer is usually left signed in as the Owner, and its Owner pages
+   open only while the Owner is the one working there (workshop computer
+   design 9). Once it is removed it is no longer a workshop computer, so
+   without this it would open every Owner page to whoever sits at it, with
+   no PIN. So a browser that was a removed workshop computer counts as
+   staff, not the Owner, until someone signs in again on it: signing in
+   clears the old workshop key, and from then on it is an ordinary browser
+   and the Owner is the Owner there. This is stricter than leaving it open.
+   Jack can choose instead to have removing it open the Owner's pages
+   straight away. The Remove pop-up's words are unchanged, as drawn.
+   *Pattern:* a mechanic working on a workshop computer.
 
 ## Decided here, for Jack to overrule
 
