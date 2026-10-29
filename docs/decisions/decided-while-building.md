@@ -1717,8 +1717,10 @@ silent:
 11. **The Owner's look at closing never starts a day's cash** when that day
     then isn't closed (the money review): the next morning's figure runs
     from the previous close, since the day's cash before the look was in
-    the drawer. A look made at the till in the morning still starts it
-    (27 Oct answer 9).
+    the drawer, and so does the cash taken out since that close, whatever
+    day it is dated (an earlier day nobody counted has nothing else to go
+    in; re-review, 29 Oct). A look made at the till in the morning still
+    starts it (27 Oct answer 9).
 12. **Cash taken out added at Close it updates this morning's short or
     over float on Today**: the morning count's "should have" figure is
     worked out again, as the close works out its own, so a forgotten
