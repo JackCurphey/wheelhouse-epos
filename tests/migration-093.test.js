@@ -75,7 +75,8 @@ test('093 adds a reason and who to stock movements, and keeps older lines', asyn
   });
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`), 'safe to run twice');
   await withClient(url.href, async (c) => {
-    const { rows } = await c.query("SELECT conname FROM pg_constraint WHERE conrelid = 'stock_movements'::regclass AND (conname LIKE '%reason%' OR conname LIKE '%login_id%')");
+    const { rows } = await c.query("SELECT conname FROM pg_constraint WHERE conrelid = 'stock_movements'::regclass AND (conname LIKE '%reason%' OR conname LIKE '%login_id%') AND conname NOT LIKE '%seen_by%'");
+    // Migration 102's seen_by_login_id has its own foreign key (stock-warnings-on-today).
     assert.equal(rows.length, 2, `one check and one foreign key, not doubled: ${rows.map((r) => r.conname)}`);
     const { rows: [shop] } = await c.query('SELECT id FROM shops LIMIT 1');
     await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shop.id)]);

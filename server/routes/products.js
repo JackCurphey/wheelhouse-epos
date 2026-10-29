@@ -277,13 +277,30 @@ export function register(route) {
         return badRequest(res, 'Stock cannot go below zero');
       }
       newQty = updated.stock_qty;
-      await db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note, reason, login_id) VALUES (?, ?, ?, ?, ?, ?)').run(
+      // An adjustment keeps its value at cost, in whole pence, and goes to
+      // the Owner's Today when that is more than the amount set in Settings ›
+      // Stockroom, decided now (openspec/changes/stock-warnings-on-today
+      // design 1 to 4; stock control decision 6). Up or down; none set, none.
+      // A negative cost (the product form saves one) counts at its size, so
+      // the value is never below nothing (review, 29 Oct; design 11).
+      let valuePence = null;
+      let toSee = false;
+      if (type === 'adjustment') {
+        const { cost_pence: costPence, over } = await db.prepare(
+          'SELECT abs(round(p.cost * 100))::bigint AS cost_pence, s.stock_adjust_today_over_pence AS over FROM products p, shops s WHERE p.id = ? AND s.id = ?'
+        ).get(id, shopId);
+        valuePence = Math.abs(change) * costPence;
+        toSee = over !== null && valuePence > over;
+      }
+      await db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note, reason, login_id, value_pence, to_see) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
         id,
         change,
         type,
         note,
         reason,
-        ctx.login.id
+        ctx.login.id,
+        valuePence,
+        toSee
       );
       await db.exec('COMMIT');
     } catch (err) {

@@ -55,7 +55,7 @@ async function summary(t, name, words) {
 test('the rooms down the left, built ones only; a computer opens on Front desk', async () => {
   const { ui, within } = await openSettings();
   const nav = within(ui.getByRole('navigation', { name: 'Settings' }));
-  assert.deepEqual(nav.getAllByRole('link').map((a) => a.textContent), ['Front desk', 'Workshop', 'Office']);
+  assert.deepEqual(nav.getAllByRole('link').map((a) => a.textContent), ['Front desk', 'Workshop', 'Stockroom', 'Office']);
   assert.equal(nav.getByRole('link', { name: 'Front desk' }).getAttribute('aria-current'), 'page');
   assert.ok(ui.getByRole('heading', { level: 2, name: 'Front desk' }));
   assert.ok(ui.getByText('The till, payments, messages to customers and closing the day.'));
@@ -105,7 +105,7 @@ test('Workshop: Online booking and Mechanics, each summed up', async () => {
 test('on a phone, Settings opens on the rooms, each with what’s in it; a room has ‹ Settings back', async () => {
   const first = await openSettings();
   const list = first.within(first.ui.getByRole('navigation', { name: 'Settings rooms' }));
-  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'OfficeShop details, opening hours']);
+  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments', 'OfficeShop details, opening hours']);
   first.cleanup();
   shell?.queryClient.clear();
   uninstall?.();

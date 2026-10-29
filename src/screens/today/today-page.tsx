@@ -1,8 +1,11 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
-import { apiGet, apiMutate } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { REASON_LABEL } from '@/screens/stock/adjust-stock.tsx';
+import { productHref } from '@/screens/stock/stock-bits.tsx';
+import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
@@ -25,7 +28,9 @@ type Attention =
   | { kind: 'replies'; count: number; oldestName: string | null; oldestAt: string }
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
   | { kind: 'float_short'; checkId: number; day: string; shortPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
-  | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string };
+  | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
+  | { kind: 'below_zero'; count: number; takeId: number | null }
+  | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
 type TillToday = { code: string | null; openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
@@ -123,7 +128,7 @@ function WhosIn({ now }: { now: Date }) {
   );
 }
 
-function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
+function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean; phone: boolean }) {
   // Read again every minute and when the window comes back, until live updates (design 6).
   const list = useQuery({ queryKey: ['needs-attention'], queryFn: () => apiGet<{ items: Attention[] }>('/api/needs-attention'), refetchInterval: 60_000, refetchOnWindowFocus: true });
   const items = list.data?.items ?? [];
@@ -164,7 +169,76 @@ function NeedsAttention({ today, touch }: { today: string; touch: boolean }) {
     }
     if (done) document.getElementById('today-attention')?.focus();
   }
+  // Seen on a big stock adjustment (st-today-adjust): as the float's Seen.
+  const [seeingStock, setSeeingStock] = useState<ReadonlySet<number>>(new Set());
+  async function stockSeen(movementId: number) {
+    setSeeingStock((c) => new Set(c).add(movementId));
+    setRefused(null);
+    let done = false;
+    try {
+      await apiMutate(`/api/stock-adjustments/${movementId}/seen`, {}, { method: 'POST' });
+      done = true;
+    } catch (err) {
+      // Seen already in another tab (409): it's done; the line just goes (review, 29 Oct).
+      if (err instanceof ApiError && err.status === 409) done = true;
+      else setRefused('Wheelhouse couldn’t record that. Try again in a moment.');
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      setSeeingStock((c) => { const next = new Set(c); next.delete(movementId); return next; });
+    }
+    if (done) document.getElementById('today-attention')?.focus();
+  }
+  // Count them (st-today-below; stock decisions 9 and 11, "starts the count at
+  // once"): a below-zero stock take, opened on its counting page; the one
+  // already counting if there is one (stock-warnings-on-today design 7).
+  // Today is read again first, so a count finished since the page loaded
+  // isn't reopened; a new one starts instead (review, 29 Oct).
+  const navigate = useNavigate();
+  const [starting, setStarting] = useState(false);
+  async function countThem() {
+    setStarting(true);
+    setRefused(null);
+    try {
+      const fresh = await list.refetch();
+      const line = fresh.data?.items.find((x) => x.kind === 'below_zero');
+      const takeId = line && line.kind === 'below_zero' ? line.takeId : null;
+      if (takeId !== null) { navigate(countHref(takeId)); return; }
+      const made = await apiMutate<{ id: number }>('/api/stock-takes', { kind: 'below_zero' });
+      navigate(countHref(made.id));
+    } catch (err) {
+      setRefused(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t start the count. Try again in a moment.');
+      setStarting(false);
+    }
+  }
   const lines = items.map((i) => {
+    // st-today-below: on a phone See them and Count them sit under the words.
+    if (i.kind === 'below_zero') {
+      const sub = 'Sold more than Wheelhouse thought were here · Count them starts a count straight away';
+      const acts = (
+        <span className="inline-flex items-center gap-1.5">
+          <Link to={`${ROUTES.stock}?show=below-zero`} className="inline-flex min-h-11 items-center px-1 text-sm font-semibold whitespace-nowrap text-[var(--wh-ink)]">See them</Link>
+          <Button size={touch ? 'default' : 'sm'} className={`whitespace-nowrap ${touch ? 'min-h-11' : ''}`} disabled={starting} onClick={() => void countThem()}>Count them</Button>
+        </span>
+      );
+      return (
+        <Line key="below-zero" lead={warn}
+          title={`${i.count} ${i.count === 1 ? 'product' : 'products'} below zero`}
+          sub={phone ? <>{sub}<span className="mt-1 flex text-[var(--wh-ink)]">{acts}</span></> : sub}
+          right={phone ? null : acts} />
+      );
+    }
+    // st-today-adjust: the product's name opens its page (audit M8).
+    if (i.kind === 'stock_adjusted') {
+      const change = i.change < 0 ? `−${-i.change}` : `+${i.change}`;
+      const at = londonDay(i.at) === today ? clock(i.at) : when(i.at);
+      const sub = [REASON_LABEL[i.reason] ?? 'Adjusted', i.note ? `“${i.note}”` : null, i.byName ? `by ${i.byName} at ${at}` : at].filter(Boolean).join(' · ');
+      return (
+        <Line key={`s${i.movementId}`} lead={warn}
+          title={<>Stock adjusted: <Link to={productHref(i.productId)} className="inline-flex min-h-11 items-center text-[var(--wh-ink)] underline">{i.productName}</Link> {change} · {penceText(i.valuePence)}</>}
+          sub={sub}
+          right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeingStock.has(i.movementId)} onClick={() => void stockSeen(i.movementId)}>Seen</Button>} />
+      );
+    }
     // op-today-short, "Till B1’s float…" when counted on a set-up till
     // (till-setup); it stays until Seen, so an earlier day's gives its date
     // (review, 27 Oct). An over float reads the same, once yesterday was
@@ -275,7 +349,7 @@ export function TodayPage() {
   const dateLine = [dayLabel(today), signedIn?.shop.name, hours ? `open ${hours.open}–${hours.close}` : null].filter(Boolean).join(' · ');
 
   // The Owner: Needs attention, Tills, Who's in; Staff: Who's in (decision 4, op-today-staff).
-  const left = <>{owner ? <><NeedsAttention today={today} touch={touch} /><Tills /></> : null}<WhosIn now={now} /></>;
+  const left = <>{owner ? <><NeedsAttention today={today} touch={touch} phone={isPhone} /><Tills /></> : null}<WhosIn now={now} /></>;
   const work = <WorkshopToday today={today} now={now} touch={touch} />;
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
