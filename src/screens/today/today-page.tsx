@@ -178,8 +178,10 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
     try {
       await apiMutate(`/api/stock-adjustments/${movementId}/seen`, {}, { method: 'POST' });
       done = true;
-    } catch {
-      setRefused('Wheelhouse couldn’t record that. Try again in a moment.');
+    } catch (err) {
+      // Seen already in another tab (409): it's done; the line just goes (review, 29 Oct).
+      if (err instanceof ApiError && err.status === 409) done = true;
+      else setRefused('Wheelhouse couldn’t record that. Try again in a moment.');
     } finally {
       await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
       setSeeingStock((c) => { const next = new Set(c); next.delete(movementId); return next; });
@@ -189,13 +191,18 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
   // Count them (st-today-below; stock decisions 9 and 11, "starts the count at
   // once"): a below-zero stock take, opened on its counting page; the one
   // already counting if there is one (stock-warnings-on-today design 7).
+  // Today is read again first, so a count finished since the page loaded
+  // isn't reopened; a new one starts instead (review, 29 Oct).
   const navigate = useNavigate();
   const [starting, setStarting] = useState(false);
-  async function countThem(takeId: number | null) {
-    if (takeId !== null) { navigate(countHref(takeId)); return; }
+  async function countThem() {
     setStarting(true);
     setRefused(null);
     try {
+      const fresh = await list.refetch();
+      const line = fresh.data?.items.find((x) => x.kind === 'below_zero');
+      const takeId = line && line.kind === 'below_zero' ? line.takeId : null;
+      if (takeId !== null) { navigate(countHref(takeId)); return; }
       const made = await apiMutate<{ id: number }>('/api/stock-takes', { kind: 'below_zero' });
       navigate(countHref(made.id));
     } catch (err) {
@@ -210,7 +217,7 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       const acts = (
         <span className="inline-flex items-center gap-1.5">
           <Link to={`${ROUTES.stock}?show=below-zero`} className="inline-flex min-h-11 items-center px-1 text-sm font-semibold whitespace-nowrap text-[var(--wh-ink)]">See them</Link>
-          <Button size={touch ? 'default' : 'sm'} className={`whitespace-nowrap ${touch ? 'min-h-11' : ''}`} disabled={starting} onClick={() => void countThem(i.takeId)}>Count them</Button>
+          <Button size={touch ? 'default' : 'sm'} className={`whitespace-nowrap ${touch ? 'min-h-11' : ''}`} disabled={starting} onClick={() => void countThem()}>Count them</Button>
         </span>
       );
       return (

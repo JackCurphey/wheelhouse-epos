@@ -30,9 +30,11 @@ afterEach(async () => {
   current = undefined;
 });
 
-async function open(path, { me = JACK, items = [ADJUSTED, BELOW], over = null, startStatus = 201 } = {}) {
+// `next`: what Needs attention says from its second read on (a count finished
+// meanwhile); `seenStatus`: 409 when Seen was pressed already in another tab.
+async function open(path, { me = JACK, items = [ADJUSTED, BELOW], over = null, startStatus = 201, next = null, seenStatus = 200 } = {}) {
   calls = [];
-  server = { items, over };
+  server = { items, over, next };
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -42,7 +44,11 @@ async function open(path, { me = JACK, items = [ADJUSTED, BELOW], over = null, s
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/stockroom-settings' && method === 'PUT') { server.over = body.adjustTodayOverPence; return reply(200, { adjustTodayOverPence: server.over }); }
     if (u.pathname === '/api/stockroom-settings') return reply(200, { adjustTodayOverPence: server.over });
-    if (u.pathname === '/api/stock-adjustments/31/seen') { server.items = server.items.filter((i) => i.kind !== 'stock_adjusted'); return reply(200, { ok: true }); }
+    if (u.pathname === '/api/stock-adjustments/31/seen') {
+      server.items = server.items.filter((i) => i.kind !== 'stock_adjusted');
+      return seenStatus === 200 ? reply(200, { ok: true }) : reply(seenStatus, { error: 'That adjustment isn’t waiting to be seen.', code: 'not_to_see' });
+    }
+    if (u.pathname === '/api/needs-attention' && server.next) { const first = server.items; server.items = server.next; server.next = null; return reply(200, { items: first }); }
     if (u.pathname === '/api/stock-takes' && method === 'POST') return startStatus === 201 ? reply(201, { id: 77, kind: 'below_zero' }) : reply(startStatus, { error: 'Nothing is below zero' });
     if (u.pathname === '/api/needs-attention') return me.isOwner ? reply(200, { items: server.items }) : reply(403, { error: 'no', code: 'owner_only' });
     if (u.pathname === '/api/products') return reply(200, [product({}), product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', stockQty: -1 })]);
@@ -118,6 +124,41 @@ test('Today: Count them opens the below-zero count already counting, and one pro
   await t.waitFor(() => assert.equal(window.location.pathname, '/workshop/stocktake/5'));
   // The counting page joins the count it opens; no second count is started.
   assert.deepEqual(calls.filter((c) => c.method === 'POST' && c.url === '/api/stock-takes'), [], 'no second count started');
+});
+
+// Review, 29 Oct: Today is read again before Count them opens a count, so a
+// count finished since the page loaded isn't reopened; a new one starts.
+test('Today: Count them starts a new count when the remembered one has finished', async () => {
+  const t = await open('/workshop/today', { items: [{ ...BELOW, takeId: 5 }], next: [{ ...BELOW, takeId: null }] });
+  const line = await row(t, '2 products below zero');
+  t.fireEvent.click(t.within(line).getByRole('button', { name: 'Count them' }));
+  await t.waitFor(() => assert.equal(window.location.pathname, '/workshop/stocktake/77'));
+  assert.deepEqual(calls.filter((c) => c.method === 'POST' && c.url === '/api/stock-takes').map((c) => c.body), [{ kind: 'below_zero' }]);
+});
+
+// Review, 29 Oct: Seen pressed already in another tab is done, not a failure.
+test('Today: Seen already pressed elsewhere drops the line quietly', async () => {
+  const t = await open('/workshop/today', { items: [ADJUSTED], seenStatus: 409 });
+  const line = await row(t, /^Stock adjusted:/);
+  t.fireEvent.click(t.within(line).getByRole('button', { name: 'Seen' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByText(/^Stock adjusted:/) === null));
+  assert.ok(t.ui.queryByText('Wheelhouse couldn’t record that. Try again in a moment.') === null);
+  // Nothing alarming in Needs attention (the fake server has no tills, so Tills says so).
+  assert.ok(t.within(t.ui.getByRole('region', { name: /^Needs attention/ })).queryByRole('alert') === null);
+});
+
+// Review, 29 Oct: emptying the box clears the amount.
+test('Settings › Stockroom: an emptied box clears the amount, back to Not set yet', async () => {
+  const t = await open('/workshop/settings?room=stockroom', { over: 5000 });
+  const fold = await t.ui.findByRole('button', { name: /^Stock adjustments/ });
+  await t.waitFor(() => assert.match(fold.textContent, /Show on Today over £50\.00/));
+  const box = await t.ui.findByLabelText(/Show on Today when an adjustment is worth more than/);
+  t.fireEvent.change(box, { target: { value: '  ' } });
+  t.fireEvent.blur(box);
+  await t.waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ adjustTodayOverPence: null }]));
+  await t.waitFor(() => assert.match(fold.textContent, /Not set yet/));
+  assert.ok(t.ui.queryByText('Pounds and pence, like 50.00') === null);
+  assert.equal(box.value, '');
 });
 
 test('Today: a count the server refuses says why', async () => {

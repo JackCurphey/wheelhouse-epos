@@ -29,12 +29,17 @@ export function StockAdjustmentsSettings() {
 
   async function save() {
     if (typed === null) return;
-    const read = parseTotal(typed);
-    if (read === null || 'invalid' in read) { setNote({ ok: false, text: 'Pounds and pence, like 50.00' }); return; }
-    if (read.pence === stored) { setTyped(null); setNote(null); return; }
+    // An emptied box clears the amount, back to "Not set yet" (review, 29 Oct).
+    let pence: number | null = null;
+    if (typed.trim() !== '') {
+      const read = parseTotal(typed);
+      if (read === null || 'invalid' in read) { setNote({ ok: false, text: 'Pounds and pence, like 50.00' }); return; }
+      pence = read.pence;
+    }
+    if (pence === stored) { setTyped(null); setNote(null); return; }
     setNote(null);
     try {
-      const saved = await apiMutate<Stockroom>('/api/stockroom-settings', { adjustTodayOverPence: read.pence }, { method: 'PUT' });
+      const saved = await apiMutate<Stockroom>('/api/stockroom-settings', { adjustTodayOverPence: pence }, { method: 'PUT' });
       queryClient.setQueryData(KEY, saved);
       setTyped((t) => (t === typed ? null : t));
       setNote({ ok: true, text: 'Saved.' });
