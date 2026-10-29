@@ -20,9 +20,13 @@ with the customer.
 `POST /api/portal/:shopSlug/me/data-copy`, for the signed-in customer only
 (401 otherwise, or for another shop's sign-in). A request from another
 website is refused (403), as the account's other actions are. In one
-transaction it records the request (`kind 'copy'`, `source 'account'`,
+transaction it reads the sign-in's customer again, `FOR SHARE` (so a merge
+waits, and a merge that has just finished points it at the kept record; a
+record merged away gets 401), records the request (`kind 'copy'`, `source 'account'`,
 `asked_at` and `done_at` both the database's `now()`), reads the data, and
-commits; only then does it reply. `Cache-Control: no-store`.
+commits; only then does it reply. `Cache-Control: no-store`. (With
+`DB_TENANT_SCOPE=transaction`, off by default, that commit only ends a
+savepoint, as for every route.)
 
 The reply is `application/zip`, with `Content-Disposition: attachment;
 filename="<shop slug>-your-data-<YYYY-MM-DD>.zip"`, the date the shop's day
@@ -30,9 +34,11 @@ filename="<shop slug>-your-data-<YYYY-MM-DD>.zip"`, the date the shop's day
 
 ## 3. What's in it
 
-Six CSV files, each with a header row, cells quoted as the stock take's
-download quotes them, and a cell starting `=`, `+`, `-`, `@` or a tab
-prefixed with `'` so a spreadsheet never runs it:
+Six CSV files, each starting with the UTF-8 mark (so Excel shows £ and ’),
+with a header row, cells quoted as the stock take's download quotes them,
+and a cell starting `=`, `+`, `-`, `@` or a tab prefixed with `'` so a
+spreadsheet never runs it; a negative number such as a refund's total stays a
+number:
 
 - `your-details.csv`: name, email, mobile, address, postcode; for a company,
   contact name, VAT number and invoice email; the email you sign in with.
@@ -67,7 +73,8 @@ are small), UTF-8 names, CRC-32 from Node's `zlib.crc32`. No new dependency.
   link to the file the browser holds, and a green bar (role status) says
   "Your data is downloading as one file, [file name] — details, bikes, jobs,
   purchases, messages and what you agreed to." with "Not started? Download
-  it again". On failure a warning bar says "The download didn't start." with
+  it again", which saves that same file again; leaving the account lets the
+  browser go of it. On failure a warning bar says "The download didn't start." with
   Try again. A 401 sends them to sign in, as the account's loading does.
 - The bars sit at the top of the account, under its title (the drawing puts
   them above the title, which the booking pages' frame draws itself).

@@ -1174,7 +1174,9 @@ export function register(route) {
   // 3; account and reminders decision 4): one zip, made straight away and
   // logged as a privacy request from the account, done at once. The log and
   // the reads are one transaction, the customer's row locked so a merge can't
-  // move their records half-way through; the file goes after the commit.
+  // move their records half-way through; the file goes after the commit
+  // (with DB_TENANT_SCOPE=transaction, off by default, that COMMIT only ends a
+  // savepoint, as for every route; db.js).
   // screens: ac-download, ac-download-failed
   route('POST', '/api/portal/:shopSlug/me/data-copy', async (req, res, params) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -1186,7 +1188,15 @@ export function register(route) {
     let files;
     await db.exec('BEGIN');
     try {
-      const customer = await db.prepare('SELECT id FROM customers WHERE id = ? FOR UPDATE').get(ctx.login.customer_id);
+      // The sign-in's customer read again here, under the lock: a merge that
+      // committed since the session was read has moved the sign-in to the
+      // kept record. FOR SHARE holds off a merge (FOR UPDATE) without holding
+      // up a sale or a message for this customer (review).
+      const customer = await db.prepare(
+        `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+          WHERE l.id = ? AND l.shop_id = ? AND l.active = 1 AND c.active = 1 AND c.merged_into_id IS NULL
+          FOR SHARE OF c`
+      ).get(ctx.login.id, ctx.shop.id);
       if (!customer) {
         await db.exec('ROLLBACK');
         return sendJson(res, 401, { error: 'Not signed in' });

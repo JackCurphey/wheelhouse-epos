@@ -81,6 +81,11 @@ before(async () => {
     ).get(maya.id, jo)).id;
     // A line a spreadsheet would read as a formula.
     await prepare("INSERT INTO sale_items (sale_id, name, unit_price, qty, line_total, line_type) VALUES (?, '=HYPERLINK(\"x\")', 12, 1, 12, 'labour')").run(sale);
+    // A refund: a negative total stays a number in the spreadsheet (review).
+    await prepare(
+      `INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id, cashier_id)
+       VALUES ('2026-08-22T10:00:00Z', -5, -5, 'Cash', -5, ?, ?)`
+    ).run(maya.id, jo);
     await prepare("INSERT INTO job_notes (customer_id, from_customer, body) VALUES (?, true, '[Maya’s message]')").run(maya.id);
     await prepare("INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address, sent_at) VALUES (?, '[Bike ready text]', 'sent', 'delivered', 'sms', '07700 900 142', '2026-09-05T15:00:00Z')").run(maya.id);
     await prepare("INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address) VALUES (?, '[Taken back]', 'sent', 'undone', 'sms', '07700 900 142')").run(maya.id);
@@ -113,6 +118,9 @@ test('Maya downloads one zip of her details, bikes, repairs, purchases, messages
   assert.match(files['your-repairs.csv'], /Standard service/);
   assert.match(files['your-repairs.csv'], /2026-09-05/);
   assert.match(files['your-purchases.csv'], /12\.00/);
+  assert.match(files['your-purchases.csv'], /,-5\.00\r\n/, 'a refund’s total stays a number');
+  // Each file says it is UTF-8, so Excel shows £ and ’ as they are (review).
+  for (const [name, text] of Object.entries(files)) assert.ok(text.startsWith('\uFEFF'), `${name} starts with the UTF-8 mark`);
   // A formula-looking cell is made safe (design 3).
   assert.ok(files['your-purchases.csv'].includes(`"'=HYPERLINK(""x"")"`), files['your-purchases.csv']);
   assert.match(files['your-messages.csv'], /\[Maya’s message\]/);
@@ -163,4 +171,16 @@ test('a merge carries the log with the customer, and its Undo carries it back', 
   const undo = await staff(`/api/customer-merges/${merged.body.id}/undo`, { method: 'POST', body: {} });
   assert.equal(undo.status, 200, JSON.stringify(undo.body));
   assert.equal(await ownerOf(), twin.id);
+});
+
+test('a sign-in whose customer record was merged away gets nothing, and nothing is logged', async () => {
+  const email = `kai-${randomUUID().slice(0, 8)}@example.test`;
+  const cookie = await signIn(email);
+  const kai = await inShop(() => prepare('SELECT customer_id FROM customer_logins WHERE email = ?').get(email));
+  // As a merge leaves the other record: inactive and pointing at the kept one,
+  // here without the sign-in moved, as a request racing the merge would see it.
+  await inShop(() => prepare('UPDATE customers SET active = 0, merged_into_id = ? WHERE id = ?').run(maya.id, kai.customer_id));
+  const { res } = await download({ cookie });
+  assert.equal(res.status, 401);
+  assert.equal((await requests(kai.customer_id)).length, 0);
 });
