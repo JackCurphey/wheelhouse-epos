@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { Check, ChevronDown } from 'lucide-react';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
@@ -269,6 +270,8 @@ function EarlierDay({ day }: { day: string }) {
   const session = useSession();
   const queryClient = useQueryClient();
   const key = [...CLOSE_DAY_QUERY, day];
+  const fromToday = useSearchParams()[0].get('day') !== null;
+  const navigate = useNavigate();
   const late = useQuery({ queryKey: key, queryFn: () => apiGet<LateDay>(`/api/close-the-day?day=${encodeURIComponent(day)}`), retry: false });
   const [open, setOpen] = useState<number | null>(2);
   const [bagged, setBagged] = useState(false);
@@ -294,8 +297,13 @@ function EarlierDay({ day }: { day: string }) {
     </div>
   );
   const counted = <Step n={1} title="Count the cash" tone="done" status={`Counted ${when} by ${by.byName}`} />;
-  // The report closes back to tonight's page, which reads its figures again.
-  const done = () => { setShowReport(false); void queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY }); };
+  // The report closes back to where Close it came from: Today, for ?day=
+  // (money review 4, 29 Oct), or tonight's page, which reads its figures again.
+  const done = () => {
+    setShowReport(false);
+    void queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
+    if (fromToday) navigate(ROUTES.today);
+  };
 
   async function closeIt() {
     setSaving(true);

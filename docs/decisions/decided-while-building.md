@@ -1690,8 +1690,9 @@ silent:
    31 August", "Monday's cash".
 2. **Close the day opens the waiting day first.** Tonight's Close the day
    shows the day nobody closed (its page at banking), and tonight's count
-   once that is closed and its report shut. *Pattern:* the float check
-   showing first on Close the day.
+   once that is closed and its report shut. Opened by Close it on Today,
+   shutting the report goes back to Today (the money review, 29 Oct).
+   *Pattern:* the float check showing first on Close the day.
 3. **Close it is a link styled as Today's other buttons that open a page**
    ("Open Messages"), named "Close Monday 31 August" for a screen reader.
 4. **"Counted this morning by Jo Taylor"** says "on [date]" instead when

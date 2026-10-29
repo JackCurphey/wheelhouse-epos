@@ -153,6 +153,17 @@ test('Close it: the earlier day at banking, its cash taken out, and its own repo
   assert.ok(z.getByText('Monday 31 August · closed by Jack Lewis'));
 });
 
+// Money review 4, 29 Oct: Close it came from Today, so closing its report
+// goes back to Today, not to the day just closed.
+test('closing the report after Close it goes back to Today', async () => {
+  const t = await open(`/workshop/till/close?day=${MON}`);
+  const banking = t.within(await t.ui.findByRole('region', { name: 'Paid-outs and banking' }));
+  t.fireEvent.click(banking.getByRole('button', { name: 'Banking bagged — next step' }));
+  t.fireEvent.click(t.within(await t.ui.findByRole('region', { name: 'End-of-day report' })).getByRole('button', { name: 'Close the day and show the report' }));
+  t.fireEvent.click((await popUp(t, 'Day closed')).getByRole('button', { name: 'Close' }));
+  await t.waitFor(() => assert.equal(window.location.pathname, '/workshop/today'));
+});
+
 test('tonight\'s Close the day shows the day nobody closed first', async () => {
   const t = await open('/workshop/till/close', { tonight: { ...TONIGHT, earlierDay: MON } });
   assert.ok(await t.ui.findByText('Monday 31 August'));
