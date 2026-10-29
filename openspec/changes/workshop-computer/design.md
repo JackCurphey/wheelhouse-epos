@@ -98,4 +98,23 @@ active workshop computer whose hash matches, in the request's shop, or null.
    refuse; `GET /api/auth/me` says `isOwner: false`, so the screens show
    what a staff sign-in sees. `server/lib/workshop-owner.js` decides it once
    per request. After a PIN the screens read the sign-in again before the
-   page shows. Decided for Jack to overrule.
+   page shows. Decided for Jack to overrule. **Its limit:** it rests on the
+   `wh_workshop` cookie. Deleting that cookie, or pasting in a till's, makes
+   the browser an ordinary one with the Owner's pages, so it stops casual
+   use, not a determined person (the review, 29 Oct). The mechanism stays;
+   the PIN every time (stage-1 gaps 1) with roles is the lasting fix.
+10. **The sign-in's own PIN and settings are the sign-in's own** (the
+    review, 29 Oct). On a workshop computer, `GET`/`POST
+    /api/your-settings/till-pin`, its `/offer` and `/ask`, and `PUT
+    /api/your-settings` answer 403 `not_your_account_here` unless the
+    person checked in is the sign-in's own team member
+    (`ownAccountHere`, `server/routes/till-pins.js`). Otherwise whoever is
+    working could get the Owner a new PIN and check in as the Owner.
+11. **Today's Tills leave out workshop computers**: their check-ins are in
+    Who's in only.
+12. **The screen's 10 minutes run from its last telling** of the server,
+    and a use not yet told is told within 30 seconds, so both end together.
+13. **`GET /api/auth/me` gains `workshopComputer`**, so a workshop computer
+    whose check-in can't be read shows a message and no pages.
+14. **Migration 101 checks a check-in is never on both a till and a
+    workshop computer.**

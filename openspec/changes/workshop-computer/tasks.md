@@ -9,6 +9,7 @@
 - [x] 1.5 Build the screens to the drawings
 - [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [ ] 1.7 Log choices in Jack’s section of `decided-while-building.md` (done, 28 Oct); lint, typecheck, `npm test`, `npm run test:browser` (done, 28 Oct); `/review` (sign-in, migration): still to run before merging
+- [x] 1.7a Review, 29 Oct, and Jack's answer 1 (`docs/decisions/2026-10-29-answers.md`): the sign-in's own PIN and settings only for its own team member on a workshop computer; Today's Tills leave workshop computers out; the cookie's limit written down; the screen's 10 minutes from its last telling; no pages if the check-in can't be read; one status region and a full-size Switch; migration 101's never-both check. Tests first, each fix broken on purpose
 - [ ] 1.8 `/opsx:archive` as the last commit
 
 ## 2. Later pieces of task 3.6 (each its own change when taken)

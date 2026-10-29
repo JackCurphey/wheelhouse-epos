@@ -1326,8 +1326,9 @@ silent:
    (stage-1 gaps 10), above the page's header, as the job pop-up draws it.
    Switch ends the check-in and goes back to Enter your PIN; a screen reader
    hears "Now working: Alex Morgan" (second walk, answer 10).
-8. **Decided here, for Jack to overrule: Set up this computer offers "A
-   till" or "A workshop computer"** (stage-1 gaps 4 says it offers both;
+8. **Set up this computer offers "A till" or "A workshop computer"**
+   (Jack approved it, 29 Oct, `docs/decisions/2026-10-29-answers.md`
+   answer 1) (stage-1 gaps 4 says it offers both;
    not drawn) as pills under "This computer becomes", the till first and
    chosen. With the workshop computer chosen: the heading "Set up a
    workshop computer", the line "This computer becomes a workshop computer:
@@ -1357,9 +1358,38 @@ silent:
     giving a PIN at the till (`giverHere`, 28 Oct entries 1 and 2: the PIN
     says who you are), and a staff sign-in's own pages. The Till page still
     opens on a workshop computer, as on a browser that isn't a till; whether
-    a workshop computer may sell isn't decided.
+    a workshop computer may sell isn't decided. **Known limit, for Jack:**
+    the rule rests on the workshop computer's own cookie. Someone who
+    deletes that cookie from the browser, or pastes in a till's, makes the
+    computer an ordinary browser again with the Owner's pages. It stops
+    casual use, not a determined person; the lasting fix is the Owner or
+    Manager PIN every time (stage-1 gaps 1) with roles.
 11. **Giving a PIN is the till's**: the Serving menu's "Give a PIN" isn't
     offered on a workshop computer, and the server refuses it there.
+12. **Someone else's PIN and settings can't be changed from a workshop
+    computer** (the review, 29 Oct: staff working on the Owner's workshop
+    computer could get the Owner a new PIN, then check in as the Owner).
+    There, "Your till PIN" (see it, get one, keep it, and the first-time
+    pop-up) and changing Your settings are refused unless the person
+    working is the sign-in's own team member. Your settings can still be
+    read, since every page uses them. On the screen, the Till PIN block
+    doesn't show and "Your till PIN" never opens by itself for someone
+    else. *Pattern:* walk-through 8 decision 3, no "Change PIN" on a shared
+    computer.
+13. **A workshop computer is no till on Today**: its check-ins are in
+    Who's in and never make a "Till" line with no number (the review,
+    29 Oct).
+14. **The screen and the server end together** (the review, 29 Oct): the
+    screen's 10 minutes run from the last time it told the server someone
+    was using it, and a use it hasn't told yet is told within 30 seconds.
+15. **If the computer can't read who is working, it shows no pages**: "Wheelhouse
+    couldn’t check who is working on this computer. Try again in a
+    moment." Who's signed in says whether the browser is a workshop
+    computer, so this holds even when the check-in can't be read.
+    *Pattern:* the frame's own "Wheelhouse couldn’t check who is signed in."
+16. **"Now working: [name]" is said from one status region** kept from the
+    PIN screen to the page, empty until the PIN, and Switch is a full-size
+    target (44 pixels high) (the review, 29 Oct).
 
 ## Decided here, for Jack to overrule
 
