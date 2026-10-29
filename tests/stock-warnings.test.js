@@ -152,6 +152,9 @@ test('stock received is never a warning, however much it is worth', async () => 
   const pads = await product(owner, { cost: 14 });
   assert.equal((await call(owner, `/api/products/${pads.id}/stock`, { method: 'POST', body: { type: 'intake', change: 50 } })).status, 200);
   assert.deepEqual(await adjusted(owner), []);
+  // Nor marked for later: it has no value and isn't to see.
+  const lines = await runWithShop(owner.shop.id, () => prepare("SELECT value_pence, to_see FROM stock_movements WHERE product_id = ? AND type = 'intake' AND note = ''").all(pads.id));
+  assert.deepEqual(lines, [{ value_pence: null, to_see: false }]);
 });
 
 test('Seen takes the line off, records who and when, and is the Owner’s only', async () => {
