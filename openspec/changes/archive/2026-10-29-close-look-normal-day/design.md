@@ -27,3 +27,13 @@ defined it).
    figure now includes the earlier day's cash too, which is in the drawer.
 4. **Locks unchanged:** the close still locks the shop's row first, reads,
    marks and writes, and replies after COMMIT.
+5. **After a late Close it** (money review of #584): when the last close
+   was made after a later day's morning count, the drawer then held that
+   count's cash too, so the window starts at that count (its figure, its
+   time, cash taken out from its day), and the banking since comes off.
+   The same for a day nobody closed whose only check is a look. "Float this
+   morning" and the report's "Float at the start" show that figure.
+6. **Exact times** (money review of #584): every time read back only to be
+   compared (a check's, a count's, a close's) stays the database's own text,
+   to the microsecond; a JavaScript date keeps only milliseconds, and the
+   last close looked to be after itself.
