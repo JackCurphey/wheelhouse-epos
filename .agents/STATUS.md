@@ -7,7 +7,7 @@
 
 **Who is on what** (from 21 Oct, the working agreement, #349: take a piece
 here before starting it, so two people never build the same one):
-- **Jack:** 25 Oct. Merged 24 Oct: #447 to #477 (Customers with Merge,
+- **Jack:** 29 Oct. Merged 24 Oct: #447 to #477 (Customers with Merge,
   deposits online, Larger text, Don't close things by themselves, WP-0.4
   finished, the test copy's review fixes and test shop, Done ticks and staff
   notes per line, the till's Email receipt and Save to a customer record, an
@@ -59,11 +59,21 @@ here before starting it, so two people never build the same one):
   Merged 28 Oct: PINs and the till check-in (#554, #555, migration
   097); the give-a-PIN drawings (#556); CI once a day and by hand on risky
   pull requests (#557, Jack's choice; main's required check turned off).
-  **Now on (28 Oct):** giving a PIN at the till (#558, in review); Who's in
-  on Today and a first sign-in opening Your till PIN (WP-1.10 and 1.7 task
-  3.2, branch `jack/whos-in-and-first-pin`); stock take (WP-2.2, slice C,
-  branch `jack/stock-take`). Roles and the settings store (WP-1.1, 1.2) stay
-  Mark's.
+  Merged 28-29 Oct: giving a PIN at the till, the Serving menu and Who's
+  getting a PIN? (#558); Who's in and Tills on Today, and a first sign-in
+  asking for Your till PIN (#561, WP-1.10 and WP-1.7 3.2, migration 098);
+  stock take, count blind, check, apply with Undo, Finished counts (#562,
+  #563, WP-2.2, migration 099 stock takes); Set up this till, a computer
+  becomes Till B1, check-ins per till, Settings › Tills (#564, #565, WP-1.7
+  3.4, migration 100 till setup); a Shopify refund adds its stock back and a
+  failed one is retried (#566); the intermittent quote-reminder test fixed
+  (#567); the shared workshop computer, first part: Enter your PIN, Working:
+  [name] · Switch, back to the PIN after 10 minutes (#568, WP-1.7 3.6,
+  migration 101 workshop computers). Opened #560 for Mark: what would free
+  up more work.
+  **Now (29 Oct):** stock warnings, in review (#569, migration 102: big
+  adjustments with Seen, products below zero with Count them, Settings ›
+  Stockroom). Roles and the settings store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
@@ -93,14 +103,28 @@ here before starting it, so two people never build the same one):
   only). Answered 27 Oct (`docs/decisions/2026-10-27-answers.md`, with #546):
   closing a part-delivered order marks the rest not coming; the restock list
   waits for WP-1.5. Still open: who may edit a supplier (any staff member can,
-  unlike the other settings, #543); Google's "G" logo file; the hosted
-  server's "System restart required". For him to overrule: the 26 Oct
-  `decided-while-building.md` sections.
+  unlike the other settings, #543); the hosted server's "System restart
+  required". Open from 28-29 Oct (`decided-while-building.md`, each built
+  on its default until Jack says): stock take, how sales during a count are
+  allowed for (default: from each product's last count); adding a till-only
+  person waits for roles; settings on a workshop computer belong to the
+  sign-in until roles; a staff member can end their check-in so the Owner's
+  sign-in sets up a till (default: allowed, as decision 7); supplier imports
+  start stock with no history line (a stock control decision 6 question,
+  #566). Also: 491 leftover test shops in the shared test database (#567;
+  default: leave them until Jack says). For him to overrule: the 26 and
+  28-29 Oct `decided-while-building.md` sections.
 - **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
   is built after it); a money route, `PUT /api/sale-documents/:id`, can
   write an order back to open if it is saved while being completed (found
   26 Oct, listed in the archived `more-saves-dont-clash` design, not
-  changed).
+  changed). #560 (28 Oct) lists what would free up more work: his yes on
+  `till-job-deposit`, step C, roles and the settings store, WP-1.5, and his
+  open pull requests. Step C needs an Owner route to issue the offline key
+  for a till set up in the new app (#564; a till set up there has none yet).
+  The till's offline copy (`server/till/snapshot.js`) carries every
+  cashier's PIN hash (`decided-while-building.md`, 28 Oct, 6a), for step C's
+  design.
 
 **Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
 route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
@@ -518,8 +542,12 @@ All in `ARCHIVE.md`, "Moved from STATUS on 2026-10-05 (WP-0.3)":
   `scripts/new-db.sh <name>`.
 - Jack wants plain English, numbered options with concrete trade-offs,
   mock-ups for anything visual, one question at a time. Merging: until the
-  build starts, only when Jack says; after, as `CLAUDE.md` sets out. Always
-  after CI passed on the PR's final commit.
+  build starts, only when Jack says; after, as `CLAUDE.md` sets out.
+- CI (Jack, 28 Oct, #557, `docs/decisions/2026-10-28-ci-once-a-day.md`):
+  it runs once a day on main and when started by hand, not on each pull
+  request; main's required check is off. Merge when `npm test` and `npm run
+  test:browser` pass locally; on a risky-area pull request, also run CI by
+  hand (`gh workflow run test.yml --ref <branch>`) and merge when it is green.
 - Tests: server tests pin the clock to 1 Sep 2026 (`WHEELHOUSE_TEST_CLOCK`;
   never add fixed test dates before it); customer tests need `npm run
   pretest` first; compare DOM query results with `assert.ok(x === null)`
