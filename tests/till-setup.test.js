@@ -75,7 +75,7 @@ test('Set up this till is the Owner\'s, with the shop\'s sites and the numbers i
   assert.equal((await call(jo.cookie, '/api/till-setup')).status, 403);
   assert.deepEqual((await post(jo.cookie, '/api/till-setup', { siteId: owner.site.id, number: 1 })).body.code, 'owner_only');
   assert.deepEqual((await call(owner.cookie, '/api/till-setup')).body, {
-    sites: [{ id: owner.site.id, name: 'Bolton', code: 'B', taken: [] }], thisTill: null, tills: [],
+    sites: [{ id: owner.site.id, name: 'Bolton', code: 'B', taken: [] }], thisTill: null, thisWorkshop: null, tills: [],
   });
   // A till switched off keeps its number.
   const old = (await post(owner.cookie, '/api/tills', { siteId: owner.site.id, number: 2, name: 'Back office' })).body.till;
@@ -203,7 +203,7 @@ test('the float check records its till; Today has a line per till, and the short
 test('with no till set up, Tills is one line with no number, as before', async () => {
   const owner = await shop({ site: false });
   assert.deepEqual((await call(owner.cookie, '/api/today/tills')).body, { tills: [{ code: null, openedAt: null, openedBy: null, floatCheck: null }] });
-  assert.deepEqual((await call(owner.cookie, '/api/till-setup')).body, { sites: [], thisTill: null, tills: [] });
+  assert.deepEqual((await call(owner.cookie, '/api/till-setup')).body, { sites: [], thisTill: null, thisWorkshop: null, tills: [] });
 });
 
 // Review, 28 Oct (the lead's independent review of jack/till-setup).

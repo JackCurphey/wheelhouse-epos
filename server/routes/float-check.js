@@ -10,7 +10,7 @@ import { currentSession } from '../lib/session.js';
 import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { closeEntryNow } from '../lib/close-entry.js';
-import { currentCheckin } from './till-pins.js';
+import { NOT_YOURS_HERE, currentCheckin, ownAccountHere } from './till-pins.js';
 
 export const MAX_PENCE = 10_000_000; // £100,000, as migration 095
 export const isPence = (v) => Number.isSafeInteger(v) && v >= 0 && v <= MAX_PENCE;
@@ -112,6 +112,10 @@ export function register(route) {
     // The morning check is made by whoever checked in with their PIN; only
     // the Owner's look at closing needs no check-in (pins-and-checkin design 5).
     const checkin = await currentCheckin(req);
+    // On a workshop computer with nobody checked in, the sign-in isn't the
+    // one there, so it makes no float check, not even the look at closing
+    // (ownAccountHere's rule; openspec/changes/workshop-computer, the second review 29 Oct).
+    if (!checkin && !(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const closing = await lookAtClose(ctx.login, body);
     if (!checkin && !closing) return sendJson(res, 409, { error: 'Check in at the till with your PIN first', code: 'check_in_first' });
     if (!(checkin ? await checkedInTakesPayments(checkin) : await takesPayments(ctx.login))) return sendJson(res, 403, { error: 'Only someone who takes payments checks the float', code: 'not_taking_payments' });

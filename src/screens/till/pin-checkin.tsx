@@ -17,7 +17,13 @@ import { ServingMenuButton } from './give-pin.tsx';
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const FAILED = 'Wheelhouse couldn’t check that PIN. Try again in a moment.';
 
-export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) {
+/**
+ * `workshop`: a workshop computer's Enter your PIN (till-checkin-workshop):
+ * no line about sales, no "No PIN yet?" and no "Checked in today", which
+ * are the till's; its drawn line waits for work recorded under the person
+ * working (openspec/changes/workshop-computer, design 5).
+ */
+export function PinCheckin({ checkedInToday, workshop = false }: { checkedInToday: CheckedIn[]; workshop?: boolean }) {
   const { checkIn } = useCheckinActions();
   const [digits, setDigits] = useState('');
   const [busy, setBusy] = useState(false);
@@ -80,7 +86,7 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
     <div className="flex min-h-full flex-col items-stretch justify-center gap-3.5 py-4 md:items-center md:gap-[18px]">
       <div className="flex flex-col gap-3.5 text-center md:w-[360px] md:gap-[18px]">
         <h1 className="m-0 text-2xl font-bold md:text-size-28">Enter your PIN</h1>
-        <p className="m-0 text-sm leading-normal text-[var(--wh-muted)] md:text-size-15">Your PIN checks you in and puts your name on sales and workshop work.</p>
+        {workshop ? null : <p className="m-0 text-sm leading-normal text-[var(--wh-muted)] md:text-size-15">Your PIN checks you in and puts your name on sales and workshop work.</p>}
         <div role="status" data-pin-dots="" className="flex justify-center gap-4">
           <span className="sr-only">{`${shown} of 4 digits`}</span>
           {[0, 1, 2, 3].map((i) => <span key={i} aria-hidden="true" className={`size-[18px] rounded-full border-2 border-[var(--wh-ink)] ${i < shown ? 'bg-[var(--wh-ink)]' : 'bg-transparent'}`} />)}
@@ -92,9 +98,9 @@ export function PinCheckin({ checkedInToday }: { checkedInToday: CheckedIn[] }) 
           {key('0')}
           {key('Delete', 'Delete the last digit')}
         </div>
-        <p className="m-0 text-size-13 leading-[1.45] text-[var(--wh-muted)] md:text-sm"><strong className="text-[var(--wh-ink)]">No PIN yet?</strong> Sign in on your phone, or ask the owner or a manager to give you one here.</p>
+        {workshop ? null : <p className="m-0 text-size-13 leading-[1.45] text-[var(--wh-muted)] md:text-sm"><strong className="text-[var(--wh-ink)]">No PIN yet?</strong> Sign in on your phone, or ask the owner or a manager to give you one here.</p>}
       </div>
-      {checkedInToday.length ? (
+      {checkedInToday.length && !workshop ? (
         <div className="flex flex-col gap-2.5 md:w-[360px]">
           <span className="text-sm font-bold tracking-[0.8px] uppercase">Checked in today</span>
           <div className="flex flex-wrap gap-2">

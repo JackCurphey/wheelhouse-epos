@@ -18,8 +18,12 @@ import { buildSnapshot } from '../till/snapshot.js';
 import { TransientSyncError, batchProblem, processSyncItems } from '../till/sync.js';
 import { TILL_ORDER, serializeThisTill, thisTill, tillCookie } from '../till/this-till.js';
 import { someoneElseCheckedIn } from './till-pins.js';
+import { serializeThisWorkshop, thisWorkshop, workshopCookie } from '../till/this-workshop.js';
 
 const OWNER_ONLY = { error: 'Only the owner can set up a till', code: 'owner_only' };
+const NOT_OWNER_HERE = { error: 'Only the owner can set up a till. Switch to the owner first.', code: 'not_owner_checked_in' };
+const ALREADY_A_TILL = { error: 'This computer is already a till', code: 'already_a_till' };
+const ALREADY_A_WORKSHOP = { error: 'This computer is already a workshop computer', code: 'already_a_workshop' };
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -96,9 +100,11 @@ export function register(route) {
     // Every number used at a site, switched off or not: codes stay unique.
     const taken = (site) => tills.filter((t) => t.site_id === site.id).map((t) => Number(t.code.slice(site.code.length))).sort((a, b) => a - b);
     const mine = await thisTill(req);
+    const workshop = mine ? null : await thisWorkshop(req);
     sendJson(res, 200, {
       sites: sites.map((s) => ({ ...serializeSite(s), taken: taken(s) })),
       thisTill: mine ? serializeThisTill(mine) : null,
+      thisWorkshop: workshop ? serializeThisWorkshop(workshop) : null,
       tills: tills.filter((t) => t.active).map((t) => t.code),
     });
   });
@@ -108,8 +114,9 @@ export function register(route) {
     if (!ctx?.login.is_owner) return sendJson(res, 403, OWNER_ONLY);
     // The Owner's sign-in, but someone else checked in here by PIN: not them
     // (roles and switches 2; the giverHere rule; review, 28 Oct).
-    if (await someoneElseCheckedIn(req)) return sendJson(res, 403, { error: 'Only the owner can set up a till. Switch to the owner first.', code: 'not_owner_checked_in' });
-    if (await thisTill(req)) return sendJson(res, 409, { error: 'This computer is already a till', code: 'already_a_till' });
+    if (await someoneElseCheckedIn(req)) return sendJson(res, 403, NOT_OWNER_HERE);
+    if (await thisTill(req)) return sendJson(res, 409, ALREADY_A_TILL);
+    if (await thisWorkshop(req)) return sendJson(res, 409, ALREADY_A_WORKSHOP);
     const { siteId, number, name, reclaim } = (await readJsonBody(req)) ?? {};
     // RLS hides other shops' sites, so a foreign siteId reads as missing.
     const site = Number.isInteger(siteId) ? await db.prepare('SELECT * FROM sites WHERE id = ?').get(siteId) : null;
@@ -147,6 +154,31 @@ export function register(route) {
     }
     res.setHeader('Set-Cookie', tillCookie(req, browserToken));
     sendJson(res, 201, { till: { id: made.id, code, name: named || null, siteName: site.name } });
+  });
+
+  // Make this computer a workshop computer (openspec/changes/workshop-computer;
+  // stage-1 gaps 4; walk-through 8 decision 1): the Owner, signed in, as for
+  // a till; a shop and an optional name, no number. Never by PIN (roles and
+  // switches 2).
+  // screens: till-setup, till-checkin-workshop
+  route('POST', '/api/till-setup/workshop', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, OWNER_ONLY);
+    if (await someoneElseCheckedIn(req)) return sendJson(res, 403, NOT_OWNER_HERE);
+    if (await thisTill(req)) return sendJson(res, 409, ALREADY_A_TILL);
+    if (await thisWorkshop(req)) return sendJson(res, 409, ALREADY_A_WORKSHOP);
+    const { siteId, name } = (await readJsonBody(req)) ?? {};
+    // RLS hides other shops' sites, so a foreign siteId reads as missing.
+    const site = Number.isInteger(siteId) ? await db.prepare('SELECT * FROM sites WHERE id = ?').get(siteId) : null;
+    if (!site) return badRequest(res, 'Choose one of your shops');
+    if (name !== undefined && name !== null && typeof name !== 'string') return badRequest(res, 'The name must be text');
+    const named = (name ?? '').trim();
+    if (named.length > 60) return badRequest(res, 'A name can be up to 60 characters');
+    const browserToken = newLinkCode();
+    const made = await db.prepare('INSERT INTO workshop_computers (site_id, name, browser_token_hash) VALUES (?, ?, ?) RETURNING id')
+      .get(site.id, named || null, hashLinkCode(browserToken));
+    res.setHeader('Set-Cookie', workshopCookie(req, browserToken));
+    sendJson(res, 201, { workshop: { id: made.id, name: named || null, siteName: site.name } });
   });
 
   route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {

@@ -1279,6 +1279,138 @@ silent:
     when every till is set up (second review, 28 Oct). *Pattern:* the float
     check's own "the sign-in's own name for a look at closing".
 
+### 28 Oct 2026: the shared workshop computer, first part (`openspec/changes/workshop-computer`, `till-checkin-workshop`, the Working bar, `till-setup`; WP-1.7 task 3.6; walk-through 8 decisions 1, 3 and 4; build plan Q6; stage-1 gaps 4 and 10)
+
+1. **This is the first playable part of task 3.6.** Built: a computer
+   becomes a workshop computer, Enter your PIN with no till number,
+   "Working: [name] · Switch" on every page, and back to Enter your PIN
+   after 10 minutes idle. Listed as later tasks in the change: trust PIN and
+   its settings (the two lines on `set-till-quick`), "Who's working?"
+   (`till-checkin-workshop-names`), the Working pills
+   (`workshop-working-pills`), the till's Serving pills
+   (`till-serving-pills`), Owner and Manager pages asking for a PIN (stage-1
+   gaps 1), and the diary's "Me" as the person working. The whole of 3.6
+   was about 1,800 lines, over one piece.
+2. **Trust PIN isn't built, so it is off for every shop**, which roles and
+   switches 9 says means a workshop computer always goes back after 10
+   minutes. Nothing about trust PIN shows yet. *Pattern:* show only what
+   works (20 Oct, Settings frame 6).
+3. **The server enforces the 10 minutes.** Each check-in on a workshop
+   computer records when it was last used; 10 minutes later the server ends
+   it, whatever the screen does, so nothing more is done as that person. The
+   screen counts a press, click, tap, key or scroll as using it and tells
+   the server at most every 30 seconds; it also goes back to Enter your PIN
+   by itself at 10 minutes, and reads the check-in every minute. Just
+   looking at the screen doesn't count as using it. Tills never go back by
+   themselves. *Pattern:* the check-in's own day (28 Oct, PINs entry 3).
+4. **A workshop computer is kept apart from tills**, in its own table and
+   its own cookie (`wh_workshop`, 400 days, renewed when read, only its hash
+   stored), so tills' numbers, float checks and Today's lines don't change.
+   A computer is a till or a workshop computer, never both. *Pattern:* the
+   till's own browser key (28 Oct, till-setup entry 3).
+5. **Before anyone is working, Enter your PIN takes the place of every
+   page**, with the bar and no sidebar, as drawn. The address stays, so the
+   PIN opens the page that was asked for; the front page opens the diary
+   (third walk, answer 8). Anything on screen that wasn't saved isn't kept
+   when it goes back: pages save as they go. *Pattern:* the till's PIN
+   screen in place of the till.
+6. **The workshop PIN screen says only what works.** The bar reads
+   "Workshop computer", "Bolton · North Street Cycles" ("Bolton" on a
+   phone) and "Nobody working — enter your PIN" ("Nobody working" on a
+   phone), with no Online pill (the till bar's isn't built either). The
+   drawn line "What you do on this computer is recorded under your name and
+   role." isn't shown: until task 3.8 the server records the sign-in, not
+   the person working. No "Checked in today" and no "No PIN yet?", as drawn.
+   *Pattern:* 28 Oct, PINs entry 8.
+7. **"Working: Alex Morgan · Switch" runs across the top of every page**
+   (stage-1 gaps 10), above the page's header, as the job pop-up draws it.
+   Switch ends the check-in and goes back to Enter your PIN; a screen reader
+   hears "Now working: Alex Morgan" (second walk, answer 10).
+8. **Set up this computer offers "A till" or "A workshop computer"**
+   (Jack approved it, 29 Oct, `docs/decisions/2026-10-29-answers.md`
+   answer 1) (stage-1 gaps 4 says it offers both;
+   not drawn) as pills under "This computer becomes", the till first and
+   chosen. With the workshop computer chosen: the heading "Set up a
+   workshop computer", the line "This computer becomes a workshop computer:
+   staff work on it with their PIN.", the shop pills, "Name (optional)" and
+   "Make this computer a workshop computer"; no till number. The name is
+   kept but shown nowhere yet, as a till's. *Pattern:* the setup's own shop
+   pills.
+9. **Settings › Till › Tills doesn't offer "Make this computer a till" on a
+   workshop computer**; its drawn note keeps its words ("It doesn’t show on
+   a computer that’s already a till."). Opening the setup page there goes
+   to Enter your PIN.
+10. **Decided here, for Jack to overrule: on a workshop computer, Owner
+    pages are the Owner's only while the Owner is the person working**
+    (the lead, 28 Oct; it stands in for stage-1 gaps 1, an Owner or Manager
+    PIN pop-up every time, until roles are built). A workshop computer is
+    usually signed in as the Owner. There, the Owner's sign-in counts as the
+    Owner only while the person checked in by PIN is the Owner; with nobody
+    working, someone else working, or the Owner gone idle, it counts as
+    staff. The server refuses every Owner-only route (`ownerOnly` and the
+    routes' own Owner checks alike), and the screens show exactly what a
+    staff sign-in sees: the Staff rooms in the menu, and "Settings aren’t
+    part of your role" on Settings. When the Owner types his PIN, the Owner's
+    pages are back. Tills and other browsers are unchanged. **For Jack:**
+    the menu's footer still names the sign-in, so while Alex works on a
+    computer the Owner signed in it reads "Jack Lewis · Staff"; Your settings
+    belonging to the person working is walk-through 8 M3, a later task. *Pattern:*
+    giving a PIN at the till (`giverHere`, 28 Oct entries 1 and 2: the PIN
+    says who you are), and a staff sign-in's own pages. The Till page still
+    opens on a workshop computer, as on a browser that isn't a till; whether
+    a workshop computer may sell isn't decided. **Known limit, for Jack:**
+    the rule rests on the workshop computer's own cookie. Someone who
+    deletes that cookie from the browser, or pastes in a till's, makes the
+    computer an ordinary browser again with the Owner's pages. It stops
+    casual use, not a determined person; the lasting fix is the Owner or
+    Manager PIN every time (stage-1 gaps 1) with roles.
+11. **Giving a PIN is the till's**: the Serving menu's "Give a PIN" isn't
+    offered on a workshop computer, and the server refuses it there.
+12. **Someone else's PIN and settings can't be changed from a workshop
+    computer** (the review, 29 Oct: staff working on the Owner's workshop
+    computer could get the Owner a new PIN, then check in as the Owner).
+    There, "Your till PIN" (see it, get one, keep it, and the first-time
+    pop-up) and changing Your settings are refused unless the person
+    working is the sign-in's own team member. Your settings can still be
+    read, since every page uses them. On the screen, the Till PIN block
+    doesn't show and "Your till PIN" never opens by itself for someone
+    else. *Pattern:* walk-through 8 decision 3, no "Change PIN" on a shared
+    computer.
+13. **A workshop computer is no till on Today**: its check-ins are in
+    Who's in and never make a "Till" line with no number (the review,
+    29 Oct).
+14. **The screen and the server end together** (the review, 29 Oct): the
+    screen's 10 minutes run from the last time it told the server someone
+    was using it, and a use it hasn't told yet is told within 30 seconds.
+15. **If the computer can't read who is working, it shows no pages**: "Wheelhouse
+    couldn’t check who is working on this computer. Try again in a
+    moment." Who's signed in says whether the browser is a workshop
+    computer, so this holds even when the check-in can't be read.
+    *Pattern:* the frame's own "Wheelhouse couldn’t check who is signed in."
+16. **"Now working: [name]" is said from one status region** kept from the
+    PIN screen to the page, empty until the PIN, and Switch is a full-size
+    target (44 pixels high) (the review, 29 Oct).
+17. **Your settings on someone else's sign-in says so plainly** (the second
+    review, 29 Oct). When a switch is changed on a workshop computer signed
+    in by someone other than the person working, the page says "Your
+    settings change only on your own sign-in. Change them on your own phone
+    or computer." in the page's plain-message style (not the red "couldn’t
+    save" line), the switches become unavailable, and "Changes apply
+    straight away." goes. *Pattern:* Settings' "Only the shop’s owner can
+    change settings for now." **Question for Jack, default taken:** should
+    Your settings on a workshop computer belong to the person checked in by
+    PIN (walk-through 8 M3) rather than the sign-in? Default until roles:
+    the sign-in's settings, changed only by its own team member there.
+18. **No float check on a workshop computer with nobody working** (the
+    second review, 29 Oct), not even the Owner's look at closing:
+    ownAccountHere's rule.
+19. **Who's signed in says "workshop computer" only when the browser isn't
+    also a till**: a till's key wins, as everywhere else.
+20. **Known gap, for task 3.8: work done on a workshop computer is recorded
+    under the sign-in's login**, not the person working: stock changes,
+    stock takes, customer messages, receipt emails and no-shows, among
+    others. Recording it under the person working is task 3.8.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

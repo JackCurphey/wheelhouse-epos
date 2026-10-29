@@ -14,7 +14,8 @@ import { apiGet, ApiError } from '../api/client.ts';
  */
 /** The staff member a login is linked to, if any: the till's "serving". */
 export type SessionEmployee = { id: number; name: string; isCashier: boolean };
-export type SessionUser = { id: number; name: string; email: string; isOwner: boolean; employee: SessionEmployee | null };
+/** workshopComputer: this browser is a workshop computer (openspec/changes/workshop-computer). */
+export type SessionUser = { id: number; name: string; email: string; isOwner: boolean; employee: SessionEmployee | null; workshopComputer?: boolean };
 export type SessionShop = { name: string; slug: string };
 export type SessionState =
   | { status: 'loading' }
@@ -31,6 +32,7 @@ type MeResponse = {
   shopName: string;
   shopSlug: string;
   employee?: SessionEmployee | null;
+  workshopComputer?: boolean;
 };
 
 export async function resolveSession(): Promise<SessionState> {
@@ -38,7 +40,7 @@ export async function resolveSession(): Promise<SessionState> {
     const me = await apiGet<MeResponse>('/api/auth/me');
     return {
       status: 'signed-in',
-      user: { id: me.id, name: me.name, email: me.email, isOwner: me.isOwner, employee: me.employee ?? null },
+      user: { id: me.id, name: me.name, email: me.email, isOwner: me.isOwner, employee: me.employee ?? null, workshopComputer: me.workshopComputer === true },
       shop: { name: me.shopName, slug: me.shopSlug },
     };
   } catch (err) {

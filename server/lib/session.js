@@ -7,6 +7,8 @@ import { getCustomerSessionContext, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MA
 import { isHttpsRequest } from '../proxy-trust.js';
 import { parseCookies } from './http.js';
 import { devSession } from './dev-autologin.js';
+import { dbContext } from '../db.js';
+import { ownerHere } from './workshop-owner.js';
 
 // The staff session the dispatcher in server.js looked up for this request,
 // BEFORE it took the request's pooled connection (runWithShop). A handler
@@ -24,11 +26,27 @@ export function rememberSession(req, ctx) {
   remembered.set(req, ctx);
 }
 
-export async function currentSession(req) {
+/** The sign-in as stored, whatever browser it is on. */
+export async function signedInSession(req) {
   if (remembered.has(req)) return remembered.get(req);
   const { [SESSION_COOKIE]: token } = parseCookies(req);
   // A real session wins; with none, local development may sign in by itself (dev-autologin.js).
   return (await getSessionContext(token)) ?? (await devSession(req));
+}
+
+/**
+ * The sign-in a route acts on. Inside the request's shop scope, on a
+ * workshop computer the Owner's sign-in counts as the Owner only while the
+ * Owner is the person checked in by PIN, and as staff otherwise
+ * (workshop-owner.js; openspec/changes/workshop-computer design 9), so every
+ * Owner-only check, ownerOnly or a route's own, refuses there. Outside a shop
+ * scope (the dispatcher's early lookup) it is the sign-in as stored.
+ */
+export async function currentSession(req) {
+  const ctx = await signedInSession(req);
+  if (!ctx?.login.is_owner || !dbContext.getStore()) return ctx;
+  if (await ownerHere(req, ctx)) return ctx;
+  return { ...ctx, login: { ...ctx.login, is_owner: false } };
 }
 
 // The same for a customer on the shop's website: the dispatcher's portal

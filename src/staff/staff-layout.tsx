@@ -10,6 +10,8 @@ import { HeaderSlotContext } from './header-slot.ts';
 import { HeaderSearch } from './header-search.tsx';
 import { SignedOut } from './signed-out.tsx';
 import { FirstPinPrompt } from '@/screens/your-settings/till-pin.tsx';
+import { useTillCheckin } from '@/lib/till-checkin.ts';
+import { WorkingBar, WorkingStatus, WorkshopPinScreen, useWorkshopIdle } from '@/screens/till/workshop-computer.tsx';
 
 /**
  * The frame every staff page sits in (journey A; Workshop day decision 68):
@@ -266,6 +268,13 @@ export function StaffLayout() {
   // The signed-in person's accessibility switches, on every page (Your settings).
   useAccessibilityClasses(session.status === 'signed-in');
   const settings = useYourSettings(session.status === 'signed-in');
+  // A workshop computer (openspec/changes/workshop-computer): Enter your PIN
+  // in place of every page until someone is working, then who is working
+  // across the top, and back after 10 minutes idle.
+  const checkin = useTillCheckin(session.status === 'signed-in');
+  const workshop = checkin.data?.workshop ?? null;
+  const working = workshop ? checkin.data?.serving ?? null : null;
+  useWorkshopIdle(Boolean(working));
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
   if (session.status === 'signed-out') return <SignedOut expired={session.expired} />;
@@ -278,6 +287,22 @@ export function StaffLayout() {
   }
 
   const { user, shop } = session;
+  // Nothing shows until it's first known whether this is a workshop computer
+  // with nobody working. Only the first time: a read again after a failure
+  // starts out pending, and holding the page then would unmount the page that
+  // asked for it, round and round.
+  if (!checkin.isFetched && !checkin.data) return <p className="p-8">Loading…</p>;
+  // A workshop computer whose check-in can't be read shows no pages (the review, 29 Oct).
+  if (user.workshopComputer && !checkin.data) {
+    return (
+      <div role="alert" className="p-8">
+        <p>Wheelhouse couldn’t check who is working on this computer. Try again in a moment.</p>
+      </div>
+    );
+  }
+  // On a workshop computer, one status region stays from the PIN screen to the page.
+  const status = workshop ? <WorkingStatus working={working} /> : null;
+  if (workshop && !working) return <>{status}<WorkshopPinScreen workshop={workshop} shopName={shop.name} /></>;
   const { role, roleName } = roleOf(user);
   // The Till always folds to the rail (app map review 4); every page does with Folded sidebar on (7).
   const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility?.foldedSidebar);
@@ -288,7 +313,7 @@ export function StaffLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[var(--wh-bg)] text-[var(--wh-ink)]">
+    <>{status}<div className="flex min-h-screen bg-[var(--wh-bg)] text-[var(--wh-ink)]">
       {/* Computer: the rooms sidebar, unless it's folded (the Till always; Folded sidebar, app map review 4 and 7). */}
       {folded ? null : (
         <nav
@@ -305,6 +330,7 @@ export function StaffLayout() {
       {/* Tablet, and a folded computer: the icon rail, a label under every icon (decision 68). */}
       <Rail user={user} shopName={shop.name} role={role} roleName={roleName} folded={folded} />
       <div className="flex min-w-0 grow flex-col">
+        {working ? <WorkingBar working={working} /> : null}
         {/* One header: on a phone the charcoal top bar with the menu button;
             on a tablet or computer the page title on the panel. */}
         <header className="flex h-14 shrink-0 items-center gap-1.5 bg-[var(--sidebar)] px-1.5 text-[var(--sidebar-foreground)] md:h-[60px] md:gap-4 md:border-b md:border-[var(--wh-border)] md:bg-[var(--wh-panel)] md:px-[22px] md:text-[var(--wh-ink)] lg:h-16 lg:px-7">
@@ -335,13 +361,17 @@ export function StaffLayout() {
       {menuOpen ? (
         <PhoneMenu user={user} shopName={shop.name} role={role} roleName={roleName} onClose={closeMenu} />
       ) : null}
-    </div>
+    </div></>
   );
 }
 
 /** /workshop on its own: where each person lands (decision A11). */
 export function Landing() {
   const session = useSession();
+  // StaffLayout has already read it: a workshop computer's keys lead to the
+  // diary (third walk, answer 8).
+  const checkin = useTillCheckin(session.status === 'signed-in');
   if (session.status !== 'signed-in') return null;
+  if (checkin.data?.workshop) return <Navigate replace to={NAV_ROUTES.diary} />;
   return <Navigate replace to={session.user.isOwner ? NAV_ROUTES.today : NAV_ROUTES.till} />;
 }

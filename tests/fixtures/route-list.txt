@@ -33,6 +33,7 @@ GET /api/tills
 POST /api/tills
 GET /api/till-setup
 POST /api/till-setup
+POST /api/till-setup/workshop
 POST /api/tills/:id/deactivate
 GET /api/till/:shopSlug/snapshot
 POST /api/till/:shopSlug/sync
@@ -251,6 +252,7 @@ POST /api/your-settings/till-pin
 POST /api/team/:id/clear-pin
 GET /api/till-checkin
 POST /api/till-checkin
+POST /api/till-checkin/active
 POST /api/till-checkin/end
 POST /api/till-checkin/give-pin/:id/offer
 DELETE /api/till-checkin/give-pin/:id/offer

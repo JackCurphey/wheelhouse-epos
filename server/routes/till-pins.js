@@ -14,11 +14,12 @@ import { shopToday } from '../clock.js';
 import { hashLinkCode, newLinkCode } from '../booking-link.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { notFound, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
-import { currentSession } from '../lib/session.js';
+import { currentSession, signedInSession } from '../lib/session.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
 import { thisTill, tillCookie, tillCookieToken } from '../till/this-till.js';
+import { IDLE_MINUTES, thisWorkshop, workshopCookie, workshopCookieToken } from '../till/this-workshop.js';
 
 export const CHECKIN_COOKIE = 'wh_till_checkin';
 const OFFER_MINUTES = 15;
@@ -118,41 +119,79 @@ async function keepPin(employeeId, pin, { firstOnly = false } = {}) {
 }
 
 /**
+ * This browser's till, or its workshop computer, or neither: a till's key
+ * wins should a browser somehow carry both (workshop-computer design 1).
+ */
+async function thisComputer(req) {
+  const till = await thisTill(req);
+  return { till, workshop: till ? null : await thisWorkshop(req) };
+}
+
+/**
  * The person checked in on this browser, or null: the cookie's check-in,
- * made under this same sign-in, on this browser's till (or, on a browser
- * that isn't a set-up till, on none: till-setup design 3), today, not ended,
- * by someone still active. Row-level security keeps it to the request's shop.
+ * made under this same sign-in, on this browser's till or workshop computer
+ * (or, on a browser that is neither, on none: till-setup design 3), today,
+ * not ended, by someone still active. On a workshop computer, a check-in
+ * last used 10 minutes ago or more is ended there and then and counts as
+ * none (workshop-computer design 2; walk-through 8 decision 3; build plan
+ * Q6). Row-level security keeps it to the request's shop.
  */
 export async function currentCheckin(req) {
   const token = parseCookies(req)[CHECKIN_COOKIE];
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
-  const ctx = await currentSession(req);
+  // The sign-in as stored: whether it counts as the Owner here is decided from this check-in.
+  const ctx = await signedInSession(req);
   if (!ctx) return null;
-  const till = await thisTill(req);
+  const { till, workshop } = await thisComputer(req);
   const row = await prepare(
-    `SELECT c.id, c.employee_id, c.till_id, e.name, e.is_cashier FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-      WHERE c.token_hash = ? AND c.login_id = ? AND c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int AND c.ended_at IS NULL AND e.active = 1`
-  ).get(hashLinkCode(token), ctx.login.id, await today(), till?.id ?? null);
-  return row ?? null;
+    `SELECT c.id, c.employee_id, c.till_id, c.workshop_computer_id, e.name, e.is_cashier,
+            (c.workshop_computer_id IS NOT NULL AND COALESCE(c.last_active_at, c.checked_in_at) <= now() - interval '${IDLE_MINUTES} minutes') AS idle
+       FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
+      WHERE c.token_hash = ? AND c.login_id = ? AND c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int
+        AND c.workshop_computer_id IS NOT DISTINCT FROM ?::int AND c.ended_at IS NULL AND e.active = 1`
+  ).get(hashLinkCode(token), ctx.login.id, await today(), till?.id ?? null, workshop?.id ?? null);
+  if (!row) return null;
+  if (row.idle) {
+    await prepare('UPDATE pin_checkins SET ended_at = now() WHERE id = ? AND ended_at IS NULL').run(row.id);
+    return null;
+  }
+  return row;
 }
 
 // Who may give PINs at the till: the person checked in on this browser by
 // PIN (not the browser's sign-in), if they are the Owner. Manager and "Give
 // everything a Manager can do" aren't stored yet; they join here with roles
 // (WP-1.1; decided-while-building.md, 28 Oct, giving a PIN at the till).
+// Giving a PIN is the till's: never on a workshop computer (workshop-computer).
 async function giverHere(req) {
   const mine = await currentCheckin(req);
-  if (!mine) return null;
-  const owner = await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(mine.employee_id);
-  return owner ? mine : null;
+  if (!mine || mine.workshop_computer_id) return null;
+  return (await isTheOwner(mine)) ? mine : null;
 }
+export const isTheOwner = async (checkin) => Boolean(await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(checkin.employee_id));
+
+/**
+ * Whether the sign-in's own PIN and settings are the sign-in's to use on this
+ * browser (the review, 29 Oct). Anywhere but a workshop computer, yes. On a
+ * workshop computer, only while the person checked in by PIN is the
+ * sign-in's own team member: otherwise whoever is working could get the
+ * sign-in (usually the Owner) a new PIN and check in as them.
+ */
+export async function ownAccountHere(req, ctx) {
+  const { workshop } = await thisComputer(req);
+  if (!workshop) return true;
+  const mine = await currentCheckin(req);
+  if (!mine) return false;
+  return Boolean(await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, mine.employee_id));
+}
+export const NOT_YOURS_HERE = { error: 'On a workshop computer, only the person signed in changes their own PIN and settings, checked in with their own PIN', code: 'not_your_account_here' };
 
 // Someone checked in by PIN on this browser who isn't the Owner: then the
-// Owner's sign-in doesn't set up a till here (giverHere's rule; roles and
-// switches 2; till-setup, review, 28 Oct).
+// Owner's sign-in doesn't set up a till or a workshop computer here
+// (giverHere's rule; roles and switches 2; till-setup, review, 28 Oct).
 export async function someoneElseCheckedIn(req) {
   const mine = await currentCheckin(req);
-  return Boolean(mine) && !(await giverHere(req));
+  return Boolean(mine) && !(await isTheOwner(mine));
 }
 
 // The people the giver can give a PIN to: active, no PIN, never the giver
@@ -224,6 +263,7 @@ export function register(route) {
   route('GET', '/api/your-settings/till-pin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const me = await teamMemberOf(ctx.login);
     sendJson(res, 200, { canHavePin: Boolean(me) || ctx.login.is_owner === true, hasPin: Boolean(me?.pin_hash) });
   });
@@ -236,6 +276,7 @@ export function register(route) {
   route('GET', '/api/your-settings/till-pin/ask', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const row = ctx.login.is_owner ? null : await prepare(
       `SELECT l.till_pin_asked_at AS asked, e.pin_cleared_at AS cleared FROM logins l JOIN employees e ON e.id = l.employee_id
         WHERE l.id = ? AND e.pin_hash IS NULL AND e.active = 1`
@@ -251,6 +292,7 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin/ask', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     await prepare('UPDATE logins SET till_pin_asked_at = now() WHERE id = ?').run(ctx.login.id);
     sendJson(res, 200, { ask: null });
   });
@@ -261,6 +303,7 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin/offer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     if (!offers.take(String(ctx.login.id))) return sendJson(res, 429, SLOW_DOWN);
     const me = await teamMemberForPin(ctx.login, shopId);
     if (!me) return sendJson(res, 409, { error: 'Ask the owner to add you to the team first', code: 'no_team_member' });
@@ -275,6 +318,7 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const body = await readJsonBody(req);
     const me = await teamMemberOf(ctx.login);
     if (!me) return sendJson(res, 400, NO_OFFER);
@@ -309,19 +353,22 @@ export function register(route) {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     const mine = await currentCheckin(req);
-    const till = await thisTill(req);
-    // A till's cookie is renewed each time it's read, so a till in use never
-    // loses it (review, 28 Oct).
+    const { till, workshop } = await thisComputer(req);
+    // A till's or a workshop computer's cookie is renewed each time it's
+    // read, so one in use never loses it (review, 28 Oct).
     if (till) res.setHeader('Set-Cookie', tillCookie(req, tillCookieToken(req)));
+    if (workshop) res.setHeader('Set-Cookie', workshopCookie(req, workshopCookieToken(req)));
     const people = await prepare(
       `SELECT DISTINCT e.id, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-        WHERE c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int AND e.active = 1 ORDER BY e.name, e.id`
-    ).all(await today(), till?.id ?? null);
-    // Only for the Owner serving here: who has no PIN (till-serving-menu).
-    const giver = mine ? await giverHere(req) : null;
+        WHERE c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int AND c.workshop_computer_id IS NOT DISTINCT FROM ?::int AND e.active = 1 ORDER BY e.name, e.id`
+    ).all(await today(), till?.id ?? null, workshop?.id ?? null);
+    // Only for the Owner serving at a till: who has no PIN (till-serving-menu).
+    // Giving a PIN is the till's, never a workshop computer's.
+    const giver = mine && !workshop ? await giverHere(req) : null;
     sendJson(res, 200, {
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
       till: till ? { code: till.code, name: till.name, siteName: till.site_name } : null,
+      workshop: workshop ? { name: workshop.name, siteName: workshop.site_name } : null,
       checkedInToday: people.map((p) => ({ id: p.id, name: p.name })),
       givePin: giver ? await peopleWithNoPin(giver) : [],
     });
@@ -354,13 +401,27 @@ export function register(route) {
       await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND ended_at IS NULL').run(hashLinkCode(previous));
     }
     const token = newLinkCode();
-    // On this browser's till, if it is one (till-setup design 3).
-    const till = await thisTill(req);
-    await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id) VALUES (?, ?, ?, ?, ?)')
-      .run(who.id, ctx.login.id, hashLinkCode(token), await today(), till?.id ?? null);
+    // On this browser's till or workshop computer, if it is one (till-setup
+    // design 3; workshop-computer), last used now.
+    const { till, workshop } = await thisComputer(req);
+    await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id, workshop_computer_id, last_active_at) VALUES (?, ?, ?, ?, ?, ?, now())')
+      .run(who.id, ctx.login.id, hashLinkCode(token), await today(), till?.id ?? null, workshop?.id ?? null);
     // The server ends it with the shop's day; the cookie lasts no longer than a day.
     res.setHeader('Set-Cookie', checkinCookie(req, token, 24 * 60 * 60));
     sendJson(res, 201, { serving: { id: who.id, name: who.name } });
+  });
+
+  // Someone is using the workshop computer (a press, a click, a key): their
+  // check-in's 10 minutes start again, while it still counts. Reading the
+  // check-in never does this (workshop-computer design 2). Elsewhere it
+  // changes nothing.
+  // screens: till-checkin-workshop
+  route('POST', '/api/till-checkin/active', async (req, res) => {
+    const ctx = await currentSession(req);
+    if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    const mine = await currentCheckin(req);
+    if (mine?.workshop_computer_id) await prepare('UPDATE pin_checkins SET last_active_at = now() WHERE id = ? AND ended_at IS NULL').run(mine.id);
+    sendJson(res, 200, { serving: mine ? { id: mine.employee_id, name: mine.name } : null });
   });
 
   // Switch: nobody serving on this browser, back to Enter your PIN.
