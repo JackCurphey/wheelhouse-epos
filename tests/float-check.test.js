@@ -70,7 +70,7 @@ test('the Owner sets the float in whole pence; until then it is not set', async 
 test('on the first day the float must be counted; the count is kept with who and when', async () => {
   const owner = await shop();
   const before = await call(owner, '/api/float-check');
-  assert.deepEqual(before.body, { day: '2026-09-01', floatPence: FLOAT, takesPayments: true, firstDay: true, check: null });
+  assert.deepEqual(before.body, { day: '2026-09-01', floatPence: FLOAT, takesPayments: true, firstDay: true, check: null, unclosed: null });
   const look = await post(owner, '/api/float-check', { countedPence: null });
   assert.deepEqual([look.status, look.body.code], [400, 'count_needed']);
   const counted = await post(owner, '/api/float-check', { countedPence: FLOAT });
