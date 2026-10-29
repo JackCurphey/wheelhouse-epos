@@ -102,6 +102,7 @@ export const journeys = [
       ] },
       { label: 'Till', screens: [
         sb('till-setup', 'Set up this till', 'Owner'),
+        sb('till-setup-workshop', 'Set up a workshop computer: don’t stay signed in to Google (proposed, 29 Oct)', 'Owner'),
         sb('till-checkin', 'Till check-in: PIN only', 'Staff'),
         sb('till-checkin-offline', 'Till start-up: offline, sales waiting to send (the start-up line on the PIN screen)', 'Staff'),
         sb('till-checkin-stale', 'Till start-up: online, but not up to date', 'Staff'),

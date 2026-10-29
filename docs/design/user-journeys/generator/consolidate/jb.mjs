@@ -10,6 +10,8 @@ export default {
   'auth-expired': into('auth-signedout', '', "Lock icon; 'Please sign in again' after being signed out 'after a while without activity'"), // Walk-through 8 M4: decision 3 is the workshop computer's PIN screen (on till-checkin), not an email sign-out
   'auth-noaccess': into('staff-app', '', "'Reports aren’t part of your role' card for Jo Taylor (Staff), with 'Go to Today'"),
   'till-setup': keep(1),
+  // Jack's answer 29 Oct, 6 ("Merge, warn at setup"): proposed for his approval.
+  'till-setup-workshop': into('till-setup', "Stage-1 gaps 4; Jack's answers 29 Oct, 6", "'A workshop computer' chosen: heading 'Set up a workshop computer', no till number, and the line 'Don’t stay signed in to Google on this computer: anyone using it could sign in as you.'"),
   'till-checkin': keep(43),
   'till-checkin-offline': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Offline · [n] sales waiting to send'; the till bar shows offline"),
   'till-checkin-stale': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Online · prices and stock last updated [time] · [n] sales still sending'"),
