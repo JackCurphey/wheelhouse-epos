@@ -86,6 +86,8 @@ const ROUTES = [
   // (openspec/changes/stock-warnings-on-today).
   ['PUT', '/api/stockroom-settings', { adjustTodayOverPence: 5000 }],
   ['POST', `/api/stock-adjustments/${MISSING}/seen`, {}],
+  // Trust PIN and the workshop computer's time (openspec/changes/trust-pin-workshop).
+  ['PUT', '/api/signing-in-settings', { trustPin: true }],
   // Close the day and cash taken out, for owners and managers (cash-up
   // decision 5), so the Owner until roles (openspec/changes/close-the-day).
   ['POST', '/api/close-the-day', {}],
@@ -137,6 +139,7 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/your-settings/till-pin', 'each person their own: keeping the PIN Wheelhouse picked (signing in 6 and 7)'],
   ['POST /api/till-checkin', 'day-to-day: checking in at the till with a PIN (signing in 4)'],
   ['POST /api/till-checkin/end', 'day-to-day: Switch, back to Enter your PIN (signing in 4)'],
+  ['POST /api/till-checkin/tap', 'day-to-day: with trust PIN on, tapping your name on a workshop computer you typed your PIN on today (trust-pin-workshop)'],
   ['POST /api/till-checkin/active', 'day-to-day: someone using the workshop computer keeps their check-in (workshop-computer design 2)'],
   // The Owner checked in by PIN, not the sign-in: the check is giverHere, tested in give-pin-at-till.test.js.
   ['POST /api/till-checkin/give-pin/:id/offer', 'the Owner checked in at the till by PIN, whoever the browser is signed in as (giving a PIN, Jack 28 Oct)'],

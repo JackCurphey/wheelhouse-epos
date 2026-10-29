@@ -270,11 +270,12 @@ export function StaffLayout() {
   const settings = useYourSettings(session.status === 'signed-in');
   // A workshop computer (openspec/changes/workshop-computer): Enter your PIN
   // in place of every page until someone is working, then who is working
-  // across the top, and back after 10 minutes idle.
+  // across the top, and back after the shop's time idle (10 minutes with
+  // trust PIN off; openspec/changes/trust-pin-workshop).
   const checkin = useTillCheckin(session.status === 'signed-in');
   const workshop = checkin.data?.workshop ?? null;
   const working = workshop ? checkin.data?.serving ?? null : null;
-  useWorkshopIdle(Boolean(working));
+  useWorkshopIdle(Boolean(working), checkin.data?.idleMinutes === undefined ? 10 : checkin.data.idleMinutes);
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
   if (session.status === 'signed-out') return <SignedOut expired={session.expired} />;
@@ -302,7 +303,7 @@ export function StaffLayout() {
   }
   // On a workshop computer, one status region stays from the PIN screen to the page.
   const status = workshop ? <WorkingStatus working={working} /> : null;
-  if (workshop && !working) return <>{status}<WorkshopPinScreen workshop={workshop} shopName={shop.name} /></>;
+  if (workshop && !working) return <>{status}<WorkshopPinScreen workshop={workshop} shopName={shop.name} names={checkin.data?.names ?? []} /></>;
   const { role, roleName } = roleOf(user);
   // The Till always folds to the rail (app map review 4); every page does with Folded sidebar on (7).
   const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility?.foldedSidebar);

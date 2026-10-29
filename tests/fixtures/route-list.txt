@@ -19,6 +19,8 @@ GET /api/label-settings
 PUT /api/label-settings
 GET /api/shop-theme
 PUT /api/shop-theme
+GET /api/signing-in-settings
+PUT /api/signing-in-settings
 GET /api/end-of-day-settings
 PUT /api/end-of-day-settings
 GET /api/stockroom-settings
@@ -255,6 +257,7 @@ POST /api/your-settings/till-pin
 POST /api/team/:id/clear-pin
 GET /api/till-checkin
 POST /api/till-checkin
+POST /api/till-checkin/tap
 POST /api/till-checkin/active
 POST /api/till-checkin/end
 POST /api/till-checkin/give-pin/:id/offer

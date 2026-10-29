@@ -17,6 +17,26 @@ const MAX_AGE = 400 * 24 * 60 * 60;
 /** Left alone this long, a workshop computer's check-in stops counting (build plan Q6). */
 export const IDLE_MINUTES = 10;
 
+/**
+ * The request's shop's trust PIN and how long its workshop computers wait
+ * (openspec/changes/trust-pin-workshop; roles and switches 9): with trust
+ * PIN off, always 10 minutes; with it on, the time chosen, or null for
+ * never (Off).
+ */
+export async function trustPinHere() {
+  const shop = await prepare("SELECT trust_pin, workshop_idle_minutes FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
+  const trustPin = shop?.trust_pin === true;
+  return { trustPin, idleMinutes: trustPin ? shop.workshop_idle_minutes : IDLE_MINUTES };
+}
+
+/**
+ * The Owner's own check-in on a workshop computer waits 10 minutes at most,
+ * or the shop's time if shorter, whatever the setting (trust-pin-workshop
+ * design 8): until Owner pages ask for a PIN every time (task 2.5), an
+ * Owner who walks away must not leave their pages open to whoever is next.
+ */
+export const ownerIdleMinutes = (idleMinutes) => (idleMinutes === null ? IDLE_MINUTES : Math.min(IDLE_MINUTES, idleMinutes));
+
 /** The active workshop computer this browser was made, or null. */
 export async function thisWorkshop(req) {
   const token = workshopCookieToken(req);

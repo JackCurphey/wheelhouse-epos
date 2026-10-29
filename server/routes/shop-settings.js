@@ -149,6 +149,41 @@ export function register(route) {
     sendJson(res, 200, serializeShopTheme(await db.prepare('SELECT * FROM shop_theme LIMIT 1').get()));
   });
 
+  // Settings › Front desk › Till › Signing in (the trust PIN lines on
+  // set-till-quick; roles and switches 3 and 9; stage-1 gaps 9;
+  // openspec/changes/trust-pin-workshop): trust PIN, off to start, and how
+  // long a workshop computer waits, 5, 10, 15 or 30 minutes or null for Off.
+  // One setting for the whole business, on the shop's row like the float.
+  // Anyone signed in reads it; the Owner sets it.
+  const signingIn = (row) => ({ trustPin: row.trust_pin, workshopIdleMinutes: row.workshop_idle_minutes });
+  route('GET', '/api/signing-in-settings', async (req, res, params, query, afterRelease, shopId) => {
+    sendJson(res, 200, signingIn(await db.prepare('SELECT trust_pin, workshop_idle_minutes FROM shops WHERE id = ?').get(shopId)));
+  });
+
+  // Either or both, each checked; the shop's row is read FOR UPDATE in a
+  // transaction before it's written, and the reply comes after COMMIT.
+  route('PUT', '/api/signing-in-settings', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    const hasTrust = body && 'trustPin' in body;
+    const hasIdle = body && 'workshopIdleMinutes' in body;
+    if (!hasTrust && !hasIdle) return badRequest(res, 'Nothing to change');
+    if (hasTrust && typeof body.trustPin !== 'boolean') return badRequest(res, 'Trust PIN is on or off');
+    if (hasIdle && ![5, 10, 15, 30, null].includes(body.workshopIdleMinutes)) return badRequest(res, 'Choose 5, 10, 15 or 30 minutes, or Off');
+    let row;
+    await db.exec('BEGIN');
+    try {
+      const now = await db.prepare('SELECT trust_pin, workshop_idle_minutes FROM shops WHERE id = ? FOR UPDATE').get(shopId);
+      row = await db.prepare('UPDATE shops SET trust_pin = ?, workshop_idle_minutes = ? WHERE id = ? RETURNING trust_pin, workshop_idle_minutes')
+        .get(hasTrust ? body.trustPin : now.trust_pin, hasIdle ? body.workshopIdleMinutes : now.workshop_idle_minutes, shopId);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, signingIn(row));
+  });
+
   // Settings › Front desk › End of day › Float (set-eod; cash-up decision 4;
   // openspec/changes/opening-float-check): what's left in the drawer each
   // night, in whole pence, null until set. On the shop's row like the

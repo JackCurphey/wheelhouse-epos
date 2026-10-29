@@ -1471,6 +1471,61 @@ silent:
 16. **Emptying the Stock adjustments box clears the amount**, back to "Not
     set yet", rather than saying "Pounds and pence" (review).
 
+### 29 Oct 2026: trust PIN on the workshop computer (`openspec/changes/trust-pin-workshop`, `set-till-quick`, `till-checkin-workshop-names`; WP-1.7 task 3.6, later tasks 2.1 and 2.2; roles and switches 3 and 9; stage-1 gaps 9 and 10)
+
+1. **The Signing in fold, no row drawn** (`set-till-quick` has the two
+   lines only; stage-1 gaps 9 put them in their own fold after Tills): the
+   settings pages' own switch, "Trust PIN", with "Once someone has typed
+   their PIN on a workshop computer today, they tap their name instead. The
+   owner still types theirs. One setting for the whole business."; with it
+   on, "Go back to the start when left alone" as pills, "5 minutes", "10
+   minutes", "15 minutes", "30 minutes", "Off", each saved when chosen; with
+   it off, "Workshop computers go back to Enter your PIN after 10 minutes
+   left alone." The summary: "Trust PIN off", "Trust PIN on · back after
+   [n] minutes" or "Trust PIN on · never goes back". The drawn line's tills
+   ("on a workshop computer or a till") wait for the till's pills (task
+   2.4). *Pattern:* "Show prices on the booking page" for the switch, "Bikes
+   are booked in for" for the pills.
+2. **A time chosen with trust PIN on is kept when it is switched off**, and
+   comes back when it is switched on again; while off, it is 10 minutes
+   whatever is kept. *Pattern:* "A fixed amount" kept while the deposit is
+   off (deposit settings).
+3. **Stored on the shop's row**, as the float and the stock amount, until
+   the settings store (WP-1.2).
+4. **The Owner's own check-in on a workshop computer ends after 10 minutes
+   left alone at most**, or the shop's time if that is shorter, whatever
+   trust PIN's time is set to, Off and 30 minutes included (the review, 29
+   Oct). Otherwise an Owner who walked away would leave the Owner's pages
+   open to whoever is next. It lasts until Owner pages ask for a PIN every
+   time (task 2.5). *Pattern:* trust PIN off's own 10 minutes (build plan
+   Q6).
+
+5. **The Owner is never a name to tap on "Who's working?"; the Owner types
+   their PIN** (`till-checkin-workshop-names`). Roles and switches 3 says
+   Owner and Manager pages still ask for that person's PIN every time; that
+   isn't built yet (task 2.5), and on a workshop computer the Owner's pages
+   follow the Owner working (workshop-computer design 9). A tap making the
+   Owner the one working would open the Owner's pages, trust PIN's own
+   setting among them, with no PIN. The server refuses a tap for the Owner
+   too. Managers aren't stored yet. *Pattern:* the till's "Who’s getting a
+   PIN?", which never lists the Owner (28 Oct, giving a PIN entry).
+6. **"Who's working?" drops the drawn "Owner and manager pages still ask
+   for your PIN."** until those pages do (task 2.5); the line is "You’ve
+   typed your PIN here today, so just tap your name." Each name shows
+   Mechanic or Staff from the team list, as the drawing's do, until roles.
+   *Pattern:* show only what works (workshop-computer entry 6).
+7. **Only a typed PIN puts someone on the names.** A check-in made by a
+   tap doesn't count as having typed a PIN there, and a PIN cleared or
+   changed since takes them off until they type their new one (changed:
+   the review, 29 Oct, so someone who saw the old PIN can't keep tapping
+   the name). The names come only from check-ins made under the computer's
+   own sign-in, as a check-in only counts under it. *Pattern:* clearing a PIN
+   ends that person's check-ins (28 Oct, PINs entry).
+8. **"Who's working?" shows after Switch too**, not only after the
+   computer is left alone (stage-1 gaps 10: "Switch opens the existing
+   Enter your PIN screen (with trust PIN on, the names to tap)"). With
+   nobody on the names yet today, it is Enter your PIN.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

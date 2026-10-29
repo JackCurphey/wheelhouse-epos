@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { User } from 'lucide-react';
-import { useCheckinActions, type CheckedIn, type ThisWorkshop } from '@/lib/till-checkin.ts';
+import { ApiError } from '@/lib/api/client.ts';
+import { Button } from '@/components/ui/button.tsx';
+import { useCheckinActions, type CheckedIn, type TapName, type ThisWorkshop } from '@/lib/till-checkin.ts';
 import { PinCheckin } from './pin-checkin.tsx';
 
 /**
@@ -16,9 +18,13 @@ import { PinCheckin } from './pin-checkin.tsx';
 
 /**
  * Enter your PIN in place of every page. The bar says only what works
- * (design 5): no Online pill. "Bolton" alone on a phone, as drawn.
+ * (design 5): no Online pill. "Bolton" alone on a phone, as drawn. With
+ * trust PIN on and someone who typed their PIN here today, "Who’s working?"
+ * comes first (openspec/changes/trust-pin-workshop).
  */
-export function WorkshopPinScreen({ workshop, shopName }: { workshop: ThisWorkshop; shopName: string }) {
+export function WorkshopPinScreen({ workshop, shopName, names = [] }: { workshop: ThisWorkshop; shopName: string; names?: TapName[] }) {
+  const [askPin, setAskPin] = useState(false);
+  const tapping = names.length > 0 && !askPin;
   return (
     <div className="flex min-h-screen flex-col bg-[var(--wh-bg)] text-[var(--wh-ink)]">
       <header className="flex h-14 shrink-0 items-center gap-1.5 bg-[var(--sidebar)] px-3.5 text-[var(--sidebar-foreground)] md:h-16 md:gap-3.5 md:px-5">
@@ -26,11 +32,57 @@ export function WorkshopPinScreen({ workshop, shopName }: { workshop: ThisWorksh
           <span className="text-base font-bold">Workshop computer</span>
           <span className="text-xs opacity-85 md:text-sm md:opacity-100">{workshop.siteName}<span className="hidden md:inline">{shopName ? ` · ${shopName}` : ''}</span></span>
         </span>
-        <span className="pr-2 text-size-13 opacity-85 md:pr-0 md:text-sm">Nobody working<span className="hidden md:inline"> — enter your PIN</span></span>
+        <span className="pr-2 text-size-13 opacity-85 md:pr-0 md:text-sm">Nobody working<span className="hidden md:inline">{tapping ? ' — tap your name' : ' — enter your PIN'}</span></span>
       </header>
       <main className="min-h-0 grow p-4 md:p-7">
-        <PinCheckin checkedInToday={[]} workshop />
+        {tapping ? <WhosWorking names={names} onSomeoneElse={() => setAskPin(true)} /> : <PinCheckin checkedInToday={[]} workshop />}
       </main>
+    </div>
+  );
+}
+
+const TAP_FAILED = 'Wheelhouse couldn’t check you in. Try again, or enter your PIN.';
+
+/**
+ * "Who’s working?" (till-checkin-workshop-names, checkinWorkshopNames and
+ * nameTile in signin.mjs; roles and switches 3). The drawn "Owner and
+ * manager pages still ask for your PIN." waits for that to be built
+ * (trust-pin-workshop design 6); each name shows Mechanic or Staff.
+ */
+function WhosWorking({ names, onSomeoneElse }: { names: TapName[]; onSomeoneElse: () => void }) {
+  const { tapIn } = useCheckinActions();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function tap(id: number) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await tapIn(id);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : TAP_FAILED);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex min-h-full flex-col items-stretch justify-center py-4 md:items-center">
+      <div className="flex flex-col gap-3 md:w-[360px] md:gap-3.5">
+        <h1 className="m-0 text-2xl font-bold md:text-size-28">Who’s working?</h1>
+        <p className="m-0 text-sm leading-normal text-[var(--wh-muted)] md:text-size-15">You’ve typed your PIN here today, so just tap your name.</p>
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+        {names.map((n) => (
+          <button key={n.id} type="button" aria-disabled={busy} onClick={() => void tap(n.id)}
+            className="flex min-h-14 w-full items-center gap-3.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-2.5 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)] md:min-h-16">
+            <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] font-bold">{n.name[0]}</span>
+            <span className="flex flex-col">
+              <span className="text-size-17 font-semibold">{n.name}</span>
+              <span className="text-size-13 text-[var(--wh-muted)]">{n.role}</span>
+            </span>
+          </button>
+        ))}
+        <Button type="button" className="w-full" onClick={onSomeoneElse}>Someone else — enter your PIN</Button>
+      </div>
     </div>
   );
 }
@@ -67,7 +119,6 @@ export function WorkingStatus({ working }: { working: CheckedIn | null }) {
   return <p role="status" data-working="" className="sr-only">{working ? `Now working: ${working.name}` : ''}</p>;
 }
 
-const IDLE_MS = 10 * 60_000;
 // The server is told someone is still here at most this often (design 2).
 const TELL_EVERY_MS = 30_000;
 const USES = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
@@ -81,7 +132,7 @@ const USES = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
  * every second against the clock, so a sleeping tab catches up the moment it
  * wakes.
  */
-export function useWorkshopIdle(working: boolean) {
+export function useWorkshopIdle(working: boolean, idleMinutes: number | null = 10) {
   const { stillHere, idleOut } = useCheckinActions();
   const actions = useRef({ stillHere, idleOut });
   useEffect(() => { actions.current = { stillHere, idleOut }; });
@@ -104,7 +155,8 @@ export function useWorkshopIdle(working: boolean) {
     const timer = setInterval(() => {
       const now = Date.now();
       if (untold && now - told >= TELL_EVERY_MS) tell(now);
-      if (now - told < IDLE_MS) return;
+      // Off (trust PIN on): never goes back by itself (trust-pin-workshop).
+      if (idleMinutes === null || now - told < idleMinutes * 60_000) return;
       clearInterval(timer);
       actions.current.idleOut();
     }, 1000);
@@ -112,5 +164,5 @@ export function useWorkshopIdle(working: boolean) {
       for (const kind of USES) window.removeEventListener(kind, used, { capture: true });
       clearInterval(timer);
     };
-  }, [working]);
+  }, [working, idleMinutes]);
 }
