@@ -9,6 +9,7 @@ import { ROUTES } from '@/staff/routes.ts';
 import { BLOCK } from '@/screens/diary/diary-model.ts';
 import { StatusShape } from '@/screens/diary/status-shape.tsx';
 import { TillPinBlock } from './till-pin.tsx';
+import { ApiError } from '@/lib/api/client.ts';
 
 /**
  * Your settings (drawn as your-settings, app-map.mjs yourSettingsDialog;
@@ -87,6 +88,9 @@ export function YourSettingsPage() {
   const change = useChangeAccessibility();
   const [busy, setBusy] = useState<ReadonlySet<keyof Accessibility>>(new Set());
   const [failed, setFailed] = useState(false);
+  // On a workshop computer, someone else's sign-in: its settings aren't theirs
+  // to change (openspec/changes/workshop-computer, the review 29 Oct).
+  const [notYours, setNotYours] = useState(false);
   if (session.status !== 'signed-in') return null;
   const { user } = session;
   const roleName = user.isOwner ? 'Owner' : 'Staff';
@@ -98,8 +102,9 @@ export function YourSettingsPage() {
     setFailed(false);
     try {
       await change(key, on);
-    } catch {
-      setFailed(true);
+    } catch (err) {
+      if (err instanceof ApiError && (err.body as { code?: unknown } | null)?.code === 'not_your_account_here') setNotYours(true);
+      else setFailed(true);
     } finally {
       setBusy((b) => { const next = new Set(b); next.delete(key); return next; });
     }
@@ -133,13 +138,14 @@ export function YourSettingsPage() {
                 <span className="text-size-15 font-bold">{r.label}</span>
                 <span className="text-size-13 leading-[1.45] text-[var(--wh-muted)]">{r.hint}</span>
               </div>
-              <Switch label={r.label} on={Boolean(a11y?.[r.key])} disabled={!a11y || busy.has(r.key)} onChange={() => void flip(r.key, !a11y?.[r.key])} />
+              <Switch label={r.label} on={Boolean(a11y?.[r.key])} disabled={!a11y || notYours || busy.has(r.key)} onChange={() => void flip(r.key, !a11y?.[r.key])} />
             </div>
             {r.preview === 'symbols' ? <SymbolsPreview /> : r.preview === 'text' ? <TextPreview /> : null}
           </div>
         ))}
-        {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t save that. Try again in a moment.</p> : null}
-        <p className="m-0 text-size-13 text-[var(--wh-muted)]">Changes apply straight away.</p>
+        {notYours ? <p role="alert" className="m-0 text-sm">Your settings change only on your own sign-in. Change them on your own phone or computer.</p>
+          : failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t save that. Try again in a moment.</p> : null}
+        {notYours ? null : <p className="m-0 text-size-13 text-[var(--wh-muted)]">Changes apply straight away.</p>}
       </div>
     </Dialog>
   );

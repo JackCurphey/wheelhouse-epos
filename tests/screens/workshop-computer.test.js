@@ -57,6 +57,11 @@ async function open(path, { workshop = WORKSHOP, till = null, serving = null, pi
     if (u.pathname === '/api/till-checkin') return reply(200, { serving: state.serving, checkedInToday: state.serving ? [state.serving] : [], givePin: [], till, workshop: state.workshop });
     if (u.pathname === '/api/float-check') return reply(200, { day: '2026-09-01', floatPence: null, takesPayments: true, firstDay: false, check: null });
     if (u.pathname === '/api/your-settings/till-pin/ask') return reply(200, { ask: null });
+    // On a workshop computer, only the sign-in's own team member changes its settings (the review, 29 Oct).
+    if (u.pathname === '/api/your-settings' && method === 'PUT') {
+      if (state.workshop && state.serving?.id !== JACK_WORKING.id) return reply(403, { error: 'On a workshop computer, only the person signed in changes their own PIN and settings, checked in with their own PIN', code: 'not_your_account_here' });
+      return reply(200, { accessibility: { ...body.accessibility } });
+    }
     if (u.pathname === '/api/your-settings') return reply(200, { accessibility: {} });
     if (u.pathname === '/api/workshop-services') return reply(200, []);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
@@ -66,6 +71,8 @@ async function open(path, { workshop = WORKSHOP, till = null, serving = null, pi
     return reply(404, { error: 'Not found' });
   };
   const uninstall = installDom(`http://localhost${path}`);
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   const shell = await importFresh(SHELL);
@@ -264,6 +271,19 @@ test('one status region, empty on the PIN screen, says "Now working" after the P
   assert.ok(region.isConnected, 'the same region, kept');
   assert.equal(region.textContent, 'Now working: Alex Morgan');
   assert.match(t.within(working).getByRole('button', { name: 'Switch' }).className, /\bmin-h-11\b/);
+});
+
+test('Your settings on someone else’s sign-in: said plainly, and the switches unavailable', async () => {
+  const t = await open('/workshop/your-settings', { serving: ALEX });
+  const dialog = t.within(await t.ui.findByRole('dialog', { name: 'Your settings' }));
+  const larger = await dialog.findByRole('switch', { name: 'Larger text' });
+  await t.waitFor(() => assert.equal(larger.disabled, false));
+  t.fireEvent.click(larger);
+  const said = await dialog.findByRole('alert');
+  assert.equal(said.textContent, 'Your settings change only on your own sign-in. Change them on your own phone or computer.');
+  assert.ok(!/Try again/.test(t.ui.getByRole('dialog').textContent));
+  assert.ok(dialog.getAllByRole('switch').every((s) => s.disabled), 'every switch unavailable');
+  assert.ok(dialog.queryByText('Changes apply straight away.') === null);
 });
 
 test('a till is not a workshop computer: no Working bar, and it never goes back by itself', async () => {

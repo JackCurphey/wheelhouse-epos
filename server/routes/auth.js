@@ -10,6 +10,7 @@ import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, read
 import { currentSession } from '../lib/session.js';
 import { ownerHere } from '../lib/workshop-owner.js';
 import { thisWorkshop, workshopCookieToken } from '../till/this-workshop.js';
+import { thisTill } from '../till/this-till.js';
 import { devAutologinOn, DEV_SIGNED_OUT_COOKIE } from '../lib/dev-autologin.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
 import { staffSigninProvider } from '../staff-signin/provider.js';
@@ -216,7 +217,10 @@ export function register(route) {
     const isOwner = ctx.login.is_owner ? await runWithShop(ctx.shop.id, () => ownerHere(req, ctx)) : false;
     // Whether this browser is a workshop computer, so a screen that can't
     // read the check-in still shows no pages (the review, 29 Oct).
-    const workshopComputer = workshopCookieToken(req) ? Boolean(await runWithShop(ctx.shop.id, () => thisWorkshop(req))) : false;
+    // A till's key wins should a browser carry both (design 1), as everywhere else.
+    const workshopComputer = workshopCookieToken(req)
+      ? await runWithShop(ctx.shop.id, async () => !(await thisTill(req)) && Boolean(await thisWorkshop(req)))
+      : false;
     sendJson(res, 200, {
       ...serializeSession({ ...ctx, login: { ...ctx.login, is_owner: isOwner } }),
       workshopComputer,

@@ -311,6 +311,37 @@ test('Today: a check-in on the workshop computer is in Who\'s in, not a till lin
   assert.ok(JSON.stringify(whosIn).includes('Jo Taylor'), JSON.stringify(whosIn));
 });
 
+// The second review, 29 Oct: with nobody checked in on a workshop computer,
+// the float check is refused there, by ownAccountHere's rule, even at closing.
+test('the float check on a workshop computer with nobody working is refused', async () => {
+  const owner = await shop();
+  assert.equal((await call(owner.cookie, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 15000 } })).status, 200);
+  // Shut on Tuesdays, so "Close the day" shows all day and the Owner's look at closing would count.
+  assert.equal((await call(owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { openingHours: [{ weekday: 1, open: '09:00', close: '17:00' }] } })).status, 200);
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  const look = await w.send('/api/float-check', { method: 'POST', body: { countedPence: null, atClose: true } });
+  assert.deepEqual([look.status, look.body.code], [403, 'not_your_account_here']);
+  const count = await w.send('/api/float-check', { method: 'POST', body: { countedPence: 15000 } });
+  assert.deepEqual([count.status, count.body.code], [403, 'not_your_account_here']);
+  assert.equal((await row(owner, 'SELECT count(*)::int AS n FROM float_checks')).n, 0);
+  // Off a workshop computer the Owner's look at closing still works.
+  assert.equal((await post(owner.cookie, '/api/float-check', { countedPence: null, atClose: true })).status, 201);
+});
+
+// The second review, 29 Oct: a browser carrying a till's cookie and a
+// workshop computer's is the till (a till's key wins), so /me says so.
+test('a browser with both a till\'s and a workshop computer\'s cookie is not a workshop computer to /me', async () => {
+  const owner = await shop();
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  const t = browser(owner);
+  assert.equal((await t.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
+  t.jar.set('wh_workshop', w.jar.get('wh_workshop'));
+  assert.equal((await t.send('/api/auth/me')).body.workshopComputer, false);
+  assert.equal((await t.send('/api/till-checkin')).body.till.code, 'B1');
+});
+
 test('a till never goes back by itself', async () => {
   const owner = await shop();
   const jo = await member(owner, 'Jo Taylor');
