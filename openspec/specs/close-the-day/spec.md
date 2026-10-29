@@ -35,7 +35,7 @@ Once counted, the step SHALL show Counted, "The till expected", "How the till wo
 - **THEN** the step shows "Spot on" £0.00 and no reason box
 
 ### Requirement: What the drawer should hold
-The till's expected cash SHALL be this morning's float (what was counted, or the shop's float when it looked right), plus the cash sales since the float check from both sales records, minus the cash taken out since it, minus the cash banked since it for an earlier day nobody closed, in whole pence. Cash from before the check SHALL not be added again: it was in the morning count (Jack's answer 9, 27 Oct).
+The till's expected cash SHALL be this morning's float (what was counted, or the shop's float when it looked right), plus the cash sales since the float check from both sales records, minus the cash taken out since it, minus the cash banked since it for an earlier day nobody closed, in whole pence. Cash from before the check SHALL not be added again: it was in the morning count (Jack's answer 9, 27 Oct). When the day's only check is the Owner's look at closing, the figure SHALL start from the last close instead, with the float left in (Jack's 29 Oct answer 7).
 
 #### Scenario: A day's cash
 - **WHEN** the float looked right at £150.00, cash sales came to £74.00 and £5.00 was taken out
@@ -48,6 +48,10 @@ The till's expected cash SHALL be this morning's float (what was counted, or the
 #### Scenario: Yesterday's cash banked this afternoon
 - **WHEN** this morning's count was the float plus Wednesday's cash, and Wednesday's cash was banked at its close this afternoon
 - **THEN** tonight the till expects the float plus today's cash
+
+#### Scenario: No morning check, a look at closing
+- **WHEN** the float is £100.00, nobody checked it this morning, £60.00 was taken in cash before Jack Lewis's look at 17:30, and he counts £160.00
+- **THEN** the till expects £160.00, banks £60.00, and the difference is £0.00
 
 ### Requirement: Cash taken out
 "Add a paid-out" SHALL open "Cash taken out" with the amount, what it was for and an optional note; it SHALL be recorded with who took it out and when, listed under "Cash taken out today", and come off what the till expects. A day with none SHALL say "No cash taken out today." Once the day is closed, no more SHALL be added (`eod-paidout`, `eod-banking`, `eod-banking-none`).
