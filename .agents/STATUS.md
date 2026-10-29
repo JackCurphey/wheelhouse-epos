@@ -83,7 +83,7 @@ here before starting it, so two people never build the same one):
   #576, migration 104, task 2.7, part of WP-5.1; a removed workshop computer
   counts as staff until someone signs out there). Opened #560 for Mark:
   what would free up more work.
-  **Now (29 Oct):** the next piece is being chosen. Roles and the settings
+  **Now (29 Oct):** the workshop computer's Owner lock on the server (Jack's answer 4, 29 Oct). Roles and the settings
   store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
@@ -123,16 +123,7 @@ here before starting it, so two people never build the same one):
   sign-in sets up a till (default: allowed, as decision 7); supplier imports
   start stock with no history line (a stock control decision 6 question,
   #566). Also: 491 leftover test shops in the shared test database (#567;
-  default: leave them until Jack says). Open from 29 Oct, each built on its
-  default, none stopping work: (1) the Owner is never a name to tap, on
-  workshop computers or tills, and the Owner's workshop check-in ends after
-  10 minutes at most, until Owner pages ask for a PIN every time; the
-  drawing `till-serving-pills` shows the Owner as a pill (default: keep it,
-  #572, #574); (2) a removed workshop computer stays closed to the Owner's
-  pages until someone signs out there (default: keep it, #575); (3) the
-  Owner lock on a workshop computer depends on a browser cookie that someone
-  using developer tools could delete, as since #568; closing it needs a
-  server-side design change (default: leave it for now). For him to overrule: the 26 and
+  default: leave them until Jack says). Answered 29 Oct (`docs/decisions/2026-10-29-answers.md`, answers 2 to 4): the Owner stays never a name to tap and capped at 10 minutes on a workshop computer (#572, #574); a removed workshop computer stays closed to the Owner's pages until someone signs out there (#575); the workshop computer's Owner lock moves to the server, built next. For him to overrule: the 26 and
   28-29 Oct `decided-while-building.md` sections.
 - **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
   is built after it); a money route, `PUT /api/sale-documents/:id`, can
