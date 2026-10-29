@@ -9,7 +9,7 @@ import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, crea
 import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { ownerHere } from '../lib/workshop-owner.js';
-import { thisWorkshop, workshopCookieToken } from '../till/this-workshop.js';
+import { removedWorkshopHere, thisWorkshop, workshopCookieExpired, workshopCookieToken } from '../till/this-workshop.js';
 import { thisTill } from '../till/this-till.js';
 import { devAutologinOn, DEV_SIGNED_OUT_COOKIE } from '../lib/dev-autologin.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
@@ -183,7 +183,11 @@ export function register(route) {
     const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
     // parseCookies has already decoded it (review: not twice).
     const back = staffAppPage(from) ?? '/workshop';
-    redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE), ...devSignedOutExpired()]);
+    // A removed workshop computer's old key goes: signing in again is the
+    // way back to the Owner's pages there (tills-list, the review, 29 Oct).
+    const removedHere = await runWithShop(login.shop_id, () => removedWorkshopHere(req));
+    redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE), ...devSignedOutExpired(),
+      ...(removedHere ? [workshopCookieExpired(req)] : [])]);
   });
 
   route('POST', '/api/auth/logout', async (req, res) => {

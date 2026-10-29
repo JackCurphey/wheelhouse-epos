@@ -11,6 +11,7 @@ import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { registerTill, tillRequest } from './helpers/till.js';
 
 let server;
 const shops = [];
@@ -137,9 +138,9 @@ test('removing switches it off: the browser stops being it, the number stays in 
   assert.deepEqual((await call(owner.cookie, '/api/till-setup')).body.sites[0].taken, [1], 'B1 stays in use');
   assert.equal((await post(owner.cookie, `/api/till-setup/tills/${t.id}/remove`)).status, 404, 'already off');
   assert.equal((await call(owner.cookie, `/api/till-setup/tills/${t.id}`, { method: 'PUT', body: { name: 'A' } })).status, 404);
-  assert.notEqual((await w.b.send('/api/till-setup')).body.thisWorkshop, null);
+  assert.notEqual((await w.b.send('/api/till-checkin')).body.workshop, null);
   assert.deepEqual((await post(owner.cookie, `/api/till-setup/workshop/${w.id}/remove`)).body, { id: w.id, active: false });
-  assert.equal((await w.b.send('/api/till-setup')).body.thisWorkshop, null, 'that computer is no longer a workshop computer');
+  assert.equal((await w.b.send('/api/till-checkin')).body.workshop, null, 'that computer is no longer a workshop computer');
   assert.equal((await post(owner.cookie, `/api/till-setup/workshop/${w.id}/remove`)).status, 404);
   assert.deepEqual((await call(owner.cookie, '/api/till-setup/list')).body, { tills: [], workshopComputers: [] });
   const other = await shop();
@@ -159,4 +160,76 @@ test('nobody but the Owner checked in on that browser can rename or remove there
   const removed = await t.b.send(`/api/till-setup/tills/${t.id}/remove`, { method: 'POST' });
   assert.deepEqual([removed.status, removed.body.code], [403, 'not_owner_checked_in']);
   assert.deepEqual(await row(owner, 'SELECT name, active FROM tills WHERE id = ?', t.id), { name: null, active: true });
+});
+
+// The review, 29 Oct: what a removed till or workshop computer can still do.
+const checkIn = async (b, pin) => {
+  const res = await b.send('/api/till-checkin', { method: 'POST', body: { pin } });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  return res.body.serving;
+};
+
+test('a removed workshop computer still signed in as the Owner is not the Owner: Owner pages refuse it (review 1)', async () => {
+  const owner = await shop();
+  const w = await makeWorkshop(owner);
+  // With nobody working it already counts as staff (workshop-computer design 9).
+  assert.equal((await w.b.send('/api/till-setup/list')).status, 403);
+  assert.equal((await post(owner.cookie, `/api/till-setup/workshop/${w.id}/remove`)).status, 200);
+  // Removed, the browser still carries its old key: still not the Owner.
+  const refused = await w.b.send('/api/till-setup/list');
+  assert.deepEqual([refused.status, refused.body.code], [403, 'owner_only']);
+  assert.equal((await w.b.send('/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 100 } })).status, 403);
+  assert.equal((await w.b.send('/api/auth/me')).body.isOwner, false);
+  // Another browser of the Owner's is the Owner as before.
+  assert.equal((await call(owner.cookie, '/api/till-setup/list')).status, 200);
+});
+
+test('the older switch-off route follows the same rules: not while someone else is checked in, and not twice (review 2)', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const t = await makeTill(owner, 1);
+  await checkIn(t.b, jo.pin);
+  const refused = await t.b.send(`/api/tills/${t.id}/deactivate`, { method: 'POST' });
+  assert.deepEqual([refused.status, refused.body.code], [403, 'not_owner_checked_in']);
+  assert.equal((await row(owner, 'SELECT active FROM tills WHERE id = ?', t.id)).active, true);
+  assert.deepEqual((await post(owner.cookie, `/api/tills/${t.id}/deactivate`)).body, { id: t.id, active: false });
+  assert.equal((await post(owner.cookie, `/api/tills/${t.id}/deactivate`)).status, 404, 'already off');
+});
+
+test('after a remove the till\'s offline key is refused, and check-ins made there no longer count', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  // A till registered with an offline key.
+  const offline = await registerTill(server.baseUrl, owner, { siteCode: 'B', number: 5 });
+  const snapshot = () => tillRequest(server.baseUrl, owner.shop.slug, offline.token, '/snapshot');
+  assert.equal((await snapshot()).status, 200);
+  assert.equal((await post(owner.cookie, `/api/till-setup/tills/${offline.till.id}/remove`)).status, 200);
+  assert.equal((await snapshot()).status, 401);
+  // An open check-in on a till, and on a workshop computer.
+  const t = await makeTill(owner, 1);
+  const w = await makeWorkshop(owner);
+  await checkIn(t.b, jo.pin);
+  await checkIn(w.b, jo.pin);
+  assert.equal((await t.b.send('/api/till-checkin')).body.serving?.name, 'Jo Taylor');
+  assert.equal((await w.b.send('/api/till-checkin')).body.serving?.name, 'Jo Taylor');
+  await post(owner.cookie, `/api/till-setup/tills/${t.id}/remove`);
+  await post(owner.cookie, `/api/till-setup/workshop/${w.id}/remove`);
+  assert.equal((await t.b.send('/api/till-checkin')).body.serving, null);
+  assert.equal((await w.b.send('/api/till-checkin')).body.serving, null);
+});
+
+test('with trust PIN on, a tap on a removed workshop computer is refused', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  assert.equal((await call(owner.cookie, '/api/signing-in-settings', { method: 'PUT', body: { trustPin: true } })).status, 200);
+  const w = await makeWorkshop(owner);
+  const serving = await checkIn(w.b, jo.pin);
+  assert.equal((await w.b.send('/api/till-checkin/end', { method: 'POST', body: {} })).status, 200);
+  // Jo typed her PIN here today, so a tap works while it is a workshop computer.
+  assert.equal((await w.b.send('/api/till-checkin/tap', { method: 'POST', body: { employeeId: serving.id } })).status, 201);
+  assert.equal((await w.b.send('/api/till-checkin/end', { method: 'POST', body: {} })).status, 200);
+  await post(owner.cookie, `/api/till-setup/workshop/${w.id}/remove`);
+  const tapped = await w.b.send('/api/till-checkin/tap', { method: 'POST', body: { employeeId: serving.id } });
+  assert.ok(tapped.status >= 400 && tapped.status < 500, `refused: ${tapped.status}`);
+  assert.equal((await w.b.send('/api/till-checkin')).body.serving, null);
 });
