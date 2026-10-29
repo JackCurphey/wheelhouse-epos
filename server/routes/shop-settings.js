@@ -165,4 +165,33 @@ export function register(route) {
     const row = await db.prepare('UPDATE shops SET float_pence = ? WHERE id = ? RETURNING float_pence').get(body.floatPence, shopId);
     sendJson(res, 200, { floatPence: row.float_pence });
   });
+
+  // Settings › Stockroom › Stock adjustments (st-setting-adjust; stock control
+  // decision 6; openspec/changes/stock-warnings-on-today): an adjustment worth
+  // more than this, at cost, shows on Today. Whole pence, null until set, on
+  // the shop's row like the float. Anyone signed in reads it; the Owner sets it.
+  route('GET', '/api/stockroom-settings', async (req, res, params, query, afterRelease, shopId) => {
+    const row = await db.prepare('SELECT stock_adjust_today_over_pence FROM shops WHERE id = ?').get(shopId);
+    sendJson(res, 200, { adjustTodayOverPence: row.stock_adjust_today_over_pence });
+  });
+
+  // The body is read before the lock, and the shop's row is read FOR UPDATE
+  // in a transaction before it's written (settings-saves-dont-clash design 1
+  // and 2), as the other settings saves are.
+  route('PUT', '/api/stockroom-settings', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    if (!isPence(body?.adjustTodayOverPence)) return badRequest(res, 'The amount must be pounds and pence, up to £100,000');
+    let row;
+    await db.exec('BEGIN');
+    try {
+      await db.prepare('SELECT id FROM shops WHERE id = ? FOR UPDATE').get(shopId);
+      row = await db.prepare('UPDATE shops SET stock_adjust_today_over_pence = ? WHERE id = ? RETURNING stock_adjust_today_over_pence').get(body.adjustTodayOverPence, shopId);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, { adjustTodayOverPence: row.stock_adjust_today_over_pence });
+  });
 }

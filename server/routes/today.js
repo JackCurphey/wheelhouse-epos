@@ -67,6 +67,33 @@ async function uncollectedBikes() {
   }));
 }
 
+// Products below zero (st-today-below; stock control decision 9): one line,
+// how many, counted as the below-zero stock take counts them (active
+// products under 0); and a below-zero count still counting, which "Count
+// them" opens rather than starting a second (stock-warnings-on-today design 7).
+async function belowZero() {
+  const { n } = await prepare('SELECT count(*)::int AS n FROM products WHERE stock_qty < 0 AND active = 1').get();
+  if (!n) return [];
+  const take = await prepare("SELECT id FROM stock_takes WHERE kind = 'below_zero' AND status = 'counting' ORDER BY id DESC LIMIT 1").get();
+  return [{ kind: 'below_zero', count: n, takeId: take?.id ?? null }];
+}
+
+// Adjustments worth more than the shop's amount when they were made, not yet
+// seen (st-today-adjust; stock control decision 6): oldest first, each with
+// its product, change, value at cost, reason, note, who and when.
+const ADJUSTMENT_TO_SEE = "m.type = 'adjustment' AND m.to_see AND m.seen_at IS NULL";
+async function adjustmentsToSee() {
+  const rows = await prepare(
+    `SELECT m.id, m.product_id, p.name AS product_name, m.change_qty, m.value_pence, m.reason, m.note, l.name AS by_name, m.created_at
+       FROM stock_movements m JOIN products p ON p.id = m.product_id LEFT JOIN logins l ON l.id = m.login_id
+      WHERE ${ADJUSTMENT_TO_SEE} ORDER BY m.created_at, m.id`
+  ).all();
+  return rows.map((r) => ({
+    kind: 'stock_adjusted', movementId: r.id, productId: r.product_id, productName: r.product_name, change: r.change_qty,
+    valuePence: r.value_pence, reason: r.reason, note: r.note || '', byName: r.by_name ?? null, at: iso(r.created_at),
+  }));
+}
+
 // Who's in (op-today, op-today-late; opening the shop decisions 5 and 6;
 // whos-in-and-first-pin): everyone who checked in by PIN today, ended or not
 // (no check-out), by their first check-in; then each mechanic with free time
@@ -145,7 +172,22 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies())] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await belowZero()), ...(await adjustmentsToSee())] });
+  });
+
+  // Seen on a big stock adjustment (st-today-adjust; stock control decision
+  // 6): one click, who and when. Owner only, as Needs attention, until roles;
+  // the check and the record in one statement, as the float's Seen.
+  route('POST', '/api/stock-adjustments/:id/seen', async (req, res, params) => {
+    const ctx = await currentSession(req);
+    if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner can mark a stock adjustment seen", code: 'owner_only' });
+    const id = Number(params.id);
+    if (!Number.isInteger(id)) return sendJson(res, 404, { error: 'Adjustment not found' });
+    const marked = await prepare(
+      `UPDATE stock_movements m SET seen_at = now(), seen_by_login_id = ? WHERE m.id = ? AND ${ADJUSTMENT_TO_SEE} RETURNING m.id`
+    ).get(ctx.login.id, id);
+    if (!marked) return sendJson(res, 409, { error: 'That adjustment isn’t waiting to be seen.', code: 'not_to_see' });
+    sendJson(res, 200, { ok: true });
   });
 
   // Contacted on an uncollected bike's line (cp-today-uncollected; H4): who and
