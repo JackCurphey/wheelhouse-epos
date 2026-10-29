@@ -93,6 +93,12 @@ safe to run twice:
 10. **Today's short float** still goes to Needs attention against the full
     expected figure (`op-today-two`); an over one only once Wednesday is
     closed (decision 8 H1, unchanged).
+11. **A day nobody closed's window** (money review, 29 Oct): from its float
+    check up to the count, cash taken out in it counts whatever its date,
+    plus any added at its Close it; the Owner's look at closing never starts
+    it (it runs from the previous close instead). Adding cash taken out for
+    it works the morning count's expected figure out again, so Today's
+    short float follows.
 
 ## Screens (second pull request)
 

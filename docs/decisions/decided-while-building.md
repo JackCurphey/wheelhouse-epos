@@ -1658,6 +1658,30 @@ silent:
    (`op-today-two`): short against the float plus Wednesday's cash. An over
    one shows only once Wednesday is closed (opening the shop 8 H1,
    unchanged).
+10. **Cash taken out between Wednesday's float check and Thursday's count
+    is Wednesday's**, whatever date it carries (the money review, 29 Oct):
+    £20.00 taken out early on Thursday, before the count, wasn't in the
+    count, so it comes off Wednesday's expected cash, not Thursday's.
+    Tonight's own close still takes only today's, after this morning's
+    check.
+11. **The Owner's look at closing never starts a day's cash** when that day
+    then isn't closed (the money review): the next morning's figure runs
+    from the previous close, since the day's cash before the look was in
+    the drawer. A look made at the till in the morning still starts it
+    (27 Oct answer 9).
+12. **Cash taken out added at Close it updates this morning's short or
+    over float on Today**: the morning count's "should have" figure is
+    worked out again, as the close works out its own, so a forgotten
+    Wednesday paid-out that explains a short count clears the line.
+    *Pattern:* the close checking its expected figure again before closing
+    (close-the-day design 7).
+13. **Decided here, for Jack to overrule: Thursday's first count decides
+    where Thursday's sales go.** Everything sold before the morning count
+    is Wednesday's, so if nobody checks in to take payments until 16:30,
+    all of Thursday's daytime sales land in Wednesday's report. The cash
+    is right (it was in the 16:30 count), but the day's takings move with
+    it. Jack can choose instead to split the takings by date and the cash
+    by the count.
 
 ### 29 Oct 2026: a day nobody closed, the screens (`openspec/changes/unclosed-day`, `op-float-check-unclosed`, `op-today-unclosed`, `op-close-yesterday`, `op-today-two`)
 
