@@ -1667,6 +1667,24 @@ silent:
    the server who is signed in as soon as it loads, so that window is
    short; not closed further.
 
+### 29 Oct 2026: To return to [Supplier], with Returned (`openspec/changes/to-return`, `rs-hub`; WP-2.3; receiving decisions 4, 9 and 10)
+
+1. **Items set aside with no supplier picked** (a delivery received not on
+   an order, with no supplier chosen) have their own section headed "To
+   return", after the suppliers'. *Pattern:* the drawn "To return to
+   [Supplier]" section.
+2. **One line for each time an item was set aside**, not one per product:
+   two deliveries' damaged pads are two lines, each with its own delivery's
+   day, as drawn ("from the delivery on [date]").
+3. **Returned is one press, with no "are you sure?" and no Undo.** Nothing
+   about stock changes (the item was never in stock), so a mistaken press
+   only takes a line off the list. *Pattern:* Seen on Today.
+4. **The supplier waiting longest comes first**, then the next; each
+   supplier's items oldest first.
+5. **The day reads "Tue 1 Sep"**, as Deliveries and orders writes its days.
+6. **Only the Owner sees and uses it**, as with orders, until roles bring
+   "Can order stock" (receiving decision 4). Staff see the hub as before.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
