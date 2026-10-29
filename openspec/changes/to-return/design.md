@@ -17,8 +17,9 @@ stock", as orders), until roles bring "Can order stock".
   Every damaged or wrong item not yet returned (missing items are still to
   come on their order, never returned). The supplier is the order's, or the
   one picked when it wasn't on an order; items with none are grouped with
-  `supplierId: null`, `supplierName: null`. Suppliers by name, the
-  no-supplier group last; items oldest first. `kind` is `damaged` or
+  `supplierId: null`, `supplierName: null`. The supplier whose
+  oldest item has waited longest first, the no-supplier group last; items
+  oldest first. `kind` is `damaged` or
   `wrong_item`; `deliveredAt` is when it was booked in.
 - `POST /api/deliveries/to-return/:id/returned` → 200 `{ id, returnedAt }`.
   `BEGIN`, the row `SELECT … FOR UPDATE` while it is damaged or wrong and

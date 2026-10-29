@@ -12,6 +12,8 @@ PUT /api/purchase-orders/:id
 POST /api/purchase-orders/:id/mark-ordered
 POST /api/purchase-orders/:id/cancel
 POST /api/purchase-orders/:id/receive
+GET /api/deliveries/to-return
+POST /api/deliveries/to-return/:id/returned
 POST /api/deliveries/receive
 GET /api/shop-details
 PUT /api/shop-details
