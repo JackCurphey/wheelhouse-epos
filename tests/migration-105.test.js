@@ -1,6 +1,6 @@
-// Migration 105 (openspec/changes/to-return, design 1): when an item set
-// aside at booking in was returned, and by whom. Run from empty, then onto a
-// database that already has a problem recorded, then again.
+// Migration 105 (openspec/changes/workshop-lock-server, design 1): which
+// workshop computer a signed-in session belongs to. Run from empty, then onto
+// a database that already has a session and a workshop computer, then again.
 import '../server/load-env.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +13,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '105_returned_items.sql';
+const FILE = '105_session_workshop_computer.sql';
 const LATER = readdirSync(path.join(ROOT, 'server/migrations')).filter((f) => f.endsWith('.sql') && f >= FILE);
 
 function adminUrlOrSkip(t) {
@@ -32,7 +32,7 @@ async function withClient(url, fn) {
 }
 const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8', stdio: 'pipe' });
 
-test('105 records when an item set aside was returned and by whom, none for older ones', async (t) => {
+test('105 records which workshop computer a session belongs to, none for older sessions', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
   const name = `epos_mig105_${process.pid}`;
@@ -52,26 +52,23 @@ test('105 records when an item set aside was returned and by whom, none for olde
     const { rows: [shop] } = await c.query("INSERT INTO shops (name, slug) VALUES ('North Street Cycles', 'north-street-cycles') RETURNING id");
     const { rows: [jack] } = await c.query("INSERT INTO logins (shop_id, name, email, password_hash, is_owner) VALUES ($1, 'Jack Lewis', 'jack@example.test', 'x', true) RETURNING id", [shop.id]);
     await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shop.id)]);
-    const { rows: [product] } = await c.query("INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES ('[Supplier code]', '[Product]', 'Parts', 28, 28, 0, now()) RETURNING id");
-    // A problem from before 105: damaged, not on an order.
-    const { rows: [old] } = await c.query("INSERT INTO delivery_problems (product_id, kind, qty) VALUES ($1, 'damaged', 1) RETURNING id", [product.id]);
-    ids = { shop: shop.id, jack: jack.id, old: old.id };
+    const { rows: [site] } = await c.query("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id");
+    const { rows: [work] } = await c.query("INSERT INTO workshop_computers (site_id, browser_token_hash) VALUES ($1, 'w1') RETURNING id", [site.id]);
+    // A session from before 105.
+    await c.query("INSERT INTO sessions (token, login_id, expires_at) VALUES ('s1', $1, now() + interval '1 day')", [jack.id]);
+    ids = { shop: shop.id, work: work.id };
     await c.query('DELETE FROM schema_migrations WHERE filename = ANY($1)', [LATER]);
   });
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`));
   await withClient(url.href, async (c) => {
-    await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.shop)]);
-    assert.deepEqual((await c.query('SELECT returned_at, returned_by_login_id FROM delivery_problems WHERE id = $1', [ids.old])).rows[0], { returned_at: null, returned_by_login_id: null });
-    await c.query("UPDATE delivery_problems SET returned_at = '2026-09-01T10:00:00Z', returned_by_login_id = $1 WHERE id = $2", [ids.jack, ids.old]);
-    await assert.rejects(c.query('UPDATE delivery_problems SET returned_by_login_id = 999999 WHERE id = $1', [ids.old]), /foreign key/i);
+    assert.equal((await c.query("SELECT workshop_computer_id FROM sessions WHERE token = 's1'")).rows[0].workshop_computer_id, null);
+    await c.query("UPDATE sessions SET workshop_computer_id = $1 WHERE token = 's1'", [ids.work]);
+    await assert.rejects(c.query("UPDATE sessions SET workshop_computer_id = 999999 WHERE token = 's1'"), /foreign key/i);
   });
   // Run again on a database that already has it: it runs, and everything stays.
   await withClient(url.href, (c) => c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]));
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`));
   await withClient(url.href, async (c) => {
-    await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.shop)]);
-    const row = (await c.query('SELECT returned_at, returned_by_login_id FROM delivery_problems WHERE id = $1', [ids.old])).rows[0];
-    assert.equal(row.returned_by_login_id, ids.jack);
-    assert.equal(row.returned_at.toISOString(), '2026-09-01T10:00:00.000Z');
+    assert.equal((await c.query("SELECT workshop_computer_id FROM sessions WHERE token = 's1'")).rows[0].workshop_computer_id, ids.work);
   });
 });

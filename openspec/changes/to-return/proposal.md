@@ -16,7 +16,7 @@ roles, as orders already are. Slice B's remaining pieces in Jack's lane wait
 on Mark or on Jack (see `decided-while-building.md`, 29 Oct, To return
 entry 1).
 
-**Risky area:** a migration (105, when an item was returned and by whom). No
+**Risky area:** a migration (107, when an item was returned and by whom). No
 money, stock count, sign-in or public route: returned items were never in
 stock, and marking one returned changes no stock.
 
@@ -29,7 +29,7 @@ stock, and marking one returned changes no stock.
 - **Returned** marks it sent back, who and when, and it leaves the list.
 - For the Owner only, as orders are (receiving decision 4, until "Can order
   stock"); Staff see the hub as now, with its drawn note.
-- Migration 105: `delivery_problems.returned_at` and `returned_by_login_id`.
+- Migration 107: `delivery_problems.returned_at` and `returned_by_login_id`.
 - Server: `GET /api/deliveries/to-return`, `POST /api/deliveries/to-return/:id/returned`.
 
 ## Drawings and decisions

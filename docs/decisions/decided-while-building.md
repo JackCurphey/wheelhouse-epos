@@ -1617,6 +1617,56 @@ silent:
    straight away. The Remove pop-up's words are unchanged, as drawn.
    *Pattern:* a mechanic working on a workshop computer.
 
+### 29 Oct 2026: the workshop computer's Owner lock, held on the server (`openspec/changes/workshop-lock-server`; 29 Oct answer 4; WP-1.7 task 3.6; walk-through 8 decision 3)
+
+1. **The lock belongs to the sign-in, not the browser's cookie.** A signed-in
+   session used on a workshop computer (set up there, or its first request
+   there) is recorded on the server as that computer's. From then on it
+   counts as the Owner only while the Owner is checked in by PIN on that
+   same workshop computer. Deleting or changing the workshop cookie, or
+   sending a till's key, can only lock it further. *Pattern:* the removed
+   workshop computer (Tills list entry 9).
+2. **Decided here, for Jack to overrule: with the cookie gone, the Owner's
+   PIN doesn't open it either.** A browser whose workshop cookie was deleted
+   can't make a check-in on the workshop computer, so its Owner pages stay
+   shut, even if the Owner types their PIN there, until someone signs out
+   on it. Signing out and in again is the way back, as for a removed
+   workshop computer. Stricter than needed; the other way would let a
+   cookie-less browser keep the Owner's pages with no 10-minute limit.
+3. **The screen isn't changed.** With the cookie deleted the browser shows
+   the ordinary app, not Enter your PIN, but every Owner page and route is
+   refused there. Showing the PIN screen again would need the browser to
+   carry on as the workshop computer, a bigger change; not built.
+4. **Local development's automatic sign-in** (off unless asked, refused in
+   production and on the hosted copy) has no stored session, so there the
+   lock still follows the cookie.
+5. **Staff sign-ins are recorded too** (review of #578): the same rule
+   holds every sign-in's own PIN and settings on a workshop computer, which
+   staff sign-ins have as well. With the cookie deleted, nobody there can
+   get the sign-in a new PIN (the Owner's or a staff member's) unless that
+   sign-in's own person is checked in by PIN on that workshop computer.
+6. **Each test browser now signs in on its own**, as each real computer
+   would: the tests that shared one Owner session between a workshop
+   computer and an ordinary browser now give each browser its own.
+7. **A workshop computer keeps no remembered WorkOS session** (review of
+   #578). WorkOS remembers who signed in and may offer a one-press Continue,
+   which would give whoever is at the computer a fresh Owner sign-in. So
+   when a WorkOS sign-in becomes a workshop computer's (at setup, or its
+   first request there), Wheelhouse ends that WorkOS session at WorkOS from
+   the server, and stays signed in itself. Signing in again at that
+   computer then needs the person's own WorkOS sign-in. **For Jack:**
+   WorkOS's reference says the revoke ends the user's session, but doesn't
+   say in so many words that its sign-in page stops offering Continue;
+   worth checking once on the Staging account. If WorkOS can't be reached,
+   the server logs it and tries again on a later request from that sign-in,
+   at most once a minute (re-review of #578). The ending runs on its own,
+   so nobody waits for WorkOS; WorkOS answering that the session is
+   already gone (any refusal but "too many requests") counts as ended.
+8. **A sign-in from before this change**, already on a workshop computer,
+   is recorded at its first request with the workshop key. The screen asks
+   the server who is signed in as soon as it loads, so that window is
+   short; not closed further.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
