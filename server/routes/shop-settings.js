@@ -181,7 +181,8 @@ export function register(route) {
   route('PUT', '/api/stockroom-settings', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
-    if (!isPence(body?.adjustTodayOverPence)) return badRequest(res, 'The amount must be pounds and pence, up to £100,000');
+    // null clears it, back to not set (the box emptied; review, 29 Oct).
+    if (body?.adjustTodayOverPence !== null && !isPence(body?.adjustTodayOverPence)) return badRequest(res, 'The amount must be pounds and pence, up to £100,000');
     let row;
     await db.exec('BEGIN');
     try {

@@ -66,7 +66,7 @@ test('the Owner sets the amount in whole pence; until then it is not set', async
   const saved = await setAmount(owner, 5000);
   assert.deepEqual([saved.status, saved.body], [200, { adjustTodayOverPence: 5000 }]);
   assert.deepEqual((await call(owner, SETTINGS)).body, { adjustTodayOverPence: 5000 });
-  for (const bad of [12.5, -1, '5000', null, true, 10_000_001]) {
+  for (const bad of [12.5, -1, '5000', undefined, true, 10_000_001]) {
     const res = await setAmount(owner, bad);
     assert.equal(res.status, 400, `${JSON.stringify(bad)}: ${JSON.stringify(res.body)}`);
   }
@@ -76,6 +76,30 @@ test('the Owner sets the amount in whole pence; until then it is not set', async
   const refused = await setAmount(owner.jo, 100);
   assert.deepEqual([refused.status, refused.body.code], [403, 'owner_only']);
   assert.deepEqual((await call(owner.jo, SETTINGS)).body, { adjustTodayOverPence: 10_000_000 });
+});
+
+// Review, 29 Oct: the box emptied clears the amount, back to not set.
+test('the Owner clears the amount with null; then nothing goes on Today', async () => {
+  const owner = await shop({ over: 1000 });
+  const cleared = await setAmount(owner, null);
+  assert.deepEqual([cleared.status, cleared.body], [200, { adjustTodayOverPence: null }]);
+  assert.deepEqual((await call(owner, SETTINGS)).body, { adjustTodayOverPence: null });
+  const pads = await product(owner, { cost: 14 });
+  await adjust(owner, pads.id, { change: -6, reason: 'damaged' });
+  assert.deepEqual(await adjusted(owner), []);
+  assert.equal((await setAmount(owner.jo, null)).status, 403, 'still the Owner only');
+});
+
+// Review, 29 Oct: a negative cost (the product form saves one) still adjusts;
+// its value is the size of the cost, so it is never below nothing.
+test('a product with a negative cost adjusts, its value counted at the size of the cost', async () => {
+  const unset = await shop();
+  const p = await product(unset, { cost: -14 });
+  await adjust(unset, p.id, { change: -1, reason: 'damaged' });
+  const owner = await shop({ over: 1000 });
+  const pads = await product(owner, { cost: -14 });
+  await adjust(owner, pads.id, { change: -1, reason: 'damaged' });
+  assert.deepEqual((await adjusted(owner)).map((l) => l.valuePence), [1400]);
 });
 
 test('saves at once each write the amount whole', async () => {
