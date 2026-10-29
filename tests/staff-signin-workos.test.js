@@ -321,25 +321,42 @@ test('provider=google asks WorkOS for Google; anything else for its own page; fr
 });
 
 // The way back for a removed workshop computer (openspec/changes/tills-list,
-// the review, 29 Oct): its old key keeps the Owner's sign-in from counting as
-// the Owner there, and signing in again clears the key. A workshop computer
-// still on keeps it.
-test('signing in again on a removed workshop computer clears its old key, and the Owner is the Owner there again', async () => {
+// the reviews, 29 Oct): its old key keeps the Owner's sign-in from counting
+// as the Owner there. Signing in leaves the key (WorkOS may offer a one-press
+// Continue to whoever is at the computer); signing out clears it, and ends
+// the WorkOS session, so getting back in needs the Owner's own sign-in.
+test('a removed workshop computer: signing in leaves it staff; signing out clears its key, and the next sign-in is the Owner', async () => {
   const { email, cookie: ownerCookie } = await owner();
   const post = (cookie, path, body) => fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const site = await (await post(ownerCookie, '/api/sites', { name: 'Bolton', code: 'B' })).json();
-  const keyOf = async (res) => cookieValue(res.headers.getSetCookie(), 'wh_workshop');
+  const keyOf = (res) => cookieValue(res.headers.getSetCookie(), 'wh_workshop');
   const stays = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
   const gone = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
-  const [stayKey, goneKey] = [await keyOf(stays), await keyOf(gone)];
+  const [stayKey, goneKey] = [keyOf(stays), keyOf(gone)];
   assert.ok(stayKey && goneKey);
   assert.equal((await post(ownerCookie, `/api/till-setup/workshop/${(await gone.json()).workshop.id}/remove`)).status, 200);
-  // Still on: signing in leaves the key.
+  const touchesKey = (cookies) => cookies.some((c) => c.startsWith('wh_workshop='));
+
+  // Signing in on the removed computer leaves its key: still staff there.
+  const signedIn = await signIn(email, { cookie: goneKey });
+  assert.ok(signedIn.session);
+  assert.ok(!touchesKey(signedIn.cookies), signedIn.cookies.join(' | '));
+  assert.equal((await me(`${signedIn.session}; ${goneKey}`)).body.isOwner, false);
+
+  // Signing out there clears the key; the next sign-in is the Owner.
+  const out = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: `${signedIn.session}; ${goneKey}` } });
+  assert.equal(out.status, 200);
+  assert.ok(out.headers.getSetCookie().some((c) => /^wh_workshop=; .*Max-Age=0/.test(c)), out.headers.getSetCookie().join(' | '));
+  const back = await signIn(email);
+  assert.equal((await me(back.session)).body.isOwner, true);
+
+  // On a workshop computer still on, and on an ordinary browser, signing in and out leave the key as before.
   const onStill = await signIn(email, { cookie: stayKey });
-  assert.ok(!onStill.cookies.some((c) => c.startsWith('wh_workshop=')), onStill.cookies.join(' | '));
-  // Removed: the old key is refused the Owner's pages, and a fresh sign-in clears it.
-  assert.equal((await me(`${onStill.session}; ${goneKey}`)).body.isOwner, false);
-  const again = await signIn(email, { cookie: goneKey });
-  assert.ok(again.cookies.some((c) => /^wh_workshop=; .*Max-Age=0/.test(c)), again.cookies.join(' | '));
-  assert.equal((await me(again.session)).body.isOwner, true);
+  assert.ok(!touchesKey(onStill.cookies));
+  const outStill = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: `${onStill.session}; ${stayKey}` } });
+  assert.ok(!touchesKey(outStill.headers.getSetCookie()), outStill.headers.getSetCookie().join(' | '));
+  const plain = await signIn(email);
+  const outPlain = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: plain.session } });
+  assert.equal(outPlain.status, 200);
+  assert.ok(!touchesKey(outPlain.headers.getSetCookie()));
 });

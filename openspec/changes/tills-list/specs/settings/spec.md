@@ -47,4 +47,4 @@ Remove SHALL ask first (`set-till-remove`): "Remove Till B1?", "Bolton", "This c
 
 #### Scenario: A removed workshop computer still signed in as the Owner
 - **WHEN** the workshop computer Jack Lewis removed is still signed in as him
-- **THEN** it gets no Owner pages until he signs in again there
+- **THEN** it gets no Owner pages, even after signing in again there, until he signs out there and signs back in

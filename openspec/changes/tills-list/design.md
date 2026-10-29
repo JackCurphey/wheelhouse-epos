@@ -51,9 +51,13 @@ removed, its browser still carries the old key; read as "no workshop
 computer", that browser would get every Owner page with no PIN. So a key
 that points at one of this shop's removed workshop computers counts as
 **not the Owner**: Owner-only routes refuse it, as when a mechanic is
-working. Signing in again on that browser (the WorkOS callback) clears the
-old key, and the Owner is the Owner there again; nobody is locked out for
-good. A removed till changes nothing here (a till's key never changed who
+working. Signing in there leaves the old key: WorkOS remembers the
+Owner's session and may offer a one-press Continue to whoever is at the
+computer (second review, 29 Oct). Signing out there (`POST /api/auth/logout`)
+clears it, and also ends the WorkOS session, so getting back in needs the
+Owner's own sign-in; then the Owner is the Owner there again, and nobody is
+locked out for good. Signing out anywhere else leaves any other key as
+before. A removed till changes nothing here (a till's key never changed who
 counts as the Owner). Stricter than needed until Jack says otherwise
 (`decided-while-building.md`, the Tills list, entry 9).
 

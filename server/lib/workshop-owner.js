@@ -5,7 +5,7 @@
 // the person checked in by PIN is the Owner (giverHere's rule in
 // routes/till-pins.js): with nobody working, someone else working, or the
 // Owner gone idle, it counts as staff; on one that has been removed, too, until
-// someone signs in again (tills-list). Tills and other browsers are unchanged.
+// someone signs out there (tills-list). Tills and other browsers are unchanged.
 import { workshopCookieToken, thisWorkshop, removedWorkshopHere } from '../till/this-workshop.js';
 import { thisTill } from '../till/this-till.js';
 import { currentCheckin, isTheOwner } from '../routes/till-pins.js';
@@ -29,8 +29,8 @@ async function decide(req) {
   // A till's key wins should a browser carry both (workshop-computer design 1).
   if (await thisTill(req)) return true;
   // A removed workshop computer stays closed, not open: its Owner sign-in
-  // isn't the Owner until someone signs in again there, which clears the old
-  // key (routes/auth.js; tills-list design 5, the review, 29 Oct).
+  // isn't the Owner until someone signs out there, which clears the old key
+  // (routes/auth.js; tills-list design 5, the reviews, 29 Oct).
   if (!(await thisWorkshop(req))) return !(await removedWorkshopHere(req));
   const mine = await currentCheckin(req);
   return Boolean(mine) && (await isTheOwner(mine));
