@@ -282,3 +282,33 @@ test('a changed PIN takes someone off the names until they type the new one', as
   await switchOff(w);
   assert.equal((await tap(w, joId)).status, 201);
 });
+
+// The Working pills (openspec/changes/working-pills; workshop-working-pills):
+// a pill is the same tap, made while someone is working.
+test('the check-in says whether trust PIN is on; a pill takes over from whoever is working, and a refused one leaves them', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  // The Owner with a PIN, so a team member a pill could name.
+  await newPin(owner.cookie);
+  const w = await workshop(owner);
+  assert.equal((await checkin(w)).trustPin, false);
+  await put(owner.cookie, { trustPin: true });
+  assert.equal((await checkin(w)).trustPin, true);
+  const joId = (await checkIn(w, jo.pin)).id;
+  const alexId = (await checkIn(w, alex.pin)).id;
+  const alexToken = w.jar.get('wh_till_checkin');
+  // Jo taps her pill while Alex is working: Jo is working, Alex's check-in has ended.
+  const swapped = await tap(w, joId);
+  assert.equal(swapped.status, 201);
+  assert.deepEqual((await checkin(w)).serving, { id: joId, name: 'Jo Taylor' });
+  assert.ok((await row(owner, 'SELECT ended_at FROM pin_checkins WHERE token_hash = ?', hashLinkCode(alexToken))).ended_at, 'Alex’s check-in ended');
+  // The Owner is never a pill to tap: refused, and Jo stays.
+  const ownerId = (await row(owner, 'SELECT employee_id FROM logins WHERE id = ?', owner.loginId)).employee_id;
+  const refused = await tap(w, ownerId);
+  assert.deepEqual([refused.status, refused.body.code], [403, 'not_typed_here']);
+  assert.deepEqual((await checkin(w)).serving, { id: joId, name: 'Jo Taylor' });
+  // Alex's pill takes it back.
+  assert.equal((await tap(w, alexId)).status, 201);
+  assert.equal((await checkin(w)).serving.name, 'Alex Morgan');
+});

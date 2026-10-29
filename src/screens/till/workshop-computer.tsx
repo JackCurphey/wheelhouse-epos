@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { User } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
-import { useCheckinActions, type CheckedIn, type TapName, type ThisWorkshop } from '@/lib/till-checkin.ts';
+import { useQueryClient } from '@tanstack/react-query';
+import { CHECKIN_QUERY, useCheckinActions, type CheckedIn, type TapName, type ThisWorkshop } from '@/lib/till-checkin.ts';
 import { PinCheckin } from './pin-checkin.tsx';
 
 /**
@@ -23,7 +24,8 @@ import { PinCheckin } from './pin-checkin.tsx';
  * comes first (openspec/changes/trust-pin-workshop).
  */
 export function WorkshopPinScreen({ workshop, shopName, names = [] }: { workshop: ThisWorkshop; shopName: string; names?: TapName[] }) {
-  const [askPin, setAskPin] = useState(false);
+  // "Someone else" on the Working pills asks for the pad straight away (working-pills design 4).
+  const [askPin, setAskPin] = useState(takePadNext);
   const tapping = names.length > 0 && !askPin;
   return (
     <div className="flex min-h-screen flex-col bg-[var(--wh-bg)] text-[var(--wh-ink)]">
@@ -82,6 +84,72 @@ function WhosWorking({ names, onSomeoneElse }: { names: TapName[]; onSomeoneElse
           </button>
         ))}
         <Button type="button" className="w-full" onClick={onSomeoneElse}>Someone else — enter your PIN</Button>
+      </div>
+    </div>
+  );
+}
+
+// Set by "Someone else" on the Working pills, read once by the PIN screen that follows.
+let padNext = false;
+function takePadNext() {
+  const next = padNext;
+  padNext = false;
+  return next;
+}
+
+const pillClass = (on: boolean) => `inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-size-13 font-semibold whitespace-nowrap md:px-4 md:text-sm ${on
+  ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]'
+  : 'border-[var(--wh-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]'}`;
+
+/**
+ * The Working pills (workshop-working-pills in signin.mjs, workPill and
+ * workingPills; roles and switches 9; openspec/changes/working-pills): with
+ * trust PIN on, at the bottom of every page in place of the Working bar.
+ * Today's people as pills, the person working highlighted (added if they
+ * aren't a name to tap, as the Owner never is), then "Someone else". A pill
+ * is the same tap as "Who's working?", on the same page; "Someone else" ends
+ * the check-in and shows the pad.
+ */
+export function WorkingPills({ working, names }: { working: CheckedIn; names: TapName[] }) {
+  const { tapIn, switchServing } = useCheckinActions();
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const people = names.some((n) => n.id === working.id) ? names : [working, ...names];
+  async function act(go: () => Promise<void>) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await go();
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t change who’s working. Try again in a moment.');
+      // The pills are read again, so a name the server no longer offers goes (design 3).
+      void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="sticky bottom-0 z-30 flex shrink-0 flex-col border-t border-[var(--wh-border)] bg-[var(--wh-surface-muted)] shadow-[0_-6px_16px_var(--wh-backdrop)]">
+      {error ? <p role="alert" className="m-0 px-3 pt-2 text-sm font-semibold text-[var(--wh-danger-hover)] md:px-6">{error}</p> : null}
+      <div role="group" aria-label="Who’s working" className="flex flex-nowrap items-center gap-1.5 overflow-x-auto px-3 py-2.5 md:gap-2 md:px-6">
+        <span className="mr-1 shrink-0 text-size-13 text-[var(--wh-muted)]">Working:</span>
+        {people.map((p) => {
+          const on = p.id === working.id;
+          return (
+            <button key={p.id} type="button" aria-pressed={on} aria-disabled={busy}
+              onClick={() => { if (!on) void act(() => tapIn(p.id)); }} className={pillClass(on)}>
+              {p.name}
+            </button>
+          );
+        })}
+        <button type="button" aria-disabled={busy} onClick={() => void act(async () => {
+          padNext = true;
+          try { await switchServing(); } catch (err) { padNext = false; throw err; }
+        })} className={pillClass(false)}>
+          Someone else
+        </button>
       </div>
     </div>
   );

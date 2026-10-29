@@ -394,6 +394,7 @@ export function register(route) {
     sendJson(res, 200, {
       // The Owner working here goes back sooner (design 8), so the screen does too.
       idleMinutes: workshop && mine && (await isTheOwner(mine)) ? ownerIdleMinutes(trust.idleMinutes) : trust.idleMinutes,
+      trustPin: trust.trustPin,
       names: workshop && trust.trustPin ? await tapNames(workshop.id, ctx.login.id, await today()) : [],
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
       till: till ? { code: till.code, name: till.name, siteName: till.site_name } : null,
