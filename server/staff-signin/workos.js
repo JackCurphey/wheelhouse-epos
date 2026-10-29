@@ -1,4 +1,4 @@
-// The real WorkOS (openspec/changes/staff-signin-workos design 2): three calls
+// The real WorkOS (openspec/changes/staff-signin-workos design 2): its calls
 // to its API, as its reference describes them (checked 25 Oct), with plain
 // fetch rather than its SDK.
 const API = 'https://api.workos.com';
@@ -57,6 +57,35 @@ export function workosProvider(env, { fetch = globalThis.fetch, log = console.er
       } catch (err) {
         log(`Staff sign-in: WorkOS's reply couldn't be read: ${err.message}`);
         return null;
+      }
+    },
+
+    /**
+     * Ends a WorkOS session from the server (POST /user_management/sessions/revoke,
+     * workos.com/docs/reference/user-management/session/revoke, checked 29 Oct):
+     * a workshop computer keeps no remembered WorkOS session
+     * (openspec/changes/workshop-lock-server). True when it is over: WorkOS
+     * took it, or refused it for good with a 4xx other than 429 (an unknown
+     * or ended session; the reference doesn't say which status that gets,
+     * and its errors page has 404 "The resource was not found"). False to
+     * try again: not reached, 429, or a WorkOS fault (5xx).
+     */
+    async revokeSession({ sessionId }) {
+      if (!sessionId) return false;
+      try {
+        const res = await fetch(`${API}/user_management/sessions/revoke`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${env.WORKOS_API_KEY}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (res.ok) return true;
+        const retry = res.status === 429 || res.status >= 500;
+        log(`Staff sign-in: WorkOS didn't end a workshop computer's session (${res.status})${retry ? ', to try again' : ''}.`);
+        return !retry;
+      } catch (err) {
+        log(`Staff sign-in: WorkOS couldn't be reached to end a workshop computer's session: ${err.message}`);
+        return false;
       }
     },
 
