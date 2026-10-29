@@ -16,5 +16,7 @@ ALTER TABLE pin_checkins ADD COLUMN IF NOT EXISTS by_tap BOOLEAN NOT NULL DEFAUL
 
 -- When each person's PIN was last set (kept), so a changed PIN takes them
 -- off "Who's working?" until they type the new one, as a cleared one does
--- (the review, 29 Oct). Null for a PIN set before 103.
+-- (the review, 29 Oct). Null for a PIN set before 103. A development
+-- database that ran this file before pin_set_at was added runs it again
+-- (delete its schema_migrations row) to add it.
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS pin_set_at TIMESTAMPTZ;
