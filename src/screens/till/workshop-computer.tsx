@@ -108,9 +108,11 @@ const pillClass = (on: boolean) => `inline-flex min-h-11 shrink-0 items-center r
  * Today's people as pills, the person working highlighted (added if they
  * aren't a name to tap, as the Owner never is), then "Someone else". A pill
  * is the same tap as "Who's working?", on the same page; "Someone else" ends
- * the check-in and shows the pad.
+ * the check-in and shows the pad. `serving`: the till's Serving pills
+ * (till-serving-pills in till.mjs, servingPills; roles and switches 10;
+ * openspec/changes/serving-pills), a box at the end of the product side.
  */
-export function WorkingPills({ working, names }: { working: CheckedIn; names: TapName[] }) {
+export function WorkingPills({ working, names, serving = false }: { working: CheckedIn; names: TapName[]; serving?: boolean }) {
   const { tapIn, switchServing } = useCheckinActions();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -123,7 +125,7 @@ export function WorkingPills({ working, names }: { working: CheckedIn; names: Ta
     try {
       await go();
     } catch (err) {
-      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t change who’s working. Try again in a moment.');
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : `Wheelhouse couldn’t change who’s ${serving ? 'serving' : 'working'}. Try again in a moment.`);
       // The pills are read again, so a name the server no longer offers goes (design 3).
       void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     } finally {
@@ -131,10 +133,12 @@ export function WorkingPills({ working, names }: { working: CheckedIn; names: Ta
     }
   }
   return (
-    <div className="sticky bottom-0 z-30 flex shrink-0 flex-col border-t border-[var(--wh-border)] bg-[var(--wh-surface-muted)] shadow-[0_-6px_16px_var(--wh-backdrop)]">
+    <div className={serving
+      ? 'mt-auto flex flex-col rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)]'
+      : 'sticky bottom-0 z-30 flex shrink-0 flex-col border-t border-[var(--wh-border)] bg-[var(--wh-surface-muted)] shadow-[0_-6px_16px_var(--wh-backdrop)]'}>
       {error ? <p role="alert" className="m-0 px-3 pt-2 text-sm font-semibold text-[var(--wh-danger-hover)] md:px-6">{error}</p> : null}
-      <div role="group" aria-label="Who’s working" className="flex flex-nowrap items-center gap-1.5 overflow-x-auto px-3 py-2.5 md:gap-2 md:px-6">
-        <span className="mr-1 shrink-0 text-size-13 text-[var(--wh-muted)]">Working:</span>
+      <div role="group" aria-label={serving ? 'Who’s serving' : 'Who’s working'} className={`flex flex-nowrap items-center gap-1.5 overflow-x-auto py-2.5 md:gap-2 ${serving ? 'px-2 md:px-3.5' : 'px-3 md:px-6'}`}>
+        <span className="mr-1 shrink-0 text-size-13 text-[var(--wh-muted)]">{serving ? 'Serving:' : 'Working:'}</span>
         {people.map((p) => {
           const on = p.id === working.id;
           return (
@@ -145,7 +149,8 @@ export function WorkingPills({ working, names }: { working: CheckedIn; names: Ta
           );
         })}
         <button type="button" aria-disabled={busy} onClick={() => void act(async () => {
-          padNext = true;
+          // The workshop's PIN screen shows the pad, not the names; the till's has no names screen.
+          padNext = !serving;
           try { await switchServing(); } catch (err) { padNext = false; throw err; }
         })} className={pillClass(false)}>
           Someone else

@@ -74,9 +74,9 @@ async function workshop(owner) {
   assert.equal((await b.send('/api/till-setup/workshop', { method: 'POST', body: { siteId: owner.site.id } })).status, 201);
   return b;
 }
-async function till(owner) {
+async function till(owner, number = 1) {
   const b = browser(owner);
-  assert.equal((await b.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
+  assert.equal((await b.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number } })).status, 201);
   return b;
 }
 const checkIn = async (b, pin) => {
@@ -170,11 +170,11 @@ test('Who’s working?: the people who typed their PIN on this workshop computer
   }
   assert.equal((await tap(w, 'x')).status, 400);
   assert.equal((await checkin(w)).serving, null, 'nobody checked in by a refused tap');
-  // Not on a till, nor a browser that is neither.
-  for (const b of [t, browser(owner)]) {
-    const refused = await tap(b, alexId);
-    assert.deepEqual([refused.status, refused.body.code], [403, 'not_a_workshop']);
-  }
+  // Not on a till he never typed it on, nor a browser that is neither.
+  const onTill = await tap(t, alexId);
+  assert.deepEqual([onTill.status, onTill.body.code], [403, 'not_typed_here']);
+  const plain = await tap(browser(owner), alexId);
+  assert.deepEqual([plain.status, plain.body.code], [403, 'not_shared_computer']);
   assert.equal((await checkin(t)).serving?.name, 'Jo Taylor', 'the till keeps Jo');
   // Alex taps his name: working, as by his PIN, the check-in marked as a tap.
   const tapped = await tap(w, alexId);
@@ -311,4 +311,40 @@ test('the check-in says whether trust PIN is on; a pill takes over from whoever 
   // Alex's pill takes it back.
   assert.equal((await tap(w, alexId)).status, 201);
   assert.equal((await checkin(w)).serving.name, 'Alex Morgan');
+});
+
+// The till's Serving pills (openspec/changes/serving-pills; till-serving-pills;
+// roles and switches 10; stage-1 gaps 11): the same tap, on a till.
+test('on a till, a tap counts only for someone who typed their PIN on that till today, never the Owner', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  const ownerPin = await newPin(owner.cookie);
+  const b1 = await till(owner, 1);
+  const b2 = await till(owner, 2);
+  const w = await workshop(owner);
+  await put(owner.cookie, { trustPin: true });
+  const alexId = (await checkIn(b1, alex.pin)).id;
+  const joId = (await checkIn(b2, jo.pin)).id;
+  await checkIn(w, jo.pin);
+  const ownerId = (await checkIn(b1, ownerPin)).id;
+  // Till B1's names: Alex only. Not Jo (another till, a workshop computer), not the Owner.
+  assert.deepEqual((await checkin(b1)).names, [{ id: alexId, name: 'Alex Morgan', role: 'Mechanic' }]);
+  assert.deepEqual((await checkin(w)).names.map((n) => n.name), ['Jo Taylor'], 'a till’s check-in never counts on the workshop computer');
+  for (const id of [joId, ownerId]) {
+    const refused = await tap(b1, id);
+    assert.deepEqual([refused.status, refused.body.code], [403, 'not_typed_here'], String(id));
+  }
+  assert.equal((await checkin(b1)).serving.name, 'Jack Lewis', 'a refused tap leaves who was serving');
+  // Alex taps his pill: serving on Till B1, recorded on that till, as a tap.
+  const tapped = await tap(b1, alexId);
+  assert.equal(tapped.status, 201, JSON.stringify(tapped.body));
+  assert.deepEqual((await checkin(b1)).serving, { id: alexId, name: 'Alex Morgan' });
+  const made = await row(owner, 'SELECT c.till_id, c.workshop_computer_id, c.by_tap, t.code FROM pin_checkins c JOIN tills t ON t.id = c.till_id WHERE c.token_hash = ?', hashLinkCode(b1.jar.get('wh_till_checkin')));
+  assert.deepEqual({ ...made, till_id: 0 }, { till_id: 0, workshop_computer_id: null, by_tap: true, code: 'B1' });
+  // Trust PIN off: no names, and the tap is refused.
+  await put(owner.cookie, { trustPin: false });
+  assert.deepEqual((await checkin(b1)).names, []);
+  const off = await tap(b1, alexId);
+  assert.deepEqual([off.status, off.body.code], [403, 'trust_pin_off']);
 });
