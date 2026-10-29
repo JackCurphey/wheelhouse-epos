@@ -1492,6 +1492,13 @@ silent:
    off (deposit settings).
 3. **Stored on the shop's row**, as the float and the stock amount, until
    the settings store (WP-1.2).
+4. **The Owner's own check-in on a workshop computer ends after 10 minutes
+   left alone at most**, or the shop's time if that is shorter, whatever
+   trust PIN's time is set to, Off and 30 minutes included (the review, 29
+   Oct). Otherwise an Owner who walked away would leave the Owner's pages
+   open to whoever is next. It lasts until Owner pages ask for a PIN every
+   time (task 2.5). *Pattern:* trust PIN off's own 10 minutes (build plan
+   Q6).
 
 ## Decided here, for Jack to overrule
 

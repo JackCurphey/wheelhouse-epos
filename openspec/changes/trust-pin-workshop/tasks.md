@@ -7,6 +7,7 @@
 - [x] 1.3 Tests first: the Signing in fold (off to start, the times only with it on, saved when chosen) and the screen going back at the shop's time (`tests/screens/trust-pin.test.js`). Watch each fail
 - [x] 1.4 Build the fold and the screen's time
 - [x] 1.5 Break each key rule of section 1 on purpose, see its test go red, and restore; lint, `npm test`, `npm run test:browser`
+- [x] 1.6 Review, 29 Oct: the Owner's own check-in on a workshop computer waits 10 minutes at most, whatever the setting (design 8); `employees.pin_set_at` in migration 103 for section 2. Tests first, each watched failing, the fix broken on purpose
 
 ## 2. Who's working? (2.2; second pull request, `jack/trust-pin-names`, on the first)
 

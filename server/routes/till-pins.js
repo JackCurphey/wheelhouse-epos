@@ -19,7 +19,7 @@ import { currentShopTimeZone } from '../workshop/jobs.js';
 import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
 import { thisTill, tillCookie, tillCookieToken } from '../till/this-till.js';
-import { thisWorkshop, trustPinHere, workshopCookie, workshopCookieToken } from '../till/this-workshop.js';
+import { ownerIdleMinutes, thisWorkshop, trustPinHere, workshopCookie, workshopCookieToken } from '../till/this-workshop.js';
 
 export const CHECKIN_COOKIE = 'wh_till_checkin';
 const OFFER_MINUTES = 15;
@@ -144,16 +144,18 @@ export async function currentCheckin(req) {
   const ctx = await signedInSession(req);
   if (!ctx) return null;
   const { till, workshop } = await thisComputer(req);
-  // The shop's time on a workshop computer (trust-pin-workshop): null is never.
+  // The shop's time on a workshop computer (trust-pin-workshop): null is
+  // never. The Owner's own check-in waits 10 minutes at most (design 8).
   const idleMinutes = workshop ? (await trustPinHere()).idleMinutes : null;
+  const ownerMinutes = workshop ? ownerIdleMinutes(idleMinutes) : null;
   const row = await prepare(
     `SELECT c.id, c.employee_id, c.till_id, c.workshop_computer_id, e.name, e.is_cashier,
-            (c.workshop_computer_id IS NOT NULL AND ?::int IS NOT NULL
-              AND COALESCE(c.last_active_at, c.checked_in_at) <= now() - make_interval(mins => ?::int)) AS idle
+            (c.workshop_computer_id IS NOT NULL AND COALESCE(c.last_active_at, c.checked_in_at) <= now() - make_interval(mins =>
+              CASE WHEN EXISTS (SELECT 1 FROM logins l WHERE l.employee_id = e.id AND l.is_owner = true) THEN ?::int ELSE ?::int END)) AS idle
        FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
       WHERE c.token_hash = ? AND c.login_id = ? AND c.day = ? AND c.till_id IS NOT DISTINCT FROM ?::int
         AND c.workshop_computer_id IS NOT DISTINCT FROM ?::int AND c.ended_at IS NULL AND e.active = 1`
-  ).get(idleMinutes, idleMinutes, hashLinkCode(token), ctx.login.id, await today(), till?.id ?? null, workshop?.id ?? null);
+  ).get(ownerMinutes, idleMinutes, hashLinkCode(token), ctx.login.id, await today(), till?.id ?? null, workshop?.id ?? null);
   if (!row) return null;
   if (row.idle) {
     await prepare('UPDATE pin_checkins SET ended_at = now() WHERE id = ? AND ended_at IS NULL').run(row.id);
@@ -372,7 +374,8 @@ export function register(route) {
     // The shop's time, for the screen (trust-pin-workshop).
     const trust = await trustPinHere();
     sendJson(res, 200, {
-      idleMinutes: trust.idleMinutes,
+      // The Owner working here goes back sooner (design 8), so the screen does too.
+      idleMinutes: workshop && mine && (await isTheOwner(mine)) ? ownerIdleMinutes(trust.idleMinutes) : trust.idleMinutes,
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
       till: till ? { code: till.code, name: till.name, siteName: till.site_name } : null,
       workshop: workshop ? { name: workshop.name, siteName: workshop.site_name } : null,

@@ -1,6 +1,6 @@
 // Migration 103 (openspec/changes/trust-pin-workshop, the contract): trust
-// PIN and the workshop computer's time on the shop's row, and whether each
-// check-in was made by a tap. Run from empty, then onto a database that
+// PIN and the workshop computer's time on the shop's row, whether each
+// check-in was made by a tap, and when each person's PIN was last set. Run from empty, then onto a database that
 // already has a shop and a check-in, then again.
 import '../server/load-env.js';
 import test from 'node:test';
@@ -71,6 +71,9 @@ test('103 adds trust PIN, off, the time, 10 minutes, and a tap on each check-in'
     // The older check-in was typed, not tapped.
     assert.equal((await c.query('SELECT by_tap FROM pin_checkins WHERE id = $1', [ids.old])).rows[0].by_tap, false);
     await c.query("INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, by_tap) VALUES ($1, $2, 'h2', '2026-09-01', true)", [ids.alex, ids.jack]);
+    // When each person's PIN was last set: none before 103.
+    assert.equal((await c.query('SELECT pin_set_at FROM employees WHERE id = $1', [ids.alex])).rows[0].pin_set_at, null);
+    await c.query("UPDATE employees SET pin_set_at = '2026-09-01T09:00:00Z' WHERE id = $1", [ids.alex]);
   });
   // Run again on a database that already has it: it runs, and everything stays.
   await withClient(url.href, (c) => c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]));
@@ -79,5 +82,6 @@ test('103 adds trust PIN, off, the time, 10 minutes, and a tap on each check-in'
     assert.deepEqual((await c.query('SELECT trust_pin, workshop_idle_minutes FROM shops WHERE id = $1', [ids.shop])).rows[0], { trust_pin: true, workshop_idle_minutes: 15 });
     await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.shop)]);
     assert.deepEqual((await c.query('SELECT by_tap FROM pin_checkins ORDER BY id')).rows, [{ by_tap: false }, { by_tap: true }]);
+    assert.equal((await c.query('SELECT pin_set_at FROM employees WHERE id = $1', [ids.alex])).rows[0].pin_set_at.toISOString(), '2026-09-01T09:00:00.000Z');
   });
 });
