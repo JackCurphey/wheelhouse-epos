@@ -8,6 +8,7 @@ import { penceText } from '@/lib/cash-count.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Floating } from '@/screens/diary/diary-bits.tsx';
+import { dayLabel } from '@/screens/diary/rules.ts';
 import { NoteCoinCounter } from './note-coin-counter.tsx';
 import { useHoldScreen } from '@/lib/screen-clear.ts';
 
@@ -25,7 +26,10 @@ import { useHoldScreen } from '@/lib/screen-clear.ts';
  * shop a day, as before.
  */
 type Check = { id: number; how: 'looked' | 'counted'; expectedPence: number; countedPence: number | null; reason: string; checkedByName: string; checkedAt: string };
-type Today = { day: string; floatPence: number | null; takesPayments: boolean; firstDay: boolean; check: Check | null };
+// The morning after a day nobody closed (op-float-check-unclosed;
+// openspec/changes/unclosed-day): what it started with and its cash since.
+type Unclosed = { day: string; startPence: number; cashPence: number; expectedPence: number };
+type Today = { day: string; floatPence: number | null; takesPayments: boolean; firstDay: boolean; check: Check | null; unclosed?: Unclosed | null };
 type Step = { at: 'check' } | { at: 'count' } | { at: 'diff'; counted: number };
 
 const QUERY = ['float-check'];
@@ -96,7 +100,11 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
     </Floating>
   ) : null;
   if (!due || t.floatPence === null) return floating;
-  const expected = t.floatPence;
+  // After a day nobody closed the drawer should have that day's cash too, and
+  // the count is that day's (UX walk-through 2 H1(b)); at closing, the Owner's
+  // look is only ever against the float (Jack's answer 8).
+  const unclosed = !atClose ? t.unclosed ?? null : null;
+  const expected = unclosed ? unclosed.expectedPence : t.floatPence;
   const error = failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed}</p> : null;
 
   if (step.at === 'count') {
@@ -152,6 +160,26 @@ export function FloatCheck({ atClose = false }: { atClose?: boolean } = {}) {
           <span className="font-mono text-size-30">{penceText(expected)}</span>
           <span className="text-sm text-[var(--wh-muted)]">The shop’s float</span>
         </div>
+        {error}
+      </Box>
+    );
+  }
+
+  // op-float-check-unclosed: Count it only, so the earlier day's figure is a
+  // real count (walk-through 2, decision 6).
+  if (unclosed) {
+    const label = dayLabel(unclosed.day);
+    const weekday = label.split(' ')[0];
+    return (
+      <Box key="check" id="fc" title={`Hello, ${name.split(' ')[0]}`} sub={`${at}first in today to take payments`}
+        footer={<Button variant="primary" onClick={toCount}>Count it</Button>}>
+        <div className="flex flex-col items-center gap-1.5 py-2.5 text-center">
+          <span className="text-size-15 text-[var(--wh-muted)]">The drawer should have</span>
+          <span className="font-mono text-size-30">{penceText(unclosed.startPence)}</span>
+          <span className="text-size-15 text-[var(--wh-muted)]">{`plus ${weekday}’s cash`}</span>
+          <span className="font-mono text-size-30">{penceText(unclosed.cashPence)}</span>
+        </div>
+        <Note>{`${label} wasn’t counted, so its cash is still in the drawer. Count it now — your count becomes ${weekday}’s count, so it needs real numbers, not a quick look.`}</Note>
         {error}
       </Box>
     );
