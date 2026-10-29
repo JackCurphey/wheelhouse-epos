@@ -1779,6 +1779,15 @@ silent:
    "Float this morning · looked right · Jack Lewis at [time]" for the look
    at closing, and "plus cash sales" is now the whole day's. No screen
    change was asked for.
+4. **After a late Close it, the look starts from the count it banked from**
+   (money review of #584, 29 Oct): Close it for Tuesday at 17:00 leaves the
+   float plus Wednesday's and Thursday's cash in the drawer, not just the
+   float, so Thursday's figure starts at Wednesday's morning count (£140.00
+   in the review's example), less the £40.00 Close it banked: £150.00. Then
+   "Float this morning" on the page, and "Float at the start" on the report,
+   show that count's figure, not the float, so the rows still add up. The
+   same holds for a day nobody closed. *Pattern:* a day nobody closed's
+   window (unclosed-day design 11).
 
 ## Decided here, for Jack to overrule
 

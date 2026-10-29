@@ -28,12 +28,17 @@ const iso = (v) => new Date(v).toISOString();
 
 // This morning's float check: what the drawer started with (what was counted,
 // or the float when it looked right), by whom and when (walk-through 2 M2).
+//
+// Every time read here only to be compared again (`checkedAt`, a count's,
+// a close's) is kept as the database's own text, to the microsecond: a
+// JavaScript date keeps only milliseconds, so a row compared with its own
+// time read back looked to be after itself (money review of #584, 1).
 async function floatStartOn(day) {
-  const row = await prepare(`SELECT f.*, COALESCE(e.name, l.name) AS by_name FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id WHERE f.day = ?`).get(day);
+  const row = await prepare(`SELECT f.*, f.checked_at::text AS checked_at_exact, COALESCE(e.name, l.name) AS by_name FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id WHERE f.day = ?`).get(day);
   if (!row) return null;
   return {
     id: row.id,
-    checkedAt: row.checked_at,
+    checkedAt: row.checked_at_exact,
     // The Owner's look at closing (Jack's answer 8): no count, nobody checked
     // in at a till. On a day nobody then closed, it doesn't start the day's
     // cash (money review 2, 29 Oct).
@@ -142,8 +147,11 @@ async function paidOutsWhere({ sql, args }) {
 // On a normal day too, the Owner's look at closing never starts the window:
 // with no morning check the day starts from the last close, the float left
 // in (Jack's 29 Oct answer 7, "Start from last close").
+//
+// `startPence` is what the window starts from: the check's figure, or, from
+// a late close, the count that close banked from (see `windowFor`).
 async function drawer(day, start, sales, until = null, { missed = false } = {}) {
-  const window = start.closingLook ? await previousClose(day) : { at: start.checkedAt, fromDay: day };
+  const window = await windowFor(day, start);
   const from = window.at;
   const { cashPence } = await takingsIn(sales, from);
   const paidOuts = missed || start.closingLook
@@ -151,17 +159,35 @@ async function drawer(day, start, sales, until = null, { missed = false } = {}) 
     : await paidOutsSince(day, start);
   const paidOutsPence = paidOuts.reduce((n, p) => n + p.amountPence, 0);
   const earlierBankedPence = await bankedForEarlier(day, from, until);
-  return { cashPence, paidOuts, paidOutsPence, earlierBankedPence, expectedPence: start.start.pence + cashPence - paidOutsPence - earlierBankedPence };
+  return { startPence: window.pence, cashPence, paidOuts, paidOutsPence, earlierBankedPence, expectedPence: window.pence + cashPence - paidOutsPence - earlierBankedPence };
 }
-// The last close before `day`: when it was made, and the day after its day.
-// A shop's first close has none: then the start of `day` by the shop's
-// clock, where Close the day starts counting sales (close-the-day design 6;
-// close-look-normal-day design 2).
+// Where a day's drawer figure starts: its check, unless that is the Owner's
+// look at closing. Then the last close, with the float left in; but if that
+// close was a late one (made after a later day's count, money review of
+// #584, 2), the drawer held that count's cash too, so the window starts at
+// that count instead, and the banking since comes off (`bankedForEarlier`),
+// as for a day nobody closed. Every time stays the database's own text.
+async function windowFor(day, start) {
+  if (!start.closingLook) return { pence: start.start.pence, at: start.checkedAt, fromDay: day };
+  const prev = await previousClose(day);
+  if (!prev) {
+    // A shop's first close: from the start of today by the shop's clock,
+    // where Close the day starts counting sales (close-the-day design 6).
+    const { at } = await prepare('SELECT ((?::date)::timestamp AT TIME ZONE ?)::text AS at').get(day, await currentShopTimeZone());
+    return { pence: start.start.pence, at, fromDay: day };
+  }
+  const next = await prepare(`SELECT f.counted_pence, f.expected_pence, f.checked_at::text AS at, to_char(f.day, 'YYYY-MM-DD') AS day,
+      f.checked_at < (SELECT closed_at FROM day_closes WHERE id = ?) AS before_it
+    FROM float_checks f WHERE f.day > ?::date AND f.day < ? ORDER BY f.day, f.checked_at LIMIT 1`).get(prev.id, prev.day, day);
+  if (next?.before_it) return { pence: next.counted_pence ?? next.expected_pence, at: next.at, fromDay: next.day };
+  return { pence: start.start.pence, at: prev.at, fromDay: prev.fromDay };
+}
+// The last close before `day`: which, its day, when it was made (exactly),
+// and the day after its day.
 async function previousClose(day) {
-  const r = await prepare(`SELECT closed_at AS at, to_char(day + 1, 'YYYY-MM-DD') AS from_day FROM day_closes WHERE day < ? ORDER BY closed_at DESC LIMIT 1`).get(day);
-  if (r) return { at: r.at, fromDay: r.from_day };
-  const { at } = await prepare('SELECT (?::date)::timestamp AT TIME ZONE ? AS at').get(day, await currentShopTimeZone());
-  return { at, fromDay: day };
+  const r = await prepare(`SELECT id, to_char(day, 'YYYY-MM-DD') AS day, closed_at::text AS at, to_char(day + 1, 'YYYY-MM-DD') AS from_day
+    FROM day_closes WHERE day < ? ORDER BY closed_at DESC, id DESC LIMIT 1`).get(day);
+  return r ? { id: r.id, day: r.day, at: r.at, fromDay: r.from_day } : null;
 }
 // What a day nobody closed should have held at its count, from its own
 // window: kept on the count, so Today's short or over float for it follows
@@ -196,9 +222,9 @@ export async function daysWaiting() {
 }
 // The morning count made for a day, closed or not.
 async function countFor(day) {
-  const r = await prepare(`SELECT f.id, f.counted_pence, f.reason, f.checked_at, to_char(f.day, 'YYYY-MM-DD') AS day, COALESCE(e.name, l.name) AS by_name
+  const r = await prepare(`SELECT f.id, f.counted_pence, f.reason, f.checked_at, f.checked_at::text AS checked_at_exact, to_char(f.day, 'YYYY-MM-DD') AS day, COALESCE(e.name, l.name) AS by_name
     FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id WHERE f.for_day = ?`).get(day);
-  return r ? { id: r.id, checkedAt: r.checked_at, reason: r.reason, by: { pence: r.counted_pence, byName: r.by_name, at: iso(r.checked_at), day: r.day } } : null;
+  return r ? { id: r.id, checkedAt: r.checked_at_exact, reason: r.reason, by: { pence: r.counted_pence, byName: r.by_name, at: iso(r.checked_at), day: r.day } } : null;
 }
 
 /**
@@ -214,7 +240,7 @@ export async function unclosedBefore(today) {
   if (open || !before) return null;
   const start = await floatStartOn(prev.day);
   const d = await drawer(prev.day, start, await openSales(prev.day), null, { missed: true });
-  return { day: prev.day, startPence: start.start.pence, cashPence: d.expectedPence - start.start.pence, expectedPence: d.expectedPence };
+  return { day: prev.day, startPence: d.startPence, cashPence: d.expectedPence - d.startPence, expectedPence: d.expectedPence };
 }
 
 // A day closed late: the morning count that counted it, the cash banked for
@@ -312,9 +338,9 @@ async function closeLate(res, ctx, shopId, day, today) {
     const t = await takingsIn(counts);
     const d = await drawer(day, late.start, counts, count.checkedAt, { missed: true });
     await prepare(
-      `UPDATE day_closes SET cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
+      `UPDATE day_closes SET float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
          takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ? WHERE id = ?`
-    ).run(t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
+    ).run(d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
     await refreshCount(count, d.expectedPence);
     return { ok: true };
   });
@@ -341,7 +367,7 @@ export function register(route) {
       const { late, d } = await missedDrawer(asked, count);
       const banked = floatPence === null ? 0 : Math.min(count.by.pence, bankedFrom(late.base, floatPence));
       return sendJson(res, 200, {
-        day: asked, floatPence, floatStart: late.start.start, cashPence: d.cashPence, paidOutsPence: d.paidOutsPence,
+        day: asked, floatPence, floatStart: { ...late.start.start, pence: d.startPence }, cashPence: d.cashPence, paidOutsPence: d.paidOutsPence,
         expectedPence: d.expectedPence, earlierBankedPence: d.earlierBankedPence, paidOuts: d.paidOuts, countedBy: count.by,
         carriedPence: late.carriedPence, bankPence: banked, topUpPence: floatPence === null ? 0 : Math.max(0, floatPence - late.base), close: null,
       });
@@ -350,7 +376,7 @@ export function register(route) {
     const d = start ? await drawer(day, start, await openSales(day)) : { cashPence: 0, paidOuts: await paidOutsSince(day, null), expectedPence: null, earlierBankedPence: 0 };
     const [waiting] = await daysWaiting();
     sendJson(res, 200, {
-      day, floatPence, floatStart: start?.start ?? null, cashPence: d.cashPence,
+      day, floatPence, floatStart: start ? { ...start.start, pence: d.startPence } : null, cashPence: d.cashPence,
       paidOutsPence: d.paidOuts.reduce((n, p) => n + p.amountPence, 0), expectedPence: d.expectedPence, earlierBankedPence: d.earlierBankedPence,
       paidOuts: d.paidOuts, entry, close: await closeOn(day),
       // A day nobody closed with a count waiting, shown first (unclosed-day design 7).
@@ -440,9 +466,9 @@ export function register(route) {
         return { status: 409, body: { error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: d.expectedPence } };
       }
       await prepare(
-        `UPDATE day_closes SET cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
+        `UPDATE day_closes SET float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
            takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ? WHERE id = ?`
-      ).run(t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
+      ).run(d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
       return { ok: true };
     });
     if (!reply.ok) {

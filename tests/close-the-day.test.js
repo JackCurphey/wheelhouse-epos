@@ -587,6 +587,70 @@ test('no morning check on a shop\'s first close: from the start of today', async
   assert.deepEqual([res.status, res.body.close?.differencePence, res.body.close?.cashPence], [201, 0, 6000]);
 });
 
+// Money review of #584, 1: a close saved at the database's own time has
+// microseconds; reading it into the server and back loses them, and the
+// close then looked to be after itself, its banking taken off again.
+test('no morning check: the last close\'s own banking is never taken off again, to the microsecond', async () => {
+  const owner = await shop({ float: HUNDRED, check: false });
+  const c = await earlierCheck(owner, '2026-08-31', HUNDRED, null);
+  await runWithShop(owner.shop.id, () => prepare(
+    `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
+       float_pence, banked_pence, takings_pence, card_pence, other_pence)
+     VALUES ('2026-08-31', ?, '2026-08-31T17:00:00.581911Z', ?, ?, 4500, 0, ?, ?, ?, 4500, 4500, 0, 0)`
+  ).run(owner.loginId, c.id, HUNDRED, HUNDRED + 4500, HUNDRED + 4500, HUNDRED));
+  await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 60 });
+  await lookAtClosing(owner);
+  assert.equal((await day(owner)).expectedPence, 16000);
+});
+
+// The same for this morning's check: a sale or cash taken out a few
+// microseconds before it was in the morning's float, not tonight's.
+test('a sale and cash taken out just before the morning check, in the same millisecond, aren\'t added again', async () => {
+  const owner = await shop();
+  await runWithShop(owner.shop.id, async () => {
+    await prepare("UPDATE float_checks SET checked_at = '2026-09-01T06:00:00.500900Z' WHERE day = '2026-09-01'").run();
+    await prepare("INSERT INTO paid_outs (day, login_id, amount_pence, reason, created_at) VALUES ('2026-09-01', ?, 200, 'Other', '2026-09-01T06:00:00.500500Z')").run(owner.loginId);
+  });
+  await oldSale(owner, '2026-09-01T06:00:00.500500Z', { cash: 5 });
+  const d = await day(owner);
+  assert.deepEqual([d.cashPence, d.paidOutsPence, d.expectedPence], [0, 0, FLOAT]);
+});
+
+// Money review of #584, 2: Mon 29 closed; Tue 30 missed, £40.00; Wed 31's
+// £140.00 count is Tuesday's, then £30.00, not closed; Thu (today) no
+// morning check, £20.00. Close it banks Tuesday's £40.00, leaving £150.00;
+// the look at closing then starts from Wednesday's count, not the float.
+test('no morning check after Close it of an earlier day: the drawer starts from the count it banked from', async () => {
+  for (const takenOut of [false, true]) {
+    const owner = await shop({ float: HUNDRED, check: false });
+    const mon = await earlierCheck(owner, '2026-08-29', HUNDRED, null);
+    await earlierClose(owner, '2026-08-29', mon.id, '2026-08-29T17:00:00Z');
+    await earlierCheck(owner, '2026-08-30', HUNDRED, null);
+    await oldSale(owner, '2026-08-30T10:00:00Z', { cash: 40 });
+    await runWithShop(owner.shop.id, () => prepare(
+      "INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, for_day, checked_at) VALUES ('2026-08-31', ?, 14000, 14000, '2026-08-30', '2026-08-31T06:00:00Z')"
+    ).run(owner.loginId));
+    await oldSale(owner, '2026-08-31T10:00:00Z', { cash: 30 });
+    await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 20 });
+    if (takenOut) {
+      await runWithShop(owner.shop.id, async () => {
+        await prepare("INSERT INTO paid_outs (day, login_id, amount_pence, reason, created_at) VALUES ('2026-08-31', ?, 1000, 'Other', '2026-08-31T12:00:00Z')").run(owner.loginId);
+        await prepare("INSERT INTO paid_outs (day, login_id, amount_pence, reason, created_at) VALUES ('2026-09-01', ?, 500, 'Other', '2026-09-01T12:00:00Z')").run(owner.loginId);
+      });
+    }
+    const late = await post(owner, '/api/close-the-day', { day: '2026-08-30' });
+    assert.equal(late.status, 201, JSON.stringify(late.body));
+    assert.equal(late.body.close.bankedPence, 4000);
+    await lookAtClosing(owner);
+    const expected = takenOut ? 13500 : 15000;
+    const d = await day(owner);
+    assert.deepEqual([d.earlierDay, d.paidOutsPence, d.expectedPence], [null, takenOut ? 1500 : 0, expected], `taken out: ${takenOut}`);
+    const res = await post(owner, '/api/close-the-day', { countedPence: expected, expectedPence: expected });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.deepEqual([res.body.close.differencePence, res.body.close.cashPence, res.body.close.bankedPence], [0, 5000, expected - HUNDRED]);
+  }
+});
+
 test('no morning check after a day nobody closed: both days\' cash expected, each sale counted once', async () => {
   const owner = await shop({ float: HUNDRED, check: false });
   const sat = await earlierCheck(owner, '2026-08-30', HUNDRED, null);
