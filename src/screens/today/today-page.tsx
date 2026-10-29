@@ -29,6 +29,7 @@ type Attention =
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
   | { kind: 'float_short'; checkId: number; day: string; shortPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
   | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
+  | { kind: 'day_not_closed'; day: string; checkId: number; checkDay: string; countedByName: string; checkedAt: string; tillCode: string | null }
   | { kind: 'below_zero'; count: number; takeId: number | null }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
@@ -250,6 +251,17 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           title={`${i.tillCode ? `Till ${i.tillCode}’s float` : 'The float'} was ${by} ${londonDay(i.checkedAt) === today ? 'this morning' : `on ${shortDate(i.checkedAt)}`}`}
           sub={`Counted by ${i.countedByName} at ${clock(i.checkedAt)}${i.reason ? ` · “${i.reason}”` : ''}`}
           right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeing.has(i.checkId)} onClick={() => void seen(i.checkId)}>Seen</Button>} />
+      );
+    }
+    // op-today-unclosed: a day nobody closed, counted with a morning's float;
+    // Close it opens its Close the day at banking (openspec/changes/unclosed-day).
+    if (i.kind === 'day_not_closed') {
+      const morning = i.checkDay === today ? 'this morning’s' : `${dayLabel(i.checkDay)}’s`;
+      return (
+        <Line key={`d${i.day}`} lead={warn}
+          title={`${dayLabel(i.day)} wasn’t closed`}
+          sub={`${i.tillCode ? `Till ${i.tillCode} · ` : ''}counted with ${morning} float by ${i.countedByName} · still to bank`}
+          right={<Link to={`${ROUTES['eod-count']}?day=${i.day}`} aria-label={`Close ${dayLabel(i.day)}`} className={linkButton(touch)}>Close it</Link>} />
       );
     }
     if (i.kind === 'uncollected') {

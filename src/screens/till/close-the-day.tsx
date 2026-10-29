@@ -1,12 +1,14 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearchParams } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { Check, ChevronDown } from 'lucide-react';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { parseTotal, penceText } from '@/lib/cash-count.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { dayLabel } from '@/screens/diary/rules.ts';
+import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
 import { clock } from '@/screens/diary/when.ts';
 import { NoteCoinCounter } from './note-coin-counter.tsx';
 import { FloatCheck } from './float-check.tsx';
@@ -24,14 +26,24 @@ import { printPaper } from './receipt.tsx';
  */
 type FloatStart = { pence: number; how: 'looked' | 'counted'; expectedPence: number; byName: string; at: string };
 type PaidOut = { id: number; amountPence: number; reason: string; note: string; byName: string; at: string };
+// The morning count made for a day nobody closed (openspec/changes/unclosed-day).
+type CountedBy = { pence: number; byName: string; at: string; day: string };
 export type Close = {
   id: number; day: string; closedByName: string; closedAt: string; floatStart: FloatStart;
   cashPence: number; drawerCashPence: number; paidOutsPence: number; expectedPence: number; countedPence: number; differencePence: number; reason: string;
   floatPence: number; bankedPence: number; leftPence: number; topUpPence: number; takingsPence: number; cardPence: number; otherPence: number; onlinePence: number;
+  countedBy?: CountedBy | null;
 };
 export type Day = {
   day: string; floatPence: number | null; floatStart: FloatStart | null; cashPence: number; paidOutsPence: number;
   expectedPence: number | null; paidOuts: PaidOut[]; entry: { show: boolean; closesAt: string | null }; close: Close | null;
+  // Cash banked since this morning for a day nobody closed, and the oldest such day still waiting.
+  earlierBankedPence?: number; earlierDay?: string | null;
+};
+// A day nobody closed, by Close it (op-close-yesterday): closed from its morning count.
+type LateDay = {
+  day: string; floatPence: number | null; countedBy: CountedBy; close: Close | null;
+  paidOuts?: PaidOut[]; bankPence?: number; topUpPence?: number;
 };
 export const CLOSE_DAY_QUERY = ['close-the-day'];
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
@@ -48,7 +60,9 @@ export function CloseTheDayPage() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
   const queryClient = useQueryClient();
-  const day = useQuery({ queryKey: CLOSE_DAY_QUERY, queryFn: () => apiGet<Day>('/api/close-the-day'), enabled: owner, retry: false });
+  // ?day=…: Close it on Today, for a day nobody closed (op-close-yesterday).
+  const asked = useSearchParams()[0].get('day');
+  const day = useQuery({ queryKey: CLOSE_DAY_QUERY, queryFn: () => apiGet<Day>('/api/close-the-day'), enabled: owner && !asked, retry: false });
   const [open, setOpen] = useState<number | null>(1);
   const [counted, setCounted] = useState<number | null>(null);
   const [result, setResult] = useState<number | null>(null);
@@ -62,9 +76,13 @@ export function CloseTheDayPage() {
   const [changed, setChanged] = useState<string | null>(null);
 
   if (session.status === 'signed-in' && !owner) return <p className="m-0 text-sm">Only the shop’s owner can close the day.</p>;
+  if (asked) return owner ? <EarlierDay day={asked} /> : null;
   const d = day.data;
   if (day.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the day. Try again in a moment.</p>;
   if (!d) return null;
+  // A day nobody closed is closed first, so its sales stay its own
+  // (unclosed-day design 7; the float check's "first" pattern).
+  if (d.earlierDay && !d.close) return <EarlierDay day={d.earlierDay} />;
   const close = d.close;
   const head = (
     <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -157,6 +175,8 @@ export function CloseTheDayPage() {
               <SubRow label={`Float this morning · ${floatHow(d.floatStart)}`} value={penceText(d.floatStart.pence)} />
               <SubRow label="plus cash sales" value={penceText(d.cashPence)} />
               <SubRow label="minus cash taken out (paid-outs)" value={penceText(d.paidOutsPence)} />
+              {/* This morning's count held a day nobody closed, banked since (unclosed-day design 6). */}
+              {d.earlierBankedPence ? <SubRow label="minus cash banked for an earlier day" value={penceText(d.earlierBankedPence)} /> : null}
             </div>
             {diff === 0 ? (
               <div className="flex items-center justify-between gap-3 rounded-[10px] bg-[var(--wh-ok-bg)] px-3.5 py-3 text-[var(--wh-status-complete-ink)]">
@@ -239,6 +259,145 @@ export function CloseTheDayPage() {
   );
 }
 
+/**
+ * A day nobody closed, closed later (op-close-yesterday, drawn by cashup.mjs
+ * `closeUncounted`; UX walk-through 2 H1(b); openspec/changes/unclosed-day):
+ * its count was the morning's float check, so it opens at banking — bank
+ * that day's cash, leave the float and today's sales — then saves that
+ * day's own report.
+ */
+function EarlierDay({ day }: { day: string }) {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const key = [...CLOSE_DAY_QUERY, day];
+  const fromToday = useSearchParams()[0].get('day') !== null;
+  const navigate = useNavigate();
+  const late = useQuery({ queryKey: key, queryFn: () => apiGet<LateDay>(`/api/close-the-day?day=${encodeURIComponent(day)}`), retry: false });
+  const [open, setOpen] = useState<number | null>(2);
+  const [bagged, setBagged] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const d = late.data;
+  if (late.isError) {
+    const gone = late.error instanceof ApiError && late.error.status === 404;
+    return <p role="alert" className="m-0 text-sm">{gone ? 'That day isn’t waiting to be closed.' : 'Wheelhouse couldn’t load the day. Try again in a moment.'}</p>;
+  }
+  if (!d) return null;
+  const label = dayLabel(day);
+  const weekday = label.split(' ')[0];
+  const by = d.countedBy;
+  const when = by.day === todayIso() ? 'this morning' : `on ${dayLabel(by.day)}`;
+  const toggle = (n: number) => setOpen((o) => (o === n ? null : n));
+  const head = (
+    <div className="flex flex-wrap items-baseline justify-between gap-3">
+      <h2 className="m-0 text-size-22 font-bold md:text-size-26">Close the day</h2>
+      <span className="text-sm text-[var(--wh-muted)]">{label}</span>
+    </div>
+  );
+  const counted = <Step n={1} title="Count the cash" tone="done" status={`Counted ${when} by ${by.byName}`} />;
+  // The report closes back to where Close it came from: Today, for ?day=
+  // (money review 4, 29 Oct), or tonight's page, which reads its figures again.
+  const done = () => {
+    setShowReport(false);
+    void queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
+    if (fromToday) navigate(ROUTES.today);
+  };
+
+  async function closeIt() {
+    setSaving(true);
+    setFailed(null);
+    try {
+      const { close: made } = await apiMutate<{ close: Close }>('/api/close-the-day', { day }, { method: 'POST' });
+      queryClient.setQueryData<LateDay>(key, (old) => (old ? { ...old, close: made } : old));
+      void queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      setShowReport(true);
+    } catch (err) {
+      // Closed already, by someone else: show that close.
+      if (err instanceof ApiError && err.status === 409 && (err.body as { code?: string } | null)?.code === 'already_closed') {
+        await late.refetch();
+        setShowReport(true);
+      } else setFailed(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : SAVE_FAILED);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (d.close) {
+    return (
+      <Page>
+        {head}
+        {counted}
+        <Step n={2} title="Paid-outs and banking" tone="done" status="Bagged" />
+        <Step n={3} title="End-of-day report" tone="done" status="Closed" open={open !== null} onToggle={() => setOpen((o) => (o === null ? 3 : null))}>
+          <div><Button onClick={() => setShowReport(true)}>Show the report</Button></div>
+        </Step>
+        {showReport ? <Report close={d.close} onClose={done} /> : null}
+      </Page>
+    );
+  }
+
+  const paidOuts = d.paidOuts ?? [];
+  const float = d.floatPence ?? 0;
+  return (
+    <Page>
+      {head}
+      {counted}
+      <Step n={2} title="Paid-outs and banking" tone={bagged ? 'done' : 'todo'} status={bagged ? 'Bagged' : 'To do'} open={open === 2} onToggle={() => toggle(2)}>
+        <div className="flex flex-col">
+          <span className="pb-1.5 text-sm font-bold">{`Cash taken out on ${weekday}`}</span>
+          {paidOuts.length === 0 ? (
+            <p className="m-0 border-t border-[var(--wh-border)] py-2.5 text-sm text-[var(--wh-muted)]">{`No cash taken out on ${weekday}.`}</p>
+          ) : (
+            <ul className="m-0 list-none p-0">
+              {paidOuts.map((p) => (
+                <li key={p.id} className="flex items-center gap-3 border-t border-[var(--wh-border)] py-2.5">
+                  <span className="flex grow flex-col gap-0.5">
+                    <span className="text-size-15 font-semibold">{p.reason}</span>
+                    <span className="text-size-13 text-[var(--wh-muted)]">{`${clock(p.at)} · ${p.byName}${p.note ? ` · ${p.note}` : ''}`}</span>
+                  </span>
+                  <span className="font-mono text-size-15">{penceText(p.amountPence)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="pt-1.5"><Button onClick={() => setAdding(true)}>Add a paid-out</Button></div>
+        </div>
+        <div className="flex flex-col rounded-[10px] border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-4 pt-1.5 pb-2.5">
+          <Row label={`Bank ${weekday}’s cash`} value={penceText(d.bankPence ?? 0)} first big />
+          <div data-row className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2">
+            <span className="text-base font-bold">Leave in the drawer</span>
+            <span className="text-right text-size-15">The float and today’s sales</span>
+          </div>
+        </div>
+        {/* Jack's answer 5 (27 Oct): a count below the float banks nothing and is made up to it. */}
+        {d.topUpPence ? (
+          <p className="m-0 rounded-md bg-[var(--wh-warn-bg)] px-2 py-1 text-size-13 font-semibold text-[var(--wh-warn-ink)]">{`Put ${penceText(d.topUpPence)} in to make the float up to ${penceText(float)}`}</p>
+        ) : null}
+        <Note>{`${by.byName} counted the drawer ${when}: the float plus ${weekday}’s cash. That count is ${weekday}’s count, so there’s nothing to count again. Take ${weekday}’s cash out and bag it for the bank.`}</Note>
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={() => { setBagged(true); setOpen(3); }}>Banking bagged — next step</Button>
+        </div>
+      </Step>
+      <Step n={3} title="End-of-day report" tone="todo" status={bagged ? 'Ready' : 'After the steps above'} open={open === 3} onToggle={() => toggle(3)}>
+        {bagged ? (
+          <>
+            <Note>{`Everything above is done. Closing the day saves ${weekday}’s report.`}</Note>
+            {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed}</p> : null}
+            <div className="flex justify-end">
+              <Button variant="primary" disabled={saving} onClick={() => void closeIt()}>Close the day and show the report</Button>
+            </div>
+          </>
+        ) : (
+          <Note>Bag the banking first.</Note>
+        )}
+      </Step>
+      {adding ? <PaidOutDialog day={day} name={session.status === 'signed-in' ? session.user.name : ''} onClose={() => setAdding(false)} /> : null}
+    </Page>
+  );
+}
+
 function Page({ children }: { children: ReactNode }) {
   return <div className="mx-auto flex w-full max-w-[860px] flex-col gap-3">{children}</div>;
 }
@@ -296,7 +455,7 @@ function Note({ children }: { children: ReactNode }) {
  * note. Until Settings › Till › Reasons exists, what it was for is typed (the
  * drawing's "Other…"). There's no cash drawer to open from Wheelhouse yet.
  */
-function PaidOutDialog({ name, onClose }: { name: string; onClose: () => void }) {
+function PaidOutDialog({ name, onClose, day }: { name: string; onClose: () => void; day?: string }) {
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
@@ -311,7 +470,9 @@ function PaidOutDialog({ name, onClose }: { name: string; onClose: () => void })
     setSaving(true);
     setError(null);
     try {
-      await apiMutate('/api/paid-outs', { amountPence: parsed.pence, reason: reason.trim(), note: note.trim() }, { method: 'POST' });
+      // `day`: cash taken out for a day nobody closed, at its Close it (unclosed-day design 8).
+      const body = { amountPence: parsed.pence, reason: reason.trim(), note: note.trim() };
+      await apiMutate('/api/paid-outs', day ? { ...body, day } : body, { method: 'POST' });
       await queryClient.invalidateQueries({ queryKey: CLOSE_DAY_QUERY });
       onClose();
     } catch (err) {
@@ -367,7 +528,8 @@ function reportRows(c: Close): [string, string, string?][] {
 }
 // Online money is beside the till's takings, not in them (walk-through 11 H2;
 // Jack's answer 7). The drawing's "see Reports" waits for Reports.
-const online = (c: Close) => `Online money is not in this till’s takings: ${penceText(c.onlinePence)} today`;
+// A day nobody closed, closed later, says its own day rather than "today".
+const online = (c: Close) => `Online money is not in this till’s takings: ${penceText(c.onlinePence)} ${c.countedBy ? `on ${dayLabel(c.day)}` : 'today'}`;
 
 /** "Day closed" (eod-z): the end-of-day report, with Print. */
 function Report({ close, onClose }: { close: Close; onClose: () => void }) {
