@@ -1617,6 +1617,48 @@ silent:
    straight away. The Remove pop-up's words are unchanged, as drawn.
    *Pattern:* a mechanic working on a workshop computer.
 
+### 29 Oct 2026: a day nobody closed, the server (`openspec/changes/unclosed-day`, `op-float-check-unclosed`, `op-today-unclosed`, `op-close-yesterday`, `op-today-two`; WP-3.3 and WP-3.4, slice B; Jack's 29 Oct answer 5)
+
+1. **Decided here, for Jack to overrule: a shop that has never closed a
+   day has no "day nobody closed".** The morning after is a normal check
+   until the shop's first close. Close the day only counts sales from the
+   day of the shop's first close (close-the-day design 6), so there is no
+   earlier close for such a day to run from. Jack can choose instead to have
+   the first day after switch-over asked for a count too. *Pattern:*
+   close-the-day design 6.
+2. **"[£ float]" on the drawn pop-up is what Wednesday started with**: the
+   float when it looked right, or its morning count. So the two figures
+   always add up to what the drawer should have, even after a short
+   Wednesday morning. "Wednesday's cash" is its cash sales since its float
+   check, less the cash taken out on it. *Pattern:* "How the till worked it
+   out" (walk-through 2 M2).
+3. **The Owner's look at closing stays a look after a day nobody closed**
+   (Jack's 27 Oct answer 8 wins at closing): no count is then kept for
+   Wednesday, so there is no Close it, and Thursday's close counts
+   Wednesday's sales with Thursday's, as before (answer 9).
+4. **Wednesday's close counts the sales made up to Thursday's morning
+   count** (by the server's clock; a till's own clock only for a sale made
+   offline, close-the-day's rule), and Thursday's close the rest. A sale
+   made offline on Wednesday that arrives later in the day still counts in
+   Wednesday's report, if Wednesday isn't closed yet.
+5. **Today's close waits until a day nobody closed is closed**, oldest
+   first, so a sale can't land in the wrong day. Not drawn: the Close the
+   day page will open the waiting day first (the screens). *Pattern:* the
+   float check pop-up showing first on Close the day (Jack's answer 8).
+6. **Cash taken out at Close it is Wednesday's**: it comes off Wednesday's
+   expected cash, never Thursday's, as the drawn "Cash taken out on
+   Wednesday" says.
+7. **Below the float, Close it banks nothing and says how much to put in**
+   (Jack's 27 Oct answer 5 applied to an earlier day); what is put in counts
+   in Thursday's drawer.
+8. **Two days in a row nobody closed** (not drawn): each morning's count is
+   the day before's; they close oldest first, and the second banks only its
+   own cash, since the first day's cash, banked since, was in its count.
+9. **Today's short float still shows beside "wasn't closed"**
+   (`op-today-two`): short against the float plus Wednesday's cash. An over
+   one shows only once Wednesday is closed (opening the shop 8 H1,
+   unchanged).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

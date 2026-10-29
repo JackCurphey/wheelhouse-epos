@@ -10,6 +10,7 @@ import { currentSession } from '../lib/session.js';
 import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { closeEntryNow } from '../lib/close-entry.js';
+import { unclosedBefore } from './close-the-day.js';
 import { NOT_YOURS_HERE, currentCheckin, ownAccountHere } from './till-pins.js';
 
 export const MAX_PENCE = 10_000_000; // £100,000, as migration 095
@@ -98,7 +99,10 @@ export function register(route) {
     // At the till, the person checked in is asked (Jack's answer 3, 27 Oct: the check moves to the check-in).
     const checkin = await currentCheckin(req);
     const takes = checkin ? await checkedInTakesPayments(checkin) : await takesPayments(ctx.login);
-    sendJson(res, 200, { day, floatPence, takesPayments: takes, firstDay: !any, check: await checkOn(day) });
+    const check = await checkOn(day);
+    // The morning after a day nobody closed: the float plus its cash, counted
+    // (op-float-check-unclosed; openspec/changes/unclosed-day).
+    sendJson(res, 200, { day, floatPence, takesPayments: takes, firstDay: !any, check, unclosed: check ? null : await unclosedBefore(day) });
   });
 
   // Looks right (countedPence null) or a count, with an optional reason.
@@ -133,14 +137,21 @@ export function register(route) {
       return sendJson(res, 400, { error: 'Count the float on the first day', code: 'count_needed' });
     }
     const day = await today();
+    // After a day nobody closed, the morning's count is that day's count, so
+    // it must be a count, against the float plus that day's cash
+    // (walk-through 2 decision 6; unclosed-day design 3). The Owner's look at
+    // closing stays a look (Jack's answer 8) and counts for today only.
+    const unclosed = closing ? null : await unclosedBefore(day);
+    if (unclosed && counted === null) return sendJson(res, 400, { error: 'Count the drawer: the last day wasn’t closed', code: 'count_needed' });
+    const shouldHave = unclosed ? Math.min(MAX_PENCE, Math.max(0, unclosed.expectedPence)) : expected;
     // The till it was checked at; the Owner's look at closing is the whole
     // shop's, so it records none (review, 28 Oct), and is the sign-in's own,
     // not the person checked in (BY_NAME), so Today can tell it from a check
     // made at a till (second review, 28 Oct).
     const made = await prepare(
-      `INSERT INTO float_checks (day, login_id, employee_id, expected_pence, counted_pence, reason, till_id) VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (shop_id, day) DO NOTHING RETURNING id`
-    ).get(day, ctx.login.id, closing ? null : (checkin?.employee_id ?? null), expected, counted, reason, closing ? null : (checkin?.till_id ?? null));
+      `INSERT INTO float_checks (day, login_id, employee_id, expected_pence, counted_pence, reason, till_id, for_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT DO NOTHING RETURNING id`
+    ).get(day, ctx.login.id, closing ? null : (checkin?.employee_id ?? null), shouldHave, counted, reason, closing ? null : (checkin?.till_id ?? null), unclosed?.day ?? null);
     if (!made) return sendJson(res, 409, { error: 'The float was already checked today', code: 'already_checked', check: await checkOn(day) });
     sendJson(res, 201, { check: await checkOn(day) });
   });
