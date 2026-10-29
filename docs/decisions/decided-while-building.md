@@ -1659,6 +1659,35 @@ silent:
    one shows only once Wednesday is closed (opening the shop 8 H1,
    unchanged).
 
+### 29 Oct 2026: a day nobody closed, the screens (`openspec/changes/unclosed-day`, `op-float-check-unclosed`, `op-today-unclosed`, `op-close-yesterday`, `op-today-two`)
+
+1. **The day's name is the real one**: the drawings' "Wednesday 16
+   September" and "Wednesday's cash" read as the day nobody closed, "Monday
+   31 August", "Monday's cash".
+2. **Close the day opens the waiting day first.** Tonight's Close the day
+   shows the day nobody closed (its page at banking), and tonight's count
+   once that is closed and its report shut. *Pattern:* the float check
+   showing first on Close the day.
+3. **Close it is a link styled as Today's other buttons that open a page**
+   ("Open Messages"), named "Close Monday 31 August" for a screen reader.
+4. **"Counted this morning by Jo Taylor"** says "on [date]" instead when
+   the count wasn't made today, as Today's short float line does.
+5. **No cash taken out on Monday.** when there is none, as "No cash taken
+   out today." on tonight's page (`eod-banking-none`).
+6. **The report step's words for a day closed late**: "Everything above is
+   done. Closing the day saves Monday's report." (tonight's "starts
+   tomorrow with the float" doesn't fit), and before banking, "Bag the
+   banking first." Its report's online money line says "on Monday 31
+   August", not "today".
+7. **Steps 1, 2 and 5 of the drawing** (the till has sent its sales, Needs
+   attention, the card check) are left out as on tonight's page
+   (close-the-day proposal; Jack's 27 Oct answer 4): the page has Count the
+   cash (done), Paid-outs and banking (open) and End-of-day report.
+8. **Tonight's "How the till worked it out" adds "minus cash banked for an
+   earlier day"** when this morning's count held a day nobody closed, so
+   the rows add up to what the till expected. *Pattern:* the drawn
+   "minus cash taken out (paid-outs)" row.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
