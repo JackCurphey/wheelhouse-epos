@@ -36,9 +36,14 @@ test('a signed-in session carries the user and shop from the real response', asy
   stubFetch(200, ME);
   assert.deepEqual(await resolveSession(), {
     status: 'signed-in',
-    user: { id: 3, name: 'Alex', email: 'a@example.com', isOwner: true, employee: null },
+    user: { id: 3, name: 'Alex', email: 'a@example.com', isOwner: true, employee: null, workshopComputer: false },
     shop: { name: 'Spokes', slug: 'spokes' },
   });
+});
+
+test('a workshop computer says so (openspec/changes/workshop-computer, the review 29 Oct)', async () => {
+  stubFetch(200, { ...ME, workshopComputer: true });
+  assert.equal((await resolveSession()).user.workshopComputer, true);
 });
 
 test('a login linked to a staff member carries who they are, for the till', async () => {
