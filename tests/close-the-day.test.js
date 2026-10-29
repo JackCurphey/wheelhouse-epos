@@ -188,6 +188,8 @@ test('closing the day keeps its figures: the count, the difference, the banking 
     floatStart: { pence: FLOAT, how: 'looked', expectedPence: FLOAT, byName: 'Jack Lewis', at: 0 },
     cashPence: 8400, drawerCashPence: 8400, paidOutsPence: 500, expectedPence: 22900, countedPence: 22690, differencePence: -210, reason: 'change given wrongly',
     floatPence: FLOAT, bankedPence: 7690, leftPence: FLOAT, topUpPence: 0,
+    // A normal close: nothing banked for an earlier day, no morning count for it (unclosed-day).
+    earlierBankedPence: 0, carriedPence: 0, countedBy: null,
     // Takings is card + cash + other, so it always adds up (review fix 5).
     takingsPence: 3800 + 8400 + 1100, cardPence: 3800, otherPence: 1100, onlinePence: 4000,
   });
