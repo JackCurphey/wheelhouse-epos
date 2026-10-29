@@ -95,10 +95,11 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
 .next li span { display: block; font-size: 13px; color: var(--muted); }
 .more { margin: 0; font-size: 14px; color: var(--muted); }
 .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
-.stage .bar { height: 10px; border-radius: 999px; background: var(--next-bg); overflow: hidden; }
-.stage .bar span { display: block; height: 100%; background: var(--done-ink); border-radius: 999px; }
+.stage .bar, .slices > .bar { height: 10px; border-radius: 999px; background: var(--next-bg); overflow: hidden; }
+.stage .bar span, .slices > .bar span { display: block; height: 100%; background: var(--done-ink); border-radius: 999px; }
 .slices { display: flex; flex-direction: column; gap: 10px; }
 .slices .sum { margin: 0; font-size: 16px; font-weight: 600; }
+.slices > .count { margin: 0; font-size: 13px; color: var(--muted); }
 .slices .how { margin: 0; font-size: 13px; color: var(--muted); max-width: 68ch; }
 #ov-slices { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 8px; align-items: start; }
 .slice-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
@@ -144,6 +145,8 @@ a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); o
       <h2 id="ov-slices-h">Slices</h2>
       <div class="slices">
         <p class="sum" id="ov-slices-sum"></p>
+        <p class="count" id="ov-slices-overall"></p>
+        <div class="bar" id="ov-slices-overall-bar" role="progressbar" aria-label="Release 2 overall" aria-describedby="ov-slices-overall" aria-valuemin="0" aria-valuemax="100"><span></span></div>
         <ol id="ov-slices"></ol>
         <p class="how" id="ov-slices-how"></p>
         <details class="packages">
@@ -223,7 +226,7 @@ const BOARD = {
     // "play it" check is done. Its bar is worked out from its items: done
     // counts 1, part counts half. The packages are the build plan's, marked by
     // Claude against what is merged, for Jack and Mark to correct.
-    slicesHow: "Each slice's bar counts its own items: done counts 1, partly done counts half. Slice A's items are the replan's open items plus the workshop and customer packages already mostly built; putting those packages under A is the board's reading of the replan, not a line in it. A slice is played once its play-it check on the test copy is done.",
+    slicesHow: "Each slice's bar counts its own items: done counts 1, partly done counts half. The overall figure counts every item in every slice the same way, so a small item counts as much as a big one. Slice A's items are the replan's open items plus the workshop and customer packages already mostly built; putting those packages under A is the board's reading of the replan, not a line in it. A slice is played once its play-it check on the test copy is done.",
     slices: [
         { letter: "A", name: "A repair, start to finish", state: "build",
           play: "Book online, answer it, take the bike in, quote, work, ready, collect, pay with a deposit taken off, receipt, the reminder and review text",
@@ -756,6 +759,18 @@ const ov = BOARD.overview;
   if (upNext.length) parts.push(`${join(upNext)} ${upNext.length > 1 ? 'are' : 'is'} next`);
   const n = ov.slices.length;
   document.getElementById('ov-slices-sum').textContent = `Release 2 in ${n} slices${parts.length ? `: ${parts.join(', ')}` : ''} · ${letters('played').length} of ${n} played`;
+  // Release 2 overall (Jack, 29 Oct, "count every item"): the same rule as
+  // each slice's bar, across every item in every slice together.
+  {
+    const all = ov.slices.flatMap((s) => s.items);
+    const count = (status) => all.filter((it) => it.status === status).length;
+    const [done, part, todo] = [count('done'), count('part'), count('todo')];
+    const pct = Math.round(((done + part / 2) / all.length) * 100);
+    document.getElementById('ov-slices-overall').textContent = `Release 2 overall: about ${pct}% · ${done} done, ${part} partly done, ${todo} to do across all slices`;
+    const bar = document.getElementById('ov-slices-overall-bar');
+    bar.setAttribute('aria-valuenow', String(pct));
+    bar.firstElementChild.style.width = `${pct}%`;
+  }
   document.getElementById('ov-slices-how').textContent = ov.slicesHow;
   document.getElementById('ov-outside-how').textContent = ov.outsideHow;
   const outside = itemRows(ov.outside);

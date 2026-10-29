@@ -58,3 +58,30 @@ test('the board shows Release 2 as six slices, each with its own bar', () => {
   assert.ok(doc.querySelectorAll('#ov-outside li').length === 8, 'eight packages in no slice');
 });
 
+// Release 2 overall (Jack, 29 Oct, "count every item"): the slice bar's rule
+// applied to every item in slices A to F together, done counting 1 and partly
+// done half. Worked out from the slice cards' own rows, never typed in.
+test('the overall figure counts every item in every slice', () => {
+  const doc = new JSDOM(html, { runScripts: 'dangerously' }).window.document;
+  const line = doc.getElementById('ov-slices-overall');
+  assert.ok(line, 'the overall line is there');
+  const rows = [...doc.querySelectorAll('#ov-slices > li details li[data-status]')];
+  assert.deepEqual([...new Set([...doc.querySelectorAll('#ov-slices > li')].map((c) => c.dataset.letter))], ['A', 'B', 'C', 'D', 'E', 'F']);
+  const count = (s) => rows.filter((li) => li.dataset.status === s).length;
+  const [done, part, todo] = [count('done'), count('part'), count('todo')];
+  const pct = Math.round(((done + part / 2) / rows.length) * 100);
+  assert.equal(line.textContent, `Release 2 overall: about ${pct}% · ${done} done, ${part} partly done, ${todo} to do across all slices`);
+  // The bar sits after the line and before the slice cards.
+  const bar = line.nextElementSibling;
+  assert.ok(bar.classList.contains('bar'), 'the bar follows the line');
+  assert.ok(bar.nextElementSibling === doc.getElementById('ov-slices'), 'the slice cards follow the bar');
+  assert.ok(line.previousElementSibling === doc.getElementById('ov-slices-sum'), 'the line follows the summary');
+  assert.equal(bar.getAttribute('role'), 'progressbar');
+  assert.equal(bar.getAttribute('aria-label'), 'Release 2 overall');
+  assert.equal(bar.getAttribute('aria-describedby'), 'ov-slices-overall');
+  assert.equal(bar.getAttribute('aria-valuemin'), '0');
+  assert.equal(bar.getAttribute('aria-valuemax'), '100');
+  assert.equal(bar.getAttribute('aria-valuenow'), String(pct));
+  assert.equal(bar.firstElementChild.style.width, `${pct}%`);
+});
+
