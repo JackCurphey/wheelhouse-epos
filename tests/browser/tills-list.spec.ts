@@ -6,11 +6,11 @@
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest } from '../helpers/staff.js';
+import { staffSignup, staffRequest, staffFreshCookie } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
-const owners: { cookie: string; shop: { id: number } }[] = [];
+const owners: { cookie: string; shop: { id: number }; loginId: number }[] = [];
 
 test.describe.configure({ timeout: 90_000 });
 test.beforeAll(async () => {
@@ -34,7 +34,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     expect(site.status).toBe(201);
     // Another computer becomes Till B1, and another a workshop computer.
     expect((await api('/api/till-setup', { siteId: site.body.id, number: 1 })).status).toBe(201);
-    expect((await api('/api/till-setup/workshop', { siteId: site.body.id })).status).toBe(201);
+    // Each from its own sign-in: a sign-in used on a workshop computer stays
+    // that computer's (workshop-lock-server).
+    const elsewhere = await staffFreshCookie(owner.loginId);
+    expect((await staffRequest(server!.baseUrl, elsewhere, '/api/till-setup/workshop', { method: 'POST', body: { siteId: site.body.id } })).status).toBe(201);
     const [name, value] = owner.cookie.split('=');
     await context.addCookies([{ name, value, url: server!.baseUrl }]);
     const noSideScroll = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
