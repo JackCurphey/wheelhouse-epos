@@ -257,6 +257,7 @@ POST /api/your-settings/till-pin
 POST /api/team/:id/clear-pin
 GET /api/till-checkin
 POST /api/till-checkin
+POST /api/till-checkin/tap
 POST /api/till-checkin/active
 POST /api/till-checkin/end
 POST /api/till-checkin/give-pin/:id/offer

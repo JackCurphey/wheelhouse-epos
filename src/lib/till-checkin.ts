@@ -14,8 +14,13 @@ export type GiveTo = { id: number; name: string; role: 'Staff' | 'Mechanic'; til
 export type ThisTillName = { code: string; name: string | null; siteName: string };
 /** This browser's workshop computer (openspec/changes/workshop-computer). */
 export type ThisWorkshop = { name: string | null; siteName: string };
-/** `idleMinutes`: how long a workshop computer waits before going back, null for never (openspec/changes/trust-pin-workshop). */
-export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[]; till?: ThisTillName | null; workshop?: ThisWorkshop | null; idleMinutes?: number | null };
+/** Someone who typed their PIN on this workshop computer today, to tap with trust PIN on (openspec/changes/trust-pin-workshop). */
+export type TapName = { id: number; name: string; role: 'Staff' | 'Mechanic' };
+/**
+ * `idleMinutes`: how long a workshop computer waits before going back, null
+ * for never (trust-pin-workshop); `names`: who can tap their name there.
+ */
+export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[]; till?: ThisTillName | null; workshop?: ThisWorkshop | null; idleMinutes?: number | null; names?: TapName[] };
 
 export const CHECKIN_QUERY = ['till-checkin'];
 // The float check asks the person checked in, so it is read again when that changes.
@@ -38,7 +43,7 @@ export function useCheckinActions() {
     queryClient.setQueryData<TillCheckin>(CHECKIN_QUERY, (old) => {
       const today = old?.checkedInToday ?? [];
       // Who can be given a PIN is the Owner's to see, so it goes with whoever was serving.
-      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [], till: old?.till ?? null, workshop: old?.workshop ?? null, idleMinutes: old?.idleMinutes };
+      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [], till: old?.till ?? null, workshop: old?.workshop ?? null, idleMinutes: old?.idleMinutes, names: old?.names ?? [] };
     });
     void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     void queryClient.invalidateQueries({ queryKey: FLOAT_QUERY });
@@ -50,6 +55,12 @@ export function useCheckinActions() {
       // Who is signed in is read again first: on a workshop computer the
       // Owner's pages follow the person working (workshop-computer design 9),
       // so the menu never shows the last person's for a moment.
+      await queryClient.refetchQueries({ queryKey: SESSION_QUERY }).catch(() => {});
+      settle(serving);
+    },
+    /** With trust PIN on, tapping your name on a workshop computer (till-checkin-workshop-names). */
+    async tapIn(employeeId: number) {
+      const { serving } = await apiMutate<{ serving: CheckedIn }>('/api/till-checkin/tap', { employeeId });
       await queryClient.refetchQueries({ queryKey: SESSION_QUERY }).catch(() => {});
       settle(serving);
     },

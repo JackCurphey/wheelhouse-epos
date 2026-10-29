@@ -303,7 +303,7 @@ export function StaffLayout() {
   }
   // On a workshop computer, one status region stays from the PIN screen to the page.
   const status = workshop ? <WorkingStatus working={working} /> : null;
-  if (workshop && !working) return <>{status}<WorkshopPinScreen workshop={workshop} shopName={shop.name} /></>;
+  if (workshop && !working) return <>{status}<WorkshopPinScreen workshop={workshop} shopName={shop.name} names={checkin.data?.names ?? []} /></>;
   const { role, roleName } = roleOf(user);
   // The Till always folds to the rail (app map review 4); every page does with Folded sidebar on (7).
   const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility?.foldedSidebar);
