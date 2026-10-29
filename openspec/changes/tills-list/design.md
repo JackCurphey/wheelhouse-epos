@@ -38,8 +38,28 @@ the `UPDATE`, `COMMIT`, and the reply only after `COMMIT`; a refusal rolls
 back. So a rename and a remove at once queue, and a rename after a remove
 is 404 rather than renaming a till that's off.
 
-The older `POST /api/tills/:id/deactivate` (the offline core's) stays as it
-is; the screen uses the new route.
+The older `POST /api/tills/:id/deactivate` (the offline core's) stays for
+its callers, but goes through the same switch-off as Remove: locked, refused
+while someone else is checked in here, 404 when already off (the review,
+29 Oct). The screen uses the new route.
+
+## 5. A removed workshop computer stays closed (the review, 29 Oct)
+
+A workshop computer's Owner sign-in counts as the Owner only while the Owner
+is the person working there (workshop computer design 9). Once it is
+removed, its browser still carries the old key; read as "no workshop
+computer", that browser would get every Owner page with no PIN. So a key
+that points at one of this shop's removed workshop computers counts as
+**not the Owner**: Owner-only routes refuse it, as when a mechanic is
+working. Signing in again on that browser (the WorkOS callback) clears the
+old key, and the Owner is the Owner there again; nobody is locked out for
+good. A removed till changes nothing here (a till's key never changed who
+counts as the Owner). Stricter than needed until Jack says otherwise
+(`decided-while-building.md`, the Tills list, entry 9).
+
+After a remove, as before: the till's offline key is refused on
+`/api/till/:slug/*`, check-ins made there no longer count, and a trust-PIN
+tap there is refused, because each reads only those switched on.
 
 ## 3. The screen
 

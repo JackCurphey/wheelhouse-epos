@@ -277,12 +277,13 @@ export function register(route) {
     await removeDevice(WORKSHOP_KIND, req, res, params.id);
   });
 
+  // The offline core's switch-off, kept for its callers: the same rules as
+  // Remove (tills-list, the review, 29 Oct): locked, not while someone else
+  // is checked in here, and a till already off is 404.
   route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {
     const ctx = await currentSession(req);
     if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can switch a till off' });
-    const { changes } = await db.prepare('UPDATE tills SET active = false WHERE id = ?').run(Number(params.id));
-    if (!changes) return notFound(res, 'Till not found');
-    sendJson(res, 200, { id: Number(params.id), active: false });
+    await removeDevice(TILL_KIND, req, res, params.id);
   });
 
   // A till authenticates with its bearer token (see the /api/till/ dispatcher

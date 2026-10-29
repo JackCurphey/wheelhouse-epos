@@ -44,3 +44,7 @@ Remove SHALL ask first (`set-till-remove`): "Remove Till B1?", "Bolton", "This c
 - **THEN** he is asked "Remove the workshop computer?", "This computer stops working as a workshop computer."
 - **WHEN** he presses Remove the workshop computer
 - **THEN** it leaves the list and that computer goes back to being an ordinary signed-in browser
+
+#### Scenario: A removed workshop computer still signed in as the Owner
+- **WHEN** the workshop computer Jack Lewis removed is still signed in as him
+- **THEN** it gets no Owner pages until he signs in again there

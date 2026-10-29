@@ -55,7 +55,7 @@ const cookieValue = (cookies, name) => cookies.map((c) => c.split(';')[0]).find(
 
 // Start, sign in on the pretend WorkOS page, and come back. Returns the
 // callback's answer and the session cookie it set, if any.
-async function signIn(email, { user, verified = true, ip = newNetwork(), state } = {}) {
+async function signIn(email, { user, verified = true, ip = newNetwork(), state, cookie = '' } = {}) {
   const start = await hop('/api/auth/workos/start', { ip });
   assert.equal(start.status, 302, start.body);
   const stateCookie = cookieValue(start.cookies, 'wh_signin_state');
@@ -70,7 +70,7 @@ async function signIn(email, { user, verified = true, ip = newNetwork(), state }
   const callback = new URL(back.location, server.baseUrl);
   assert.equal(callback.pathname, '/api/auth/workos/callback', 'the pretend page only ever goes back to the callback');
   if (state !== undefined) callback.searchParams.set('state', state);
-  const done = await hop(callback.pathname + callback.search, { cookie: stateCookie, ip });
+  const done = await hop(callback.pathname + callback.search, { cookie: [stateCookie, cookie].filter(Boolean).join('; '), ip });
   return { ...done, session: cookieValue(done.cookies, 'wh_session'), callback: callback.pathname + callback.search, stateCookie, ip };
 }
 
@@ -318,4 +318,28 @@ test('provider=google asks WorkOS for Google; anything else for its own page; fr
   const done = await hop(back.location, { cookie: cookies, ip });
   assert.equal(done.location, '/workshop/diary');
   assert.ok(cookieValue(done.cookies, 'wh_session'));
+});
+
+// The way back for a removed workshop computer (openspec/changes/tills-list,
+// the review, 29 Oct): its old key keeps the Owner's sign-in from counting as
+// the Owner there, and signing in again clears the key. A workshop computer
+// still on keeps it.
+test('signing in again on a removed workshop computer clears its old key, and the Owner is the Owner there again', async () => {
+  const { email, cookie: ownerCookie } = await owner();
+  const post = (cookie, path, body) => fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+  const site = await (await post(ownerCookie, '/api/sites', { name: 'Bolton', code: 'B' })).json();
+  const keyOf = async (res) => cookieValue(res.headers.getSetCookie(), 'wh_workshop');
+  const stays = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
+  const gone = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
+  const [stayKey, goneKey] = [await keyOf(stays), await keyOf(gone)];
+  assert.ok(stayKey && goneKey);
+  assert.equal((await post(ownerCookie, `/api/till-setup/workshop/${(await gone.json()).workshop.id}/remove`)).status, 200);
+  // Still on: signing in leaves the key.
+  const onStill = await signIn(email, { cookie: stayKey });
+  assert.ok(!onStill.cookies.some((c) => c.startsWith('wh_workshop=')), onStill.cookies.join(' | '));
+  // Removed: the old key is refused the Owner's pages, and a fresh sign-in clears it.
+  assert.equal((await me(`${onStill.session}; ${goneKey}`)).body.isOwner, false);
+  const again = await signIn(email, { cookie: goneKey });
+  assert.ok(again.cookies.some((c) => /^wh_workshop=; .*Max-Age=0/.test(c)), again.cookies.join(' | '));
+  assert.equal((await me(again.session)).body.isOwner, true);
 });
