@@ -15,9 +15,10 @@ never blocks it.
   session with the new workshop computer, in the same request that sets the
   cookie. A session that began on an ordinary browser becomes the workshop
   computer's here.
-- **Any later request** from an Owner's sign-in that carries a valid key of
-  one of this shop's workshop computers that is on, while the session isn't
-  marked yet, marks it (`decide()`, once a request). This covers a session
+- **Any later request** from a sign-in, the Owner's or a staff member's,
+  that carries a valid key of one of this shop's workshop computers that is
+  on, while the session isn't marked yet, marks it (`ownSignInHere`, once a
+  request). This covers a session
   that signed in on the workshop computer after it was set up, a WorkOS
   sign-in, and sessions from before 105.
 - A mark is never cleared or moved: a session marked with one workshop
@@ -25,22 +26,28 @@ never blocks it.
   deletes the session row (`POST /api/auth/logout`), and so does its 30 days
   running out.
 
-Only the Owner's sessions need the mark, since only they can count as the
-Owner; marking happens where the Owner's sign-in is decided.
+Staff sessions are marked too (the review of #578, 1): the same rule holds
+the sign-in's own PIN and settings, which every sign-in has. A session from
+before 105 on a workshop computer is unmarked until its first request with
+the key; the screen calls `/api/auth/me` as soon as it loads, so that
+window is short (Jack's section of `decided-while-building.md`).
 
-## 3. The rule (`decide()`, `server/lib/workshop-owner.js`)
+## 3. The rule (`ownSignInHere`, `server/lib/workshop-owner.js`)
 
-For the Owner's sign-in, inside the request's shop:
+One helper decides both the Owner's pages (`ownerHere`) and the sign-in's
+own PIN and settings (`ownAccountHere`, Your settings' PIN routes and the
+float check's look at closing; the review of #578, 1). Inside the request's
+shop:
 
-1. **A marked session** counts as the Owner only when the person checked in
-   by PIN on this browser is the Owner and that check-in was made on the
-   marked workshop computer. The cookies don't open it: with `wh_workshop`
+1. **A marked session** is its own (for the Owner, counts as the Owner) only
+   when the person checked in by PIN on this browser is the sign-in's own
+   team member and that check-in was made on the marked workshop computer. The cookies don't open it: with `wh_workshop`
    deleted or changed, no check-in on the marked computer can be found, so
    it is locked; a till's key is ignored (a workshop computer is never also
    a till, `ALREADY_A_WORKSHOP`). A marked computer that has since been
    removed is locked the same way (#575, 29 Oct answer 3).
-2. **An unmarked session** is as before: a till's key counts as the Owner;
-   no workshop key counts as the Owner, unless it is a removed workshop
+2. **An unmarked session** is as before: with a till's key it is its own;
+   with no workshop key it is its own, unless it is a removed workshop
    computer's key (#575); a workshop computer's key marks the session (2)
    and then follows rule 1.
 
@@ -56,5 +63,23 @@ The way out is signing out, as for a removed workshop computer.
 - **The screen** still reads `workshopComputer` in `/api/auth/me` from the
   cookie: with the cookie deleted it shows the ordinary app, but every Owner
   page and route is refused (`isOwner` is false). No screen change.
-- **Staff sessions** (not the Owner's) aren't marked: they never count as
-  the Owner, so the lock doesn't apply to them.
+
+## 5. No remembered WorkOS session on a workshop computer (the review of #578, 2)
+
+WorkOS remembers a person's session and may offer a one-press Continue, so
+someone at a workshop computer with every cookie deleted could get a fresh,
+unmarked Owner sign-in. So when a WorkOS sign-in is marked as a workshop
+computer's (at setup or its first request there), its WorkOS session is
+ended at WorkOS from the server: `POST /user_management/sessions/revoke`
+with `session_id`, authorised with the API key as a Bearer token
+(workos.com/docs/reference/user-management/session/revoke, checked 29 Oct:
+"Revoke a user session"). Wheelhouse's own session stays signed in; its
+`workos_session_id` is cleared once WorkOS takes the revoke, so signing out
+there later has no WorkOS session to end. If WorkOS can't be reached or
+refuses, the server logs it and the WorkOS session stays (signing out still
+ends it as before). The pretend WorkOS answers the revoke and keeps nothing.
+
+WorkOS's reference doesn't say in so many words that revoking stops its
+hosted page offering Continue; it says the revoke ends the user session
+that "is created when a user signs in through AuthKit". Checking it against
+Jack's Staging account is logged for Jack.

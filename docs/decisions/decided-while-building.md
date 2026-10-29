@@ -1640,11 +1640,29 @@ silent:
 4. **Local development's automatic sign-in** (off unless asked, refused in
    production and on the hosted copy) has no stored session, so there the
    lock still follows the cookie.
-5. **Staff sign-ins aren't recorded**: they never count as the Owner, so
-   the lock has nothing to hold for them.
+5. **Staff sign-ins are recorded too** (review of #578): the same rule
+   holds every sign-in's own PIN and settings on a workshop computer, which
+   staff sign-ins have as well. With the cookie deleted, nobody there can
+   get the sign-in a new PIN (the Owner's or a staff member's) unless that
+   sign-in's own person is checked in by PIN on that workshop computer.
 6. **Each test browser now signs in on its own**, as each real computer
    would: the tests that shared one Owner session between a workshop
    computer and an ordinary browser now give each browser its own.
+7. **A workshop computer keeps no remembered WorkOS session** (review of
+   #578). WorkOS remembers who signed in and may offer a one-press Continue,
+   which would give whoever is at the computer a fresh Owner sign-in. So
+   when a WorkOS sign-in becomes a workshop computer's (at setup, or its
+   first request there), Wheelhouse ends that WorkOS session at WorkOS from
+   the server, and stays signed in itself. Signing in again at that
+   computer then needs the person's own WorkOS sign-in. **For Jack:**
+   WorkOS's reference says the revoke ends the user's session, but doesn't
+   say in so many words that its sign-in page stops offering Continue;
+   worth checking once on the Staging account. If WorkOS can't be reached,
+   the server logs it and the WorkOS session stays, as before.
+8. **A sign-in from before this change**, already on a workshop computer,
+   is recorded at its first request with the workshop key. The screen asks
+   the server who is signed in as soon as it loads, so that window is
+   short; not closed further.
 
 ## Decided here, for Jack to overrule
 
