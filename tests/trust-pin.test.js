@@ -205,4 +205,33 @@ test('a tap counts only after a typed PIN: not after another tap alone, nor once
   await checkIn(w, again);
   await switchOff(w);
   assert.equal((await tap(w, alexId)).status, 201);
+
+test('the Owner’s own check-in on a workshop computer ends after 10 minutes at most, whatever the setting (until Owner pages ask for a PIN)', async () => {
+  const owner = await shop();
+  const ownerPin = await newPin(owner.cookie);
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  const w = await workshop(owner);
+  await put(owner.cookie, { trustPin: true, workshopIdleMinutes: null });
+  // Off: Alex stays, but the Owner goes after 10 minutes, and the screen is told 10.
+  await checkIn(w, ownerPin);
+  assert.equal((await checkin(w)).idleMinutes, 10);
+  await idleFor(owner, w, 9);
+  assert.equal((await checkin(w)).serving?.name, 'Jack Lewis');
+  await idleFor(owner, w, 10);
+  assert.equal((await checkin(w)).serving, null, 'the Owner gone after 10 minutes with Off');
+  await checkIn(w, alex.pin);
+  assert.equal((await checkin(w)).idleMinutes, null);
+  await idleFor(owner, w, 600);
+  assert.equal((await checkin(w)).serving?.name, 'Alex Morgan');
+  // 30 minutes: still 10 for the Owner.
+  await put(owner.cookie, { workshopIdleMinutes: 30 });
+  await checkIn(w, ownerPin);
+  await idleFor(owner, w, 10);
+  assert.equal((await checkin(w)).serving, null, 'the Owner gone after 10 minutes with 30 chosen');
+  // 5 minutes: shorter, so 5 for the Owner too.
+  await put(owner.cookie, { workshopIdleMinutes: 5 });
+  await checkIn(w, ownerPin);
+  assert.equal((await checkin(w)).idleMinutes, 5);
+  await idleFor(owner, w, 5);
+  assert.equal((await checkin(w)).serving, null, 'the Owner gone after 5 minutes with 5 chosen');
 });

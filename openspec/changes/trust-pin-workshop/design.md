@@ -12,6 +12,8 @@ safe to run twice:
   start. It applies only with trust PIN on.
 - `pin_checkins.by_tap`, true for a check-in made by tapping a name, false
   for one made by typing a PIN (every check-in before 103).
+- `employees.pin_set_at`, when the person's PIN was last kept; null for a
+  PIN kept before 103.
 
 **The settings.**
 
@@ -25,7 +27,9 @@ safe to run twice:
 **The idle time.** `trustPinHere()` (`server/till/this-workshop.js`)
 is the request's shop's time: 10 with trust PIN off; with it on, the time
 chosen, or null (never). `currentCheckin` ends a workshop computer's
-check-in unused for that time, as it did at a fixed 10 minutes.
+check-in unused for that time, as it did at a fixed 10 minutes; the
+Owner's own check-in after `ownerIdleMinutes()`, 10 minutes at most
+(decision 8).
 
 **The check-in.**
 
@@ -88,3 +92,9 @@ same moment can't slip in between.
    "Workshop computers go back to Enter your PIN after 10 minutes left
    alone." The fold's summary: "Trust PIN off", or "Trust PIN on · back
    after [n] minutes", or "Trust PIN on · never goes back".
+8. **The Owner's own check-in on a workshop computer waits 10 minutes at
+   most** (the review, 29 Oct), or the shop's time if shorter, whatever the
+   setting, and `GET /api/till-checkin` tells the screen the same. With Off
+   or 30 minutes, an Owner who walked away would otherwise leave their pages
+   to whoever is next, the hole decision 3 closes for taps. It lasts until
+   Owner pages ask for a PIN every time (task 2.5).

@@ -54,7 +54,7 @@ The server SHALL check someone in by a tap only on a workshop computer, with tru
 ## MODIFIED Requirements
 
 ### Requirement: A check-in belongs to its shop and its till
-A check-in SHALL count only in its own shop, on the browser and sign-in it was made on, on the till or workshop computer it was made on, and only on the shop's day it was made. On a workshop computer it SHALL also stop counting once it has gone unused for the shop's time: 10 minutes with trust PIN off; with trust PIN on, the time chosen, or never when Off is chosen.
+A check-in SHALL count only in its own shop, on the browser and sign-in it was made on, on the till or workshop computer it was made on, and only on the shop's day it was made. On a workshop computer it SHALL also stop counting once it has gone unused for the shop's time: 10 minutes with trust PIN off; with trust PIN on, the time chosen, or never when Off is chosen; the Owner's own, 10 minutes at most.
 
 #### Scenario: Another shop
 - **WHEN** a check-in made at one shop is sent to another
@@ -69,7 +69,7 @@ A check-in SHALL count only in its own shop, on the browser and sign-in it was m
 - **THEN** he is not checked in on Till B1, and the workshop computer's check-in doesn't count on a browser that is neither
 
 ### Requirement: A workshop computer left alone goes back to Enter your PIN
-A workshop computer SHALL go back to the start after the shop's time with nobody using it: 10 minutes with trust PIN off; with trust PIN on, 5, 10, 15 or 30 minutes as chosen, or never when Off is chosen. The server SHALL stop counting the check-in at that time after it was last used, whatever the screen does. A till SHALL stay checked in.
+A workshop computer SHALL go back to the start after the shop's time with nobody using it: 10 minutes with trust PIN off; with trust PIN on, 5, 10, 15 or 30 minutes as chosen, or never when Off is chosen. The Owner's own check-in SHALL wait 10 minutes at most. The server SHALL stop counting the check-in at that time after it was last used, whatever the screen does. A till SHALL stay checked in.
 
 #### Scenario: A break
 - **WHEN** Alex Morgan leaves the workshop computer for 10 minutes with trust PIN off
@@ -86,3 +86,7 @@ A workshop computer SHALL go back to the start after the shop's time with nobody
 #### Scenario: Still working
 - **WHEN** Alex Morgan keeps using the workshop computer
 - **THEN** it stays his
+
+#### Scenario: The Owner walks away
+- **WHEN** trust PIN is on with Off or 30 minutes chosen, and Jack Lewis, the Owner, typed his PIN on the workshop computer and leaves it for 10 minutes
+- **THEN** it goes back to the start, so whoever is next doesn't have the Owner's pages

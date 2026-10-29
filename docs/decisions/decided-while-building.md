@@ -1492,8 +1492,15 @@ silent:
    off (deposit settings).
 3. **Stored on the shop's row**, as the float and the stock amount, until
    the settings store (WP-1.2).
+4. **The Owner's own check-in on a workshop computer ends after 10 minutes
+   left alone at most**, or the shop's time if that is shorter, whatever
+   trust PIN's time is set to, Off and 30 minutes included (the review, 29
+   Oct). Otherwise an Owner who walked away would leave the Owner's pages
+   open to whoever is next. It lasts until Owner pages ask for a PIN every
+   time (task 2.5). *Pattern:* trust PIN off's own 10 minutes (build plan
+   Q6).
 
-4. **The Owner is never a name to tap on "Who's working?"; the Owner types
+5. **The Owner is never a name to tap on "Who's working?"; the Owner types
    their PIN** (`till-checkin-workshop-names`). Roles and switches 3 says
    Owner and Manager pages still ask for that person's PIN every time; that
    isn't built yet (task 2.5), and on a workshop computer the Owner's pages
@@ -1502,16 +1509,16 @@ silent:
    setting among them, with no PIN. The server refuses a tap for the Owner
    too. Managers aren't stored yet. *Pattern:* the till's "Who’s getting a
    PIN?", which never lists the Owner (28 Oct, giving a PIN entry).
-5. **"Who's working?" drops the drawn "Owner and manager pages still ask
+6. **"Who's working?" drops the drawn "Owner and manager pages still ask
    for your PIN."** until those pages do (task 2.5); the line is "You’ve
    typed your PIN here today, so just tap your name." Each name shows
    Mechanic or Staff from the team list, as the drawing's do, until roles.
    *Pattern:* show only what works (workshop-computer entry 6).
-6. **Only a typed PIN puts someone on the names.** A check-in made by a
+7. **Only a typed PIN puts someone on the names.** A check-in made by a
    tap doesn't count as having typed a PIN there, and a PIN cleared since
    takes them off until they type their new one. *Pattern:* clearing a PIN
    ends that person's check-ins (28 Oct, PINs entry).
-7. **"Who's working?" shows after Switch too**, not only after the
+8. **"Who's working?" shows after Switch too**, not only after the
    computer is left alone (stage-1 gaps 10: "Switch opens the existing
    Enter your PIN screen (with trust PIN on, the names to tap)"). With
    nobody on the names yet today, it is Enter your PIN.

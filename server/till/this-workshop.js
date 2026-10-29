@@ -29,6 +29,14 @@ export async function trustPinHere() {
   return { trustPin, idleMinutes: trustPin ? shop.workshop_idle_minutes : IDLE_MINUTES };
 }
 
+/**
+ * The Owner's own check-in on a workshop computer waits 10 minutes at most,
+ * or the shop's time if shorter, whatever the setting (trust-pin-workshop
+ * design 8): until Owner pages ask for a PIN every time (task 2.5), an
+ * Owner who walks away must not leave their pages open to whoever is next.
+ */
+export const ownerIdleMinutes = (idleMinutes) => (idleMinutes === null ? IDLE_MINUTES : Math.min(IDLE_MINUTES, idleMinutes));
+
 /** The active workshop computer this browser was made, or null. */
 export async function thisWorkshop(req) {
   const token = workshopCookieToken(req);
