@@ -131,3 +131,38 @@ test('signing out ends it: the session is gone, and the next sign-in on an ordin
   const next = await browser(owner);
   assert.equal(await ownerPages(next), 200);
 });
+
+// The review of #578, 1: the sign-in's own PIN and settings follow the same
+// rule (ownAccountHere): with the cookie deleted, whoever is at the workshop
+// computer can't get the sign-in a new PIN, the Owner's or a staff member's.
+test('with the cookie deleted, the sign-in\'s own PIN and settings are refused there', async () => {
+  const owner = await shop();
+  const w = await workshop(owner);
+  w.jar.delete('wh_workshop');
+  for (const [method, path, body] of [
+    ['POST', '/api/your-settings/till-pin/offer', {}],
+    ['POST', '/api/your-settings/till-pin', { pin: '1234' }],
+    ['GET', '/api/your-settings/till-pin', undefined],
+  ]) {
+    const res = await w.send(path, { method, body });
+    assert.deepEqual([res.status, res.body?.code], [403, 'not_your_account_here'], `${method} ${path}`);
+  }
+  // The float check's look at closing, too.
+  const look = await w.send('/api/float-check', { method: 'POST', body: { countedPence: null, atClose: true } });
+  assert.deepEqual([look.status, look.body?.code], [403, 'not_your_account_here']);
+  // The Owner's other browser keeps its own settings.
+  assert.equal((await call(owner.cookie, '/api/your-settings/till-pin')).status, 200);
+});
+
+test('a staff member\'s sign-in on a workshop computer is held the same way', async () => {
+  const owner = await shop();
+  const w = await workshop(owner);
+  const made = await post(owner.cookie, '/api/team', { name: 'Alex Morgan', isCashier: false, isMechanic: true, email: `alex-${Date.now()}@example.test`, password: 'password123' });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const alexSession = await staffFreshCookie(made.body.loginId);
+  const send = (cookie, path, method = 'GET', body) => fetch(`${server.baseUrl}${path}`, { method, headers: { cookie, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  // Alex's sign-in used on the workshop computer, nobody working: not his own account there.
+  assert.equal((await send(`${alexSession}; wh_workshop=${w.jar.get('wh_workshop')}`, '/api/your-settings/till-pin')).status, 403);
+  // The cookie deleted: still not.
+  assert.equal((await send(alexSession, '/api/your-settings/till-pin/offer', 'POST', {})).status, 403);
+});

@@ -18,7 +18,7 @@ import { SESSION_COOKIE } from '../auth.js';
 import { parseCookies } from './http.js';
 import { workshopCookieToken, thisWorkshop, removedWorkshopHere } from '../till/this-workshop.js';
 import { thisTill } from '../till/this-till.js';
-import { currentCheckin, isTheOwner } from '../routes/till-pins.js';
+import { currentCheckin } from '../routes/till-pins.js';
 
 // One answer per request, as session.js keeps one sign-in per request.
 const decided = new WeakMap();
@@ -30,6 +30,47 @@ export async function markSessionWorkshop(req, workshopComputerId) {
   await prepare('UPDATE sessions SET workshop_computer_id = ? WHERE token = ? AND workshop_computer_id IS NULL').run(workshopComputerId, token);
 }
 
+// The workshop computer this request's sign-in belongs to, once a request:
+// { id } for one (the session's record, or the browser's key, which records
+// it), { id: null } for a removed one's key (closed: tills-list), or null for
+// none. A session already recorded is held whatever the cookies say; an
+// unrecorded one with a till's key is a till's (workshop-computer design 1).
+const tiedOnce = new WeakMap();
+function tiedWorkshop(req) {
+  if (!tiedOnce.has(req)) tiedOnce.set(req, findTied(req));
+  return tiedOnce.get(req);
+}
+async function findTied(req) {
+  const token = parseCookies(req)[SESSION_COOKIE];
+  const session = token ? await prepare('SELECT workshop_computer_id FROM sessions WHERE token = ?').get(token) : null;
+  if (session?.workshop_computer_id) return { id: session.workshop_computer_id };
+  if (await thisTill(req)) return null;
+  const here = workshopCookieToken(req) ? await thisWorkshop(req) : null;
+  if (here) {
+    await markSessionWorkshop(req, here.id);
+    return { id: here.id };
+  }
+  // A removed workshop computer stays closed, not open, until someone signs
+  // out there, which clears the old key (routes/auth.js; tills-list design 5).
+  return (await removedWorkshopHere(req)) ? { id: null } : null;
+}
+
+/**
+ * Whether this sign-in is its own on this browser: anywhere but a workshop
+ * computer, yes; on one (recorded on the server, so a deleted cookie doesn't
+ * change it), only while the person checked in by PIN on that same workshop
+ * computer is the sign-in's own team member. Shared by the Owner's pages
+ * (`ownerHere`) and the sign-in's own PIN and settings (`ownAccountHere`).
+ */
+export async function ownSignInHere(req, ctx) {
+  const tied = await tiedWorkshop(req);
+  if (!tied) return true;
+  if (tied.id === null) return false;
+  const mine = await currentCheckin(req);
+  if (!mine || mine.workshop_computer_id !== tied.id) return false;
+  return Boolean(await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, mine.employee_id));
+}
+
 /**
  * Whether this signed-in Owner counts as the Owner on this browser. Runs
  * inside the request's shop scope (row-level security finds the workshop
@@ -37,27 +78,6 @@ export async function markSessionWorkshop(req, workshopComputerId) {
  */
 export function ownerHere(req, ctx) {
   if (!ctx?.login.is_owner) return Promise.resolve(false);
-  if (!decided.has(req)) decided.set(req, decide(req));
+  if (!decided.has(req)) decided.set(req, ownSignInHere(req, ctx));
   return decided.get(req);
-}
-
-async function decide(req) {
-  const token = parseCookies(req)[SESSION_COOKIE];
-  const session = token ? await prepare('SELECT workshop_computer_id FROM sessions WHERE token = ?').get(token) : null;
-  let marked = session?.workshop_computer_id ?? null;
-  if (marked === null) {
-    // Not a workshop computer's session (yet): a till's key wins should a
-    // browser carry both (workshop-computer design 1).
-    if (await thisTill(req)) return true;
-    const here = workshopCookieToken(req) ? await thisWorkshop(req) : null;
-    // A removed workshop computer stays closed, not open: its Owner sign-in
-    // isn't the Owner until someone signs out there, which clears the old key
-    // (routes/auth.js; tills-list design 5, the reviews, 29 Oct).
-    if (!here) return !(await removedWorkshopHere(req));
-    await markSessionWorkshop(req, here.id);
-    marked = here.id;
-  }
-  // The Owner checked in by PIN on that same workshop computer, and only then.
-  const mine = await currentCheckin(req);
-  return Boolean(mine) && mine.workshop_computer_id === marked && (await isTheOwner(mine));
 }
