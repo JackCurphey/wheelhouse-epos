@@ -82,6 +82,10 @@ const ROUTES = [
   // The float, and Seen on a short float (openspec/changes/opening-float-check).
   ['PUT', '/api/end-of-day-settings', { floatPence: 15000 }],
   ['POST', `/api/float-check/${MISSING}/seen`, {}],
+  // The amount over which an adjustment shows on Today, and its Seen
+  // (openspec/changes/stock-warnings-on-today).
+  ['PUT', '/api/stockroom-settings', { adjustTodayOverPence: 5000 }],
+  ['POST', `/api/stock-adjustments/${MISSING}/seen`, {}],
   // Trust PIN and the workshop computer's time (openspec/changes/trust-pin-workshop).
   ['PUT', '/api/signing-in-settings', { trustPin: true }],
   // Close the day and cash taken out, for owners and managers (cash-up
@@ -146,7 +150,7 @@ const NOT_OWNER_ONLY = new Map([
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
 // (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js', 'stock-takes.js'];
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js', 'stock-takes.js', 'today.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.

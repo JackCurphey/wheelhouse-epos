@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { apiGet } from '@/lib/api/client.ts';
@@ -40,7 +40,9 @@ export function StockPage() {
   const isPhone = useMedia('(max-width: 767px)');
   const [typed, setTyped] = useState('');
   const search = useTyped(typed);
-  const [filter, setFilter] = useState<Filter>('All');
+  // Today's See them opens Stock with Below zero picked (st-today-below; stock-warnings-on-today design 8).
+  const [params] = useSearchParams();
+  const [filter, setFilter] = useState<Filter>(params.get('show') === 'below-zero' ? 'Below zero' : 'All');
   const [sort, setSort] = useState<{ key: SortKey; up: boolean }>({ key: 'name', up: true });
   const [all, setAll] = useState(false);
   const list = useQuery({

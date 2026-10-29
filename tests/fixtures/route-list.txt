@@ -23,6 +23,8 @@ GET /api/signing-in-settings
 PUT /api/signing-in-settings
 GET /api/end-of-day-settings
 PUT /api/end-of-day-settings
+GET /api/stockroom-settings
+PUT /api/stockroom-settings
 GET /api/storefront-settings
 PUT /api/storefront-settings
 GET /api/shopify/connection
@@ -228,6 +230,7 @@ GET /api/dashboard
 GET /api/today/whos-in
 GET /api/today/tills
 GET /api/needs-attention
+POST /api/stock-adjustments/:id/seen
 POST /api/workshop-jobs/:id/contacted
 GET /api/your-settings
 PUT /api/your-settings

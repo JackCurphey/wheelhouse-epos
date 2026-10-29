@@ -1411,6 +1411,66 @@ silent:
     stock takes, customer messages, receipt emails and no-shows, among
     others. Recording it under the person working is task 3.8.
 
+### 29 Oct 2026: Today's stock warnings (`openspec/changes/stock-warnings-on-today`, `st-today-adjust`, `st-setting-adjust`, `st-today-below`; stock control decisions 6, 9 and 11; day answer 11; stock take task 4.2)
+
+1. **"The manager's Today" is the Owner's, until roles** (WP-1.1), as the
+   rest of Needs attention is (opening the shop decision 4). The setting,
+   the two lines and Seen are the Owner's only. *Pattern:* the float's Seen.
+2. **Worth is at cost** (`st-setting-adjust` says "At cost"): how many the
+   adjustment moved times the product's cost, in whole pence, worked out
+   when it is made and kept on the line, so a later change of cost doesn't
+   change what Today says.
+3. **Up as well as down.** A big Found goes to Today as a big Damaged does;
+   decision 6 says "worth more than" without a direction, and the drawing
+   shows the down case.
+4. **Decided when it is made.** Whether an adjustment goes to Today is
+   settled against the amount set at that moment. Setting or changing the
+   amount later neither brings old adjustments onto Today nor takes lines
+   off. "More than" is strict: worth exactly the amount stays off.
+5. **Not set until the Owner sets it**, as the float: with no amount, no
+   adjustment goes to Today, and the fold says "Not set yet". From £0.00 to
+   £100,000.00, on the shop's row until the settings store (WP-1.2). The
+   save takes the settings-saves-dont-clash lock (the shop's row read
+   `FOR UPDATE`); it is one column, so this only keeps the save in the shape
+   the other settings saves have.
+6. **Settings gets its Stockroom room**, after Workshop as drawn, with only
+   Stock adjustments in it. The area's words are cut to "Stock
+   adjustments." until Categories (decision 10) is built. The fold's box is
+   saved when it is left, as the Float box is.
+7. **Only adjustments count**, not stock received, sold or counted: those
+   aren't "adjustments" in decision 6.
+8. **The line's words**: "Stock adjusted: [Product] −[n] · £[value]" as
+   drawn, "+[n]" going up; the sub-line is the reason, then the note in
+   quotes when there is one (as the float's reason), then "by [Name] at
+   [time]", with the day too for an earlier day's (as the messages line).
+   "By" is the sign-in that made it, as the product's history shows; on a
+   workshop computer that is the sign-in, not the person (entry 20 above).
+9. **Count them opens the below-zero count already counting**, if there
+   is one, rather than starting a second; otherwise it starts one and opens
+   its counting page (decision 11: "starts the count at once"). A refusal
+   ("Nothing is below zero") shows in Needs attention's alert line.
+10. **"[n] products below zero" counts what the below-zero count would
+    count**: products on sale with stock under 0. "1 product" in the
+    singular. The line stays while a count is under way, and goes when none
+    are below zero (decision 9).
+11. **See them opens Stock with Below zero picked**
+    (`/workshop/stock?show=below-zero`), the filter decision 9 names.
+12. **Order**: the two stock lines come after the lines Needs attention
+    already had, below zero first, then adjustments oldest first, as the
+    drawing's order puts below zero above the adjustment.
+13. **A negative cost counts at its size** (the independent review, 29
+    Oct). The product form saves a negative cost, and adjusting such a
+    product failed; its value is now worked out from the cost's size (−£14
+    counts as £14), chosen over counting it as £0 so a mistyped cost still
+    warns. The product's cost itself is left as typed.
+14. **Seen pressed already in another tab** is treated as done: the line
+    goes, with no "couldn't record that" (review).
+15. **Count them reads Today again first**, so a count finished since the
+    page loaded isn't reopened; if the one remembered is no longer
+    counting, a new below-zero count starts (review).
+16. **Emptying the Stock adjustments box clears the amount**, back to "Not
+    set yet", rather than saying "Pounds and pence" (review).
+
 ### 29 Oct 2026: trust PIN on the workshop computer (`openspec/changes/trust-pin-workshop`, `set-till-quick`, `till-checkin-workshop-names`; WP-1.7 task 3.6, later tasks 2.1 and 2.2; roles and switches 3 and 9; stage-1 gaps 9 and 10)
 
 1. **The Signing in fold, no row drawn** (`set-till-quick` has the two

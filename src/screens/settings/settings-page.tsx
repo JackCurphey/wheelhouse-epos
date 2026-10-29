@@ -16,7 +16,11 @@ import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-gro
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
+<<<<<<< HEAD
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
+=======
+import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
+>>>>>>> origin/main
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -954,10 +958,14 @@ function OwnerSettings() {
   const collection = useCollectionSummary();
   const float = useFloatSummary();
   const tills = useTillsSummary();
+<<<<<<< HEAD
   const signingIn = useSigningInSummary();
+=======
+  const stockAdjustments = useStockAdjustmentsSummary();
+>>>>>>> origin/main
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
-  // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
+  // order and words (settings-frame.mjs SETTINGS_ROOMS).
   const rooms: SettingsRoom[] = [
     {
       key: 'front-desk', name: 'Front desk', intro: 'The till, payments, messages to customers and closing the day.',
@@ -995,6 +1003,17 @@ function OwnerSettings() {
           { key: 'diary-blocks', title: 'Diary blocks', summary: diaryBlocks, body: <DiaryBlocksSettings /> },
           { key: 'storage-slots', title: 'Storage slots', summary: storageSlots, body: <StorageSlotsSettings /> },
           { key: 'collection', title: 'Collection', summary: collection, body: <CollectionSettings /> },
+        ] },
+      ],
+    },
+    // After Workshop, as drawn; only Stock adjustments works yet
+    // (st-setting-adjust; stock-warnings-on-today). The area's words are
+    // the drawn ones up to Categories, which isn't built.
+    {
+      key: 'stockroom', name: 'Stockroom', intro: '',
+      areas: [
+        { key: 'stock', title: 'Stockroom', intro: 'Stock adjustments.', folds: [
+          { key: 'stock-adjustments', title: 'Stock adjustments', summary: stockAdjustments, body: <StockAdjustmentsSettings /> },
         ] },
       ],
     },
