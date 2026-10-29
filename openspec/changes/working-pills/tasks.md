@@ -8,4 +8,4 @@
 - [x] 1.4 Build the strip to `workshop-working-pills`
 - [x] 1.5 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.6 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawing and this spec
-- [x] 1.7 `/opsx:archive` as the last commit
+- [ ] 1.7 `/opsx:archive` as the last commit
