@@ -7,4 +7,4 @@
 - [x] 1.3 The line on the setup screen, as drawn
 - [x] 1.4 Break it on purpose (shown for a till; gone), see it go red, and restore
 - [x] 1.5 Lint, `npm test`, `npm run test:browser`
-- [ ] 1.6 `/opsx:archive` as the last commit
+- [x] 1.6 `/opsx:archive` as the last commit
