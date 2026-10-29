@@ -1765,6 +1765,21 @@ silent:
    the rows add up to what the till expected. *Pattern:* the drawn
    "minus cash taken out (paid-outs)" row.
 
+### 29 Oct 2026: the look at closing on a normal day (`openspec/changes/close-look-normal-day`; Jack's 29 Oct answer 7, "Start from last close")
+
+1. **A shop's first close, with no morning check, starts at the start of
+   today** by the shop's clock: there is no last close to start from. Cash
+   sales and cash taken out from before today aren't in it, as Close the day
+   already starts counting sales at its first close's day. *Pattern:*
+   close-the-day design 6.
+2. **Cash taken out counts from the day after the last close's day**, made
+   after that close, as a day nobody closed already does (the re-review of
+   29 Oct): the last close's own cash taken out is never counted again.
+3. **"How the till worked it out" is unchanged**: its first row still reads
+   "Float this morning · looked right · Jack Lewis at [time]" for the look
+   at closing, and "plus cash sales" is now the whole day's. No screen
+   change was asked for.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

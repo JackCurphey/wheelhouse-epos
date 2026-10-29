@@ -138,22 +138,30 @@ async function paidOutsWhere({ sql, args }) {
 // From the previous close, cash taken out is counted from the day after that
 // close's day, so an earlier unclosed day's is counted (re-review, 29 Oct);
 // that close's own, made before it, is never counted again.
+//
+// On a normal day too, the Owner's look at closing never starts the window:
+// with no morning check the day starts from the last close, the float left
+// in (Jack's 29 Oct answer 7, "Start from last close").
 async function drawer(day, start, sales, until = null, { missed = false } = {}) {
-  const window = missed && start.closingLook ? await previousClose(day) : { at: start.checkedAt, fromDay: day };
+  const window = start.closingLook ? await previousClose(day) : { at: start.checkedAt, fromDay: day };
   const from = window.at;
   const { cashPence } = await takingsIn(sales, from);
-  const paidOuts = missed
+  const paidOuts = missed || start.closingLook
     ? await paidOutsWhere({ sql: 'p.day >= ?::date AND p.created_at > ? AND (?::timestamptz IS NULL OR p.created_at <= ? OR p.day = ?)', args: [window.fromDay, from, until, until, day] })
     : await paidOutsSince(day, start);
   const paidOutsPence = paidOuts.reduce((n, p) => n + p.amountPence, 0);
   const earlierBankedPence = await bankedForEarlier(day, from, until);
   return { cashPence, paidOuts, paidOutsPence, earlierBankedPence, expectedPence: start.start.pence + cashPence - paidOutsPence - earlierBankedPence };
 }
-// The last close before `day` (a day nobody closed always has one): when it
-// was made, and the day after its day.
+// The last close before `day`: when it was made, and the day after its day.
+// A shop's first close has none: then the start of `day` by the shop's
+// clock, where Close the day starts counting sales (close-the-day design 6;
+// close-look-normal-day design 2).
 async function previousClose(day) {
   const r = await prepare(`SELECT closed_at AS at, to_char(day + 1, 'YYYY-MM-DD') AS from_day FROM day_closes WHERE day < ? ORDER BY closed_at DESC LIMIT 1`).get(day);
-  return r ? { at: r.at, fromDay: r.from_day } : { at: new Date(0), fromDay: '1970-01-01' };
+  if (r) return { at: r.at, fromDay: r.from_day };
+  const { at } = await prepare('SELECT (?::date)::timestamp AT TIME ZONE ? AS at').get(day, await currentShopTimeZone());
+  return { at, fromDay: day };
 }
 // What a day nobody closed should have held at its count, from its own
 // window: kept on the count, so Today's short or over float for it follows
