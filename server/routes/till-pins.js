@@ -20,6 +20,7 @@ import { SESSION_COOKIE } from '../auth.js';
 import { hashPinAsync, verifyPinAsync } from '../till/pin.js';
 import { thisTill, tillCookie, tillCookieToken } from '../till/this-till.js';
 import { ownerIdleMinutes, thisWorkshop, trustPinHere, workshopCookie, workshopCookieToken } from '../till/this-workshop.js';
+import { ownSignInHere } from '../lib/workshop-owner.js';
 
 export const CHECKIN_COOKIE = 'wh_till_checkin';
 const OFFER_MINUTES = 15;
@@ -181,14 +182,14 @@ export const isTheOwner = async (checkin) => Boolean(await prepare('SELECT 1 FRO
  * browser (the review, 29 Oct). Anywhere but a workshop computer, yes. On a
  * workshop computer, only while the person checked in by PIN is the
  * sign-in's own team member: otherwise whoever is working could get the
- * sign-in (usually the Owner) a new PIN and check in as them.
+ * sign-in (usually the Owner) a new PIN and check in as them. Which
+ * workshop computer is the server's record, not the cookie's
+ * (workshop-lock-server).
  */
 export async function ownAccountHere(req, ctx) {
-  const { workshop } = await thisComputer(req);
-  if (!workshop) return true;
-  const mine = await currentCheckin(req);
-  if (!mine) return false;
-  return Boolean(await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, mine.employee_id));
+  // The same rule as the Owner's pages, held on the server
+  // (openspec/changes/workshop-lock-server, the review of #578).
+  return ownSignInHere(req, ctx);
 }
 export const NOT_YOURS_HERE = { error: 'On a workshop computer, only the person signed in changes their own PIN and settings, checked in with their own PIN', code: 'not_your_account_here' };
 
