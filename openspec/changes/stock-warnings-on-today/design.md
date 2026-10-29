@@ -24,7 +24,7 @@ twice, additive:
 
 - `GET /api/stockroom-settings` → `{ adjustTodayOverPence: number | null }`.
   Anyone signed in.
-- `PUT /api/stockroom-settings` `{ adjustTodayOverPence }` → the same.
+- `PUT /api/stockroom-settings` `{ adjustTodayOverPence }` → the same; `null` clears it.
   Owner only (403 `owner_only`). 400 unless whole pence from 0 to
   10,000,000. Runs in a transaction that reads the shop's row `FOR UPDATE`
   first (the settings-saves-dont-clash pattern).
@@ -72,3 +72,10 @@ twice, additive:
    history shows it.
 10. **A note** on an adjustment (Other's, or any) follows the reason in
     quotes, as the float's reason does on its line.
+11. **A negative cost counts at its size** (`abs`), so the value is never
+    below nothing and the adjustment never fails on 102's check (review,
+    29 Oct).
+12. **`PUT /api/stockroom-settings` takes `null`** to clear the amount; the
+    fold's emptied box sends it. Seen answered 409 (pressed in another tab)
+    is done on the screen. Count them reads Needs attention again before
+    choosing between the count already counting and a new one (review).

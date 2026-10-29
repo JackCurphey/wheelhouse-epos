@@ -1458,6 +1458,18 @@ silent:
 12. **Order**: the two stock lines come after the lines Needs attention
     already had, below zero first, then adjustments oldest first, as the
     drawing's order puts below zero above the adjustment.
+13. **A negative cost counts at its size** (the independent review, 29
+    Oct). The product form saves a negative cost, and adjusting such a
+    product failed; its value is now worked out from the cost's size (−£14
+    counts as £14), chosen over counting it as £0 so a mistyped cost still
+    warns. The product's cost itself is left as typed.
+14. **Seen pressed already in another tab** is treated as done: the line
+    goes, with no "couldn't record that" (review).
+15. **Count them reads Today again first**, so a count finished since the
+    page loaded isn't reopened; if the one remembered is no longer
+    counting, a new below-zero count starts (review).
+16. **Emptying the Stock adjustments box clears the amount**, back to "Not
+    set yet", rather than saying "Pounds and pence" (review).
 
 ## Decided here, for Jack to overrule
 

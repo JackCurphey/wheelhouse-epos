@@ -8,3 +8,7 @@ Settings SHALL have a Stockroom room whose Stockroom area has a Stock adjustment
 #### Scenario: Setting the amount
 - **WHEN** Jack Lewis types an amount in Stock adjustments and leaves the box
 - **THEN** it is saved, the fold's summary shows it, and adjustments worth more than it from then on show on Today
+
+#### Scenario: Clearing the amount
+- **WHEN** Jack Lewis empties the box and leaves it
+- **THEN** the amount is cleared and the fold says "Not set yet"

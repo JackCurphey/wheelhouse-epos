@@ -12,5 +12,5 @@
 - [x] 2.1 Tests first: the Stockroom room and its fold; Today's two lines, Seen, See them and Count them (`tests/screens/`); Stock opening with Below zero picked; a browser spec. Watch each fail
 - [x] 2.2 Build them to the drawings
 - [x] 2.3 Break each key rule on purpose, see its test go red, and restore
-- [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, `npm run test:browser`
+- [x] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, typecheck, `npm test`, `npm run test:browser`
 - [ ] 2.5 `/review` (migration, stock); CI by hand; `/opsx:archive` as the last commit (left to whoever opens the pull request)
