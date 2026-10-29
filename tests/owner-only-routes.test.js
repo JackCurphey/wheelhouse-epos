@@ -101,6 +101,12 @@ const ROUTES = [
   ['POST', '/api/till-setup', {}],
   // Make this computer a workshop computer (openspec/changes/workshop-computer).
   ['POST', '/api/till-setup/workshop', {}],
+  // The Tills list, Rename and Remove (owner setup 17; openspec/changes/tills-list).
+  ['GET', '/api/till-setup/list'],
+  ['PUT', `/api/till-setup/tills/${MISSING}`, {}],
+  ['POST', `/api/till-setup/tills/${MISSING}/remove`, {}],
+  ['PUT', `/api/till-setup/workshop/${MISSING}`, {}],
+  ['POST', `/api/till-setup/workshop/${MISSING}/remove`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {

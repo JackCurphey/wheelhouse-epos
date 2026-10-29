@@ -9,7 +9,7 @@ import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, crea
 import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { ownerHere } from '../lib/workshop-owner.js';
-import { thisWorkshop, workshopCookieToken } from '../till/this-workshop.js';
+import { removedWorkshopHere, thisWorkshop, workshopCookieExpired, workshopCookieToken } from '../till/this-workshop.js';
 import { thisTill } from '../till/this-till.js';
 import { devAutologinOn, DEV_SIGNED_OUT_COOKIE } from '../lib/dev-autologin.js';
 import { clientIp, isHttpsRequest } from '../proxy-trust.js';
@@ -74,8 +74,8 @@ function redirect(res, location, cookies = []) {
 const signinFailed = (req, res, reason) =>
   redirect(res, `/workshop?signin=${reason}`, [stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE)]);
 
-function clearSessionCookie(res) {
-  const cookies = [`${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`];
+function clearSessionCookie(res, extra = []) {
+  const cookies = [`${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`, ...extra];
   // With the local sign-in skip on, signing out has to stick (dev-autologin.js).
   if (devAutologinOn()) cookies.push(`${DEV_SIGNED_OUT_COOKIE}=1; HttpOnly; Path=/; SameSite=Lax`);
   res.setHeader('Set-Cookie', cookies);
@@ -183,13 +183,21 @@ export function register(route) {
     const token = await createSession(login.id, { workosSessionId: signedIn.sessionId });
     // parseCookies has already decoded it (review: not twice).
     const back = staffAppPage(from) ?? '/workshop';
+    // A removed workshop computer's old key stays: WorkOS may offer a
+    // one-press Continue to whoever is at it (tills-list, second review).
     redirect(res, back, [sessionCookie(req, token), stateCookie(req, '', 0), stateCookie(req, '', 0, FROM_COOKIE), ...devSignedOutExpired()]);
   });
 
   route('POST', '/api/auth/logout', async (req, res) => {
     const { [SESSION_COOKIE]: token } = parseCookies(req);
+    // Signing out of a removed workshop computer clears its old key, the
+    // way back to the Owner's pages there: this also ends the WorkOS
+    // session, so getting back in needs the Owner's own sign-in (tills-list,
+    // design 5; second review, 29 Oct). Any other key stays, as before.
+    const ctx = workshopCookieToken(req) ? await getSessionContext(token) : null;
+    const removedHere = ctx ? await runWithShop(ctx.shop.id, () => removedWorkshopHere(req)) : false;
     const workosSessionId = await destroySession(token);
-    clearSessionCookie(res);
+    clearSessionCookie(res, removedHere ? [workshopCookieExpired(req)] : []);
     // A WorkOS sign-in ends at WorkOS too, so the next person at this
     // computer signs in again rather than pressing Continue (design 3).
     const signOutUrl = workosSessionId ? staffSigninProvider()?.logoutUrl({ sessionId: workosSessionId }) : null;

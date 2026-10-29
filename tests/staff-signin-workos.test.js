@@ -55,7 +55,7 @@ const cookieValue = (cookies, name) => cookies.map((c) => c.split(';')[0]).find(
 
 // Start, sign in on the pretend WorkOS page, and come back. Returns the
 // callback's answer and the session cookie it set, if any.
-async function signIn(email, { user, verified = true, ip = newNetwork(), state } = {}) {
+async function signIn(email, { user, verified = true, ip = newNetwork(), state, cookie = '' } = {}) {
   const start = await hop('/api/auth/workos/start', { ip });
   assert.equal(start.status, 302, start.body);
   const stateCookie = cookieValue(start.cookies, 'wh_signin_state');
@@ -70,7 +70,7 @@ async function signIn(email, { user, verified = true, ip = newNetwork(), state }
   const callback = new URL(back.location, server.baseUrl);
   assert.equal(callback.pathname, '/api/auth/workos/callback', 'the pretend page only ever goes back to the callback');
   if (state !== undefined) callback.searchParams.set('state', state);
-  const done = await hop(callback.pathname + callback.search, { cookie: stateCookie, ip });
+  const done = await hop(callback.pathname + callback.search, { cookie: [stateCookie, cookie].filter(Boolean).join('; '), ip });
   return { ...done, session: cookieValue(done.cookies, 'wh_session'), callback: callback.pathname + callback.search, stateCookie, ip };
 }
 
@@ -318,4 +318,45 @@ test('provider=google asks WorkOS for Google; anything else for its own page; fr
   const done = await hop(back.location, { cookie: cookies, ip });
   assert.equal(done.location, '/workshop/diary');
   assert.ok(cookieValue(done.cookies, 'wh_session'));
+});
+
+// The way back for a removed workshop computer (openspec/changes/tills-list,
+// the reviews, 29 Oct): its old key keeps the Owner's sign-in from counting
+// as the Owner there. Signing in leaves the key (WorkOS may offer a one-press
+// Continue to whoever is at the computer); signing out clears it, and ends
+// the WorkOS session, so getting back in needs the Owner's own sign-in.
+test('a removed workshop computer: signing in leaves it staff; signing out clears its key, and the next sign-in is the Owner', async () => {
+  const { email, cookie: ownerCookie } = await owner();
+  const post = (cookie, path, body) => fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+  const site = await (await post(ownerCookie, '/api/sites', { name: 'Bolton', code: 'B' })).json();
+  const keyOf = (res) => cookieValue(res.headers.getSetCookie(), 'wh_workshop');
+  const stays = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
+  const gone = await post(ownerCookie, '/api/till-setup/workshop', { siteId: site.id });
+  const [stayKey, goneKey] = [keyOf(stays), keyOf(gone)];
+  assert.ok(stayKey && goneKey);
+  assert.equal((await post(ownerCookie, `/api/till-setup/workshop/${(await gone.json()).workshop.id}/remove`)).status, 200);
+  const touchesKey = (cookies) => cookies.some((c) => c.startsWith('wh_workshop='));
+
+  // Signing in on the removed computer leaves its key: still staff there.
+  const signedIn = await signIn(email, { cookie: goneKey });
+  assert.ok(signedIn.session);
+  assert.ok(!touchesKey(signedIn.cookies), signedIn.cookies.join(' | '));
+  assert.equal((await me(`${signedIn.session}; ${goneKey}`)).body.isOwner, false);
+
+  // Signing out there clears the key; the next sign-in is the Owner.
+  const out = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: `${signedIn.session}; ${goneKey}` } });
+  assert.equal(out.status, 200);
+  assert.ok(out.headers.getSetCookie().some((c) => /^wh_workshop=; .*Max-Age=0/.test(c)), out.headers.getSetCookie().join(' | '));
+  const back = await signIn(email);
+  assert.equal((await me(back.session)).body.isOwner, true);
+
+  // On a workshop computer still on, and on an ordinary browser, signing in and out leave the key as before.
+  const onStill = await signIn(email, { cookie: stayKey });
+  assert.ok(!touchesKey(onStill.cookies));
+  const outStill = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: `${onStill.session}; ${stayKey}` } });
+  assert.ok(!touchesKey(outStill.headers.getSetCookie()), outStill.headers.getSetCookie().join(' | '));
+  const plain = await signIn(email);
+  const outPlain = await fetch(`${server.baseUrl}/api/auth/logout`, { method: 'POST', headers: { cookie: plain.session } });
+  assert.equal(outPlain.status, 200);
+  assert.ok(!touchesKey(outPlain.headers.getSetCookie()));
 });

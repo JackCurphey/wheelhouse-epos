@@ -48,6 +48,23 @@ export async function thisWorkshop(req) {
   return row ?? null;
 }
 
+/**
+ * Whether this browser's workshop key is one of this shop's workshop
+ * computers that has been removed (switched off; openspec/changes/tills-list,
+ * the review, 29 Oct). Such a browser was a shared computer: its Owner
+ * sign-in doesn't count as the Owner until someone signs out there.
+ */
+export async function removedWorkshopHere(req) {
+  const token = workshopCookieToken(req);
+  if (!token) return false;
+  const row = await prepare('SELECT 1 FROM workshop_computers WHERE browser_token_hash = ? AND active = false').get(hashLinkCode(token));
+  return Boolean(row);
+}
+
+/** Expires this browser's workshop key (signing out of a removed workshop computer). */
+export const workshopCookieExpired = (req) =>
+  `${WORKSHOP_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttpsRequest(req) ? '; Secure' : ''}`;
+
 export const serializeThisWorkshop = (w) => ({ id: w.id, name: w.name, siteName: w.site_name });
 
 /** This browser's own key from its cookie, as sent, or null. */
