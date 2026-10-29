@@ -1765,6 +1765,29 @@ silent:
    the rows add up to what the till expected. *Pattern:* the drawn
    "minus cash taken out (paid-outs)" row.
 
+### 29 Oct 2026: To return to [Supplier], with Returned (`openspec/changes/to-return`, `rs-hub`; WP-2.3; receiving decisions 4, 9 and 10)
+
+1. **Items set aside with no supplier picked** (a delivery received not on
+   an order, with no supplier chosen) have their own section headed "To
+   return", after the suppliers'. *Pattern:* the drawn "To return to
+   [Supplier]" section.
+2. **One line for each time an item was set aside**, not one per product:
+   two deliveries' damaged pads are two lines, each with its own delivery's
+   day, as drawn ("from the delivery on [date]").
+3. **Returned is one press, with no "are you sure?" and no Undo.** Nothing
+   about stock changes (the item was never in stock), so a mistaken press
+   only takes a line off the list. *Pattern:* Seen on Today.
+4. **The supplier waiting longest comes first**, then the next; each
+   supplier's items oldest first.
+5. **The day reads "Tue 1 Sep"**, as Deliveries and orders writes its days.
+6. **Only the Owner sees and uses it**, as with orders, until roles bring
+   "Can order stock" (receiving decision 4). Staff see the hub as before.
+7. **A list that can't be loaded says so** (review of #582): a "To return"
+   section with "Wheelhouse couldn’t load the items to return. Try again in
+   a moment.", rather than looking like nothing to return. A Returned that's
+   refused reads the list again, so a line already returned elsewhere goes.
+   *Pattern:* the Orders section's "couldn’t load" line.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
