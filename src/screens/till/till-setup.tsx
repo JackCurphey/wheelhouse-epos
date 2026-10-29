@@ -116,6 +116,8 @@ function SetupForm({ ownerName }: { ownerName: string }) {
         <label htmlFor="till-name" className="text-sm font-semibold">Name (optional)</label>
         <Input id="till-name" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
       </div>
+      {/* Jack's 29 Oct answer 6, drawn as till-setup-workshop and approved ("Approve it"). */}
+      {workshop ? <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">{`Don’t stay signed in to Google on this ${device}: anyone using it could sign in as you.`}</p> : null}
       {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed}</p> : null}
       {workshop ? (
         <Button variant="accent" block disabled={saving} onClick={() => void make()}>{`Make this ${device} a workshop computer`}</Button>
