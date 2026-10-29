@@ -82,6 +82,12 @@ test('101 adds workshop computers, kept to their shop, and the workshop computer
       c.query("INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, workshop_computer_id) VALUES ($1, $2, 'checkin-3', '2026-09-01', 999999)", [ids.alex, ids.jack]),
       /foreign key/i, 'only a workshop computer that exists',
     );
+    // A check-in is on a till or a workshop computer, never both (the review, 29 Oct).
+    const { rows: [till] } = await c.query("INSERT INTO tills (site_id, code, name, token_hash) VALUES ($1, 'B1', NULL, 'till-hash-1') RETURNING id", [ids.site]);
+    await assert.rejects(
+      c.query("INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id, workshop_computer_id) VALUES ($1, $2, 'checkin-4', '2026-09-01', $3, $4)", [ids.alex, ids.jack, till.id, w.id]),
+      /check constraint/i, 'never both',
+    );
     // Another shop sees none, and can't add one to this shop.
     await inShop(c, ids.other);
     assert.equal((await c.query('SELECT count(*)::int AS n FROM workshop_computers')).rows[0].n, 0, 'row-level security');

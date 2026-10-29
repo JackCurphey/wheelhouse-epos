@@ -98,6 +98,10 @@ test('make this computer a workshop computer: the Owner only, the cookie holds i
   // Signing in as someone else on that computer leaves it a workshop computer.
   const asJo = await fetch(`${server.baseUrl}/api/till-checkin`, { headers: { cookie: `${jo.cookie}; wh_workshop=${token}` } });
   assert.deepEqual((await asJo.json()).workshop, { name: 'Back bench', siteName: 'Bolton' });
+  // Who's signed in says it is a workshop computer, so a screen that can't
+  // read the check-in still shows no pages (the review, 29 Oct).
+  assert.equal((await b.send('/api/auth/me')).body.workshopComputer, true);
+  assert.equal((await call(owner.cookie, '/api/auth/me')).body.workshopComputer, false);
   // A blank name is none.
   const other = browser(owner);
   assert.equal((await makeWorkshop(other, owner, '   ')).body.workshop.name, null);
@@ -230,6 +234,81 @@ test('on a workshop computer the Owner\'s sign-in is the Owner only while the Ow
   // Staff signed in on the workshop computer stay staff, whoever is working.
   const asJo = await fetch(`${server.baseUrl}/api/workshop-services`, { method: 'POST', headers: { cookie: `${jo.cookie}; wh_workshop=${w.jar.get('wh_workshop')}`, 'content-type': 'application/json' }, body: '{}' });
   assert.equal(asJo.status, 403);
+});
+
+// The review, 29 Oct (high): staff working on a workshop computer the Owner
+// signed in could get the Owner a new PIN, then check in as the Owner. On a
+// workshop computer the sign-in's own PIN and settings are the sign-in's
+// only while its own team member is the person working.
+test('the reviewer\'s steps: Jo working on the Owner\'s workshop computer can\'t give the Owner a new PIN', async () => {
+  const owner = await shop();
+  const ownerPin = (await post(owner.cookie, '/api/your-settings/till-pin/offer')).body.pin;
+  assert.equal((await post(owner.cookie, '/api/your-settings/till-pin', { pin: ownerPin })).status, 200);
+  const jo = await member(owner, 'Jo Taylor');
+  const b = browser(owner);
+  assert.equal((await makeWorkshop(b, owner)).status, 201);
+  assert.equal((await checkIn(b, jo.pin)).status, 201);
+  const offer = await b.send('/api/your-settings/till-pin/offer', { method: 'POST' });
+  assert.deepEqual([offer.status, offer.body.code, offer.body.pin], [403, 'not_your_account_here', undefined]);
+  // Even with a PIN guessed at, keeping is refused, and nothing was offered.
+  const keep = await b.send('/api/your-settings/till-pin', { method: 'POST', body: { pin: '1234' } });
+  assert.deepEqual([keep.status, keep.body.code], [403, 'not_your_account_here']);
+  assert.equal((await row(owner, 'SELECT pin_offer_hash FROM employees e JOIN logins l ON l.employee_id = e.id WHERE l.id = ?', owner.loginId)).pin_offer_hash, null);
+  // "Your till PIN" never pops up for whoever is working, and Your settings aren't theirs to change.
+  assert.equal((await b.send('/api/your-settings/till-pin/ask')).status, 403);
+  assert.equal((await b.send('/api/your-settings/till-pin/ask', { method: 'POST' })).status, 403);
+  assert.equal((await b.send('/api/your-settings/till-pin')).status, 403);
+  assert.equal((await b.send('/api/your-settings', { method: 'PUT', body: { accessibility: { largerText: true } } })).status, 403);
+  // Switch, then the PIN that was offered (none): nobody becomes the Owner; the Owner's own PIN still works.
+  await b.send('/api/till-checkin/end', { method: 'POST', body: {} });
+  assert.equal(await serving(b), null);
+  assert.equal((await b.send('/api/till-setup')).status, 403);
+  assert.equal((await checkIn(b, ownerPin)).status, 201);
+  assert.equal((await serving(b)).name, 'Jack Lewis');
+  // The Owner working there is his own team member: his PIN and settings are his.
+  assert.equal((await b.send('/api/your-settings/till-pin')).status, 200);
+  assert.equal((await b.send('/api/your-settings/till-pin/offer', { method: 'POST' })).status, 201);
+  assert.equal((await b.send('/api/your-settings', { method: 'PUT', body: { accessibility: { largerText: true } } })).status, 200);
+  // Nobody working: not his either.
+  await b.send('/api/till-checkin/end', { method: 'POST', body: {} });
+  assert.equal((await b.send('/api/your-settings/till-pin/offer', { method: 'POST' })).status, 403);
+  // Off a workshop computer nothing changes: Jo's own sign-in, and the Owner's plain browser.
+  assert.equal((await post(jo.cookie, '/api/your-settings/till-pin/offer')).status, 201);
+  assert.equal((await post(owner.cookie, '/api/your-settings/till-pin/offer')).status, 201);
+});
+
+test('a staff sign-in on a workshop computer: their own PIN only while they are the one working', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const alex = await member(owner, 'Alex Morgan', { mechanic: true });
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  const token = w.jar.get('wh_workshop');
+  // Jo's sign-in on the workshop computer, Alex working.
+  const asJo = (path, method, cookie) => fetch(`${server.baseUrl}${path}`, { method, headers: { cookie } });
+  const login = await fetch(`${server.baseUrl}/api/till-checkin`, { method: 'POST', headers: { cookie: `${jo.cookie}; wh_workshop=${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ pin: alex.pin }) });
+  const checkinCookie = login.headers.getSetCookie().map((l) => l.split(';')[0]).find((p) => p.startsWith('wh_till_checkin='));
+  const alexWorking = `${jo.cookie}; wh_workshop=${token}; ${checkinCookie}`;
+  assert.equal((await asJo('/api/your-settings/till-pin/offer', 'POST', alexWorking)).status, 403);
+  const joIn = await fetch(`${server.baseUrl}/api/till-checkin`, { method: 'POST', headers: { cookie: alexWorking, 'content-type': 'application/json' }, body: JSON.stringify({ pin: jo.pin }) });
+  const joCookie = joIn.headers.getSetCookie().map((l) => l.split(';')[0]).find((p) => p.startsWith('wh_till_checkin='));
+  assert.equal((await asJo('/api/your-settings/till-pin/offer', 'POST', `${jo.cookie}; wh_workshop=${token}; ${joCookie}`)).status, 201);
+});
+
+// The review, 29 Oct (medium): a workshop computer is no till, so its
+// check-ins never make Today's "Till" line with no number; they stay in Who's in.
+test('Today: a check-in on the workshop computer is in Who\'s in, not a till line', async () => {
+  const owner = await shop();
+  const jo = await member(owner, 'Jo Taylor');
+  const t = browser(owner);
+  assert.equal((await t.send('/api/till-setup', { method: 'POST', body: { siteId: owner.site.id, number: 1 } })).status, 201);
+  const w = browser(owner);
+  await makeWorkshop(w, owner);
+  assert.equal((await checkIn(w, jo.pin)).status, 201);
+  const tills = (await call(owner.cookie, '/api/today/tills')).body.tills;
+  assert.deepEqual(tills.map((l) => [l.code, l.openedBy]), [['B1', null]]);
+  const whosIn = (await call(owner.cookie, '/api/today/whos-in')).body;
+  assert.ok(JSON.stringify(whosIn).includes('Jo Taylor'), JSON.stringify(whosIn));
 });
 
 test('a till never goes back by itself', async () => {

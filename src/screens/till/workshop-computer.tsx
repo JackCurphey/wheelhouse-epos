@@ -38,24 +38,33 @@ export function WorkshopPinScreen({ workshop, shopName }: { workshop: ThisWorksh
 /**
  * "Working: Alex Morgan · Switch" (block 26), across the top of every page
  * on a workshop computer. Switch ends the check-in: back to Enter your PIN.
- * A screen reader hears "Now working: [name]" (second walk, answer 10).
+ * A screen reader hears "Now working: [name]" (second walk, answer 10) from
+ * WorkingStatus, which stays in the page from the PIN screen on.
  */
 export function WorkingBar({ working }: { working: CheckedIn }) {
   const { switchServing } = useCheckinActions();
   const [failed, setFailed] = useState(false);
   return (
     <section aria-label="Who’s working" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-3.5 py-1.5 text-size-13 md:px-6">
-      <p role="status" className="sr-only">{`Now working: ${working.name}`}</p>
       <User size={16} aria-hidden="true" />
       <span>Working: <strong>{working.name}</strong></span>
       <span aria-hidden="true" className="text-[var(--wh-muted)]">·</span>
       <button type="button" onClick={() => { setFailed(false); switchServing().catch(() => setFailed(true)); }}
-        className="inline-flex min-h-6 items-center font-semibold text-[var(--wh-brand-dark)] underline">
+        className="inline-flex min-h-11 items-center px-1 font-semibold text-[var(--wh-brand-dark)] underline">
         Switch
       </button>
       {failed ? <span role="alert" className="font-semibold text-[var(--wh-danger-hover)]">Wheelhouse couldn’t switch. Try again in a moment.</span> : null}
     </section>
   );
+}
+
+/**
+ * One status region, kept from the PIN screen to the page, empty until
+ * someone is working: filled after the PIN, so "Now working: [name]" is
+ * announced (the review, 29 Oct).
+ */
+export function WorkingStatus({ working }: { working: CheckedIn | null }) {
+  return <p role="status" data-working="" className="sr-only">{working ? `Now working: ${working.name}` : ''}</p>;
 }
 
 const IDLE_MS = 10 * 60_000;
@@ -66,9 +75,11 @@ const USES = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
 /**
  * While someone is working on a workshop computer: a press, a click, a tap, a
  * key or a scroll counts as using it, and the server is told at most every 30
- * seconds; 10 minutes with none, and it goes back to Enter your PIN. The
- * check runs every second against the clock, so a sleeping tab catches up
- * the moment it wakes.
+ * seconds, a use it hasn't been told of yet within 30 seconds. The 10 minutes
+ * run from the last telling, the time the server counts from too, so the
+ * screen and the server end together (the review, 29 Oct). The check runs
+ * every second against the clock, so a sleeping tab catches up the moment it
+ * wakes.
  */
 export function useWorkshopIdle(working: boolean) {
   const { stillHere, idleOut } = useCheckinActions();
@@ -76,18 +87,24 @@ export function useWorkshopIdle(working: boolean) {
   useEffect(() => { actions.current = { stillHere, idleOut }; });
   useEffect(() => {
     if (!working) return undefined;
-    let last = Date.now();
-    let told = last;
+    // The check-in itself was the first telling.
+    let told = Date.now();
+    let untold = false;
+    const tell = (now: number) => {
+      told = now;
+      untold = false;
+      actions.current.stillHere().catch(() => {});
+    };
     const used = () => {
       const now = Date.now();
-      last = now;
-      if (now - told < TELL_EVERY_MS) return;
-      told = now;
-      actions.current.stillHere().catch(() => {});
+      if (now - told >= TELL_EVERY_MS) tell(now);
+      else untold = true;
     };
     for (const kind of USES) window.addEventListener(kind, used, { capture: true, passive: true });
     const timer = setInterval(() => {
-      if (Date.now() - last < IDLE_MS) return;
+      const now = Date.now();
+      if (untold && now - told >= TELL_EVERY_MS) tell(now);
+      if (now - told < IDLE_MS) return;
       clearInterval(timer);
       actions.current.idleOut();
     }, 1000);

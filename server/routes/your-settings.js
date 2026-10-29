@@ -5,6 +5,7 @@
 import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
 import { readJsonBody, sendJson } from '../lib/http.js';
+import { NOT_YOURS_HERE, ownAccountHere } from './till-pins.js';
 
 // Every switch the drawing has, off to start, but Show the diary legend, on
 // to start (diary-legend-box design 1); the screens show the ones built.
@@ -29,6 +30,10 @@ export function register(route) {
   route('PUT', '/api/your-settings', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    // On a workshop computer, only while the sign-in's own team member is
+    // working (the review, 29 Oct; till-pins.js ownAccountHere). Reading
+    // them stays open: every page applies them.
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const body = await readJsonBody(req);
     const changes = body?.accessibility;
     if (!changes || typeof changes !== 'object' || Array.isArray(changes) || Object.keys(changes).length === 0) {

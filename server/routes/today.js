@@ -95,11 +95,13 @@ async function whosIn() {
 // (design 2). Each line: who opened it with its own earliest check-in today;
 // and the day's float check, one a shop, on the line it was checked at
 // (design 4). A deleted till's check-ins have no till, so they join that line.
+// A workshop computer is no till: its check-ins are only in Who's in
+// (openspec/changes/workshop-computer; the review, 29 Oct).
 async function tillsToday() {
   const day = shopToday(await currentShopTimeZone());
   const firsts = await prepare(
     `SELECT DISTINCT ON (c.till_id) c.till_id, c.checked_in_at AS at, e.name FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-      WHERE c.day = ? ORDER BY c.till_id, c.checked_in_at, c.id`
+      WHERE c.day = ? AND c.workshop_computer_id IS NULL ORDER BY c.till_id, c.checked_in_at, c.id`
   ).all(day);
   const f = await prepare(
     `SELECT f.till_id, f.employee_id, f.checked_at, f.counted_pence < f.expected_pence AS short, COALESCE(e.name, l.name) AS by_name, s.name AS seen_by

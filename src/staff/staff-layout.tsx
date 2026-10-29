@@ -11,7 +11,7 @@ import { HeaderSearch } from './header-search.tsx';
 import { SignedOut } from './signed-out.tsx';
 import { FirstPinPrompt } from '@/screens/your-settings/till-pin.tsx';
 import { useTillCheckin } from '@/lib/till-checkin.ts';
-import { WorkingBar, WorkshopPinScreen, useWorkshopIdle } from '@/screens/till/workshop-computer.tsx';
+import { WorkingBar, WorkingStatus, WorkshopPinScreen, useWorkshopIdle } from '@/screens/till/workshop-computer.tsx';
 
 /**
  * The frame every staff page sits in (journey A; Workshop day decision 68):
@@ -292,7 +292,17 @@ export function StaffLayout() {
   // starts out pending, and holding the page then would unmount the page that
   // asked for it, round and round.
   if (!checkin.isFetched && !checkin.data) return <p className="p-8">Loading…</p>;
-  if (workshop && !working) return <WorkshopPinScreen workshop={workshop} shopName={shop.name} />;
+  // A workshop computer whose check-in can't be read shows no pages (the review, 29 Oct).
+  if (user.workshopComputer && !checkin.data) {
+    return (
+      <div role="alert" className="p-8">
+        <p>Wheelhouse couldn’t check who is working on this computer. Try again in a moment.</p>
+      </div>
+    );
+  }
+  // On a workshop computer, one status region stays from the PIN screen to the page.
+  const status = workshop ? <WorkingStatus working={working} /> : null;
+  if (workshop && !working) return <>{status}<WorkshopPinScreen workshop={workshop} shopName={shop.name} /></>;
   const { role, roleName } = roleOf(user);
   // The Till always folds to the rail (app map review 4); every page does with Folded sidebar on (7).
   const folded = pathname.startsWith(NAV_ROUTES.till) || Boolean(settings.data?.accessibility?.foldedSidebar);
@@ -303,7 +313,7 @@ export function StaffLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[var(--wh-bg)] text-[var(--wh-ink)]">
+    <>{status}<div className="flex min-h-screen bg-[var(--wh-bg)] text-[var(--wh-ink)]">
       {/* Computer: the rooms sidebar, unless it's folded (the Till always; Folded sidebar, app map review 4 and 7). */}
       {folded ? null : (
         <nav
@@ -351,7 +361,7 @@ export function StaffLayout() {
       {menuOpen ? (
         <PhoneMenu user={user} shopName={shop.name} role={role} roleName={roleName} onClose={closeMenu} />
       ) : null}
-    </div>
+    </div></>
   );
 }
 

@@ -170,6 +170,22 @@ async function giverHere(req) {
 }
 export const isTheOwner = async (checkin) => Boolean(await prepare('SELECT 1 FROM logins WHERE employee_id = ? AND is_owner = true AND active = true').get(checkin.employee_id));
 
+/**
+ * Whether the sign-in's own PIN and settings are the sign-in's to use on this
+ * browser (the review, 29 Oct). Anywhere but a workshop computer, yes. On a
+ * workshop computer, only while the person checked in by PIN is the
+ * sign-in's own team member: otherwise whoever is working could get the
+ * sign-in (usually the Owner) a new PIN and check in as them.
+ */
+export async function ownAccountHere(req, ctx) {
+  const { workshop } = await thisComputer(req);
+  if (!workshop) return true;
+  const mine = await currentCheckin(req);
+  if (!mine) return false;
+  return Boolean(await prepare('SELECT 1 FROM logins WHERE id = ? AND employee_id = ?').get(ctx.login.id, mine.employee_id));
+}
+export const NOT_YOURS_HERE = { error: 'On a workshop computer, only the person signed in changes their own PIN and settings, checked in with their own PIN', code: 'not_your_account_here' };
+
 // Someone checked in by PIN on this browser who isn't the Owner: then the
 // Owner's sign-in doesn't set up a till or a workshop computer here
 // (giverHere's rule; roles and switches 2; till-setup, review, 28 Oct).
@@ -247,6 +263,7 @@ export function register(route) {
   route('GET', '/api/your-settings/till-pin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const me = await teamMemberOf(ctx.login);
     sendJson(res, 200, { canHavePin: Boolean(me) || ctx.login.is_owner === true, hasPin: Boolean(me?.pin_hash) });
   });
@@ -259,6 +276,7 @@ export function register(route) {
   route('GET', '/api/your-settings/till-pin/ask', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const row = ctx.login.is_owner ? null : await prepare(
       `SELECT l.till_pin_asked_at AS asked, e.pin_cleared_at AS cleared FROM logins l JOIN employees e ON e.id = l.employee_id
         WHERE l.id = ? AND e.pin_hash IS NULL AND e.active = 1`
@@ -274,6 +292,7 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin/ask', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     await prepare('UPDATE logins SET till_pin_asked_at = now() WHERE id = ?').run(ctx.login.id);
     sendJson(res, 200, { ask: null });
   });
@@ -284,6 +303,7 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin/offer', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     if (!offers.take(String(ctx.login.id))) return sendJson(res, 429, SLOW_DOWN);
     const me = await teamMemberForPin(ctx.login, shopId);
     if (!me) return sendJson(res, 409, { error: 'Ask the owner to add you to the team first', code: 'no_team_member' });
@@ -298,6 +318,7 @@ export function register(route) {
   route('POST', '/api/your-settings/till-pin', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!(await ownAccountHere(req, ctx))) return sendJson(res, 403, NOT_YOURS_HERE);
     const body = await readJsonBody(req);
     const me = await teamMemberOf(ctx.login);
     if (!me) return sendJson(res, 400, NO_OFFER);

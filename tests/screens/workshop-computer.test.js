@@ -30,7 +30,7 @@ afterEach(async () => {
   current = undefined;
 });
 
-async function open(path, { workshop = WORKSHOP, till = null, serving = null, pinOk = true } = {}) {
+async function open(path, { workshop = WORKSHOP, till = null, serving = null, pinOk = true, checkinFails = false } = {}) {
   const calls = [];
   const state = { serving, workshop };
   const realFetch = globalThis.fetch;
@@ -42,7 +42,7 @@ async function open(path, { workshop = WORKSHOP, till = null, serving = null, pi
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     // On a workshop computer the server says Owner only while the Owner is working (design 9).
-    if (u.pathname === '/api/auth/me') return reply(200, { ...JACK, isOwner: !state.workshop || state.serving?.id === JACK_WORKING.id });
+    if (u.pathname === '/api/auth/me') return reply(200, { ...JACK, isOwner: !state.workshop || state.serving?.id === JACK_WORKING.id, workshopComputer: Boolean(state.workshop) });
     if (u.pathname === '/api/till-setup/workshop') state.workshop = { name: body.name || null, siteName: 'Bolton' };
     if (u.pathname === '/api/till-setup/workshop') return reply(201, { workshop: { id: 4, name: body.name || null, siteName: 'Bolton' } });
     if (u.pathname === '/api/till-setup') return reply(200, { sites: [BOLTON], thisTill: till ? { id: 3, ...till } : null, thisWorkshop: state.workshop ? { id: 4, ...state.workshop } : null, tills: till ? [till.code] : [] });
@@ -53,6 +53,7 @@ async function open(path, { workshop = WORKSHOP, till = null, serving = null, pi
     }
     if (u.pathname === '/api/till-checkin/end') { state.serving = null; return reply(200, { serving: null }); }
     if (u.pathname === '/api/till-checkin/active') return reply(200, { serving: state.serving });
+    if (u.pathname === '/api/till-checkin' && checkinFails) return reply(500, { error: 'Internal server error' });
     if (u.pathname === '/api/till-checkin') return reply(200, { serving: state.serving, checkedInToday: state.serving ? [state.serving] : [], givePin: [], till, workshop: state.workshop });
     if (u.pathname === '/api/float-check') return reply(200, { day: '2026-09-01', floatPence: null, takesPayments: true, firstDay: false, check: null });
     if (u.pathname === '/api/your-settings/till-pin/ask') return reply(200, { ask: null });
@@ -174,12 +175,14 @@ test('using it keeps it: a key or a tap starts the 10 minutes again, and tells t
   later(6 * MINUTE);
   t.fireEvent.keyDown(document.body, { key: 'a' });
   await t.waitFor(() => assert.equal(posts(t, '/api/till-checkin/active').length, 1));
-  // A second press straight after doesn't tell the server again.
+  // A second press straight after doesn't tell the server at once; it is
+  // told once 30 seconds have passed (the review, 29 Oct).
   t.fireEvent.pointerDown(document.body);
+  assert.equal(posts(t, '/api/till-checkin/active').length, 1);
   later(6 * MINUTE);
   await new Promise((r) => setTimeout(r, 1200));
   assert.ok(t.ui.queryByRole('region', { name: 'Who’s working' }), 'still Alex, 12 minutes after he started');
-  assert.equal(posts(t, '/api/till-checkin/active').length, 1);
+  assert.equal(posts(t, '/api/till-checkin/active').length, 2);
   assert.equal(posts(t, '/api/till-checkin/end').length, 0);
 });
 
@@ -220,6 +223,47 @@ test('after the Owner, the next person never sees the Owner’s menu, not even f
   await t.ui.findByRole('region', { name: 'Who’s working' });
   // The moment the page is back, its menu is already Alex's.
   assert.ok(t.within(nav()).queryByRole('link', { name: 'Settings' }) === null);
+});
+
+// The review, 29 Oct: the screen's 10 minutes run from the last time it told
+// the server, and activity it hasn't told yet is told within 30 seconds, so
+// the screen and the server end together.
+test('a press the server wasn’t told of yet is told within 30 seconds, and the 10 minutes run from then', async () => {
+  const t = await open('/workshop/diary', { serving: ALEX });
+  await t.ui.findByRole('region', { name: 'Who’s working' });
+  later(20_000);
+  t.fireEvent.keyDown(document.body, { key: 'a' });
+  // Too soon after the check-in to tell the server at once…
+  assert.equal(posts(t, '/api/till-checkin/active').length, 0);
+  // …so it is told once 30 seconds have passed since it last was.
+  later(11_000);
+  await t.waitFor(() => assert.equal(posts(t, '/api/till-checkin/active').length, 1), { timeout: 3000 });
+  // Nothing more: 10 minutes from that telling, not from the press.
+  later(9 * MINUTE + 50_000);
+  await new Promise((r) => setTimeout(r, 1200));
+  assert.ok(t.ui.queryByRole('region', { name: 'Who’s working' }), 'still Alex just under 10 minutes after the server was told');
+  later(15_000);
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' }, { timeout: 3000 });
+});
+
+test('a workshop computer whose check-in can’t be read shows no pages, only a message', async () => {
+  const t = await open('/workshop/settings', { checkinFails: true });
+  assert.equal((await t.ui.findByRole('alert')).textContent, 'Wheelhouse couldn’t check who is working on this computer. Try again in a moment.');
+  assert.ok(t.ui.queryByRole('navigation') === null);
+  assert.ok(t.ui.queryByText(/Settings/) === null);
+});
+
+test('one status region, empty on the PIN screen, says "Now working" after the PIN; Switch is a full-size target', async () => {
+  const t = await open('/workshop/diary');
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  const region = t.ui.getAllByRole('status').find((s) => s.dataset.working !== undefined);
+  assert.ok(region, 'the working status region is there before the PIN');
+  assert.equal(region.textContent, '');
+  typePin(t, '7305');
+  const working = await t.ui.findByRole('region', { name: 'Who’s working' });
+  assert.ok(region.isConnected, 'the same region, kept');
+  assert.equal(region.textContent, 'Now working: Alex Morgan');
+  assert.match(t.within(working).getByRole('button', { name: 'Switch' }).className, /\bmin-h-11\b/);
 });
 
 test('a till is not a workshop computer: no Working bar, and it never goes back by itself', async () => {

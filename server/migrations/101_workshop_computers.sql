@@ -25,3 +25,9 @@ CREATE POLICY workshop_computers_shop_isolation ON workshop_computers
 ALTER TABLE pin_checkins ADD COLUMN IF NOT EXISTS workshop_computer_id INTEGER REFERENCES workshop_computers(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_pin_checkins_workshop_day ON pin_checkins(workshop_computer_id, day);
 ALTER TABLE pin_checkins ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ;
+-- A check-in is on a till or on a workshop computer, never both (the review,
+-- 29 Oct). Dropped and made again, so running twice is safe. The shared
+-- development database ran this file before the check was added; running it
+-- again there (delete its schema_migrations row) adds the check.
+ALTER TABLE pin_checkins DROP CONSTRAINT IF EXISTS pin_checkins_one_computer;
+ALTER TABLE pin_checkins ADD CONSTRAINT pin_checkins_one_computer CHECK (till_id IS NULL OR workshop_computer_id IS NULL);
