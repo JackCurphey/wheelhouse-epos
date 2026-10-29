@@ -14,6 +14,7 @@ import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/htt
 import { ownerOnly } from '../lib/owner-only.js';
 import { currentSession } from '../lib/session.js';
 import { deferShopifyPushes } from '../lib/sales.js';
+import { csvCell, textCell } from '../lib/csv.js';
 import { checkOf, differencesOf, notCountedOf, recountsAskedOf, takeLabel as label } from '../lib/stock-take-differences.js';
 
 const db = { prepare, exec: dbExec };
@@ -91,10 +92,6 @@ const lockProducts = (ids) => (ids.length
   ? db.prepare('SELECT id FROM products WHERE id = ANY(?) ORDER BY id FOR NO KEY UPDATE').all(ids)
   : Promise.resolve([]));
 
-const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-// A name or code a spreadsheet would read as a formula is written as text
-// (review, 28 Oct): a ' before =, +, -, @, a tab or a return. Numbers stay numbers.
-const textCell = (v) => csvCell(/^[=+\-@\t\r]/.test(String(v)) ? `'${v}` : v);
 const MATCHES = 20;
 const pounds = (pence) => `${pence < 0 ? '-' : ''}${(Math.abs(pence) / 100).toFixed(2)}`;
 const names = (ns) => (ns.length < 2 ? ns.join('') : `${ns.slice(0, -1).join(', ')} and ${ns[ns.length - 1]}`);

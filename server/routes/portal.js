@@ -42,6 +42,8 @@ import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
 import { setStopped, stopView } from '../messaging/stop-codes.js';
 import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
+import { dataCopyFiles } from '../customer-data-copy.js';
+import { zipFiles } from '../lib/zip.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
@@ -705,6 +707,46 @@ const contactOf = (customer) => ({
   marketingPermission: Boolean(customer?.marketing_permission),
 });
 
+// A signed-in customer's repairs, each with its stage and total, and their
+// purchases from both sales records: the account's history, and the copy of
+// their data (your-data-copy design 3).
+const shopZone = async () => (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+async function repairsAndPurchases(customerId) {
+  const zone = await shopZone();
+  const jobs = await db.prepare(
+    `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
+            NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike_label,
+            CASE WHEN w.job_date IS NULL THEN w.created_at
+                 ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
+       FROM workshop_jobs w LEFT JOIN customer_bikes b ON b.id = w.bike_id
+      WHERE w.customer_id = ?`
+  ).all(zone, customerId);
+  const repairs = [];
+  for (const j of jobs) {
+    // The repair page's own figures, so Show prices off hides the total here too.
+    const money = await jobMoney(j.id);
+    const totalPence = money.paid?.amount != null ? Math.round(money.paid.amount * 100) : money.workTotalPence;
+    repairs.push({
+      kind: 'repair', jobId: j.id, reference: j.reference, title: j.title, bikeLabel: j.bike_label,
+      stage: bookingStage(j), jobDate: j.job_date, totalPence: totalPence ?? null, at: new Date(j.at).toISOString(),
+      // For the bike's "In the shop now" and the tracker's chip (customer-account-screens design 1).
+      bikeId: j.bike_id ?? null, workStarted: j.work_state !== 'not_started' && j.work_state != null,
+    });
+  }
+  const sales = await db.prepare(
+    `SELECT v.source, v.id, v.receipt_number, v.total_pence, v.made_at,
+            CASE WHEN v.source = 'old'
+                 THEN (SELECT string_agg(i.name, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
+                 ELSE (SELECT string_agg(l.description, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
+       FROM all_sales v WHERE v.customer_id = ?`
+  ).all(customerId);
+  const purchases = sales.map((p) => ({
+    kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
+    what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
+  }));
+  return [...repairs, ...purchases];
+}
+
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
     const ip = clientIp(req);
@@ -1120,43 +1162,50 @@ export function register(route) {
     const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const customerId = ctx.login.customer_id;
-    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-    const jobs = await db.prepare(
-      `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
-              NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike_label,
-              CASE WHEN w.job_date IS NULL THEN w.created_at
-                   ELSE ((w.job_date::text || ' ' || coalesce(NULLIF(w.start_time, ''), '00:00'))::timestamp AT TIME ZONE ?) END AS at
-         FROM workshop_jobs w LEFT JOIN customer_bikes b ON b.id = w.bike_id
-        WHERE w.customer_id = ?`
-    ).all(zone, customerId);
-    const repairs = [];
-    for (const j of jobs) {
-      // The repair page's own figures, so Show prices off hides the total here too.
-      const money = await jobMoney(j.id);
-      const totalPence = money.paid?.amount != null ? Math.round(money.paid.amount * 100) : money.workTotalPence;
-      repairs.push({
-        kind: 'repair', jobId: j.id, reference: j.reference, title: j.title, bikeLabel: j.bike_label,
-        stage: bookingStage(j), jobDate: j.job_date, totalPence: totalPence ?? null, at: new Date(j.at).toISOString(),
-        // For the bike's "In the shop now" and the tracker's chip (customer-account-screens design 1).
-        bikeId: j.bike_id ?? null, workStarted: j.work_state !== 'not_started' && j.work_state != null,
-      });
-    }
-    const sales = await db.prepare(
-      `SELECT v.source, v.id, v.receipt_number, v.total_pence, v.made_at,
-              CASE WHEN v.source = 'old'
-                   THEN (SELECT string_agg(i.name, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
-                   ELSE (SELECT string_agg(l.description, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
-         FROM all_sales v WHERE v.customer_id = ?`
-    ).all(customerId);
-    const purchases = sales.map((p) => ({
-      kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
-      what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
-    }));
+    const history = await repairsAndPurchases(customerId);
     // One "Messages with [shop]" row for the conversation (ac-account-asked;
     // ask-the-shop-server design 3): its newest message, and whether it's the shop's.
     const newest = (await customerConversation(customerId)).at(-1);
     const messages = newest ? [{ kind: 'messages', at: newest.at, shopReplied: !newest.fromCustomer }] : [];
-    sendJson(res, 200, [...repairs, ...purchases, ...messages].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
+    sendJson(res, 200, [...history, ...messages].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
+  });
+
+  // "Download a copy of your data" (ac-download; your-data-copy design 2 and
+  // 3; account and reminders decision 4): one zip, made straight away and
+  // logged as a privacy request from the account, done at once. The log and
+  // the reads are one transaction, the customer's row locked so a merge can't
+  // move their records half-way through; the file goes after the commit.
+  // screens: ac-download, ac-download-failed
+  route('POST', '/api/portal/:shopSlug/me/data-copy', async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const zone = await shopZone();
+    let files;
+    await db.exec('BEGIN');
+    try {
+      const customer = await db.prepare('SELECT id FROM customers WHERE id = ? FOR UPDATE').get(ctx.login.customer_id);
+      if (!customer) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, { error: 'Not signed in' });
+      }
+      await db.prepare("INSERT INTO privacy_requests (customer_id, kind, source, asked_at, done_at) VALUES (?, 'copy', 'account', now(), now())").run(customer.id);
+      files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id) });
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    const day = shopToday(zone);
+    const zip = zipFiles(files, currentMoment());
+    res.writeHead(200, {
+      'content-type': 'application/zip',
+      'content-length': zip.length,
+      'content-disposition': `attachment; filename="${ctx.shop.slug}-your-data-${day}.zip"`,
+    });
+    res.end(zip);
   });
 
   // "Ask the shop a question": the signed-in customer's one conversation with

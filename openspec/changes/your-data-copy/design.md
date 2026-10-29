@@ -1,0 +1,73 @@
+# Design: Download a copy of your data
+
+## 1. Migration 108: `privacy_requests`
+
+One row per privacy request: who (`customer_id`, `ON DELETE SET NULL` so the
+paper trail outlives the record), what (`kind`: `copy` or `delete`), where
+from (`source`: `account` or `shop`), `asked_at`, and `done_at` (null while
+open). Row-level security per shop, as every shop table. `CREATE TABLE IF
+NOT EXISTS` and policies dropped before they are made, so it is safe to run
+twice. `delete` and `shop` are in the checks now because the Privacy
+requests list (`cs-privacy`) draws both kinds and both sources; nothing
+writes them yet.
+
+`privacy_requests` joins the merge's moved tables (`MOVED` in
+`server/routes/customer-merge.js`), so a merge and its Undo carry the log
+with the customer.
+
+## 2. The route
+
+`POST /api/portal/:shopSlug/me/data-copy`, for the signed-in customer only
+(401 otherwise, or for another shop's sign-in). A request from another
+website is refused (403), as the account's other actions are. In one
+transaction it records the request (`kind 'copy'`, `source 'account'`,
+`asked_at` and `done_at` both the database's `now()`), reads the data, and
+commits; only then does it reply. `Cache-Control: no-store`.
+
+The reply is `application/zip`, with `Content-Disposition: attachment;
+filename="<shop slug>-your-data-<YYYY-MM-DD>.zip"`, the date the shop's day
+(its time zone, as the history uses).
+
+## 3. What's in it
+
+Six CSV files, each with a header row, cells quoted as the stock take's
+download quotes them, and a cell starting `=`, `+`, `-`, `@` or a tab
+prefixed with `'` so a spreadsheet never runs it:
+
+- `your-details.csv`: name, email, mobile, address, postcode; for a company,
+  contact name, VAT number and invoice email; the email you sign in with.
+- `your-bikes.csv`: make, model, colour, frame number and when it was added,
+  for each of their bikes still on the account.
+- `your-repairs.csv`: reference, date, bike, work, where it's up to (the
+  account's words), total, and when you agreed to the booking terms.
+- `your-purchases.csv`: receipt number (or "No. [id]"), date, what was
+  bought, total, from both sales records, as the history shows them.
+- `your-messages.csv`: your conversation with the shop (who, when, about
+  which repair, the words), then messages the shop sent you (when, how, the
+  subject and words) that went.
+- `what-you-agreed-to.csv`: job updates by; service reminders, review
+  requests, offers and news (yes or no); when and where a yes to reminders
+  was given.
+
+Left out: the shop's own private notes about the customer and their bikes
+(staff-only, not shown on the account); messages that never went (undone,
+failed or waiting).
+
+## 4. The zip
+
+A small writer in `server/lib/zip.js`: files stored (not compressed; CSVs
+are small), UTF-8 names, CRC-32 from Node's `zlib.crc32`. No new dependency.
+
+## 5. The screen (`src/screens/book/account.tsx`)
+
+- **Your data card**: heading "Your data", and "Download a copy of your
+  data" as a link-style button (the drawn `actBtn`), under History on a
+  computer and last on a phone.
+- **Pressing it** posts to the route. On success the zip is saved through a
+  link to the file the browser holds, and a green bar (role status) says
+  "Your data is downloading as one file, [file name] — details, bikes, jobs,
+  purchases, messages and what you agreed to." with "Not started? Download
+  it again". On failure a warning bar says "The download didn't start." with
+  Try again. A 401 sends them to sign in, as the account's loading does.
+- The bars sit at the top of the account, under its title (the drawing puts
+  them above the title, which the booking pages' frame draws itself).
