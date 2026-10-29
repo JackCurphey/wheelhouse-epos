@@ -1390,6 +1390,26 @@ silent:
 16. **"Now working: [name]" is said from one status region** kept from the
     PIN screen to the page, empty until the PIN, and Switch is a full-size
     target (44 pixels high) (the review, 29 Oct).
+17. **Your settings on someone else's sign-in says so plainly** (the second
+    review, 29 Oct). When a switch is changed on a workshop computer signed
+    in by someone other than the person working, the page says "Your
+    settings change only on your own sign-in. Change them on your own phone
+    or computer." in the page's plain-message style (not the red "couldn’t
+    save" line), the switches become unavailable, and "Changes apply
+    straight away." goes. *Pattern:* Settings' "Only the shop’s owner can
+    change settings for now." **Question for Jack, default taken:** should
+    Your settings on a workshop computer belong to the person checked in by
+    PIN (walk-through 8 M3) rather than the sign-in? Default until roles:
+    the sign-in's settings, changed only by its own team member there.
+18. **No float check on a workshop computer with nobody working** (the
+    second review, 29 Oct), not even the Owner's look at closing:
+    ownAccountHere's rule.
+19. **Who's signed in says "workshop computer" only when the browser isn't
+    also a till**: a till's key wins, as everywhere else.
+20. **Known gap, for task 3.8: work done on a workshop computer is recorded
+    under the sign-in's login**, not the person working: stock changes,
+    stock takes, customer messages, receipt emails and no-shows, among
+    others. Recording it under the person working is task 3.8.
 
 ## Decided here, for Jack to overrule
 

@@ -10,6 +10,7 @@
 - [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [ ] 1.7 Log choices in Jack’s section of `decided-while-building.md` (done, 28 Oct); lint, typecheck, `npm test`, `npm run test:browser` (done, 28 Oct); `/review` (sign-in, migration): still to run before merging
 - [x] 1.7a Review, 29 Oct, and Jack's answer 1 (`docs/decisions/2026-10-29-answers.md`): the sign-in's own PIN and settings only for its own team member on a workshop computer; Today's Tills leave workshop computers out; the cookie's limit written down; the screen's 10 minutes from its last telling; no pages if the check-in can't be read; one status region and a full-size Switch; migration 101's never-both check. Tests first, each fix broken on purpose
+- [x] 1.7b Second review, 29 Oct: Your settings says plainly that settings change only on your own sign-in, switches unavailable; no float check on a workshop computer with nobody working; /me's workshopComputer false when the browser is also a till. Tests first, each fix broken on purpose
 - [ ] 1.8 `/opsx:archive` as the last commit
 
 ## 2. Later pieces of task 3.6 (each its own change when taken)
@@ -21,3 +22,4 @@
 - Later, not in this change: 2.5 Owner and Manager pages asking for a PIN every time on a workshop computer (stage-1 gaps 1; walk-through 8 decision 3), with roles (WP-1.1)
 - Later, not in this change: 2.6 The diary's "Me" as the person working, and Your settings as theirs with no Change PIN (walk-through 8 M2, M3); work recorded under the person working (task 3.8), and then the drawn line "What you do on this computer is recorded under your name and role."
 - Later, not in this change: 2.7 Renaming or switching off a workshop computer, with the Tills list (WP-5.1)
+- Later, not in this change: 2.8 Work done on a workshop computer recorded under the person working, not the sign-in's login: stock changes, stock takes, customer messages, receipt emails, no-shows and the rest (task 3.8)
