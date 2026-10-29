@@ -211,20 +211,21 @@ async function peopleWithNoPin(giver) {
   return rows.map((r) => ({ id: r.id, name: r.name, role: r.is_mechanic ? 'Mechanic' : 'Staff', tillOnly: r.login_id === null }));
 }
 
-// Who a tap checks in on this workshop computer (trust-pin-workshop design 3
-// and 4): someone active, with a PIN, never the Owner, who typed their PIN
-// (not a tap) on this workshop computer on the shop's day, under this same
-// sign-in (as currentCheckin), since their PIN was last cleared or changed
-// (the review, 29 Oct). `id` narrows it to one person.
-async function tapNames(workshopId, loginId, day, id = null) {
+// Who a tap checks in on this till or workshop computer (trust-pin-workshop
+// design 3 and 4; serving-pills): someone active, with a PIN, never the
+// Owner, who typed their PIN (not a tap) on this same till or workshop
+// computer on the shop's day, under this same sign-in (as currentCheckin),
+// since their PIN was last cleared or changed (the review, 29 Oct). `id`
+// narrows it to one person.
+async function tapNames({ till, workshop }, loginId, day, id = null) {
   const rows = await prepare(
     `SELECT DISTINCT e.id, e.name, e.is_mechanic FROM pin_checkins c JOIN employees e ON e.id = c.employee_id
-      WHERE c.workshop_computer_id = ? AND c.login_id = ? AND c.day = ? AND c.by_tap = false AND e.active = 1 AND e.pin_hash IS NOT NULL
+      WHERE c.till_id IS NOT DISTINCT FROM ?::int AND c.workshop_computer_id IS NOT DISTINCT FROM ?::int AND c.login_id = ? AND c.day = ? AND c.by_tap = false AND e.active = 1 AND e.pin_hash IS NOT NULL
         AND c.checked_in_at > GREATEST(COALESCE(e.pin_cleared_at, '-infinity'::timestamptz), COALESCE(e.pin_set_at, '-infinity'::timestamptz))
         AND NOT EXISTS (SELECT 1 FROM logins l WHERE l.employee_id = e.id AND l.is_owner = true)
         AND (?::int IS NULL OR e.id = ?::int)
       ORDER BY e.name, e.id`
-  ).all(workshopId, loginId, day, id, id);
+  ).all(till?.id ?? null, workshop?.id ?? null, loginId, day, id, id);
   return rows.map((r) => ({ id: r.id, name: r.name, role: r.is_mechanic ? 'Mechanic' : 'Staff' }));
 }
 
@@ -395,7 +396,7 @@ export function register(route) {
       // The Owner working here goes back sooner (design 8), so the screen does too.
       idleMinutes: workshop && mine && (await isTheOwner(mine)) ? ownerIdleMinutes(trust.idleMinutes) : trust.idleMinutes,
       trustPin: trust.trustPin,
-      names: workshop && trust.trustPin ? await tapNames(workshop.id, ctx.login.id, await today()) : [],
+      names: (till || workshop) && trust.trustPin ? await tapNames({ till, workshop }, ctx.login.id, await today()) : [],
       serving: mine ? { id: mine.employee_id, name: mine.name } : null,
       till: till ? { code: till.code, name: till.name, siteName: till.site_name } : null,
       workshop: workshop ? { name: workshop.name, siteName: workshop.site_name } : null,
@@ -453,8 +454,9 @@ export function register(route) {
     const body = await readJsonBody(req);
     const id = body?.employeeId;
     if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { error: 'Choose a name', code: 'not_a_name' });
-    const { workshop } = await thisComputer(req);
-    if (!workshop) return sendJson(res, 403, { error: 'Tapping a name is only on a workshop computer', code: 'not_a_workshop' });
+    // A till's or a workshop computer's own (serving-pills); never a browser that is neither.
+    const { till, workshop } = await thisComputer(req);
+    if (!till && !workshop) return sendJson(res, 403, { error: 'Tapping a name is only on a till or a workshop computer', code: 'not_shared_computer' });
     const day = await today();
     const token = newLinkCode();
     let refusal = null;
@@ -464,7 +466,7 @@ export function register(route) {
       const shop = await prepare("SELECT trust_pin FROM shops WHERE id = current_setting('app.current_shop_id')::int FOR SHARE").get();
       await prepare('SELECT id FROM employees WHERE id = ? FOR UPDATE').get(id);
       if (shop?.trust_pin !== true) refusal = { error: 'Trust PIN is off: enter your PIN', code: 'trust_pin_off' };
-      else [who] = await tapNames(workshop.id, ctx.login.id, day, id);
+      else [who] = await tapNames({ till, workshop }, ctx.login.id, day, id);
       if (!refusal && !who) refusal = { error: 'Enter your PIN: you haven’t typed it on this computer today', code: 'not_typed_here' };
       if (refusal) {
         await dbExec('ROLLBACK');
@@ -474,8 +476,8 @@ export function register(route) {
         if (previous && /^[0-9a-f]{64}$/.test(previous)) {
           await prepare('UPDATE pin_checkins SET ended_at = now() WHERE token_hash = ? AND ended_at IS NULL').run(hashLinkCode(previous));
         }
-        await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, workshop_computer_id, last_active_at, by_tap) VALUES (?, ?, ?, ?, ?, now(), true)')
-          .run(who.id, ctx.login.id, hashLinkCode(token), day, workshop.id);
+        await prepare('INSERT INTO pin_checkins (employee_id, login_id, token_hash, day, till_id, workshop_computer_id, last_active_at, by_tap) VALUES (?, ?, ?, ?, ?, ?, now(), true)')
+          .run(who.id, ctx.login.id, hashLinkCode(token), day, till?.id ?? null, workshop?.id ?? null);
         await dbExec('COMMIT');
       }
     } catch (err) {
