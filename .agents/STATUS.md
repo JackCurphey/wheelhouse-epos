@@ -81,9 +81,25 @@ here before starting it, so two people never build the same one):
   and tapping offline for task 3.5); Settings › Till › Tills with Rename,
   and Remove, which asks first and switches off without deleting (#575,
   #576, migration 104, task 2.7, part of WP-5.1; a removed workshop computer
-  counts as staff until someone signs out there). Opened #560 for Mark:
-  what would free up more work.
-  **Now (29 Oct):** the workshop computer's Owner lock on the server (Jack's answer 4, 29 Oct). Roles and the settings
+  counts as staff until someone signs out there). Merged 29 Oct, evening:
+  the workshop computer's Owner lock held on the server (#578, migration
+  105 `sessions.workshop_computer_id`, Jack's answer 4: deleting the
+  workshop cookie no longer opens the Owner's pages, Your settings uses the
+  same rule, and a workshop computer's WorkOS session is ended at WorkOS in
+  the background, a failed attempt tried again once a minute); a day nobody
+  closed, built as drawn (#579 Jack's answer 5; #580, #581, migration 106:
+  the next morning's count becomes that day's count, Today shows "[day]
+  wasn't closed" with Close it and that day gets its own close, two missed
+  days close oldest first, the money review's fixes in); "To return to
+  [Supplier]" with Returned (#582, migration 107, WP-2.3); Set up a
+  workshop computer says "Don't stay signed in to Google on this computer"
+  (#583, Jack's answer 6, the drawing approved); a normal day with no
+  morning check starts from the last close (#584, Jack's answer 7; it also
+  fixes, on main, close times losing their microseconds and a late Close
+  it's window, both from the money review); the build plan lists the new
+  `till-setup-workshop` drawing, so the drawings' coverage check passes
+  again (#585). Opened #560 for Mark: what would free up more work.
+  **Now (29 Oct):** the next piece is being chosen. Roles and the settings
   store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
@@ -123,7 +139,7 @@ here before starting it, so two people never build the same one):
   sign-in sets up a till (default: allowed, as decision 7); supplier imports
   start stock with no history line (a stock control decision 6 question,
   #566). Also: 491 leftover test shops in the shared test database (#567;
-  default: leave them until Jack says). Answered 29 Oct (`docs/decisions/2026-10-29-answers.md`, answers 2 to 4): the Owner stays never a name to tap and capped at 10 minutes on a workshop computer (#572, #574); a removed workshop computer stays closed to the Owner's pages until someone signs out there (#575); the workshop computer's Owner lock moves to the server, built next. For him to overrule: the 26 and
+  default: leave them until Jack says). Answered 29 Oct (`docs/decisions/2026-10-29-answers.md`, answers 2 to 7): the Owner stays never a name to tap and capped at 10 minutes on a workshop computer (#572, #574); a removed workshop computer stays closed to the Owner's pages until someone signs out there (#575); the workshop computer's Owner lock is held on the server (#578); a day nobody closed is built as drawn (#579 to #581); Set up a workshop computer warns against staying signed in to Google (#583); a normal day with no morning check starts from the last close (#584). To try once on the Staging account: after a workshop computer is set up and its cookies cleared, WorkOS asks for the password instead of offering "Continue" (#578; WorkOS's docs don't say this outright). For him to overrule: the 26 and
   28-29 Oct `decided-while-building.md` sections.
 - **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
   is built after it); a money route, `PUT /api/sale-documents/:id`, can
