@@ -82,6 +82,8 @@ const ROUTES = [
   // The float, and Seen on a short float (openspec/changes/opening-float-check).
   ['PUT', '/api/end-of-day-settings', { floatPence: 15000 }],
   ['POST', `/api/float-check/${MISSING}/seen`, {}],
+  // Trust PIN and the workshop computer's time (openspec/changes/trust-pin-workshop).
+  ['PUT', '/api/signing-in-settings', { trustPin: true }],
   // Close the day and cash taken out, for owners and managers (cash-up
   // decision 5), so the Owner until roles (openspec/changes/close-the-day).
   ['POST', '/api/close-the-day', {}],

@@ -16,6 +16,7 @@ import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-gro
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
+import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -953,6 +954,7 @@ function OwnerSettings() {
   const collection = useCollectionSummary();
   const float = useFloatSummary();
   const tills = useTillsSummary();
+  const signingIn = useSigningInSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS); Stockroom has nothing yet.
@@ -964,6 +966,8 @@ function OwnerSettings() {
           { key: 'receipts', title: 'Receipts', summary: details.data ? (details.data.receiptFooter ? 'Words at the bottom' : 'Nothing at the bottom yet') : '', body: <ReceiptsBox /> },
           // Last in Till, as drawn (setup.mjs tillFolds; till-setup).
           { key: 'tills', title: 'Tills', summary: tills, body: <TillsSettings /> },
+          // Beside Tills, its own fold (stage-1 gaps 9; trust-pin-workshop).
+          { key: 'signing-in', title: 'Signing in', summary: signingIn, body: <SigningInSettings /> },
         ] },
         // After Till, as drawn (settings-frame.mjs); only Customer groups works yet (cs-groups).
         { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [

@@ -14,7 +14,8 @@ export type GiveTo = { id: number; name: string; role: 'Staff' | 'Mechanic'; til
 export type ThisTillName = { code: string; name: string | null; siteName: string };
 /** This browser's workshop computer (openspec/changes/workshop-computer). */
 export type ThisWorkshop = { name: string | null; siteName: string };
-export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[]; till?: ThisTillName | null; workshop?: ThisWorkshop | null };
+/** `idleMinutes`: how long a workshop computer waits before going back, null for never (openspec/changes/trust-pin-workshop). */
+export type TillCheckin = { serving: CheckedIn | null; checkedInToday: CheckedIn[]; givePin?: GiveTo[]; till?: ThisTillName | null; workshop?: ThisWorkshop | null; idleMinutes?: number | null };
 
 export const CHECKIN_QUERY = ['till-checkin'];
 // The float check asks the person checked in, so it is read again when that changes.
@@ -37,7 +38,7 @@ export function useCheckinActions() {
     queryClient.setQueryData<TillCheckin>(CHECKIN_QUERY, (old) => {
       const today = old?.checkedInToday ?? [];
       // Who can be given a PIN is the Owner's to see, so it goes with whoever was serving.
-      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [], till: old?.till ?? null, workshop: old?.workshop ?? null };
+      return { serving, checkedInToday: serving && !today.some((p) => p.id === serving.id) ? [...today, serving] : today, givePin: [], till: old?.till ?? null, workshop: old?.workshop ?? null, idleMinutes: old?.idleMinutes };
     });
     void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     void queryClient.invalidateQueries({ queryKey: FLOAT_QUERY });

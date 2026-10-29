@@ -19,6 +19,8 @@ GET /api/label-settings
 PUT /api/label-settings
 GET /api/shop-theme
 PUT /api/shop-theme
+GET /api/signing-in-settings
+PUT /api/signing-in-settings
 GET /api/end-of-day-settings
 PUT /api/end-of-day-settings
 GET /api/storefront-settings

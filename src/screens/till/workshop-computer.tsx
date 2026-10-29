@@ -67,7 +67,6 @@ export function WorkingStatus({ working }: { working: CheckedIn | null }) {
   return <p role="status" data-working="" className="sr-only">{working ? `Now working: ${working.name}` : ''}</p>;
 }
 
-const IDLE_MS = 10 * 60_000;
 // The server is told someone is still here at most this often (design 2).
 const TELL_EVERY_MS = 30_000;
 const USES = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
@@ -81,7 +80,7 @@ const USES = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
  * every second against the clock, so a sleeping tab catches up the moment it
  * wakes.
  */
-export function useWorkshopIdle(working: boolean) {
+export function useWorkshopIdle(working: boolean, idleMinutes: number | null = 10) {
   const { stillHere, idleOut } = useCheckinActions();
   const actions = useRef({ stillHere, idleOut });
   useEffect(() => { actions.current = { stillHere, idleOut }; });
@@ -104,7 +103,8 @@ export function useWorkshopIdle(working: boolean) {
     const timer = setInterval(() => {
       const now = Date.now();
       if (untold && now - told >= TELL_EVERY_MS) tell(now);
-      if (now - told < IDLE_MS) return;
+      // Off (trust PIN on): never goes back by itself (trust-pin-workshop).
+      if (idleMinutes === null || now - told < idleMinutes * 60_000) return;
       clearInterval(timer);
       actions.current.idleOut();
     }, 1000);
@@ -112,5 +112,5 @@ export function useWorkshopIdle(working: boolean) {
       for (const kind of USES) window.removeEventListener(kind, used, { capture: true });
       clearInterval(timer);
     };
-  }, [working]);
+  }, [working, idleMinutes]);
 }

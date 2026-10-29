@@ -1411,6 +1411,28 @@ silent:
     stock takes, customer messages, receipt emails and no-shows, among
     others. Recording it under the person working is task 3.8.
 
+### 29 Oct 2026: trust PIN on the workshop computer (`openspec/changes/trust-pin-workshop`, `set-till-quick`, `till-checkin-workshop-names`; WP-1.7 task 3.6, later tasks 2.1 and 2.2; roles and switches 3 and 9; stage-1 gaps 9 and 10)
+
+1. **The Signing in fold, no row drawn** (`set-till-quick` has the two
+   lines only; stage-1 gaps 9 put them in their own fold after Tills): the
+   settings pages' own switch, "Trust PIN", with "Once someone has typed
+   their PIN on a workshop computer today, they tap their name instead. The
+   owner still types theirs. One setting for the whole business."; with it
+   on, "Go back to the start when left alone" as pills, "5 minutes", "10
+   minutes", "15 minutes", "30 minutes", "Off", each saved when chosen; with
+   it off, "Workshop computers go back to Enter your PIN after 10 minutes
+   left alone." The summary: "Trust PIN off", "Trust PIN on · back after
+   [n] minutes" or "Trust PIN on · never goes back". The drawn line's tills
+   ("on a workshop computer or a till") wait for the till's pills (task
+   2.4). *Pattern:* "Show prices on the booking page" for the switch, "Bikes
+   are booked in for" for the pills.
+2. **A time chosen with trust PIN on is kept when it is switched off**, and
+   comes back when it is switched on again; while off, it is 10 minutes
+   whatever is kept. *Pattern:* "A fixed amount" kept while the deposit is
+   off (deposit settings).
+3. **Stored on the shop's row**, as the float and the stock amount, until
+   the settings store (WP-1.2).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
