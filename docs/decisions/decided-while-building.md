@@ -1567,6 +1567,56 @@ silent:
    PINs: the drawing's till bar still shows who is serving. The pills are
    added under the quick buttons.
 
+### 29 Oct 2026: the Tills list, with Rename and Remove (`openspec/changes/tills-list`, `set-till-tills-owner`, `set-till-remove`; WP-1.7 task 3.6, later task 2.7; WP-5.1; owner setup 17)
+
+1. **Workshop computers are in the same list**, after the tills, titled
+   "Workshop computer", with the same "Bolton · registered [date] by [name]",
+   Rename and Remove. The drawing has only tills; the workshop computer task
+   2.7 puts them "with the Tills list". *Pattern:* the drawn till row.
+2. **Removing a workshop computer asks in its own words**: "Remove the
+   workshop computer?", "This computer stops working as a workshop
+   computer.", "Keep the workshop computer", "Remove the workshop computer".
+   No line about sales: none are taken there. *Pattern:* `set-till-remove`.
+3. **A till's name shows in its row's title**, "Till B1 · Front counter";
+   the drawing's row shows only "Till B1", so a name given at setup or by
+   Rename would show nowhere. *Pattern:* the "·" between name and shop on
+   the drawn rows.
+4. **Rename opens a box**, not drawn: "Rename Till B1" over "Bolton",
+   Set up this till's "Name (optional)", Cancel and Save; a blank name is
+   none (28 Oct entry 14). *Pattern:* Customer groups' Edit box, with the
+   drawn pop-up's header.
+5. **"registered [date]" is the day it was set up**, "Thu 29 Oct" as
+   elsewhere in the app; "by [name]" is the Owner's sign-in that set it up.
+   Tills and workshop computers set up before migration 104 have nobody
+   recorded, so theirs read "Bolton · registered [date]" without "by".
+   Re-claiming a number (28 Oct entry 16) keeps the first registration.
+6. **Removing switches it off; nothing is deleted.** Its check-ins, float
+   checks and Today's line stay (28 Oct entry 17) and a till's number stays
+   "In use" (entry 7). The computer stops being the till at once.
+7. **Only the Owner, until roles**: the Manager's view (`set-till-tills`,
+   Rename without Remove) waits for WP-1.1. Rename and Remove are refused,
+   like setting up a till, while someone else is checked in by PIN on the
+   computer making the change (28 Oct entry 15).
+8. **The pop-ups sit in the middle of the screen on a phone too**, as
+   Customer groups' box does; the drawing's phone pop-up fills the screen.
+   *Pattern:* the built Settings boxes.
+9. **Decided here, for Jack to overrule: a removed workshop computer
+   stays closed to the Owner's pages** (review, 29 Oct). A workshop
+   computer is usually left signed in as the Owner, and its Owner pages
+   open only while the Owner is the one working there (workshop computer
+   design 9). Once it is removed it is no longer a workshop computer, so
+   without this it would open every Owner page to whoever sits at it, with
+   no PIN. So a browser that was a removed workshop computer counts as
+   staff, not the Owner, even after signing in again there (WorkOS
+   remembers the Owner and may offer a one-press Continue to whoever is at
+   the computer; second review, 29 Oct). Signing out there clears the old
+   workshop key and ends the WorkOS session, so the Owner signs back in
+   with their own sign-in, and from then on it is an ordinary browser and
+   the Owner is the Owner there. This is stricter than leaving it open.
+   Jack can choose instead to have removing it open the Owner's pages
+   straight away. The Remove pop-up's words are unchanged, as drawn.
+   *Pattern:* a mechanic working on a workshop computer.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
