@@ -11,4 +11,4 @@
 - [x] 1.5b Second review, 29 Oct: signing in leaves a removed workshop computer's key (WorkOS may offer a one-press Continue); signing out clears it. Tests first, each watched failing, each rule broken on purpose
 - [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.7 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
-- [ ] 1.8 `/opsx:archive` as the last commit
+- [x] 1.8 `/opsx:archive` as the last commit
