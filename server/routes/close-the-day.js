@@ -20,7 +20,7 @@ import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
 import { closeEntryNow, entryFor } from '../lib/close-entry.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
-import { isPence } from './float-check.js';
+import { isPence, MAX_PENCE } from './float-check.js';
 
 export { entryFor };
 
@@ -34,6 +34,10 @@ async function floatStartOn(day) {
   return {
     id: row.id,
     checkedAt: row.checked_at,
+    // The Owner's look at closing (Jack's answer 8): no count, nobody checked
+    // in at a till. On a day nobody then closed, it doesn't start the day's
+    // cash (money review 2, 29 Oct).
+    closingLook: row.counted_pence === null && row.employee_id === null && row.till_id === null,
     start: {
       pence: row.counted_pence ?? row.expected_pence, how: row.counted_pence === null ? 'looked' : 'counted',
       expectedPence: row.expected_pence, byName: row.by_name, at: iso(row.checked_at),
@@ -124,13 +128,39 @@ async function paidOutsWhere({ sql, args }) {
 // Minus, too, the cash banked since the check for an earlier day nobody
 // closed (unclosed-day design 6): it was in the count. `until`, for a day
 // closed late, is the morning count that counted it.
-async function drawer(day, start, sales, until = null) {
-  const { cashPence } = await takingsIn(sales, start.checkedAt);
-  const paidOuts = await paidOutsSince(day, start);
+//
+// `missed`, for a day nobody closed (money review, 29 Oct): its window runs
+// from its float check up to the count, so cash taken out in it counts
+// whatever date it carries (one dated the next day but taken out before the
+// count was in the count), as does what is added at its Close it; and the
+// Owner's look at closing never starts the window: then it runs from the
+// previous close, since the day's cash before the look was in the drawer.
+async function drawer(day, start, sales, until = null, { missed = false } = {}) {
+  const from = missed && start.closingLook ? await previousCloseAt(day) : start.checkedAt;
+  const { cashPence } = await takingsIn(sales, from);
+  const paidOuts = missed
+    ? await paidOutsWhere({ sql: 'p.day >= ? AND p.created_at > ? AND (?::timestamptz IS NULL OR p.created_at <= ? OR p.day = ?)', args: [day, from, until, until, day] })
+    : await paidOutsSince(day, start);
   const paidOutsPence = paidOuts.reduce((n, p) => n + p.amountPence, 0);
-  const earlierBankedPence = await bankedForEarlier(day, start.checkedAt, until);
+  const earlierBankedPence = await bankedForEarlier(day, from, until);
   return { cashPence, paidOuts, paidOutsPence, earlierBankedPence, expectedPence: start.start.pence + cashPence - paidOutsPence - earlierBankedPence };
 }
+// When the last close before `day` was made (a day nobody closed always has one).
+async function previousCloseAt(day) {
+  const { at } = await prepare('SELECT max(closed_at) AS at FROM day_closes WHERE day < ?').get(day);
+  return at ?? new Date(0);
+}
+// What a day nobody closed should have held at its count, from its own
+// window: kept on the count, so Today's short or over float for it follows
+// cash taken out for it later (money review 3, 29 Oct; the close recomputes
+// its expected figure the same way).
+async function missedDrawer(day, count) {
+  const late = await lateDay(day, count);
+  const d = await drawer(day, late.start, await openSales(day, count.checkedAt), count.checkedAt, { missed: true });
+  return { late, d };
+}
+const refreshCount = (count, expectedPence) => prepare('UPDATE float_checks SET expected_pence = ? WHERE id = ?')
+  .run(Math.min(MAX_PENCE, Math.max(0, expectedPence)), count.id);
 
 // Cash that closes of days before `day` took out of the drawer after
 // `from` (and up to `until`): what each banked, less what it said to put in
@@ -170,7 +200,7 @@ export async function unclosedBefore(today) {
   const { open, before } = await prepare('SELECT EXISTS (SELECT 1 FROM day_closes WHERE day = ?) AS open, EXISTS (SELECT 1 FROM day_closes WHERE day < ?) AS before').get(prev.day, prev.day);
   if (open || !before) return null;
   const start = await floatStartOn(prev.day);
-  const d = await drawer(prev.day, start, await openSales(prev.day));
+  const d = await drawer(prev.day, start, await openSales(prev.day), null, { missed: true });
   return { day: prev.day, startPence: start.start.pence, cashPence: d.expectedPence - start.start.pence, expectedPence: d.expectedPence };
 }
 
@@ -267,11 +297,12 @@ async function closeLate(res, ctx, shopId, day, today) {
     await prepare(`UPDATE till_sales t SET day_close_id = ? WHERE ${open.till.sql}`).run(made.id, ...open.till.args);
     const counts = closedBy(made.id);
     const t = await takingsIn(counts);
-    const d = await drawer(day, late.start, counts, count.checkedAt);
+    const d = await drawer(day, late.start, counts, count.checkedAt, { missed: true });
     await prepare(
       `UPDATE day_closes SET cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
          takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ? WHERE id = ?`
     ).run(t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
+    await refreshCount(count, d.expectedPence);
     return { ok: true };
   });
   if (!reply.ok) {
@@ -294,8 +325,7 @@ export function register(route) {
       const close = count ? await closeOn(asked) : null;
       if (!count) return sendJson(res, 404, NOT_WAITING);
       if (close) return sendJson(res, 200, { day: asked, floatPence, countedBy: count.by, close });
-      const late = await lateDay(asked, count);
-      const d = await drawer(asked, late.start, await openSales(asked, count.checkedAt), count.checkedAt);
+      const { late, d } = await missedDrawer(asked, count);
       const banked = floatPence === null ? 0 : Math.min(count.by.pence, bankedFrom(late.base, floatPence));
       return sendJson(res, 200, {
         day: asked, floatPence, floatStart: late.start.start, cashPence: d.cashPence, paidOutsPence: d.paidOutsPence,
@@ -334,9 +364,12 @@ export function register(route) {
     const day = body.day ?? today;
     const reply = await lockedOnShop(shopId, async () => {
       if (await prepare('SELECT 1 FROM day_closes WHERE day = ?').get(day)) return { status: 409, body: { error: day === today ? 'Today is already closed' : 'That day is already closed', code: 'day_closed' } };
-      if (day !== today && !(day < today && (await countFor(day)))) return { status: 404, body: NOT_WAITING };
+      const count = day < today ? await countFor(day) : null;
+      if (day !== today && !count) return { status: 404, body: NOT_WAITING };
       const { id } = await prepare('INSERT INTO paid_outs (day, login_id, amount_pence, reason, note) VALUES (?, ?, ?, ?, ?) RETURNING id')
         .get(day, ctx.login.id, body.amountPence, body.reason.trim(), note);
+      // The morning count's expected figure follows (money review 3).
+      if (count) await refreshCount(count, (await missedDrawer(day, count)).d.expectedPence);
       return { ok: true, status: 201, id };
     });
     if (!reply.ok) return sendJson(res, reply.status, reply.body);
