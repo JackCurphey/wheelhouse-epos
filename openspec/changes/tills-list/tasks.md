@@ -10,4 +10,4 @@
 - [x] 1.5a Review, 29 Oct: a removed workshop computer's Owner sign-in isn't the Owner until signing in again, which clears the old key; the older switch-off route takes the same rules; tests that a removed till's offline key, check-ins and taps are refused. Tests first, each watched failing, each rule broken on purpose
 - [x] 1.6 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.7 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
-- [x] 1.8 `/opsx:archive` as the last commit
+- [ ] 1.8 `/opsx:archive` as the last commit
