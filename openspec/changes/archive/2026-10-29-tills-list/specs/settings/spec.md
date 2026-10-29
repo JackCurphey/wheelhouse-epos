@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Settings › Till › Tills offers "Make this computer a till"
-For the Owner, Settings › Front desk › Till SHALL have a Tills section after Receipts, summarised by the shop's tills ("Till B1") or "None yet". It SHALL list every till that is switched on, in number order, then every workshop computer that is switched on, each with where and when it was registered and by whom, Rename and Remove (`set-till-tills-owner`), then the drawn note and "Make this computer a till", which opens Set up this till (stage-1 gaps 4). The button SHALL not show on a computer that is already a till, nor for a business with no site yet.
+For the Owner, Settings › Front desk › Till SHALL have a Tills section after Receipts, summarised by the shop's tills ("Till B1") or "None yet". It SHALL list the tills that are on, in number order, then the workshop computers that are on, each with Rename and Remove (`set-till-tills-owner`), then the drawn note and "Make this computer a till", which opens Set up this till (stage-1 gaps 4). The button SHALL not show on a computer that is already a till, nor for a business with no site yet.
 
 #### Scenario: Jack sets up the first till
 - **WHEN** Jack Lewis opens Settings › Till › Tills on the shop's counter computer
