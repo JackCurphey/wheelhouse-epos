@@ -1607,9 +1607,12 @@ silent:
    design 9). Once it is removed it is no longer a workshop computer, so
    without this it would open every Owner page to whoever sits at it, with
    no PIN. So a browser that was a removed workshop computer counts as
-   staff, not the Owner, until someone signs in again on it: signing in
-   clears the old workshop key, and from then on it is an ordinary browser
-   and the Owner is the Owner there. This is stricter than leaving it open.
+   staff, not the Owner, even after signing in again there (WorkOS
+   remembers the Owner and may offer a one-press Continue to whoever is at
+   the computer; second review, 29 Oct). Signing out there clears the old
+   workshop key and ends the WorkOS session, so the Owner signs back in
+   with their own sign-in, and from then on it is an ordinary browser and
+   the Owner is the Owner there. This is stricter than leaving it open.
    Jack can choose instead to have removing it open the Owner's pages
    straight away. The Remove pop-up's words are unchanged, as drawn.
    *Pattern:* a mechanic working on a workshop computer.
