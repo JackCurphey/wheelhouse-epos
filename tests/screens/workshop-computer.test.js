@@ -104,6 +104,21 @@ test('Set up this computer offers a workshop computer: a shop, a name, no number
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
 });
 
+// Jack's 29 Oct answer 6 ("Merge, warn at setup"; the drawing approved,
+// "Approve it"): till-setup-workshop's one line, for a workshop computer only.
+test('Set up a workshop computer says not to stay signed in to Google; a till doesn\'t', async () => {
+  const LINE = 'Don’t stay signed in to Google on this computer: anyone using it could sign in as you.';
+  const t = await open('/workshop/till/setup', { workshop: null });
+  await t.ui.findByRole('heading', { name: 'Set up this till' });
+  assert.ok(t.ui.queryByText(LINE) === null, 'not for a till');
+  t.fireEvent.click(t.within(t.ui.getByRole('radiogroup', { name: 'This computer becomes' })).getByRole('radio', { name: 'A workshop computer' }));
+  await t.ui.findByRole('heading', { name: 'Set up a workshop computer' });
+  assert.ok(t.ui.getByText(LINE));
+  t.fireEvent.click(t.within(t.ui.getByRole('radiogroup', { name: 'This computer becomes' })).getByRole('radio', { name: 'A till' }));
+  await t.ui.findByRole('heading', { name: 'Set up this till' });
+  assert.ok(t.ui.queryByText(LINE) === null, 'gone again for a till');
+});
+
 test('a computer that is already a workshop computer goes to it, and Settings offers no till there', async () => {
   const t = await open('/workshop/till/setup');
   await t.waitFor(() => assert.equal(window.location.pathname, '/workshop'));
