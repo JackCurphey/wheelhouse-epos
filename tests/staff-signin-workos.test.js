@@ -395,3 +395,35 @@ test('a WorkOS sign-in that becomes a workshop computer\'s has its WorkOS sessio
   assert.equal((await me(plain.session)).status, 200);
   assert.match(await workosOf(plain.session), /^session_pretend_/);
 });
+
+// The re-review of #578: a revoke that failed is tried again on a later
+// request, at most once a minute for a session, so a WorkOS outage doesn't
+// add a call to every request.
+test('a workshop computer\'s WorkOS session still set is ended on a later request, at most once a minute', async () => {
+  const { email, cookie: ownerCookie } = await owner();
+  const json = { 'content-type': 'application/json' };
+  const site = await (await fetch(`${server.baseUrl}/api/sites`, { method: 'POST', headers: { cookie: ownerCookie, ...json }, body: JSON.stringify({ name: 'Bolton', code: 'B' }) })).json();
+  const signedIn = await signIn(email);
+  const token = signedIn.session.split('=')[1];
+  const workos = async () => (await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [token])).rows[0].workos_session_id;
+  const setWorkos = (id) => pool.query('UPDATE sessions SET workos_session_id = $1 WHERE token = $2', [id, token]);
+  // Tied at setup, its WorkOS session ended.
+  assert.equal((await fetch(`${server.baseUrl}/api/till-setup/workshop`, { method: 'POST', headers: { cookie: signedIn.session, ...json }, body: JSON.stringify({ siteId: site.id }) })).status, 201);
+  assert.equal(await workos(), null);
+  // As if that revoke had failed: WorkOS refuses one it doesn't know (the
+  // pretend one refuses any id it didn't make).
+  await setWorkos('session_unknown_1');
+  assert.equal((await me(signedIn.session)).status, 200);
+  assert.equal(await workos(), 'session_unknown_1', 'refused, so kept');
+  // Within the minute, not tried again, even for one WorkOS would take.
+  await setWorkos('session_pretend_retry');
+  assert.equal((await me(signedIn.session)).status, 200);
+  assert.equal(await workos(), 'session_pretend_retry', 'not tried again within the minute');
+  // Another tied session whose revoke failed: its first later request tries again.
+  const other = await signIn(email);
+  const otherToken = other.session.split('=')[1];
+  const key = (await pool.query('SELECT workshop_computer_id FROM sessions WHERE token = $1', [token])).rows[0].workshop_computer_id;
+  await pool.query("UPDATE sessions SET workshop_computer_id = $1, workos_session_id = 'session_pretend_later' WHERE token = $2", [key, otherToken]);
+  assert.equal((await me(other.session)).status, 200);
+  assert.equal((await pool.query('SELECT workos_session_id FROM sessions WHERE token = $1', [otherToken])).rows[0].workos_session_id, null, 'tried again and ended');
+});

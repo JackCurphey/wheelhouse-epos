@@ -36,10 +36,26 @@ export async function markSessionWorkshop(req, workshopComputerId) {
   if (!token) return;
   const marked = await prepare('UPDATE sessions SET workshop_computer_id = ? WHERE token = ? AND workshop_computer_id IS NULL RETURNING workos_session_id')
     .get(workshopComputerId, token);
-  if (!marked?.workos_session_id) return;
+  if (marked?.workos_session_id) await endWorkosSession(token, marked.workos_session_id);
+}
+
+// A revoke WorkOS didn't take is tried again on a later request, at most once
+// a minute for a session (the re-review of #578), so a WorkOS outage doesn't
+// add a call to every request. Kept in this process's memory: a restart only
+// lets one more try through.
+const REVOKE_RETRY_MS = 60_000;
+const revokeTried = new Map(); // session token -> when last tried
+async function endWorkosSession(token, workosSessionId) {
+  const now = Date.now();
+  if (now - (revokeTried.get(token) ?? 0) < REVOKE_RETRY_MS) return;
+  if (revokeTried.size > 10_000) {
+    for (const [t, at] of revokeTried) if (now - at >= REVOKE_RETRY_MS) revokeTried.delete(t);
+  }
+  revokeTried.set(token, now);
   const provider = staffSigninProvider();
-  if (provider?.revokeSession && (await provider.revokeSession({ sessionId: marked.workos_session_id }))) {
+  if (provider?.revokeSession && (await provider.revokeSession({ sessionId: workosSessionId }))) {
     await prepare('UPDATE sessions SET workos_session_id = NULL WHERE token = ?').run(token);
+    revokeTried.delete(token);
   }
 }
 
@@ -55,8 +71,12 @@ function tiedWorkshop(req) {
 }
 async function findTied(req) {
   const token = parseCookies(req)[SESSION_COOKIE];
-  const session = token ? await prepare('SELECT workshop_computer_id FROM sessions WHERE token = ?').get(token) : null;
-  if (session?.workshop_computer_id) return { id: session.workshop_computer_id };
+  const session = token ? await prepare('SELECT workshop_computer_id, workos_session_id FROM sessions WHERE token = ?').get(token) : null;
+  if (session?.workshop_computer_id) {
+    // Still holding a WorkOS session: its revoke failed before; try again.
+    if (session.workos_session_id) await endWorkosSession(token, session.workos_session_id);
+    return { id: session.workshop_computer_id };
+  }
   if (await thisTill(req)) return null;
   const here = workshopCookieToken(req) ? await thisWorkshop(req) : null;
   if (here) {

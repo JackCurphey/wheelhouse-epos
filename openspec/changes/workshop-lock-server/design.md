@@ -76,8 +76,10 @@ with `session_id`, authorised with the API key as a Bearer token
 "Revoke a user session"). Wheelhouse's own session stays signed in; its
 `workos_session_id` is cleared once WorkOS takes the revoke, so signing out
 there later has no WorkOS session to end. If WorkOS can't be reached or
-refuses, the server logs it and the WorkOS session stays (signing out still
-ends it as before). The pretend WorkOS answers the revoke and keeps nothing.
+refuses, the server logs it and the WorkOS session stays; a later request
+from that sign-in tries again, at most once a minute for a session, so an
+outage doesn't add a call to every request (the re-review of #578). Signing
+out still ends it as before. The pretend WorkOS answers the revoke and keeps nothing.
 
 WorkOS's reference doesn't say in so many words that revoking stops its
 hosted page offering Continue; it says the revoke ends the user session

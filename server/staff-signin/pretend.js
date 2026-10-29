@@ -52,8 +52,9 @@ export const pretend = {
   },
 
   // Ending a session from the server, as WorkOS's revoke does
-  // (workshop-lock-server): the pretend one keeps nothing to end.
-  revokeSession: async ({ sessionId }) => Boolean(sessionId),
+  // (workshop-lock-server): the pretend one keeps nothing to end, and, like
+  // WorkOS with an id it doesn't know, refuses one it didn't make.
+  revokeSession: async ({ sessionId }) => typeof sessionId === 'string' && sessionId.startsWith('session_pretend_'),
 
   // WorkOS's sign-out page would come back to the signed-out page; the pretend one goes straight there.
   logoutUrl: ({ sessionId }) => (sessionId ? '/workshop/signed-out' : null),
