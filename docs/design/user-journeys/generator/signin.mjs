@@ -111,6 +111,21 @@ ${second ? pillGroup('Till number', inUse('[code]1') + inUse('[code]2') + pill('
 ${second ? field('Name (optional)', { hint: 'Receipts from this till are numbered [code]3-0001, [code]3-0002 and so on.' }) : field('Name (optional)', { value: 'Front counter', hint: 'Receipts from this till are numbered B1-0001, B1-0002 and so on.' })}
 ${button(`Make this ${size === 'desktop' ? 'computer' : 'device'} Till ${second ? '[code]3' : 'B1'}`, { block: true })}`, 16), { w: 480 });
 screens['till-setup'] = each((size) => tillSetupAt(size));
+// Set up with "A workshop computer" chosen (stage-1 gaps 4; built 28 Oct as
+// decided-while-building, workshop computer entry 7: no till number, its own
+// heading and line), and Jack's 29 Oct answer 6, "Merge, warn at setup": a
+// remembered Google sign-in on a workshop computer could sign anyone in as
+// the Owner, so the setup says so in one line (proposed, 29 Oct).
+const tillSetupWorkshopAt = (size) => {
+  const device = size === 'desktop' ? 'computer' : 'device';
+  return centred(size, stack(`${h1('Set up a workshop computer')}${p(`Signed in as Jack Lewis (Owner). This ${device} becomes a workshop computer: staff work on it with their PIN.`)}
+${pillGroup(`This ${device} becomes`, pill('A till', false) + pill('A workshop computer', true))}
+${pillGroup('Shop', pill('Bolton', true) + pill('[Second site]', false))}
+${field('Name (optional)')}
+${p(`Don’t stay signed in to Google on this ${device}: anyone using it could sign in as you.`, 14)}
+${button(`Make this ${device} a workshop computer`, { block: true })}`, 16), { w: 480 });
+};
+screens['till-setup-workshop'] = each((size) => tillSetupWorkshopAt(size));
 
 // Decision 4: PIN only — it says who you are. It checks the 4th digit at
 // once (no OK button), and works without the internet (decision 3). A wrong
@@ -371,6 +386,7 @@ export const TITLES = {
   'auth-expired': 'Signed out after a while — sign in again',
   'auth-noaccess': 'Not part of your role',
   'till-setup': 'Set up this till (manager)',
+  'till-setup-workshop': 'Set up a workshop computer — with the line about not staying signed in to Google (proposed, 29 Oct)',
   'till-checkin': 'Till check-in — PIN only',
   'till-checkin-offline': 'Till start-up: offline, sales waiting to send',
   'till-checkin-stale': 'Till start-up: online, but not up to date',
@@ -396,7 +412,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in', screens: ['staff-signin', 'workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-checkin-workshop-names', 'workshop-working-pills', 'till-pin-wrong', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-setup-workshop', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-checkin-workshop-names', 'workshop-working-pills', 'till-pin-wrong', 'pin-change'] },
   // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
   { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-serving-menu', 'till-serving-menu-several', 'till-give-pin-pick', 'till-give-pin', 'till-checkin-practice'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },

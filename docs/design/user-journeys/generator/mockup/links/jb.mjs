@@ -43,6 +43,7 @@ export default {
     'Someone else': go('till-checkin-workshop'),
   },
   'till-setup': { 'Make this computer Till B1': go('till-checkin'), 'Make this device Till B1': go('till-checkin') },
+  'till-setup-workshop': { 'Make this computer a workshop computer': go('till-checkin-workshop'), 'Make this device a workshop computer': go('till-checkin-workshop') },
   // Change PIN from Your settings
   'pin-change': { 'Keep this PIN': go('your-settings') },
   // First sign-in: the PIN box opens over the diary
