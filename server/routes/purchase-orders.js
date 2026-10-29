@@ -482,6 +482,60 @@ export function register(route) {
     sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
   });
 
+  // To return to [Supplier] (openspec/changes/to-return; rs-hub; receiving
+  // decisions 4, 9 and 10): the damaged and wrong items set aside at booking
+  // in and not yet sent back, by supplier (the order's, or the one picked
+  // when not on an order): the supplier waiting longest first, none last;
+  // each supplier's items oldest first. Missing items are still
+  // to come, never returned. For people who can order stock: the Owner,
+  // until roles.
+  // screens: rs-hub
+  route('GET', '/api/deliveries/to-return', async (req, res) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
+    const rows = await db.prepare(
+      `SELECT dp.id, dp.kind, dp.qty, dp.created_at, p.name AS product_name, s.id AS supplier_id, s.name AS supplier_name
+         FROM delivery_problems dp JOIN products p ON p.id = dp.product_id
+         LEFT JOIN purchase_orders po ON po.id = dp.purchase_order_id
+         LEFT JOIN suppliers s ON s.id = COALESCE(po.supplier_id, dp.supplier_id)
+        WHERE dp.kind IN ('damaged', 'wrong_item') AND dp.returned_at IS NULL
+        ORDER BY s.id IS NULL, min(dp.created_at) OVER (PARTITION BY s.id), s.id, dp.created_at, dp.id`
+    ).all();
+    const suppliers = [];
+    for (const r of rows) {
+      const supplierId = r.supplier_id ?? null;
+      let group = suppliers.at(-1);
+      if (!group || group.supplierId !== supplierId) suppliers.push(group = { supplierId, supplierName: r.supplier_name ?? null, items: [] });
+      group.items.push({ id: r.id, productName: r.product_name, kind: r.kind, qty: r.qty, deliveredAt: new Date(r.created_at).toISOString() });
+    }
+    sendJson(res, 200, { suppliers });
+  });
+
+  // Returned: who and when, once. The row is locked while it is still to
+  // return, so two presses at once mark it once (the other is 404); the
+  // reply is sent after COMMIT. Stock doesn't change: the item was never
+  // added to it.
+  // screens: rs-hub
+  route('POST', '/api/deliveries/to-return/:id/returned', async (req, res, params) => {
+    if (await ownerOnly(req, res, ORDER_STOCK)) return;
+    const ctx = await currentSession(req);
+    const id = Number(params.id);
+    if (!Number.isInteger(id) || id < 1) return notFound(res, 'Nothing to return with that id');
+    await db.exec('BEGIN');
+    let done;
+    try {
+      const row = await db.prepare(
+        "SELECT id FROM delivery_problems WHERE id = ? AND kind IN ('damaged', 'wrong_item') AND returned_at IS NULL FOR UPDATE"
+      ).get(id);
+      done = row ? await db.prepare('UPDATE delivery_problems SET returned_at = now(), returned_by_login_id = ? WHERE id = ? AND returned_at IS NULL RETURNING id, returned_at').get(ctx.login.id, id) : null;
+      await db.exec(done ? 'COMMIT' : 'ROLLBACK');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    if (!done) return notFound(res, 'Nothing to return with that id');
+    sendJson(res, 200, { id: done.id, returnedAt: new Date(done.returned_at).toISOString() });
+  });
+
   // Receive a delivery, with or without an order (openspec/changes/
   // receive-without-order, the contract; receiving decisions 2, 3, 4 and 9):
   // open to everyone. The supplier is optional ("pick the supplier if you

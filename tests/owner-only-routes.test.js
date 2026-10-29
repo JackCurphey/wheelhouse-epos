@@ -101,6 +101,10 @@ const ROUTES = [
   ['POST', '/api/till-setup', {}],
   // Make this computer a workshop computer (openspec/changes/workshop-computer).
   ['POST', '/api/till-setup/workshop', {}],
+  // To return to [Supplier] and Returned: for people who can order stock
+  // (receiving decisions 4 and 9; openspec/changes/to-return).
+  ['GET', '/api/deliveries/to-return'],
+  ['POST', `/api/deliveries/to-return/${MISSING}/returned`, {}],
   // The Tills list, Rename and Remove (owner setup 17; openspec/changes/tills-list).
   ['GET', '/api/till-setup/list'],
   ['PUT', `/api/till-setup/tills/${MISSING}`, {}],

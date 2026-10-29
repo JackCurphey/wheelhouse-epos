@@ -4,6 +4,7 @@ import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
+import { ToReturn } from './to-return.tsx';
 import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, orderHref, stillToCome, type Order } from './deliveries-bits.tsx';
 
 /**
@@ -12,8 +13,9 @@ import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, order
  * orders and + New order, for the Owner (decision 4, until "Can order
  * stock"); "A delivery arrived?" for everyone, with or without an order
  * (openspec/changes/receive-delivery and receive-without-order).
- * To return, Products to add and Recent deliveries come later; the restock
- * list waits for answers.
+ * To return to [Supplier] second, only when something's on it
+ * (openspec/changes/to-return). Products to add and Recent deliveries come
+ * later; the restock list waits for answers.
  */
 export function DeliveriesPage() {
   const session = useSession();
@@ -32,6 +34,8 @@ export function DeliveriesPage() {
   return (
     <Page>
       {arrived}
+      {/* Second, only when something's on it (decision 10; openspec/changes/to-return). */}
+      <ToReturn />
       <Card id="t-orders" title="Orders" action={<Link to={ROUTES['rs-order']} className={buttonVariants({ variant: 'default' })}>+ New order</Link>}>
         {orders.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the orders. Try again in a moment.</p>
           : !open ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
