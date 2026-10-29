@@ -8,7 +8,7 @@
 - [x] 1.4 Build to `till-serving-pills`, sharing the workshop's pill strip
 - [x] 1.5 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.6 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawing and this spec
-- [ ] 1.7 `/opsx:archive` as the last commit
+- [x] 1.7 `/opsx:archive` as the last commit
 
 ## Waits for Mark (not in this change)
 
