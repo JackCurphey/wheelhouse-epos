@@ -69,11 +69,22 @@ here before starting it, so two people never build the same one):
   failed one is retried (#566); the intermittent quote-reminder test fixed
   (#567); the shared workshop computer, first part: Enter your PIN, Working:
   [name] · Switch, back to the PIN after 10 minutes (#568, WP-1.7 3.6,
-  migration 101 workshop computers). Opened #560 for Mark: what would free
-  up more work.
-  **Now (29 Oct):** stock warnings, in review (#569, migration 102: big
-  adjustments with Seen, products below zero with Count them, Settings ›
-  Stockroom). Roles and the settings store (WP-1.1, 1.2) stay Mark's.
+  migration 101 workshop computers). Merged 29 Oct: stock warnings on
+  Today, big adjustments with Seen, products below zero with Count them,
+  Settings › Stockroom (#569, migration 102); trust PIN and "Who's
+  working?" (#571, #572, migration 103, workshop computer tasks 2.1 and 2.2;
+  the review's fixes: the Owner's check-in on a workshop computer ends after
+  10 minutes at most, a changed PIN takes the person off the names, and the
+  names come from the same sign-in); the Working pills on workshop pages
+  (#573, task 2.3); the till's Serving pills (#574, task 2.4; recording a
+  sale under the person on the server waits for task 3.8, Mark's step C,
+  and tapping offline for task 3.5); Settings › Till › Tills with Rename,
+  and Remove, which asks first and switches off without deleting (#575,
+  #576, migration 104, task 2.7, part of WP-5.1; a removed workshop computer
+  counts as staff until someone signs out there). Opened #560 for Mark:
+  what would free up more work.
+  **Now (29 Oct):** the next piece is being chosen. Roles and the settings
+  store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
@@ -112,7 +123,16 @@ here before starting it, so two people never build the same one):
   sign-in sets up a till (default: allowed, as decision 7); supplier imports
   start stock with no history line (a stock control decision 6 question,
   #566). Also: 491 leftover test shops in the shared test database (#567;
-  default: leave them until Jack says). For him to overrule: the 26 and
+  default: leave them until Jack says). Open from 29 Oct, each built on its
+  default, none stopping work: (1) the Owner is never a name to tap, on
+  workshop computers or tills, and the Owner's workshop check-in ends after
+  10 minutes at most, until Owner pages ask for a PIN every time; the
+  drawing `till-serving-pills` shows the Owner as a pill (default: keep it,
+  #572, #574); (2) a removed workshop computer stays closed to the Owner's
+  pages until someone signs out there (default: keep it, #575); (3) the
+  Owner lock on a workshop computer depends on a browser cookie that someone
+  using developer tools could delete, as since #568; closing it needs a
+  server-side design change (default: leave it for now). For him to overrule: the 26 and
   28-29 Oct `decided-while-building.md` sections.
 - **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
   is built after it); a money route, `PUT /api/sale-documents/:id`, can
@@ -120,7 +140,7 @@ here before starting it, so two people never build the same one):
   26 Oct, listed in the archived `more-saves-dont-clash` design, not
   changed). #560 (28 Oct) lists what would free up more work: his yes on
   `till-job-deposit`, step C, roles and the settings store, WP-1.5, and his
-  open pull requests. Step C needs an Owner route to issue the offline key
+  open pull requests; no activity from Mark since 26 Oct. Step C needs an Owner route to issue the offline key
   for a till set up in the new app (#564; a till set up there has none yet).
   The till's offline copy (`server/till/snapshot.js`) carries every
   cashier's PIN hash (`decided-while-building.md`, 28 Oct, 6a), for step C's

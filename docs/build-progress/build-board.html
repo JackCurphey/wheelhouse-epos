@@ -247,7 +247,7 @@ const BOARD = {
           items: [
           { id: "WP-1.1", what: "Roles and switches", status: "part", detail: "App frame and where each person lands (#97), Settings for the Owner only (#283); the roles and switches aren't on the server yet. Mark's" },
           { id: "WP-1.2", what: "Settings store, change record, activity log", status: "todo", detail: "Not built; Mark's. I'll do this and Who did what wait for it" },
-          { id: "WP-1.7", what: "Sign-in and PINs", status: "part", detail: "Customers sign in with an emailed code (#500, #502), staying signed in 30 days from their last visit (#529); staff sign in only through WorkOS (#504), with its pages (#505) and Wheelhouse's own sign-in screen with Continue with Google (#508); the label printer helper is dropped, everything prints through the browser (#527); till PINs and the check-in (#554, #555), giving a PIN at the till (#558), a first sign-in asking for Your till PIN (#561), Set up this till (#564, #565) and the shared workshop computer's first part (#568); not yet: the rest of the workshop computer, checking PINs offline (after Mark's step C), work recorded under the person checked in" },
+          { id: "WP-1.7", what: "Sign-in and PINs", status: "part", detail: "Customers sign in with an emailed code (#500, #502), staying signed in 30 days from their last visit (#529); staff sign in only through WorkOS (#504), with its pages (#505) and Wheelhouse's own sign-in screen with Continue with Google (#508); the label printer helper is dropped, everything prints through the browser (#527); till PINs and the check-in (#554, #555), giving a PIN at the till (#558), a first sign-in asking for Your till PIN (#561), Set up this till (#564, #565) and the shared workshop computer's first part (#568); trust PIN and \"Who's working?\" (#571, #572), the Working pills on workshop pages (#573) and the till's Serving pills (#574); not yet: tapping a name offline and checking PINs offline (after Mark's step C), sales recorded under the person on the server (task 3.8, after step C)" },
           { id: "WP-3.3", what: "Opening the shop", status: "done", detail: "The morning float check on the till, the Float setting, a short float on Today (#547, #548)" },
           { id: "WP-3.4", what: "End-of-day cash-up", status: "done", detail: "Close the day: the cash count, banking and the day's report on the till (#551, #552)" },
           { id: "WP-1.10", what: "Needs attention and Today", status: "done", detail: "Today with Needs attention for the Owner and Workshop today (#437), the uncollected bike line (#441); Who's in and Tills (#561), one Tills line per till (#564)" },
@@ -257,7 +257,7 @@ const BOARD = {
           play: "Add a product with sizes and colours, receive a delivery, sell it and watch stock drop, count the shelf",
           items: [
           { id: "WP-1.5", what: "Products, stock, sizes and colours", status: "todo", detail: "Only the old app's products" },
-          { id: "WP-2.1", what: "Stock control", status: "part", detail: "The stock list and a product's page (#530); adjusting stock with a reason, who and when, by anyone with the Stock page (#538); two saves at once no longer undo each other (#542); a Shopify refund adds its stock back without losing other changes (#566); stock warnings on Today in review (#569)" },
+          { id: "WP-2.1", what: "Stock control", status: "part", detail: "The stock list and a product's page (#530); adjusting stock with a reason, who and when, by anyone with the Stock page (#538); two saves at once no longer undo each other (#542); a Shopify refund adds its stock back without losing other changes (#566); stock warnings on Today: big adjustments with Seen, products below zero with Count them (#569)" },
           { id: "WP-2.3", what: "Deliveries and purchase orders", status: "part", detail: "The hub, a new order and an order's page (#532); receiving against an order with damaged, wrong and missing items (#533) and without one (#541); closing a part-delivered order (#546); not yet: the restock list, which waits for WP-1.5 (your 27 Oct answer)" },
           { id: "WP-2.2", what: "Stock take", status: "done", detail: "Start a count, count blind, Check the count, applied with Undo, Finished counts and Download (#562, #563)" },
           { id: "WP-2.4", what: "Citrus Lime import, first half", status: "todo", detail: "The export list is written down (#170); no importer yet" },
@@ -265,7 +265,7 @@ const BOARD = {
         { letter: "D", name: "The owner's view", state: "later",
           play: "Reports and takings by day, the activity log, staff and roles setup, payments set up",
           items: [
-          { id: "WP-5.1", what: "Owner setup, the rooms", status: "part", detail: "Shop details, hours, receipt words, the sign-off switch (#275 to #281), Workshop › Services (#484), customer groups in Payments (#517); not yet: staff and roles, ways to pay, end of day" },
+          { id: "WP-5.1", what: "Owner setup, the rooms", status: "part", detail: "Shop details, hours, receipt words, the sign-off switch (#275 to #281), Workshop › Services (#484), customer groups in Payments (#517), Settings › Stockroom (#569), Till › Signing in with Trust PIN (#571) and Till › Tills with Rename and Remove (#575, #576); not yet: staff and roles, ways to pay, end of day" },
           { id: "WP-5.3", what: "Reports and accounts", status: "todo", detail: "Old app's sales history only" },
           { id: "WP-5.4", what: "Management oversight", status: "todo", detail: "Not built" },
           { id: "WP-1.11", what: "Small shared parts", status: "part", detail: "Receipt and bike-tag printing (#269, #347), everything through the browser (#527); the note-and-coin counter for the float check and Close the day (#540); Your settings with Reduce motion, status symbols, the folded sidebar, Larger text and Don't close things by themselves (#442 to #467); the header search (#448); not yet: spreadsheet download" },
@@ -299,7 +299,7 @@ const BOARD = {
       { id: "WP-5.2", what: "Multiple sites, the screens", status: "todo", detail: "Not built" },
       { id: "WP-1.9", what: "Live updates", status: "todo", detail: "Not built" },
     ],
-    now: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in: PINs and the till check-in, giving a PIN at the till, the float check, closing the day, Who\'s in on Today, Set up this till and the workshop computer\'s first part; roles and the settings store are left, and they\'re Mark\'s. Slice C: stock take is in, stock warnings are in review (#569), and the restock list waits for WP-1.5.',
+    now: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in: PINs and the till check-in, giving a PIN at the till, the float check, closing the day, Who\'s in on Today, Set up this till, the shared workshop computer with trust PIN and the Working and Serving pills, and the Tills list; roles and the settings store are left, and they\'re Mark\'s. Slice C: stock take and stock warnings are in, and the restock list waits for WP-1.5.',
     next: {
       Mark: [
         { what: 'Sales in pence step C', detail: 'The new till records through sync instead of POST /api/sales; the first piece of "a shop day" (replan slice B)' },
@@ -307,7 +307,7 @@ const BOARD = {
         { what: 'Then roles and the settings store', detail: 'Roles on the server, the settings store and activity log (WP-1.1, WP-1.2), what is left of slice B; Jack built the PINs, check-in, float check and close the day' },
       ],
       Jack: [
-        { what: 'Stock warnings on Today (in review, #569)', detail: 'Big adjustments with Seen, products below zero with Count them, Settings › Stockroom (migration 102)' },
+        { what: 'The next piece', detail: 'Being chosen; roles and the settings store stay Mark\'s' },
         { what: 'Paying a repair online', detail: 'After Mark\'s till deposit is merged (your 26 Oct answer 9): "Paid online" with no cashier, Pay hidden while the till has it open' },
         { what: 'The text receipt and its page', detail: 'Waits for Mark\'s step C (your 26 Oct answer)' },
         { what: 'Waiting on groundwork', detail: 'I\'ll do this and Who did what wait for who\'s at the device and the activity record (your answer, 22 Oct)' },
@@ -321,13 +321,16 @@ const BOARD = {
       { what: 'Ending a check-in to set up a till', detail: 'A staff member can end their check-in so the Owner\'s sign-in sets up a till. Default taken: allowed, as decision 7 (#564).' },
       { what: 'Supplier imports and stock history', detail: 'Importing a supplier item starts its stock with no history line, a stock control decision 6 question (#566).' },
       { what: 'Leftover test shops', detail: '491 test shops in the shared test database. Default taken: leave them until you say (#567).' },
+      { what: 'The Owner is never a name to tap', detail: 'On workshop computers or tills, and the Owner\'s workshop check-in ends after 10 minutes at most, until Owner pages ask for a PIN every time. The drawing till-serving-pills shows the Owner as a pill. Default taken: keep it (#572, #574).' },
+      { what: 'A removed workshop computer', detail: 'Stays closed to the Owner\'s pages until someone signs out there. Default taken: keep it (#575).' },
+      { what: 'The Owner lock on a workshop computer', detail: 'Depends on a browser cookie that someone using developer tools could delete, as since #568. Closing it needs a server-side design change. Default taken: leave it for now.' },
       { what: 'Still open from before', detail: 'The test server\'s "System restart required".' },
       { what: 'Waiting on Mark', detail: 'Paying a repair online is built after his till deposit (till-job-deposit). Discounts and the text receipt wait for his step C. What would free up more work is in #560.', links: [560] },
       { what: 'To overrule if you want', detail: 'The 26 and 28-29 Oct sections of decided-while-building.md.' },
       { what: 'Later', detail: 'Your yes to switch real sending on (texts and emails cost money per message), to open the Stripe account and buy the S700 reader, and a Google account for Wheelhouse.', links: [140] },
     ],
     waitingOnMark: [
-      { what: 'What would free up more work', detail: 'Your yes on the till deposit, step C, roles and the settings store, WP-1.5, and your open pull requests.', links: [560] },
+      { what: 'What would free up more work', detail: 'Your yes on the till deposit, step C, roles and the settings store, WP-1.5, and your open pull requests. No activity from you since 26 Oct.', links: [560] },
       { what: 'Step C: an offline key for a new till', detail: 'A till set up in the new app (#564) has no offline key yet; step C needs an Owner route to issue one.' },
       { what: 'Step C: PIN hashes offline', detail: 'The till\'s offline copy (server/till/snapshot.js) carries every cashier\'s PIN hash; logged in decided-while-building.md (28 Oct, 6a) for step C\'s design.' },
       { what: 'Your yes on the till deposit', detail: 'till-job-deposit, written and waiting for your yes; paying a repair online (slice A) is built after it.' },
@@ -339,8 +342,8 @@ const BOARD = {
     ],
   },
   updated: '29 Oct 2026',
-  lead: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in (PINs, check-in, float check, close the day, Who\'s in, till setup, the workshop computer\'s first part); roles and the settings store are left, and they\'re Mark\'s. Slice C\'s stock take is in; Jack\'s stock warnings are in review.',
-  sub: 'Merged 27 to 29 Oct: #544 to #568, all Jack\'s. In review: #569. Open: Mark\'s #499 (the replan, accepted as is), #511 (the component registry) and #520; #560 lists what waits on Mark. CI runs once a day, and by hand on risky pull requests (#557).',
+  lead: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in (PINs, check-in, float check, close the day, Who\'s in, till setup, the shared workshop computer with trust PIN and the pills, the Tills list); roles and the settings store are left, and they\'re Mark\'s. Slice C\'s stock take and stock warnings are in.',
+  sub: 'Merged 27 to 29 Oct: #544 to #576, all Jack\'s. Open: Mark\'s #499 (the replan, accepted as is), #511 (the component registry) and #520; #560 lists what waits on Mark. CI runs once a day, and by hand on risky pull requests (#557).',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -596,13 +599,18 @@ const BOARD = {
     { status: 'done', what: 'A Shopify refund\'s stock', detail: 'Adds its stock back without losing changes made at the same moment; a failed refund is retried', pr: 566 },
     { status: 'done', what: 'The quote-reminder test fixed', detail: 'It waits on the database, not the rate-limited customer page', pr: 567 },
     { status: 'done', what: 'The shared workshop computer, first part', detail: 'Enter your PIN, Working: [name] · Switch, back to the PIN after 10 minutes (migration 101)', pr: 568 },
-    { status: 'review', what: 'Stock warnings on Today', detail: 'Big adjustments with Seen, products below zero with Count them, Settings › Stockroom (migration 102)', pr: 569 },
+    { status: 'done', what: 'Stock warnings on Today', detail: 'Big adjustments with Seen, products below zero with Count them, Settings › Stockroom (migration 102)', pr: 569 },
+    { status: 'done', what: 'Trust PIN and Who\'s working?', detail: 'Settings › Till › Signing in, the workshop computer\'s time (#571, migration 103); tapping your name on a workshop computer (#572). The Owner\'s workshop check-in ends after 10 minutes at most; a changed PIN takes the person off the names', pr: 572 },
+    { status: 'done', what: 'The Working pills', detail: 'Today\'s people as pills at the bottom of workshop pages, with Someone else, when trust PIN is on', pr: 573 },
+    { status: 'done', what: 'The till\'s Serving pills', detail: 'Change who is serving with the sale kept; tap your name in Checked in today. Recording the sale under that person on the server waits for Mark\'s step C', pr: 574 },
+    { status: 'done', what: 'The Tills list', detail: 'Settings › Till › Tills: Rename, and Remove, which asks first and switches off without deleting (#575 server, migration 104; #576 screens)', pr: 576 },
     { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock; you accepted it as is (your 26 Oct answer 1); the pull request is still open', pr: 499 },
   ],
   asks: [
     { what: 'Wording to check', detail: 'A few words the drawings needed that no answer gave, in the 26 and 28-29 Oct sections of decided-while-building.md, for you to overrule if you want.' },
     { what: 'Who may edit a supplier', detail: 'Any staff member can today, unlike the other settings (#543).' },
     { what: 'Still open', detail: 'The test server\'s "System restart required".' },
+    { what: 'Defaults taken, 29 Oct', detail: 'The Owner is never a name to tap and the Owner\'s workshop check-in ends after 10 minutes at most (the drawing shows the Owner as a pill); a removed workshop computer stays closed to the Owner\'s pages until someone signs out there; the workshop computer\'s Owner lock relies on a browser cookie, left for now. None stops work.' },
     { what: 'Defaults taken, 28-29 Oct', detail: 'Stock take allows for sales during a count from each product\'s last count; a staff member can end their check-in so the Owner\'s sign-in sets up a till (decision 7); 491 leftover test shops stay until you say. Also open: adding a till-only person waits for roles; settings on a workshop computer belong to the sign-in until roles; supplier imports start stock with no history line (stock control decision 6).' },
     { what: 'Check with the shop', detail: 'Citrus Lime\'s exports are listed (#170); ask Citrus Lime for the full customer list and workshop history nearer the end (#171). Card payments: Stripe first (#174); the Paymentsense questions (#138) wait until Paymentsense is added. Your yes is needed later for the Stripe account and which reader to buy.' },
     { what: 'Mechanic sign-off (Workshop day 64)', detail: 'All three pieces built (#271, #273, #275). Showing customers who signed off stays off at a real shop until the solicitor\'s check.' },
@@ -613,7 +621,7 @@ const BOARD = {
   screens: [
     { area: 'Staff app', note: 'The frame is built: Soft sand look, the sidebar grouped by rooms, tablet rail and phone menu. The Owner lands on Today, everyone else on the Till. Your settings opens from your name.', rooms: [
       { room: 'Front desk', pages: [
-        ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid; pays a job\'s order; prints a receipt, headed Invoice for a company; Enter your PIN and Serving, the float check and Close the day. No discounts or card machine yet'],
+        ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid; pays a job\'s order; prints a receipt, headed Invoice for a company; Enter your PIN and Serving, the Serving pills, the float check and Close the day. No discounts or card machine yet'],
         ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'part', 'The list, a customer\'s page with Edit, Merge and Add a bike, company customers, a sale from the history; Refund waits for refunds'], ['Messages', 'built', 'The staff inbox, one conversation per customer: Needs a reply first, the conversation and Send reply'],
       ] },
       { room: 'Workshop', pages: [
@@ -626,8 +634,8 @@ const BOARD = {
         ['Stock', 'part', 'The stock list, a product\'s page and Adjust stock'], ['Deliveries and orders', 'part', 'The hub, a new order, an order\'s page, receiving with or without an order; not yet: the restock list\'s details, closing a part-delivered order'], ['Stock take', 'built', 'Start a count, count blind, Check the count, applied with Undo, Finished counts and Download'],
       ] },
       { room: 'Office', pages: [
-        ['Today', 'part', 'Needs attention for the Owner and Workshop today, Who\'s in, and Tills for the Owner; stock warnings in review'], ['Reports', 'old', 'The old app has Sales history'],
-        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending; Checklists, Diary blocks, Storage slots; the quote reminder\'s hours; Your own messages; Services; customer groups in Payments'],
+        ['Today', 'part', 'Needs attention for the Owner and Workshop today, Who\'s in, Tills for the Owner, and stock warnings with Seen and Count them'], ['Reports', 'old', 'The old app has Sales history'],
+        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'part', 'Shop details, opening hours, receipts, Workshop and Online booking (with Preview and booking terms); Owner only until roles; Messages with each message\'s wording, pretend sending; Checklists, Diary blocks, Storage slots; the quote reminder\'s hours; Your own messages; Services; customer groups in Payments; Stockroom; Till › Signing in (Trust PIN) and Till › Tills with Rename and Remove'],
       ] },
     ] },
     { area: 'Customer side', note: 'What a shop\'s customers see. Booking a repair works end to end in the new app. The old shop website is still running; the new one is drawn but not built. The customer account is built.', rooms: [
