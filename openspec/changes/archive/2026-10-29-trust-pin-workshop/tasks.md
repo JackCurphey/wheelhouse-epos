@@ -19,4 +19,4 @@
 
 - [x] 3.1 Break each key rule on purpose, see its test go red, and restore
 - [x] 3.2 Log choices in Jack’s section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
-- [ ] 3.3 `/opsx:archive` as the last commit
+- [x] 3.3 `/opsx:archive` as the last commit
