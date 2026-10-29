@@ -127,7 +127,7 @@ export function WorkingPills({ working, names }: { working: CheckedIn; names: Ta
     }
   }
   return (
-    <div className="sticky bottom-0 z-30 flex shrink-0 flex-col border-t border-[var(--wh-border)] bg-[var(--wh-surface-muted)] shadow-[0_-6px_16px_rgba(28,30,25,0.08)]">
+    <div className="sticky bottom-0 z-30 flex shrink-0 flex-col border-t border-[var(--wh-border)] bg-[var(--wh-surface-muted)] shadow-[0_-6px_16px_var(--wh-backdrop)]">
       {error ? <p role="alert" className="m-0 px-3 pt-2 text-sm font-semibold text-[var(--wh-danger-hover)] md:px-6">{error}</p> : null}
       <div role="group" aria-label="Who’s working" className="flex flex-nowrap items-center gap-1.5 overflow-x-auto px-3 py-2.5 md:gap-2 md:px-6">
         <span className="mr-1 shrink-0 text-size-13 text-[var(--wh-muted)]">Working:</span>
