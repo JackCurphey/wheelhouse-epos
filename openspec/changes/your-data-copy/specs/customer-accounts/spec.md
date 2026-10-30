@@ -11,12 +11,16 @@ A signed-in customer SHALL be able to download, straight away, one zip file of w
 - **WHEN** another customer of the same shop downloads their copy
 - **THEN** nothing of Maya's is in it
 
+#### Scenario: Too many at once
+- **WHEN** the same sign-in asks for an 11th copy within 15 minutes
+- **THEN** it is refused with "That’s a lot of copies at once. Try again in a few minutes." and nothing is logged
+
 #### Scenario: Not signed in
 - **WHEN** the download is asked for without signing in, or signed in to another shop
 - **THEN** it is refused and nothing is logged
 
 ### Requirement: Each copy is logged
-Each copy downloaded from the account SHALL be recorded as a privacy request from the account, asked and done at the same moment, before the file is sent. A merge of two customers SHALL move the record with the customer, and its Undo SHALL move it back.
+Each copy downloaded from the account SHALL be recorded as a privacy request from the account, with the sign-in that asked, asked and done at the same moment, before the file is sent. A merge of two customers SHALL move the record with the customer, and its Undo SHALL move it back, along with any copy asked for since by the sign-in that goes back.
 
 #### Scenario: The log
 - **WHEN** Maya downloads her copy

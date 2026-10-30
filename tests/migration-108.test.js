@@ -56,7 +56,13 @@ test('108 logs privacy requests per shop, and runs twice', async (t) => {
     const { rows: [other] } = await c.query("INSERT INTO shops (name, slug) VALUES ('Elsewhere Cycles', 'elsewhere-cycles') RETURNING id");
     await asShop(c, north.id);
     const { rows: [maya] } = await c.query("INSERT INTO customers (name) VALUES ('Maya Patel') RETURNING id");
-    const { rows: [req] } = await c.query("INSERT INTO privacy_requests (customer_id, kind, source, done_at) VALUES ($1, 'copy', 'account', now()) RETURNING id, asked_at, done_at", [maya.id]);
+    // The sign-in that asked, so Undo of a merge can send it back with that sign-in (review of #587).
+    const { rows: [login] } = await c.query("INSERT INTO customer_logins (shop_id, customer_id, email, password_hash) VALUES ($1, $2, 'maya@example.test', '') RETURNING id", [north.id, maya.id]);
+    const { rows: [req] } = await c.query("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, done_at) VALUES ($1, $2, 'copy', 'account', now()) RETURNING id, asked_at, done_at, customer_login_id", [maya.id, login.id]);
+    assert.equal(req.customer_login_id, login.id);
+    await assert.rejects(c.query("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source) VALUES ($1, 999999, 'copy', 'account')", [maya.id]), /foreign key/i);
+    // Written for another shop: refused.
+    await assert.rejects(c.query("INSERT INTO privacy_requests (shop_id, customer_id, kind, source) VALUES ($1, $2, 'copy', 'account')", [other.id, maya.id]), /row-level security/i);
     assert.ok(req.asked_at instanceof Date);
     // Only the drawn kinds and sources.
     await assert.rejects(c.query("INSERT INTO privacy_requests (customer_id, kind, source) VALUES ($1, 'sell', 'account')", [maya.id]), /check/i);
@@ -66,7 +72,7 @@ test('108 logs privacy requests per shop, and runs twice', async (t) => {
     // Another shop sees none of it.
     await asShop(c, other.id);
     assert.equal((await c.query('SELECT count(*)::int AS n FROM privacy_requests')).rows[0].n, 0);
-    return { north: north.id, maya: maya.id, req: req.id };
+    return { north: north.id, maya: maya.id, req: req.id, login: login.id };
   });
   // Run again on a database that already has it: it runs, and everything stays.
   await withClient(url.href, (c) => c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]));
@@ -75,7 +81,9 @@ test('108 logs privacy requests per shop, and runs twice', async (t) => {
     await asShop(c, ids.north);
     assert.equal((await c.query('SELECT count(*)::int AS n FROM privacy_requests')).rows[0].n, 2);
     // The log outlives the customer record (design 1).
+    assert.equal((await c.query('SELECT customer_login_id FROM privacy_requests WHERE id = $1', [ids.req])).rows[0].customer_login_id, ids.login);
+    await c.query('DELETE FROM customer_logins WHERE id = $1', [ids.login]);
     await c.query('DELETE FROM customers WHERE id = $1', [ids.maya]);
-    assert.equal((await c.query('SELECT customer_id FROM privacy_requests WHERE id = $1', [ids.req])).rows[0].customer_id, null);
+    assert.deepEqual((await c.query('SELECT customer_id, customer_login_id FROM privacy_requests WHERE id = $1', [ids.req])).rows[0], { customer_id: null, customer_login_id: null });
   });
 });
