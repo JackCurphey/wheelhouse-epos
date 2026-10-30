@@ -9,6 +9,7 @@ import { CHIP } from '@/screens/diary/diary-model.ts';
 import { STATE_LABEL, diaryState, shortDay } from '@/screens/diary/rules.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { shortDate } from '@/screens/diary/when.ts';
+import { DeletionLine, type InTheWay } from './privacy-requests.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { CompanyInvoice, CompanyNames, Field, OnOff, WHO, companyProblem, initials, type Who } from './customers-page.tsx';
 import { SaleDialog } from './sale-dialog.tsx';
@@ -26,6 +27,8 @@ type Customer = {
   // A company or club (cs-add-company; openspec/changes/company-customers).
   isCompany?: boolean; contactName?: string | null; vatNumber?: string | null; invoiceEmail?: string | null;
   groups: { id: number; name: string; discountPercent: number }[];
+  // An open request to delete their account (ac-customer-delete; openspec/changes/delete-account).
+  deletionRequest?: { askedOn: string; dueBy: string; source: 'account' | 'shop'; inTheWay: InTheWay[] } | null;
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
@@ -389,6 +392,7 @@ export function CustomerPage() {
         </span>
         <Link to={newJobHref(c.id)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--wh-on-brand)] no-underline">New job</Link>
       </div>
+      {c.deletionRequest ? <DeletionLine request={c.deletionRequest} /> : null}
       <Duplicates me={c} />
       <div className={`flex gap-4 ${isPhone ? 'flex-col' : 'flex-row items-start'}`}>
         <div className={`flex shrink-0 flex-col rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] pt-1 pb-3.5 ${isPhone ? '' : 'w-80'}`}>

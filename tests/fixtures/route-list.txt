@@ -186,6 +186,8 @@ POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 GET /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/history
 POST /api/portal/:shopSlug/me/data-copy
+POST /api/portal/:shopSlug/me/delete-request
+POST /api/portal/:shopSlug/me/delete-request/cancel
 GET /api/portal/:shopSlug/messages
 POST /api/portal/:shopSlug/messages
 POST /api/portal/:shopSlug/bookings
@@ -284,3 +286,6 @@ POST /api/stock-takes/:id/none
 POST /api/stock-takes/:id/apply
 POST /api/stock-takes/:id/undo
 GET /api/stock-takes/:id/download
+GET /api/privacy-requests
+GET /api/privacy-requests/open-count
+POST /api/privacy-requests/:id/delete

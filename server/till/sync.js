@@ -237,7 +237,8 @@ async function recordCustomer(item) {
      ) LIMIT 1`
   ).get(id, email || '', email || '', phoneDigits, phoneDigits);
   if (!match) return { status: 'recorded', attention: [] };
-  await flag('possible_duplicate_customer', { detail: `"${item.name.trim()}" may be the same person as customer ${match.id}`, customerId: id });
+  // The record matched is named too, so deleting that person's details finds this alert (delete-account, review of #590).
+  await flag('possible_duplicate_customer', { detail: `"${item.name.trim()}" may be the same person as customer ${match.id}`, customerId: id, matchedCustomerId: match.id });
   return { status: 'recorded', attention: ['possible_duplicate_customer'] };
 }
 

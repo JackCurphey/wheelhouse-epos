@@ -7,6 +7,7 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
 import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { ROUTES } from '@/staff/routes.ts';
+import { PrivacyLink } from './privacy-requests.tsx';
 
 /**
  * Front desk › Customers (drawn as cs-list, cs-add and cs-add-match in
@@ -218,6 +219,7 @@ export function CustomersPage() {
           : recent.data.length === 0 ? <p className="m-0 px-3.5 py-3 text-sm text-[var(--wh-muted)]">No customers yet.</p>
           : <ul aria-labelledby="recent-title" className="m-0 list-none p-0">{recent.data.map((c) => <Row key={c.id} c={c} phone={isPhone} />)}</ul>}
       </div>
+      <PrivacyLink />
       {adding ? <AddCustomer onClose={() => setAdding(false)} /> : null}
     </div>
   );
