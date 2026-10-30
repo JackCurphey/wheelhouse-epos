@@ -2,7 +2,7 @@
 // design 1 to 3; ac-download; account and reminders decision 4): a signed-in
 // customer's own details, bikes, repairs, purchases, messages and answers, as
 // one zip of spreadsheets, logged as a privacy request before it is sent.
-import test, { before, after } from 'node:test';
+import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -118,6 +118,12 @@ before(async () => {
     await prepare("INSERT INTO customer_bikes (customer_id, make, model) VALUES (?, '[Elsewhere make]', '[Elsewhere model]')").run(olu);
     await prepare("INSERT INTO job_notes (customer_id, from_customer, body) VALUES (?, true, '[Elsewhere message]')").run(olu);
   }, other.shop.id);
+});
+
+// One copy per sign-in a day (Jack, 30 Oct, answer 2): each test starts with
+// none taken today, so the earlier tests' copies don't use up a later one's.
+beforeEach(async () => {
+  if (owner) await inShop(() => prepare('DELETE FROM privacy_requests').run());
 });
 
 after(async () => {
@@ -238,16 +244,53 @@ test('a company’s details and every answer are in its copy', async (t) => {
   }
 });
 
-test('ten copies in a quarter of an hour, then a plain refusal, not logged', async () => {
-  const email = `lena-${randomUUID().slice(0, 8)}@example.test`;
+// Today's start in the shop's time zone, worked out by the database, as the route does.
+const TODAY_STARTS = "(date_trunc('day', now() AT TIME ZONE coalesce((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London')) AT TIME ZONE coalesce((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'))";
+async function signedIn(name) {
+  const email = `${name}-${randomUUID().slice(0, 8)}@example.test`;
   const cookie = await signIn(email);
-  const { customer_id: id } = await inShop(() => prepare('SELECT customer_id FROM customer_logins WHERE email = ?').get(email));
-  for (let i = 0; i < 10; i += 1) assert.equal((await download({ cookie })).res.status, 200, `copy ${i + 1}`);
-  const { res, body } = await download({ cookie });
+  const { id: loginId, customer_id: customerId } = await inShop(() => prepare('SELECT id, customer_id FROM customer_logins WHERE email = ?').get(email));
+  return { cookie, loginId, customerId };
+}
+
+test('one copy a day: a second today is refused in plain words, and not logged', async () => {
+  const lena = await signedIn('lena');
+  assert.equal((await download({ cookie: lena.cookie })).res.status, 200);
+  const { res, body } = await download({ cookie: lena.cookie });
   assert.equal(res.status, 429);
-  assert.match(JSON.parse(body.toString()).error, /a lot of copies at once/);
-  assert.equal((await requests(id)).length, 10);
-  // Another sign-in isn't held up by hers.
+  assert.equal(JSON.parse(body.toString()).error, 'You’ve already downloaded a copy today. You can get another tomorrow.');
+  assert.equal((await requests(lena.customerId)).length, 1);
+});
+
+test('the day is the shop’s: a copy just before its midnight leaves today free, one just after doesn’t', async (t) => {
+  // A shop hours away from UTC, so its midnight and UTC's differ whatever the season.
+  const zone = (await inShop(() => prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())).time_zone;
+  await inShop(() => prepare("UPDATE workshop_settings SET time_zone = 'America/New_York'").run());
+  t.after(() => inShop(() => prepare('UPDATE workshop_settings SET time_zone = ?').run(zone)));
+  const kim = await signedIn('kim');
+  const logAt = (offset) => inShop(() => prepare(`INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, asked_at, done_at)
+    VALUES (?, ?, 'copy', 'account', ${TODAY_STARTS} + ?::interval, ${TODAY_STARTS} + ?::interval)`).run(kim.customerId, kim.loginId, offset, offset));
+  await logAt('-1 minute');
+  assert.equal((await download({ cookie: kim.cookie })).res.status, 200, 'yesterday’s copy, by the shop’s clock, doesn’t count');
+  await inShop(() => prepare('DELETE FROM privacy_requests WHERE customer_login_id = ?').run(kim.loginId));
+  await logAt('1 minute');
+  assert.equal((await download({ cookie: kim.cookie })).res.status, 429, 'one just after the shop’s midnight is today’s');
+  // A request the shop logged by hand, or a delete request, isn't a copy from the account.
+  await inShop(() => prepare('DELETE FROM privacy_requests WHERE customer_login_id = ?').run(kim.loginId));
+  await inShop(() => prepare("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source) VALUES (?, ?, 'delete', 'account')").run(kim.customerId, kim.loginId));
+  assert.equal((await download({ cookie: kim.cookie })).res.status, 200);
+});
+
+test('two at the same moment: exactly one goes through and is logged', async () => {
+  const ash = await signedIn('ash');
+  const both = await Promise.all([download({ cookie: ash.cookie }), download({ cookie: ash.cookie })]);
+  assert.deepEqual(both.map((b) => b.res.status).sort(), [200, 429]);
+  assert.equal((await requests(ash.customerId)).length, 1);
+});
+
+test('another sign-in isn’t held up by hers', async () => {
+  const lena = await signedIn('lena');
+  assert.equal((await download({ cookie: lena.cookie })).res.status, 200);
   assert.equal((await download({ cookie: samCookie })).res.status, 200);
 });
 

@@ -89,8 +89,6 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // A customer's messages to the shop: 30 in 15 minutes each, so nobody can flood the inbox (ask-the-shop-server review 1).
 const messageLimiter = makeRateLimiter(30, 15 * 60 * 1000);
-// Copies of your data, per sign-in (review of #587): each one reads everything and is logged.
-const dataCopyLimiter = makeRateLimiter(10, 15 * 60 * 1000);
 // Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
 // network and by the shop's email address; codes checked, by network.
 const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
@@ -1176,7 +1174,9 @@ export function register(route) {
   // 3; account and reminders decision 4): one zip, made straight away and
   // logged as a privacy request from the account, done at once. The log and
   // the reads are one transaction, the customer's row locked so a merge can't
-  // move their records half-way through; the file goes after the commit
+  // move their records half-way through; the file goes after the commit.
+  // One copy per sign-in a day, the shop's day (Jack, 30 Oct, answer 2),
+  // counted from the log, so a restart never resets it
   // (with DB_TENANT_SCOPE=transaction, off by default, that COMMIT only ends a
   // savepoint, as for every route; db.js).
   // screens: ac-download, ac-download-failed
@@ -1186,7 +1186,6 @@ export function register(route) {
     if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
     const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
-    if (!dataCopyLimiter.check(`${ctx.shop.id}:${ctx.login.id}`)) return sendJson(res, 429, { error: 'That’s a lot of copies at once. Try again in a few minutes.' });
     const zone = await shopZone();
     let files;
     await db.exec('BEGIN');
@@ -1194,15 +1193,28 @@ export function register(route) {
       // The sign-in's customer read again here, under the lock: a merge that
       // committed since the session was read has moved the sign-in to the
       // kept record. FOR SHARE holds off a merge (FOR UPDATE) without holding
-      // up a sale or a message for this customer (review).
+      // up a sale or a message for this customer (review). The sign-in's own
+      // row is locked FOR UPDATE, so two of its requests at once take turns
+      // and the second sees the first's copy (answer 2).
       const customer = await db.prepare(
         `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
           WHERE l.id = ? AND l.shop_id = ? AND l.active = 1 AND c.active = 1 AND c.merged_into_id IS NULL
-          FOR SHARE OF c`
+          FOR UPDATE OF l FOR SHARE OF c`
       ).get(ctx.login.id, ctx.shop.id);
       if (!customer) {
         await db.exec('ROLLBACK');
         return sendJson(res, 401, { error: 'Not signed in' });
+      }
+      // A copy this sign-in took since the start of the shop's day, worked out by the database.
+      const takenToday = await db.prepare(
+        `SELECT 1 FROM privacy_requests
+          WHERE customer_login_id = ? AND kind = 'copy' AND source = 'account'
+            AND asked_at >= (date_trunc('day', now() AT TIME ZONE ?) AT TIME ZONE ?)
+          LIMIT 1`
+      ).get(ctx.login.id, zone, zone);
+      if (takenToday) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 429, { error: 'You’ve already downloaded a copy today. You can get another tomorrow.' });
       }
       await db.prepare("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, asked_at, done_at) VALUES (?, ?, 'copy', 'account', now(), now())").run(customer.id, ctx.login.id);
       files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id) });

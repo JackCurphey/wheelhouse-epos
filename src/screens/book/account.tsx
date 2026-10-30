@@ -137,7 +137,7 @@ export function AccountScreen() {
   );
 }
 
-type Copy = { state: 'idle' | 'busy' | 'failed' | 'signed-out' } | { state: 'done'; name: string; url: string };
+type Copy = { state: 'idle' | 'busy' | 'failed' | 'signed-out' } | { state: 'done'; name: string; url: string } | { state: 'refused'; words: string };
 
 /**
  * The copy of your data (your-data-copy design 5): posted, then saved through
@@ -151,6 +151,12 @@ function useDataCopy(base: string) {
     try {
       const res = await fetch(`${base}/me/data-copy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
       if (res.status === 401) { setCopy({ state: 'signed-out' }); return; }
+      // Already taken today (Jack, 30 Oct, answer 2): the server's own words.
+      // A 429 with none of its own (a proxy's page) is a download that didn't start.
+      if (res.status === 429) {
+        const words = await res.json().then((b: { error?: unknown }) => (typeof b?.error === 'string' ? b.error : null), () => null);
+        if (words) { setCopy({ state: 'refused', words }); return; }
+      }
       if (!res.ok) throw new Error(`data copy: ${res.status}`);
       const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'your-data.zip';
       const url = URL.createObjectURL(await res.blob());
@@ -172,7 +178,8 @@ function useDataCopy(base: string) {
 }
 type CopyState = ReturnType<typeof useDataCopy>;
 
-// The drawn bars (ac-download, ac-download-failed): green while it downloads, a warning if it didn't start.
+// The drawn bars (ac-download, ac-download-failed): green while it downloads, a warning if it didn't start
+// or was refused for today.
 function CopyBar({ copy }: { copy: CopyState }) {
   if (copy.state === 'done') {
     return (
@@ -180,6 +187,15 @@ function CopyBar({ copy }: { copy: CopyState }) {
         <Check aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" />
         <span>{`Your data is downloading as one file, ${copy.name} — details, bikes, jobs, purchases, messages and what you agreed to. `}<a href={copy.url} download={copy.name} className="text-inherit underline">Not started? Download it again</a></span>
       </p>
+    );
+  }
+  // Already downloaded today: no Try again, as it would only be refused until tomorrow.
+  if (copy.state === 'refused') {
+    return (
+      <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+        <TriangleAlert aria-hidden="true" className="size-[18px] shrink-0" />
+        <span className="grow">{copy.words}</span>
+      </div>
     );
   }
   if (copy.state === 'failed') {

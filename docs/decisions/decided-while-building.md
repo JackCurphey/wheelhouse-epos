@@ -1848,6 +1848,20 @@ silent:
    *Pattern:* the account's other unbuilt parts
    (customer-account-screens proposal).
 
+### 30 Oct 2026: one copy of your data a day (`openspec/changes/your-data-once-a-day`, `ac-download`, `ac-download-failed`; Jack's 30 Oct answer 2)
+
+1. **"Already downloaded today" has no Try again.** It shows in the drawn
+   warning bar (`ac-download-failed`), in the shop's words, without the
+   button: pressing it would only be refused until tomorrow. A refusal with
+   no words of its own (a proxy's page) still reads "The download didn't
+   start." with Try again. *Pattern:* the drawn warning bar.
+2. **The day counts only copies taken from the account by that sign-in.** A
+   request the shop logs by hand, or a request to delete, doesn't use it up.
+3. **Two requests at once take turns on the sign-in, not the customer**: the
+   sign-in's own row is locked, so a sale or a message for the customer is
+   never held up while a copy is made (the review of #587 kept the customer
+   row shared).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
