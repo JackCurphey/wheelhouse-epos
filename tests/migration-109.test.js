@@ -73,6 +73,10 @@ test('109: a cancelled request, a deleted customer, one open deletion request ea
     // Done: another may be asked.
     await c.query('UPDATE privacy_requests SET done_at = now() WHERE id = $1', [again.id]);
     await ask(c, ids.maya);
+    // A till's duplicate alert names the record it matched (review of #590).
+    const { rows: [other] } = await c.query("INSERT INTO customers (name) VALUES ('[Other name]') RETURNING id");
+    await c.query("INSERT INTO till_attention (kind, detail, customer_id, matched_customer_id) VALUES ('possible_duplicate_customer', '[detail]', $1, $2)", [other.id, ids.maya]);
+    await assert.rejects(c.query("INSERT INTO till_attention (kind, detail, matched_customer_id) VALUES ('possible_duplicate_customer', '[detail]', 999999)"), /foreign key/i);
     await c.query('UPDATE customers SET deleted_at = now(), active = 0 WHERE id = $1', [ids.maya]);
     assert.ok((await c.query('SELECT deleted_at FROM customers WHERE id = $1', [ids.maya])).rows[0].deleted_at instanceof Date);
   });

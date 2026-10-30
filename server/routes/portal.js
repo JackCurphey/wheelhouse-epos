@@ -1494,6 +1494,18 @@ export function register(route) {
         }
         heldPayment = pay;
       }
+      // Signed in: the sign-in's customer read again and held (FOR SHARE), so
+      // a deletion of their details either finished first, and this booking
+      // is refused, or waits until it's in (delete-account, review of #590).
+      if (signedIn) {
+        const held = await db.prepare(
+          `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+            WHERE l.id = ? AND l.active = 1 AND c.active = 1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+            FOR SHARE OF c`
+        ).get(ctx.login.id);
+        if (!held) return { status: 401, body: { error: 'Please sign in again to book.' } };
+        customerId = held.id;
+      }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;
       const { times } = checked;
