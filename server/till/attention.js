@@ -18,7 +18,7 @@ import { prepare } from '../db.js';
 // here, since ON CONFLICT DO NOTHING RETURNING id returns zero rows when the
 // conflict fires and one row otherwise, so .run()'s `changes` (rowCount) is
 // exactly 1 when a flag was raised and 0 when it was not.
-export async function flag(kind, { detail, tillSaleId = null, productId = null, customerId = null }) {
+export async function flag(kind, { detail, tillSaleId = null, productId = null, customerId = null, matchedCustomerId = null }) {
   if (kind === 'stock_below_zero') {
     const { changes } = await prepare(
       `INSERT INTO till_attention (kind, detail, till_sale_id, product_id, customer_id)
@@ -29,8 +29,8 @@ export async function flag(kind, { detail, tillSaleId = null, productId = null, 
     return changes > 0;
   }
   await prepare(
-    'INSERT INTO till_attention (kind, detail, till_sale_id, product_id, customer_id) VALUES (?, ?, ?, ?, ?)'
-  ).run(kind, detail, tillSaleId, productId, customerId);
+    'INSERT INTO till_attention (kind, detail, till_sale_id, product_id, customer_id, matched_customer_id) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(kind, detail, tillSaleId, productId, customerId, matchedCustomerId);
   return true;
 }
 

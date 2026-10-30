@@ -43,6 +43,7 @@ import { setStopped, stopView } from '../messaging/stop-codes.js';
 import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { dataCopyFiles } from '../customer-data-copy.js';
+import { bookingNotes } from '../workshop/booking-notes.js';
 import { zipFiles } from '../lib/zip.js';
 import { openDeletion } from '../privacy-requests.js';
 import { checkAnswers } from '../service-questions.js';
@@ -240,30 +241,8 @@ async function bookedServices(jobId) {
   };
 }
 
-// Staff see an online booking only through the job's Notes (piece 9): the
-// bike note, each answered question, and the description, in that order,
-// leaving out any part that is empty. A choice question's line names the
-// choice (or "I'm not sure") and, when the customer also typed words,
-// appends them after " - "; a question answered by words alone shows the
-// words on their own. A free-text question's line is just its answer.
-function answerNoteLine({ wording, kind, answer, text }) {
-  if (kind === 'text') return answer ? `${wording} ${answer}` : null;
-  const choiceOrNotSure = answer && typeof answer === 'object' && answer.notSure ? "I'm not sure" : answer;
-  const words = text || null;
-  const value = choiceOrNotSure && words ? `${choiceOrNotSure} - ${words}` : choiceOrNotSure || words;
-  return value ? `${wording} ${value}` : null;
-}
-
-function bookingNotes({ bikeNote, questionAnswers, description }) {
-  const lines = [];
-  if (bikeNote) lines.push(`Bike (customer's words): ${bikeNote}`);
-  for (const entry of questionAnswers ?? []) {
-    const line = answerNoteLine(entry);
-    if (line) lines.push(line);
-  }
-  if (description) lines.push(`Customer's description: ${description}`);
-  return lines.join('\n');
-}
+// The notes an online booking writes from the customer's words (piece 9):
+// server/workshop/booking-notes.js, shared with deleting their details.
 
 // Every check a customer's chosen time passes, in the booking route's order,
 // run inside the booking lock. Shared by a new booking and a change (piece
@@ -1495,6 +1474,18 @@ export function register(route) {
           return { status: 402, body: { error: 'The deposit hasn’t gone through yet.', code: 'deposit_not_held' } };
         }
         heldPayment = pay;
+      }
+      // Signed in: the sign-in's customer read again and held (FOR SHARE), so
+      // a deletion of their details either finished first, and this booking
+      // is refused, or waits until it's in (delete-account, review of #590).
+      if (signedIn) {
+        const held = await db.prepare(
+          `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+            WHERE l.id = ? AND l.active = 1 AND c.active = 1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+            FOR SHARE OF c`
+        ).get(ctx.login.id);
+        if (!held) return { status: 401, body: { error: 'Please sign in again to book.' } };
+        customerId = held.id;
       }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;

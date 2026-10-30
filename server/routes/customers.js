@@ -75,12 +75,17 @@ async function setCustomerGroups(customerId, groupIds) {
   for (const groupId of groupIds) await insert.run(customerId, groupId);
 }
 
+// A customer whose details were deleted at their request stays blank: no save
+// brings anything back (delete-account, review of #590-#592).
+const DELETED = { status: 409, body: { error: 'This customer’s details were deleted at their request, so they can’t be changed.', code: 'deleted' } };
+
 // PUT /api/customers/:id, inside its transaction: reads the customer FOR
 // UPDATE, merges in the fields sent, checks them and writes. Returns a
 // { status, body } refusal, or nothing once written.
 async function saveCustomer(id, body) {
   const existing = await db.prepare('SELECT * FROM customers WHERE id = ? FOR UPDATE').get(id);
   if (!existing) return { status: 404, body: { error: 'Customer not found' } };
+  if (existing.deleted_at) return DELETED;
   const refuse = (error) => ({ status: 400, body: { error } });
 
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
@@ -472,12 +477,27 @@ export function register(route) {
     const serialNumber = (body.serialNumber || '').trim();
     const notes = (body.notes || '').trim();
 
-    const info = await db
-      .prepare(
-        `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(customerId, make, model, colour, serialNumber, notes, nowIso());
+    // The customer held while the bike is added, so a deletion of their
+    // details either finished first, and this is refused, or waits for it.
+    let info;
+    await db.exec('BEGIN');
+    try {
+      const held = await db.prepare('SELECT deleted_at FROM customers WHERE id = ? FOR SHARE').get(customerId);
+      if (held?.deleted_at) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, DELETED.status, DELETED.body);
+      }
+      info = await db
+        .prepare(
+          `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, notes, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(customerId, make, model, colour, serialNumber, notes, nowIso());
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeBike(row));
   });
@@ -492,6 +512,13 @@ export function register(route) {
     // number saved at once both stay (more-saves-dont-clash).
     await db.exec('BEGIN');
     try {
+      // The owner first, as deleting their details holds the customer and
+      // then clears their bikes; a deleted customer's bike stays bare.
+      const owner = await db.prepare('SELECT deleted_at FROM customers WHERE id = ? FOR SHARE').get(existing.customer_id);
+      if (owner?.deleted_at) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, DELETED.status, DELETED.body);
+      }
       const current = await db.prepare('SELECT * FROM customer_bikes WHERE id = ? FOR UPDATE').get(id);
       if (!current) {
         await db.exec('ROLLBACK');

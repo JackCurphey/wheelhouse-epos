@@ -354,6 +354,9 @@ test('a customer who may already exist is flagged, not merged', async () => {
   assert.ok(byEmailRow, 'the by-email customer should have been created, not merged');
   assert.ok(byPhoneRow, 'the by-phone customer should have been created, not merged');
   assert.ok(existing, 'the pre-existing customer should be untouched');
+  // Each alert names the record it matched (delete-account, review of #590).
+  const matched = await inShop(() => prepare("SELECT customer_id, matched_customer_id FROM till_attention WHERE kind = 'possible_duplicate_customer' AND customer_id = ANY(?::int[]) ORDER BY customer_id").all([byEmailRow.id, byPhoneRow.id]));
+  assert.ok(matched.length === 2 && matched.every((m) => m.matched_customer_id !== null && m.matched_customer_id !== m.customer_id), JSON.stringify(matched));
 });
 
 test('a sale pointing at a customer the server never received is recorded without one', async () => {

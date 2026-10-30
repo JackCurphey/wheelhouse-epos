@@ -42,3 +42,21 @@ A customer's page SHALL show their open deletion request: when they asked, where
 #### Scenario: Maya's page
 - **WHEN** staff open Maya Patel's page while her request is open
 - **THEN** it says "Asked to delete their account on [date] · from their account on the website · answer by [date]. Still in the way: bike in the workshop, WH-1042."
+
+### Requirement: Deleted details stay deleted
+Once a customer's details are deleted, no staff save SHALL bring any back: saving the customer, switching them on, adding a bike for them or editing one of their bikes SHALL be refused. A booking from their account already under way SHALL be refused, and their booking links SHALL stop working.
+
+#### Scenario: A stale Edit
+- **WHEN** an Edit pop-up opened before the deletion is saved after it
+- **THEN** it is refused with "This customer’s details were deleted at their request, so they can’t be changed." and nothing comes back
+
+#### Scenario: Her booking link
+- **WHEN** her private booking link is opened after the deletion
+- **THEN** it no longer opens her booking
+
+### Requirement: Their own words on kept jobs are removed
+Deleting someone's details SHALL replace what they wrote when booking, on each kept job and the order made with it, with "[removed]": their description, their bike note, their answers, the lines the booking added to the notes, and their description in the title. What staff typed, the work and the money SHALL stay (answer 4).
+
+#### Scenario: A phone number in her words
+- **WHEN** her description and bike note include her phone number
+- **THEN** after the deletion neither the job nor its order holds it, and the staff's own note is still there
