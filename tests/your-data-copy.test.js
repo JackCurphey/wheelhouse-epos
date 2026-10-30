@@ -81,18 +81,43 @@ before(async () => {
     ).get(maya.id, jo)).id;
     // A line a spreadsheet would read as a formula.
     await prepare("INSERT INTO sale_items (sale_id, name, unit_price, qty, line_total, line_type) VALUES (?, '=HYPERLINK(\"x\")', 12, 1, 12, 'labour')").run(sale);
+    // Late on a summer evening in UTC: the next day in the shop (its day, by the database).
+    const late = (await prepare(
+      `INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id, cashier_id)
+       VALUES ('2026-08-23T23:30:00Z', 3, 3, 'Cash', 3, ?, ?) RETURNING id`
+    ).get(maya.id, jo)).id;
+    await prepare("INSERT INTO sale_items (sale_id, name, unit_price, qty, line_total, line_type) VALUES (?, '[Late sale]', 3, 1, 3, 'labour')").run(late);
     // A refund: a negative total stays a number in the spreadsheet (review).
     await prepare(
       `INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id, cashier_id)
        VALUES ('2026-08-22T10:00:00Z', -5, -5, 'Cash', -5, ?, ?)`
     ).run(maya.id, jo);
     await prepare("INSERT INTO job_notes (customer_id, from_customer, body) VALUES (?, true, '[Maya’s message]')").run(maya.id);
+    // The shop's own notes on her bike and her repair, and a bike taken off her account (review of #587).
+    await prepare("UPDATE customer_bikes SET notes = '[Shop’s bike note]' WHERE id = ?").run(bike.id);
+    await prepare("UPDATE workshop_jobs SET notes = '[Shop’s job note]', terms_accepted_at = '2026-08-30T09:15:00Z' WHERE id = ?").run(job.id);
+    await prepare("INSERT INTO customer_bikes (customer_id, make, model, active) VALUES (?, '[Removed make]', '[Removed model]', 0)").run(maya.id);
+    // Each a sale of its own, so each starts its cell: +, @, a tab, and -1+1 (review of #587).
+    for (const name of ['+1', '@SUM(1)', '\tx', '-1+1']) {
+      const one = (await prepare(
+        `INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id, cashier_id)
+         VALUES ('2026-08-21T10:00:00Z', 1, 1, 'Cash', 1, ?, ?) RETURNING id`
+      ).get(maya.id, jo)).id;
+      await prepare("INSERT INTO sale_items (sale_id, name, unit_price, qty, line_total, line_type) VALUES (?, ?, 1, 1, 1, 'labour')").run(one, name);
+    }
     await prepare("INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address, sent_at) VALUES (?, '[Bike ready text]', 'sent', 'delivered', 'sms', '07700 900 142', '2026-09-05T15:00:00Z')").run(maya.id);
     await prepare("INSERT INTO customer_messages (customer_id, body, status, intent_state, channel, to_address) VALUES (?, '[Taken back]', 'sent', 'undone', 'sms', '07700 900 142')").run(maya.id);
   });
   mayaCookie = await signIn(mayaEmail);
   samCookie = await signIn(`sam-${randomUUID().slice(0, 8)}@example.test`);
-  otherCookie = await signIn(`olu-${randomUUID().slice(0, 8)}@example.test`, other);
+  const oluEmail = `olu-${randomUUID().slice(0, 8)}@example.test`;
+  otherCookie = await signIn(oluEmail, other);
+  // Another shop's customer with data of their own (review of #587).
+  await inShop(async () => {
+    const { customer_id: olu } = await prepare('SELECT customer_id FROM customer_logins WHERE email = ?').get(oluEmail);
+    await prepare("INSERT INTO customer_bikes (customer_id, make, model) VALUES (?, '[Elsewhere make]', '[Elsewhere model]')").run(olu);
+    await prepare("INSERT INTO job_notes (customer_id, from_customer, body) VALUES (?, true, '[Elsewhere message]')").run(olu);
+  }, other.shop.id);
 });
 
 after(async () => {
@@ -114,10 +139,17 @@ test('Maya downloads one zip of her details, bikes, repairs, purchases, messages
   assert.ok(files['your-details.csv'].includes(mayaEmail));
   assert.doesNotMatch(files['your-details.csv'], /private note/, 'the shop’s own note stays out (design 3)');
   assert.match(files['your-bikes.csv'], /Trek,Domane AL 3,green/);
+  assert.doesNotMatch(files['your-bikes.csv'], /Removed/, 'a bike taken off the account stays out');
+  const all = Object.values(files).join('\n');
+  assert.doesNotMatch(all, /Shop’s (bike|job) note|private note/, 'the shop’s own notes stay out of every file');
+  assert.doesNotMatch(all, /Elsewhere/, 'nothing of another shop’s');
+  assert.match(files['your-repairs.csv'], /2026-08-30 10:15/, 'when she agreed to the booking terms, in the shop’s time');
+  for (const cell of ["'+1", "'@SUM(1)", "'\tx", "'-1+1"]) assert.ok(files['your-purchases.csv'].includes(`,${cell},`), `${JSON.stringify(cell)} in ${files['your-purchases.csv']}`);
   assert.ok(files['your-repairs.csv'].includes(job.reference), files['your-repairs.csv']);
   assert.match(files['your-repairs.csv'], /Standard service/);
   assert.match(files['your-repairs.csv'], /2026-09-05/);
   assert.match(files['your-purchases.csv'], /12\.00/);
+  assert.match(files['your-purchases.csv'], /,2026-08-24,\[Late sale\],/, 'the shop’s day, not UTC’s');
   assert.match(files['your-purchases.csv'], /,-5\.00\r\n/, 'a refund’s total stays a number');
   // Each file says it is UTF-8, so Excel shows £ and ’ as they are (review).
   for (const [name, text] of Object.entries(files)) assert.ok(text.startsWith('\uFEFF'), `${name} starts with the UTF-8 mark`);
@@ -158,6 +190,7 @@ test('signed out, signed in to another shop, or from another website: refused, a
   assert.equal((await download({ cookie: null })).res.status, 401);
   assert.equal((await download({ cookie: otherCookie })).res.status, 401);
   assert.equal((await download({ headers: { 'sec-fetch-site': 'cross-site' } })).res.status, 403);
+  assert.equal((await download({ headers: { 'sec-fetch-site': 'same-site' } })).res.status, 403, 'another site of the same domain too');
   assert.equal((await requests(maya.id)).length, before);
 });
 
@@ -183,4 +216,57 @@ test('a sign-in whose customer record was merged away gets nothing, and nothing 
   const { res } = await download({ cookie });
   assert.equal(res.status, 401);
   assert.equal((await requests(kai.customer_id)).length, 0);
+});
+
+test('a company’s details and every answer are in its copy', async (t) => {
+  const email = `club-${randomUUID().slice(0, 8)}@example.test`;
+  const cookie = await signIn(email);
+  const { customer_id: id } = await inShop(() => prepare('SELECT customer_id FROM customer_logins WHERE email = ?').get(email));
+  await inShop(() => prepare(
+    `UPDATE customers SET name = '[Club name]', is_company = true, contact_name = '[Contact name]', vat_number = '[VAT number]',
+            invoice_email = '[invoice email]', update_channel = 'email', review_requests = true, marketing_permission = true,
+            reminders_said_yes_at = '2026-08-25T13:00:00Z', reminders_said_yes_via = 'account' WHERE id = ?`
+  ).run(id));
+  const { res, body } = await download({ cookie });
+  assert.equal(res.status, 200);
+  const files = filesOf(body, t);
+  for (const line of ['Name,[Club name]', 'Contact name,[Contact name]', 'VAT number,[VAT number]', 'Send invoices to,[invoice email]', `Email you sign in with,${email}`]) {
+    assert.ok(files['your-details.csv'].includes(line), `${line} in ${files['your-details.csv']}`);
+  }
+  for (const line of ['Job updates by,Email', 'Service reminders,No', 'Review requests,Yes', 'Offers and news,Yes', 'Said yes to reminders,"2026-08-25 14:00, from your account"']) {
+    assert.ok(files['what-you-agreed-to.csv'].includes(line), `${line} in ${files['what-you-agreed-to.csv']}`);
+  }
+});
+
+test('ten copies in a quarter of an hour, then a plain refusal, not logged', async () => {
+  const email = `lena-${randomUUID().slice(0, 8)}@example.test`;
+  const cookie = await signIn(email);
+  const { customer_id: id } = await inShop(() => prepare('SELECT customer_id FROM customer_logins WHERE email = ?').get(email));
+  for (let i = 0; i < 10; i += 1) assert.equal((await download({ cookie })).res.status, 200, `copy ${i + 1}`);
+  const { res, body } = await download({ cookie });
+  assert.equal(res.status, 429);
+  assert.match(JSON.parse(body.toString()).error, /a lot of copies at once/);
+  assert.equal((await requests(id)).length, 10);
+  // Another sign-in isn't held up by hers.
+  assert.equal((await download({ cookie: samCookie })).res.status, 200);
+});
+
+test('a copy downloaded by the merged-away person’s sign-in goes back with them on Undo', async () => {
+  // Only one of two records may have an online account to be merged: the merged-away one here.
+  const kept = (await staff('/api/customers', { method: 'POST', body: { name: '[Kept name]' } })).body;
+  const goneEmail = `gone-${randomUUID().slice(0, 8)}@example.test`;
+  const gone = (await staff('/api/customers', { method: 'POST', body: { name: '[Merged name]', email: goneEmail } })).body;
+  await inShop(() => prepare('UPDATE customers SET email_from_customer = true WHERE id = ?').run(gone.id));
+  const goneCookie = await signIn(goneEmail);
+  const merged = await staff(`/api/customers/${kept.id}/merge`, { method: 'POST', body: { otherId: gone.id, keep: {} } });
+  assert.equal(merged.status, 200, JSON.stringify(merged.body));
+  // Their sign-in now reaches the kept record, and the copy is logged there.
+  assert.equal((await download({ cookie: goneCookie })).res.status, 200);
+  assert.equal((await requests(kept.id)).length, 1);
+  // One the shop logged for the kept record itself stays with it.
+  await inShop(() => prepare("INSERT INTO privacy_requests (customer_id, kind, source) VALUES (?, 'copy', 'shop')").run(kept.id));
+  const undo = await staff(`/api/customer-merges/${merged.body.id}/undo`, { method: 'POST', body: {} });
+  assert.equal(undo.status, 200, JSON.stringify(undo.body));
+  assert.equal((await requests(gone.id)).length, 1, 'the merged-away person’s copy goes back with their sign-in');
+  assert.deepEqual((await requests(kept.id)).map((r) => r.source), ['shop'], 'the kept record’s own request stays');
 });

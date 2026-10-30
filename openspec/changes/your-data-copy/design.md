@@ -4,8 +4,8 @@
 
 One row per privacy request: who (`customer_id`, `ON DELETE SET NULL` so the
 paper trail outlives the record), what (`kind`: `copy` or `delete`), where
-from (`source`: `account` or `shop`), `asked_at`, and `done_at` (null while
-open). Row-level security per shop, as every shop table. `CREATE TABLE IF
+from (`source`: `account` or `shop`), the sign-in that asked from the
+account (`customer_login_id`), `asked_at`, and `done_at` (null while open). Row-level security per shop, as every shop table. `CREATE TABLE IF
 NOT EXISTS` and policies dropped before they are made, so it is safe to run
 twice. `delete` and `shop` are in the checks now because the Privacy
 requests list (`cs-privacy`) draws both kinds and both sources; nothing
@@ -13,13 +13,18 @@ writes them yet.
 
 `privacy_requests` joins the merge's moved tables (`MOVED` in
 `server/routes/customer-merge.js`), so a merge and its Undo carry the log
-with the customer.
+with the customer. A copy asked for after the merge by the merged-away
+person's sign-in is logged on the kept record; Undo sends it back with that
+sign-in (review of #587).
 
 ## 2. The route
 
 `POST /api/portal/:shopSlug/me/data-copy`, for the signed-in customer only
 (401 otherwise, or for another shop's sign-in). A request from another
-website is refused (403), as the account's other actions are. In one
+website is refused (403), as the account's other actions are. Each sign-in
+may take 10 copies in 15 minutes; the 11th is refused (429, "That’s a lot of
+copies at once. Try again in a few minutes."), before anything is read or
+logged. In one
 transaction it reads the sign-in's customer again, `FOR SHARE` (so a merge
 waits, and a merge that has just finished points it at the kept record; a
 record merged away gets 401), records the request (`kind 'copy'`, `source 'account'`,
@@ -46,7 +51,8 @@ number:
   for each of their bikes still on the account.
 - `your-repairs.csv`: reference, date, bike, work, where it's up to (the
   account's words), total, and when you agreed to the booking terms.
-- `your-purchases.csv`: receipt number (or "No. [id]"), date, what was
+- `your-purchases.csv`: receipt number (or "No. [id]"), date (the shop's
+  day, worked out by the database), what was
   bought, total, from both sales records, as the history shows them.
 - `your-messages.csv`: your conversation with the shop (who, when, about
   which repair, the words), then messages the shop sent you (when, how, the

@@ -89,6 +89,8 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // A customer's messages to the shop: 30 in 15 minutes each, so nobody can flood the inbox (ask-the-shop-server review 1).
 const messageLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+// Copies of your data, per sign-in (review of #587): each one reads everything and is logged.
+const dataCopyLimiter = makeRateLimiter(10, 15 * 60 * 1000);
 // Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
 // network and by the shop's email address; codes checked, by network.
 const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
@@ -1184,6 +1186,7 @@ export function register(route) {
     if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
     const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    if (!dataCopyLimiter.check(`${ctx.shop.id}:${ctx.login.id}`)) return sendJson(res, 429, { error: 'That’s a lot of copies at once. Try again in a few minutes.' });
     const zone = await shopZone();
     let files;
     await db.exec('BEGIN');
@@ -1201,7 +1204,7 @@ export function register(route) {
         await db.exec('ROLLBACK');
         return sendJson(res, 401, { error: 'Not signed in' });
       }
-      await db.prepare("INSERT INTO privacy_requests (customer_id, kind, source, asked_at, done_at) VALUES (?, 'copy', 'account', now(), now())").run(customer.id);
+      await db.prepare("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, asked_at, done_at) VALUES (?, ?, 'copy', 'account', now(), now())").run(customer.id, ctx.login.id);
       files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id) });
       await db.exec('COMMIT');
     } catch (err) {

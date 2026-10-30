@@ -19,8 +19,6 @@ const YES_VIA = { booking: 'at booking', collection: 'at collection', account: '
 const yesNo = (on) => (on ? 'Yes' : 'No');
 const money = (pence) => (pence == null ? '' : (pence / 100).toFixed(2));
 const WHEN = "'YYYY-MM-DD HH24:MI'";
-// A purchase's day in the shop's time zone, for display only (the history gives its moment).
-const dayIn = (zone, iso) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 
 /**
  * The copy's files for a customer. `history` is the account's history
@@ -48,6 +46,10 @@ export async function dataCopyFiles({ customerId, email, zone, history }) {
   ).all(zone, customerId)).map((r) => [r.id, r.at]));
   const repairs = history.filter((h) => h.kind === 'repair');
   const purchases = history.filter((h) => h.kind === 'purchase');
+  // Each purchase's day in the shop's time zone, worked out by the database (review of #587).
+  const purchaseDay = new Map((await prepare(
+    `SELECT source, id, to_char(made_at AT TIME ZONE ?, 'YYYY-MM-DD') AS day FROM all_sales WHERE customer_id = ?`
+  ).all(zone, customerId)).map((r) => [`${r.source}:${r.id}`, r.day]));
 
   const conversation = await customerConversation(customerId, { forCustomer: true });
   const conversationAt = await prepare(
@@ -68,7 +70,7 @@ export async function dataCopyFiles({ customerId, email, zone, history }) {
     { name: 'your-repairs.csv', content: csvOf([['Reference', 'Date', 'Bike', 'Work', 'Where it’s up to', 'Total (£)', 'Booking terms agreed'],
       ...repairs.map((r) => [r.reference, r.jobDate, r.bikeLabel, r.title, STAGE_WORDS[r.stage] ?? r.stage, money(r.totalPence), terms.get(r.jobId)])]) },
     { name: 'your-purchases.csv', content: csvOf([['Receipt', 'Date', 'What', 'Total (£)'],
-      ...purchases.map((p) => [p.receiptNumber ?? `No. ${p.id}`, dayIn(zone, p.at), p.what, money(p.totalPence)])]) },
+      ...purchases.map((p) => [p.receiptNumber ?? `No. ${p.id}`, purchaseDay.get(`${p.source}:${p.id}`), p.what, money(p.totalPence)])]) },
     { name: 'your-messages.csv', content: csvOf([['When', 'From', 'How', 'About', 'Subject', 'Message'],
       ...conversation.items.map((i) => [noteAt.get(i.id), i.from, 'On your account', i.about?.reference, '', i.text]),
       ...sent.map((m) => [m.at, conversation.shopName, WAYS[m.channel] ?? '', '', m.subject, m.body])]) },
