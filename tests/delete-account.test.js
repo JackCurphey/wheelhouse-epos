@@ -691,3 +691,31 @@ test('words over several lines: each part of the booking’s notes becomes one �
   const { notes } = await inShop(() => prepare('SELECT notes FROM workshop_jobs WHERE id = ?').get(job));
   assert.equal(notes, "[Staff’s first note]\nAnything else? [removed]\nCustomer's description: [removed]\n[Staff’s own note]");
 });
+
+// A note through her booking link at the same moment as a merge of her
+// record, or its Undo (the last re-review): another connection plays the
+// merge, holding the customers, then moving the job; the note has taken its
+// job lock and waits on the customer. Neither may be cancelled.
+for (const [what, lockCustomers] of [
+  ['a merge', 'SELECT id FROM customers WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE'],
+  ['a merge’s Undo', 'SELECT id FROM customers WHERE id = ANY($1::int[]) ORDER BY id DESC FOR UPDATE'],
+]) {
+  test(`a note through her link at the same moment as ${what}: no deadlock, both go through`, async () => {
+    const dee = await customer('[Dee’s name]');
+    const twin = (await staff('/api/customers', { method: 'POST', body: { name: '[Twin name]', phone: '07700 900 246' } })).body;
+    const job = await jobFor(dee.id, 'expected');
+    const code = (await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} })).body.privateLink.split('/booking/')[1];
+    let moved;
+    const res = await holding(lockCustomers, [[dee.id, twin.id]], async (conn) => {
+      const note = portal(`/booking-links/${code}/notes`, { method: 'POST', body: { text: '[Her note]' } });
+      // The note holds its job and waits on her record...
+      await blockedBy(conn);
+      // ...while the merge moves her job.
+      moved = await conn.query('UPDATE workshop_jobs SET customer_id = $1 WHERE id = $2', [twin.id, job.id]).then(() => 'moved', (err) => err.message);
+      await conn.query(moved === 'moved' ? 'COMMIT' : 'ROLLBACK');
+      return note;
+    });
+    assert.equal(moved, 'moved', 'the merge is never the one cancelled');
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+  });
+}

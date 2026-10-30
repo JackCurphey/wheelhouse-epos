@@ -1870,10 +1870,13 @@ export function register(route) {
     if (!text) return badRequest(res, NOTE_WORDS);
     // The job held, then its customer, as deleting their details takes them:
     // a note already under way when the shop deletes them waits, and is then
-    // refused, the link no longer theirs (delete-account, re-review).
+    // refused, the link no longer theirs (delete-account, re-review). FOR KEY
+    // SHARE, the lightest hold: it still waits behind the deletion's FOR
+    // UPDATE, but not behind a merge or its Undo moving the job, which hold the
+    // customer first (a deadlock with FOR UPDATE; the last re-review).
     await db.exec('BEGIN');
     try {
-      const job = await db.prepare('SELECT customer_id, link_token_hash FROM workshop_jobs WHERE id = ? FOR UPDATE').get(found.id);
+      const job = await db.prepare('SELECT customer_id, link_token_hash FROM workshop_jobs WHERE id = ? FOR KEY SHARE').get(found.id);
       const still = job && (found.signedIn || job.link_token_hash === hashLinkCode(params.code));
       const owner = still && job.customer_id !== null
         ? await db.prepare('SELECT deleted_at FROM customers WHERE id = ? FOR SHARE').get(job.customer_id) : null;
