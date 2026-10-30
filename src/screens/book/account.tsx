@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, TriangleAlert } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { cn } from '@/lib/utils';
@@ -20,9 +21,10 @@ import type { BookingStage } from './pending-query.ts';
  * "Ask the shop a question" and the history's one Messages row open her
  * conversation with the shop (openspec/changes/ask-the-shop-screens design 2;
  * ac-account-asked).
- * Not built yet, so not shown: store credit,
- * warranty and next-service lines, adding a bike, changing details, a
- * purchase's receipt, and Your data.
+ * "Your data" downloads a copy straight away (openspec/changes/your-data-copy
+ * design 5; ac-download, ac-download-failed).
+ * Not built yet, so not shown: store credit, the warranty line, a purchase's
+ * receipt, asking to delete the account, and the privacy notice.
  */
 type Me = {
   id: number; email: string; name: string | null; phone: string | null; shopName: string; shopSlug: string;
@@ -78,9 +80,10 @@ export function AccountScreen() {
   const navigate = useNavigate();
   const [leaving, setLeaving] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
+  const copy = useDataCopy(base);
   const home = `/book/${shopSlug}`;
 
-  if ([me, bikes, history].some((q) => signedOut(q.error))) {
+  if ([me, bikes, history].some((q) => signedOut(q.error)) || copy.state === 'signed-out') {
     return <Navigate replace to={`${home}/sign-in?from=${encodeURIComponent(`${home}/account`)}`} />;
   }
   if (me.isPending || bikes.isPending || history.isPending) return <BookFrame title="Loading…">{null}</BookFrame>;
@@ -119,14 +122,87 @@ export function AccountScreen() {
           {bookLink}
         </div>
       </div>
+      <CopyBar copy={copy} />
       {failed ? <p role="alert" className="m-0 mb-4 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">That didn’t go through. Check your connection and try again.</p> : null}
-      {/* On a phone: bikes, history, details (ac-account phone); on a computer, bikes and details on the left, the history on the right. */}
+      {/* On a phone: bikes, history, details, your data (ac-account phone); on a computer, bikes and details on the left, the history and your data on the right (audit M2). */}
       <div className="grid items-start gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="lg:col-start-1 lg:row-start-1">{bikesCard}</div>
-        <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1"><HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} /></div>
+        <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
+          <HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} />
+          <div className="order-last lg:order-none"><YourDataCard copy={copy} /></div>
+        </div>
         <div className="lg:col-start-1 lg:row-start-2"><DetailsCard me={me.data} shopSlug={shopSlug} /></div>
       </div>
     </BookFrame>
+  );
+}
+
+type Copy = { state: 'idle' | 'busy' | 'failed' | 'signed-out' } | { state: 'done'; name: string; url: string };
+
+/**
+ * The copy of your data (your-data-copy design 5): posted, then saved through
+ * a link to the file the browser now holds. "Download it again" reuses that
+ * file, so it isn't made, or logged, twice.
+ */
+function useDataCopy(base: string) {
+  const [copy, setCopy] = React.useState<Copy>({ state: 'idle' });
+  const download = React.useCallback(async () => {
+    setCopy({ state: 'busy' });
+    try {
+      const res = await fetch(`${base}/me/data-copy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+      if (res.status === 401) { setCopy({ state: 'signed-out' }); return; }
+      if (!res.ok) throw new Error(`data copy: ${res.status}`);
+      const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'your-data.zip';
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setCopy({ state: 'done', name, url });
+    } catch {
+      setCopy({ state: 'failed' });
+    }
+  }, [base]);
+  // Leaving the account lets go of the file the browser held for "Download it again" (review).
+  const held = copy.state === 'done' ? copy.url : null;
+  React.useEffect(() => () => { if (held) URL.revokeObjectURL(held); }, [held]);
+  return { ...copy, download };
+}
+type CopyState = ReturnType<typeof useDataCopy>;
+
+// The drawn bars (ac-download, ac-download-failed): green while it downloads, a warning if it didn't start.
+function CopyBar({ copy }: { copy: CopyState }) {
+  if (copy.state === 'done') {
+    return (
+      <p role="status" className="m-0 mb-4 flex items-start gap-2.5 rounded-lg bg-[var(--wh-status-complete-bg)] px-3.5 py-3 text-size-15 font-semibold leading-snug text-[var(--wh-status-complete-ink)]">
+        <Check aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" />
+        <span>{`Your data is downloading as one file, ${copy.name} — details, bikes, jobs, purchases, messages and what you agreed to. `}<a href={copy.url} download={copy.name} className="text-inherit underline">Not started? Download it again</a></span>
+      </p>
+    );
+  }
+  if (copy.state === 'failed') {
+    return (
+      <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+        <TriangleAlert aria-hidden="true" className="size-[18px] shrink-0" />
+        <span className="grow">The download didn’t start.</span>
+        <Button onClick={() => void copy.download()}>Try again</Button>
+      </div>
+    );
+  }
+  return null;
+}
+
+// "Your data" (ac-account; account and reminders decision 4): Download a copy, as a link-style button.
+function YourDataCard({ copy }: { copy: CopyState }) {
+  const idBase = React.useId();
+  return (
+    <Card id={`${idBase}-data`} title="Your data">
+      <div className="flex flex-col items-start">
+        <button type="button" disabled={copy.state === 'busy'} onClick={() => void copy.download()} className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-sm font-semibold text-[var(--wh-ink)] underline">Download a copy of your data</button>
+      </div>
+    </Card>
   );
 }
 

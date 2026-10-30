@@ -44,7 +44,8 @@ export async function renderBookScreen({
   file, exportName, at, url, services, draft, mechanics = NO_MECHANICS, availability = NO_AVAILABILITY,
   terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state, real = {}, strict = false,
   media, photoCode = NO_LINK, depositHold = NO_LINK, card = NO_LINK, later, stopCode = NO_LINK, signIn = NO_LINK,
-  // The account's /me, /bikes, /history and /logout (customer-account-screens).
+  // The account's /me, /bikes, /history and /logout (customer-account-screens),
+  // and /me/data-copy (your-data-copy).
   account = () => ({ status: 401, body: { error: 'Not signed in' } }),
   // The conversation's GET and POST /messages (ask-the-shop-screens).
   messages = () => ({ status: 401, body: { error: 'Not signed in' } }),
@@ -87,13 +88,16 @@ export async function renderBookScreen({
             : pathname.includes('/photo-codes/') ? photoCode
             : pathname.includes('/reminder-stops/') ? stopCode
             : pathname.includes('/sign-in/') ? signIn
-            : /\/(me|me\/contact|bikes|history|logout)$/.test(pathname) ? account
+            : /\/(me|me\/contact|me\/data-copy|bikes|history|logout)$/.test(pathname) ? account
             : pathname.endsWith('/messages') ? messages
             : pathname.endsWith('/deposit-holds') ? depositHold
             : pathname.includes('/pretend-payments/') ? card
             : pathname.endsWith('/bookings') ? booking
               : services;
-    const { status, body } = typeof source === 'function' ? await source(address, init) : { status: 200, body: source };
+    const answer = typeof source === 'function' ? await source(address, init) : { status: 200, body: source };
+    // A file (the copy of your data): the source's own Response.
+    if (answer instanceof Response) return answer;
+    const { status, body } = answer;
     return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
   };
 

@@ -1812,6 +1812,42 @@ silent:
    same holds for a day nobody closed. *Pattern:* a day nobody closed's
    window (unclosed-day design 11).
 
+### 29 Oct 2026: Download a copy of your data (`openspec/changes/your-data-copy`, `ac-account`, `ac-download`, `ac-download-failed`; WP-4.5, slice A; account and reminders decision 4)
+
+1. **The copy is six spreadsheets (CSV) in the zip**: your details, your
+   bikes, your repairs, your purchases, your messages, and what you agreed
+   to. The drawing names the zip and what's in it, not the format inside;
+   spreadsheets open on any computer and are what UK data protection calls
+   "commonly used". *Pattern:* stock take's Download the count.
+2. **The file is named `[shop's web name]-your-data-[the shop's date].zip`**,
+   for the drawing's "[file name].zip".
+3. **Left out of the copy: the shop's own private notes** about the customer
+   and their bikes (the staff-only note on the customer page and bike), and
+   messages that never went (taken back, failed or still waiting). The drawn
+   list is "details, bikes, jobs, purchases, messages and what you agreed
+   to", and the account never shows those notes. Under UK data protection a
+   customer asking the shop for everything is entitled to those notes too;
+   the shop's Privacy requests list (a later piece) can send a fuller copy
+   by hand. **Settled** by Jack's 30 Oct answer 1 ("Leave notes out",
+   `docs/decisions/2026-10-30-answers.md`).
+4. **A formula-looking cell is written as text** (a ' before =, +, -, @), as
+   stock take's download does, so a spreadsheet never runs it.
+5. **Each copy is logged** in a new privacy requests table (migration 108),
+   from the account, asked and done at once, ready for the Privacy requests
+   list (`cs-privacy`). It holds both kinds the list draws (a copy, or
+   deleting) and both sources (the account, or logged by the shop); nothing
+   writes a delete yet. A merge moves the log with the customer, as it moves
+   their messages.
+6. **"Not started? Download it again" saves the same file again** rather
+   than making (and logging) another.
+7. **The bars sit under the page's title**, not above it as drawn: the
+   booking pages' frame draws the title itself. *Pattern:* the account's
+   own "That didn't go through" line.
+8. **Left out until built, not shown disabled:** "Ask us to delete your
+   account" and "Privacy notice" (there's no privacy notice page yet).
+   *Pattern:* the account's other unbuilt parts
+   (customer-account-screens proposal).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

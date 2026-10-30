@@ -10,7 +10,7 @@ import { UK_NUMBER_SQL, ukNumber } from './customers.js';
 const UNDO_DAYS = 30;
 // Every table that points at a customer, moved together (design 2).
 // A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
-const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes'];
+const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes', 'privacy_requests'];
 // The fields that may differ, and the columns each takes.
 // A company's details travel with its name (company customers' review 1).
 const FIELDS = { name: ['name', 'is_company', 'contact_name', 'vat_number', 'invoice_email'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
@@ -255,6 +255,8 @@ export function register(route) {
         if (ids.length) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? AND id = ANY(?::int[])`).run(m.other_id, m.kept_id, ids);
       }
       if (moved.logins?.length) await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ? AND id = ANY(?::int[])').run(m.other_id, shopId, m.kept_id, moved.logins);
+      // A copy of their data asked for since the merge by a sign-in going back goes back with it (review of #587).
+      if (moved.logins?.length) await prepare('UPDATE privacy_requests SET customer_id = ? WHERE customer_id = ? AND customer_login_id = ANY(?::int[])').run(m.other_id, m.kept_id, moved.logins);
       if (moved.groups?.length) await prepare('DELETE FROM customer_group_members WHERE customer_id = ? AND group_id = ANY(?::int[])').run(m.kept_id, moved.groups);
       if (moved.ownStops?.length) await prepare('DELETE FROM shop_message_stops WHERE customer_id = ? AND shop_message_id = ANY(?::int[])').run(m.kept_id, moved.ownStops);
       // Only what the merge changed, and only where nobody has changed it since.
