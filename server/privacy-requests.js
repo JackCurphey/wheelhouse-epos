@@ -5,6 +5,7 @@
 import { unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { prepare, dbExec } from './db.js';
+import { wipedAnswers, wipedNotes, wipedTitle, REMOVED } from './workshop/booking-notes.js';
 import { UPLOADS_DIR } from './lib/uploads.js';
 
 export const shopZone = async () => (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
@@ -143,7 +144,12 @@ async function deleteOnce(requestId) {
     }
     const who = asked.customer_id;
     const lockMerges = async (ids) => prepare('SELECT id FROM customer_merges WHERE kept_id = ANY(?::int[]) OR other_id = ANY(?::int[]) ORDER BY id FOR UPDATE').all(ids, ids);
-    await lockMerges(await chainIds(who));
+    const first = await chainIds(who);
+    await lockMerges(first);
+    // Their jobs before their record, as a job's own routes lock the job and
+    // then write for the customer (Mark ready queues Bike ready; review of
+    // #590-#592); then read again once both are held.
+    await prepare('SELECT id FROM workshop_jobs WHERE customer_id = ANY(?::int[]) ORDER BY id FOR UPDATE').all(first);
     await prepare('SELECT id FROM customers WHERE id = ? FOR UPDATE').get(who);
     // Read again now they're held: a merge that finished while we waited is in.
     const ids = await chainIds(who);
@@ -193,7 +199,41 @@ async function deleteOnce(requestId) {
     await prepare('DELETE FROM customer_group_members WHERE customer_id = ANY(?::int[])').run(ids);
     await prepare('DELETE FROM customer_not_duplicates WHERE first_id = ANY(?::int[]) OR second_id = ANY(?::int[])').run(ids, ids);
     // The till's alerts about them name them (review).
-    await prepare("UPDATE till_attention SET detail = 'Customer details deleted' WHERE customer_id = ANY(?::int[])").run(ids);
+    // The till's alerts about them name them, as the alert's own record or
+    // the one it matched (an alert from before the matched column, by its
+    // words; review of #590-#592).
+    await prepare(
+      `UPDATE till_attention SET detail = 'Customer details deleted'
+        WHERE customer_id = ANY(?::int[]) OR matched_customer_id = ANY(?::int[])
+           OR (kind = 'possible_duplicate_customer' AND substring(detail from 'customer ([0-9]+)$')::int = ANY(?::int[]))`
+    ).run(ids, ids, ids);
+    // Their booking links stop working (review of #590-#592).
+    await prepare('UPDATE workshop_jobs SET link_token_hash = NULL WHERE customer_id = ANY(?::int[])').run(ids);
+    // Answer 4 ("Wipe their words"): what they wrote when booking becomes
+    // "[removed]" on each job and the order made with it; what staff typed,
+    // the work and the money stay.
+    const worded = await prepare(
+      `SELECT w.id, w.title, w.notes, w.customer_description, w.customer_bike_note, w.question_answers,
+              d.id AS order_id, d.title AS order_title, d.note AS order_note
+         FROM workshop_jobs w LEFT JOIN sale_documents d ON d.workshop_job_id = w.id AND d.kind = 'order'
+        WHERE w.customer_id = ANY(?::int[])
+          AND (w.customer_description IS NOT NULL OR w.customer_bike_note IS NOT NULL OR w.question_answers IS NOT NULL)`
+    ).all(ids);
+    for (const j of worded) {
+      const said = { bikeNote: j.customer_bike_note, questionAnswers: j.question_answers, description: j.customer_description };
+      await prepare(
+        `UPDATE workshop_jobs SET title = ?, notes = ?, customer_description = ?, customer_bike_note = ?, question_answers = ?::jsonb, updated_at = now()
+          WHERE id = ?`
+      ).run(
+        wipedTitle(j.title, j.customer_description), wipedNotes(j.notes, said),
+        j.customer_description ? REMOVED : j.customer_description, j.customer_bike_note ? REMOVED : j.customer_bike_note,
+        j.question_answers === null ? null : JSON.stringify(wipedAnswers(j.question_answers)), j.id,
+      );
+      if (j.order_id) {
+        await prepare('UPDATE sale_documents SET title = ?, note = ?, updated_at = now() WHERE id = ?')
+          .run(wipedTitle(j.order_title, j.customer_description), wipedNotes(j.order_note, said), j.order_id);
+      }
+    }
     // Answer 3.2: their bikes stay as bare rows, for the kept jobs.
     await prepare(
       `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', active = 0, updated_at = now()
@@ -220,5 +260,8 @@ async function deleteOnce(requestId) {
 
 /** Remove the files of the photos a deletion took, once its save is in. */
 export async function removeFiles(files) {
-  await Promise.all(files.map((key) => unlink(path.join(UPLOADS_DIR, key)).catch(() => {})));
+  await Promise.all(files.map((key) => unlink(path.join(UPLOADS_DIR, key)).catch((err) => {
+    // Logged, so a photo left on disk is known about (review of #590-#592); already gone is fine.
+    if (err.code !== 'ENOENT') console.error(`Deleting a customer's details: the photo file ${key} couldn't be removed`, err);
+  })));
 }
