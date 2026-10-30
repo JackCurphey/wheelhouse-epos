@@ -111,7 +111,7 @@ test('a bike still in the workshop doesn’t stop her asking', async () => {
   assert.equal((await openFor(ola.id)).length, 1);
 });
 
-test('Cancel my request: cancelled, off the shop’s list, and asking again is a new request', async () => {
+test('Cancel my request: cancelled, and asking again is a new request', async () => {
   const kai = await customer('Jamie Brooks');
   await ask(kai);
   const cancelled = await portal('/me/delete-request/cancel', { cookie: kai.cookie, method: 'POST' });
