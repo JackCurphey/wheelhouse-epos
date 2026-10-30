@@ -288,6 +288,18 @@ test('two at the same moment: exactly one goes through and is logged', async () 
   assert.equal((await requests(ash.customerId)).length, 1);
 });
 
+// Waits until some other connection is waiting on a lock this one holds
+// (pg_blocking_pids), instead of a fixed pause (the review of #589).
+async function blockedBy(conn) {
+  const { rows: [{ pid }] } = await conn.query('SELECT pg_backend_pid() AS pid');
+  for (let i = 0; i < 250; i += 1) {
+    const { rows: [{ n }] } = await conn.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))', [pid]);
+    if (n > 0) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error('nothing came to wait on this connection’s lock');
+}
+
 // A copy racing a merge, or a merge's Undo (review of #589). Both of those
 // lock the customer first, then change the sign-in; here another connection
 // does just that while a copy is being made. If the copy locked the sign-in
@@ -306,7 +318,8 @@ for (const [what, lockFirst] of [
       await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
       await other.query(lockFirst, [zoe.customerId]);
       copy = download({ cookie: zoe.cookie });
-      await new Promise((r) => setTimeout(r, 300));
+      // Until the copy is actually waiting on this connection, however slow the machine.
+      await blockedBy(other);
       // The merge's or Undo's next step: the sign-in's row.
       moved = await other.query('UPDATE customer_logins SET customer_id = customer_id WHERE id = $1', [zoe.loginId]).then(() => 'moved', (err) => err.message);
       await other.query(moved === 'moved' ? 'COMMIT' : 'ROLLBACK');
