@@ -6,9 +6,11 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
-import { runWithShop, prepare } from '../server/db.js';
+import { runWithShop, prepare, pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest } from './helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
+import { futureDate } from './helpers/workshopFixtures.js';
+import { BOOKING_CONTACT } from './helpers/bookable.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -135,4 +137,54 @@ test('signed out, signed in to another shop, or from another website: refused, n
     assert.equal((await portal('/me/delete-request/cancel', { cookie: aisha.cookie, method: 'POST', headers: { 'sec-fetch-site': site } })).status, 403);
   }
   assert.equal((await openFor(aisha.id)).length, 0);
+});
+
+// A booking already under way when her details are deleted (review of #590):
+// it must not add a bike or a job to the blanked record, or write her email
+// and answers back onto it.
+async function blockedBy(conn) {
+  const { rows: [{ pid }] } = await conn.query('SELECT pg_backend_pid() AS pid');
+  for (let i = 0; i < 250; i += 1) {
+    const { rows: [{ n }] } = await conn.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))', [pid]);
+    if (n > 0) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error('nothing came to wait on this connection’s lock');
+}
+
+test('a booking under way while her details are deleted is refused, and writes nothing to the blank record', async () => {
+  const mechanic = await seedMechanic(owner.shop.id, { name: 'Sam' });
+  const serviceId = await inShop(async () => (await prepare(
+    "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('[Service]', 50, 5000, 60, 1, 1, now())"
+  ).run()).lastInsertRowid);
+  const lia = await customer('[Lia’s name]');
+  const conn = await pool.connect();
+  let res;
+  try {
+    await conn.query('BEGIN');
+    await conn.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    // The deletion has her record.
+    await conn.query('SELECT id FROM customers WHERE id = $1 FOR UPDATE', [lia.id]);
+    const booking = fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/bookings`, {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie: lia.cookie },
+      body: JSON.stringify({ mechanicId: mechanic, jobDate: futureDate(2), startTime: '10:00', description: '[What’s wrong]', newBike: { make: '[Make]', model: '[Model]' }, serviceIds: [serviceId], ...BOOKING_CONTACT, email: lia.email, serviceReminders: true }),
+    });
+    await blockedBy(conn);
+    // ...and finishes: her details blanked, her sign-in gone.
+    await conn.query("UPDATE customers SET name = '', email = '', phone = '', active = 0, deleted_at = now() WHERE id = $1", [lia.id]);
+    await conn.query('DELETE FROM customer_sessions WHERE customer_login_id = $1', [lia.loginId]);
+    await conn.query('DELETE FROM customer_logins WHERE id = $1', [lia.loginId]);
+    await conn.query('COMMIT');
+    res = await booking;
+  } finally {
+    await conn.query('ROLLBACK').catch(() => {});
+    conn.release();
+  }
+  assert.ok([401, 409].includes(res.status), `refused: ${res.status} ${await res.text()}`);
+  const left = await inShop(async () => ({
+    jobs: await prepare('SELECT id FROM workshop_jobs WHERE customer_id = ?').all(lia.id),
+    bikes: await prepare('SELECT id FROM customer_bikes WHERE customer_id = ?').all(lia.id),
+    me: await prepare('SELECT email, service_reminders FROM customers WHERE id = ?').get(lia.id),
+  }));
+  assert.deepEqual(left, { jobs: [], bikes: [], me: { email: '', service_reminders: false } });
 });
