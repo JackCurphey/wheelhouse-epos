@@ -137,8 +137,10 @@ at once take turns) inside its own transaction and is refused (401) once the
 deletion is in. The account's other actions already under way (adding a
 bike, changing How we contact you) and a note through their booking link do
 the same: each re-reads and holds the customer in its own transaction (the
-link's note holds the job first, then checks the link is still theirs), and
-is refused once the deletion is in.
+link's note holds the job first, `FOR KEY SHARE`, then checks the link is
+still theirs: that waits behind the deletion's `FOR UPDATE` but not behind a
+merge or its Undo moving the job, so no deadlock with them), and is refused
+once the deletion is in.
 
 **Offline tills** (checked, not built): the till's copy (`server/till/snapshot.js`)
 lists only active customers, so a deleted one is left out of every new copy;
