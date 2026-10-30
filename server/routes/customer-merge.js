@@ -57,6 +57,14 @@ async function removeExpired() {
   for (const m of due) {
     await dbExec('BEGIN');
     try {
+      // The merge record first, as Undo and deleting a customer's details take
+      // it first, and still due: one undone or deleted since is skipped
+      // (delete-account, second review).
+      const still = await prepare('SELECT id FROM customer_merges WHERE id = ? AND other_id IS NOT NULL AND undone_at IS NULL FOR UPDATE').get(m.id);
+      if (!still) {
+        await dbExec('ROLLBACK');
+        continue;
+      }
       for (const table of MOVED) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ?`).run(m.kept_id, m.other_id);
       await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ?').run(m.kept_id, shopId, m.other_id);
       // Anything merged into it earlier now points at the record it went into.

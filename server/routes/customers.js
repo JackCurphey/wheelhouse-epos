@@ -12,6 +12,7 @@ import { serializeWorkshopJob } from '../workshop/jobs.js';
 import { TEMPLATES } from '../messaging/templates.js';
 import { shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
+import { deletionOnPage } from '../privacy-requests.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -195,7 +196,8 @@ function serializeCustomer(row, groups) {
 }
 
 async function listCustomers({ search, activeOnly }) {
-  let sql = 'SELECT * FROM customers WHERE 1=1';
+  // A customer whose details were deleted is never listed (delete-account design 5).
+  let sql = 'SELECT * FROM customers WHERE deleted_at IS NULL';
   const params = [];
   if (activeOnly) {
     sql += ' AND active = 1';
@@ -329,7 +331,8 @@ export function register(route) {
     const id = Number(params.id);
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     if (!row) return notFound(res, 'Customer not found');
-    sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
+    // An open request to delete their account, for the page's line (ac-customer-delete).
+    sendJson(res, 200, { ...serializeCustomer(row, await groupsForCustomer(row.id)), deletionRequest: await deletionOnPage(row.id) });
   });
 
   // A customer's page: one history of their jobs, sales and messages, newest
