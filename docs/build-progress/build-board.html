@@ -243,7 +243,7 @@ const BOARD = {
           { id: "WP-4.2", what: "Quotes, the rest", status: "part", detail: "Photos, lines that go together, the reminder, the spending limit, notes, the pinned bar, Use my phone, location taken off photos, No answer yet on Today, deposits (#405 to #462)" },
           { id: "WP-4.3", what: "Collect and pay", status: "part", detail: "Bike ready (#326), the ready and collected stages (#344, #360), a bike left uncollected (#440, #441), emailed receipts (#443, the till's button #472 and Save to a customer record #474), an online deposit off at the till (#473); not yet: paying online (after Mark's till deposit, your 26 Oct answer 9)" },
           { id: "WP-4.4", what: "Book a repair, rebuilt", status: "part", detail: "Change, cancel, offered times, confirming automatically, booking settings and messages, deposits online with refunds and Didn't come (#452 to #462), an unfinished booking coming back (#477); not yet: a deposit taken at the till (after Mark's step B)" },
-          { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); service reminders: the yes when booking (#483), each service's months (#485), sending them (#488), Stop these (#489), the in-shop ready page's tick (#491), a merge keeping a yes (#493); review requests (#494, #495); the customer's account (#514, #515) with Add a bike (#523), next service due (#524), How we contact you (#526) and Ask the shop, one conversation per customer (#529, #531); not yet: [to check against the drawings]" },
+          { id: "WP-4.5", what: "Account, history and reminders", status: "part", detail: "The staff Messages inbox and notes (#421 to #423); service reminders: the yes when booking (#483), each service's months (#485), sending them (#488), Stop these (#489), the in-shop ready page's tick (#491), a merge keeping a yes (#493); review requests (#494, #495); the customer's account (#514, #515) with Add a bike (#523), next service due (#524), How we contact you (#526) and Ask the shop, one conversation per customer (#529, #531); Download a copy of your data, one a day (#587 to #589), and Ask us to delete your account with the shop's Privacy requests (#590 to #592); not yet: [to check against the drawings]" },
         ] },
         { letter: "B", name: "A shop day with real people", state: "build",
           play: "Staff sign in with a PIN, see only their own rooms, the shop opens with a float check, sells, the day closes with a count and a report",
@@ -342,9 +342,9 @@ const BOARD = {
       { what: 'Still his from before', detail: 'When the front page switches to the new app.' },
     ],
   },
-  updated: '29 Oct 2026',
-  lead: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in (PINs, check-in, float check, close the day, Who\'s in, till setup, the shared workshop computer with trust PIN and the pills, the Tills list); roles and the settings store are left, and they\'re Mark\'s. Slice C\'s stock take and stock warnings are in.',
-  sub: 'Merged 27 to 29 Oct: #544 to #585, all Jack\'s. Open: Mark\'s #499 (the replan, accepted as is), #511 (the component registry) and #520; #560 lists what waits on Mark. CI runs once a day, and by hand on risky pull requests (#557).',
+  updated: '30 Oct 2026',
+  lead: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in (PINs, check-in, float check, close the day, Who\'s in, till setup, the shared workshop computer with trust PIN and the pills, the Tills list); roles and the settings store are left, and they\'re Mark\'s. Slice C\'s stock take and stock warnings are in. Customers can now download a copy of their data and ask to delete their account.',
+  sub: 'Merged 27 to 30 Oct: #544 to #592, all Jack\'s. Paused for the weekend. Open: Mark\'s #499 (the replan, accepted as is), #511 (the component registry) and #520; #560 lists what waits on Mark. CI runs once a day, and by hand on risky pull requests (#557).',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -613,6 +613,10 @@ const BOARD = {
     { status: 'done', what: 'Don\'t stay signed in to Google', detail: 'The line on Set up a workshop computer (your answer 6; the drawing approved)', pr: 583 },
     { status: 'done', what: 'A normal day with no morning check', detail: 'The look at closing starts from the last close (your answer 7); also fixes close times losing their microseconds and a late Close it\'s window, from the money review', pr: 584 },
     { status: 'done', what: 'The build plan lists the till-setup-workshop drawing', detail: 'The drawings\' coverage check passes again', pr: 585 },
+    { status: 'done', what: 'Status, 29 Oct night', detail: 'STATUS and the board caught up to #585', pr: 586 },
+    { status: 'done', what: 'Download a copy of your data', detail: 'On the customer\'s account: one zip of six spreadsheets, each copy logged, staff notes left out (your 30 Oct answer 1; #587 server, migration 108; #588 screen)', pr: 588 },
+    { status: 'done', what: 'One copy of your data a day', detail: 'A second try that day says to come back tomorrow (your 30 Oct answer 2)', pr: 589 },
+    { status: 'done', what: 'Ask us to delete your account', detail: 'The customer asks or cancels; the Owner deletes from Privacy requests. Their details, messages, photos and own booking words go; sales and jobs stay without the name; only a bike in the workshop blocks it (your answers 3 and 4; #590, migration 109; #591; #592)', pr: 592 },
     { status: 'next', what: 'Replan into playable slices', detail: 'A to F, the shop day before stock; you accepted it as is (your 26 Oct answer 1); the pull request is still open', pr: 499 },
   ],
   asks: [
@@ -630,7 +634,7 @@ const BOARD = {
     { area: 'Staff app', note: 'The frame is built: Soft sand look, the sidebar grouped by rooms, tablet rail and phone menu. The Owner lands on Today, everyone else on the Till. Your settings opens from your name.', rooms: [
       { room: 'Front desk', pages: [
         ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid; pays a job\'s order; prints a receipt, headed Invoice for a company; Enter your PIN and Serving, the Serving pills, the float check and Close the day, which also closes a day nobody closed; Set up this till, with the Google line for a workshop computer. No discounts or card machine yet'],
-        ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'part', 'The list, a customer\'s page with Edit, Merge and Add a bike, company customers, a sale from the history; Refund waits for refunds'], ['Messages', 'built', 'The staff inbox, one conversation per customer: Needs a reply first, the conversation and Send reply'],
+        ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'part', 'The list, a customer\'s page with Edit, Merge and Add a bike, company customers, a sale from the history, Privacy requests with Delete for the Owner; Refund waits for refunds'], ['Messages', 'built', 'The staff inbox, one conversation per customer: Needs a reply first, the conversation and Send reply'],
       ] },
       { room: 'Workshop', pages: [
         ['Diary', 'built', 'Week, day and phone views; Waiting for you; drag jobs; New job; jobs over several days; the legend in a box'],
@@ -653,7 +657,7 @@ const BOARD = {
         ['Your booking page', 'built', 'Confirmed or waiting; change the date, cancel, accept another time, see why it was declined; then progress, the amount to pay and what was done; notes with the shop'],
       ] },
       { room: 'Website and account', pages: [
-        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'built', 'Bikes with Add a bike and next service due, details, How we contact you, one history, Ask the shop'], ['Customer sign-in', 'built', 'Sign in with a code sent by email (#500, #502); signed in 30 days from the last visit'],
+        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'built', 'Bikes with Add a bike and next service due, details, How we contact you, one history, Ask the shop, Download a copy of your data (one a day), Ask us to delete your account'], ['Customer sign-in', 'built', 'Sign in with a code sent by email (#500, #502); signed in 30 days from the last visit'],
       ] },
     ] },
   ],
