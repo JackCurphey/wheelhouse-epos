@@ -129,7 +129,8 @@ of their bikes is refused (409 `deleted`, "This customer's details were
 deleted at their request, so they can't be changed."), each under a lock on
 the customer, so a save already waiting is refused once the deletion is
 in. A booking already under way from their account holds the customer
-(`FOR SHARE`) inside its own transaction and is refused (401) once the
+(`FOR NO KEY UPDATE`, as it goes on to update them, so two of their bookings
+at once take turns) inside its own transaction and is refused (401) once the
 deletion is in.
 
 **Offline tills** (checked, not built): the till's copy (`server/till/snapshot.js`)
