@@ -63,8 +63,8 @@ test('a Your data card, with Download a copy of your data', async () => {
   const { within } = await import('@testing-library/react');
   const card = within(await ui.findByRole('region', { name: 'Your data' }));
   assert.ok(card.getByRole('button', { name: 'Download a copy of your data' }));
-  // Not built yet, so not shown (proposal: out of scope).
-  assert.ok(card.queryByText('Ask us to delete your account') === null);
+  // Built since (openspec/changes/delete-account): asking to delete follows the copy.
+  assert.ok(card.getByRole('button', { name: 'Ask us to delete your account' }));
 });
 
 test('pressing it downloads the zip and says so, naming the file, with Download it again', async () => {

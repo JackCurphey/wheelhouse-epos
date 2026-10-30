@@ -140,6 +140,14 @@ test('signed out, signed in to another shop, or from another website: refused, n
   assert.equal((await openFor(aisha.id)).length, 0);
 });
 
+test('the account knows the shop’s phone, for “Call [shop phone] if you need to talk it through”', async () => {
+  const zoe = await customer('[Zoe’s name]');
+  await inShop(() => prepare("UPDATE shops SET phone = '[shop phone]' WHERE id = ?").run(owner.shop.id));
+  assert.equal((await portal('/me', { cookie: zoe.cookie })).body.shopPhone, '[shop phone]');
+  await inShop(() => prepare('UPDATE shops SET phone = NULL WHERE id = ?').run(owner.shop.id));
+  assert.equal((await portal('/me', { cookie: zoe.cookie })).body.shopPhone, null);
+});
+
 // A booking already under way when her details are deleted (review of #590):
 // it must not add a bike or a job to the blanked record, or write her email
 // and answers back onto it.

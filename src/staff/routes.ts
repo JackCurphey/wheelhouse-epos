@@ -34,6 +34,9 @@ export const ROUTES = {
   'your-settings': '/workshop/your-settings',
   // A customer's page (cs-page), from Customers and the header search.
   'cs-page': '/workshop/customers/:id',
+  // The shop's privacy requests (cs-privacy), from "Privacy requests · [n]
+  // open" on Customers (openspec/changes/delete-account).
+  'cs-privacy': '/workshop/customers/privacy',
   // A bike's own page (cs-bike), from a customer's page and the header search.
   'cs-bike': '/workshop/bikes/:id',
   // A product's page (st-product), from Stock (openspec/changes/stock-list).

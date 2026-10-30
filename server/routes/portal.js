@@ -838,6 +838,8 @@ export function register(route) {
       ...contactOf(customer),
       // A request to delete the account, while it's open (delete-account design 3).
       deletion: customer ? await openDeletion(customer.id) : null,
+      // For "Call [shop phone] if you need to talk it through" (ac-delete-blocked).
+      shopPhone: (await db.prepare('SELECT phone FROM shops WHERE id = ?').get(ctx.shop.id))?.phone || null,
     });
   });
 
