@@ -1848,6 +1848,86 @@ silent:
    *Pattern:* the account's other unbuilt parts
    (customer-account-screens proposal).
 
+### 30 Oct 2026: one copy of your data a day (`openspec/changes/your-data-once-a-day`, `ac-download`, `ac-download-failed`; Jack's 30 Oct answer 2)
+
+1. **"Already downloaded today" has no Try again.** It shows in the drawn
+   warning bar (`ac-download-failed`), in the shop's words, without the
+   button: pressing it would only be refused until tomorrow. A refusal with
+   no words of its own (a proxy's page) still reads "The download didn't
+   start." with Try again. *Pattern:* the drawn warning bar.
+2. **The day counts only copies taken from the account by that sign-in.** A
+   request the shop logs by hand, or a request to delete, doesn't use it up.
+3. **Two requests at once take turns on the sign-in, not the customer**: the
+   sign-in's own row is locked, so a sale or a message for the customer is
+   never held up while a copy is made (the review of #587 kept the customer
+   row shared). The customer row is locked first, then the sign-in, as a
+   merge and its Undo lock them, so a copy and a merge can't deadlock (the
+   review of #589).
+
+### 30 Oct 2026: Ask us to delete your account, and Privacy requests (`openspec/changes/delete-account`, `ac-delete`, `ac-delete-blocked`, `ac-delete-sent`, `ac-account-delete-pending`, `ac-account-delete-cancelled`, `cs-list`, `cs-privacy`, `cs-privacy-delete`, `ac-privacy-requests`, `ac-customer-delete`; Jack's 30 Oct answer 3)
+
+1. **Dates**: the account writes them as it already does ("Fri 30 Oct
+   2026"); the shop's list and the customer page as the staff app does ("Tue
+   1 Sep"). "Answer by" is one calendar month after the shop's day it was
+   asked. *Pattern:* the account's next service due; the customer page's
+   dates.
+2. **A bike "with us"** is a repair in the workshop or ready to collect, as
+   the account's history shows it; the shop's side uses the same rule (the
+   job's bike is in the shop).
+3. **Store credit and money owed** lines are left out of the pop-ups, the
+   rows and the customer page line: neither is built, and neither blocks a
+   deletion (audit M12; coverage walks answer 5).
+4. **"+ Log a request" and "Send the copy"** aren't shown; requests come
+   only from the account so far, and a copy from the account is done at
+   once.
+5. **A done deletion** shows as "PR-[n] · Delete their details": its
+   reference, where the name was (answer 3.6).
+6. **The "Privacy requests · [n] open" link** shows to the Owner only. The
+   drawing has it on Customers as Staff see it, but the list it opens is the
+   Owner's (answer 3.7); Staff who open the list's address are told "Only the
+   shop's owner can see privacy requests."
+7. **"Call [shop phone]"** uses the shop's phone from its details; with none
+   recorded, "Call the shop if you need to talk it through."
+8. **After Delete their details** the pop-up closes and the row turns Done;
+   nothing more is said (not drawn). A refusal shows the shop's own words in
+   the pop-up ("Can be deleted once the bike is collected.", or "Something
+   else is changing this customer just now. Try again." when another save
+   holds them for too long).
+9. **Cancel my request that doesn't go through** uses the account's own
+   "That didn't go through. Check your connection and try again." line.
+10. **A deleted customer is never in the customer list**, even with
+    switched-off customers shown.
+11. **Not built yet, logged for later:** Today's line for a deletion request
+    (`ac-today`), and telling the customer when it's done (their email goes
+    with the deletion, so it needs a message sent in the same step).
+12. **A look-alike record is left alone.** Another customer record holding
+    the same phone or email, never merged, is another person's record as far
+    as Wheelhouse knows, so deleting her details doesn't touch it, and the
+    shop's delete pop-up doesn't list possible duplicates: the drawing
+    (`cs-privacy-delete`) shows none. The till's duplicate alerts that name
+    her lose her name (review of #590-#592).
+13. **Her words become "[removed]" part by part** (answer 4). Every answer
+    to a service's questions is replaced, the choices she picked as well as
+    words she typed. Each part the booking wrote (her bike note, each answer,
+    her description) is replaced as a whole by one "[removed]" line, however
+    many lines her words ran over. A part staff have since edited no longer
+    matches, so it stays as they left it; anything else staff typed stays.
+14. **A staff save on a deleted customer** (Edit, switching them on, a bike)
+    is refused: "This customer's details were deleted at their request, so
+    they can't be changed." A booking from her account already under way is
+    refused with "Please sign in again to book.", and adding a bike or
+    changing How we contact you with "Please sign in again." (the sign-in is
+    gone); a note through her booking link with "We can't find that
+    booking", as for any link that no longer works.
+15. **Against a till payment at the same moment** the deletion steps back
+    and tries again, so the payment is never the one cancelled; against
+    Mark ready it waits for the job. *Pattern:* the review's lock order
+    (jobs before the customer).
+16. **Offline tills, checked, not built:** the till's copy lists only active
+    customers, so a deleted one is left out of every new copy. No till keeps
+    a copy yet (Mark's step C), so whether a till drops a customer missing
+    from a newer copy is a question for step C's design.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

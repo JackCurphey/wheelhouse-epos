@@ -43,7 +43,9 @@ import { setStopped, stopView } from '../messaging/stop-codes.js';
 import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { dataCopyFiles } from '../customer-data-copy.js';
+import { bookingNotes } from '../workshop/booking-notes.js';
 import { zipFiles } from '../lib/zip.js';
+import { openDeletion } from '../privacy-requests.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
@@ -89,8 +91,6 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 // A customer's messages to the shop: 30 in 15 minutes each, so nobody can flood the inbox (ask-the-shop-server review 1).
 const messageLimiter = makeRateLimiter(30, 15 * 60 * 1000);
-// Copies of your data, per sign-in (review of #587): each one reads everything and is logged.
-const dataCopyLimiter = makeRateLimiter(10, 15 * 60 * 1000);
 // Sign-in by emailed code (customer-code-signin design 3): codes asked for, by
 // network and by the shop's email address; codes checked, by network.
 const signinAskNetworkLimiter = makeRateLimiter(10, 15 * 60 * 1000);
@@ -241,30 +241,8 @@ async function bookedServices(jobId) {
   };
 }
 
-// Staff see an online booking only through the job's Notes (piece 9): the
-// bike note, each answered question, and the description, in that order,
-// leaving out any part that is empty. A choice question's line names the
-// choice (or "I'm not sure") and, when the customer also typed words,
-// appends them after " - "; a question answered by words alone shows the
-// words on their own. A free-text question's line is just its answer.
-function answerNoteLine({ wording, kind, answer, text }) {
-  if (kind === 'text') return answer ? `${wording} ${answer}` : null;
-  const choiceOrNotSure = answer && typeof answer === 'object' && answer.notSure ? "I'm not sure" : answer;
-  const words = text || null;
-  const value = choiceOrNotSure && words ? `${choiceOrNotSure} - ${words}` : choiceOrNotSure || words;
-  return value ? `${wording} ${value}` : null;
-}
-
-function bookingNotes({ bikeNote, questionAnswers, description }) {
-  const lines = [];
-  if (bikeNote) lines.push(`Bike (customer's words): ${bikeNote}`);
-  for (const entry of questionAnswers ?? []) {
-    const line = answerNoteLine(entry);
-    if (line) lines.push(line);
-  }
-  if (description) lines.push(`Customer's description: ${description}`);
-  return lines.join('\n');
-}
+// The notes an online booking writes from the customer's words (piece 9):
+// server/workshop/booking-notes.js, shared with deleting their details.
 
 // Every check a customer's chosen time passes, in the booking route's order,
 // run inside the booking lock. Shared by a new booking and a change (piece
@@ -749,6 +727,17 @@ async function repairsAndPurchases(customerId) {
   return [...repairs, ...purchases];
 }
 
+// The sign-in's own customer, read again and held inside the caller's
+// transaction, or null once their details were deleted (or the sign-in has
+// gone): a website action already under way when the shop deletes their
+// details waits for it and is then refused (delete-account, re-review).
+const holdOwnCustomer = (ctx, mode) => db.prepare(
+  `SELECT c.id, c.phone FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+    WHERE l.id = ? AND l.active = 1 AND c.active = 1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+    FOR ${mode === 'update' ? 'NO KEY UPDATE' : 'SHARE'} OF c`
+).get(ctx.login.id);
+const SIGN_IN_AGAIN = { error: 'Please sign in again.' };
+
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
     const ip = clientIp(req);
@@ -847,8 +836,61 @@ export function register(route) {
       // The account's Your details and How we contact you (customer-account-screens design 1).
       phone: customer?.phone || null,
       ...contactOf(customer),
+      // A request to delete the account, while it's open (delete-account design 3).
+      deletion: customer ? await openDeletion(customer.id) : null,
+      // For "Call [shop phone] if you need to talk it through" (ac-delete-blocked).
+      shopPhone: (await db.prepare('SELECT phone FROM shops WHERE id = ?').get(ctx.shop.id))?.phone || null,
     });
   });
+
+  // "Ask us to delete your account" and "Cancel my request" (ac-delete,
+  // ac-account-delete-pending, ac-account-delete-cancelled; delete-account
+  // design 3; account and reminders decision 4 and audit H3). The sign-in's
+  // customer is read again and locked as the copy of your data locks it, the
+  // customer before the sign-in; the reply comes after the commit. A bike in
+  // the workshop doesn't stop the ask (coverage walks answer 4).
+  // screens: ac-delete, ac-delete-blocked, ac-delete-sent, ac-account-delete-pending, ac-account-delete-cancelled
+  const deletionRoute = (verb, write) => route('POST', `/api/portal/:shopSlug/me/delete-request${verb}`, async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    let customer;
+    await db.exec('BEGIN');
+    try {
+      customer = await db.prepare(
+        `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+          WHERE l.id = ? AND l.shop_id = ? AND l.active = 1 AND c.active = 1 AND c.merged_into_id IS NULL
+          FOR SHARE OF c FOR NO KEY UPDATE OF l`
+      ).get(ctx.login.id, ctx.shop.id);
+      if (!customer) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, { error: 'Not signed in' });
+      }
+      if (!(await write(customer.id, ctx.login.id))) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 404, { error: 'There’s no request to cancel.' });
+      }
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, { deletion: await openDeletion(customer.id) });
+  });
+  // One open request each (migration 109): asking again answers with it.
+  deletionRoute('', async (customerId, loginId) => {
+    await db.prepare(
+      `INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source) VALUES (?, ?, 'delete', 'account')
+       ON CONFLICT (customer_id) WHERE kind = 'delete' AND done_at IS NULL AND cancelled_at IS NULL DO NOTHING`
+    ).run(customerId, loginId);
+    return true;
+  });
+  deletionRoute('/cancel', async (customerId) => Boolean(await db.prepare(
+    `UPDATE privacy_requests SET cancelled_at = now()
+      WHERE customer_id = ? AND kind = 'delete' AND done_at IS NULL AND cancelled_at IS NULL RETURNING id`
+  ).get(customerId)));
 
   // How we contact you (openspec/changes/how-we-contact-you design 1; account
   // and reminders decision 6): any of the way job updates go and the three
@@ -865,8 +907,6 @@ export function register(route) {
     const args = [];
     if (body.updateChannel !== undefined) {
       if (!['sms', 'whatsapp', 'email'].includes(body.updateChannel)) return badRequest(res, 'Choose text, WhatsApp or email');
-      const customer = await db.prepare('SELECT phone FROM customers WHERE id = ?').get(ctx.login.customer_id);
-      if (body.updateChannel !== 'email' && !customer?.phone) return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
       sets.push('update_channel = ?');
       args.push(body.updateChannel);
     }
@@ -882,7 +922,24 @@ export function register(route) {
         "reminders_said_yes_via = CASE WHEN service_reminders OR review_requests THEN reminders_said_yes_via ELSE 'account' END");
     }
     if (!sets.length) return badRequest(res, 'Nothing to change');
-    const customer = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING *`).get(...args, ctx.login.customer_id);
+    let customer;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'update');
+      if (!held) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      if (body.updateChannel !== undefined && body.updateChannel !== 'email' && !held.phone) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
+      }
+      customer = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING *`).get(...args, held.id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     sendJson(res, 200, contactOf(customer));
   });
 
@@ -1065,11 +1122,24 @@ export function register(route) {
     const make = (body.make || '').trim();
     const model = (body.model || '').trim();
     if (!make && !model) return badRequest(res, 'Make or model is required');
-    const info = await db
-      .prepare(
-        `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(ctx.login.customer_id, make, model, (body.colour || '').trim(), (body.serialNumber || '').trim(), nowIso());
+    let info;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'share');
+      if (!held) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      info = await db
+        .prepare(
+          `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(held.id, make, model, (body.colour || '').trim(), (body.serialNumber || '').trim(), nowIso());
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeBike(row));
   });
@@ -1176,7 +1246,9 @@ export function register(route) {
   // 3; account and reminders decision 4): one zip, made straight away and
   // logged as a privacy request from the account, done at once. The log and
   // the reads are one transaction, the customer's row locked so a merge can't
-  // move their records half-way through; the file goes after the commit
+  // move their records half-way through; the file goes after the commit.
+  // One copy per sign-in a day, the shop's day (Jack, 30 Oct, answer 2),
+  // counted from the log, so a restart never resets it
   // (with DB_TENANT_SCOPE=transaction, off by default, that COMMIT only ends a
   // savepoint, as for every route; db.js).
   // screens: ac-download, ac-download-failed
@@ -1186,7 +1258,6 @@ export function register(route) {
     if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
     const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
-    if (!dataCopyLimiter.check(`${ctx.shop.id}:${ctx.login.id}`)) return sendJson(res, 429, { error: 'That’s a lot of copies at once. Try again in a few minutes.' });
     const zone = await shopZone();
     let files;
     await db.exec('BEGIN');
@@ -1194,15 +1265,30 @@ export function register(route) {
       // The sign-in's customer read again here, under the lock: a merge that
       // committed since the session was read has moved the sign-in to the
       // kept record. FOR SHARE holds off a merge (FOR UPDATE) without holding
-      // up a sale or a message for this customer (review).
+      // up a sale or a message for this customer (review). The sign-in's own
+      // row is then locked FOR NO KEY UPDATE, so two of its requests at once
+      // take turns and the second sees the first's copy (answer 2). The
+      // customer first, as a merge and its Undo lock them, so a copy and a
+      // merge never wait on each other (a deadlock; the review of #589).
       const customer = await db.prepare(
         `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
           WHERE l.id = ? AND l.shop_id = ? AND l.active = 1 AND c.active = 1 AND c.merged_into_id IS NULL
-          FOR SHARE OF c`
+          FOR SHARE OF c FOR NO KEY UPDATE OF l`
       ).get(ctx.login.id, ctx.shop.id);
       if (!customer) {
         await db.exec('ROLLBACK');
         return sendJson(res, 401, { error: 'Not signed in' });
+      }
+      // A copy this sign-in took since the start of the shop's day, worked out by the database.
+      const takenToday = await db.prepare(
+        `SELECT 1 FROM privacy_requests
+          WHERE customer_login_id = ? AND kind = 'copy' AND source = 'account'
+            AND asked_at >= (date_trunc('day', now() AT TIME ZONE ?) AT TIME ZONE ?)
+          LIMIT 1`
+      ).get(ctx.login.id, zone, zone);
+      if (takenToday) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 429, { error: 'You’ve already downloaded a copy today. You can get another tomorrow.' });
       }
       await db.prepare("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, asked_at, done_at) VALUES (?, ?, 'copy', 'account', now(), now())").run(customer.id, ctx.login.id);
       files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id) });
@@ -1427,6 +1513,21 @@ export function register(route) {
           return { status: 402, body: { error: 'The deposit hasn’t gone through yet.', code: 'deposit_not_held' } };
         }
         heldPayment = pay;
+      }
+      // Signed in: the sign-in's customer read again and held, so a deletion
+      // of their details either finished first, and this booking is refused,
+      // or waits until it's in (delete-account, review of #590). Held for
+      // update, not shared: this booking goes on to update the customer, so two
+      // of their bookings at once take turns here instead of each holding a
+      // share the other's update waits on (a deadlock).
+      if (signedIn) {
+        const held = await db.prepare(
+          `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+            WHERE l.id = ? AND l.active = 1 AND c.active = 1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+            FOR NO KEY UPDATE OF c`
+        ).get(ctx.login.id);
+        if (!held) return { status: 401, body: { error: 'Please sign in again to book.' } };
+        customerId = held.id;
       }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;
@@ -1769,7 +1870,28 @@ export function register(route) {
     const body = await readJsonBody(req);
     const text = cleanNote(body?.text);
     if (!text) return badRequest(res, NOTE_WORDS);
-    await addNote({ jobId: found.id, fromCustomer: true, text });
+    // The job held, then its customer, as deleting their details takes them:
+    // a note already under way when the shop deletes them waits, and is then
+    // refused, the link no longer theirs (delete-account, re-review). FOR KEY
+    // SHARE, the lightest hold: it still waits behind the deletion's FOR
+    // UPDATE, but not behind a merge or its Undo moving the job, which hold the
+    // customer first (a deadlock with FOR UPDATE; the last re-review).
+    await db.exec('BEGIN');
+    try {
+      const job = await db.prepare('SELECT customer_id, link_token_hash FROM workshop_jobs WHERE id = ? FOR KEY SHARE').get(found.id);
+      const still = job && (found.signedIn || job.link_token_hash === hashLinkCode(params.code));
+      const owner = still && job.customer_id !== null
+        ? await db.prepare('SELECT deleted_at FROM customers WHERE id = ? FOR SHARE').get(job.customer_id) : null;
+      if (!still || owner?.deleted_at) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 404, { error: "We can't find that booking" });
+      }
+      await addNote({ jobId: found.id, fromCustomer: true, text });
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
   });
 

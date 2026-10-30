@@ -63,8 +63,8 @@ test('a Your data card, with Download a copy of your data', async () => {
   const { within } = await import('@testing-library/react');
   const card = within(await ui.findByRole('region', { name: 'Your data' }));
   assert.ok(card.getByRole('button', { name: 'Download a copy of your data' }));
-  // Not built yet, so not shown (proposal: out of scope).
-  assert.ok(card.queryByText('Ask us to delete your account') === null);
+  // Built since (openspec/changes/delete-account): asking to delete follows the copy.
+  assert.ok(card.getByRole('button', { name: 'Ask us to delete your account' }));
 });
 
 test('pressing it downloads the zip and says so, naming the file, with Download it again', async () => {
@@ -112,4 +112,34 @@ test('leaving the account lets go of the downloaded file', async () => {
   assert.deepEqual(saved.revoked, []);
   ui.unmount();
   assert.deepEqual(saved.revoked, ['blob:copy-1']);
+});
+
+test('already downloaded today: the server’s own words, with no Try again', async () => {
+  const { ui } = await open(() => ({ status: 429, body: { error: 'You’ve already downloaded a copy today. You can get another tomorrow.' } }));
+  catchDownloads();
+  (await ui.findByRole('button', { name: 'Download a copy of your data' })).click();
+  const bar = await ui.findByRole('status');
+  assert.equal(bar.textContent, 'You’ve already downloaded a copy today. You can get another tomorrow.');
+  assert.ok(ui.queryByRole('button', { name: 'Try again' }) === null, 'trying again today would only be refused');
+});
+
+test('a 429 a proxy sent, with no words of its own, still says the download didn’t start', async () => {
+  const { ui } = await open(() => new Response('<html>Too Many Requests</html>', { status: 429, headers: { 'content-type': 'text/html' } }));
+  catchDownloads();
+  (await ui.findByRole('button', { name: 'Download a copy of your data' })).click();
+  assert.match((await ui.findByRole('status')).textContent, /^The download didn’t start\./);
+  assert.ok(ui.getByRole('button', { name: 'Try again' }));
+});
+
+test('Download it again saves the same file, with no new request, so it never uses up the day', async () => {
+  const { ui, posts } = await open(zipReply);
+  const saved = catchDownloads();
+  (await ui.findByRole('button', { name: 'Download a copy of your data' })).click();
+  const again = await ui.findByRole('link', { name: 'Not started? Download it again' });
+  // A real click event on the link, as a person's would be.
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.click(again);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(posts.length, 1, 'no second request');
+  assert.equal(again.getAttribute('href'), saved[0].href, 'the same file');
 });

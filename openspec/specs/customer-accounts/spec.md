@@ -243,8 +243,8 @@ A signed-in customer SHALL be able to download, straight away, one zip file of w
 - **THEN** nothing of Maya's is in it
 
 #### Scenario: Too many at once
-- **WHEN** the same sign-in asks for an 11th copy within 15 minutes
-- **THEN** it is refused with "That’s a lot of copies at once. Try again in a few minutes." and nothing is logged
+- **WHEN** Maya asks for another copy later the same day
+- **THEN** it is refused, as "One copy a day" says
 
 #### Scenario: Not signed in
 - **WHEN** the download is asked for without signing in, or signed in to another shop
@@ -267,3 +267,44 @@ The account SHALL show a "Your data" card under History (last on a phone) with "
 #### Scenario: It fails
 - **WHEN** the download can't be made
 - **THEN** "The download didn’t start." shows with Try again
+
+### Requirement: One copy a day
+Each sign-in SHALL be able to download one copy of its data a day, the shop's day from midnight in its time zone, counted from the privacy requests log. A second that day SHALL be refused with "You’ve already downloaded a copy today. You can get another tomorrow." before anything is logged; two at the same moment SHALL let only one through. The account SHALL show the refusal in those words with no Try again, and "Not started? Download it again" SHALL save the same file without asking the shop.
+
+#### Scenario: A second copy the same day
+- **WHEN** Maya asks for another copy later the same day
+- **THEN** it is refused with "You’ve already downloaded a copy today. You can get another tomorrow.", nothing is logged, and the account shows those words with no Try again
+
+#### Scenario: The next day
+- **WHEN** Maya asks again just after midnight in the shop's time zone
+- **THEN** she gets a copy
+
+#### Scenario: Two at once
+- **WHEN** two requests from Maya's sign-in arrive at the same moment
+- **THEN** one gets the copy and one is refused, and one copy is logged
+
+#### Scenario: Download it again
+- **WHEN** Maya presses "Not started? Download it again"
+- **THEN** the same file saves again and the shop isn't asked, so it doesn't use up her day
+
+### Requirement: A customer asks the shop to delete their account
+A signed-in customer SHALL be able to ask the shop to delete their account from Your data, after a pop-up saying what goes and what stays. The request SHALL be recorded once, from their account, and show on the account with when they asked and when it will be done by (one month on), with "Cancel my request". A bike still in the workshop SHALL NOT stop them asking; the pop-up SHALL say the deletion waits until it has been collected.
+
+#### Scenario: Maya asks
+- **WHEN** Maya Patel presses "Ask us to delete your account" and then "Ask to delete"
+- **THEN** "Request sent" says North Street Cycles will delete her account by [date] at the latest, and her account shows "You asked us to delete your account on [date]. We’ll finish by [date]." with "Cancel my request"
+
+#### Scenario: Her bike is still in the workshop
+- **WHEN** her Trek Domane AL 3 is in the workshop as WH-1042 and she asks
+- **THEN** the pop-up says "We’ll delete your account once your bike has been collected." and she can still ask
+
+#### Scenario: Asking twice
+- **WHEN** she asks again, or two asks arrive at once
+- **THEN** there is still one request
+
+### Requirement: Cancel my request
+While the shop hasn't yet deleted their details, the customer SHALL be able to cancel their request from the account, which then says "Request cancelled — your account stays as it is." Once the shop has deleted their details, there is no account left to cancel from.
+
+#### Scenario: Maya changes her mind
+- **WHEN** Maya presses "Cancel my request"
+- **THEN** the request is cancelled, leaves the shop's list, and her account says "Request cancelled — your account stays as it is."
