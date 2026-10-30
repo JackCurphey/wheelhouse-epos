@@ -99,8 +99,19 @@ here before starting it, so two people never build the same one):
   it's window, both from the money review); the build plan lists the new
   `till-setup-workshop` drawing, so the drawings' coverage check passes
   again (#585). Opened #560 for Mark: what would free up more work.
-  **Now (29 Oct):** the next piece is being chosen. Roles and the settings
-  store (WP-1.1, 1.2) stay Mark's.
+  Merged 30 Oct: a customer's "Download a copy of your data" on their
+  account (#587, #588, migration 108 `privacy_requests`: one zip of six
+  spreadsheets, each copy logged, staff notes left out, Jack's 30 Oct
+  answer 1), one copy a day (#589, answer 2); "Ask us to delete your
+  account" with the shop's Privacy requests list (#590 to #592, migration
+  109, answers 3 and 4: what identifies the customer is blanked, their
+  messages, photos and own booking words removed, sales and jobs kept
+  without the name, Owner only, only a bike in the workshop blocks it; a
+  deleted customer can't be brought back by a staff save, an old booking
+  link or anything already under way). Each had an independent review and
+  a hand-started CI run.
+  **Now (30 Oct):** paused for the weekend at Jack's request (usage). Roles
+  and the settings store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
@@ -139,7 +150,7 @@ here before starting it, so two people never build the same one):
   sign-in sets up a till (default: allowed, as decision 7); supplier imports
   start stock with no history line (a stock control decision 6 question,
   #566). Also: 491 leftover test shops in the shared test database (#567;
-  default: leave them until Jack says). Answered 29 Oct (`docs/decisions/2026-10-29-answers.md`, answers 2 to 7): the Owner stays never a name to tap and capped at 10 minutes on a workshop computer (#572, #574); a removed workshop computer stays closed to the Owner's pages until someone signs out there (#575); the workshop computer's Owner lock is held on the server (#578); a day nobody closed is built as drawn (#579 to #581); Set up a workshop computer warns against staying signed in to Google (#583); a normal day with no morning check starts from the last close (#584). To try once on the Staging account: after a workshop computer is set up and its cookies cleared, WorkOS asks for the password instead of offering "Continue" (#578; WorkOS's docs don't say this outright). For him to overrule: the 26 and
+  default: leave them until Jack says). Answered 29 Oct (`docs/decisions/2026-10-29-answers.md`, answers 2 to 7): the Owner stays never a name to tap and capped at 10 minutes on a workshop computer (#572, #574); a removed workshop computer stays closed to the Owner's pages until someone signs out there (#575); the workshop computer's Owner lock is held on the server (#578); a day nobody closed is built as drawn (#579 to #581); Set up a workshop computer warns against staying signed in to Google (#583); a normal day with no morning check starts from the last close (#584). Answered 30 Oct (`docs/decisions/2026-10-30-answers.md`, answers 1 to 4): staff notes left out of a customer's copy; one copy a day; deleting an account on the seven defaults; a customer's own booking words wiped on deletion. To try once on the Staging account: after a workshop computer is set up and its cookies cleared, WorkOS asks for the password instead of offering "Continue" (#578; WorkOS's docs don't say this outright). For him to overrule: the 26 and
   28-29 Oct `decided-while-building.md` sections.
 - **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
   is built after it); a money route, `PUT /api/sale-documents/:id`, can
