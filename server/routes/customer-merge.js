@@ -67,6 +67,8 @@ async function removeExpired() {
       }
       for (const table of MOVED) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ?`).run(m.kept_id, m.other_id);
       await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ?').run(m.kept_id, shopId, m.other_id);
+      // A till alert that matched it now matches the record it went into (delete-account, re-review).
+      await prepare('UPDATE till_attention SET matched_customer_id = ? WHERE matched_customer_id = ?').run(m.kept_id, m.other_id);
       // Anything merged into it earlier now points at the record it went into.
       await prepare('UPDATE customers SET merged_into_id = ? WHERE merged_into_id = ?').run(m.kept_id, m.other_id);
       await prepare('UPDATE customer_merges SET kept_id = ? WHERE kept_id = ?').run(m.kept_id, m.other_id);
@@ -163,6 +165,8 @@ export function register(route) {
         moved.rows[table] = (await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? RETURNING id`).all(id, otherId)).map((r) => r.id);
       }
       moved.logins = (await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ? RETURNING id').all(id, shopId, otherId)).map((r) => r.id);
+      // A till alert that matched the other record matches the kept one, as its own customer_id moves (delete-account, re-review).
+      moved.matched = (await prepare('UPDATE till_attention SET matched_customer_id = ? WHERE matched_customer_id = ? RETURNING id').all(id, otherId)).map((r) => r.id);
       moved.groups = (await prepare(
         `INSERT INTO customer_group_members (group_id, customer_id)
            SELECT group_id, ? FROM customer_group_members WHERE customer_id = ? ON CONFLICT DO NOTHING RETURNING group_id`
@@ -263,6 +267,7 @@ export function register(route) {
         if (ids.length) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? AND id = ANY(?::int[])`).run(m.other_id, m.kept_id, ids);
       }
       if (moved.logins?.length) await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ? AND id = ANY(?::int[])').run(m.other_id, shopId, m.kept_id, moved.logins);
+      if (moved.matched?.length) await prepare('UPDATE till_attention SET matched_customer_id = ? WHERE matched_customer_id = ? AND id = ANY(?::int[])').run(m.other_id, m.kept_id, moved.matched);
       // A copy of their data asked for since the merge by a sign-in going back goes back with it (review of #587).
       if (moved.logins?.length) await prepare('UPDATE privacy_requests SET customer_id = ? WHERE customer_id = ? AND customer_login_id = ANY(?::int[])').run(m.other_id, m.kept_id, moved.logins);
       if (moved.groups?.length) await prepare('DELETE FROM customer_group_members WHERE customer_id = ? AND group_id = ANY(?::int[])').run(m.kept_id, moved.groups);

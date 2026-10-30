@@ -103,15 +103,18 @@ For the customer and every record merged into theirs (answer 3):
   **customer_not_duplicates**: deleted.
 - **till_attention**: an alert about them, as its own record, as the record
   it matched (`matched_customer_id`, migration 109, written by the till's
-  sync), or, before that column, by its words ending "customer [id]", keeps
-  its row, with the words "Customer details deleted".
+  sync, and moved by a merge, its Undo and the 30-day clean-up as
+  `customer_id` is), or, before that column, by its words ending "customer
+  [id]", keeps its row, with the words "Customer details deleted".
 - **workshop_jobs.link_token_hash**: cleared, so their booking links stop
   working, a future booking's included.
 - **Their words** (answer 4, "Wipe their words"), on each job and the order
   made with it: `customer_description`, `customer_bike_note`, every answer
   and typed word in `question_answers`, the lines the booking wrote in the
   job's `notes` and the order's `note` (`server/workshop/booking-notes.js`,
-  line by line; a line staff have since edited no longer matches and stays),
+  each part matched as a whole, however many lines her words ran over, and
+  replaced by its one "[removed]" line, in order; a part staff have since
+  edited no longer matches and stays),
   and the description in "Online booking: [services] - [their words]" on the
   job's and the order's title, each become "[removed]". What staff typed
   stays.
@@ -131,7 +134,11 @@ the customer, so a save already waiting is refused once the deletion is
 in. A booking already under way from their account holds the customer
 (`FOR NO KEY UPDATE`, as it goes on to update them, so two of their bookings
 at once take turns) inside its own transaction and is refused (401) once the
-deletion is in.
+deletion is in. The account's other actions already under way (adding a
+bike, changing How we contact you) and a note through their booking link do
+the same: each re-reads and holds the customer in its own transaction (the
+link's note holds the job first, then checks the link is still theirs), and
+is refused once the deletion is in.
 
 **Offline tills** (checked, not built): the till's copy (`server/till/snapshot.js`)
 lists only active customers, so a deleted one is left out of every new copy;
