@@ -1860,7 +1860,9 @@ silent:
 3. **Two requests at once take turns on the sign-in, not the customer**: the
    sign-in's own row is locked, so a sale or a message for the customer is
    never held up while a copy is made (the review of #587 kept the customer
-   row shared).
+   row shared). The customer row is locked first, then the sign-in, as a
+   merge and its Undo lock them, so a copy and a merge can't deadlock (the
+   review of #589).
 
 ## Decided here, for Jack to overrule
 

@@ -10,7 +10,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import '../server/load-env.js';
-import { runWithShop, prepare } from '../server/db.js';
+import { runWithShop, prepare, pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -287,6 +287,39 @@ test('two at the same moment: exactly one goes through and is logged', async () 
   assert.deepEqual(both.map((b) => b.res.status).sort(), [200, 429]);
   assert.equal((await requests(ash.customerId)).length, 1);
 });
+
+// A copy racing a merge, or a merge's Undo (review of #589). Both of those
+// lock the customer first, then change the sign-in; here another connection
+// does just that while a copy is being made. If the copy locked the sign-in
+// first, each would wait for the other: a deadlock, and one would fail.
+for (const [what, lockFirst] of [
+  ['a merge', 'SELECT id FROM customers WHERE id = $1 FOR UPDATE'],
+  ['a merge’s Undo', 'SELECT id FROM customers WHERE id = $1 OR merged_into_id = $1 ORDER BY id FOR UPDATE'],
+]) {
+  test(`a copy at the same moment as ${what} waits its turn: no deadlock, both go through`, async () => {
+    const zoe = await signedIn('zoe');
+    const other = await pool.connect();
+    let copy;
+    let moved;
+    try {
+      await other.query('BEGIN');
+      await other.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+      await other.query(lockFirst, [zoe.customerId]);
+      copy = download({ cookie: zoe.cookie });
+      await new Promise((r) => setTimeout(r, 300));
+      // The merge's or Undo's next step: the sign-in's row.
+      moved = await other.query('UPDATE customer_logins SET customer_id = customer_id WHERE id = $1', [zoe.loginId]).then(() => 'moved', (err) => err.message);
+      await other.query(moved === 'moved' ? 'COMMIT' : 'ROLLBACK');
+    } finally {
+      await other.query('ROLLBACK').catch(() => {});
+      other.release();
+    }
+    assert.equal(moved, 'moved');
+    const { res, body } = await copy;
+    assert.equal(res.status, 200, body.toString());
+    assert.equal((await requests(zoe.customerId)).length, 1);
+  });
+}
 
 test('another sign-in isn’t held up by hers', async () => {
   const lena = await signedIn('lena');

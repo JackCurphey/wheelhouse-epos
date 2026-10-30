@@ -1194,12 +1194,14 @@ export function register(route) {
       // committed since the session was read has moved the sign-in to the
       // kept record. FOR SHARE holds off a merge (FOR UPDATE) without holding
       // up a sale or a message for this customer (review). The sign-in's own
-      // row is locked FOR UPDATE, so two of its requests at once take turns
-      // and the second sees the first's copy (answer 2).
+      // row is then locked FOR NO KEY UPDATE, so two of its requests at once
+      // take turns and the second sees the first's copy (answer 2). The
+      // customer first, as a merge and its Undo lock them, so a copy and a
+      // merge never wait on each other (a deadlock; the review of #589).
       const customer = await db.prepare(
         `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
           WHERE l.id = ? AND l.shop_id = ? AND l.active = 1 AND c.active = 1 AND c.merged_into_id IS NULL
-          FOR UPDATE OF l FOR SHARE OF c`
+          FOR SHARE OF c FOR NO KEY UPDATE OF l`
       ).get(ctx.login.id, ctx.shop.id);
       if (!customer) {
         await db.exec('ROLLBACK');
