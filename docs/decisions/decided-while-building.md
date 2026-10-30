@@ -1864,6 +1864,43 @@ silent:
    merge and its Undo lock them, so a copy and a merge can't deadlock (the
    review of #589).
 
+### 30 Oct 2026: Ask us to delete your account, and Privacy requests (`openspec/changes/delete-account`, `ac-delete`, `ac-delete-blocked`, `ac-delete-sent`, `ac-account-delete-pending`, `ac-account-delete-cancelled`, `cs-list`, `cs-privacy`, `cs-privacy-delete`, `ac-privacy-requests`, `ac-customer-delete`; Jack's 30 Oct answer 3)
+
+1. **Dates**: the account writes them as it already does ("Fri 30 Oct
+   2026"); the shop's list and the customer page as the staff app does ("Tue
+   1 Sep"). "Answer by" is one calendar month after the shop's day it was
+   asked. *Pattern:* the account's next service due; the customer page's
+   dates.
+2. **A bike "with us"** is a repair in the workshop or ready to collect, as
+   the account's history shows it; the shop's side uses the same rule (the
+   job's bike is in the shop).
+3. **Store credit and money owed** lines are left out of the pop-ups, the
+   rows and the customer page line: neither is built, and neither blocks a
+   deletion (audit M12; coverage walks answer 5).
+4. **"+ Log a request" and "Send the copy"** aren't shown; requests come
+   only from the account so far, and a copy from the account is done at
+   once.
+5. **A done deletion** shows as "PR-[n] · Delete their details": its
+   reference, where the name was (answer 3.6).
+6. **The "Privacy requests · [n] open" link** shows to the Owner only. The
+   drawing has it on Customers as Staff see it, but the list it opens is the
+   Owner's (answer 3.7); Staff who open the list's address are told "Only the
+   shop's owner can see privacy requests."
+7. **"Call [shop phone]"** uses the shop's phone from its details; with none
+   recorded, "Call the shop if you need to talk it through."
+8. **After Delete their details** the pop-up closes and the row turns Done;
+   nothing more is said (not drawn). A refusal shows the shop's own words in
+   the pop-up ("Can be deleted once the bike is collected.", or "Something
+   else is changing this customer just now. Try again." when another save
+   holds them for too long).
+9. **Cancel my request that doesn't go through** uses the account's own
+   "That didn't go through. Check your connection and try again." line.
+10. **A deleted customer is never in the customer list**, even with
+    switched-off customers shown.
+11. **Not built yet, logged for later:** Today's line for a deletion request
+    (`ac-today`), and telling the customer when it's done (their email goes
+    with the deletion, so it needs a message sent in the same step).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

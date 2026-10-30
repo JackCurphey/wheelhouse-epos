@@ -23,12 +23,19 @@ import type { BookingStage } from './pending-query.ts';
  * ac-account-asked).
  * "Your data" downloads a copy straight away (openspec/changes/your-data-copy
  * design 5; ac-download, ac-download-failed).
+ * "Ask us to delete your account" asks the shop, with Cancel my request while
+ * it's open (openspec/changes/delete-account design 6; ac-delete,
+ * ac-delete-blocked, ac-delete-sent, ac-account-delete-pending,
+ * ac-account-delete-cancelled).
  * Not built yet, so not shown: store credit, the warranty line, a purchase's
- * receipt, asking to delete the account, and the privacy notice.
+ * receipt, and the privacy notice.
  */
+// An open request to delete the account: the shop's days it was asked and will be done by.
+type Deletion = { askedOn: string; finishBy: string };
 type Me = {
   id: number; email: string; name: string | null; phone: string | null; shopName: string; shopSlug: string;
   updateChannel: 'sms' | 'whatsapp' | 'email'; serviceReminders: boolean; reviewRequests: boolean; marketingPermission: boolean;
+  shopPhone?: string | null; deletion?: Deletion | null;
 };
 type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null };
 type Repair = {
@@ -80,6 +87,9 @@ export function AccountScreen() {
   const navigate = useNavigate();
   const [leaving, setLeaving] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
+  const [asking, setAsking] = React.useState(false);
+  const [cancelling, setCancelling] = React.useState(false);
+  const [cancelled, setCancelled] = React.useState(false);
   const copy = useDataCopy(base);
   const home = `/book/${shopSlug}`;
 
@@ -109,6 +119,22 @@ export function AccountScreen() {
   }
 
   const items = history.data;
+  const deletion = me.data.deletion ?? null;
+  // A bike with the shop holds the deletion back until it's collected (coverage walks answer 4).
+  const bikeWithUs = items.find((i): i is Repair => i.kind === 'repair' && (i.stage === 'in_workshop' || i.stage === 'ready_to_collect')) ?? null;
+  async function cancelRequest() {
+    setCancelling(true);
+    setFailed(false);
+    try {
+      await apiMutate(`${base}/me/delete-request/cancel`, {}, { method: 'POST' });
+      queryClient.setQueryData<Me>(['account', shopSlug, 'me'], (old) => (old ? { ...old, deletion: null } : old));
+      setCancelled(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setCancelling(false);
+    }
+  }
   const bookLink = <Link to={home} className={cn(buttonVariants({ variant: 'accent' }), 'no-underline')}>Book a repair</Link>;
   const bikesCard = <BikesCard bikes={bikes.data} items={items} bookLink={bookLink} shopSlug={shopSlug} reminders={me.data.serviceReminders} />;
   return (
@@ -123,16 +149,19 @@ export function AccountScreen() {
         </div>
       </div>
       <CopyBar copy={copy} />
+      {deletion ? <PendingBar deletion={deletion} onCancel={() => void cancelRequest()} busy={cancelling} /> : null}
+      {cancelled && !deletion ? <p role="status" className={GREEN_BAR}><Check aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>Request cancelled — your account stays as it is.</span></p> : null}
       {failed ? <p role="alert" className="m-0 mb-4 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">That didn’t go through. Check your connection and try again.</p> : null}
       {/* On a phone: bikes, history, details, your data (ac-account phone); on a computer, bikes and details on the left, the history and your data on the right (audit M2). */}
       <div className="grid items-start gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="lg:col-start-1 lg:row-start-1">{bikesCard}</div>
         <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
           <HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} />
-          <div className="order-last lg:order-none"><YourDataCard copy={copy} /></div>
+          <div className="order-last lg:order-none"><YourDataCard copy={copy} deletion={deletion} onAsk={() => { setCancelled(false); setAsking(true); }} onCancel={() => void cancelRequest()} cancelling={cancelling} /></div>
         </div>
         <div className="lg:col-start-1 lg:row-start-2"><DetailsCard me={me.data} shopSlug={shopSlug} /></div>
       </div>
+      {asking ? <DeleteDialog me={me.data} base={base} bike={bikeWithUs} onDownload={() => void copy.download()} onClose={() => setAsking(false)} /> : null}
     </BookFrame>
   );
 }
@@ -210,15 +239,104 @@ function CopyBar({ copy }: { copy: CopyState }) {
   return null;
 }
 
-// "Your data" (ac-account; account and reminders decision 4): Download a copy, as a link-style button.
-function YourDataCard({ copy }: { copy: CopyState }) {
+const LINK_BUTTON = 'inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-sm font-semibold text-[var(--wh-ink)] underline';
+const GREEN_BAR = 'm-0 mb-4 flex items-start gap-2.5 rounded-lg bg-[var(--wh-status-complete-bg)] px-3.5 py-3 text-size-15 font-semibold leading-snug text-[var(--wh-status-complete-ink)]';
+const askedLine = (d: Deletion) => `You asked us to delete your account on ${longDate(d.askedOn)}. We’ll finish by ${longDate(d.finishBy)}.`;
+
+// "Your data" (ac-account; account and reminders decision 4 and audit H3):
+// Download a copy, then Ask us to delete your account, or, while a request is
+// open, when it was asked and Cancel my request.
+function YourDataCard({ copy, deletion, onAsk, onCancel, cancelling }: { copy: CopyState; deletion: Deletion | null; onAsk: () => void; onCancel: () => void; cancelling: boolean }) {
   const idBase = React.useId();
   return (
     <Card id={`${idBase}-data`} title="Your data">
       <div className="flex flex-col items-start">
-        <button type="button" disabled={copy.state === 'busy'} onClick={() => void copy.download()} className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-sm font-semibold text-[var(--wh-ink)] underline">Download a copy of your data</button>
+        <button type="button" disabled={copy.state === 'busy'} onClick={() => void copy.download()} className={LINK_BUTTON}>Download a copy of your data</button>
+        {deletion ? (
+          <>
+            <p className="my-1.5 text-size-15 leading-normal">{askedLine(deletion)}</p>
+            <Button disabled={cancelling} onClick={onCancel}>Cancel my request</Button>
+          </>
+        ) : <button type="button" onClick={onAsk} className={LINK_BUTTON}>Ask us to delete your account</button>}
       </div>
     </Card>
+  );
+}
+
+// The request at the top of the account while it's open (ac-account-delete-pending).
+function PendingBar({ deletion, onCancel, busy }: { deletion: Deletion; onCancel: () => void; busy: boolean }) {
+  return (
+    <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+      <TriangleAlert aria-hidden="true" className="size-[18px] shrink-0" />
+      <span className="grow">{askedLine(deletion)}</span>
+      <Button disabled={busy} onClick={onCancel}>Cancel my request</Button>
+    </div>
+  );
+}
+
+/**
+ * "Ask us to delete your account" (ac-delete; with a bike still with the
+ * shop, ac-delete-blocked; once asked, ac-delete-sent). Store credit isn't
+ * built, so its line isn't shown.
+ */
+function DeleteDialog({ me, base, bike, onDownload, onClose }: { me: Me; base: string; bike: Repair | null; onDownload: () => void; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [sent, setSent] = React.useState<Deletion | null>(null);
+  const note = 'text-sm text-[var(--wh-muted)]';
+
+  async function ask() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { deletion } = await apiMutate<{ deletion: Deletion | null }>(`${base}/me/delete-request`, {}, { method: 'POST' });
+      queryClient.setQueryData<Me>(['account', me.shopSlug, 'me'], (old) => (old ? { ...old, deletion } : old));
+      setSent(deletion);
+    } catch {
+      setError('That didn’t go through. Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="del-title" className="md:max-w-[520px]">
+        <DialogHeader><DialogTitle id="del-title">Request sent</DialogTitle></DialogHeader>
+        <DialogBody className="flex flex-col gap-3">
+          <p role="status" className="m-0 text-size-15 leading-normal">{`${me.shopName} will delete your account and tell you when it’s done — by ${longDate(sent.finishBy)} at the latest.`}</p>
+          <p className={`m-0 ${note}`}>Changed your mind? “Cancel my request” is on your account until the shop has done it.</p>
+        </DialogBody>
+        <DialogFooter className="flex justify-end"><Button variant="accent" onClick={onClose}>OK</Button></DialogFooter>
+      </Dialog>
+    );
+  }
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="del-title" className="md:max-w-[520px]">
+      <DialogHeader><DialogTitle id="del-title">Ask us to delete your account</DialogTitle></DialogHeader>
+      <DialogBody className="flex flex-col gap-3">
+        {bike ? (
+          <>
+            <p className="m-0 text-size-15 leading-normal">We’ll delete your account once your bike has been collected.</p>
+            <Row k="Bike with us" v={[bike.bikeLabel, bike.reference].filter(Boolean).join(' · ')} />
+            <p className={`m-0 ${note}`}>{`Call ${me.shopPhone || 'the shop'} if you need to talk it through.`}</p>
+          </>
+        ) : (
+          <>
+            <p className="m-0 text-size-15 leading-normal">{`${me.shopName} will delete your account within one month, and tell you when it’s done.`}</p>
+            <p className={`m-0 ${note}`}>Your details, bikes and messages are deleted. Sales stay in the shop’s books without your name, because the shop must keep them for tax.</p>
+            <p className={`m-0 ${note}`}>Want a copy first? <button type="button" onClick={onDownload} className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-inherit underline">Download a copy of your data</button>.</p>
+            <p className="m-0 text-size-15 font-bold">This can’t be undone.</p>
+          </>
+        )}
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="flex justify-end gap-2.5">
+        <Button variant="ghost" disabled={busy} onClick={onClose}>Keep my account</Button>
+        <Button variant="danger" disabled={busy} onClick={() => void ask()}>Ask to delete</Button>
+      </DialogFooter>
+    </Dialog>
   );
 }
 
