@@ -7,6 +7,7 @@ Three stacked pull requests, to keep each near 250-600 changed lines.
 - [ ] 1.1 Tests first: migration 109 from empty and run twice (`tests/migration-109.test.js`); asking and cancelling (`tests/delete-request.test.js`: once, twice at once, with a bike in, cancel and ask again, signed out, another shop and another website refused). Watch each fail
 - [ ] 1.2 Migration 109; `openDeletion` in `server/privacy-requests.js`; the two routes and `/me`'s `deletion` in `server/routes/portal.js`
 - [ ] 1.3 Break each rule on purpose, see its test go red, and restore
+- [ ] 1.4 Review of #590-#592: a booking from the account already under way holds the customer and is refused once the deletion is in; migration 109 also records the record a till's duplicate alert matched (`till_attention.matched_customer_id`, written by the till's sync). Tests first, watched failing (the booking went through, 201), the rule broken on purpose
 
 ## 2. The shop's list and deleting someone's details (`jack/delete-account-server`, stacked on 1)
 

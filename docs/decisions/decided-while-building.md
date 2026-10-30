@@ -1900,6 +1900,29 @@ silent:
 11. **Not built yet, logged for later:** Today's line for a deletion request
     (`ac-today`), and telling the customer when it's done (their email goes
     with the deletion, so it needs a message sent in the same step).
+12. **A look-alike record is left alone.** Another customer record holding
+    the same phone or email, never merged, is another person's record as far
+    as Wheelhouse knows, so deleting her details doesn't touch it, and the
+    shop's delete pop-up doesn't list possible duplicates: the drawing
+    (`cs-privacy-delete`) shows none. The till's duplicate alerts that name
+    her lose her name (review of #590-#592).
+13. **Her words become "[removed]" line by line** (answer 4). Every answer to
+    a service's questions is replaced, the choices she picked as well as
+    words she typed. A line the booking wrote that staff have since edited no
+    longer matches, so it stays as they left it; anything else staff typed
+    stays.
+14. **A staff save on a deleted customer** (Edit, switching them on, a bike)
+    is refused: "This customer's details were deleted at their request, so
+    they can't be changed." A booking from her account already under way is
+    refused with "Please sign in again to book." (the sign-in is gone).
+15. **Against a till payment at the same moment** the deletion steps back
+    and tries again, so the payment is never the one cancelled; against
+    Mark ready it waits for the job. *Pattern:* the review's lock order
+    (jobs before the customer).
+16. **Offline tills, checked, not built:** the till's copy lists only active
+    customers, so a deleted one is left out of every new copy. No till keeps
+    a copy yet (Mark's step C), so whether a till drops a customer missing
+    from a newer copy is a question for step C's design.
 
 ## Decided here, for Jack to overrule
 
