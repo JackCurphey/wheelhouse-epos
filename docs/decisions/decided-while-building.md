@@ -1906,15 +1906,19 @@ silent:
     shop's delete pop-up doesn't list possible duplicates: the drawing
     (`cs-privacy-delete`) shows none. The till's duplicate alerts that name
     her lose her name (review of #590-#592).
-13. **Her words become "[removed]" line by line** (answer 4). Every answer to
-    a service's questions is replaced, the choices she picked as well as
-    words she typed. A line the booking wrote that staff have since edited no
-    longer matches, so it stays as they left it; anything else staff typed
-    stays.
+13. **Her words become "[removed]" part by part** (answer 4). Every answer
+    to a service's questions is replaced, the choices she picked as well as
+    words she typed. Each part the booking wrote (her bike note, each answer,
+    her description) is replaced as a whole by one "[removed]" line, however
+    many lines her words ran over. A part staff have since edited no longer
+    matches, so it stays as they left it; anything else staff typed stays.
 14. **A staff save on a deleted customer** (Edit, switching them on, a bike)
     is refused: "This customer's details were deleted at their request, so
     they can't be changed." A booking from her account already under way is
-    refused with "Please sign in again to book." (the sign-in is gone).
+    refused with "Please sign in again to book.", and adding a bike or
+    changing How we contact you with "Please sign in again." (the sign-in is
+    gone); a note through her booking link with "We can't find that
+    booking", as for any link that no longer works.
 15. **Against a till payment at the same moment** the deletion steps back
     and tries again, so the payment is never the one cancelled; against
     Mark ready it waits for the job. *Pattern:* the review's lock order
