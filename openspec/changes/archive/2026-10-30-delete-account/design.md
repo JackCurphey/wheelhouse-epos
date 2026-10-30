@@ -58,26 +58,30 @@ transaction and reply after `COMMIT`.
 ## 5. Deleting their details (`server/privacy-requests.js`)
 
 One transaction, every row locked before anything is written, in the order
-the rest of the app takes them (the review of the server):
+the rest of the app takes them (the reviews of the server):
 
 1. The merge records naming them (Undo takes its merge record first).
-2. The customer, `FOR UPDATE`: no new merge into them can start, and a
+2. Their jobs, `FOR UPDATE` in id order, before their record: a job's own
+   routes lock the job and then write for the customer (Mark ready queues
+   Bike ready), so the deletion waits for the job rather than holding the
+   customer it needs.
+3. The customer, `FOR UPDATE`: no new merge into them can start, and a
    sale, payment or booking for them waits (its reference to the customer
    waits on this lock).
-3. Every record merged into theirs, however far back (a recursive read,
+4. Every record merged into theirs, however far back (a recursive read,
    done again now the customer is held, so a merge that finished while the
    deletion waited is in), with their merge records, `FOR UPDATE` in id order.
-4. Their sign-ins, then their jobs, then the request.
+5. Their sign-ins, their jobs read again (one booked while the deletion
+   waited is in), then the request.
 
 Then: an open deletion request is required (409 `not_open` otherwise); a
-bike in the workshop is in the way (409 `in_the_way`). The deletion gives up
+bike in the workshop is in the way (409 `in_the_way`). A till payment holds
+the customer and then the job, the other way round: the deletion gives up
 any lock it waits on for more than 0.8 seconds, before the database's own
-deadlock check (1 second) could cancel the other side: a job's route that
-locks the job and then queues a message for the customer (Mark ready) waits
-on the customer the other way round, and the mechanic's save must not be the
-one cancelled. It then pauses, tries once more (logged), and answers 503
-`busy` if it still can't. The 30-day merge clean-up takes its merge record
-first too (`customer-merge.js`), and skips one undone or deleted since.
+deadlock check (1 second) could cancel the payment, then pauses, tries once
+more (logged), and answers 503 `busy` if it still can't. The 30-day merge
+clean-up takes its merge record first too (`customer-merge.js`), and skips
+one undone or deleted since.
 
 For the customer and every record merged into theirs (answer 3):
 - **customers**: name, email, phone, note, address, postcode, company
@@ -86,9 +90,10 @@ For the customer and every record merged into theirs (answer 3):
 - **customer_bikes**: make, model, colour, frame number and notes cleared;
   `active = 0`. The rows stay, for the kept jobs.
 - **job_notes**: their conversation with the shop and the notes on their
-  repairs, deleted. `workshop_jobs.notes` (staff-only) stays.
+  repairs, deleted.
 - **workshop_job_attachments** sent by the customer (`from_customer`) on
-  their jobs: rows deleted; the files removed once the save is released.
+  their jobs: rows deleted; the files removed once the save is released,
+  a file that can't be removed logged.
 - **customer_messages**: every message the shop sent them (by customer, or
   a receipt for one of their sales), deleted, waiting ones included.
 - **customer_merges** naming them, deleted (answer 3.5).
@@ -96,15 +101,51 @@ For the customer and every record merged into theirs (answer 3):
   is gone. `pretend_signin_codes` for their email, deleted.
 - **reminder_stop_codes**, **shop_message_stops**, **customer_group_members**,
   **customer_not_duplicates**: deleted.
-- **till_attention**: an alert about them keeps its row, with the words
-  "Customer details deleted" in place of their name.
-- **Kept whole**: sales, till sales and their lines, orders
-  (`sale_documents`), payments, workshop jobs and their lines, quotes, the
-  job's own words from booking.
+- **till_attention**: an alert about them, as its own record, as the record
+  it matched (`matched_customer_id`, migration 109, written by the till's
+  sync, and moved by a merge, its Undo and the 30-day clean-up as
+  `customer_id` is), or, before that column, by its words ending "customer
+  [id]", keeps its row, with the words "Customer details deleted".
+- **workshop_jobs.link_token_hash**: cleared, so their booking links stop
+  working, a future booking's included.
+- **Their words** (answer 4, "Wipe their words"), on each job and the order
+  made with it: `customer_description`, `customer_bike_note`, every answer
+  and typed word in `question_answers`, the lines the booking wrote in the
+  job's `notes` and the order's `note` (`server/workshop/booking-notes.js`,
+  each part matched as a whole, however many lines her words ran over, and
+  replaced by its one "[removed]" line, in order; a part staff have since
+  edited no longer matches and stays),
+  and the description in "Online booking: [services] - [their words]" on the
+  job's and the order's title, each become "[removed]". What staff typed
+  stays.
+- **Kept whole**: sales, till sales and their lines and payments, orders
+  (`sale_documents`) and their totals, payments, workshop jobs and their
+  lines, quotes, the work and the prices.
 
 The request: `done_at = now()`. It keeps its `customer_id` (now a blank
 record) for the paper trail, shown by its reference with no name. Signing
 in again later with the same email makes a fresh, empty customer.
+
+**After the deletion nothing brings their details back:** staff saving the
+customer (Edit, switching them on), adding a bike for them or editing one
+of their bikes is refused (409 `deleted`, "This customer's details were
+deleted at their request, so they can't be changed."), each under a lock on
+the customer, so a save already waiting is refused once the deletion is
+in. A booking already under way from their account holds the customer
+(`FOR NO KEY UPDATE`, as it goes on to update them, so two of their bookings
+at once take turns) inside its own transaction and is refused (401) once the
+deletion is in. The account's other actions already under way (adding a
+bike, changing How we contact you) and a note through their booking link do
+the same: each re-reads and holds the customer in its own transaction (the
+link's note holds the job first, `FOR KEY SHARE`, then checks the link is
+still theirs: that waits behind the deletion's `FOR UPDATE` but not behind a
+merge or its Undo moving the job, so no deadlock with them), and is refused
+once the deletion is in.
+
+**Offline tills** (checked, not built): the till's copy (`server/till/snapshot.js`)
+lists only active customers, so a deleted one is left out of every new copy;
+no till keeps a copy yet (Mark's step C), so whether a till drops a customer
+missing from a newer copy is for step C's design (logged).
 
 ## 6. The account (`src/screens/book/account.tsx`)
 

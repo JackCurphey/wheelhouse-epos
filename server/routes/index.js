@@ -29,5 +29,6 @@ import * as floatCheck from './float-check.js';
 import * as closeTheDay from './close-the-day.js';
 import * as tillPins from './till-pins.js';
 import * as stockTakes from './stock-takes.js';
+import * as privacyRequests from './privacy-requests.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests];

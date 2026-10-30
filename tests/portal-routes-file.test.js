@@ -29,11 +29,13 @@ const ROUTES = [
 ];
 // setCustomerSessionCookie moved to server/lib/session.js on 26 Oct, shared
 // by sign-in and the 30 days from the last visit (ask-the-shop-server design 6).
+// answerNoteLine and bookingNotes moved to server/workshop/booking-notes.js on
+// 30 Oct, shared with deleting a customer's details (delete-account design 5).
 const HELPERS = [
   'clearCustomerSessionCookie', 'portalLoginLimiter', 'portalSignupLimiter',
   'portalGuestBookingLimiter', 'bookingLinkLimiter', 'CUSTOMER_ACTIONABLE', 'customerTooLate', 'customerCanAct',
-  'serializePortalBooking', 'CUSTOMER_REFUSALS', 'customerActionRefusal', 'bookedServices', 'answerNoteLine',
-  'bookingNotes', 'checkCustomerTime', 'REUSED_KEY', 'replayBookingRequest', 'resolveBookingLink',
+  'serializePortalBooking', 'CUSTOMER_REFUSALS', 'customerActionRefusal', 'bookedServices',
+  'checkCustomerTime', 'REUSED_KEY', 'replayBookingRequest', 'resolveBookingLink',
   'bookingLinkView', 'changeBookingTime', 'withdrawRequest',
 ];
 const defines = (source, name) =>
@@ -45,6 +47,7 @@ test('server/routes/portal.js registers the customer account and read routes', (
   assert.deepEqual(ROUTES.filter((r) => !portal.includes(`route(${r}`)), []);
   assert.deepEqual(HELPERS.filter((name) => !defines(portal, name)), []);
   assert.ok(defines(read('server/lib/session.js'), 'setCustomerSessionCookie'), 'the customer cookie is set in one place');
+  for (const name of ['answerNoteLine', 'bookingNotes']) assert.ok(defines(read('server/workshop/booking-notes.js'), name), `${name} is in booking-notes.js`);
 });
 
 test('server/server.js keeps none of them', () => {
