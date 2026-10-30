@@ -44,6 +44,7 @@ import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { dataCopyFiles } from '../customer-data-copy.js';
 import { zipFiles } from '../lib/zip.js';
+import { openDeletion } from '../privacy-requests.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
@@ -845,8 +846,59 @@ export function register(route) {
       // The account's Your details and How we contact you (customer-account-screens design 1).
       phone: customer?.phone || null,
       ...contactOf(customer),
+      // A request to delete the account, while it's open (delete-account design 3).
+      deletion: customer ? await openDeletion(customer.id) : null,
     });
   });
+
+  // "Ask us to delete your account" and "Cancel my request" (ac-delete,
+  // ac-account-delete-pending, ac-account-delete-cancelled; delete-account
+  // design 3; account and reminders decision 4 and audit H3). The sign-in's
+  // customer is read again and locked as the copy of your data locks it, the
+  // customer before the sign-in; the reply comes after the commit. A bike in
+  // the workshop doesn't stop the ask (coverage walks answer 4).
+  // screens: ac-delete, ac-delete-blocked, ac-delete-sent, ac-account-delete-pending, ac-account-delete-cancelled
+  const deletionRoute = (verb, write) => route('POST', `/api/portal/:shopSlug/me/delete-request${verb}`, async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    let customer;
+    await db.exec('BEGIN');
+    try {
+      customer = await db.prepare(
+        `SELECT c.id FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+          WHERE l.id = ? AND l.shop_id = ? AND l.active = 1 AND c.active = 1 AND c.merged_into_id IS NULL
+          FOR SHARE OF c FOR NO KEY UPDATE OF l`
+      ).get(ctx.login.id, ctx.shop.id);
+      if (!customer) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, { error: 'Not signed in' });
+      }
+      if (!(await write(customer.id, ctx.login.id))) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 404, { error: 'There’s no request to cancel.' });
+      }
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, { deletion: await openDeletion(customer.id) });
+  });
+  // One open request each (migration 109): asking again answers with it.
+  deletionRoute('', async (customerId, loginId) => {
+    await db.prepare(
+      `INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source) VALUES (?, ?, 'delete', 'account')
+       ON CONFLICT (customer_id) WHERE kind = 'delete' AND done_at IS NULL AND cancelled_at IS NULL DO NOTHING`
+    ).run(customerId, loginId);
+    return true;
+  });
+  deletionRoute('/cancel', async (customerId) => Boolean(await db.prepare(
+    `UPDATE privacy_requests SET cancelled_at = now()
+      WHERE customer_id = ? AND kind = 'delete' AND done_at IS NULL AND cancelled_at IS NULL RETURNING id`
+  ).get(customerId)));
 
   // How we contact you (openspec/changes/how-we-contact-you design 1; account
   // and reminders decision 6): any of the way job updates go and the three
