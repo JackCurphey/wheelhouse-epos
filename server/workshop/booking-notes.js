@@ -18,15 +18,21 @@ export function answerNoteLine({ wording, kind, answer, text }) {
   return value ? `${wording} ${value}` : null;
 }
 
-export function bookingNotes({ bikeNote, questionAnswers, description }) {
-  const lines = [];
-  if (bikeNote) lines.push(`Bike (customer's words): ${bikeNote}`);
+// The booking's parts of the notes, in order. A part can run over several
+// lines when what they wrote did.
+function bookingParts({ bikeNote, questionAnswers, description }) {
+  const parts = [];
+  if (bikeNote) parts.push(`Bike (customer's words): ${bikeNote}`);
   for (const entry of questionAnswers ?? []) {
     const line = answerNoteLine(entry);
-    if (line) lines.push(line);
+    if (line) parts.push(line);
   }
-  if (description) lines.push(`Customer's description: ${description}`);
-  return lines.join('\n');
+  if (description) parts.push(`Customer's description: ${description}`);
+  return parts;
+}
+
+export function bookingNotes(said) {
+  return bookingParts(said).join('\n');
 }
 
 const wipe = (v) => (v === null || v === undefined || v === '' ? v : REMOVED);
@@ -37,18 +43,30 @@ export const wipedAnswers = (answers) => (Array.isArray(answers)
   : answers);
 
 /**
- * A job's or its order's notes with the lines the booking wrote from their
- * words replaced, line by line; anything else (what staff typed) stays. A
- * line staff have since edited no longer matches, and stays as they left it.
+ * A job's or its order's notes with each part the booking wrote from their
+ * words replaced as a whole, however many lines it ran over, by its one
+ * "[removed]" line, in order; anything else (what staff typed) stays. A part
+ * staff have since edited no longer matches, and stays as they left it
+ * (re-review: matching line by line drifted when their words had line breaks).
  */
 export function wipedNotes(notes, { bikeNote, questionAnswers, description }) {
   if (!notes) return notes;
-  const was = bookingNotes({ bikeNote, questionAnswers, description }).split('\n').filter(Boolean);
-  const now = bookingNotes({ bikeNote: wipe(bikeNote), questionAnswers: wipedAnswers(questionAnswers), description: wipe(description) }).split('\n').filter(Boolean);
-  return notes.split('\n').map((line) => {
-    const i = was.indexOf(line);
-    return i >= 0 ? now[i] : line;
-  }).join('\n');
+  const was = bookingParts({ bikeNote, questionAnswers, description });
+  const now = bookingParts({ bikeNote: wipe(bikeNote), questionAnswers: wipedAnswers(questionAnswers), description: wipe(description) });
+  let out = notes;
+  let from = 0;
+  was.forEach((part, i) => {
+    // A whole part only: starting a line and ending one.
+    for (let at = out.indexOf(part, from); at >= 0; at = out.indexOf(part, at + 1)) {
+      const end = at + part.length;
+      if ((at === 0 || out[at - 1] === '\n') && (end === out.length || out[end] === '\n')) {
+        out = out.slice(0, at) + now[i] + out.slice(end);
+        from = at + now[i].length;
+        return;
+      }
+    }
+  });
+  return out;
 }
 
 /**

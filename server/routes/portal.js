@@ -727,6 +727,17 @@ async function repairsAndPurchases(customerId) {
   return [...repairs, ...purchases];
 }
 
+// The sign-in's own customer, read again and held inside the caller's
+// transaction, or null once their details were deleted (or the sign-in has
+// gone): a website action already under way when the shop deletes their
+// details waits for it and is then refused (delete-account, re-review).
+const holdOwnCustomer = (ctx, mode) => db.prepare(
+  `SELECT c.id, c.phone FROM customer_logins l JOIN customers c ON c.id = l.customer_id
+    WHERE l.id = ? AND l.active = 1 AND c.active = 1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+    FOR ${mode === 'update' ? 'NO KEY UPDATE' : 'SHARE'} OF c`
+).get(ctx.login.id);
+const SIGN_IN_AGAIN = { error: 'Please sign in again.' };
+
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
     const ip = clientIp(req);
@@ -894,8 +905,6 @@ export function register(route) {
     const args = [];
     if (body.updateChannel !== undefined) {
       if (!['sms', 'whatsapp', 'email'].includes(body.updateChannel)) return badRequest(res, 'Choose text, WhatsApp or email');
-      const customer = await db.prepare('SELECT phone FROM customers WHERE id = ?').get(ctx.login.customer_id);
-      if (body.updateChannel !== 'email' && !customer?.phone) return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
       sets.push('update_channel = ?');
       args.push(body.updateChannel);
     }
@@ -911,7 +920,24 @@ export function register(route) {
         "reminders_said_yes_via = CASE WHEN service_reminders OR review_requests THEN reminders_said_yes_via ELSE 'account' END");
     }
     if (!sets.length) return badRequest(res, 'Nothing to change');
-    const customer = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING *`).get(...args, ctx.login.customer_id);
+    let customer;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'update');
+      if (!held) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      if (body.updateChannel !== undefined && body.updateChannel !== 'email' && !held.phone) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
+      }
+      customer = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING *`).get(...args, held.id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     sendJson(res, 200, contactOf(customer));
   });
 
@@ -1094,11 +1120,24 @@ export function register(route) {
     const make = (body.make || '').trim();
     const model = (body.model || '').trim();
     if (!make && !model) return badRequest(res, 'Make or model is required');
-    const info = await db
-      .prepare(
-        `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(ctx.login.customer_id, make, model, (body.colour || '').trim(), (body.serialNumber || '').trim(), nowIso());
+    let info;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'share');
+      if (!held) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      info = await db
+        .prepare(
+          `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(held.id, make, model, (body.colour || '').trim(), (body.serialNumber || '').trim(), nowIso());
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeBike(row));
   });
@@ -1829,7 +1868,25 @@ export function register(route) {
     const body = await readJsonBody(req);
     const text = cleanNote(body?.text);
     if (!text) return badRequest(res, NOTE_WORDS);
-    await addNote({ jobId: found.id, fromCustomer: true, text });
+    // The job held, then its customer, as deleting their details takes them:
+    // a note already under way when the shop deletes them waits, and is then
+    // refused, the link no longer theirs (delete-account, re-review).
+    await db.exec('BEGIN');
+    try {
+      const job = await db.prepare('SELECT customer_id, link_token_hash FROM workshop_jobs WHERE id = ? FOR UPDATE').get(found.id);
+      const still = job && (found.signedIn || job.link_token_hash === hashLinkCode(params.code));
+      const owner = still && job.customer_id !== null
+        ? await db.prepare('SELECT deleted_at FROM customers WHERE id = ? FOR SHARE').get(job.customer_id) : null;
+      if (!still || owner?.deleted_at) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 404, { error: "We can't find that booking" });
+      }
+      await addNote({ jobId: found.id, fromCustomer: true, text });
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
     sendJson(res, 201, await jobNotes(found.id, { forCustomer: true }));
   });
 

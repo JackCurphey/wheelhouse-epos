@@ -24,11 +24,11 @@ let jo;
 const staff = (p, options, who = owner) => staffRequest(server.baseUrl, who.cookie, p, options);
 const inShop = (fn, shop = owner.shop.id) => runWithShop(shop, fn);
 
-async function portal(p, { cookie, method = 'GET', shop = owner, headers = {} } = {}) {
+async function portal(p, { cookie, method = 'GET', shop = owner, headers = {}, body = {} } = {}) {
   const res = await fetch(`${server.baseUrl}/api/portal/${shop.shop.slug}${p}`, {
     method,
     headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}), ...headers },
-    body: method === 'GET' ? undefined : '{}',
+    body: method === 'GET' ? undefined : JSON.stringify(body),
   });
   return { status: res.status, body: await res.json().catch(() => null) };
 }
@@ -415,6 +415,7 @@ test('a job’s order paid at the till at the same moment: the payment goes thro
   // The deletion holds her jobs before her record (Mark ready's order), so
   // against a payment it is the one that steps back and tries again.
   assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.match(server.stderr, new RegExp(`Privacy request ${req.id}: deletion tried again after`), 'it stepped back and tried again');
 });
 
 test('the till’s duplicate alert about her loses her name', async () => {
@@ -601,4 +602,92 @@ test('everything else of hers goes, and her till sales, orders and payments stay
   assert.deepEqual([after.stops.n, after.ownStops.n, after.notDuplicates.n, after.codes.n, after.sessions.n], [0, 0, 0, 0, 0]);
   // Her sign-in's session is gone with it (counted by the token, as the join above can't see a deleted sign-in).
   assert.equal((await portal('/me', { cookie: kit.cookie })).status, 401);
+});
+
+// ---------- The re-review of #589-#592 ----------
+// Website actions already under way when her details are deleted: another
+// connection plays the deletion (her jobs, then her record, held), the
+// action starts and waits on it, then the deletion's writes go in.
+
+async function deletingHer(c, { jobId = null } = {}, during) {
+  const conn = await pool.connect();
+  try {
+    await conn.query('BEGIN');
+    await conn.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    if (jobId) await conn.query('SELECT id FROM workshop_jobs WHERE id = $1 FOR UPDATE', [jobId]);
+    await conn.query('SELECT id FROM customers WHERE id = $1 FOR UPDATE', [c.id]);
+    const action = during();
+    await blockedBy(conn);
+    await conn.query("UPDATE customers SET name = '', email = '', phone = '', active = 0, update_channel = NULL, service_reminders = false, review_requests = false, marketing_permission = false, reminders_said_yes_at = NULL, reminders_said_yes_via = NULL, deleted_at = now() WHERE id = $1", [c.id]);
+    await conn.query('UPDATE workshop_jobs SET link_token_hash = NULL WHERE customer_id = $1', [c.id]);
+    await conn.query('DELETE FROM customer_sessions WHERE customer_login_id = $1', [c.loginId]);
+    await conn.query('DELETE FROM customer_logins WHERE id = $1', [c.loginId]);
+    await conn.query('COMMIT');
+    return await action;
+  } finally {
+    await conn.query('ROLLBACK').catch(() => {});
+    conn.release();
+  }
+}
+
+test('a bike added from her account while her details are deleted is refused, and nothing is added', async () => {
+  const ana = await customer('[Ana’s name]');
+  const res = await deletingHer(ana, {}, () => portal('/bikes', { cookie: ana.cookie, method: 'POST', body: { make: '[Make]', model: '[Model]' } }));
+  assert.ok([401, 409].includes(res.status), `refused: ${res.status} ${JSON.stringify(res.body)}`);
+  assert.deepEqual(await inShop(() => prepare('SELECT id FROM customer_bikes WHERE customer_id = ?').all(ana.id)), []);
+});
+
+test('“How we contact you” changed while her details are deleted is refused, and nothing is written', async () => {
+  const bo = await customer('[Bo’s name]');
+  const res = await deletingHer(bo, {}, () => portal('/me/contact', { cookie: bo.cookie, method: 'PUT', body: { updateChannel: 'email', serviceReminders: true, marketingPermission: true } }));
+  assert.ok([401, 409].includes(res.status), `refused: ${res.status} ${JSON.stringify(res.body)}`);
+  assert.deepEqual(await inShop(() => prepare('SELECT update_channel, service_reminders, marketing_permission, reminders_said_yes_at FROM customers WHERE id = ?').get(bo.id)),
+    { update_channel: null, service_reminders: false, marketing_permission: false, reminders_said_yes_at: null });
+});
+
+test('a note sent through her booking link while her details are deleted is refused, and nothing is added', async () => {
+  const cy = await customer('[Cy’s name]');
+  const job = await jobFor(cy.id, 'expected');
+  const code = (await staff(`/api/workshop-jobs/${job.id}/private-link`, { method: 'POST', body: {} })).body.privateLink.split('/booking/')[1];
+  const res = await deletingHer(cy, { jobId: job.id }, () => portal(`/booking-links/${code}/notes`, { method: 'POST', body: { text: '[Her note]' } }));
+  assert.ok([404, 409, 410].includes(res.status), `refused: ${res.status} ${JSON.stringify(res.body)}`);
+  assert.deepEqual(await inShop(() => prepare('SELECT id FROM job_notes WHERE workshop_job_id = ?').all(job.id)), []);
+});
+
+test('a till alert matched to a record merged into hers, then cleaned up after 30 days, still loses her name', async () => {
+  const kim = await customer('[Kim’s name]');
+  const d = (await staff('/api/customers', { method: 'POST', body: { name: '[D name]', phone: '07700 900 321' } })).body;
+  const x = (await staff('/api/customers', { method: 'POST', body: { name: '[Till record]', phone: '07700 900 654' } })).body;
+  const alert = await inShop(async () => (await prepare("INSERT INTO till_attention (kind, detail, customer_id, matched_customer_id) VALUES ('possible_duplicate_customer', '\"[Kim’s name]\" may be the same person as a customer here', ?, ?) RETURNING id").get(x.id, d.id)).id);
+  const merged = await staff(`/api/customers/${kim.id}/merge`, { method: 'POST', body: { otherId: d.id, keep: {} } });
+  assert.equal(merged.status, 200, JSON.stringify(merged.body));
+  assert.equal((await inShop(() => prepare('SELECT matched_customer_id FROM till_attention WHERE id = ?').get(alert))).matched_customer_id, kim.id, 'the merge moves the alert’s match');
+  // Undo moves it back, and merging again moves it again.
+  assert.equal((await staff(`/api/customer-merges/${merged.body.id}/undo`, { method: 'POST', body: {} })).status, 200);
+  assert.equal((await inShop(() => prepare('SELECT matched_customer_id FROM till_attention WHERE id = ?').get(alert))).matched_customer_id, d.id, 'Undo moves it back');
+  const again = await staff(`/api/customers/${kim.id}/merge`, { method: 'POST', body: { otherId: d.id, keep: {} } });
+  assert.equal(again.status, 200);
+  // As a merge made before the match moved with it would have left it.
+  await inShop(() => prepare('UPDATE till_attention SET matched_customer_id = ? WHERE id = ?').run(d.id, alert));
+  // 30 days on, the merged record is cleaned up.
+  await inShop(() => prepare("UPDATE customer_merges SET merged_at = now() - interval '31 days' WHERE id = ?").run(again.body.id));
+  assert.equal((await staff(`/api/customers/${kim.id}/merges`)).status, 200);
+  assert.equal(await inShop(async () => (await prepare('SELECT count(*)::int AS n FROM customers WHERE id = ?').get(d.id)).n), 0, 'cleaned up');
+  await deleteFor(kim);
+  assert.doesNotMatch((await inShop(() => prepare('SELECT detail FROM till_attention WHERE id = ?').get(alert))).detail, /Kim/);
+});
+
+test('words over several lines: each part of the booking’s notes becomes one “[removed]” line, in order, no blank lines', async () => {
+  const lyn = await customer('[Lyn’s name]');
+  const description = 'Brakes squeal\nand the chain slips';
+  const answers = [{ serviceId: 1, wording: 'Anything else?', kind: 'text', answer: 'Ring me\nafter 5' }];
+  const { bookingNotes } = await import('../server/workshop/booking-notes.js');
+  const built = bookingNotes({ bikeNote: null, questionAnswers: answers, description });
+  const job = await inShop(async () => (await prepare(
+    `INSERT INTO workshop_jobs (title, customer_id, job_date, start_time, end_time, booking_state, work_state, custody_state, notes, customer_description, question_answers, updated_at)
+     VALUES (?, ?, '2026-09-05', '10:00', '11:00', 'scheduled', 'not_started', 'expected', ?, ?, ?::jsonb, now()) RETURNING id`
+  ).get(`Online booking: [Service] - ${description}`, lyn.id, `[Staff’s first note]\n${built}\n[Staff’s own note]`, description, JSON.stringify(answers))).id);
+  await deleteFor(lyn);
+  const { notes } = await inShop(() => prepare('SELECT notes FROM workshop_jobs WHERE id = ?').get(job));
+  assert.equal(notes, "[Staff’s first note]\nAnything else? [removed]\nCustomer's description: [removed]\n[Staff’s own note]");
 });

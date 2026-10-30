@@ -10,6 +10,7 @@ import { runWithShop, prepare, pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { futureDate } from './helpers/workshopFixtures.js';
+import { bookingLockKey } from '../server/capacity.js';
 import { BOOKING_CONTACT } from './helpers/bookable.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
@@ -158,22 +159,25 @@ test('a booking under way while her details are deleted is refused, and writes n
     "INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('[Service]', 50, 5000, 60, 1, 1, now())"
   ).run()).lastInsertRowid);
   const lia = await customer('[Lia’s name]');
+  await ask(lia);
+  const [req] = await openFor(lia.id);
+  const jobDate = futureDate(2);
+  // Another connection holds the booking's own day, so the booking is under
+  // way, past its sign-in check, and waits there while the shop deletes her
+  // details through the real route; then it goes on.
   const conn = await pool.connect();
   let res;
   try {
     await conn.query('BEGIN');
     await conn.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
-    // The deletion has her record.
-    await conn.query('SELECT id FROM customers WHERE id = $1 FOR UPDATE', [lia.id]);
+    await conn.query("SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, $1::int)", [bookingLockKey(jobDate)]);
     const booking = fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/bookings`, {
       method: 'POST', headers: { 'content-type': 'application/json', cookie: lia.cookie },
-      body: JSON.stringify({ mechanicId: mechanic, jobDate: futureDate(2), startTime: '10:00', description: '[What’s wrong]', newBike: { make: '[Make]', model: '[Model]' }, serviceIds: [serviceId], ...BOOKING_CONTACT, email: lia.email, serviceReminders: true }),
+      body: JSON.stringify({ mechanicId: mechanic, jobDate, startTime: '10:00', description: '[What’s wrong]', newBike: { make: '[Make]', model: '[Model]' }, serviceIds: [serviceId], ...BOOKING_CONTACT, email: lia.email, serviceReminders: true }),
     });
     await blockedBy(conn);
-    // ...and finishes: her details blanked, her sign-in gone.
-    await conn.query("UPDATE customers SET name = '', email = '', phone = '', active = 0, deleted_at = now() WHERE id = $1", [lia.id]);
-    await conn.query('DELETE FROM customer_sessions WHERE customer_login_id = $1', [lia.loginId]);
-    await conn.query('DELETE FROM customer_logins WHERE id = $1', [lia.loginId]);
+    const deleted = await staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
+    assert.equal(deleted.status, 200, JSON.stringify(deleted.body));
     await conn.query('COMMIT');
     res = await booking;
   } finally {
