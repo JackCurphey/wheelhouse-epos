@@ -1825,10 +1825,11 @@ silent:
    and their bikes (the staff-only note on the customer page and bike), and
    messages that never went (taken back, failed or still waiting). The drawn
    list is "details, bikes, jobs, purchases, messages and what you agreed
-   to", and the account never shows those notes. **For Jack to say:** under
-   UK data protection a customer asking the shop for everything is entitled
-   to those notes too; the instant copy leaves them out, and the shop's
-   Privacy requests list (a later piece) can send a fuller copy by hand.
+   to", and the account never shows those notes. Under UK data protection a
+   customer asking the shop for everything is entitled to those notes too;
+   the shop's Privacy requests list (a later piece) can send a fuller copy
+   by hand. **Settled** by Jack's 30 Oct answer 1 ("Leave notes out",
+   `docs/decisions/2026-10-30-answers.md`).
 4. **A formula-looking cell is written as text** (a ' before =, +, -, @), as
    stock take's download does, so a spreadsheet never runs it.
 5. **Each copy is logged** in a new privacy requests table (migration 108),
