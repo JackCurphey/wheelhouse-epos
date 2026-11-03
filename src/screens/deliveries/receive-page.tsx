@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input.tsx';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
+import { newRequestKey } from '@/screens/book/details-rules.ts';
+import { ROUTES } from '@/staff/routes.ts';
 import { Back, Card, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
 import { Count, useSearch } from './new-order.tsx';
 
@@ -16,7 +18,8 @@ import { Count, useSearch } from './new-order.tsx';
  * receive-without-order): pick the supplier it's from if you like, scan each
  * item (each scan adds one, a count can be typed), mark anything wrong, then
  * Book in. A product still to come on the supplier's orders counts against
- * its line; any other is "not on an order". Open to everyone. Frame numbers,
+ * its line; any other is "not on an order". Open to everyone. Book in lands
+ * on Delivery booked in (openspec/changes/delivery-booked-in). Frame numbers,
  * a job waiting for a part and Add this product come later.
  */
 type Product = { id: number; sku: string | null; barcode: string | null; name: string };
@@ -25,7 +28,7 @@ type Kind = 'damaged' | 'wrong_item' | 'missing';
 type Problem = { kind: Kind; qty: number; note: string };
 // A scanned line: on an order (`itemId`) or not on an order.
 type Scanned = { key: string; itemId?: number; productId: number; name: string; sku: string | null; qty: number; problems: Problem[] };
-type Booked = { booked: number; orders: Order[] };
+type Booked = { booked: number; orders: Order[]; deliveryId: number };
 
 const KINDS: { value: Kind; label: string }[] = [
   { value: 'damaged', label: 'Damaged' },
@@ -48,6 +51,7 @@ const problemText = (p: Problem) => (p.kind === 'missing' ? `Missing · ${p.qty}
 
 export function ReceivePage() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const orders = useQuery({ queryKey: ['purchase-orders'], queryFn: () => apiGet<Order[]>('/api/purchase-orders') });
   const suppliers = useQuery({ queryKey: ['suppliers'], queryFn: () => apiGet<Supplier[]>('/api/suppliers') });
@@ -62,6 +66,11 @@ export function ReceivePage() {
   const [said, setSaid] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // One key for the life of the scanned list, so Try again after a lost reply
+  // books in once (openspec/changes/delivery-booked-in, design 6). Once sent, a
+  // list emptied by any route is finished with: the next box gets a new key.
+  const [requestKey, setRequestKey] = useState(newRequestKey);
+  const [keySent, setKeySent] = useState(false);
   const [marking, setMarking] = useState<string | null>(null);
   const matches = useSearch(text);
 
@@ -90,6 +99,11 @@ export function ReceivePage() {
   const newestOf = (s: Supplier) => Math.max(0, ...awaiting.filter((o) => o.supplierId === s.id).map((o) => o.id));
   const sorted = [...(suppliers.data ?? [])].sort((a, b) => newestOf(b) - newestOf(a));
   const shown = allSuppliers || sorted.findIndex((s) => String(s.id) === supplierId) >= PILLS ? sorted : sorted.slice(0, PILLS);
+  // Set during render, as above.
+  if (keySent && scanned.length === 0) {
+    setKeySent(false);
+    setRequestKey(newRequestKey());
+  }
   const scannedOf = (key: string) => scanned.find((s) => s.key === key);
   const lineOf = (itemId: number | undefined) => (itemId === undefined ? undefined : orderLines.find((it) => it.id === itemId));
   // A refresh that finds a scanned line's order all in, or the line with
@@ -165,26 +179,25 @@ export function ReceivePage() {
   async function bookIn() {
     setBusy(true);
     setProblem(null);
+    setKeySent(true);
     try {
       const done = await apiMutate<Booked>('/api/deliveries/receive', {
+        requestKey,
         supplierId: supplierId === null ? null : Number(supplierId),
         items: scanned.filter((s) => s.qty - setAside(s) > 0)
           .map((s) => (s.itemId !== undefined ? { productId: s.productId, itemId: s.itemId, qty: s.qty - setAside(s) } : { productId: s.productId, qty: s.qty - setAside(s) })),
         problems: scanned.flatMap((s) => s.problems.map((p) => (s.itemId !== undefined ? { itemId: s.itemId, ...p } : { productId: s.productId, ...p }))),
       });
-      // Stay on this supplier: once its orders are all in, nothing is left
-      // still to come, rather than moving on to another.
-      setChosen(supplierId);
       for (const next of done.orders) queryClient.setQueryData(['purchase-order', next.id], next);
       queryClient.setQueryData<Order[]>(['purchase-orders'], (os) => os?.map((o) => done.orders.find((n) => n.id === o.id) ?? o));
       void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      setScanned([]);
-      setSaid(`${toBook} items booked in · stock updated`);
+      void queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+      navigate(ROUTES['rs-booked'].replace(':id', String(done.deliveryId)));
     } catch (err) {
       // A refusal is usually counts that moved on: show the server's.
       void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t book the delivery in. Try again in a moment.');
-    } finally {
+      // Only a failure turns Book in back on: after a success the page is moving on.
       setBusy(false);
     }
   }

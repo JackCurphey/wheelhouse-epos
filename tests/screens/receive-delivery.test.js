@@ -66,8 +66,10 @@ async function open(path, { me = OWNER, orders = ORDERS, suppliers = SUPPLIERS, 
         });
         byId.set(id, { ...o, items, status: items.every((it) => it.outstanding === 0) ? 'received' : 'partially_received' });
       }
-      return reply(200, { booked: (body.items ?? []).reduce((n, x) => n + x.qty, 0), orders: touched.map((id) => byId.get(id)) });
+      return reply(200, { booked: (body.items ?? []).reduce((n, x) => n + x.qty, 0), orders: touched.map((id) => byId.get(id)), deliveryId: 77 });
     }
+    // Delivery booked in, where Book in lands (openspec/changes/delivery-booked-in).
+    if (u.pathname === '/api/deliveries/booked-in/77') return reply(200, { id: 77, supplierId: 1, supplierName: '[Supplier]', items: 1, bookedInAt: '2026-09-01T10:00:00.000Z', bookedBy: 'Jack Lewis', lines: [], setAside: [], stillToCome: [] });
     const m = u.pathname.match(/^\/api\/purchase-orders\/(\d+)(?:\/(receive))?$/);
     if (m) {
       const o = byId.get(Number(m[1]));
@@ -97,7 +99,11 @@ async function open(path, { me = OWNER, orders = ORDERS, suppliers = SUPPLIERS, 
   const ui = rtl.render(createElement(shell.AppShell));
   return { ...rtl, ui };
 }
-const receives = () => calls.filter((c) => c.method === 'POST' && c.url.endsWith('/receive'));
+// Each send's request key, kept apart from what it books in.
+const receives = () => calls.filter((c) => c.method === 'POST' && c.url.endsWith('/receive')).map((c) => {
+  const { requestKey, ...body } = c.body;
+  return { ...c, body, requestKey };
+});
 // Search for a product and click it in the list.
 async function pick(r, typed, name) {
   r.fireEvent.change(r.ui.getByRole('searchbox', { name: 'Scan a barcode, or type to search' }), { target: { value: typed } });
@@ -259,13 +265,9 @@ test('Problem?: Something wrong? as drawn; one damaged is set aside and comes of
   assert.ok(scanned.getAllByRole('listitem')[0].textContent.includes('Damaged · 1, set aside'), scanned.getAllByRole('listitem')[0].textContent);
   assert.ok(ui.getByText(/items to book in/).textContent.includes('1 items to book in · 1 set aside'));
   fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
-  await ui.findByText('1 items booked in · stock updated');
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  assert.equal(window.location.pathname, '/workshop/deliveries/delivery/77/booked');
   assert.deepEqual(receives().map((c) => [c.url, c.body]), [['/api/deliveries/receive', { supplierId: 1, items: [{ productId: 12, itemId: 112, qty: 1 }], problems: [{ itemId: 112, kind: 'damaged', qty: 1, note: 'box crushed' }] }]]);
-  assert.ok(ui.queryByRole('list', { name: 'Scanned' }) === null, 'the list empties');
-  // 2 arrived and 1 set aside: nothing of [Product] is to come; the pads are.
-  const toCome = within(ui.getByRole('list', { name: 'Still to come on the order' })).getAllByRole('listitem');
-  assert.ok(!toCome.some((li) => li.textContent.includes('[Product]')), 'the order’s counts refresh');
-  assert.ok(toCome.some((li) => li.textContent.includes('Shimano brake pads')));
 });
 
 test('Cancel in Something wrong? marks nothing', async () => {
@@ -312,7 +314,7 @@ test('?order= naming a closed order says it’s all in, and its lines aren’t s
   assert.ok(ui.queryByRole('list', { name: 'Still to come on the order' }) === null);
 });
 
-test('booking in the last of an order keeps its supplier picked, with nothing still to come, and doesn’t move on to another', async () => {
+test('booking in the last of an order sends the supplier picked, and lands on Delivery booked in', async () => {
   const r = await receivePage({}, '/workshop/deliveries/receive');
   const { ui, within, fireEvent } = r;
   assert.equal(ui.getByRole('radio', { name: '[Supplier 2]' }).checked, true);
@@ -320,10 +322,8 @@ test('booking in the last of an order keeps its supplier picked, with nothing st
   fireEvent.click(await ui.findByRole('option', { name: /^\[Product\]/ }));
   fireEvent.click(within(await ui.findByRole('list', { name: 'Scanned' })).getByRole('button', { name: 'One more: [Product]' }));
   fireEvent.click(ui.getByRole('button', { name: 'Book in 2 items' }));
-  await r.waitFor(() => assert.ok(said(ui, within).textContent.includes('2 items booked in · stock updated'), said(ui, within).textContent));
-  assert.equal(ui.getByRole('radio', { name: '[Supplier]' }).checked, false, 'the other supplier isn’t picked for them');
-  assert.equal(ui.getByRole('radio', { name: '[Supplier 2]' }).checked, true, 'the supplier stays picked');
-  await r.waitFor(() => assert.ok(ui.queryByRole('list', { name: 'Still to come on the order' }) === null));
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  assert.equal(receives()[0].body.supplierId, 2, 'booked in from the supplier picked');
 });
 
 test('a refused booking refreshes the orders, so the counts shown are the server’s', async () => {
@@ -400,7 +400,7 @@ test('one Book in sends the order’s lines and the lines not on an order togeth
   fireEvent.click(box.getByRole('button', { name: 'Mark as wrong item' }));
   assert.ok(scanned.getAllByRole('listitem')[1].textContent.includes('Wrong item · 1, set aside'), scanned.getAllByRole('listitem')[1].textContent);
   fireEvent.click(ui.getByRole('button', { name: 'Book in 2 items' }));
-  await r.waitFor(() => assert.ok(said(ui, within).textContent.includes('2 items booked in · stock updated'), said(ui, within).textContent));
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
   assert.deepEqual(receives().map((c) => [c.url, c.body]), [['/api/deliveries/receive', {
     supplierId: 1,
     items: [{ productId: 11, itemId: 111, qty: 1 }, { productId: 13, qty: 1 }],
@@ -416,8 +416,71 @@ test('with no supplier picked, a delivery is booked in with no supplier', async 
   const line = within(await ui.findByRole('list', { name: 'Scanned' })).getAllByRole('listitem')[0];
   assert.ok(line.textContent.includes('[Supplier code] · not on an order'), line.textContent);
   fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
-  await r.waitFor(() => assert.equal(receives().length, 1));
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
   assert.deepEqual(receives()[0].body, { supplierId: null, items: [{ productId: 12, qty: 1 }], problems: [] });
+});
+
+// The independent review, 3 Nov (openspec/changes/delivery-booked-in, design 6).
+test('Try again after a lost reply sends the same request key; changing the supplier starts a new list with a new key', async () => {
+  const r = await receivePage({ receiveReply: [500, { error: 'lost' }] });
+  const { ui, fireEvent } = r;
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await ui.findByRole('alert');
+  fireEvent.click(await r.waitFor(() => { const b = ui.getByRole('button', { name: 'Book in 1 items' }); assert.equal(b.disabled, false); return b; }));
+  await r.waitFor(() => assert.equal(receives().length, 2));
+  const [first, again] = receives();
+  assert.match(first.requestKey, /^[A-Za-z0-9_-]{32,128}$/);
+  assert.equal(again.requestKey, first.requestKey);
+  await r.waitFor(() => assert.equal(ui.getByRole('button', { name: 'Book in 1 items' }).disabled, false));
+  fireEvent.click(ui.getByRole('radio', { name: '[Supplier 2]' }));
+  await pick(r, '[Prod', /^\[Product\]/);
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await r.waitFor(() => assert.equal(receives().length, 3));
+  assert.notEqual(receives()[2].requestKey, first.requestKey);
+});
+
+// The re-review, 3 Nov: the key belongs to the list. Emptied after a lost reply,
+// the next box is a new delivery; the same list tried again isn't.
+test('after a lost reply, emptying the list and scanning a new box gets a new key', async () => {
+  const r = await receivePage({ receiveReply: [500, { error: 'lost' }] });
+  const { ui, fireEvent, within } = r;
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await ui.findByRole('alert');
+  fireEvent.click(await r.waitFor(() => within(ui.getByRole('list', { name: 'Scanned' })).getByRole('button', { name: 'One fewer: Shimano brake pads' })));
+  await r.waitFor(() => assert.ok(ui.queryByRole('list', { name: 'Scanned' }) === null));
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(await r.waitFor(() => { const b = ui.getByRole('button', { name: 'Book in 1 items' }); assert.equal(b.disabled, false); return b; }));
+  await r.waitFor(() => assert.equal(receives().length, 2));
+  assert.notEqual(receives()[1].requestKey, receives()[0].requestKey);
+});
+
+test('emptied before anything was sent, then a new box: one key is all it takes, sent once', async () => {
+  const r = await receivePage({ receiveReply: [500, { error: 'lost' }] });
+  const { ui, fireEvent, within } = r;
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(within(await ui.findByRole('list', { name: 'Scanned' })).getByRole('button', { name: 'One fewer: Shimano brake pads' }));
+  await r.waitFor(() => assert.ok(ui.queryByRole('list', { name: 'Scanned' }) === null));
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await r.waitFor(() => assert.equal(receives().length, 1));
+  await ui.findByRole('alert');
+});
+
+test('Book in stays off once it has worked: it never comes back on before the page moves', async () => {
+  const r = await receivePage();
+  const { ui, fireEvent } = r;
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  const button = ui.getByRole('button', { name: 'Book in 1 items' });
+  let cameBackOn = false;
+  const watching = new window.MutationObserver(() => { if (button.isConnected && !button.disabled) cameBackOn = true; });
+  watching.observe(button, { attributes: true, attributeFilter: ['disabled'] });
+  fireEvent.click(button);
+  assert.equal(button.disabled, true);
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  watching.disconnect();
+  assert.equal(cameBackOn, false);
 });
 
 test('changing the supplier empties the list', async () => {
@@ -464,6 +527,6 @@ test('a line whose order was all received elsewhere becomes “not on an order�
   assert.ok(scanned.getAllByRole('listitem')[0].textContent.includes('Damaged · 1, set aside'));
   assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '2');
   fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
-  await r.waitFor(() => assert.equal(receives().length, 1));
-  assert.deepEqual(receives()[0].body, { supplierId: 2, items: [{ productId: 12, qty: 1 }], problems: [{ productId: 12, kind: 'damaged', qty: 1, note: '' }] });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  assert.deepEqual(receives()[0].body, { supplierId: 2, items: [{ productId: 12, qty: 1 }], problems: [{ productId: 12, kind:'damaged', qty: 1, note: '' }] });
 });

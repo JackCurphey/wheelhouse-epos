@@ -33,6 +33,15 @@ async function busyShop(name) {
   const customerId = await runWithShop(made.shop.id, async () =>
     (await prepare("INSERT INTO customers (name, email) VALUES ('Maya Patel', ?) RETURNING id").get(`maya-${randomUUID().slice(0, 8)}@example.com`)).id);
   await seedWorkshopJob({ shopId: made.shop.id, customerId, mechanicId: mechanic.id ?? mechanic });
+  // A delivery with a line and an item set aside (openspec/changes/delivery-booked-in):
+  // they point at products, suppliers and a person, so they mustn't stop a removal.
+  await runWithShop(made.shop.id, async () => {
+    const supplier = (await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES ('[Supplier]', 'mock_csv', '{}', now()) RETURNING id").get()).id;
+    const product = (await prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES ('[Supplier code]', '[Product]', 'Parts', 28, 28, 0, now()) RETURNING id").get()).id;
+    const delivery = (await prepare("INSERT INTO deliveries (supplier_id, supplier_name, booked_by_login_id, booked_by_name) VALUES (?, '[Supplier]', ?, 'Jack Lewis') RETURNING id").get(supplier, made.loginId)).id;
+    await prepare("INSERT INTO delivery_lines (delivery_id, product_id, product_name, qty, unit_cost) VALUES (?, ?, '[Product]', 1, 28)").run(delivery, product);
+    await prepare("INSERT INTO delivery_problems (product_id, supplier_id, kind, qty, delivery_id, unit_cost, product_name) VALUES (?, ?, 'damaged', 1, ?, 28, '[Product]')").run(product, supplier, delivery);
+  });
   return made;
 }
 
@@ -57,6 +66,8 @@ test('removes the shop and everything it owns, leaving another shop alone', asyn
   assert.equal(await count('SELECT count(*) AS n FROM logins WHERE shop_id = $1', kept.shop.id), 1);
   const keptJobs = await runWithShop(kept.shop.id, async () => (await prepare('SELECT count(*) AS n FROM workshop_jobs').get()).n);
   assert.equal(Number(keptJobs), 1);
+  const keptDeliveries = await runWithShop(kept.shop.id, async () => (await prepare('SELECT count(*) AS n FROM deliveries').get()).n);
+  assert.equal(Number(keptDeliveries), 1);
 });
 
 test('without the address typed a second time, or with it typed differently, it says what it would remove and removes nothing', async () => {
