@@ -89,3 +89,11 @@ When everything sent is in, the page SHALL say how many came across for each kin
 #### Scenario: Some need a look
 - **WHEN** a price list and barcode file finished with rows needing a look
 - **THEN** Products says how many came across and how many, in all, need a look
+
+#### Scenario: Sent again
+- **WHEN** a file is sent again
+- **THEN** the summary says how many were already here, and the number brought across doesn't grow
+
+#### Scenario: Stock that didn't come across
+- **WHEN** a row with stock needs a look
+- **THEN** Stock levels says how many need a look, not All in
