@@ -64,6 +64,45 @@ async function open(path, { me = OWNER, delivery, deliveries = [], status = 200 
 const BOOKED = '/workshop/deliveries/delivery/77/booked';
 const PAGE = '/workshop/deliveries/delivery/77';
 
+// The independent review, 3 Nov (design 7): the Owner's costs don't stay on the
+// computer when the person changes, whichever way it changes.
+for (const [how, act] of [['checks in', (a) => a.checkIn('1234')], ['ends a check-in', (a) => a.switchServing()], ['taps in', (a) => a.tapIn(2)]]) {
+  test(`when someone ${how}, what the last person was sent about deliveries and orders goes`, async () => {
+    uninstall = installDom('http://localhost/workshop');
+    rendered = true;
+    globalThis.fetch = async () => ({ status: 200, ok: true, json: async () => ({ serving: null, checkedInToday: [], deliveries: [] }) });
+    const rtl = await import('@testing-library/react');
+    const { createElement } = await import('react');
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { useCheckinActions } = await importFresh(new URL('../../.test-build/lib/till-checkin.js', import.meta.url).href);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const secret = { bookedCost: 57.1, totalCost: 57.1 };
+    const KEYS = [['deliveries', 77], ['deliveries', 'recent'], ['purchase-orders'], ['purchase-order', 7], ['po-products', 'pads']];
+    for (const key of KEYS) client.setQueryData(key, secret);
+    client.setQueryData(['suppliers'], ['[Supplier]']);
+    let actions;
+    const Grab = () => { actions = useCheckinActions(); return null; };
+    rtl.render(createElement(QueryClientProvider, { client }, createElement(Grab)));
+    try {
+      await rtl.act(async () => { await act(actions); });
+      for (const key of KEYS) assert.ok(client.getQueryData(key) === undefined, JSON.stringify(key));
+      assert.deepEqual(client.getQueryData(['suppliers']), ['[Supplier]'], 'what isn’t about costs stays');
+    } finally {
+      // Its own client: a query left in it keeps the test file running for 5 minutes.
+      client.clear();
+    }
+  });
+}
+
+// On a till signed in as the Owner with Jo checked in, the session still says
+// Owner; what the server sends decides.
+test('Delivery booked in with no costs sent shows no Owner’s links, whatever the sign-in says', async () => {
+  const { ui } = await open(BOOKED, { me: OWNER, delivery: FOR_STAFF });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  assert.ok(ui.getByText('1 set aside as damaged — the owner will return it'));
+  assert.ok(ui.queryByRole('link', { name: 'Open the order from [Supplier]' }) === null);
+});
+
 test('Delivery booked in, as the Owner: what happened, what was set aside and still to come, with their links', async () => {
   const { ui, within } = await open(BOOKED, { delivery: FOR_OWNER });
   await ui.findByRole('heading', { level: 2, name: 'Booked in' });

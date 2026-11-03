@@ -1,7 +1,6 @@
 import { Link, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, apiGet } from '@/lib/api/client.ts';
-import { useSession } from '@/lib/auth/use-session.ts';
 import { buttonVariants } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
@@ -53,10 +52,11 @@ function Waiting({ failed, gone }: { failed: boolean; gone: boolean }) {
 
 /** Delivery booked in: what happened and what's next (rs-booked, rs-booked-staff; audit M10). */
 export function DeliveryBookedPage() {
-  const session = useSession();
-  const owner = session.status === 'signed-in' && session.user.isOwner;
   const { delivery: d, failed, gone } = useDelivery();
   if (!d) return <Waiting failed={failed} gone={gone} />;
+  // Who can order stock: the server sends costs only to them, following who's
+  // checked in; the sign-in on a till can be the Owner's with Jo serving.
+  const owner = d.bookedCost !== undefined;
   const kinds = (['damaged', 'wrong_item'] as const)
     .map((kind) => ({ kind, qty: d.setAside.filter((p) => p.kind === kind).reduce((n, p) => n + p.qty, 0) }))
     .filter((k) => k.qty > 0);

@@ -64,7 +64,7 @@ export function OrderPage() {
           ))}
         </ul>
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1.5">
-          <span className="text-size-15">Total cost <span className={`text-base font-bold ${mono}`}>{money(o.totalCost)}</span></span>
+          {o.totalCost !== undefined ? <span className="text-size-15">Total cost <span className={`text-base font-bold ${mono}`}>{money(o.totalCost)}</span></span> : <span />}
           {isOpen(o) && (owner || o.status !== 'draft') ? (
             <span className="flex flex-wrap gap-2">
               {owner ? <Button variant="default" disabled={busy} onClick={() => setClosing(true)}>Close the order</Button> : null}
