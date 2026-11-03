@@ -1928,6 +1928,110 @@ silent:
     a copy yet (Mark's step C), so whether a till drops a customer missing
     from a newer copy is a question for step C's design.
 
+### 3 Nov 2026: a delivery, once it's booked in (`openspec/changes/delivery-booked-in`, `rs-booked`, `rs-booked-staff`, `rs-delivery`, `rs-delivery-staff`, `rs-hub`; WP-2.3; receiving decisions 4, 9 and 10)
+
+**Why this piece:** the earliest open piece with a drawing that needs nothing
+of Mark's. Slice A and B's open pieces wait on step C, the till deposit or
+roles; WP-2.1's rest (categories, sizes and colours, changing prices) is
+WP-1.5's. So: slice C, WP-2.3.
+
+1. **Deliveries from before this piece aren't shown.** Nothing recorded them
+   as deliveries; the stock history could only guess at which lines came
+   together, and a guess isn't a record. Recent deliveries starts empty.
+2. **Recent deliveries is the newest 10, and no section at all with none.**
+   The drawing doesn't say how many or what none looks like. *Pattern:* To
+   return, shown only when something's on it.
+3. **Staff read "the owner will return it"** where the drawing has "[Owner]
+   will return it", without the name. *Pattern:* "Orders are for the shop's
+   owner for now."
+4. **"Set aside" is one line per kind:** "1 set aside as damaged", "2 set aside
+   as a wrong item". The drawing shows only damaged.
+5. **With nothing in stock, the page says "Nothing booked in"**, not "0 items
+   booked in · stock updated", which isn't true of a delivery that was all
+   damaged. Not drawn.
+6. **"1 item", not "1 items",** on the new pages and Recent deliveries.
+   Receive a delivery's own "Book in 1 items" is unchanged, as built.
+7. **See the list goes to Deliveries and orders**, where To return is second on
+   the page; it doesn't scroll to the supplier's section.
+8. **A line's cost is copied when it's booked in:** the order line's, or the
+   product's when it isn't on an order. A product with no cost set shows
+   £0.00, as a stock list does. A set-aside item keeps its cost the same way.
+9. **An item sent back says Returned** on its delivery instead of On To return
+   (not drawn; the word is the To return list's button). Missing items aren't
+   listed: they never arrived, and they stay to come on the order.
+10. **A booking that only marks items missing keeps no delivery.** The old
+    app's order route can do that; Receive a delivery can't.
+11. **A delivery with no supplier is named "Delivery · [n] items"** (not drawn).
+12. **The frame's title stays "Deliveries and orders"** on these pages, not the
+    drawing's "Delivery booked in" and "Delivery". *Pattern:* every sub-page,
+    such as Receive a delivery and an order.
+13. **Left out, as they need what isn't built:** the job line ("1 held for
+    WH-1042"; order lines don't record a job), "Cost went up? Change it" (a
+    product's cost isn't edited until WP-1.5), the Invoice section (later,
+    issue #116 question 6), Cycle to Work and frame numbers.
+14. **Order costs are for the Owner only, on the server too.** Follows Reports
+    and accounts decisions 5 and 9 (`2026-10-01-reports-and-accounts-review.md`:
+    each person's "Can see costs and margin" switch, off to start, drawing
+    `rp-person`) and Jack's comment of 3 Nov ("it should be a setting,
+    ultimately, that the owner decides in setup whether staff can see costs or
+    not"). Owner only until roles add the switch. `GET /api/purchase-orders`,
+    `GET /api/purchase-orders/:id`, Book in's reply and the delivery routes all
+    go through one function, `canSeeCosts` (`server/lib/can-see-costs.js`), where
+    the switch plugs in. On a shared computer it follows who's checked in. An
+    order's page leaves out Total cost when none is sent, and the old app's
+    order pages show a dash. A till with nobody checked in gets no costs, even
+    under the Owner's sign-in.
+    **Noted, not changed:** `/api/products` still sends each product's cost to
+    anyone signed in; New order reads it. It's outside this piece's routes.
+15. **Waits on roles:** "Can see costs and margin" for staff.
+16. **A delivery names the person checked in by PIN,** or on an ordinary browser
+    the person signed in, with the name copied so it stays if they're deleted.
+    **On a till or workshop computer with nobody checked in, Book in is refused**
+    ("Check in with your PIN first"), as the float check is, because it would
+    name the wrong person. **Noted, not changed:** a product's stock history
+    still names the sign-in (`stock_movements.login_id`), as it does for every
+    stock change, so on a shared computer it can read the Owner.
+17. **Book in has a request key,** made once for the scanned list and new when
+    the supplier changes, as a booking's is. If the reply was lost and the person
+    changes the list before trying again, Book in is refused and says to check
+    Recent deliveries, not booked in a second time. Emptying the list starts a
+    new delivery with a new key (the re-review, 3 Nov), so if that first send did
+    get through, the next box is rightly its own.
+18. **Names on a delivery are as they were when it was booked in:** supplier,
+    product and code, on its lines and what was set aside. Labels use the product
+    as it is now.
+19. **Delivery booked in's links follow what the server sent,** not the sign-in,
+    so Jo at a till signed in as the Owner doesn't get them.
+
+### 3 Nov 2026: Print labels (`openspec/changes/delivery-labels`, `rs-labels`, `rs-booked`, `rs-booked-staff`; WP-2.3; receiving decision 8; Jack's 26 Oct answer 5)
+
+1. **The label itself wasn't drawn.** It prints what the old app's sticker
+   does: name, price, a Code 128 barcode of the product's barcode or, with
+   none, its code, and that code in words. *Pattern:* the old app's sticker,
+   printed as the bike tag is. A stand-in until shops design their own
+   printouts.
+2. **"Printing on [Label printer], the one used last" and Change are left out,**
+   and the box's note drops "and new ones added in this delivery". The print
+   helper was dropped for browser printing (26 Oct answer 5), so the browser's
+   print window picks the printer, and Add this product isn't built.
+3. **The size is the shop's saved label size** (`label_settings`, 50 by 25 mm
+   unless changed). The drawing has no size. Only the old app's sticker box can
+   change it for now; a label-size setting in the new app isn't drawn.
+4. **A product with neither barcode nor code prints its name and price,** with
+   no barcode, so it can't be scanned; a code Code 128 can't draw prints in
+   words only.
+5. **Print labels is only on Delivery booked in,** as drawn, not on a delivery's
+   page later. **"Print 0 labels" is off**, with the box still open to add some.
+6. **A count can go above what was received,** for spares, up to about ten
+   times what came: at least 10, 500 at most, so a slip can't print thousands.
+   A line starts at what came only up to 500.
+   The drawing says any count can be changed; the limit is the review's, 3 Nov.
+7. **The barcode has clear space each side and fits the label:** a narrowest bar
+   of 0.33 mm where it fits, and a long code scaled down to the label's width.
+   A very long code on a 50 mm label has thin bars a scanner may not read. No
+   real scan has been tried yet.
+8. **"Booked in just now" lasts 5 minutes,** then the box says the day.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

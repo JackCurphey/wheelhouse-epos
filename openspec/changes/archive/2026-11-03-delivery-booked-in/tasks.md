@@ -15,8 +15,10 @@
 
 ## 2. Screens (next pull request)
 
-- [ ] 2.1 Tests first: Book in lands on Delivery booked in, as Owner and as Staff; a delivery with and without costs; Recent deliveries; a load that fails (`tests/screens/delivery-booked-in.test.js`); update the receive tests and browser spec. Watch each fail
-- [ ] 2.2 Build `rs-booked`, `rs-delivery`, Recent deliveries on `rs-hub`
-- [ ] 2.3 Break each key rule on purpose, see its test go red, and restore
-- [ ] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
-- [ ] 2.5 `/opsx:archive` as the last commit
+- [x] 2.1 Tests first: Book in lands on Delivery booked in, as Owner and as Staff; a delivery with and without costs; Recent deliveries; a load that fails (`tests/screens/delivery-booked-in.test.js`); update the receive tests and browser spec. Watch each fail
+- [x] 2.2 Build `rs-booked`, `rs-delivery`, Recent deliveries on `rs-hub`
+- [x] 2.3 Break each key rule on purpose, see its test go red, and restore
+- [x] 2.3a The independent review, 3 Nov: Book in sends one request key for the list and stays off after success; costs and orders go from the computer when the person changes; an order with no costs sent says nothing about them; Delivery booked in's links follow what the server sent. Tests first, watched failing, each broken on purpose
+- [x] 2.3b The re-review, 3 Nov: a list emptied after a lost reply starts a new key; the same list keeps it. Tests first, watched failing
+- [x] 2.4 Log choices in Jack's section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
+- [x] 2.5 `/opsx:archive` as the last commit

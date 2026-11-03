@@ -93,7 +93,8 @@ advisory lock on the key's hash makes a second send wait for the first. Then:
 - a refused booking keeps nothing, so its key stays free.
 
 A unique index on `deliveries (shop_id, request_key_hash)` is the backstop. The
-screen makes one key for the life of the scanned list.
+screen makes one key for the life of the scanned list: the same list tried again
+keeps it, and once a sent list is emptied, the next box gets a new one.
 
 ## 7. Costs
 

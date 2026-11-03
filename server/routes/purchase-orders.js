@@ -675,7 +675,8 @@ export function register(route) {
     if (!row) return notFound(res, 'Delivery not found');
     const costs = await canSeeCosts(req);
     const lines = await db.prepare(
-      'SELECT id, product_id, qty, unit_cost, product_name, product_sku FROM delivery_lines WHERE delivery_id = ? ORDER BY id'
+      `SELECT l.id, l.product_id, l.qty, l.unit_cost, l.product_name, l.product_sku, p.barcode, p.price FROM delivery_lines l JOIN products p ON p.id = l.product_id
+        WHERE l.delivery_id = ? ORDER BY l.id`
     ).all(id);
     const aside = await db.prepare(
       `SELECT id, kind, qty, unit_cost, returned_at, product_name FROM delivery_problems
@@ -696,7 +697,7 @@ export function register(route) {
       ...serializeDelivery(row),
       supplierId: row.supplier_id,
       lines: lines.map((l) => ({
-        id: l.id, productId: l.product_id, name: l.product_name, sku: l.product_sku, qty: l.qty,
+        id: l.id, productId: l.product_id, name: l.product_name, sku: l.product_sku, barcode: l.barcode, price: l.price, qty: l.qty,
         ...(costs ? { unitCost: l.unit_cost, lineCost: costOf(l.qty, l.unit_cost) } : {}),
       })),
       setAside: aside.map((p) => ({

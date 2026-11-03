@@ -48,6 +48,9 @@ export function useCheckinActions() {
     void queryClient.invalidateQueries({ queryKey: CHECKIN_QUERY });
     void queryClient.invalidateQueries({ queryKey: FLOAT_QUERY });
     void queryClient.invalidateQueries({ queryKey: SESSION_QUERY });
+    // What the last person was sent about costs doesn't stay on the computer
+    // (openspec/changes/delivery-booked-in, design 7): a screen showing it reads again.
+    for (const queryKey of [['deliveries'], ['purchase-orders'], ['purchase-order'], ['po-products']]) void queryClient.resetQueries({ queryKey });
   };
   return {
     async checkIn(pin: string) {

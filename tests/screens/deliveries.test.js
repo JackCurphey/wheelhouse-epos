@@ -290,6 +290,14 @@ test('an order, as drawn: supplier and date, Partly delivered, each line ordered
   assert.ok(ui.getByText('Closing the order drops anything still to come.'));
 });
 
+// The server leaves costs out for anyone but the Owner (delivery-booked-in design 7).
+test('an order sent with no costs says nothing about them', async () => {
+  const { ui } = await open('/workshop/deliveries/orders/7', { orders: [{ ...order(), totalCost: undefined }] });
+  await ui.findByRole('list', { name: 'Lines' });
+  assert.ok(ui.queryByText(/Total cost/) === null);
+  assert.ok(!ui.getByRole('main').textContent.includes('NaN'));
+});
+
 test('a line that has all arrived says All arrived', async () => {
   const { ui, within } = await open('/workshop/deliveries/orders/7', { orders: [order({ status: 'partially_received', items: [item(PADS, 1, 1), item(TUBE, 3, 0)] })] });
   await ui.findByRole('list', { name: 'Lines' });
