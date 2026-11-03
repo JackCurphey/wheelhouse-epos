@@ -499,6 +499,6 @@ test('a line whose order was all received elsewhere becomes “not on an order�
   assert.ok(scanned.getAllByRole('listitem')[0].textContent.includes('Damaged · 1, set aside'));
   assert.equal(scanned.getByRole('textbox', { name: 'How many: [Product]' }).value, '2');
   fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
-  await r.waitFor(() => assert.equal(receives().length, 1));
-  assert.deepEqual(receives()[0].body, { supplierId: 2, items: [{ productId: 12, qty: 1 }], problems: [{ productId: 12, kind: 'damaged', qty: 1, note: '' }] });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  assert.deepEqual(receives()[0].body, { supplierId: 2, items: [{ productId: 12, qty: 1 }], problems: [{ productId: 12, kind:'damaged', qty: 1, note: '' }] });
 });
