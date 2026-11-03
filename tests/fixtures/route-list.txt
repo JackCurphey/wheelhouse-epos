@@ -174,6 +174,8 @@ POST /api/portal/:shopSlug/sign-in/code
 POST /api/portal/:shopSlug/sign-in/check
 POST /api/portal/:shopSlug/logout
 GET /api/portal/:shopSlug/me
+POST /api/portal/:shopSlug/me/delete-request
+POST /api/portal/:shopSlug/me/delete-request/cancel
 PUT /api/portal/:shopSlug/me/contact
 GET /api/portal/:shopSlug/mechanics
 GET /api/portal/:shopSlug/services
@@ -188,8 +190,6 @@ POST /api/portal/:shopSlug/booking-links/:code/quote/answer
 GET /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/history
 POST /api/portal/:shopSlug/me/data-copy
-POST /api/portal/:shopSlug/me/delete-request
-POST /api/portal/:shopSlug/me/delete-request/cancel
 GET /api/portal/:shopSlug/messages
 POST /api/portal/:shopSlug/messages
 POST /api/portal/:shopSlug/bookings
@@ -291,3 +291,5 @@ GET /api/stock-takes/:id/download
 GET /api/privacy-requests
 GET /api/privacy-requests/open-count
 POST /api/privacy-requests/:id/delete
+GET /api/move
+POST /api/move/files
