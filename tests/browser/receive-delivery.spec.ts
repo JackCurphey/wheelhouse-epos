@@ -84,7 +84,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     // It's on Recent deliveries; its page has no costs for Jo, on the page or from the server.
     await main.getByRole('link', { name: 'Deliveries and orders' }).click();
     const recent = main.getByRole('list', { name: 'Recent deliveries' });
-    await recent.getByRole('link', { name: new RegExp(`Open the delivery from ${supplierName}`) }).first().click();
+    await recent.getByRole('link', { name: `Open the delivery from ${supplierName},` }).first().click();
     await expect(main.getByRole('heading', { level: 2, name: `${supplierName} · 2 items` })).toBeVisible();
     await expect(main.getByText('Booked in', { exact: false }).first()).toContainText('by Jo Taylor');
     await expect(main.getByRole('list', { name: 'Items in this delivery' })).toContainText(`B05S-RX-${size} · 2`);
@@ -116,6 +116,8 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     const main = page.getByRole('main');
     await expect(main.getByText('Scan each item as it comes out of the box. Works with or without an order.')).toBeVisible();
     await main.getByRole('link', { name: 'Receive a delivery' }).click();
+    // The suppliers load first, or Other… looks missing and the pill too.
+    await main.getByRole('radio').first().waitFor();
     const pill = main.getByRole('radio', { name: supplierName, exact: true });
     if (!(await pill.count())) await main.getByRole('button', { name: 'Other…' }).click();
     await main.getByText(supplierName, { exact: true }).click();
