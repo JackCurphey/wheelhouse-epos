@@ -13,13 +13,15 @@ const REPORTS = {
   },
 };
 const HEADING_ROWS = 20;
+const MAX_KEPT_CHARS = 64_000_000;
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
 /**
  * @param {string[][]} rows a file's rows
- * @returns {{ report: string, rows: Record<string,string>[], storeName: string } | null}
- * null when it's no report we know, or has none of its rows. Only the columns
- * used are kept, and rows with nothing in them are dropped.
+ * @returns {{ report: string, rows: string[], storeName: string } | null} each
+ * row as JSON. null when it's no report we know, has none of its rows, or keeps
+ * too much. Only the columns used are kept, rows with nothing in them are
+ * dropped, and text is made safe to store.
  */
 export function recognise(rows) {
   for (const [report, { needs, keeps }] of Object.entries(REPORTS)) {
@@ -31,17 +33,24 @@ export function recognise(rows) {
     const cells = rows[headingAt].map(norm);
     const wanted = keeps.map((name) => [name, cells.indexOf(norm(name))]).filter(([, at]) => at >= 0);
     const out = [];
+    let kept = 0;
+    let storeName = '';
     for (const row of rows.slice(headingAt + 1)) {
       const data = {};
       for (const [name, at] of wanted) {
-        // A stray nothing-character is the one thing Postgres won't store.
-        const v = String(row[at] ?? '').replaceAll('\u0000', '').trim();
+        // Half a character, or a nothing-character, Postgres won't store.
+        const v = String(row[at] ?? '').replaceAll('\u0000', '').toWellFormed().trim();
         if (v !== '') data[name] = v;
       }
-      if (Object.keys(data).length) out.push(data);
+      if (Object.keys(data).length === 0) continue;
+      const json = JSON.stringify(data);
+      kept += json.length;
+      if (kept > MAX_KEPT_CHARS) return null;
+      storeName ||= data.Store ?? '';
+      out.push(json);
     }
     if (out.length === 0) return null;
-    return { report, rows: out, storeName: out.find((d) => d.Store)?.Store ?? '' };
+    return { report, rows: out, storeName };
   }
   return null;
 }
