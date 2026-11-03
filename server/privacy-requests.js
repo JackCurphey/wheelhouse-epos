@@ -7,7 +7,7 @@ import path from 'node:path';
 import { prepare, dbExec } from './db.js';
 import { wipedAnswers, wipedNotes, wipedTitle, REMOVED } from './workshop/booking-notes.js';
 import { UPLOADS_DIR } from './lib/uploads.js';
-import { forgetMoveRows } from './move/bring-customers.js';
+import { forgetForMove } from './move/bring-customers.js';
 
 export const shopZone = async () => (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
 
@@ -138,6 +138,9 @@ async function deleteOnce(requestId) {
   await dbExec('BEGIN');
   try {
     await prepare(`SET LOCAL lock_timeout = '${LOCK_WAIT}'`).run();
+    // The move files before anything else, as a batch bringing a file across
+    // takes them before its customers (citrus-import-customers, design 15).
+    await prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
     const asked = await prepare('SELECT customer_id, kind FROM privacy_requests WHERE id = ?').get(requestId);
     if (!asked || asked.kind !== 'delete' || asked.customer_id === null) {
       await dbExec('ROLLBACK');
@@ -178,8 +181,9 @@ async function deleteOnce(requestId) {
       `SELECT lower(email) AS email FROM customers WHERE id = ANY(?::int[]) AND email <> ''
        UNION SELECT lower(email) FROM customer_logins WHERE customer_id = ANY(?::int[])`
     ).all(ids, ids)).map((r) => r.email);
-    // Rows about them still waiting in a Citrus Lime file (citrus-import-customers, design 8).
-    await forgetMoveRows(ids, emails);
+    // One-way codes of them for a Citrus Lime file to be checked against, and rows
+    // about them still waiting in one go (Jack, 3 Nov; citrus-import-customers, design 8 and 10).
+    await forgetForMove(ids, emails);
     const jobs = (await prepare('SELECT id FROM workshop_jobs WHERE customer_id = ANY(?::int[])').all(ids)).map((j) => j.id);
     const sales = (await prepare('SELECT id FROM sales WHERE customer_id = ANY(?::int[])').all(ids)).map((s) => s.id);
 
@@ -239,7 +243,7 @@ async function deleteOnce(requestId) {
     }
     // Answer 3.2: their bikes stay as bare rows, for the kept jobs.
     await prepare(
-      `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', active = 0, updated_at = now()
+      `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', citrus_ref = NULL, active = 0, updated_at = now()
         WHERE customer_id = ANY(?::int[])`
     ).run(ids);
     // Answer 3.1: the records stay, with nothing that identifies them.
@@ -248,6 +252,7 @@ async function deleteOnce(requestId) {
               is_company = false, contact_name = NULL, vat_number = NULL, invoice_email = NULL,
               update_channel = NULL, service_reminders = false, review_requests = false, marketing_permission = false,
               reminders_said_yes_at = NULL, reminders_said_yes_via = NULL, email_from_customer = false,
+              citrus_account = NULL, marketing_consent_on = NULL,
               active = 0, deleted_at = now(), updated_at = now()
         WHERE id = ANY(?::int[])`
     ).run(ids);

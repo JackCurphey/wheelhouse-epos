@@ -1,22 +1,35 @@
 // A customer or bike row from Citrus Lime (openspec/changes/citrus-import-customers,
-// design 4 to 8). Inside bringBatch's transaction.
+// design 4 to 8 and 10 to 16). Inside bringBatch's transaction.
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { prepare } from '../db.js';
 
 export const NO_CUSTOMER = 'The customer on this bike isn’t in the customers file';
-const look = (why) => ({ state: 'look', why });
+// The customer's name is looked up when it's shown (lookRows), never stored in the row.
+export const SAME_PERSON = 'Looks like the same person as';
+const SEVERAL_CONTACT = 'More than one customer has this email or phone';
+const SEVERAL_NAME = 'More than one customer has this name';
+const NAME_DIFFERS = 'The name on this bike isn’t the name of the customer with this email or phone';
+const look = (why, customerId) => ({ state: 'look', why, customerId });
 const YES = /^(yes|true|y|1)$/i;
 // The same index expression as migration 112.
 const DIGITS = "regexp_replace(coalesce(phone, ''), '\\D', '', 'g')";
 const LIVE = 'deleted_at IS NULL AND merged_into_id IS NULL';
 
-// A number however it's written, as customers may hold it: 07700…, +44 7700…, 0044 7700….
-function phoneForms(text) {
+// A UK number however it's written, without its country code or leading 0:
+// 07700…, +44 7700…, 0044 7700…, +44 (0)7700…. Empty when it's too short to be one.
+function nationalNumber(text) {
   const digits = String(text ?? '').replace(/\D/g, '');
-  if (digits.length < 7) return [];
-  const national = digits.startsWith('0044') ? digits.slice(4) : digits.startsWith('44') && digits.length === 12 ? digits.slice(2) : digits.startsWith('0') ? digits.slice(1) : digits;
-  return [`0${national}`, `44${national}`, `0044${national}`, national];
+  if (digits.length < 7) return '';
+  const rest = digits.startsWith('0044') ? digits.slice(4) : digits.startsWith('44') && digits.length >= 12 ? digits.slice(2) : digits;
+  return rest.replace(/^0/, '');
+}
+// Every way it may be held, as digits: for finding a customer, a bike's owner, and waiting rows.
+function phoneForms(text) {
+  const national = nationalNumber(text);
+  return national ? [national, `0${national}`, `44${national}`, `0044${national}`, `440${national}`, `00440${national}`] : [];
 }
 const cleanEmail = (text) => String(text ?? '').trim().toLowerCase();
+const cleanName = (text) => String(text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 const realDay = (y, m, d) => {
   const at = new Date(Date.UTC(y, m - 1, d));
   return at.getUTCFullYear() === y && at.getUTCMonth() === m - 1 && at.getUTCDate() === d ? at.toISOString().slice(0, 10) : null;
@@ -34,45 +47,73 @@ export function consentDay(text) {
   return iso ? realDay(Number(iso[1]), Number(iso[2]), Number(iso[3])) : null;
 }
 
-async function liveByEmail(email, suffix = '') {
-  return email ? prepare(`SELECT id, name FROM customers WHERE lower(trim(email)) = ? AND email <> '' AND ${LIVE} ORDER BY id LIMIT 1${suffix}`).get(email) : undefined;
+// One-way codes of what a deleted person leaves behind (Jack, 3 Nov,
+// docs/decisions/2026-11-03-answers.md): keyed with the shop's own random salt,
+// so they can't be compared across shops or worked back from a list. They're used
+// only to spot and skip that person on import, and are linked to nothing else.
+const codeOf = (salt, kind, value) => createHmac('sha256', salt).update(`${kind}:${value}`).digest('hex');
+const codesFor = (salt, { account, emails = [], phones = [] }) => [
+  ...(account ? [['account', String(account).trim()]] : []),
+  ...emails.map(cleanEmail).filter(Boolean).map((v) => ['email', v]),
+  ...phones.map(nationalNumber).filter(Boolean).map((v) => ['phone', v]),
+].map(([kind, value]) => [kind, codeOf(salt, kind, value)]);
+
+/** The shop's salt, for a batch; null when nobody has been deleted here yet. */
+export async function moveSalt() {
+  return (await prepare('SELECT salt FROM move_deleted_salt').get())?.salt ?? null;
 }
-async function liveByPhone(forms, suffix = '') {
-  return forms.length ? prepare(`SELECT id, name FROM customers WHERE ${DIGITS} = ANY(?) AND phone <> '' AND ${LIVE} ORDER BY id LIMIT 1${suffix}`).get(forms) : undefined;
+async function wasDeleted(context, person) {
+  if (!context.salt) return false;
+  const codes = codesFor(context.salt, person);
+  if (codes.length === 0) return false;
+  const hit = await prepare('SELECT 1 AS yes FROM move_deleted_codes WHERE code = ANY(?) LIMIT 1').get(codes.map(([, code]) => code));
+  return Boolean(hit);
 }
 
-export async function customerRow(d) {
-  const account = d['Account Number'] || null;
-  const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
-  if (!name) return look('No name');
-  // Deleted or merged included: they've come across, and stay as they are (design 5).
-  if (account && (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account))) return { state: 'in' };
+const liveMatches = (email, forms) => prepare(
+  `SELECT id, name FROM customers
+    WHERE ${LIVE} AND ((? <> '' AND email <> '' AND lower(trim(email)) = ?) OR (phone <> '' AND ${DIGITS} = ANY(?)))
+    ORDER BY id LIMIT 2`
+).all(email, email, forms);
+
+export async function customerRow(d, file, context) {
+  const account = (d['Account Number'] ?? '').trim();
   const email = (d.Email ?? '').trim();
   const phone = (d.Phone ?? '').trim();
-  const same = (await liveByEmail(cleanEmail(email))) ?? (await liveByPhone(phoneForms(phone)));
-  if (same) return look(`Looks like the same person as ${same.name}`);
+  // Someone who asked to be deleted never comes back, however the file's sent.
+  if (await wasDeleted(context, { account, emails: [email], phones: [phone] })) return { state: 'skipped' };
+  const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
+  if (!name) return look('No name');
+  // With no account number a resent file couldn't tell them from themselves.
+  if (!account) return look('No account number');
+  // Merged included: they've come across, and stay as they are (design 5).
+  if (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account)) return { state: 'same' };
+  const [same] = await liveMatches(cleanEmail(email), phoneForms(phone));
+  if (same) return look(SAME_PERSON, same.id);
   const address = [d.Address, d['Address 2'], d.City, d.County, d.Country].filter(Boolean).join(', ') || null;
   const yes = YES.test(d['GDPR Consent'] ?? '');
-  await prepare(
+  const made = await prepare(
     `INSERT INTO customers (name, email, phone, address, postcode, marketing_permission, marketing_consent_on, citrus_account, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?::date, ?, now())
      ON CONFLICT (shop_id, citrus_account) WHERE citrus_account IS NOT NULL DO NOTHING RETURNING id`
   ).get(name, email, phone, address, d.Postcode ?? null, yes, yes ? consentDay(d['GDPR Consent Date']) : null, account);
-  return { state: 'in' };
+  return { state: made ? 'in' : 'same' };
 }
 
-// Whose bike, by email, mobile, phone, then the exact name (design 7).
-async function bikeOwner(d, suffix = '') {
-  const found = (await liveByEmail(cleanEmail(d['Email Address']), suffix))
-    ?? (await liveByPhone(phoneForms(d['Mobile Number']), suffix))
-    ?? (await liveByPhone(phoneForms(d['Phone Number']), suffix));
-  if (found) return found;
-  const name = (d['Customer Name'] ?? '').trim();
-  if (!name) return null;
-  const named = await prepare(`SELECT id, name FROM customers WHERE lower(trim(name)) = lower(?) AND ${LIVE} ORDER BY id LIMIT 2`).all(name);
-  if (named.length > 1) return { several: true };
-  if (!named[0]) return null;
-  return suffix ? prepare(`SELECT id, name FROM customers WHERE id = ? AND ${LIVE}${suffix}`).get(named[0].id) : named[0];
+// Whose bike: everyone its email or phones fit, then the exact name (design 7 and 12).
+async function bikeOwner(d) {
+  const forms = [...phoneForms(d['Mobile Number']), ...phoneForms(d['Phone Number'])];
+  const contacts = await liveMatches(cleanEmail(d['Email Address']), forms);
+  const name = cleanName(d['Customer Name']);
+  if (contacts.length > 1) return { why: SEVERAL_CONTACT };
+  if (contacts.length === 1) {
+    if (name && cleanName(contacts[0].name) !== name) return { why: NAME_DIFFERS, customerId: contacts[0].id };
+    return { id: contacts[0].id };
+  }
+  if (!name) return { why: NO_CUSTOMER };
+  const named = await prepare(`SELECT id FROM customers WHERE lower(trim(name)) = ? AND ${LIVE} ORDER BY id LIMIT 2`).all(name);
+  if (named.length > 1) return { why: SEVERAL_NAME };
+  return named[0] ? { id: named[0].id } : { why: NO_CUSTOMER };
 }
 
 // The batch's customers, locked in id order before any row is written (design 7).
@@ -80,41 +121,66 @@ export async function lockBikeOwners(rows) {
   const ids = new Set();
   for (const { data } of rows) {
     const owner = await bikeOwner(data);
-    if (owner?.id) ids.add(owner.id);
+    if (owner.id) ids.add(owner.id);
   }
   await prepare('SELECT id FROM customers WHERE id = ANY(?::int[]) ORDER BY id FOR SHARE').all([...ids]);
 }
 
-export async function bikeRow(d) {
+export async function bikeRow(d, file, context) {
+  if (await wasDeleted(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] })) return { state: 'skipped' };
   if (!d.Description) return look('No description');
-  const owner = await bikeOwner(d, ' FOR SHARE');
-  if (owner?.several) return look('More than one customer has this name');
-  if (!owner) return look(NO_CUSTOMER);
+  const owner = await bikeOwner(d);
+  if (!owner.id) return look(owner.why, owner.customerId);
+  // Read again under lock: a deletion that got there first is seen.
+  const live = await prepare(`SELECT id FROM customers WHERE id = ? AND ${LIVE} FOR SHARE`).get(owner.id);
+  if (!live) return look(NO_CUSTOMER);
   const serial = d['Serial Number'] ?? '';
-  const had = await prepare('SELECT id FROM customer_bikes WHERE customer_id = ? AND model = ? AND serial_number = ?').get(owner.id, d.Description, serial);
-  if (had) return { state: 'in' };
-  await prepare('INSERT INTO customer_bikes (customer_id, model, serial_number) VALUES (?, ?, ?)').run(owner.id, d.Description, serial);
+  // This row of Citrus Lime's, however the bike's been corrected since (design 16).
+  const ref = createHash('sha256').update(JSON.stringify([d.Description, serial, cleanName(d['Customer Name']), cleanEmail(d['Email Address'])])).digest('hex');
+  const had = await prepare(
+    `SELECT id FROM customer_bikes WHERE citrus_ref = ? OR (customer_id = ? AND ((? <> '' AND serial_number = ?) OR (model = ? AND serial_number = ?))) LIMIT 1`
+  ).get(ref, live.id, serial, serial, d.Description, serial);
+  if (had) return { state: 'same' };
+  await prepare('INSERT INTO customer_bikes (customer_id, model, serial_number, citrus_ref) VALUES (?, ?, ?, ?)').run(live.id, d.Description, serial, ref);
   return { state: 'in' };
 }
 
+/** A file's rows needing a look, each reason with the customer's name as it is now. */
+export async function lookRows(fileId) {
+  const rows = await prepare(
+    `SELECT r.id, r.why, c.name FROM move_rows r LEFT JOIN customers c ON c.id = r.customer_id
+      WHERE r.file_id = ? AND r.state = 'look' ORDER BY r.id`
+  ).all(fileId);
+  return rows.map((r) => ({ id: r.id, why: r.why === SAME_PERSON ? `${r.why} ${r.name}` : r.why }));
+}
+
 /**
- * Deleting someone's details (design 8): rows still waiting in a file with their
- * email, phone or account number go. Inside the deletion's transaction, with
- * their customer records locked and not yet blanked.
+ * Deleting someone's details (Jack, 3 Nov; design 8 and 10): one-way codes of
+ * their account number, emails and phones are kept, with nothing else, and rows
+ * about them still waiting in a file go. Inside the deletion's transaction, with
+ * every move file locked first and their customer records not yet blanked.
  */
-export async function forgetMoveRows(customerIds, emails) {
-  const people = await prepare(`SELECT ${DIGITS} AS digits, citrus_account FROM customers WHERE id = ANY(?::int[])`).all(customerIds);
-  const phones = people.flatMap((p) => phoneForms(p.digits));
+export async function forgetForMove(customerIds, emails) {
+  const people = await prepare('SELECT phone, citrus_account FROM customers WHERE id = ANY(?::int[])').all(customerIds);
+  await prepare('INSERT INTO move_deleted_salt (salt) VALUES (?) ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').get(randomBytes(32).toString('hex'));
+  const salt = await moveSalt();
+  const codes = people.flatMap((p) => codesFor(salt, { account: p.citrus_account, phones: [p.phone] }));
+  codes.push(...codesFor(salt, { emails }));
+  for (const [kind, code] of codes) {
+    await prepare('INSERT INTO move_deleted_codes (kind, code) VALUES (?, ?) ON CONFLICT (shop_id, code) DO NOTHING RETURNING id').get(kind, code);
+  }
+  const phones = people.flatMap((p) => phoneForms(p.phone));
   const accounts = people.map((p) => p.citrus_account).filter(Boolean);
   const gone = await prepare(
-    `DELETE FROM move_rows WHERE state <> 'in' AND (
-       lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
+    `DELETE FROM move_rows WHERE state IN ('waiting', 'look') AND (
+       customer_id = ANY(?::int[])
+       OR lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
        OR regexp_replace(coalesce(data->>'Phone', ''), '\\D', '', 'g') = ANY(?::text[])
        OR regexp_replace(coalesce(data->>'Mobile Number', ''), '\\D', '', 'g') = ANY(?::text[])
        OR regexp_replace(coalesce(data->>'Phone Number', ''), '\\D', '', 'g') = ANY(?::text[])
        OR data->>'Account Number' = ANY(?::text[])
      ) RETURNING file_id, state`
-  ).all(emails, phones, phones, phones, accounts);
+  ).all(customerIds, emails, phones, phones, phones, accounts);
   const perFile = new Map();
   for (const { file_id: id, state } of gone) {
     const was = perFile.get(id) ?? { total: 0, look: 0 };

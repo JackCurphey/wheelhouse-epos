@@ -2097,13 +2097,16 @@ WP-1.5's. So: slice C, WP-2.3.
 
 ### 3 Nov 2026: Citrus Lime import, customers and bikes (WP-2.4; `openspec/changes/citrus-import-customers`; `mv-start`, `mv-summary`)
 
-1. **A deleted customer's Citrus Lime account number stays on their blanked record.** It's what stops a file bringing them back; on its own it says nothing about them outside Citrus Lime. This goes beyond the list in Jack's 30 Oct answer 3 ("everything that identifies them is cleared"), so it's his to overrule, at the cost of a resent file bringing them back.
+1. **A deleted customer's account number, email and phone leave only one-way codes behind,** one per shop, used only to spot and skip them when a file comes (Jack's answers, `docs/decisions/2026-11-03-answers.md`, replacing this entry's earlier "the account number stays"). Nothing readable stays. A row that matches is left out and counted, on the summary as "[n] left out, as they asked".
 2. **The same email or phone as a live customer needs a look,** even if it's a family sharing one, as drawn ("Looks like the same person as").
 3. **A bike's whole description goes in Model,** with Make empty. Citrus Lime has one field, and splitting it would be a guess.
-4. **A bike matches by email, then mobile, then phone, then exact name.** A name two customers share needs a look.
-5. **A yes to offers keeps its date if it can be read,** as Excel's day number, dd/mm/yyyy or yyyy-mm-dd; otherwise the yes stands with no date. A no keeps no date.
-6. **Bikes are counted beside customers on the summary** ("[n] brought across · [n] bikes"), as bikes aren't one of the drawn kinds.
-7. **Deleting someone also removes rows about them still waiting in a file,** by email, phone or account number. A row with only their name stays, since a name alone can't be told from someone else's.
+4. **A bike matches everyone its email and phones fit, then the exact name if none do** (the independent review, 3 Nov). It needs a look if they fit two people, if the name on the bike disagrees with the person they fit, or if a name alone fits two.
+5. **A yes to offers keeps its date if it can be read,** as Excel's day number, dd/mm/yyyy or yyyy-mm-dd; otherwise the yes stands with no date. A no keeps no date, and the date goes whenever the yes or no changes (the independent review, 3 Nov).
+6. **Bikes are counted beside customers on the summary** ("[n] brought across · [n] bikes"), as bikes aren't one of the drawn kinds. "· [n] already here" and "· [n] left out, as they asked" are added where they apply.
+7. **Deleting someone also removes rows about them still waiting in a file,** by the customer the row points at, email, phone or account number. A row with only their name stays, since a name alone can't be told from someone else's.
+8. **A customer row with no account number needs a look** (the independent review, 3 Nov): with nothing to know them by, a resent file would add them again.
+9. **A row needing a look holds the customer's id, not their name,** which is looked up when it's shown (the independent review, 3 Nov).
+10. **A bike already brought across isn't added again,** matched by the Citrus Lime row it came from, its frame number on that customer, or the same description and frame (the independent review, 3 Nov).
 
 ## Decided here, for Jack to overrule
 

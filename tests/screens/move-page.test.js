@@ -202,9 +202,16 @@ test('customers: where to find them, how many, the bikes beside them, and any th
   const view = await open({ files: [FILE({ report: 'customers', rowsIn: 12, rowsLook: 2, stockIn: 0 }), FILE({ id: 2, report: 'bikes', rowsIn: 5, rowsLook: 1, stockIn: 0 })] });
   await text(view, /Here’s what came across/);
   assert.match(rowOf('Customers').textContent, /12 brought across · 5 bikes/);
+  assert.ok(!rowOf('Customers').textContent.includes('already here'));
   assert.match(rowOf('Customers').textContent, /3 need a look/);
   assert.match(rowOf('Products').textContent, /Not added yet/);
   assert.match(rowOf('Sales').textContent, /Later/);
+});
+
+test('customers already here, and those left out as they asked, are said, not counted as brought across', async () => {
+  const view = await open({ files: [FILE({ report: 'customers', rowsIn: 0, rowsSame: 4, rowsSkipped: 2, stockIn: 0 })] });
+  await text(view, /Here’s what came across/);
+  assert.match(rowOf('Customers').textContent, /0 brought across · 4 already here · 2 left out, as they asked · 0 bikes.*All in/);
 });
 
 test('the customers row says which reports to download', async () => {

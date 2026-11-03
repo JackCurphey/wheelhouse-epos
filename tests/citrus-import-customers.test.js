@@ -1,13 +1,14 @@
 // Customers and bikes from Citrus Lime (openspec/changes/citrus-import-customers;
 // Moving from Citrus Lime decisions 2 and 3; mv-summary; mv-fix's reasons; Jack's
-// 30 Oct answer 3). Every file is made up. Maya is the drawings'; the rest is placeholder.
+// 30 Oct answer 3 and 3 Nov answers). Every file is made up. Maya is the drawings';
+// the rest is placeholder.
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
-import { bringAcrossRound } from '../server/move/bring-across.js';
-import { consentDay } from '../server/move/bring-customers.js';
+import { bringBatch, readNextFile } from '../server/move/bring-across.js';
+import { consentDay, lookRows } from '../server/move/bring-customers.js';
 import { deleteCustomerDetails } from '../server/privacy-requests.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
@@ -30,19 +31,26 @@ const staff = (path, options) => staffRequest(server.baseUrl, owner.cookie, path
 const key = () => randomBytes(24).toString('hex');
 const send = (file) => staff('/api/move/files', { method: 'POST', body: { fileName: 'export.xlsx', dataBase64: file.toString('base64'), requestKey: key() } });
 const inShop = (fn) => runWithShop(owner.shop.id, fn);
-const finish = async () => { for (let i = 0; i < 5; i += 1) await bringAcrossRound(); };
+// This shop only: going round every shop in the shared test database takes minutes.
+const finish = async () => {
+  while (await readNextFile(owner.shop.id));
+  while (await inShop(() => bringBatch()));
+};
 const fileIn = async (id) => (await staff('/api/move')).body.files.find((f) => f.id === id);
-const whyOf = (fileId) => inShop(() => prepare("SELECT why FROM move_rows WHERE file_id = ? AND state = 'look' ORDER BY id").all(fileId));
+const counts = (f) => ({ rowsIn: f.rowsIn, rowsSame: f.rowsSame, rowsSkipped: f.rowsSkipped, rowsLook: f.rowsLook });
+const whyOf = async (fileId) => (await inShop(() => lookRows(fileId))).map((r) => r.why);
 const byAccount = (account) => inShop(() => prepare('SELECT * FROM customers WHERE citrus_account = ?').get(account));
 const bikesOf = (id) => inShop(() => prepare('SELECT model, serial_number FROM customer_bikes WHERE customer_id = ? ORDER BY id').all(id));
+const customersWith = (email) => inShop(() => prepare('SELECT * FROM customers WHERE email = ?').all(email));
 
 const HEAD = ['Account Number', 'Total Sales', 'First Name', 'Last Name', 'Address', 'Address 2', 'City', 'County', 'Postcode', 'Country', 'Email', 'Phone', 'GDPR Consent', 'GDPR Consent Date'];
 let n = 0;
 // Numbers and addresses unique to each made-up person, none of them real.
+const newPhone = () => { n += 1; return `07700 ${String(900000 + (n * 37 + randomBytes(2).readUInt16BE(0)) % 99999).padStart(6, '9')}`; };
 const person = (over = {}) => {
   n += 1;
-  const v = { 'Account Number': `A${n}-${key().slice(0, 6)}`, 'Total Sales': 99, 'First Name': 'Maya', 'Last Name': `Person${n}`, Address: '[Address]', City: '[City]', Postcode: '[Postcode]', Email: `maya${n}.${key().slice(0, 6)}@example.test`, Phone: `07700 9${String(n).padStart(5, '0')}`, 'GDPR Consent': 'No', ...over };
-  return { v, row: HEAD.map((h) => v[h] ?? null) };
+  const v = { 'Account Number': `A${n}-${key().slice(0, 6)}`, 'Total Sales': 99, 'First Name': 'Maya', 'Last Name': `Person${n}x${key().slice(0, 4)}`, Address: '[Address]', City: '[City]', Postcode: '[Postcode]', Email: `maya${n}.${key().slice(0, 6)}@example.test`, Phone: newPhone(), 'GDPR Consent': 'No', ...over };
+  return { v, row: HEAD.map((h) => v[h] ?? null), name: `${v['First Name']} ${v['Last Name']}` };
 };
 const customers = (...people) => xlsxOf([['Top Customers'], HEAD, ...people.map((p) => p.row)]);
 const BIKE_HEAD = ['Description', 'Serial Number', 'Date Created', 'Customer Name', 'Email Address', 'Mobile Number', 'Phone Number'];
@@ -51,20 +59,18 @@ const bikes = (...rows) => xlsxOf([BIKE_HEAD, ...rows.map((r) => BIKE_HEAD.map((
 test('Top Customers comes across: details joined, offers and their date, and only the columns used', async () => {
   const p = person({ 'GDPR Consent': 'Yes', 'GDPR Consent Date': '05/10/2026', 'Address 2': '[Address 2]' });
   const res = await send(customers(p));
-  assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.equal(res.body.report, 'customers');
-  const kept = await inShop(() => prepare('SELECT data FROM move_rows WHERE file_id = ?').get(res.body.id));
-  assert.equal(kept.data['Total Sales'], undefined);
+  assert.equal(res.status, 202, JSON.stringify(res.body));
   await finish();
+  const f = await fileIn(res.body.id);
+  assert.equal(f.report, 'customers');
   const c = await byAccount(p.v['Account Number']);
   assert.deepEqual(
     { name: c.name, email: c.email, phone: c.phone, address: c.address, postcode: c.postcode, offers: c.marketing_permission, joinable: c.email_from_customer },
-    { name: p.row[2] + ' ' + p.row[3], email: p.v.Email, phone: p.v.Phone, address: '[Address], [Address 2], [City]', postcode: '[Postcode]', offers: true, joinable: false }
+    { name: p.name, email: p.v.Email, phone: p.v.Phone, address: '[Address], [Address 2], [City]', postcode: '[Postcode]', offers: true, joinable: false }
   );
   const on = await inShop(() => prepare("SELECT to_char(marketing_consent_on, 'YYYY-MM-DD') AS d FROM customers WHERE id = ?").get(c.id));
   assert.equal(on.d, '2026-10-05');
-  const f = await fileIn(res.body.id);
-  assert.deepEqual({ state: f.state, rowsIn: f.rowsIn, rowsLook: f.rowsLook }, { state: 'done', rowsIn: 1, rowsLook: 0 });
+  assert.deepEqual(counts(f), { rowsIn: 1, rowsSame: 0, rowsSkipped: 0, rowsLook: 0 });
 });
 
 test('a no to offers keeps no date, and consent dates are read or left empty, never guessed', async () => {
@@ -79,22 +85,59 @@ test('a no to offers keeps no date, and consent dates are read or left empty, ne
   for (const odd of ['31/02/2026', 'soon', '', '12', '13/13/2026']) assert.equal(consentDay(odd), null, odd);
 });
 
-test('no name, or the same email or phone as someone here, waits for a look and makes nobody', async () => {
+test('the date of a yes goes when the yes or no changes, by any route', async () => {
+  const p = person({ 'GDPR Consent': 'Yes', 'GDPR Consent Date': '05/10/2026' });
+  await send(customers(p));
+  await finish();
+  const c = await byAccount(p.v['Account Number']);
+  const on = async () => (await inShop(() => prepare('SELECT marketing_consent_on AS d FROM customers WHERE id = ?').get(c.id))).d;
+  assert.ok((await on()) !== null);
+  // Another change leaves it.
+  assert.equal((await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: c.name, email: c.email, phone: '07700 900000' } })).status, 200);
+  assert.ok((await on()) !== null);
+  assert.equal((await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: c.name, email: c.email, phone: '07700 900000', marketingPermission: false } })).status, 200);
+  assert.equal((await inShop(() => prepare('SELECT marketing_permission AS m FROM customers WHERE id = ?').get(c.id))).m, false);
+  assert.equal(await on(), null);
+  // The customer's own account and a booking write the same column.
+  await inShop(() => prepare("UPDATE customers SET marketing_permission = true, marketing_consent_on = '2026-10-05' WHERE id = ?").run(c.id));
+  assert.ok((await on()) !== null);
+  await inShop(() => prepare('UPDATE customers SET marketing_permission = false WHERE id = ?').run(c.id));
+  assert.equal(await on(), null);
+});
+
+test('no name, no account number, or the same email or phone as someone here, waits for a look and makes nobody', async () => {
   const here = person();
   await send(customers(here));
   await finish();
-  const name = `${here.row[2]} ${here.row[3]}`;
   const digits = here.v.Phone.replace(/\D/g, '').slice(1);
   const noName = person({ 'First Name': null, 'Last Name': null });
+  const noAccount = person({ 'Account Number': null });
   const sameEmail = person({ Email: here.v.Email.toUpperCase() });
   const samePhone = person({ Phone: `+44 ${digits}` });
-  const res = await send(customers(noName, sameEmail, samePhone));
+  const sameBracket = person({ Phone: `+44 (0)${digits}` });
+  const res = await send(customers(noName, noAccount, sameEmail, samePhone, sameBracket));
   await finish();
-  assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['No name', `Looks like the same person as ${name}`, `Looks like the same person as ${name}`]);
-  for (const p of [noName, sameEmail, samePhone]) assert.equal(await byAccount(p.v['Account Number']), undefined);
+  const same = `Looks like the same person as ${here.name}`;
+  assert.deepEqual(await whyOf(res.body.id), ['No name', 'No account number', same, same, same]);
+  for (const p of [noName, sameEmail, samePhone, sameBracket]) assert.equal(await byAccount(p.v['Account Number']), undefined);
+  assert.equal((await customersWith(noAccount.v.Email)).length, 0);
 });
 
-test('sent again, nobody is doubled and a change made in Wheelhouse stays', async () => {
+test('a waiting row holds the matched customer\'s id, not their name, and shows the name as it is now', async () => {
+  const here = person();
+  await send(customers(here));
+  await finish();
+  const c = await byAccount(here.v['Account Number']);
+  const res = await send(customers(person({ Email: here.v.Email })));
+  await finish();
+  const row = await inShop(() => prepare('SELECT why, customer_id FROM move_rows WHERE file_id = ?').get(res.body.id));
+  assert.equal(row.customer_id, c.id);
+  assert.ok(!row.why.includes(here.name));
+  assert.equal((await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: 'Maya Renamed', email: c.email, phone: c.phone } })).status, 200);
+  assert.deepEqual(await whyOf(res.body.id), ['Looks like the same person as Maya Renamed']);
+});
+
+test('sent again, nobody is doubled, it isn\'t counted as brought across, and a change made in Wheelhouse stays', async () => {
   const p = person();
   const file = customers(p);
   await send(file);
@@ -104,42 +147,77 @@ test('sent again, nobody is doubled and a change made in Wheelhouse stays', asyn
   const res = await send(file);
   await finish();
   assert.equal((await byAccount(p.v['Account Number'])).phone, '07700 900000');
-  assert.deepEqual({ rowsIn: (await fileIn(res.body.id)).rowsIn, rowsLook: (await fileIn(res.body.id)).rowsLook }, { rowsIn: 1, rowsLook: 0 });
+  assert.deepEqual(counts(await fileIn(res.body.id)), { rowsIn: 0, rowsSame: 1, rowsSkipped: 0, rowsLook: 0 });
 });
 
-test('a bike joins its customer by email, mobile, phone or name; its description and serial kept, once', async () => {
+test('a bike joins its customer by email, mobile, phone or name, when the name agrees; description and serial kept, once', async () => {
   const [a, b, c, d] = [person(), person(), person(), person()];
   await send(customers(a, b, c, d));
   await finish();
-  const row = { Description: '[Bike]', 'Serial Number': '[Frame number]', 'Customer Name': 'someone else' };
+  const row = { Description: '[Bike]', 'Serial Number': `[Frame ${key().slice(0, 6)}]` };
   const file = bikes(
-    { ...row, 'Email Address': a.v.Email.toUpperCase() },
-    { ...row, 'Mobile Number': b.v.Phone },
-    { ...row, 'Phone Number': c.v.Phone },
-    { ...row, 'Customer Name': `${d.row[2]} ${d.row[3]}` },
+    { ...row, 'Customer Name': a.name, 'Email Address': a.v.Email.toUpperCase() },
+    { ...row, 'Customer Name': b.name, 'Mobile Number': b.v.Phone },
+    { ...row, 'Customer Name': c.name.toUpperCase(), 'Phone Number': c.v.Phone },
+    { ...row, 'Customer Name': d.name },
   );
   const res = await send(file);
-  assert.equal(res.body.report, 'bikes');
   await finish();
+  assert.equal((await fileIn(res.body.id)).report, 'bikes');
   for (const p of [a, b, c, d]) {
-    assert.deepEqual(await bikesOf((await byAccount(p.v['Account Number'])).id), [{ model: '[Bike]', serial_number: '[Frame number]' }]);
+    assert.deepEqual(await bikesOf((await byAccount(p.v['Account Number'])).id), [{ model: '[Bike]', serial_number: row['Serial Number'] }]);
   }
   assert.equal((await fileIn(res.body.id)).rowsIn, 4);
-  await send(file);
+  const again = await send(file);
   await finish();
   assert.equal((await bikesOf((await byAccount(a.v['Account Number'])).id)).length, 1, 'sent twice, one bike');
+  assert.deepEqual(counts(await fileIn(again.body.id)), { rowsIn: 0, rowsSame: 4, rowsSkipped: 0, rowsLook: 0 });
+});
+
+test('a bike whose name disagrees with its contact\'s owner, or whose contacts fit two people, waits and goes to nobody', async () => {
+  const [a, b] = [person(), person()];
+  await send(customers(a, b));
+  await finish();
+  const res = await send(bikes(
+    { Description: '[Bike 1]', 'Customer Name': 'Someone Else', 'Email Address': a.v.Email },
+    { Description: '[Bike 2]', 'Customer Name': a.name, 'Email Address': a.v.Email, 'Mobile Number': b.v.Phone },
+  ));
+  await finish();
+  assert.deepEqual(await whyOf(res.body.id), ['The name on this bike isn’t the name of the customer with this email or phone', 'More than one customer has this email or phone']);
+  for (const p of [a, b]) assert.equal((await bikesOf((await byAccount(p.v['Account Number'])).id)).length, 0);
+});
+
+test('a resent file doesn\'t duplicate a bike corrected in Wheelhouse, by its Citrus row or its frame number', async () => {
+  const p = person();
+  await send(customers(p));
+  await finish();
+  const c = await byAccount(p.v['Account Number']);
+  const frame = `[Frame ${key().slice(0, 6)}]`;
+  const row = { Description: '[Bike]', 'Serial Number': frame, 'Customer Name': p.name, 'Email Address': p.v.Email };
+  await send(bikes(row, { ...row, Description: '[Bike 2]', 'Serial Number': `[Frame 2 ${key().slice(0, 6)}]` }));
+  await finish();
+  await inShop(() => prepare("UPDATE customer_bikes SET model = '[Corrected]', serial_number = '[Corrected frame]' WHERE customer_id = ? AND serial_number = ?").run(c.id, frame));
+  const again = await send(bikes(row));
+  await finish();
+  assert.equal((await bikesOf(c.id)).length, 2, 'matched by its Citrus row');
+  assert.equal((await fileIn(again.body.id)).rowsSame, 1);
+  // The same frame number with another description is the same bike.
+  const other = await send(bikes({ ...row, Description: '[Described differently]', 'Serial Number': '[Corrected frame]' }));
+  await finish();
+  assert.equal((await bikesOf(c.id)).length, 2, 'matched by its frame number');
+  assert.equal((await fileIn(other.body.id)).rowsSame, 1);
 });
 
 test('bikes first: once customers are in they join, and no longer need a look', async () => {
   const p = person();
-  const list = await send(bikes({ Description: '[Bike]', 'Email Address': p.v.Email, 'Customer Name': 'x' }));
+  const list = await send(bikes({ Description: '[Bike]', 'Email Address': p.v.Email, 'Customer Name': p.name }));
   await finish();
-  assert.deepEqual((await whyOf(list.body.id)).map((r) => r.why), ['The customer on this bike isn’t in the customers file']);
+  assert.deepEqual(await whyOf(list.body.id), ['The customer on this bike isn’t in the customers file']);
   await send(customers(p));
   await finish();
   assert.equal((await bikesOf((await byAccount(p.v['Account Number'])).id)).length, 1);
   const f = await fileIn(list.body.id);
-  assert.deepEqual({ state: f.state, rowsIn: f.rowsIn, rowsLook: f.rowsLook }, { state: 'done', rowsIn: 1, rowsLook: 0 });
+  assert.deepEqual({ state: f.state, ...counts(f) }, { state: 'done', rowsIn: 1, rowsSame: 0, rowsSkipped: 0, rowsLook: 0 });
 });
 
 test('a name two customers share can\'t tell whose bike it is, and no description waits too', async () => {
@@ -150,34 +228,116 @@ test('a name two customers share can\'t tell whose bike it is, and no descriptio
   await finish();
   const res = await send(bikes({ Description: '[Bike]', 'Customer Name': `Maya ${shared}` }, { 'Customer Name': `Maya ${shared}` }));
   await finish();
-  assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['More than one customer has this name', 'No description']);
+  assert.deepEqual(await whyOf(res.body.id), ['More than one customer has this name', 'No description']);
   for (const p of [a, b]) assert.equal((await bikesOf((await byAccount(p.v['Account Number'])).id)).length, 0);
 });
 
 // Asks for deletion as the customer's request is recorded, then deletes.
 async function deleted(customerId) {
   return inShop(async () => {
-    const req = await prepare("INSERT INTO privacy_requests (customer_id, kind, source) VALUES (?, 'delete', 'shop') RETURNING id").get(customerId);
-    const done = await deleteCustomerDetails(req.id);
-    assert.ok(!done?.refusal, JSON.stringify(done));
+    // One open request a customer: a deletion told to try again keeps its own.
+    const req = (await prepare("SELECT id FROM privacy_requests WHERE customer_id = ? AND kind = 'delete' AND done_at IS NULL").get(customerId))
+      ?? (await prepare("INSERT INTO privacy_requests (customer_id, kind, source) VALUES (?, 'delete', 'shop') RETURNING id").get(customerId));
+    return deleteCustomerDetails(req.id);
   });
 }
 
-test('a deleted customer stays deleted when the file comes again, and gets no bike', async () => {
+test('a deleted customer stays deleted when the file comes again, gets no bike, and the record holds nothing readable', async () => {
+  const p = person({ 'GDPR Consent': 'Yes', 'GDPR Consent Date': '05/10/2026' });
+  await send(customers(p));
+  await finish();
+  const c = await byAccount(p.v['Account Number']);
+  // A date with no yes beside it: deleting clears it itself, not by the yes changing.
+  await inShop(() => prepare('UPDATE customers SET marketing_permission = false WHERE id = ?').run(c.id));
+  await inShop(() => prepare("UPDATE customers SET marketing_consent_on = '2026-10-05' WHERE id = ?").run(c.id));
+  await deleted(c.id);
+  const blank = await inShop(() => prepare('SELECT * FROM customers WHERE id = ?').get(c.id));
+  assert.ok(blank.deleted_at !== null);
+  assert.deepEqual({ account: blank.citrus_account, on: blank.marketing_consent_on, email: blank.email, phone: blank.phone }, { account: null, on: null, email: '', phone: '' });
+  const again = await send(customers(p));
+  const bike = await send(bikes({ Description: '[Bike]', 'Email Address': p.v.Email, 'Customer Name': p.name }));
+  await finish();
+  assert.equal(await byAccount(p.v['Account Number']), undefined, 'not brought back');
+  assert.equal((await customersWith(p.v.Email)).length, 0);
+  assert.equal((await bikesOf(c.id)).length, 0);
+  assert.deepEqual(counts(await fileIn(again.body.id)), { rowsIn: 0, rowsSame: 0, rowsSkipped: 1, rowsLook: 0 });
+  assert.deepEqual(counts(await fileIn(bike.body.id)), { rowsIn: 0, rowsSame: 0, rowsSkipped: 1, rowsLook: 0 });
+  const rows = JSON.stringify(await inShop(() => prepare('SELECT data, why FROM move_rows WHERE file_id = ANY(?::int[])').all([again.body.id, bike.body.id])));
+  assert.ok(!rows.includes(p.v.Email), 'a skipped row keeps nothing');
+});
+
+test('only one-way codes are left, unique to the shop, with nothing readable and no link to the record', async () => {
   const p = person();
   await send(customers(p));
   await finish();
   const c = await byAccount(p.v['Account Number']);
+  const before2 = (await inShop(() => prepare('SELECT count(*)::int AS n FROM move_deleted_codes').get())).n;
   await deleted(c.id);
-  await send(customers(p));
-  await send(bikes({ Description: '[Bike]', 'Email Address': p.v.Email, 'Customer Name': `${p.row[2]} ${p.row[3]}` }));
+  const codes = await inShop(() => prepare('SELECT * FROM move_deleted_codes ORDER BY id').all());
+  assert.equal(codes.length, before2 + 3, 'account, email and phone');
+  const text = JSON.stringify(codes);
+  for (const v of [p.v['Account Number'], p.v.Email, p.v.Phone, p.v.Phone.replace(/\D/g, ''), p.name]) assert.ok(!text.includes(v), v);
+  assert.deepEqual(Object.keys(codes[0]).sort(), ['code', 'id', 'kind', 'shop_id']);
+  // The same details in another shop give other codes, as each shop has its own salt.
+  const other = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
+  try {
+    const made = await staffRequest(server.baseUrl, other.cookie, '/api/customers', { method: 'POST', body: { name: p.name, email: p.v.Email, phone: p.v.Phone } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    await runWithShop(other.shop.id, async () => {
+      const req = await prepare("INSERT INTO privacy_requests (customer_id, kind, source) VALUES (?, 'delete', 'shop') RETURNING id").get(made.body.id);
+      await deleteCustomerDetails(req.id);
+      const theirs = await prepare('SELECT code FROM move_deleted_codes').all();
+      assert.equal(theirs.length, 2);
+      for (const { code } of theirs) assert.ok(!text.includes(code), 'a different code in another shop');
+    });
+  } finally {
+    await deleteTestShop(other.shop.id);
+  }
+});
+
+test('a row waiting as "the same person as Pat", then Pat is deleted, then the same file again: nobody comes back', async () => {
+  const pat = person({ 'First Name': 'Pat', 'GDPR Consent': 'Yes' });
+  const lookalike = person({ Email: pat.v.Email, 'GDPR Consent': 'Yes' });
+  const first = await send(customers(pat, lookalike));
   await finish();
-  const after2 = await inShop(() => prepare('SELECT * FROM customers WHERE id = ?').get(c.id));
-  assert.ok(after2.deleted_at !== null);
-  assert.ok(after2.email === '' || after2.email === null, 'still blank');
-  assert.equal((await inShop(() => prepare('SELECT count(*)::int AS n FROM customers WHERE citrus_account = ?').get(p.v['Account Number']))).n, 1);
-  assert.equal((await bikesOf(c.id)).length, 0);
-  assert.equal((await inShop(() => prepare('SELECT count(*)::int AS n FROM customers WHERE email = ?').get(p.v.Email))).n, 0);
+  assert.equal((await fileIn(first.body.id)).rowsLook, 1);
+  const c = await byAccount(pat.v['Account Number']);
+  await deleted(c.id);
+  assert.deepEqual(await whyOf(first.body.id), [], 'the waiting row went');
+  const again = await send(customers(pat, lookalike));
+  await finish();
+  assert.equal((await customersWith(pat.v.Email)).length, 0);
+  assert.equal(await byAccount(lookalike.v['Account Number']), undefined);
+  assert.deepEqual(counts(await fileIn(again.body.id)), { rowsIn: 0, rowsSame: 0, rowsSkipped: 2, rowsLook: 0 });
+});
+
+test('someone added by hand and deleted before the first import doesn\'t come in, with offers or without', async () => {
+  const p = person({ 'GDPR Consent': 'Yes' });
+  const made = await staff('/api/customers', { method: 'POST', body: { name: p.name, email: p.v.Email, phone: p.v.Phone } });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  await deleted(made.body.id);
+  const national = p.v.Phone.replace(/\D/g, '').slice(1);
+  const byPhone = person({ Phone: `+44 (0)${national}` });
+  const byIntl = person({ Phone: `0044 ${national}` });
+  const res = await send(customers(p, byPhone, byIntl));
+  await finish();
+  assert.equal((await customersWith(p.v.Email)).length, 0);
+  assert.equal(await byAccount(p.v['Account Number']), undefined);
+  assert.equal(await byAccount(byPhone.v['Account Number']), undefined, 'matched by the phone alone, however written');
+  assert.equal(await byAccount(byIntl.v['Account Number']), undefined);
+  assert.deepEqual(counts(await fileIn(res.body.id)), { rowsIn: 0, rowsSame: 0, rowsSkipped: 3, rowsLook: 0 });
+});
+
+test('an account-number-only match is skipped too', async () => {
+  const p = person();
+  await send(customers(p));
+  await finish();
+  await deleted((await byAccount(p.v['Account Number'])).id);
+  const changed = person({ 'Account Number': p.v['Account Number'] });
+  const res = await send(customers(changed));
+  await finish();
+  assert.equal((await customersWith(changed.v.Email)).length, 0);
+  assert.equal((await fileIn(res.body.id)).rowsSkipped, 1);
 });
 
 test('a customer marked deleted gets no bike, even with their details still readable', async () => {
@@ -186,21 +346,23 @@ test('a customer marked deleted gets no bike, even with their details still read
   await finish();
   const c = await byAccount(p.v['Account Number']);
   await inShop(() => prepare('UPDATE customers SET deleted_at = now() WHERE id = ?').run(c.id));
-  const res = await send(bikes({ Description: '[Bike]', 'Email Address': p.v.Email, 'Customer Name': `${p.row[2]} ${p.row[3]}` }));
+  const res = await send(bikes({ Description: '[Bike]', 'Email Address': p.v.Email, 'Customer Name': p.name }));
   await finish();
   assert.equal((await bikesOf(c.id)).length, 0);
-  assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['The customer on this bike isn’t in the customers file']);
+  assert.deepEqual(await whyOf(res.body.id), ['The customer on this bike isn’t in the customers file']);
 });
 
-test('deleting someone removes rows about them still waiting in a file, and the counts follow', async () => {
+test('deleting someone removes rows about them still waiting in a file, however the phone was written, and the counts follow', async () => {
   const p = person();
   await send(customers(p));
   await finish();
   const c = await byAccount(p.v['Account Number']);
   const about = await send(customers(person({ Email: p.v.Email }), person({ Phone: p.v.Phone }), person({ 'First Name': null, 'Last Name': null })));
-  const bike = await send(bikes({ 'Mobile Number': p.v.Phone, 'Customer Name': 'x' }));
+  const national = p.v.Phone.replace(/\D/g, '').slice(1);
+  const bike = await send(bikes({ 'Mobile Number': `+44 (0)${national}`, 'Customer Name': 'x' }));
   await finish();
   assert.equal((await fileIn(about.body.id)).rowsLook, 3);
+  assert.equal((await fileIn(bike.body.id)).rowsLook, 1);
   await deleted(c.id);
   const left = await inShop(() => prepare("SELECT count(*)::int AS n FROM move_rows WHERE file_id = ? AND state = 'look'").get(about.body.id));
   assert.equal(left.n, 1, 'only the row with no name, which says nothing about them');
@@ -208,5 +370,69 @@ test('deleting someone removes rows about them still waiting in a file, and the 
   assert.deepEqual({ rowsTotal: f.rowsTotal, rowsLook: f.rowsLook }, { rowsTotal: 1, rowsLook: 1 });
   assert.equal((await fileIn(bike.body.id)).rowsLook, 0);
   const text = JSON.stringify(await inShop(() => prepare('SELECT data FROM move_rows WHERE file_id = ANY(?::int[])').all([about.body.id, bike.body.id])));
-  assert.ok(!text.includes(p.v.Email) && !text.includes(p.v.Phone));
+  assert.ok(!text.includes(p.v.Email) && !text.includes(p.v.Phone) && !text.includes(national));
+});
+
+test('deleting someone removes a row pointing at them even after their email and phone changed', async () => {
+  const p = person();
+  await send(customers(p));
+  await finish();
+  const c = await byAccount(p.v['Account Number']);
+  const res = await send(customers(person({ Email: p.v.Email })));
+  await finish();
+  assert.equal((await fileIn(res.body.id)).rowsLook, 1);
+  assert.equal((await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: c.name, email: `${key().slice(0, 8)}@example.test`, phone: newPhone() } })).status, 200);
+  await deleted(c.id);
+  assert.equal((await fileIn(res.body.id)).rowsLook, 0);
+});
+
+test('a bikes batch and a deletion at the same moment don\'t deadlock, and no bike row is failed by it', async () => {
+  const people = Array.from({ length: 30 }, () => person());
+  await send(customers(...people));
+  await finish();
+  const ids = await Promise.all(people.map(async (p) => (await byAccount(p.v['Account Number'])).id));
+  const res = await send(bikes(...people.map((p) => ({ Description: '[Bike]', 'Serial Number': `[Frame ${key().slice(0, 6)}]`, 'Customer Name': p.name, 'Email Address': p.v.Email }))));
+  await readNextFile(owner.shop.id);
+  const logged = [];
+  const realWarn = console.warn;
+  console.warn = (...args) => { logged.push(args.join(' ')); };
+  try {
+    const running = (async () => { for (let i = 0; i < 40; i += 1) if (!(await inShop(() => bringBatch()))) break; })();
+    const deleting = [];
+    for (const id of [ids[29], ids[20], ids[10], ids[0]]) {
+      deleting.push(await deleted(id));
+    }
+    await running;
+  } finally {
+    console.warn = realWarn;
+  }
+  await finish();
+  assert.ok(!logged.some((l) => l.includes('40P01')), `no deadlock: ${logged.join('; ')}`);
+  const rows = await inShop(() => prepare('SELECT state, why FROM move_rows WHERE file_id = ?').all(res.body.id));
+  assert.ok(rows.every((r) => r.state !== 'waiting'), 'all dealt with');
+  assert.ok(!rows.some((r) => r.why === 'Wheelhouse couldn’t bring this row across'), 'none failed');
+});
+
+test('a deletion waits for the move files first: it locks them before any customer', async () => {
+  const p = person();
+  await send(customers(p));
+  await finish();
+  const c = await byAccount(p.v['Account Number']);
+  // A batch holding the move files: the deletion can't start, and says busy, rather than deadlocking.
+  const held = pool.connect();
+  const client = await held;
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    await client.query('SELECT id FROM move_files ORDER BY id FOR UPDATE');
+    const done = await deleted(c.id);
+    assert.equal(done?.status ?? done?.refusal?.status, 503, JSON.stringify(done));
+    const still = await inShop(() => prepare('SELECT deleted_at FROM customers WHERE id = ?').get(c.id));
+    assert.equal(still.deleted_at, null);
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+  }
+  await deleted(c.id);
+  assert.ok((await inShop(() => prepare('SELECT deleted_at FROM customers WHERE id = ?').get(c.id))).deleted_at !== null);
 });

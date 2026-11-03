@@ -5,9 +5,10 @@
 // still waiting and nothing comes across twice.
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
-import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners } from './bring-customers.js';
+import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
-const BATCH = 200;
+// Small enough that a deletion waiting on the move files isn't told to try again.
+const BATCH = 100;
 const BATCHES_A_ROUND = 20;
 const INSERT_CHUNK = 1000;
 export const NO_PRODUCT = 'The product isn’t in the products file';
@@ -120,6 +121,7 @@ async function lockForBatch(file, rows) {
   if (file.report === 'bikes') await lockBikeOwners(rows);
 }
 async function batchContext(file) {
+  if (file.report === 'customers' || file.report === 'bikes') return { salt: await moveSalt() };
   if (file.report !== 'price_list') return {};
   const first = await prepare(`SELECT store_name FROM move_files WHERE report = 'price_list' AND store_name <> '' ORDER BY id LIMIT 1`).get();
   return { firstStore: first?.store_name ?? '' };
@@ -127,7 +129,7 @@ async function batchContext(file) {
 
 // A row's outcome, then the file's counts: added up once per batch, not per row.
 async function settle(row, done, file, totals) {
-  if (done.state === 'look') await prepare(`UPDATE move_rows SET state = 'look', why = ? WHERE id = ?`).run(done.why, row.id);
+  if (done.state === 'look') await prepare(`UPDATE move_rows SET state = 'look', why = ?, customer_id = ? WHERE id = ?`).run(done.why, done.customerId ?? null, row.id);
   else await prepare(`UPDATE move_rows SET state = ?, why = NULL, data = '{}' WHERE id = ?`).run(done.state, row.id);
   totals[done.state] = (totals[done.state] ?? 0) + 1;
   totals.stock = (totals.stock ?? 0) + (done.stock ?? 0);
