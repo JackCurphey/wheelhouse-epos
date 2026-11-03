@@ -182,3 +182,14 @@ test('Stock opened from See them has Below zero picked and lists only those', as
   assert.equal(t.ui.getByRole('button', { name: 'Below zero' }).getAttribute('aria-pressed'), 'true');
   assert.ok(t.ui.queryByText('Shimano brake pads') === null);
 });
+
+test('Today: no value sent (the Owner’s till with Jo checked in): the line shows, with no money', async () => {
+  const { valuePence: _v, ...noValue } = ADJUSTED;
+  void _v;
+  const t = await open('/workshop/today', { items: [noValue] });
+  const line = await row(t, /^Stock adjusted:/);
+  assert.match(line.textContent, /Stock adjusted: Shimano brake pads −2/);
+  assert.ok(!line.textContent.includes('£'), line.textContent);
+  assert.ok(!line.textContent.includes('−2 ·'), line.textContent);
+  assert.ok(!line.textContent.includes('NaN'), line.textContent);
+});

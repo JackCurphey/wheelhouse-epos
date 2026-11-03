@@ -31,7 +31,7 @@ type Attention =
   | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
   | { kind: 'day_not_closed'; day: string; checkId: number; checkDay: string; countedByName: string; checkedAt: string; tillCode: string | null }
   | { kind: 'below_zero'; count: number; takeId: number | null }
-  | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence: number; reason: string; note: string; byName: string | null; at: string };
+  | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
 type TillToday = { code: string | null; openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
 type Hours = { openingHours?: { weekday: number; open: string; close: string }[] };
@@ -235,7 +235,7 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       const sub = [REASON_LABEL[i.reason] ?? 'Adjusted', i.note ? `“${i.note}”` : null, i.byName ? `by ${i.byName} at ${at}` : at].filter(Boolean).join(' · ');
       return (
         <Line key={`s${i.movementId}`} lead={warn}
-          title={<>Stock adjusted: <Link to={productHref(i.productId)} className="inline-flex min-h-11 items-center text-[var(--wh-ink)] underline">{i.productName}</Link> {change} · {penceText(i.valuePence)}</>}
+          title={<>Stock adjusted: <Link to={productHref(i.productId)} className="inline-flex min-h-11 items-center text-[var(--wh-ink)] underline">{i.productName}</Link> {change}{i.valuePence === undefined ? null : ` · ${penceText(i.valuePence)}`}</>}
           sub={sub}
           right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={seeingStock.has(i.movementId)} onClick={() => void stockSeen(i.movementId)}>Seen</Button>} />
       );

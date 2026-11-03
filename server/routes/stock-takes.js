@@ -12,6 +12,7 @@
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 import { currentSession } from '../lib/session.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 import { csvCell, textCell } from '../lib/csv.js';
@@ -51,10 +52,20 @@ async function appliedSummary(ids) {
        FROM stock_take_results WHERE stock_take_id = ANY(?) GROUP BY stock_take_id`
   ).all(ids);
 }
-const withSummary = async (t) => {
+// A value at cost goes only to someone who can see costs: the person at the
+// computer, which the Owner's sign-in on a till needn't be
+// (openspec/changes/product-costs-hidden). Who may check and apply stays ownerOnly.
+const summaryOf = (t, s, costs) => ({ ...serializeTake(t), productsChanged: s?.changed ?? 0, ...(costs ? { valuePence: s?.value ?? 0 } : {}) });
+const withSummary = async (t, costs) => {
   const [s] = await appliedSummary([t.id]);
-  return { ...serializeTake(t), productsChanged: s?.changed ?? 0, valuePence: s?.value ?? 0 };
+  return summaryOf(t, s, costs);
 };
+function checkWithoutCosts(checked) {
+  const rows = checked.rows.map((r) => { const row = { ...r }; delete row.costPence; delete row.valuePence; return row; });
+  const shown = { ...checked, rows };
+  delete shown.valuePence;
+  return shown;
+}
 
 // Joining, or counting again after "I've finished my part", puts the person
 // back to counting (design 7).
@@ -124,11 +135,12 @@ export function register(route) {
       }),
     };
     if (ctx.login.is_owner) {
+      const costs = await canSeeCosts(req);
       const done = await db.prepare(`${TAKE_SELECT} WHERE t.status = 'applied' ORDER BY t.applied_at DESC, t.id DESC LIMIT ${FINISHED_SHOWN}`).all();
       const sums = await appliedSummary(done.map((t) => t.id));
       body.finished = done.map((t) => {
         const s = sums.find((x) => x.stock_take_id === t.id);
-        return { ...serializeTake(t), productsChanged: s?.changed ?? 0, valuePence: s?.value ?? 0 };
+        return summaryOf(t, s, costs);
       });
     }
     sendJson(res, 200, body);
@@ -277,7 +289,7 @@ export function register(route) {
     if (!take) return notFound(res, 'Count not found');
     const { all, ...checked } = await checkOf(take);
     void all;
-    sendJson(res, 200, { ...serializeTake(take), ...checked });
+    sendJson(res, 200, { ...serializeTake(take), ...(await canSeeCosts(req) ? checked : checkWithoutCosts(checked)) });
   });
 
   // Recount (tk-diff): the line's counts go, it goes back to every counter
@@ -332,6 +344,7 @@ export function register(route) {
   route('POST', '/api/stock-takes/:id/apply', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res, CHECK_COUNT)) return;
     const ctx = await currentSession(req);
+    const costs = await canSeeCosts(req);
     const id = Number(params.id);
     if (!(await takeOf(id))) return notFound(res, 'Count not found');
     const pushes = [];
@@ -368,7 +381,7 @@ export function register(route) {
       ).all(id, rows.map((r) => r.productId), rows.map((r) => r.expected), rows.map((r) => r.counted), rows.map((r) => r.difference),
         rows.map((r) => r.costPence), rows.map((r) => movementOf.get(r.productId) ?? null));
       await db.prepare("UPDATE stock_takes SET status = 'applied', applied_at = now(), applied_by_login_id = ? WHERE id = ?").run(ctx.login.id, id);
-      return [200, await withSummary(await takeOf(id))];
+      return [200, await withSummary(await takeOf(id), costs)];
     });
     if (ok && pushes.length) deferShopifyPushes(afterRelease, shopId, pushes);
   });
@@ -419,8 +432,9 @@ export function register(route) {
     const take = await takeOf(Number(params.id));
     if (!take) return notFound(res, 'Count not found');
     const { all } = await checkOf(take);
-    const lines = [['Product', 'Supplier code', 'Expected', 'Counted', 'Difference', 'At cost'],
-      ...all.map((r) => [textCell(r.name), textCell(r.sku ?? ''), r.expected, r.counted, r.difference, pounds(r.valuePence)])];
+    const costs = await canSeeCosts(req);
+    const lines = [['Product', 'Supplier code', 'Expected', 'Counted', 'Difference', ...(costs ? ['At cost'] : [])],
+      ...all.map((r) => [textCell(r.name), textCell(r.sku ?? ''), r.expected, r.counted, r.difference, ...(costs ? [pounds(r.valuePence)] : [])])];
     res.writeHead(200, {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="stock-take-${take.id}.csv"`,

@@ -59,7 +59,9 @@ export function StockPage() {
       return (x < y ? -1 : x > y ? 1 : 0) * (sort.up ? 1 : -1);
     });
   const shown = all ? rows : rows.slice(0, SHOWN);
-  const cols = isPhone ? 'grid-cols-[minmax(0,1fr)_auto]' : owner ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.7fr)]' : 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]';
+  // The sign-in can say Owner with someone else at the till: what the server sent decides.
+  const margins = owner && (list.data ?? []).some((p) => p.cost !== null);
+  const cols = isPhone ? 'grid-cols-[minmax(0,1fr)_auto]' : margins ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.7fr)]' : 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]';
   const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); setAll(false); };
   const head = (key: SortKey, label: string, right = false) => (
     <span role="columnheader" aria-sort={sort.key === key ? (sort.up ? 'ascending' : 'descending') : 'none'} className={right ? 'text-right' : ''}>
@@ -96,7 +98,7 @@ export function StockPage() {
             {isPhone ? null : (
               <div role="rowgroup">
                 <div role="row" className={`grid ${cols} items-center gap-3 px-4 pt-1`}>
-                  {head('name', 'Product')}{head('stock', 'In stock')}{head('price', 'Price', true)}{owner ? head('margin', 'Margin', true) : null}
+                  {head('name', 'Product')}{head('stock', 'In stock')}{head('price', 'Price', true)}{margins ? head('margin', 'Margin', true) : null}
                 </div>
               </div>
             )}
@@ -113,7 +115,7 @@ export function StockPage() {
                     <span className="sr-only">In stock: </span><span className={`${mono} text-size-15`}>{count(p.stockQty)}</span><StateTag state={stockState(p)} />
                   </span>
                   {isPhone ? null : <span role="cell" className={`${mono} text-right text-size-15`}><span className="sr-only">Price: </span>{money(p.price)}</span>}
-                  {isPhone || !owner ? null : <span role="cell" className="text-right text-size-15 text-[var(--wh-muted)]"><span className="sr-only">Margin: </span>{marginText(p)}</span>}
+                  {isPhone || !margins ? null : <span role="cell" className="text-right text-size-15 text-[var(--wh-muted)]"><span className="sr-only">Margin: </span>{marginText(p)}</span>}
                 </div>
               ))}
             </div>

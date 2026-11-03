@@ -95,12 +95,18 @@ const outstanding = (it) => it.qty_ordered - it.qty_received - (it.qty_set_aside
 const MAX_QTY = 100000;
 const MAX_UNIT_COST = 99999999.99;
 
-async function loadPoLineItems(items) {
+// What each line costs. Someone who can't see costs isn't told it and doesn't
+// set it: whatever they send is ignored. Otherwise a line with no cost sent
+// (`unitCost` missing or null) takes one too, never £0: the cost already on
+// that draft's line (`onDraft`, product id to cost), else the product's
+// (openspec/changes/product-costs-hidden).
+async function loadPoLineItems(items, costs, onDraft = new Map()) {
   const loaded = [];
   for (const it of items) {
     const productId = Number(it.productId);
     const qty = Math.trunc(Number(it.qty));
-    const unitCost = Number(it.unitCost);
+    const given = costs && it.unitCost !== undefined && it.unitCost !== null;
+    const unitCost = given ? Number(it.unitCost) : 0;
     if (!productId || !Number.isFinite(qty) || qty <= 0) {
       throw new ValidationError('Each item needs a valid productId and positive qty');
     }
@@ -111,10 +117,14 @@ async function loadPoLineItems(items) {
     if (unitCost > MAX_UNIT_COST) throw new ValidationError('A unit cost can be at most £99,999,999.99');
     const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
-    loaded.push({ product, qty, unitCost });
+    loaded.push({ product, qty, unitCost: given ? unitCost : onDraft.get(product.id) ?? product.cost });
   }
   return loaded;
 }
+
+// New order keeps its rule that an order can't go without its costs (a draft
+// can) for someone who can't see them and so can't type one.
+const NO_COST_YET = 'A line has no cost yet, so this can only be saved as a draft for the shop’s owner to finish';
 
 // A problem's kind, how many and note, or the refusal's words.
 function readProblem(p) {
@@ -357,13 +367,15 @@ export function register(route) {
     // for a retry to duplicate (review of 26 Oct).
     const ordered = body.markOrdered === true;
 
+    const costs = await canSeeCosts(req);
     let loaded;
     try {
-      loaded = await loadPoLineItems(items);
+      loaded = await loadPoLineItems(items, costs);
     } catch (err) {
       if (err instanceof ValidationError) return badRequest(res, err.message);
       throw err;
     }
+    if (ordered && !costs && loaded.some((l) => !(l.unitCost > 0))) return badRequest(res, NO_COST_YET);
 
     await db.exec('BEGIN');
     try {
@@ -379,7 +391,7 @@ export function register(route) {
       }
       await db.exec('COMMIT');
       const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(poId);
-      sendJson(res, 201, serializePurchaseOrder(row, await loadPurchaseOrderItems(poId), await canSeeCosts(req)));
+      sendJson(res, 201, serializePurchaseOrder(row, await loadPurchaseOrderItems(poId), costs));
     } catch (err) {
       await db.exec('ROLLBACK');
       throw err;
@@ -393,6 +405,7 @@ export function register(route) {
     if (!found) return notFound(res, 'Purchase order not found');
     if (found.status !== 'draft') return badRequest(res, 'Only a draft purchase order can be edited');
     const body = await readJsonBody(req);
+    const costs = await canSeeCosts(req);
 
     // The order is read again FOR UPDATE inside the transaction, so a second
     // save waits for this one and starts from what it wrote, and the draft
@@ -433,7 +446,8 @@ export function register(route) {
           return badRequest(res, 'A purchase order must include at least one item');
         }
         try {
-          loaded = await loadPoLineItems(items);
+          const lines = await db.prepare('SELECT product_id, unit_cost FROM purchase_order_items WHERE purchase_order_id = ?').all(id);
+          loaded = await loadPoLineItems(items, costs, new Map(lines.map((l) => [l.product_id, l.unit_cost])));
         } catch (err) {
           if (!(err instanceof ValidationError)) throw err;
           await db.exec('ROLLBACK');
@@ -468,6 +482,8 @@ export function register(route) {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Purchase order not found');
+    const costs = await canSeeCosts(req);
+    if (!costs && await db.prepare('SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ? AND unit_cost <= 0 LIMIT 1').get(id)) return badRequest(res, NO_COST_YET);
     // The status is checked in the UPDATE itself, so two requests at once
     // can't both pass a check made beforehand (review of 26 Oct).
     const changed = await db
@@ -475,7 +491,7 @@ export function register(route) {
       .run(nowIso(), nowIso(), id);
     if (changed.changes === 0) return sendJson(res, 409, { error: 'Only a draft purchase order can be marked as ordered' });
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id), await canSeeCosts(req)));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id), costs));
   });
 
   route('POST', '/api/purchase-orders/:id/cancel', async (req, res, params) => {

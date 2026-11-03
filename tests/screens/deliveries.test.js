@@ -13,8 +13,9 @@ const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwne
 const SUPPLIERS = [{ id: 1, name: '[Supplier]' }, { id: 2, name: '[Supplier 2]' }, { id: 3, name: '[Supplier 3]' }, { id: 4, name: '[Supplier 4]' }];
 const PADS = { id: 11, sku: 'B05S-RX', barcode: '4524667000001', name: 'Shimano brake pads', cost: 28, stockQty: 0 };
 const TUBE = { id: 12, sku: '[Supplier code]', barcode: null, name: '[Product]', cost: 1.1, stockQty: 0 };
-// No cost recorded: null, or 0 as the old app saves it (the stock list's rule).
-const NOCOST = { id: 13, sku: '[Supplier code 2]', barcode: null, name: '[Uncosted product]', cost: null, stockQty: 0 };
+// No cost recorded is 0: the column can't be empty. null is a cost not sent
+// (openspec/changes/product-costs-hidden).
+const NOCOST = { id: 13, sku: '[Supplier code 2]', barcode: null, name: '[Uncosted product]', cost: 0, stockQty: 0 };
 const ZEROCOST = { id: 14, sku: '[Supplier code 3]', barcode: null, name: '[Zero-cost product]', cost: 0, stockQty: 0 };
 const PRODUCTS = [PADS, TUBE, NOCOST, ZEROCOST];
 const item = (p, ordered, received, id = p.id + 100) => ({ id, productId: p.id, name: p.name, sku: p.sku, qtyOrdered: ordered, qtyReceived: received, outstanding: ordered - received, notComing: 0, unitCost: p.cost });
@@ -37,7 +38,7 @@ afterEach(async () => {
   rendered = false;
 });
 
-async function open(path, { me = OWNER, orders = [order(), order({ id: 8, supplierName: '[Supplier 2]', status: 'draft', orderedAt: null, items: [item(TUBE, 2, 0)] })], phone = false, failOrdering = false } = {}) {
+async function open(path, { noCosts = false, me = OWNER, orders = [order(), order({ id: 8, supplierName: '[Supplier 2]', status: 'draft', orderedAt: null, items: [item(TUBE, 2, 0)] })], phone = false, failOrdering = false } = {}) {
   calls = [];
   const byId = new Map(orders.map((o) => [o.id, o]));
   globalThis.fetch = async (url, init = {}) => {
@@ -50,7 +51,7 @@ async function open(path, { me = OWNER, orders = [order(), order({ id: 8, suppli
     if (u.pathname === '/api/suppliers') return reply(200, SUPPLIERS);
     if (u.pathname === '/api/products') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
-      return reply(200, PRODUCTS.filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))));
+      return reply(200, PRODUCTS.filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))).map((p) => (noCosts ? { ...p, cost: null } : p)));
     }
     if (u.pathname === '/api/purchase-orders' && method === 'GET') return reply(200, orders);
     if (u.pathname === '/api/purchase-orders' && method === 'POST') {
@@ -204,7 +205,7 @@ test('when Mark as ordered fails it says so, having made one request and no draf
 });
 
 // No cost is no margin, as on the stock list (review of 26 Oct): a line with
-// no cost (null, or 0 as the old app saves it) says so and takes one; the
+// no cost (0, as the old app saves it) says so and takes one; the
 // order can't be marked ordered until every line has one, but a draft saves.
 test('a line with no cost says No cost recorded with a box for one; Mark as ordered waits for it; a draft still saves', async () => {
   const { ui, fireEvent, within } = await newOrder();
@@ -221,7 +222,7 @@ test('a line with no cost says No cost recorded with a box for one; Mark as orde
   assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
   fireEvent.click(ui.getByRole('button', { name: 'Save as draft' }));
   await ui.findByRole('heading', { level: 2, name: '[Supplier] · draft' });
-  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body), [{ supplierId: 1, items: [{ productId: 13, qty: 1, unitCost: 0 }, { productId: 14, qty: 1, unitCost: 0 }] }]);
+  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body), [{ supplierId: 1, items: [{ productId: 13, qty: 1 }, { productId: 14, qty: 1 }] }]);
 });
 
 test('typing a cost prices the line and the total, and Mark as ordered sends it', async () => {
@@ -365,4 +366,20 @@ test('a staff member can read an order but not close or order it', async () => {
 test('an order that isn’t there says so', async () => {
   const { ui } = await open('/workshop/deliveries/orders/99');
   assert.ok((await ui.findByRole('alert')).textContent.includes('Order not found'));
+});
+
+// ---- New order, at the Owner's till with Jo checked in: the sign-in says Owner,
+// and the products come with no cost (openspec/changes/product-costs-hidden) ----
+
+test('no costs sent: no cost, no box and no total on the line; what’s sent has no cost for the server to take as £0', async () => {
+  const { ui, fireEvent, within } = await newOrder({ noCosts: true });
+  await addByCode(ui, fireEvent, 'B05S-RX', 'Shimano brake pads');
+  const [line] = within(ui.getByRole('list', { name: 'Lines' })).getAllByRole('listitem');
+  assert.ok(!line.textContent.includes('£'), line.textContent);
+  assert.ok(!line.textContent.includes('No cost recorded'), line.textContent);
+  assert.ok(within(line).queryByRole('textbox', { name: 'Cost each: Shimano brake pads' }) === null);
+  assert.ok(ui.queryByText(/Total cost/) === null);
+  fireEvent.click(ui.getByRole('button', { name: 'Mark as ordered' }));
+  await ui.findByRole('heading', { level: 2, name: /^\[Supplier\] · / });
+  assert.deepEqual(posts('/api/purchase-orders').map((c) => c.body), [{ supplierId: 1, items: [{ productId: 11, qty: 1 }], markOrdered: true }]);
 });

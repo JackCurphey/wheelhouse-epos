@@ -7,6 +7,7 @@ import { prepare, dbExec } from '../db.js';
 import { runSync } from '../suppliers/index.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -32,14 +33,16 @@ function serializeSupplier(row) {
   };
 }
 
-function serializeCatalogueItem(row) {
+// `price` is the supplier's trade price, what the shop pays: it goes only to
+// someone who can see costs (openspec/changes/product-costs-hidden).
+function serializeCatalogueItem(row, costs) {
   return {
     id: row.id,
     supplierId: row.supplier_id,
     supplierSku: row.supplier_sku,
     barcode: row.barcode,
     name: row.name,
-    price: row.price,
+    price: costs ? row.price : null,
     stockQty: row.stock_qty,
     status: row.status,
     productId: row.product_id,
@@ -127,7 +130,8 @@ export function register(route) {
     const rows = await db
       .prepare('SELECT * FROM supplier_catalogue_items WHERE status = ? ORDER BY last_seen_at DESC')
       .all(status);
-    sendJson(res, 200, rows.map(serializeCatalogueItem));
+    const costs = await canSeeCosts(req);
+    sendJson(res, 200, rows.map((row) => serializeCatalogueItem(row, costs)));
   });
 
   route('POST', '/api/catalogue-items/:id/import', async (req, res, params) => {
@@ -152,7 +156,7 @@ export function register(route) {
         .prepare(`UPDATE supplier_catalogue_items SET status = 'imported', product_id = ?, updated_at = ? WHERE id = ?`)
         .run(info.lastInsertRowid, nowIso(), id);
       const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
-      sendJson(res, 201, serializeProduct(product));
+      sendJson(res, 201, serializeProduct(product, await canSeeCosts(req)));
     } catch (err) {
       if (err.code === '23505') return badRequest(res, `SKU or barcode "${item.supplier_sku}" is already in use`);
       throw err;

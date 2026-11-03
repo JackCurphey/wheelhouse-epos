@@ -2,7 +2,10 @@
 // WP-0.4): products (products, stock, suppliers' catalogue, booking) and
 // customers' bikes (customers, booking). Moved out of server.js unchanged.
 
-export function serializeProduct(row) {
+// `costs`: canSeeCosts(req), the one check (openspec/changes/product-costs-hidden).
+// Without it the cost is null, which nothing stored can be (the column is NOT
+// NULL, no cost recorded being 0), so a screen can tell it wasn't told.
+export function serializeProduct(row, costs = false) {
   return {
     id: row.id,
     sku: row.sku,
@@ -10,7 +13,7 @@ export function serializeProduct(row) {
     name: row.name,
     category: row.category,
     price: row.price,
-    cost: row.cost,
+    cost: costs ? row.cost : null,
     stockQty: row.stock_qty,
     lowStockThreshold: row.low_stock_threshold,
     supplier: row.supplier,

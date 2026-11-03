@@ -9,6 +9,7 @@ import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError }
 import { readUploadedImage } from '../lib/uploads.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { currentSession } from '../lib/session.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 
@@ -45,7 +46,7 @@ async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProduct
 }
 
 
-async function listProducts({ search, category, activeOnly }) {
+async function listProducts({ search, category, activeOnly }, costs) {
   let sql = 'SELECT * FROM products WHERE 1=1';
   const params = [];
   if (activeOnly) {
@@ -65,23 +66,35 @@ async function listProducts({ search, category, activeOnly }) {
   }
   sql += ' ORDER BY category, name';
   const rows = await db.prepare(sql).all(...params);
-  return rows.map(serializeProduct);
+  return rows.map((row) => serializeProduct(row, costs));
 }
 
 // ---------- Products ----------
 
 const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
 
+// A cost as sent, or null when none was: nothing, null, a blank box and anything
+// that isn't a number are no cost, never £0. Only a figure, 0 included, is one
+// (openspec/changes/product-costs-hidden).
+function sentCost(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string' || value.trim() === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 // PUT /api/products/:id, inside its transaction: the fields sent merged into
 // the row read FOR UPDATE, checked and written. Returns a refusal's message,
 // or nothing once written; a refused write leaves the transaction to roll back.
-async function saveProduct(id, existing, body) {
+// `costs`: canSeeCosts(req). Someone who can't see the cost can't change it,
+// and a save with no cost leaves it as it is.
+async function saveProduct(id, existing, body, costs) {
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
   const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
   const category = body.category !== undefined ? String(body.category).trim() || 'Uncategorised' : existing.category;
   const price = body.price !== undefined ? Number(body.price) || 0 : existing.price;
-  const cost = body.cost !== undefined ? Number(body.cost) || 0 : existing.cost;
+  const cost = (costs ? sentCost(body.cost) : null) ?? existing.cost;
   const lowStockThreshold =
     body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
   const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
@@ -112,21 +125,20 @@ export function register(route) {
       search: query.get('search') || '',
       category: query.get('category') || '',
       activeOnly: query.get('all') !== '1',
-    });
+    }, await canSeeCosts(req));
     sendJson(res, 200, products);
   });
 
   // A product's page (st-product; openspec/changes/stock-list): the product
   // and every change to its stock, newest first, with its reason and who
   // (openspec/changes/adjust-stock). Read only. Staff see no
-  // cost (stock decision 11); until roles (WP-1.1) only the Owner does. A
+  // cost (stock decision 11; canSeeCosts). A
   // product taken off sale still opens: its history stands.
   route('GET', '/api/products/:id', async (req, res, params) => {
     const id = Number(params.id);
     if (!Number.isInteger(id)) return notFound(res, 'Product not found');
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!row) return notFound(res, 'Product not found');
-    const ctx = await currentSession(req);
     const moves = await db
       // The newest 200: a fast seller's whole history would be thousands of rows (review 2).
       .prepare(
@@ -136,8 +148,7 @@ export function register(route) {
       )
       .all(id);
     sendJson(res, 200, {
-      ...serializeProduct(row),
-      cost: ctx?.login.is_owner ? row.cost : null,
+      ...serializeProduct(row, await canSeeCosts(req)),
       history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
     });
   });
@@ -150,7 +161,9 @@ export function register(route) {
     const barcode = (body.barcode || '').trim() || null;
     const category = (body.category || 'Uncategorised').trim();
     const price = Number(body.price) || 0;
-    const cost = Number(body.cost) || 0;
+    // Someone who can't see costs adds a product with none recorded.
+    const costs = await canSeeCosts(req);
+    const cost = (costs ? sentCost(body.cost) : null) ?? 0;
     const stockQty = Number.isFinite(Number(body.stockQty)) ? Math.trunc(Number(body.stockQty)) : 0;
     const lowStockThreshold = Number.isFinite(Number(body.lowStockThreshold))
       ? Math.trunc(Number(body.lowStockThreshold))
@@ -174,7 +187,7 @@ export function register(route) {
       }
       const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
       await syncProductWithShopifyIfNeeded({ show_online: false, active: false }, row);
-      sendJson(res, 201, serializeProduct(row));
+      sendJson(res, 201, serializeProduct(row, costs));
     } catch (err) {
       if (err.code === '23505') {
         return badRequest(res, err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
@@ -188,6 +201,7 @@ export function register(route) {
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
     const body = await readJsonBody(req);
+    const costs = await canSeeCosts(req);
 
     // Read again FOR UPDATE inside a transaction, so a price and a description
     // saved at once both stay (more-saves-dont-clash). The Shopify sync runs
@@ -200,7 +214,7 @@ export function register(route) {
         await db.exec('ROLLBACK');
         return notFound(res, 'Product not found');
       }
-      const refused = await saveProduct(id, locked, body);
+      const refused = await saveProduct(id, locked, body, costs);
       if (refused) {
         await db.exec('ROLLBACK');
         return badRequest(res, refused);
@@ -212,7 +226,7 @@ export function register(route) {
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     await syncProductWithShopifyIfNeeded(locked, row);
-    sendJson(res, 200, serializeProduct(row));
+    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
   });
 
   route('DELETE', '/api/products/:id', async (req, res, params) => {
@@ -313,7 +327,7 @@ export function register(route) {
       deferShopifyPushes(afterRelease, shopId, [{ product: existing, newQty }]);
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-    sendJson(res, 200, serializeProduct(row));
+    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
   });
 
   route('GET', '/api/categories', async (req, res) => {
@@ -336,6 +350,6 @@ export function register(route) {
 
     await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-    sendJson(res, 200, serializeProduct(row));
+    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
   });
 }

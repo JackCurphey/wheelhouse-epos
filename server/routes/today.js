@@ -5,6 +5,7 @@
 // so Today grows a line per kind and nothing else changes.
 import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 import { sendJson } from '../lib/http.js';
 import { WORKSHOP_JOB_SELECT } from '../workshop/jobs.js';
 import { customerConversations } from '../workshop/job-notes.js';
@@ -92,7 +93,8 @@ async function belowZero() {
 // seen (st-today-adjust; stock control decision 6): oldest first, each with
 // its product, change, value at cost, reason, note, who and when.
 const ADJUSTMENT_TO_SEE = "m.type = 'adjustment' AND m.to_see AND m.seen_at IS NULL";
-async function adjustmentsToSee() {
+// Its value is what the shop paid: only to someone who can see costs.
+async function adjustmentsToSee(costs) {
   const rows = await prepare(
     `SELECT m.id, m.product_id, p.name AS product_name, m.change_qty, m.value_pence, m.reason, m.note, l.name AS by_name, m.created_at
        FROM stock_movements m JOIN products p ON p.id = m.product_id LEFT JOIN logins l ON l.id = m.login_id
@@ -100,7 +102,7 @@ async function adjustmentsToSee() {
   ).all();
   return rows.map((r) => ({
     kind: 'stock_adjusted', movementId: r.id, productId: r.product_id, productName: r.product_name, change: r.change_qty,
-    valuePence: r.value_pence, reason: r.reason, note: r.note || '', byName: r.by_name ?? null, at: iso(r.created_at),
+    ...(costs ? { valuePence: r.value_pence } : {}), reason: r.reason, note: r.note || '', byName: r.by_name ?? null, at: iso(r.created_at),
   }));
 }
 
@@ -182,7 +184,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await belowZero()), ...(await adjustmentsToSee())] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req)))] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision

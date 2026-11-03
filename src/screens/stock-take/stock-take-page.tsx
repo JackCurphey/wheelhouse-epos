@@ -64,7 +64,7 @@ export function StockTakePage() {
             <ul aria-labelledby="t-finished-counts" className="m-0 list-none p-0">
               {hub.data.finished.map((t) => (
                 <Row key={t.id} title={t.label}
-                  sub={`Applied ${day(t.appliedAt!)} by ${t.appliedBy} · ${plural(t.productsChanged, 'product')} changed · ${atCost(t.valuePence)}`}>
+                  sub={`Applied ${day(t.appliedAt!)} by ${t.appliedBy} · ${plural(t.productsChanged, 'product')} changed${t.valuePence === undefined ? '' : ` · ${atCost(t.valuePence)}`}`}>
                   <Link to={appliedHref(t.id)} className={linkClass}
                     aria-label={t.kind === 'whole_shop' ? `Open the whole-shop count from ${day(t.appliedAt!)}` : `Open the count of ${t.label} from ${day(t.appliedAt!)}`}>Open</Link>
                 </Row>

@@ -5,7 +5,8 @@ import { day } from '@/screens/deliveries/deliveries-bits.tsx';
 /** Pieces shared by Stock take and its counting page (openspec/changes/stock-take). */
 export type Kind = 'whole_shop' | 'category' | 'area' | 'below_zero';
 export type Take = { id: number; kind: Kind; target: string; label: string; status: 'counting' | 'applied'; startedAt: string; startedBy: string; appliedAt: string | null; appliedBy: string | null };
-export type Applied = Take & { productsChanged: number; valuePence: number };
+// `valuePence` comes only to someone who can see costs (product-costs-hidden).
+export type Applied = Take & { productsChanged: number; valuePence?: number };
 
 export const countHref = (id: number) => ROUTES['tk-count'].replace(':id', String(id));
 export const checkHref = (id: number) => ROUTES['tk-diff'].replace(':id', String(id));
