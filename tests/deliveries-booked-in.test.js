@@ -88,6 +88,15 @@ test('booking in keeps the delivery: who, when, its supplier, each line at the o
   assert.deepEqual(d.stillToCome.map((o) => [o.orderId, o.supplierName, o.qty, typeof o.orderedAt]), [[order.id, '[Supplier]', 1, 'string']]);
 });
 
+test('each line carries its barcode and price, for its labels, for anyone signed in', async () => {
+  const thing = await product(12.5);
+  await inShop(() => prepare("UPDATE products SET barcode = ? WHERE id = ?").run(`[barcode]-${thing.id}`, thing.id));
+  const { body: { deliveryId } } = await deliver(asJo, { supplierId, items: [{ productId: thing.id, qty: 1 }] });
+  const { body } = await asJo(`/api/deliveries/booked-in/${deliveryId}`);
+  assert.equal(body.lines[0].barcode, `[barcode]-${thing.id}`);
+  assert.equal(body.lines[0].price, 28);
+});
+
 test('a cost changed later doesn’t change what the delivery cost then', async () => {
   const thing = await product(12.5);
   const { body: { deliveryId } } = await deliver(asOwner, { supplierId, items: [{ productId: thing.id, qty: 1 }] });

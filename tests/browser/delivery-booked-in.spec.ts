@@ -61,6 +61,25 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await expect(main.getByRole('link', { name: `Open the order from ${supplierName}` })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
 
+    // Print labels (openspec/changes/delivery-labels; rs-labels): the pads have
+    // no barcode of their own, so 2. Printing makes one page a label, at the
+    // shop's 50 by 25 mm, in a real PDF of what the printer gets.
+    await page.evaluate(() => { window.print = () => {}; });
+    await main.getByRole('button', { name: 'Print labels' }).click();
+    const box = page.getByRole('dialog', { name: 'Print labels' });
+    await expect(box.getByText('No barcode of its own · 2 received')).toBeVisible();
+    await expect(box.getByRole('textbox', { name: 'How many: Labels for Shimano brake pads' })).toHaveValue('2');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+    await box.getByRole('button', { name: 'Print 2 labels' }).click();
+    await expect(box).toHaveCount(0);
+    await expect(page.locator('#wh-print article[aria-label="Label"]')).toHaveCount(2);
+    await expect(page.locator('#wh-print article[aria-label="Label"] svg rect').first()).toBeAttached();
+    const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1');
+    const pages = [...pdf.matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)];
+    expect(pages.length).toBe(2);
+    expect(Math.round(Number(pages[0][1]) / 72 * 25.4)).toBe(50);
+    expect(Math.round(Number(pages[0][2]) / 72 * 25.4)).toBe(25);
+
     await page.goto(`${server!.baseUrl}/workshop/deliveries/delivery/${id}`);
     await expect(main.getByRole('heading', { level: 2, name: `${supplierName} · 2 items` })).toBeVisible();
     await expect(main.getByRole('list', { name: 'Items in this delivery' })).toContainText(`B05S-RX-${size} · 2 × £28.00`);

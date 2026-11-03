@@ -628,7 +628,7 @@ export function register(route) {
     if (!row) return notFound(res, 'Delivery not found');
     const canSeeCosts = (await currentSession(req))?.login.is_owner === true;
     const lines = await db.prepare(
-      `SELECT l.id, l.product_id, l.qty, l.unit_cost, p.name, p.sku FROM delivery_lines l JOIN products p ON p.id = l.product_id
+      `SELECT l.id, l.product_id, l.qty, l.unit_cost, p.name, p.sku, p.barcode, p.price FROM delivery_lines l JOIN products p ON p.id = l.product_id
         WHERE l.delivery_id = ? ORDER BY l.id`
     ).all(id);
     const aside = await db.prepare(
@@ -650,7 +650,7 @@ export function register(route) {
       ...serializeDelivery(row),
       supplierId: row.supplier_id,
       lines: lines.map((l) => ({
-        id: l.id, productId: l.product_id, name: l.name, sku: l.sku, qty: l.qty,
+        id: l.id, productId: l.product_id, name: l.name, sku: l.sku, barcode: l.barcode, price: l.price, qty: l.qty,
         ...(canSeeCosts ? { unitCost: l.unit_cost, lineCost: costOf(l.qty, l.unit_cost) } : {}),
       })),
       setAside: aside.map((p) => ({
