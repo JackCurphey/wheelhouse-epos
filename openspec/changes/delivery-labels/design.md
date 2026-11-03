@@ -17,7 +17,8 @@ gains a `min`, so a count can reach and be typed as 0; everywhere else it stays
 1. "Print [n] labels" is off at 0 ("Print 1 label" at 1).
 
 A line's count can go above what was received, for spares, up to about ten
-times what came: at least 10, 500 at most, so a slip can't print thousands.
+times what came: at least 10, 500 at most, so a slip can't print thousands. A
+line starts at what came only up to 500.
 
 ## 3. The paper
 

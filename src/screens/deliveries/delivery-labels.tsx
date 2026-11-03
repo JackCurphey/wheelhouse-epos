@@ -77,7 +77,7 @@ const whenBooked = (iso: string) => (Date.now() - new Date(iso).getTime() < JUST
 
 export function PrintLabels({ supplierName, bookedInAt, lines, onClose }: { supplierName: string | null; bookedInAt: string; lines: LabelLine[]; onClose: () => void }) {
   const size = useQuery({ queryKey: ['label-settings'], queryFn: () => apiGet<Size>('/api/label-settings') });
-  const [counts, setCounts] = useState<Record<number, number>>(() => Object.fromEntries(lines.map((l) => [l.id, l.barcode ? 0 : l.qty])));
+  const [counts, setCounts] = useState<Record<number, number>>(() => Object.fromEntries(lines.map((l) => [l.id, l.barcode ? 0 : Math.min(l.qty, mostLabels(l.qty))])));
   const total = lines.reduce((n, l) => n + counts[l.id], 0);
   function print() {
     if (!size.data) return;

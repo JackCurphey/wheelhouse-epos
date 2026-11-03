@@ -6,5 +6,6 @@
 - [x] 1.2 Build the box and the paper to `rs-labels`; `Count` gains `min`
 - [x] 1.3 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.3a The independent review, 3 Nov: a quiet zone and a barcode sized to the label; a count's limit; the day instead of "just now" later. Tests first, watched failing, each broken on purpose
+- [x] 1.3b The re-review, 3 Nov: the starting count keeps to the limit. Test first, watched failing
 - [x] 1.4 Log choices in Jack's section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawing and this spec
 - [x] 1.5 `/opsx:archive` as the last commit

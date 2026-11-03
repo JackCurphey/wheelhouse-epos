@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Print labels starts with what needs one
-Delivery booked in SHALL offer Print labels to everyone when anything was booked in. Its box SHALL list what was booked in: a product with no barcode of its own starting at one label per item received, and a product with its own barcode starting at 0. Any count SHALL be changeable, by stepping or typing, down to 0 and up to about ten times what came, at least 10 and 500 at most. The box SHALL say "booked in just now" only just after booking in, and the day after that.
+Delivery booked in SHALL offer Print labels to everyone when anything was booked in. Its box SHALL list what was booked in: a product with no barcode of its own starting at one label per item received, up to 500, and a product with its own barcode starting at 0. Any count SHALL be changeable, by stepping or typing, down to 0 and up to about ten times what came, at least 10 and 500 at most. The box SHALL say "booked in just now" only just after booking in, and the day after that.
 
 #### Scenario: no barcode of its own
 - **WHEN** [n] of [Product], with no barcode of its own, were booked in

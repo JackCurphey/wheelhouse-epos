@@ -194,6 +194,14 @@ test('a count stops at about ten times what came, 500 at most, and at least 10',
   assert.equal(typed('[Product 3]', '999'), '10');
 });
 
+test('the starting count keeps to the limit too: 1,000 of a product with no barcode starts at 500', async () => {
+  const r = await open({ delivery: { ...DELIVERY, lines: [{ ...THING, qty: 1000 }] } });
+  const box = await openBox(r);
+  assert.equal(box.getByRole('textbox', { name: 'How many: Labels for [Product]' }).value, '500');
+  assert.ok(box.getByRole('button', { name: 'Print 500 labels' }));
+  assert.ok(box.getByText('No barcode of its own · 1000 received'));
+});
+
 test('the box says “booked in just now” only just after; reopened later it says the day', async () => {
   const later = await open({ delivery: { ...DELIVERY, bookedInAt: '2026-09-01T10:00:00.000Z' } });
   const box = await openBox(later);

@@ -2024,6 +2024,7 @@ WP-1.5's. So: slice C, WP-2.3.
    page later. **"Print 0 labels" is off**, with the box still open to add some.
 6. **A count can go above what was received,** for spares, up to about ten
    times what came: at least 10, 500 at most, so a slip can't print thousands.
+   A line starts at what came only up to 500.
    The drawing says any count can be changed; the limit is the review's, 3 Nov.
 7. **The barcode has clear space each side and fits the label:** a narrowest bar
    of 0.33 mm where it fits, and a long code scaled down to the label's width.
