@@ -13,8 +13,8 @@ The owner SHALL send a file with no column matching. Wheelhouse SHALL work out w
 - **THEN** it is taken as the products file and its rows wait to come across
 
 #### Scenario: A file Wheelhouse can't read
-- **WHEN** the owner sends a file that isn't a spreadsheet, or one with no report's columns
-- **THEN** it is refused as "can't read" and nothing is stored
+- **WHEN** the owner sends a file that isn't a spreadsheet, one with no report's columns, or one far too large once unpacked
+- **THEN** it says "can't read", nothing from it is kept, and the server keeps answering for every other shop while it's read
 
 #### Scenario: Only the Owner
 - **WHEN** anyone else sends a file or asks how the files are getting on
@@ -29,7 +29,7 @@ Each row of a price list SHALL become a product with its price, cost, VAT rate, 
 
 #### Scenario: Sent twice
 - **WHEN** the same send is retried, or the same file is sent again
-- **THEN** the stock is not doubled, and what was changed in Wheelhouse since stays
+- **THEN** the stock and the counts are not doubled, and what was changed in Wheelhouse since stays
 
 ### Requirement: A row that doesn't fit waits for a look
 A row Wheelhouse can't use SHALL be kept with the reason, counted as needing a look, and SHALL NOT stop the rest of the file.
@@ -39,8 +39,12 @@ A row Wheelhouse can't use SHALL be kept with the reason, counted as needing a l
 - **THEN** it needs a look, with the reason, and the other rows come across
 
 #### Scenario: Stock at another shop
-- **WHEN** a price list holds a second store's rows
-- **THEN** those rows need a look, and the first store's stock stands
+- **WHEN** a price list, this one or a later one, holds rows for a store other than the first this shop sent
+- **THEN** those rows need a look, the first store's stock stands, and Stock levels doesn't say All in
+
+#### Scenario: Not a plain number
+- **WHEN** a price reads £12.50, 12,50, 0x10 or 1e3
+- **THEN** that row needs a look, and no price is made from it
 
 ### Requirement: Barcodes join their products
 Each row of a Barcode/Alias List SHALL give its product that barcode, whichever file was sent first.
