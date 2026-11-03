@@ -67,8 +67,10 @@ export function ReceivePage() {
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // One key for the life of the scanned list, so Try again after a lost reply
-  // books in once (openspec/changes/delivery-booked-in, design 6).
+  // books in once (openspec/changes/delivery-booked-in, design 6). Once sent, a
+  // list emptied by any route is finished with: the next box gets a new key.
   const [requestKey, setRequestKey] = useState(newRequestKey);
+  const [keySent, setKeySent] = useState(false);
   const [marking, setMarking] = useState<string | null>(null);
   const matches = useSearch(text);
 
@@ -97,6 +99,11 @@ export function ReceivePage() {
   const newestOf = (s: Supplier) => Math.max(0, ...awaiting.filter((o) => o.supplierId === s.id).map((o) => o.id));
   const sorted = [...(suppliers.data ?? [])].sort((a, b) => newestOf(b) - newestOf(a));
   const shown = allSuppliers || sorted.findIndex((s) => String(s.id) === supplierId) >= PILLS ? sorted : sorted.slice(0, PILLS);
+  // Set during render, as above.
+  if (keySent && scanned.length === 0) {
+    setKeySent(false);
+    setRequestKey(newRequestKey());
+  }
   const scannedOf = (key: string) => scanned.find((s) => s.key === key);
   const lineOf = (itemId: number | undefined) => (itemId === undefined ? undefined : orderLines.find((it) => it.id === itemId));
   // A refresh that finds a scanned line's order all in, or the line with
@@ -115,7 +122,6 @@ export function ReceivePage() {
     // The list belongs to one supplier's delivery (logged: changing From clears it).
     setChosen(id);
     setAllIn(false);
-    setRequestKey(newRequestKey());
     setScanned([]);
     setSaid('');
     setProblem(null);
@@ -173,6 +179,7 @@ export function ReceivePage() {
   async function bookIn() {
     setBusy(true);
     setProblem(null);
+    setKeySent(true);
     try {
       const done = await apiMutate<Booked>('/api/deliveries/receive', {
         requestKey,

@@ -440,6 +440,34 @@ test('Try again after a lost reply sends the same request key; changing the supp
   assert.notEqual(receives()[2].requestKey, first.requestKey);
 });
 
+// The re-review, 3 Nov: the key belongs to the list. Emptied after a lost reply,
+// the next box is a new delivery; the same list tried again isn't.
+test('after a lost reply, emptying the list and scanning a new box gets a new key', async () => {
+  const r = await receivePage({ receiveReply: [500, { error: 'lost' }] });
+  const { ui, fireEvent, within } = r;
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await ui.findByRole('alert');
+  fireEvent.click(await r.waitFor(() => within(ui.getByRole('list', { name: 'Scanned' })).getByRole('button', { name: 'One fewer: Shimano brake pads' })));
+  await r.waitFor(() => assert.ok(ui.queryByRole('list', { name: 'Scanned' }) === null));
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(await r.waitFor(() => { const b = ui.getByRole('button', { name: 'Book in 1 items' }); assert.equal(b.disabled, false); return b; }));
+  await r.waitFor(() => assert.equal(receives().length, 2));
+  assert.notEqual(receives()[1].requestKey, receives()[0].requestKey);
+});
+
+test('emptied before anything was sent, then a new box: one key is all it takes, sent once', async () => {
+  const r = await receivePage({ receiveReply: [500, { error: 'lost' }] });
+  const { ui, fireEvent, within } = r;
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(within(await ui.findByRole('list', { name: 'Scanned' })).getByRole('button', { name: 'One fewer: Shimano brake pads' }));
+  await r.waitFor(() => assert.ok(ui.queryByRole('list', { name: 'Scanned' }) === null));
+  await pick(r, 'B05S', /^Shimano brake pads/);
+  fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
+  await r.waitFor(() => assert.equal(receives().length, 1));
+  await ui.findByRole('alert');
+});
+
 test('Book in stays off once it has worked: it never comes back on before the page moves', async () => {
   const r = await receivePage();
   const { ui, fireEvent } = r;
