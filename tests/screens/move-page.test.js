@@ -8,7 +8,7 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
-const FILE = (over) => ({ id: 1, report: 'price_list', fileName: '[file name]', state: 'done', rowsTotal: 9, rowsIn: 9, rowsLook: 0, stockIn: 7, ...over });
+const FILE = (over) => ({ id: 1, report: 'price_list', fileName: '[file name]', state: 'done', rowsTotal: 9, rowsIn: 9, rowsSame: 0, rowsSkipped: 0, rowsLook: 0, stockIn: 7, stockLook: 0, ...over });
 
 let current;
 afterEach(async () => {
@@ -25,7 +25,7 @@ async function open({ user = OWNER, files = [], post } = {}) {
   const uninstall = installDom('http://localhost/workshop/moving');
   const realFetch = globalThis.fetch;
   current = { uninstall, realFetch };
-  const state = { files, sent: [] };
+  const state = { files, sent: [], deleted: [] };
   const json = (status, body) => ({ status, ok: status < 300, json: async () => body });
   globalThis.fetch = async (url, options = {}) => {
     const path = new URL(url, 'http://localhost').pathname;
@@ -34,7 +34,12 @@ async function open({ user = OWNER, files = [], post } = {}) {
     if (path === '/api/move/files') {
       const body = JSON.parse(options.body);
       state.sent.push(body);
-      return post ? post(body, json, state) : json(201, FILE({ fileName: body.fileName, state: 'bringing', rowsIn: 0, stockIn: 0 }));
+      return post ? post(body, json, state) : json(202, FILE({ fileName: body.fileName, state: 'reading', report: null, rowsIn: 0, stockIn: 0 }));
+    }
+    if (path.startsWith('/api/move/files/')) {
+      state.deleted.push(path);
+      state.files = state.files.filter((f) => `/api/move/files/${f.id}` !== path);
+      return json(200, { ok: true });
     }
     if (path.startsWith('/api/')) return json(200, []);
     return json(404, { error: 'Not found' });
@@ -71,7 +76,7 @@ test('Bring your data: the stages, which files to download, and the drop zone (m
 });
 
 test('dropping a file sends it with a key, and it starts by itself, with leaving allowed (mv-progress)', async () => {
-  const view = await open({ post: (body, json, state) => { state.files = [FILE({ fileName: body.fileName, state: 'bringing', rowsIn: 3, stockIn: 2 })]; return json(201, state.files[0]); } });
+  const view = await open({ post: (body, json, state) => { state.files = [FILE({ fileName: body.fileName, state: 'bringing', rowsIn: 2, rowsSame: 1, stockIn: 2 })]; return json(202, state.files[0]); } });
   await text(view, /Drop all the files here/);
   await drop(view, 'Price List.xlsx', 'made up');
   await text(view, /Bringing your data across/);
@@ -84,21 +89,38 @@ test('dropping a file sends it with a key, and it starts by itself, with leaving
   assert.ok(document.querySelector('[role="status"][aria-live="polite"]'), 'progress announces itself');
 });
 
-test('a file Wheelhouse can\'t read says so and asks for another (mv-progress-failed)', async () => {
-  const view = await open({ post: (body, json, state) => (body.fileName === 'Price List.xlsx' ? (state.files = [FILE({ fileName: body.fileName })], json(201, state.files[0])) : json(422, { error: 'x', code: 'cant_read' })) });
-  await text(view, /Drop all the files here/);
-  await drop(view, '[file name].xlsx');
+test('a file Wheelhouse can\'t read says so, even after leaving, and asks for another (mv-progress-failed)', async () => {
+  const refused = FILE({ id: 7, report: null, fileName: '[file name].xlsx', state: 'cant_read', rowsTotal: 0, rowsIn: 0, stockIn: 0 });
+  const view = await open({ files: [refused], post: (body, json, state) => { state.files = [...state.files, FILE({ id: 8, fileName: body.fileName })]; return json(202, state.files.at(-1)); } });
   await text(view, /Wheelhouse couldn’t read this file/);
   assert.match(document.body.textContent, /Couldn’t read it/);
-  const { fireEvent } = await import('@testing-library/react');
+  const { fireEvent, waitFor } = await import('@testing-library/react');
   fireEvent.click(view.getByRole('button', { name: 'Choose another file for [file name].xlsx' }));
   assert.match(document.body.textContent, /Wheelhouse couldn’t read this file/, 'it stays while the owner chooses');
+  assert.deepEqual(view.state.deleted, []);
   const good = new window.File(['y'], 'Price List.xlsx');
   fireEvent.change(view.getByLabelText('Choose another file'), { target: { files: [good] } });
-  await text(view, /Price List\.xlsx/);
-  const { waitFor } = await import('@testing-library/react');
-  await waitFor(() => assert.ok(!document.body.textContent.includes('[file name].xlsx'), 'the refused one has gone'));
+  await waitFor(() => assert.deepEqual(view.state.deleted, ['/api/move/files/7']));
   await waitFor(() => assert.equal(view.state.sent.at(-1).fileName, 'Price List.xlsx'));
+  await text(view, /Here’s what came across/);
+  assert.ok(!document.body.textContent.includes('[file name].xlsx'), 'the refused one has gone');
+});
+
+test('a file being read shows, by name, while it\'s read', async () => {
+  const view = await open({ files: [FILE({ report: null, fileName: 'Price List.xlsx', state: 'reading', rowsTotal: 0, rowsIn: 0, stockIn: 0 })] });
+  await text(view, /Bringing your data across/);
+  assert.match(rowOf('Price List.xlsx').textContent, /Bringing across/);
+});
+
+test('told the server is busy with another file, it waits and sends again with the same key', async () => {
+  let tries = 0;
+  const view = await open({ post: (body, json, state) => { tries += 1; if (tries === 1) return json(429, { error: 'x', code: 'busy' }); state.files = [FILE()]; return json(202, state.files[0]); } });
+  await text(view, /Drop all the files here/);
+  await drop(view, 'a.xlsx');
+  const { waitFor } = await import('@testing-library/react');
+  await waitFor(() => assert.equal(view.state.sent.length, 2), { timeout: 5000 });
+  assert.equal(view.state.sent[0].requestKey, view.state.sent[1].requestKey);
+  await text(view, /Here’s what came across/);
 });
 
 test('a file too large isn\'t sent, and says it can\'t be read', async () => {
@@ -114,7 +136,7 @@ test('a file too large isn\'t sent, and says it can\'t be read', async () => {
 
 test('a send that got no answer goes once more with the same key', async () => {
   let tries = 0;
-  const view = await open({ post: (body, json, state) => { tries += 1; if (tries === 1) throw new TypeError('network'); state.files = [FILE({ state: 'done' })]; return json(201, state.files[0]); } });
+  const view = await open({ post: (body, json, state) => { tries += 1; if (tries === 1) throw new TypeError('network'); state.files = [FILE({ state: 'done' })]; return json(202, state.files[0]); } });
   await text(view, /Drop all the files here/);
   await drop(view, 'a.xlsx');
   await text(view, /Here’s what came across/);
@@ -144,6 +166,21 @@ test('all in says so', async () => {
   const view = await open({ files: [FILE()] });
   await text(view, /Here’s what came across/);
   assert.match(rowOf('Products').textContent, /9 brought across.*All in/);
+  assert.ok(!rowOf('Products').textContent.includes('already here'));
+});
+
+test('a file sent again says what was already here, not that it came across twice', async () => {
+  const view = await open({ files: [FILE(), FILE({ id: 2, rowsIn: 0, rowsSame: 9, stockIn: 0 })] });
+  await text(view, /Here’s what came across/);
+  assert.match(rowOf('Products').textContent, /9 brought across · 9 already here.*All in/);
+  assert.match(rowOf('Stock levels').textContent, /7 brought across.*All in/);
+});
+
+test('stock that didn\'t come across means Stock levels isn\'t All in', async () => {
+  const view = await open({ files: [FILE({ rowsIn: 5, rowsLook: 4, stockIn: 5, stockLook: 3 })] });
+  await text(view, /Here’s what came across/);
+  assert.match(rowOf('Stock levels').textContent, /5 brought across.*3 need a look/);
+  assert.ok(!rowOf('Stock levels').textContent.includes('All in'));
 });
 
 test('it\'s in the Owner\'s sidebar under Office, after Today, and not for anyone else', async () => {

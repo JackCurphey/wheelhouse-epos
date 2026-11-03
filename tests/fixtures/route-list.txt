@@ -293,3 +293,4 @@ GET /api/privacy-requests/open-count
 POST /api/privacy-requests/:id/delete
 GET /api/move
 POST /api/move/files
+DELETE /api/move/files/:id

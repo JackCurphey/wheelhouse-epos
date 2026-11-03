@@ -2073,14 +2073,16 @@ WP-1.5's. So: slice C, WP-2.3.
 
 1. **Excel's `.xlsx` and CSV are what's read; anything else, an old `.xls` included, is "couldn't read it".** We've only read the reports' column names on screen, never seen a downloaded file (`2026-10-05-citrus-lime-exports.md`). If "Export to Excel" turns out to give something else, the reader changes; nothing else does.
 2. **Each Citrus Lime code comes across as its own product,** so a jersey in three sizes is three products until WP-1.5 (Mark's) adds sizes and colours. Matrix Lookup Code isn't kept: the file can be read again then.
-3. **One shop's stock comes across.** A product has one stock figure until WP-1.4 and WP-5.2, so a file's first Store counts and any other store's rows need a look.
+3. **One shop's stock comes across.** A product has one stock figure until WP-1.4 and WP-5.2, so the first Store this shop ever sent counts, and any other store's rows need a look, in that file or a later one (the independent review, 3 Nov).
 4. **One barcode per product.** Wheelhouse keeps one, so a second barcode for a product needs a look rather than being lost quietly.
 5. **Serial Number List isn't read yet.** Wheelhouse has nowhere to keep a serial number on stock, so it's treated as a file it can't read, and isn't on the list of files to download.
 6. **A code already in Wheelhouse is left alone** and counted as in, following decision 3's "what you did in Wheelhouse stays". Bringing the same file again changes nothing. Changes coming across belong to the weekly refresh (WP-8.1).
 7. **Brought-across stock has a history line,** "Brought across from Citrus Lime", as Received, under the Owner's sign-in (stock control decision 6). Stock below zero stays below zero, so Today asks for it to be counted.
-8. **Empty cells:** no cost is £0.00 and no reorder level is 3, as adding a product does by hand; no VAT rate is 20%. A VAT rate other than 0, 5 or 20% needs a look.
+8. **Only plain numbers are prices, costs and quantities** (the independent review, 3 Nov): 1,234.50 is, but £12.50, 12,50, 1e3 and 0x10 need a look. **Empty cells:** no cost is £0.00 and no reorder level is 3, as adding a product does by hand; no VAT rate is 20%. A VAT rate other than 0, 5 or 20% needs a look.
 9. **Nothing shows online because of it:** every product comes across with Show online off.
 10. **Only the columns used are kept, and a row's are emptied once it's in.** A row that needs a look keeps its own until it's dealt with.
+11. **A file is stored, then read in the background** (the independent review, 3 Nov), so a slow read can't look like a failed send. Its bytes go once it's read. A made-up 100,000-row price list: send answered in 96 ms, read in 7 s, across in under 5 minutes. One send at a time per server; a second is told to try again in a moment, and a shop can have 10 waiting.
+12. **What's too much to read:** 300,000 rows, 5,000,000 cells, 300 columns, 32,767 characters in a cell (Excel's own limit), 150 million characters in all, 60 seconds or 1 GB to read it. Any of those, or a character that doesn't exist, is "couldn't read it".
 
 ### 3 Nov 2026: Citrus Lime import, the page (WP-2.4; `openspec/changes/citrus-import-screens`; `mv-start`, `mv-progress`, `mv-progress-failed`, `mv-summary`)
 
@@ -2088,9 +2090,10 @@ WP-1.5's. So: slice C, WP-2.3.
 2. **Which files to download is filled in from the exports list:** "Price List - Store Level and Barcode/Alias List, in Cloud Reports", replacing the drawing's placeholder.
 3. **Sales and Workshop jobs stay as rows, with a grey "Later".** They come with WP-8.1, or a shop's full export.
 4. **Next: run alongside, Look at the [n] and Ask us to help aren't shown yet,** nor are the stages links, since there's nothing behind them. They appear as each is built.
-5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It lasts while the page is open.
+5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It stays, even after leaving the page, until another is chosen (the independent review, 3 Nov).
 6. **A send that fails for another reason says "Not sent"** and "Wheelhouse couldn't send this file. Try again in a moment", so nobody hunts for a fault in a good file. A file over 30 MB is treated as can't read.
 7. **The summary has a slim "Drop more files here",** the Weekly refresh card's zone, for someone who sent only some of the files.
+8. **The summary's wording** (the independent review, 3 Nov): "[n] brought across" counts only what's new. Added where it applies, "· [n] already here" for a code left alone, so a resent file doesn't look like it came across twice. Stock levels says "[n] need a look", not All in, when any stock didn't come across.
 
 ### 3 Nov 2026: Citrus Lime import, customers and bikes (WP-2.4; `openspec/changes/citrus-import-customers`; `mv-start`, `mv-summary`)
 
