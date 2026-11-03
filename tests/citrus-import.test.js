@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
-import { bringAcrossRound, bringBatch, readNextFile } from '../server/move/bring-across.js';
+import { bringBatch, readNextFile } from '../server/move/bring-across.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { staffLogin } from './helpers/till.js';
@@ -35,7 +35,11 @@ const key = () => randomBytes(24).toString('hex');
 const send = (file, { name = 'export.xlsx', requestKey = key(), who = owner } = {}) =>
   staff('/api/move/files', { method: 'POST', body: { fileName: name, dataBase64: file.toString('base64'), requestKey } }, who);
 const inShop = (fn) => runWithShop(owner.shop.id, fn);
-const finish = async () => { for (let i = 0; i < 5; i += 1) await bringAcrossRound(); };
+// This shop only: going round every shop in the shared test database takes minutes.
+const finish = async () => {
+  while (await readNextFile(owner.shop.id));
+  while (await inShop(() => bringBatch()));
+};
 const productBy = (sku) => inShop(() => prepare('SELECT * FROM products WHERE sku = ?').get(sku));
 const fileIn = async (id) => (await staff('/api/move')).body.files.find((f) => f.id === id);
 const num = (over) => ({ state: 'done', rowsIn: 0, rowsSame: 0, rowsSkipped: 0, rowsLook: 0, stockIn: 0, stockLook: 0, ...over });
