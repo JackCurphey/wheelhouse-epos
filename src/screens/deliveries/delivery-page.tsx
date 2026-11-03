@@ -99,7 +99,7 @@ export function DeliveryBookedPage() {
           <Link to={ROUTES['rs-receive']} className={buttonVariants({ variant: 'default' })}>Receive another delivery</Link>
         </div>
       </Card>
-      {labels ? <PrintLabels supplierName={d.supplierName} lines={d.lines} onClose={() => setLabels(false)} /> : null}
+      {labels ? <PrintLabels supplierName={d.supplierName} bookedInAt={d.bookedInAt} lines={d.lines} onClose={() => setLabels(false)} /> : null}
     </Page>
   );
 }

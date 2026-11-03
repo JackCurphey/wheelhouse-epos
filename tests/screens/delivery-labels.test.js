@@ -154,6 +154,58 @@ test('if the label size can’t be loaded the box says so and won’t print', as
   assert.equal(printed, 0);
 });
 
+// The independent review, 3 Nov (openspec/changes/delivery-labels, design 3 and 2).
+test('a barcode keeps a quiet zone each side, and is sized to fit: a long code fills the label, never more; a short one stays its size', async () => {
+  const LONG = 'B05S-RX-0123456789-0123456789-0123456789';
+  const r = await open({ delivery: { ...DELIVERY, lines: [{ ...THING, sku: LONG, qty: 1 }, { ...PADS, id: 3, barcode: null, sku: 'B05S-RX', qty: 1 }] } });
+  let bars = null;
+  window.print = () => {
+    bars = [...document.querySelectorAll('#wh-print article[aria-label="Label"] svg')].map((svg) => {
+      const view = Number(svg.getAttribute('viewBox').split(' ')[2]);
+      // The bars sit in a group moved along by the quiet zone; a full-width rect is the white behind.
+      const moved = Number(svg.querySelector('g').getAttribute('transform').match(/translate\(([\d.]+)/)[1]);
+      const dark = [...svg.querySelectorAll('g rect')];
+      const left = moved + Math.min(...dark.map((x) => Number(x.getAttribute('x'))));
+      const right = moved + Math.max(...dark.map((x) => Number(x.getAttribute('x')) + Number(x.getAttribute('width'))));
+      return { view, left, gapRight: view - right, width: svg.style.width };
+    });
+  };
+  const box = await openBox(r);
+  await r.waitFor(() => assert.equal(box.getByRole('button', { name: 'Print 2 labels' }).disabled, false));
+  r.fireEvent.click(box.getByRole('button', { name: 'Print 2 labels' }));
+  assert.equal(bars.length, 2);
+  // 10 narrow bars of clear space (one narrow bar is 2 units) on both sides.
+  for (const b of bars) assert.ok(b.left >= 20 && b.gapRight >= 20, JSON.stringify(b));
+  assert.equal(bars[0].width, '50mm', 'a long code is the label’s width, no more');
+  const short = Number(bars[1].width.replace('mm', ''));
+  assert.ok(short > 0 && short < 50, bars[1].width);
+});
+
+test('a count stops at about ten times what came, 500 at most, and at least 10', async () => {
+  const r = await open({ delivery: { ...DELIVERY, lines: [{ ...THING, qty: 3 }, { ...THING, id: 3, productId: 13, name: '[Product 2]', qty: 2000 }, { ...THING, id: 4, productId: 14, name: '[Product 3]', qty: 1 }] } });
+  const box = await openBox(r);
+  const typed = (name, value) => {
+    const input = box.getByRole('textbox', { name: `How many: Labels for ${name}` });
+    r.fireEvent.change(input, { target: { value } });
+    return input.value;
+  };
+  assert.equal(typed('[Product]', '999'), '30');
+  assert.equal(typed('[Product 2]', '999'), '500');
+  assert.equal(typed('[Product 3]', '999'), '10');
+});
+
+test('the box says “booked in just now” only just after; reopened later it says the day', async () => {
+  const later = await open({ delivery: { ...DELIVERY, bookedInAt: '2026-09-01T10:00:00.000Z' } });
+  const box = await openBox(later);
+  assert.ok(box.getByText('[Supplier] · booked in Tue 1 Sep'));
+  assert.ok(box.queryByText(/just now/) === null);
+  later.cleanup();
+  shell.queryClient.clear();
+  uninstall();
+  const none = await open({ delivery: { ...DELIVERY, supplierName: null, bookedInAt: '2026-09-01T10:00:00.000Z' } });
+  assert.ok((await openBox(none)).getByText('Booked in Tue 1 Sep'));
+});
+
 test('Cancel closes the box without printing', async () => {
   const r = await open();
   let printed = 0;

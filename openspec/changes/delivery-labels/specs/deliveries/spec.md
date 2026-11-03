@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Print labels starts with what needs one
-Delivery booked in SHALL offer Print labels to everyone when anything was booked in. Its box SHALL list what was booked in: a product with no barcode of its own starting at one label per item received, and a product with its own barcode starting at 0. Any count SHALL be changeable, by stepping or typing, down to 0.
+Delivery booked in SHALL offer Print labels to everyone when anything was booked in. Its box SHALL list what was booked in: a product with no barcode of its own starting at one label per item received, and a product with its own barcode starting at 0. Any count SHALL be changeable, by stepping or typing, down to 0 and up to about ten times what came, at least 10 and 500 at most. The box SHALL say "booked in just now" only just after booking in, and the day after that.
 
 #### Scenario: no barcode of its own
 - **WHEN** [n] of [Product], with no barcode of its own, were booked in
@@ -16,7 +16,7 @@ Delivery booked in SHALL offer Print labels to everyone when anything was booked
 - **THEN** there is no Print labels button
 
 ### Requirement: Labels print through the browser, one a page
-Print SHALL send the browser one label per count, each one page at the shop's label size, with the product's name, price and a barcode of its barcode or, with none, its code, with that code in words under it. A product with neither SHALL print its name and price only. If the label size can't be loaded, the box SHALL say so and SHALL NOT print.
+Print SHALL send the browser one label per count, each one page at the shop's label size, with the product's name, price and a barcode of its barcode or, with none, its code, with that code in words under it. The barcode SHALL keep clear space each side and SHALL fit the label. A product with neither SHALL print its name and price only. If the label size can't be loaded, the box SHALL say so and SHALL NOT print.
 
 #### Scenario: [Product] with a code and no barcode
 - **WHEN** 2 labels of [Product], code [Supplier code], are printed
