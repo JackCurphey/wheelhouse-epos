@@ -27,8 +27,10 @@ ALTER TABLE move_files ALTER COLUMN state SET DEFAULT 'reading';
 ALTER TABLE move_files ADD COLUMN IF NOT EXISTS rows_same INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE move_files ADD COLUMN IF NOT EXISTS rows_skipped INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE move_files ADD COLUMN IF NOT EXISTS stock_look INTEGER NOT NULL DEFAULT 0;
+-- All the reports the move reads, so running this again over a database that has
+-- them is safe (customers and bikes come with citrus-import-customers).
 ALTER TABLE move_files DROP CONSTRAINT IF EXISTS move_files_report_check;
-ALTER TABLE move_files ADD CONSTRAINT move_files_report_check CHECK (report IN ('price_list', 'barcodes'));
+ALTER TABLE move_files ADD CONSTRAINT move_files_report_check CHECK (report IN ('price_list', 'barcodes', 'customers', 'bikes'));
 ALTER TABLE move_files DROP CONSTRAINT IF EXISTS move_files_state_check;
 ALTER TABLE move_files ADD CONSTRAINT move_files_state_check CHECK (state IN ('reading', 'cant_read', 'bringing', 'done'));
 DROP INDEX IF EXISTS idx_move_files_bringing;
