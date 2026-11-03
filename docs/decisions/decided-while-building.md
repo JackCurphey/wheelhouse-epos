@@ -2069,6 +2069,19 @@ WP-1.5's. So: slice C, WP-2.3.
    form doesn't. It needs telling with no product to read from, so `GET /api/auth/me`
    now says `canSeeCosts`; nothing else reads it yet.
 
+### 3 Nov 2026: Citrus Lime import, products and stock (WP-2.4; `openspec/changes/citrus-import-products`; `mv-progress`, `mv-summary`)
+
+1. **Excel's `.xlsx` and CSV are what's read; anything else, an old `.xls` included, is "couldn't read it".** We've only read the reports' column names on screen, never seen a downloaded file (`2026-10-05-citrus-lime-exports.md`). If "Export to Excel" turns out to give something else, the reader changes; nothing else does.
+2. **Each Citrus Lime code comes across as its own product,** so a jersey in three sizes is three products until WP-1.5 (Mark's) adds sizes and colours. Matrix Lookup Code isn't kept: the file can be read again then.
+3. **One shop's stock comes across.** A product has one stock figure until WP-1.4 and WP-5.2, so a file's first Store counts and any other store's rows need a look.
+4. **One barcode per product.** Wheelhouse keeps one, so a second barcode for a product needs a look rather than being lost quietly.
+5. **Serial Number List isn't read yet.** Wheelhouse has nowhere to keep a serial number on stock, so it's treated as a file it can't read, and isn't on the list of files to download.
+6. **A code already in Wheelhouse is left alone** and counted as in, following decision 3's "what you did in Wheelhouse stays". Bringing the same file again changes nothing. Changes coming across belong to the weekly refresh (WP-8.1).
+7. **Brought-across stock has a history line,** "Brought across from Citrus Lime", as Received, under the Owner's sign-in (stock control decision 6). Stock below zero stays below zero, so Today asks for it to be counted.
+8. **Empty cells:** no cost is £0.00 and no reorder level is 3, as adding a product does by hand; no VAT rate is 20%. A VAT rate other than 0, 5 or 20% needs a look.
+9. **Nothing shows online because of it:** every product comes across with Show online off.
+10. **Only the columns used are kept, and a row's are emptied once it's in.** A row that needs a look keeps its own until it's dealt with.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
