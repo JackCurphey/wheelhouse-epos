@@ -8,6 +8,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuthError, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSession, createShop, destroySession, getSessionContext, loginForWorkosUser } from '../auth.js';
 import { badRequest, makeRateLimiter, notFound, parseCookies, readJsonBody, readRawBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 import { ownerHere } from '../lib/workshop-owner.js';
 import { removedWorkshopHere, thisWorkshop, workshopCookieExpired, workshopCookieToken } from '../till/this-workshop.js';
 import { thisTill } from '../till/this-till.js';
@@ -232,6 +233,9 @@ export function register(route) {
     sendJson(res, 200, {
       ...serializeSession({ ...ctx, login: { ...ctx.login, is_owner: isOwner } }),
       workshopComputer,
+      // So the old app's add form offers no cost box a save would throw away
+      // (openspec/changes/product-costs-hidden).
+      canSeeCosts: await runWithShop(ctx.shop.id, () => canSeeCosts(req)),
       employee: employee ? { id: employee.id, name: employee.name, isCashier: !!employee.is_cashier } : null,
     });
   });

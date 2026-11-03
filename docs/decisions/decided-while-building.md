@@ -2056,12 +2056,18 @@ WP-1.5's. So: slice C, WP-2.3.
    sends it only to someone who can see costs.
 6. **Stock take and Today at the Owner's till:** the Check, Apply, Finished counts
    and Needs attention stay open to whoever the sign-in lets in, as built, without
-   their values at cost. The download loses its At cost column. On the Check that
-   leaves the differences headed "largest value first" with no value showing.
+   their values at cost. The download loses its At cost column. For that person
+   the Check lists differences by size, then name, and is labelled "Differences,
+   largest first", because value order would itself say which product costs more.
 7. **The Stockroom setting's amount** ("show on Today when an adjustment is worth
    more than") is left as it is: it's the Owner's setting, not what anything cost.
 8. **A blank or non-number cost saved by the Owner** leaves the stored cost alone;
-   it no longer reads as £0. £0 typed on purpose is still saved as £0.
+   it no longer reads as £0. £0 typed on purpose is still saved as £0. An order
+   line's emptied box is the same: blank takes the draft line's cost, otherwise the
+   product's. Nonsense on an order line is still refused, as before.
+9. **The old app's add form offers no cost box when costs are hidden,** as its edit
+   form doesn't. It needs telling with no product to read from, so `GET /api/auth/me`
+   now says `canSeeCosts`; nothing else reads it yet.
 
 ## Decided here, for Jack to overrule
 

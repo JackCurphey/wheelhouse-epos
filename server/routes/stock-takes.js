@@ -60,8 +60,12 @@ const withSummary = async (t, costs) => {
   const [s] = await appliedSummary([t.id]);
   return summaryOf(t, s, costs);
 };
+// checkOf's rows come largest value first, and that order would itself say which
+// product costs more: by the size of the difference, then name, instead.
 function checkWithoutCosts(checked) {
-  const rows = checked.rows.map((r) => { const row = { ...r }; delete row.costPence; delete row.valuePence; return row; });
+  const rows = checked.rows
+    .map((r) => { const row = { ...r }; delete row.costPence; delete row.valuePence; return row; })
+    .sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference) || a.name.localeCompare(b.name) || a.productId - b.productId);
   const shown = { ...checked, rows };
   delete shown.valuePence;
   return shown;

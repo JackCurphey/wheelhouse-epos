@@ -97,7 +97,7 @@ const MAX_UNIT_COST = 99999999.99;
 
 // What each line costs. Someone who can't see costs isn't told it and doesn't
 // set it: whatever they send is ignored. Otherwise a line with no cost sent
-// (`unitCost` missing or null) takes one too, never £0: the cost already on
+// (`unitCost` missing, null or blank) takes one too, never £0: the cost already on
 // that draft's line (`onDraft`, product id to cost), else the product's
 // (openspec/changes/product-costs-hidden).
 async function loadPoLineItems(items, costs, onDraft = new Map()) {
@@ -105,7 +105,7 @@ async function loadPoLineItems(items, costs, onDraft = new Map()) {
   for (const it of items) {
     const productId = Number(it.productId);
     const qty = Math.trunc(Number(it.qty));
-    const given = costs && it.unitCost !== undefined && it.unitCost !== null;
+    const given = costs && it.unitCost !== undefined && it.unitCost !== null && String(it.unitCost).trim() !== '';
     const unitCost = given ? Number(it.unitCost) : 0;
     if (!productId || !Number.isFinite(qty) || qty <= 0) {
       throw new ValidationError('Each item needs a valid productId and positive qty');

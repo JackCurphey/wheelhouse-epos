@@ -3,7 +3,7 @@
 
 // ---------------- State ----------------
 
-let currentUser = null; // { id, name, email, isOwner, shopName, shopSlug } for the signed-in employee, or null before boot() resolves it
+let currentUser = null; // { id, name, email, isOwner, canSeeCosts, shopName, shopSlug } for the signed-in employee, or null before boot() resolves it
 let route = (location.hash || '#till').replace('#', '');
 let products = [];
 let categories = [];
@@ -1909,6 +1909,24 @@ function marginOf(netPrice, cost) {
 
 // What a product's form sends: a figure typed, or no cost at all, which leaves
 // the one stored as it is, never 0 (openspec/changes/product-costs-hidden).
+// A product's form offers no cost box a save would throw away: editing, the
+// product says (its cost wasn't sent); adding, the sign-in's reply does.
+function costBoxHidden(product, user) {
+  return product ? !Number.isFinite(product.cost) : user?.canSeeCosts === false;
+}
+
+// An order line's cost box: empty is no cost, which leaves the line's cost to
+// the server, never £0. A figure, 0 included, is one.
+function poLineCost(value) {
+  const typed = String(value).trim();
+  return typed === '' ? null : Math.max(0, Number(typed) || 0);
+}
+
+// null times a count is 0, which would read as a real cost.
+function poLineTotal(qty, unitCost) {
+  return costOrDash(Number.isFinite(unitCost) ? qty * unitCost : NaN);
+}
+
 function costFromForm(input) {
   const typed = input ? parseFloat(input.value) : NaN;
   return Number.isFinite(typed) ? typed : undefined;
@@ -2005,7 +2023,7 @@ async function renderPurchaseOrderForm(poId) {
       return;
     }
   }
-  poFormItems = po ? po.items.map((it) => ({ productId: it.productId, name: it.name, sku: it.sku, qty: it.qtyOrdered, unitCost: it.unitCost })) : [];
+  poFormItems = po ? po.items.map((it) => ({ productId: it.productId, name: it.name, sku: it.sku, qty: it.qtyOrdered, unitCost: it.unitCost, costHidden: !Number.isFinite(it.unitCost) })) : [];
   poFormSearch = '';
 
   const main = document.getElementById('office-content');
@@ -2125,7 +2143,7 @@ function addPoFormItem(product) {
   if (existing) {
     existing.qty += 1;
   } else {
-    poFormItems.push({ productId: product.id, name: product.name, sku: product.sku, qty: 1, unitCost: product.cost });
+    poFormItems.push({ productId: product.id, name: product.name, sku: product.sku, qty: 1, unitCost: product.cost, costHidden: !Number.isFinite(product.cost) });
   }
   poFormSearch = '';
   const searchInput = document.getElementById('po-product-search');
@@ -2148,8 +2166,8 @@ function renderPoFormItems() {
         <td>${esc(it.name)}</td>
         <td>${esc(it.sku || '—')}</td>
         <td class="num"><input type="number" min="1" step="1" class="po-qty-input" data-qty-idx="${idx}" value="${it.qty}" style="width:70px;" /></td>
-        <td class="num">${Number.isFinite(it.unitCost) ? `£<input type="number" min="0" step="0.01" class="po-cost-input" data-cost-idx="${idx}" value="${it.unitCost}" style="width:80px;" />` : '—'}</td>
-        <td class="num" data-line-total-idx="${idx}">${costOrDash(it.qty * it.unitCost)}</td>
+        <td class="num">${it.costHidden ? '—' : `£<input type="number" min="0" step="0.01" class="po-cost-input" data-cost-idx="${idx}" value="${it.unitCost ?? ''}" style="width:80px;" />`}</td>
+        <td class="num" data-line-total-idx="${idx}">${poLineTotal(it.qty, it.unitCost)}</td>
         <td><button class="remove-btn" data-remove-po-idx="${idx}" title="Remove">✕</button></td>
       </tr>
     `
@@ -2165,7 +2183,7 @@ function renderPoFormItems() {
   tbody.querySelectorAll('input[data-cost-idx]').forEach((inp) =>
     inp.addEventListener('input', (e) => {
       const idx = Number(e.target.dataset.costIdx);
-      poFormItems[idx].unitCost = Math.max(0, Number(e.target.value) || 0);
+      poFormItems[idx].unitCost = poLineCost(e.target.value);
       updatePoLineTotal(idx);
     })
   );
@@ -2179,7 +2197,7 @@ function renderPoFormItems() {
 
 function updatePoLineTotal(idx) {
   const cell = document.querySelector(`[data-line-total-idx="${idx}"]`);
-  if (cell) cell.textContent = costOrDash(poFormItems[idx].qty * poFormItems[idx].unitCost);
+  if (cell) cell.textContent = poLineTotal(poFormItems[idx].qty, poFormItems[idx].unitCost);
 }
 
 async function savePurchaseOrder(existingPo) {
@@ -3267,8 +3285,8 @@ function renderProductFormModal(holder, product) {
                 <label for="f-price">Price (£) *</label>
                 <input id="f-price" type="number" min="0" step="0.01" required value="${product?.price ?? ''}" />
               </div>
-              ${product && !Number.isFinite(product.cost)
-                ? `<div class="field"><label>Cost (£)</label><div>${costOrDash(product.cost)}</div></div>`
+              ${costBoxHidden(product, currentUser)
+                ? `<div class="field"><label>Cost (£)</label><div>${costOrDash(product?.cost)}</div></div>`
                 : `<div class="field">
                 <label for="f-cost">Cost (£)</label>
                 <input id="f-cost" type="number" min="0" step="0.01" value="${product?.cost ?? ''}" />

@@ -141,6 +141,7 @@ for (const [who, sees, computer] of PEOPLE) {
     says(sees, await send('/api/dashboard'), 'the dashboard’s low stock');
     await catalogueItem();
     says(sees, await send('/api/catalogue-items'), 'a supplier’s catalogue');
+    assert.equal((await send('/api/auth/me')).body.canSeeCosts, sees, 'the old app’s add form is told');
   });
 
   test(`writing: what ${who} is answered with follows the same rule`, async () => {
@@ -315,6 +316,13 @@ test('the Owner’s order: a cost typed is kept; none sent is the product’s; �
   assert.deepEqual((await linesOf(none.body.id)).map((l) => l.unit_cost), [COST]);
   const zero = await order(send, [{ productId: id, qty: 1, unitCost: 0 }]);
   assert.deepEqual((await linesOf(zero.body.id)).map((l) => l.unit_cost), [0]);
+  const zeroText = await order(send, [{ productId: id, qty: 1, unitCost: '0' }]);
+  assert.deepEqual((await linesOf(zeroText.body.id)).map((l) => l.unit_cost), [0]);
+  for (const blank of ['', '   ']) {
+    const made = await order(send, [{ productId: id, qty: 1, unitCost: blank }]);
+    assert.equal(made.status, 201, made.text);
+    assert.deepEqual((await linesOf(made.body.id)).map((l) => l.unit_cost), [COST], 'a blank cost isn’t £0');
+  }
   const nonsense = await order(send, [{ productId: id, qty: 1, unitCost: 'none' }]);
   assert.equal(nonsense.status, 400, 'nonsense from the Owner is still refused');
 });
@@ -324,4 +332,52 @@ test('the Owner can still mark as ordered a draft with no cost, as before', asyn
   const send = asOwner();
   const draft = await order(send, [{ productId: id, qty: 1 }]);
   assert.equal((await send(`/api/purchase-orders/${draft.body.id}/mark-ordered`, POST())).status, 200);
+});
+
+test('the Owner empties a draft line’s cost box: the line keeps its cost', async () => {
+  const id = await product();
+  const send = asOwner();
+  const draft = await order(send, [{ productId: id, qty: 1, unitCost: 19.99 }]);
+  for (const blank of ['', '   ', null]) {
+    const saved = await send(`/api/purchase-orders/${draft.body.id}`, PUT({ items: [{ productId: id, qty: 2, unitCost: blank }] }));
+    assert.equal(saved.status, 200, saved.text);
+    assert.deepEqual((await linesOf(draft.body.id)).map((l) => l.unit_cost), [19.99], JSON.stringify(blank));
+  }
+  const zero = await send(`/api/purchase-orders/${draft.body.id}`, PUT({ items: [{ productId: id, qty: 2, unitCost: 0 }] }));
+  assert.equal(zero.status, 200, zero.text);
+  assert.deepEqual((await linesOf(draft.body.id)).map((l) => l.unit_cost), [0], '£0 on purpose');
+});
+
+// ---- A count's check: its order mustn't say which product costs more ----
+
+async function countOf(lines) {
+  const send = asOwner();
+  n += 1;
+  const started = await send('/api/stock-takes', POST({ kind: 'area', target: `[Area ${n}]` }));
+  assert.equal((await send(`/api/stock-takes/${started.body.id}/join`, POST())).status, 200);
+  const ids = {};
+  for (const { name, cost, stock, counted } of lines) {
+    ids[name] = await inShop(async () => (await prepare('INSERT INTO products (sku, name, category, price, cost, stock_qty, low_stock_threshold, description, updated_at) VALUES (?, ?, ?, 28, ?, ?, 3, ?, now())')
+      .run(`${name}-${n}`, name, 'Brakes', cost, stock, '')).lastInsertRowid);
+    const res = await send(`/api/stock-takes/${started.body.id}/counts`, POST({ productId: ids[name], qty: counted }));
+    assert.equal(res.status, 200, res.text);
+  }
+  return started.body.id;
+}
+const namesOf = (reply) => reply.body.rows.map((r) => r.name);
+
+test('without costs, a check’s differences are by size, then name, not by what they cost', async () => {
+  const take = await countOf([
+    { name: '[Dear, one under]', cost: 500, stock: 2, counted: 1 },
+    { name: '[Cheap, three under]', cost: 1, stock: 4, counted: 1 },
+    { name: '[Also dear, one over]', cost: 400, stock: 1, counted: 2 },
+    { name: '[Also cheap, one under]', cost: 2, stock: 2, counted: 1 },
+  ]);
+  const owner_ = await asOwner()(`/api/stock-takes/${take}/check`);
+  assert.deepEqual(namesOf(owner_), ['[Dear, one under]', '[Also dear, one over]', '[Cheap, three under]', '[Also cheap, one under]'], 'the Owner’s stays largest value first');
+  const send = await ownersComputer('till', jo.pin);
+  const hidden = await send(`/api/stock-takes/${take}/check`);
+  assert.deepEqual(namesOf(hidden), ['[Cheap, three under]', '[Also cheap, one under]', '[Also dear, one over]', '[Dear, one under]']);
+  await asOwner()(`/api/stock-takes/${take}/apply`, POST());
+  assert.equal((await asOwner()(`/api/stock-takes/${take}/undo`, POST())).status, 200);
 });

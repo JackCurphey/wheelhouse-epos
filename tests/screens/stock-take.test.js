@@ -453,7 +453,8 @@ test('no values sent: the check has its counts and differences, and no value at 
   const { ui, within } = await open('/workshop/stocktake/5/check', { checked: { ...rest, rows } });
   const card = within(await ui.findByRole('region', { name: 'Check the count of [Area]' }));
   assert.ok(card.getByText((_, el) => el?.tagName === 'P' && el.textContent === '3 products counted · 1 match · 2 differ'));
-  const table = within(card.getByRole('table', { name: 'Differences, largest value first' }));
+  assert.ok(card.queryByRole('table', { name: 'Differences, largest value first' }) === null, 'no value to be largest by');
+  const table = within(card.getByRole('table', { name: 'Differences, largest first' }));
   const [first] = table.getAllByRole('row').slice(1);
   assert.match(first.textContent, /3 under/);
   assert.ok(!first.textContent.includes('£'), first.textContent);

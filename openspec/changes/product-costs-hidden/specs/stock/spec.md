@@ -24,6 +24,10 @@ Saving a product with no cost, a null or an empty cost SHALL leave its stored co
 - **WHEN** Jo Taylor changes the description of Shimano brake pads, and what's sent has the cost as null, 0 or a new figure
 - **THEN** the description changes and the cost stored stays as it was
 
+#### Scenario: adding a product in the old app with costs hidden
+- **WHEN** someone who can't see costs opens the old app's add form
+- **THEN** it offers no cost box, so nothing typed there is thrown away
+
 #### Scenario: the Owner corrects a cost
 - **WHEN** the Owner saves the brake pads with a new cost
 - **THEN** the new cost is stored

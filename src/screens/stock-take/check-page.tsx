@@ -80,7 +80,7 @@ export function CheckPage() {
       {back}
       <Card id="t-check" title={`Check the count of ${c.label}`}>
         <p className="m-0 text-size-15">{`${plural(c.productsCounted, 'product')} counted · ${c.productsMatching} match · ${c.productsDiffering} differ`}{c.valuePence === undefined ? null : <> · <strong>{`${atCost(c.valuePence)}, in all`}</strong></>}</p>
-        <div role="table" aria-label="Differences, largest value first">
+        <div role="table" aria-label={c.valuePence === undefined ? 'Differences, largest first' : 'Differences, largest value first'}>
           <div role="row" className={`${GRID} text-size-13 font-bold text-[var(--wh-muted)]`}>
             <span role="columnheader">Product</span>
             <span role="columnheader" className="max-md:hidden">Expected</span>

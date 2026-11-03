@@ -7,6 +7,10 @@ Someone allowed to order who can't see costs (until roles, a person at the Owner
 - **WHEN** Jo Taylor saves a new order for Shimano brake pads
 - **THEN** the line holds the product's stored cost, not £0, and no cost is on the page or in what the server sent
 
+#### Scenario: the Owner empties a line's cost box
+- **WHEN** the Owner saves a draft with a line's cost box empty
+- **THEN** the line keeps the cost it had, otherwise it takes the product's, and isn't written as £0; £0 typed on purpose is saved as £0
+
 #### Scenario: a line with no cost
 - **WHEN** Jo Taylor marks as ordered a new order with a product that has no cost recorded
 - **THEN** it is refused with the reason, and Save as draft still works
