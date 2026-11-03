@@ -9,8 +9,10 @@
 -- Items set aside at booking in point at their delivery, with their cost and
 -- name. Anything set aside before 110 has none of these; nothing is made up for
 -- deliveries from before 110.
--- Additive and safe to run twice, including on a database that ran an earlier
--- draft of this file: every column is added only when missing.
+-- Additive and safe to run twice: every column is added only when missing. A
+-- database that ran an earlier draft of this file doesn't get the new columns by
+-- itself, as the runner skips a filename it has already recorded: delete this
+-- file's row from schema_migrations there, and it runs again.
 CREATE TABLE IF NOT EXISTS deliveries (
   id SERIAL PRIMARY KEY,
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),

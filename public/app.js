@@ -1896,6 +1896,12 @@ function poStatusLabel(status) {
   return status.replace(/_/g, ' ');
 }
 
+// A cost the server didn't send reads as a dash, not £0.00, which looks like a
+// real cost (openspec/changes/delivery-booked-in, design 7).
+function costOrDash(n) {
+  return Number.isFinite(n) ? money(n) : '—';
+}
+
 function poTotalCost(po) {
   return (po.items || []).reduce((sum, it) => sum + it.qtyOrdered * it.unitCost, 0);
 }
@@ -1959,7 +1965,7 @@ function renderPurchaseOrderTable() {
         <td>${esc(po.reference || '—')}</td>
         <td><span class="badge ${poStatusBadgeClass(po.status)}">${esc(poStatusLabel(po.status))}</span></td>
         <td class="num">${po.items.length}</td>
-        <td class="num">${money(poTotalCost(po))}</td>
+        <td class="num">${costOrDash(poTotalCost(po))}</td>
         <td>${fmtDateTime(po.createdAt)}</td>
       </tr>
     `
@@ -2208,8 +2214,8 @@ async function renderPurchaseOrderDetail(id) {
         <td class="num">${it.qtyOrdered}</td>
         <td class="num">${it.qtyReceived}</td>
         <td class="num">${it.outstanding}</td>
-        <td class="num">${money(it.unitCost)}</td>
-        <td class="num">${money(it.qtyOrdered * it.unitCost)}</td>
+        <td class="num">${costOrDash(it.unitCost)}</td>
+        <td class="num">${costOrDash(it.qtyOrdered * it.unitCost)}</td>
       </tr>
     `
     )
@@ -2237,7 +2243,7 @@ async function renderPurchaseOrderDetail(id) {
           <div class="detail-item"><span class="detail-label">Reference</span><span class="detail-value">${esc(po.reference || '—')}</span></div>
           <div class="detail-item"><span class="detail-label">Created</span><span class="detail-value">${fmtDateTime(po.createdAt)}</span></div>
           <div class="detail-item"><span class="detail-label">Ordered</span><span class="detail-value">${po.orderedAt ? fmtDateTime(po.orderedAt) : '—'}</span></div>
-          <div class="detail-item"><span class="detail-label">Total cost</span><span class="detail-value">${money(poTotalCost(po))}</span></div>
+          <div class="detail-item"><span class="detail-label">Total cost</span><span class="detail-value">${costOrDash(poTotalCost(po))}</span></div>
         </div>
         ${po.notes ? `<p class="muted" style="margin-top:14px;">${esc(po.notes)}</p>` : ''}
         <div style="overflow-x:auto; margin-top:14px;">

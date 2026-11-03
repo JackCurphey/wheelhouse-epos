@@ -93,7 +93,8 @@ advisory lock on the key's hash makes a second send wait for the first. Then:
 - a refused booking keeps nothing, so its key stays free.
 
 A unique index on `deliveries (shop_id, request_key_hash)` is the backstop. The
-screen makes one key for the life of the scanned list.
+screen makes one key for the life of the scanned list: the same list tried again
+keeps it, and once a sent list is emptied, the next box gets a new one.
 
 ## 7. Costs
 
@@ -105,7 +106,8 @@ start, so until roles (WP-1.1) add it, only the Owner sees costs. The switch
 plugs in there. No switch or setting is built here.
 
 The person is whoever's at the computer: the one checked in if there is one,
-otherwise the sign-in. Every purchase order reply and both delivery reads use
+otherwise the sign-in. A till with nobody checked in gets no costs, even under
+the Owner's sign-in, as anyone could be at it. Every purchase order reply and both delivery reads use
 it, so the order routes leave out `unitCost` and `totalCost` for anyone else.
 
 ## 8. Names as they were

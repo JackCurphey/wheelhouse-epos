@@ -304,6 +304,23 @@ test('order costs on a till signed in as the Owner: a staff member checked in do
   assert.deepEqual(flags(await readsOrderCosts(send, o.id, thing, owner)), NONE);
 });
 
+test('order costs on a till left with nobody checked in: none, even under the Owner’s sign-in; the Owner checked in there gets them', async () => {
+  const owner = await shop();
+  const ownerPin = await withPin(owner.cookie);
+  const thing = await product(owner);
+  const o = await order(owner, thing.id, 10);
+  const booked = await post(owner.cookie, '/api/deliveries/receive', { supplierId: owner.supplierId, items: [{ productId: thing.id, itemId: o.items[0].id, qty: 1 }] });
+  const b = await till(owner, 1);
+  for (const path of ['/api/purchase-orders', `/api/purchase-orders/${o.id}`, `/api/deliveries/booked-in/${booked.body.deliveryId}`]) {
+    const res = await b.send(path);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.ok(!hasCosts(res.body), `${path}: ${JSON.stringify(res.body)}`);
+  }
+  assert.equal((await b.post('/api/till-checkin', { pin: ownerPin })).status, 201);
+  const send = (m, p, body) => b.send(p, m === 'POST' ? { method: 'POST', body } : {});
+  assert.deepEqual(flags(await readsOrderCosts(send, o.id, thing, owner)), ALL);
+});
+
 // ---- 5. Renames ----
 
 test('a product and a supplier renamed later: an old delivery still shows what they were called', async () => {

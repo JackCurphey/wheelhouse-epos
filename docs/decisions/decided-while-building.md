@@ -1978,8 +1978,9 @@ WP-1.5's. So: slice C, WP-2.3.
     `GET /api/purchase-orders/:id`, Book in's reply and the delivery routes all
     go through one function, `canSeeCosts` (`server/lib/can-see-costs.js`), where
     the switch plugs in. On a shared computer it follows who's checked in. An
-    order's page leaves out Total cost when none is sent. The old app reads
-    missing costs as £0.00 on its order pages, for staff only; it's a placeholder.
+    order's page leaves out Total cost when none is sent, and the old app's
+    order pages show a dash. A till with nobody checked in gets no costs, even
+    under the Owner's sign-in.
     **Noted, not changed:** `/api/products` still sends each product's cost to
     anyone signed in; New order reads it. It's outside this piece's routes.
 15. **Waits on roles:** "Can see costs and margin" for staff.
@@ -1993,7 +1994,9 @@ WP-1.5's. So: slice C, WP-2.3.
 17. **Book in has a request key,** made once for the scanned list and new when
     the supplier changes, as a booking's is. If the reply was lost and the person
     changes the list before trying again, Book in is refused and says to check
-    Recent deliveries, not booked in a second time.
+    Recent deliveries, not booked in a second time. Emptying the list starts a
+    new delivery with a new key (the re-review, 3 Nov), so if that first send did
+    get through, the next box is rightly its own.
 18. **Names on a delivery are as they were when it was booked in:** supplier,
     product and code, on its lines and what was set aside. Labels use the product
     as it is now.
