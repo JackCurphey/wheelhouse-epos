@@ -95,7 +95,7 @@ export function ProductPage() {
             {/* Anyone with the Stock page adjusts (2026-10-26-day-answers.md section 11). */}
             <div className="flex flex-wrap gap-2 pt-1"><Button onClick={() => setAdjusting(true)}>Adjust stock</Button></div>
           </Box>
-          <Box id="h-price" title={owner ? 'Price and cost' : 'Price'}>
+          <Box id="h-price" title={owner && p.cost !== null ? 'Price and cost' : 'Price'}>
             {kv('Price', <span className={mono}>{money(p.price)}</span>)}
             {owner && p.cost !== null ? kv('Cost', <span className={mono}>{money(p.cost)}</span>) : null}
             {owner && p.cost !== null ? kv('Margin', marginText(p)) : null}

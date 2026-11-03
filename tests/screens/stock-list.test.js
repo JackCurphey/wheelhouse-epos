@@ -39,7 +39,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(path, { me = OWNER, page = { ...product({}), history: HISTORY } } = {}) {
+async function open(path, { me = OWNER, page = { ...product({}), history: HISTORY }, noCosts = false } = {}) {
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
     calls.push(String(url));
@@ -48,9 +48,9 @@ async function open(path, { me = OWNER, page = { ...product({}), history: HISTOR
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/products') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
-      return reply(200, LIST.filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q)));
+      return reply(200, LIST.filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q)).map((p) => (noCosts ? { ...p, cost: null } : p)));
     }
-    if (u.pathname === '/api/products/1') return reply(200, { ...page, cost: me.isOwner ? page.cost : null });
+    if (u.pathname === '/api/products/1') return reply(200, { ...page, cost: me.isOwner && !noCosts ? page.cost : null });
     if (u.pathname === '/api/products/404') return reply(404, { error: 'Product not found' });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });
@@ -178,4 +178,23 @@ test('the history’s Show: Sold leaves only what was sold', async () => {
 test('a product that isn’t there says so', async () => {
   const { ui } = await open('/workshop/stock/404');
   assert.ok(await ui.findByText('Product not found'));
+});
+
+// At the Owner's till with Jo checked in the sign-in still says Owner; what the
+// server sends decides (openspec/changes/product-costs-hidden).
+test('no costs sent under the Owner’s sign-in: the list has no Margin column', async () => {
+  const { ui } = await open('/workshop/stock', { noCosts: true });
+  await ui.findByRole('link', { name: /Shimano brake pads/ });
+  assert.ok(ui.queryByRole('columnheader', { name: 'Margin' }) === null);
+  assert.ok(ui.queryByText('Margin: ') === null);
+});
+
+test('no costs sent under the Owner’s sign-in: a product’s page has no Cost or Margin, and no £0.00', async () => {
+  const { ui, within } = await open('/workshop/stock/1', { noCosts: true });
+  await ui.findByRole('heading', { level: 2, name: 'Shimano brake pads' });
+  const price = within(ui.getByRole('region', { name: 'Price' }));
+  assert.ok(price.getByText('£28.00'));
+  assert.ok(price.queryByText('Cost') === null);
+  assert.ok(price.queryByText('Margin') === null);
+  assert.ok(ui.queryByText('£0.00') === null);
 });

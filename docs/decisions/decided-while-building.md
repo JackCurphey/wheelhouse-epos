@@ -2032,6 +2032,43 @@ WP-1.5's. So: slice C, WP-2.3.
    real scan has been tried yet.
 8. **"Booked in just now" lasts 5 minutes,** then the box says the day.
 
+### 3 Nov 2026: staff aren't sent what the shop pays (`openspec/changes/product-costs-hidden`, `rs-order`, `st-list`, `st-product-staff`, `tk-diff`; Reports decisions 5 and 9, stock decision 11)
+
+1. **New order with someone at the Owner's till who can't see costs:** no
+   drawing shows it (`rs-order` is the Owner's; Staff have no New order, drawn in
+   `rs-hub-staff`). Who may order stays as built, the sign-in's check, until "Can
+   order stock" comes with roles, so Jo at the Owner's till, or anyone there with
+   nobody checked in, can still order. They see no costs and no total, and the
+   server ignores any cost sent: a line takes the cost already on that draft,
+   otherwise the product's, as a set-aside item does at booking in.
+2. **A line with no cost yet:** that person can't type one, so the order saves as
+   a draft and can't be marked as ordered ("A line has no cost yet, so this can
+   only be saved as a draft for the shop's owner to finish"), keeping New order's
+   rule that a draft can wait for its costs and an order can't. The Owner's own
+   Mark as ordered on a draft is unchanged.
+3. **Before the first line is added,** New order still shows "Total cost £0.00"
+   to that person, because the screen learns costs are hidden from the products
+   it's sent. It goes as soon as a line is added.
+4. **A product added by someone who can't see costs starts with none** (0, no
+   cost recorded), whatever is sent. Importing from a supplier's catalogue still
+   records the supplier's price as the cost; it just isn't sent back.
+5. **A supplier's trade price is treated as a cost:** `GET /api/catalogue-items`
+   sends it only to someone who can see costs.
+6. **Stock take and Today at the Owner's till:** the Check, Apply, Finished counts
+   and Needs attention stay open to whoever the sign-in lets in, as built, without
+   their values at cost. The download loses its At cost column. For that person
+   the Check lists differences by size, then name, and is labelled "Differences,
+   largest first", because value order would itself say which product costs more.
+7. **The Stockroom setting's amount** ("show on Today when an adjustment is worth
+   more than") is left as it is: it's the Owner's setting, not what anything cost.
+8. **A blank or non-number cost saved by the Owner** leaves the stored cost alone;
+   it no longer reads as £0. £0 typed on purpose is still saved as £0. An order
+   line's emptied box is the same: blank takes the draft line's cost, otherwise the
+   product's. Nonsense on an order line is still refused, as before.
+9. **The old app's add form offers no cost box when costs are hidden,** as its edit
+   form doesn't. It needs telling with no product to read from, so `GET /api/auth/me`
+   now says `canSeeCosts`; nothing else reads it yet.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

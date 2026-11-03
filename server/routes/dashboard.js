@@ -6,6 +6,7 @@
 import { prepare, dbExec } from '../db.js';
 import { sendJson } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 import { shopDayWindow } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
 
@@ -26,13 +27,14 @@ export function register(route) {
       )
       .get(...today.args);
 
+    const costs = await canSeeCosts(req);
     const lowStock = (await db
       .prepare(
         `SELECT * FROM products WHERE active = 1 AND low_stock_threshold > 0 AND stock_qty <= low_stock_threshold
          ORDER BY stock_qty ASC`
       )
       .all())
-      .map(serializeProduct);
+      .map((row) => serializeProduct(row, costs));
 
     const todayOld = await shopDayWindow('s.created_at', await currentShopToday());
     const todayTill = await shopDayWindow('t.till_clock_at', await currentShopToday());

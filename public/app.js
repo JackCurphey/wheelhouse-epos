@@ -3,7 +3,7 @@
 
 // ---------------- State ----------------
 
-let currentUser = null; // { id, name, email, isOwner, shopName, shopSlug } for the signed-in employee, or null before boot() resolves it
+let currentUser = null; // { id, name, email, isOwner, canSeeCosts, shopName, shopSlug } for the signed-in employee, or null before boot() resolves it
 let route = (location.hash || '#till').replace('#', '');
 let products = [];
 let categories = [];
@@ -1621,7 +1621,7 @@ function renderInventoryTable() {
       // so the VAT portion and margin are both derived from the net (ex-VAT) price.
       const netPrice = p.price / 1.2;
       const vat = p.price - netPrice;
-      const margin = netPrice > 0 ? ((netPrice - p.cost) / netPrice) * 100 : null;
+      const margin = marginOf(netPrice, p.cost);
       const marginLow = margin === null || margin < 20;
       return `
       <tr>
@@ -1631,7 +1631,7 @@ function renderInventoryTable() {
         <td><button class="link-btn" data-view="${p.id}">${esc(p.name)}</button>${inactiveTag}</td>
         <td>${esc(p.category)}</td>
         <td class="num">${money(p.price)}</td>
-        <td class="num">${money(p.cost)}</td>
+        <td class="num">${costOrDash(p.cost)}</td>
         <td class="num">${money(vat)}</td>
         <td class="num">${margin === null ? '—' : `<span class="badge ${marginLow ? 'low' : 'ok'}">${margin.toFixed(1)}%</span>`}</td>
         <td class="num">${p.category === 'Services' ? '—' : `<span class="badge ${low ? 'low' : 'ok'}">${p.stockQty}</span>`}</td>
@@ -1840,7 +1840,7 @@ function renderCatalogueTable() {
         <td>${esc(it.supplierSku)}</td>
         <td>${esc(it.barcode || '—')}</td>
         <td>${esc(it.name)}</td>
-        <td class="num">${money(it.price)}</td>
+        <td class="num">${costOrDash(it.price)}</td>
         <td class="num">${it.stockQty}</td>
         <td><span class="badge status-${it.status}">${esc(it.status)}</span></td>
         <td>
@@ -1900,6 +1900,36 @@ function poStatusLabel(status) {
 // real cost (openspec/changes/delivery-booked-in, design 7).
 function costOrDash(n) {
   return Number.isFinite(n) ? money(n) : '—';
+}
+
+// None without a price or a cost sent, not a margin worked out from nothing.
+function marginOf(netPrice, cost) {
+  return netPrice > 0 && Number.isFinite(cost) ? ((netPrice - cost) / netPrice) * 100 : null;
+}
+
+// What a product's form sends: a figure typed, or no cost at all, which leaves
+// the one stored as it is, never 0 (openspec/changes/product-costs-hidden).
+// A product's form offers no cost box a save would throw away: editing, the
+// product says (its cost wasn't sent); adding, the sign-in's reply does.
+function costBoxHidden(product, user) {
+  return product ? !Number.isFinite(product.cost) : user?.canSeeCosts === false;
+}
+
+// An order line's cost box: empty is no cost, which leaves the line's cost to
+// the server, never £0. A figure, 0 included, is one.
+function poLineCost(value) {
+  const typed = String(value).trim();
+  return typed === '' ? null : Math.max(0, Number(typed) || 0);
+}
+
+// null times a count is 0, which would read as a real cost.
+function poLineTotal(qty, unitCost) {
+  return costOrDash(Number.isFinite(unitCost) ? qty * unitCost : NaN);
+}
+
+function costFromForm(input) {
+  const typed = input ? parseFloat(input.value) : NaN;
+  return Number.isFinite(typed) ? typed : undefined;
 }
 
 function poTotalCost(po) {
@@ -1993,7 +2023,7 @@ async function renderPurchaseOrderForm(poId) {
       return;
     }
   }
-  poFormItems = po ? po.items.map((it) => ({ productId: it.productId, name: it.name, sku: it.sku, qty: it.qtyOrdered, unitCost: it.unitCost })) : [];
+  poFormItems = po ? po.items.map((it) => ({ productId: it.productId, name: it.name, sku: it.sku, qty: it.qtyOrdered, unitCost: it.unitCost, costHidden: !Number.isFinite(it.unitCost) })) : [];
   poFormSearch = '';
 
   const main = document.getElementById('office-content');
@@ -2095,7 +2125,7 @@ function renderPoProductDropdown() {
           <span class="sdi-name">${esc(p.name)}</span>
           <span class="sdi-sku">${esc(p.sku || '')}</span>
         </span>
-        <span class="sdi-side"><span class="sdi-price">${money(p.cost)} cost</span></span>
+        <span class="sdi-side"><span class="sdi-price">${costOrDash(p.cost)} cost</span></span>
       </button>
     `
     )
@@ -2113,7 +2143,7 @@ function addPoFormItem(product) {
   if (existing) {
     existing.qty += 1;
   } else {
-    poFormItems.push({ productId: product.id, name: product.name, sku: product.sku, qty: 1, unitCost: product.cost });
+    poFormItems.push({ productId: product.id, name: product.name, sku: product.sku, qty: 1, unitCost: product.cost, costHidden: !Number.isFinite(product.cost) });
   }
   poFormSearch = '';
   const searchInput = document.getElementById('po-product-search');
@@ -2136,8 +2166,8 @@ function renderPoFormItems() {
         <td>${esc(it.name)}</td>
         <td>${esc(it.sku || '—')}</td>
         <td class="num"><input type="number" min="1" step="1" class="po-qty-input" data-qty-idx="${idx}" value="${it.qty}" style="width:70px;" /></td>
-        <td class="num">£<input type="number" min="0" step="0.01" class="po-cost-input" data-cost-idx="${idx}" value="${it.unitCost}" style="width:80px;" /></td>
-        <td class="num" data-line-total-idx="${idx}">${money(it.qty * it.unitCost)}</td>
+        <td class="num">${it.costHidden ? '—' : `£<input type="number" min="0" step="0.01" class="po-cost-input" data-cost-idx="${idx}" value="${it.unitCost ?? ''}" style="width:80px;" />`}</td>
+        <td class="num" data-line-total-idx="${idx}">${poLineTotal(it.qty, it.unitCost)}</td>
         <td><button class="remove-btn" data-remove-po-idx="${idx}" title="Remove">✕</button></td>
       </tr>
     `
@@ -2153,7 +2183,7 @@ function renderPoFormItems() {
   tbody.querySelectorAll('input[data-cost-idx]').forEach((inp) =>
     inp.addEventListener('input', (e) => {
       const idx = Number(e.target.dataset.costIdx);
-      poFormItems[idx].unitCost = Math.max(0, Number(e.target.value) || 0);
+      poFormItems[idx].unitCost = poLineCost(e.target.value);
       updatePoLineTotal(idx);
     })
   );
@@ -2167,7 +2197,7 @@ function renderPoFormItems() {
 
 function updatePoLineTotal(idx) {
   const cell = document.querySelector(`[data-line-total-idx="${idx}"]`);
-  if (cell) cell.textContent = money(poFormItems[idx].qty * poFormItems[idx].unitCost);
+  if (cell) cell.textContent = poLineTotal(poFormItems[idx].qty, poFormItems[idx].unitCost);
 }
 
 async function savePurchaseOrder(existingPo) {
@@ -2378,7 +2408,7 @@ async function renderProductDetail(id) {
 
   const netPrice = product.price / 1.2;
   const vat = product.price - netPrice;
-  const margin = netPrice > 0 ? ((netPrice - product.cost) / netPrice) * 100 : null;
+  const margin = marginOf(netPrice, product.cost);
   const low = product.category !== 'Services' && product.stockQty <= product.lowStockThreshold;
 
   main.innerHTML = `
@@ -2399,7 +2429,7 @@ async function renderProductDetail(id) {
             <div class="detail-item"><span class="detail-label">Barcode</span><span class="detail-value">${esc(product.barcode || '—')}</span></div>
             <div class="detail-item"><span class="detail-label">Category</span><span class="detail-value">${esc(product.category)}</span></div>
             <div class="detail-item"><span class="detail-label">Price (inc. VAT)</span><span class="detail-value">${money(product.price)}</span></div>
-            <div class="detail-item"><span class="detail-label">Cost</span><span class="detail-value">${money(product.cost)}</span></div>
+            <div class="detail-item"><span class="detail-label">Cost</span><span class="detail-value">${costOrDash(product.cost)}</span></div>
             <div class="detail-item"><span class="detail-label">VAT (20%)</span><span class="detail-value">${money(vat)}</span></div>
             <div class="detail-item"><span class="detail-label">Margin</span><span class="detail-value">${margin === null ? '—' : `<span class="badge ${margin < 20 ? 'low' : 'ok'}">${margin.toFixed(1)}%</span>`}</span></div>
             <div class="detail-item"><span class="detail-label">Stock</span><span class="detail-value">${product.category === 'Services' ? '—' : `<span class="badge ${low ? 'low' : 'ok'}">${product.stockQty}</span>`}</span></div>
@@ -3255,10 +3285,12 @@ function renderProductFormModal(holder, product) {
                 <label for="f-price">Price (£) *</label>
                 <input id="f-price" type="number" min="0" step="0.01" required value="${product?.price ?? ''}" />
               </div>
-              <div class="field">
+              ${costBoxHidden(product, currentUser)
+                ? `<div class="field"><label>Cost (£)</label><div>${costOrDash(product?.cost)}</div></div>`
+                : `<div class="field">
                 <label for="f-cost">Cost (£)</label>
                 <input id="f-cost" type="number" min="0" step="0.01" value="${product?.cost ?? ''}" />
-              </div>
+              </div>`}
             </div>
             <div class="field-row">
               ${
@@ -3319,7 +3351,7 @@ function renderProductFormModal(holder, product) {
       barcode: document.getElementById('f-barcode').value.trim(),
       category: document.getElementById('f-category').value.trim() || 'Uncategorised',
       price: parseFloat(document.getElementById('f-price').value) || 0,
-      cost: parseFloat(document.getElementById('f-cost').value) || 0,
+      cost: costFromForm(document.getElementById('f-cost')),
       lowStockThreshold: parseInt(document.getElementById('f-threshold').value, 10) || 0,
       supplier: document.getElementById('f-supplier').value.trim(),
     };
@@ -3364,7 +3396,7 @@ function renderCatalogueImportModal(holder, item) {
               <datalist id="category-options">${categories.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
             </div>
             <div class="field-row">
-              <div class="field"><label>Supplier cost</label><input type="text" value="${money(item.price)}" disabled /></div>
+              <div class="field"><label>Supplier cost</label><input type="text" value="${costOrDash(item.price)}" disabled /></div>
               <div class="field">
                 <label for="f-price">Sell price (£) *</label>
                 <input id="f-price" type="number" min="0" step="0.01" required />

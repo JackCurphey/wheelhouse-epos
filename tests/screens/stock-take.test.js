@@ -432,3 +432,31 @@ test('counting: arrow keys and Enter pick from the matches', async () => {
   await waitFor(r, () => posts(r.calls, '/counts').length === 1);
   assert.deepEqual(posts(r.calls, '/counts')[0].body, { productId: 16, add: 1 });
 });
+
+// At the Owner's till with Jo checked in the sign-in still says Owner; what the
+// server sends decides (openspec/changes/product-costs-hidden).
+test('no values sent: Finished counts and the check say what changed, with no money', async () => {
+  const { valuePence: _v, ...noValue } = APPLIED;
+  void _v;
+  const hubTest = await open('/workshop/stocktake', { hub: { ...HUB, finished: [noValue] } });
+  const done = hubTest.within(await hubTest.ui.findByRole('list', { name: 'Finished counts' }));
+  const [row] = done.getAllByRole('listitem');
+  assert.match(row.textContent, /1 product changed/);
+  assert.ok(!row.textContent.includes('£'), row.textContent);
+  assert.ok(!row.textContent.includes('NaN'), row.textContent);
+});
+
+test('no values sent: the check has its counts and differences, and no value at cost', async () => {
+  const { valuePence: _v, ...rest } = CHECK;
+  void _v;
+  const rows = CHECK.rows.map((r) => { const row = { ...r }; delete row.costPence; delete row.valuePence; return row; });
+  const { ui, within } = await open('/workshop/stocktake/5/check', { checked: { ...rest, rows } });
+  const card = within(await ui.findByRole('region', { name: 'Check the count of [Area]' }));
+  assert.ok(card.getByText((_, el) => el?.tagName === 'P' && el.textContent === '3 products counted · 1 match · 2 differ'));
+  assert.ok(card.queryByRole('table', { name: 'Differences, largest value first' }) === null, 'no value to be largest by');
+  const table = within(card.getByRole('table', { name: 'Differences, largest first' }));
+  const [first] = table.getAllByRole('row').slice(1);
+  assert.match(first.textContent, /3 under/);
+  assert.ok(!first.textContent.includes('£'), first.textContent);
+  assert.ok(!first.textContent.includes('NaN'), first.textContent);
+});

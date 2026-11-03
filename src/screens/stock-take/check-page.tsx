@@ -17,10 +17,10 @@ import { appliedHref, atCost, plural, pounds, type Applied, type Take } from './
  */
 type Row = {
   productId: number; name: string; sku: string | null; expected: number; counted: number; difference: number;
-  valuePence: number; byCounter: { name: string; qty: number }[]; allowedFor: { kind: string; change: number }[];
+  valuePence?: number; byCounter: { name: string; qty: number }[]; allowedFor: { kind: string; change: number }[];
 };
 type Checked = Take & {
-  productsCounted: number; productsMatching: number; productsDiffering: number; valuePence: number; rows: Row[];
+  productsCounted: number; productsMatching: number; productsDiffering: number; valuePence?: number; rows: Row[];
   recountAsked: { productId: number; name: string; sku: string | null; askedBy: string }[];
   notCounted: { products: number; expected: number; list: { productId: number; name: string; sku: string | null }[] } | null;
 };
@@ -33,11 +33,11 @@ function allowed(a: { kind: string; change: number }) {
 const GRID = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 md:grid-cols-[minmax(0,2fr)_90px_minmax(0,1.2fr)_minmax(0,1.1fr)_auto]';
 const cellBtn = 'inline-flex min-h-11 min-w-11 items-center justify-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline';
 
-function DiffTag({ difference, valuePence }: { difference: number; valuePence: number }) {
+function DiffTag({ difference, valuePence }: { difference: number; valuePence?: number }) {
   const under = difference < 0;
   return (
     <span className={`inline-flex min-h-[26px] items-center rounded-full px-2.5 text-xs font-bold whitespace-nowrap ${under ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>
-      {`${Math.abs(difference)} ${under ? 'under' : 'over'} · ${pounds(valuePence)}`}
+      {`${Math.abs(difference)} ${under ? 'under' : 'over'}${valuePence === undefined ? '' : ` · ${pounds(valuePence)}`}`}
     </span>
   );
 }
@@ -79,8 +79,8 @@ export function CheckPage() {
     <Page>
       {back}
       <Card id="t-check" title={`Check the count of ${c.label}`}>
-        <p className="m-0 text-size-15">{`${plural(c.productsCounted, 'product')} counted · ${c.productsMatching} match · ${c.productsDiffering} differ · `}<strong>{`${atCost(c.valuePence)}, in all`}</strong></p>
-        <div role="table" aria-label="Differences, largest value first">
+        <p className="m-0 text-size-15">{`${plural(c.productsCounted, 'product')} counted · ${c.productsMatching} match · ${c.productsDiffering} differ`}{c.valuePence === undefined ? null : <> · <strong>{`${atCost(c.valuePence)}, in all`}</strong></>}</p>
+        <div role="table" aria-label={c.valuePence === undefined ? 'Differences, largest first' : 'Differences, largest value first'}>
           <div role="row" className={`${GRID} text-size-13 font-bold text-[var(--wh-muted)]`}>
             <span role="columnheader">Product</span>
             <span role="columnheader" className="max-md:hidden">Expected</span>

@@ -23,8 +23,12 @@ const PILLS = 3;
 const MAX_COUNT = 100000;
 // Whole pence, so 3 × £1.10 is £3.30 and not £3.3000000000000003.
 const pence = (pounds: number) => Math.round(pounds * 100);
-// No cost recorded (null, or 0 as the old app saves it) is no cost, as on the
-// stock list (review of 26 Oct): the line takes a typed one instead.
+// No cost recorded (0, as the old app saves it) is no cost, as on the stock
+// list (review of 26 Oct): the line takes a typed one instead.
+// A null cost wasn't sent: this person can't see costs, whatever the sign-in
+// says, so the line shows none and the server fills it in
+// (openspec/changes/product-costs-hidden).
+const costHidden = (p: Product) => p.cost === null;
 const recorded = (p: Product) => (p.cost !== null && p.cost > 0 ? p.cost : null);
 const typedCost = (typed: string) => {
   const n = Number(typed.trim());
@@ -105,7 +109,7 @@ export function NewOrderPage() {
     if (!supplierId) { setProblem('Pick a supplier first.'); return; }
     if (lines.length === 0) { setProblem('Add a product first.'); return; }
     // A draft can wait for its costs; an order can't (review of 26 Oct).
-    if (ordered && lines.some((l) => costOf(l) === null)) { setProblem('Type a cost for every line first.'); return; }
+    if (ordered && lines.some((l) => !costHidden(l.product) && costOf(l) === null)) { setProblem('Type a cost for every line first.'); return; }
     setProblem(null);
     setBusy(true);
     try {
@@ -113,7 +117,8 @@ export function NewOrderPage() {
       // draft behind for a retry to duplicate (review of 26 Oct).
       const made = await apiMutate<Order>('/api/purchase-orders', {
         supplierId: Number(supplierId),
-        items: lines.map((l) => ({ productId: l.product.id, qty: l.qty, unitCost: costOf(l) ?? 0 })),
+        // No cost is sent as none, never as £0: the server keeps what's stored.
+        items: lines.map((l) => { const cost = costOf(l); return { productId: l.product.id, qty: l.qty, ...(cost === null ? {} : { unitCost: cost }) }; }),
         ...(ordered ? { markOrdered: true } : {}),
       });
       queryClient.setQueryData(['purchase-order', made.id], made);
@@ -167,7 +172,7 @@ export function NewOrderPage() {
                   {p.sku ? <span className="text-size-13 text-[var(--wh-muted)]">{p.sku}</span> : null}
                 </span>
                 <Count name={p.name} value={qty} onChange={(n) => setQty(p.id, n)} />
-                {recorded(p) === null ? (
+                {recorded(p) === null && !costHidden(p) ? (
                   <label className="inline-flex shrink-0 items-center gap-1.5 text-size-13 text-[var(--wh-muted)]">
                     {cost === null ? 'No cost recorded' : null}
                     <span className="inline-flex items-center gap-1">£<input inputMode="decimal" aria-label={`Cost each: ${p.name}`} value={l.typed}
@@ -183,7 +188,7 @@ export function NewOrderPage() {
           </ul>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1.5">
-          <span className="text-size-15">Total cost <span className={`text-base font-bold ${mono}`}>{money(total)}</span></span>
+          <span className="text-size-15">{lines.some((l) => costHidden(l.product)) ? null : <>Total cost <span className={`text-base font-bold ${mono}`}>{money(total)}</span></>}</span>
           <span className="flex flex-wrap gap-2">
             <Button variant="default" disabled={busy} onClick={() => void save(false)}>Save as draft</Button>
             <Button variant="accent" disabled={busy} onClick={() => void save(true)}>Mark as ordered</Button>
