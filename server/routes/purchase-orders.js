@@ -132,6 +132,18 @@ async function inTransaction(fn) {
   }
 }
 
+// A delivery as Recent deliveries and its page read it: how many were booked
+// in is what's on its lines.
+const RECENT_DELIVERIES = 10;
+const MAX_DB_INT = 2147483647;
+const DELIVERY_SELECT = `SELECT d.id, d.supplier_id, d.booked_in_at, s.name AS supplier_name, l.name AS booked_by,
+    (SELECT COALESCE(sum(dl.qty), 0)::int FROM delivery_lines dl WHERE dl.delivery_id = d.id) AS items
+  FROM deliveries d LEFT JOIN suppliers s ON s.id = d.supplier_id LEFT JOIN logins l ON l.id = d.booked_by_login_id`;
+const serializeDelivery = (d) => ({
+  id: d.id, supplierName: d.supplier_name ?? null, items: d.items,
+  bookedInAt: new Date(d.booked_in_at).toISOString(), bookedBy: d.booked_by ?? null,
+});
+
 const refuse = (message) => ({ refusal: (res) => badRequest(res, message) });
 
 /**
@@ -148,7 +160,11 @@ const refuse = (message) => ({ refusal: (res) => badRequest(res, message) });
  * updated in product-id order, as a sale locks its products
  * (server/lib/sales.js), so two deliveries, or a delivery and a sale, wait
  * for each other instead of deadlocking. Each stock movement records who
- * booked it in. Returns { refusal } or { booked, orderIds, shopifyPushes }.
+ * booked it in. The delivery is kept in the same transaction
+ * (openspec/changes/delivery-booked-in): its row is new, so nothing can wait
+ * on it, and its lines are written after each product's update, in the same
+ * order. Marking only Missing keeps none: nothing arrived. Returns { refusal }
+ * or { booked, orderIds, deliveryId, shopifyPushes }.
  */
 async function bookIn({ orderId = null, supplier = null, lines, problems, loginId }) {
   const onOrder = [...lines, ...problems].filter((x) => x.itemId !== undefined);
@@ -198,12 +214,19 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
     if (x.itemId === undefined && !(await activeProduct(x.productId))) return refuse(`Product ${x.productId} not found or inactive`);
   }
 
+  const arrived = items.length > 0 || problems.some((p) => p.kind !== 'missing');
+  const deliverySupplierId = supplier?.id ?? orders.get(orderIds[0])?.supplier_id ?? null;
+  const deliveryId = arrived
+    ? (await db.prepare('INSERT INTO deliveries (supplier_id, booked_by_login_id, booked_in_at) VALUES (?, ?, ?) RETURNING id').get(deliverySupplierId, loginId, nowIso())).id
+    : null;
+
   const shopifyPushes = [];
   let booked = 0;
   items.sort((x, y) => x.productId - y.productId || (x.itemId ?? 0) - (y.itemId ?? 0));
   for (const { itemId, productId, qty } of items) {
     let note;
     let fromOrder = null;
+    const orderLine = itemId !== undefined ? itemsById.get(itemId) : null;
     if (itemId !== undefined) {
       fromOrder = orders.get(itemsById.get(itemId).purchase_order_id);
       await db.prepare('UPDATE purchase_order_items SET qty_received = qty_received + ? WHERE id = ?').run(qty, itemId);
@@ -215,15 +238,20 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
     await db.prepare(
       'INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id, login_id) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(product.id, qty, fromOrder ? 'po_receipt' : 'intake', note, fromOrder?.id ?? null, loginId);
+    await db.prepare(
+      'INSERT INTO delivery_lines (delivery_id, product_id, purchase_order_id, purchase_order_item_id, qty, unit_cost) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(deliveryId, product.id, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost);
     if (product.shopify_inventory_item_id) shopifyPushes.push({ product, newQty: product.stock_qty });
     booked += qty;
   }
   for (const { itemId, productId, kind, qty, note } of problems) {
     const line = itemId !== undefined ? itemsById.get(itemId) : null;
     const order = line ? orders.get(line.purchase_order_id) : null;
+    // What it cost then, as a delivery line does; the product's when it isn't on an order.
+    const cost = line ? line.unit_cost : (await db.prepare('SELECT cost FROM products WHERE id = ?').get(productId)).cost;
     await db.prepare(
-      'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, supplier_id, kind, qty, note) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(order?.id ?? null, line?.id ?? null, line?.product_id ?? productId, order?.supplier_id ?? supplier?.id ?? null, kind, qty, note);
+      'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, supplier_id, kind, qty, note, delivery_id, unit_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(order?.id ?? null, line?.id ?? null, line?.product_id ?? productId, order?.supplier_id ?? supplier?.id ?? null, kind, qty, note, deliveryId, cost);
   }
   // Each order: received when nothing is left to come (booked in or set
   // aside); partly delivered once anything is in stock; otherwise, with only
@@ -237,7 +265,7 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
       await db.prepare('UPDATE purchase_orders SET status = ?, updated_at = ? WHERE id = ?').run(status, nowIso(), id);
     }
   }
-  return { booked, orderIds, shopifyPushes };
+  return { booked, orderIds, deliveryId, shopifyPushes };
 }
 const activeProduct = (id) => (Number.isInteger(id) ? db.prepare('SELECT id FROM products WHERE id = ? AND active = 1').get(id) : null);
 
@@ -576,6 +604,62 @@ export function register(route) {
       const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
       orders.push(serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
     }
-    sendJson(res, 200, { booked: done.booked, orders });
+    sendJson(res, 200, { booked: done.booked, orders, deliveryId: done.deliveryId });
+  });
+
+  // Recent deliveries on the hub (openspec/changes/delivery-booked-in, the
+  // contract; rs-hub, rs-hub-staff): the newest 10, for anyone signed in, as
+  // everyone receives (decision 4). No costs.
+  // screens: rs-hub
+  route('GET', '/api/deliveries', async (req, res) => {
+    const rows = await db.prepare(`${DELIVERY_SELECT} ORDER BY d.id DESC LIMIT ${RECENT_DELIVERIES}`).all();
+    sendJson(res, 200, { deliveries: rows.map(serializeDelivery) });
+  });
+
+  // A delivery (rs-booked, rs-booked-staff, rs-delivery, rs-delivery-staff):
+  // what was booked in and set aside, and what's still to come on its orders.
+  // Costs are in the reply for people who can order stock, the Owner until
+  // roles, and in nobody else's (audit M12).
+  // screens: rs-booked, rs-delivery
+  route('GET', '/api/deliveries/booked-in/:id', async (req, res, params) => {
+    const id = Number(params.id);
+    if (!Number.isInteger(id) || id < 1 || id > MAX_DB_INT) return notFound(res, 'Delivery not found');
+    const row = await db.prepare(`${DELIVERY_SELECT} WHERE d.id = ?`).get(id);
+    if (!row) return notFound(res, 'Delivery not found');
+    const canSeeCosts = (await currentSession(req))?.login.is_owner === true;
+    const lines = await db.prepare(
+      `SELECT l.id, l.product_id, l.qty, l.unit_cost, p.name, p.sku FROM delivery_lines l JOIN products p ON p.id = l.product_id
+        WHERE l.delivery_id = ? ORDER BY l.id`
+    ).all(id);
+    const aside = await db.prepare(
+      `SELECT dp.id, dp.kind, dp.qty, dp.unit_cost, dp.returned_at, p.name FROM delivery_problems dp JOIN products p ON p.id = dp.product_id
+        WHERE dp.delivery_id = ? AND dp.kind IN ('damaged', 'wrong_item') ORDER BY dp.id`
+    ).all(id);
+    // Read now, not kept: what the delivery's orders still have to come.
+    const orders = await db.prepare(
+      `${PO_SELECT} WHERE po.id IN (SELECT purchase_order_id FROM delivery_lines WHERE delivery_id = ? UNION SELECT purchase_order_id FROM delivery_problems WHERE delivery_id = ?) ORDER BY po.id`
+    ).all(id, id);
+    const stillToCome = [];
+    for (const o of orders) {
+      if (CLOSED.includes(o.status)) continue;
+      const qty = (await loadPurchaseOrderItems(o.id)).reduce((n, it) => n + Math.max(0, outstanding(it)), 0);
+      if (qty > 0) stillToCome.push({ orderId: o.id, supplierName: o.supplier_name, orderedAt: o.ordered_at, qty });
+    }
+    const costOf = (qty, unit) => Math.round(qty * unit * 100) / 100;
+    const body = {
+      ...serializeDelivery(row),
+      supplierId: row.supplier_id,
+      lines: lines.map((l) => ({
+        id: l.id, productId: l.product_id, name: l.name, sku: l.sku, qty: l.qty,
+        ...(canSeeCosts ? { unitCost: l.unit_cost, lineCost: costOf(l.qty, l.unit_cost) } : {}),
+      })),
+      setAside: aside.map((p) => ({
+        id: p.id, name: p.name, kind: p.kind, qty: p.qty, returned: p.returned_at !== null,
+        ...(canSeeCosts ? { cost: costOf(p.qty, p.unit_cost) } : {}),
+      })),
+      stillToCome,
+    };
+    if (canSeeCosts) body.bookedCost = Math.round(lines.reduce((sum, l) => sum + l.qty * l.unit_cost * 100, 0)) / 100;
+    sendJson(res, 200, body);
   });
 }
