@@ -2082,6 +2082,16 @@ WP-1.5's. So: slice C, WP-2.3.
 9. **Nothing shows online because of it:** every product comes across with Show online off.
 10. **Only the columns used are kept, and a row's are emptied once it's in.** A row that needs a look keeps its own until it's dealt with.
 
+### 3 Nov 2026: Citrus Lime import, the page (WP-2.4; `openspec/changes/citrus-import-screens`; `mv-start`, `mv-progress`, `mv-progress-failed`, `mv-summary`)
+
+1. **The page is always in the Owner's sidebar, after Today.** It's drawn as being there "while the move is on", reached from Getting started. Getting started isn't built (WP-5.1), so nothing can say a move is on yet. Every Owner sees it until then, including shops not moving.
+2. **Which files to download is filled in from the exports list:** "Price List - Store Level and Barcode/Alias List, in Cloud Reports", replacing the drawing's placeholder.
+3. **Customers, Sales and Workshop jobs stay as rows, with a grey "Later".** Customers come with the next pull request; Sales and Workshop jobs with WP-8.1, or a shop's full export.
+4. **Next: run alongside, Look at the [n] and Ask us to help aren't shown yet,** nor are the stages links, since there's nothing behind them. They appear as each is built.
+5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It lasts while the page is open.
+6. **A send that fails for another reason says "Not sent"** and "Wheelhouse couldn't send this file. Try again in a moment", so nobody hunts for a fault in a good file. A file over 30 MB is treated as can't read.
+7. **The summary has a slim "Drop more files here",** the Weekly refresh card's zone, for someone who sent only some of the files.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

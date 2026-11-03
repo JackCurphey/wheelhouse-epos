@@ -13,9 +13,9 @@ export type Role = 'O' | 'M' | 'S' | 'K';
 
 export type IconName =
   | 'till' | 'orders' | 'bike' | 'customers' | 'mail' | 'today' | 'workshop'
-  | 'stock' | 'purchasing' | 'check' | 'reports' | 'website' | 'settings';
+  | 'stock' | 'purchasing' | 'check' | 'reports' | 'website' | 'settings' | 'inbox';
 
-export type NavItem = { key: string; label: string; icon: IconName; roles: string };
+export type NavItem = { key: string; label: string; icon: IconName; roles: string; railLabel?: string };
 export type Room = { room: string; items: NavItem[] };
 
 export const ROOMS: Room[] = [
@@ -55,6 +55,14 @@ export const ROOMS: Room[] = [
   },
 ];
 
+/**
+ * Office › Moving from Citrus Lime (moving.mjs MOVE_NAV; Moving from Citrus Lime
+ * decision 4), added to that journey's boards only, so not in ROOMS. For the
+ * Owner, after Today, until Getting started (WP-5.1) says when a move is on
+ * (openspec/changes/citrus-import-screens, design 1).
+ */
+export const MOVING: NavItem = { key: 'moving', label: 'Moving from Citrus Lime', railLabel: 'Moving', icon: 'inbox', roles: 'O' };
+
 /** The rooms one role sees; a room with nothing in it is left out. */
 export function roomsFor(role: Role): Room[] {
   return ROOMS
@@ -62,13 +70,21 @@ export function roomsFor(role: Role): Room[] {
     .filter((r) => r.items.length > 0);
 }
 
+/** The sidebar: the rooms, with Moving from Citrus Lime after Today for those it's for. */
+export function sidebarRooms(role: Role): Room[] {
+  return roomsFor(role).map((r) => ({
+    room: r.room,
+    items: r.items.flatMap((i) => (i.key === 'today' && MOVING.roles.includes(role) ? [i, MOVING] : [i])),
+  }));
+}
+
 /** Each sidebar page opens at /workshop/<key>. */
 export const NAV_ROUTES: Record<string, string> = Object.fromEntries(
-  ROOMS.flatMap((r) => r.items.map((i) => [i.key, `/workshop/${i.key}`])),
+  [...ROOMS.flatMap((r) => r.items), MOVING].map((i) => [i.key, `/workshop/${i.key}`]),
 );
 
 /** A page's name, for its title: the sidebar label, or Your settings. */
 export function pageLabel(key: string): string | undefined {
   if (key === 'your-settings') return 'Your settings';
-  return ROOMS.flatMap((r) => r.items).find((i) => i.key === key)?.label;
+  return [...ROOMS.flatMap((r) => r.items), MOVING].find((i) => i.key === key)?.label;
 }
