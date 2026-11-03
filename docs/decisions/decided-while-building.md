@@ -2090,9 +2090,10 @@ WP-1.5's. So: slice C, WP-2.3.
 2. **Which files to download is filled in from the exports list:** "Price List - Store Level and Barcode/Alias List, in Cloud Reports", replacing the drawing's placeholder.
 3. **Customers, Sales and Workshop jobs stay as rows, with a grey "Later".** Customers come with the next pull request; Sales and Workshop jobs with WP-8.1, or a shop's full export.
 4. **Next: run alongside, Look at the [n] and Ask us to help aren't shown yet,** nor are the stages links, since there's nothing behind them. They appear as each is built.
-5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It lasts while the page is open.
+5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It stays, even after leaving the page, until another is chosen (the independent review, 3 Nov).
 6. **A send that fails for another reason says "Not sent"** and "Wheelhouse couldn't send this file. Try again in a moment", so nobody hunts for a fault in a good file. A file over 30 MB is treated as can't read.
 7. **The summary has a slim "Drop more files here",** the Weekly refresh card's zone, for someone who sent only some of the files.
+8. **The summary's wording** (the independent review, 3 Nov): "[n] brought across" counts only what's new. Added where it applies, "· [n] already here" for a code left alone, so a resent file doesn't look like it came across twice. Stock levels says "[n] need a look", not All in, when any stock didn't come across.
 
 ## Decided here, for Jack to overrule
 

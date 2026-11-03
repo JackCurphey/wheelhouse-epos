@@ -15,13 +15,19 @@ import { Card, Page, Row, mono } from '@/screens/deliveries/deliveries-bits.tsx'
  * on if they leave. Customers, Fix and Ask us to help follow in later pull
  * requests of WP-2.4; Run alongside and Switch over are WP-8.1.
  */
-type MoveFile = { id: number; report: 'price_list' | 'barcodes'; fileName: string; state: 'bringing' | 'done'; rowsTotal: number; rowsIn: number; rowsLook: number; stockIn: number };
+type MoveFile = {
+  id: number; report: 'price_list' | 'barcodes' | null; fileName: string; state: 'reading' | 'cant_read' | 'bringing' | 'done';
+  rowsTotal: number; rowsIn: number; rowsSame: number; rowsSkipped: number; rowsLook: number; stockIn: number; stockLook: number;
+};
 type Sending = { key: string; name: string; problem?: 'cant_read' | 'not_sent' };
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024;
+const BUSY_WAIT_MS = 2000;
+const BUSY_TRIES = 15;
 const KEY = ['move'];
 const STAGES = ['Bring your data', 'Run alongside', 'Switch over'];
 const REPORTS_NOTE = 'Download these from Citrus Lime, then drop them in together. Nothing in Citrus Lime changes.';
+const CANT_READ = 'Wheelhouse couldn’t read this file';
 
 // "[Which Citrus Lime export, and where to find it]" on mv-start, from
 // docs/superpowers/specs/2026-10-05-citrus-lime-exports.md.
@@ -62,7 +68,8 @@ function Chip({ tone = 'grey', children }: { tone?: 'ok' | 'warn' | 'grey'; chil
 
 const n = (value: number) => <span className={`${mono} text-size-15`}>{value}</span>;
 const names = (files: MoveFile[]) => files.map((f) => f.fileName).join(', ');
-const lookCount = (files: MoveFile[]) => files.reduce((sum, f) => sum + f.rowsLook, 0);
+const sumOf = (files: MoveFile[], pick: (f: MoveFile) => number) => files.reduce((sum, f) => sum + pick(f), 0);
+const dealtWith = (f: MoveFile) => f.rowsIn + f.rowsSame + f.rowsSkipped + f.rowsLook;
 
 function readAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -102,27 +109,34 @@ export function MovePage() {
     queryFn: () => apiGet<{ files: MoveFile[] }>('/api/move'),
     enabled: isOwner,
     // While a file comes across, this page keeps up (audit M4).
-    refetchInterval: (q) => (q.state.data?.files.some((f) => f.state === 'bringing') ? 2000 : false),
+    refetchInterval: (q) => (q.state.data?.files.some((f) => f.state === 'reading' || f.state === 'bringing') ? 2000 : false),
   });
   const [sends, setSends] = useState<Sending[]>([]);
   const another = useRef<HTMLInputElement>(null);
-  const replacing = useRef<Sending | null>(null);
+  const replacing = useRef<{ send?: Sending; fileId?: number } | null>(null);
 
   // One at a time, so a big drop doesn't send them all at once. A send that got
-  // no answer goes once more with the same key, so it can't count twice.
+  // no answer goes again with the same key, so it can't count twice; so does one
+  // told the server is busy with another file, after a moment.
+  async function post(body: object) {
+    for (let tries = 1; ; tries += 1) {
+      try {
+        return await apiMutate('/api/move/files', body);
+      } catch (err) {
+        const busy = err instanceof ApiError && err.status === 429;
+        if (err instanceof ApiError && !busy) throw err;
+        if (tries >= (busy ? BUSY_TRIES : 2)) throw err;
+        if (busy) await new Promise((r) => { setTimeout(r, BUSY_WAIT_MS); });
+      }
+    }
+  }
   async function sendOne(file: File) {
     const send: Sending = { key: newRequestKey(), name: file.name };
     setSends((all) => [...all, send]);
     let problem: Sending['problem'];
     try {
       if (file.size > MAX_FILE_BYTES) throw new ApiError(422, {});
-      const body = { fileName: file.name, dataBase64: await readAsBase64(file), requestKey: send.key };
-      try {
-        await apiMutate('/api/move/files', body);
-      } catch (err) {
-        if (err instanceof ApiError) throw err;
-        await apiMutate('/api/move/files', body);
-      }
+      await post({ fileName: file.name, dataBase64: await readAsBase64(file), requestKey: send.key });
     } catch (err) {
       problem = err instanceof ApiError && err.status === 422 ? 'cant_read' : 'not_sent';
     }
@@ -132,16 +146,21 @@ export function MovePage() {
   async function onFiles(files: File[]) {
     for (const file of files) await sendOne(file);
   }
-  // The refused row stays until a file is chosen: going sooner could take the
+  // A refused row stays until a file is chosen: going sooner could take the
   // page's file box with it while the owner is still choosing.
-  function chooseAnother(failed: Sending) {
-    replacing.current = failed;
+  function chooseAnother(what: { send?: Sending; fileId?: number }) {
+    replacing.current = what;
     another.current?.click();
   }
-  function anotherChosen(chosen: File[]) {
+  async function anotherChosen(chosen: File[]) {
     if (chosen.length === 0) return;
-    setSends((all) => all.filter((s) => s !== replacing.current));
-    void onFiles(chosen);
+    const was = replacing.current;
+    replacing.current = null;
+    if (was?.send) setSends((all) => all.filter((s) => s !== was.send));
+    // If this goes wrong the refused row just stays: nothing depends on it.
+    if (was?.fileId) await apiMutate(`/api/move/files/${was.fileId}`, {}, { method: 'DELETE' }).catch(() => {});
+    await queryClient.invalidateQueries({ queryKey: KEY });
+    await onFiles(chosen);
   }
 
   if (session.status !== 'signed-in') return null;
@@ -152,8 +171,10 @@ export function MovePage() {
   const files = move.data.files;
   const products = files.filter((f) => f.report === 'price_list' || f.report === 'barcodes');
   const priceLists = files.filter((f) => f.report === 'price_list');
-  const bringing = files.some((f) => f.state === 'bringing');
-  const hiddenInput = <input ref={another} type="file" multiple hidden aria-label="Choose another file" accept=".xlsx,.csv" onChange={(e) => { anotherChosen([...(e.target.files ?? [])]); e.target.value = ''; }} />;
+  const reading = files.filter((f) => f.state === 'reading');
+  const refused = files.filter((f) => f.state === 'cant_read');
+  const busy = files.some((f) => f.state === 'bringing') || reading.length > 0;
+  const hiddenInput = <input ref={another} type="file" multiple hidden aria-label="Choose another file" accept=".xlsx,.csv" onChange={(e) => { void anotherChosen([...(e.target.files ?? [])]); e.target.value = ''; }} />;
 
   if (files.length === 0 && sends.length === 0) {
     return (
@@ -172,14 +193,21 @@ export function MovePage() {
     );
   }
 
-  if (bringing || sends.length > 0) {
+  if (busy || sends.length > 0 || refused.length > 0) {
     const state = (list: MoveFile[]) => {
       if (list.length === 0) return <Chip>Not added yet</Chip>;
       if (list.every((f) => f.state === 'done')) return <Chip tone="ok">Done</Chip>;
-      return <Chip>{list.some((f) => f.rowsIn + f.rowsLook > 0) ? 'Bringing across' : 'Waiting'}</Chip>;
+      return <Chip>{list.some((f) => dealtWith(f) > 0) ? 'Bringing across' : 'Waiting'}</Chip>;
     };
-    const done = products.reduce((sum, f) => sum + f.rowsIn + f.rowsLook, 0);
-    const total = products.reduce((sum, f) => sum + f.rowsTotal, 0);
+    const progress = (list: MoveFile[]) => <>{names(list)} · <span className={mono}>{sumOf(list, dealtWith)}</span> of <span className={mono}>{sumOf(list, (f) => f.rowsTotal)}</span></>;
+    const refusedRow = (key: string, name: string, sub: string, chip: string, what: { send?: Sending; fileId?: number }) => (
+      <Row key={key} title={name} sub={sub}>
+        <span className="flex flex-wrap items-center gap-2">
+          <Chip tone="warn">{chip}</Chip>
+          <Button variant="default" aria-label={`Choose another file for ${name}`} onClick={() => chooseAnother(what)}>Choose another file</Button>
+        </span>
+      </Row>
+    );
     return (
       <Page>
         <Stages />
@@ -188,21 +216,13 @@ export function MovePage() {
           {hiddenInput}
           <div role="status" aria-live="polite">
             <ul className="m-0 list-none p-0">
-              <Row title="Products" sub={products.length ? <>{names(products)} · <span className={mono}>{done}</span> of <span className={mono}>{total}</span></> : undefined}>{state(products)}</Row>
+              <Row title="Products" sub={products.length ? progress(products) : undefined}>{state(products)}</Row>
               <Row title="Stock levels" sub={priceLists.length ? names(priceLists) : undefined}>{state(priceLists)}</Row>
-              {sends.map((s) => (
-                <Row key={s.key} title={s.name}
-                  sub={s.problem === 'cant_read' ? 'Wheelhouse couldn’t read this file' : s.problem === 'not_sent' ? 'Wheelhouse couldn’t send this file. Try again in a moment.' : undefined}>
-                  {s.problem
-                    ? (
-                      <span className="flex flex-wrap items-center gap-2">
-                        <Chip tone="warn">{s.problem === 'cant_read' ? 'Couldn’t read it' : 'Not sent'}</Chip>
-                        <Button variant="default" aria-label={`Choose another file for ${s.name}`} onClick={() => chooseAnother(s)}>Choose another file</Button>
-                      </span>
-                    )
-                    : <Chip>Bringing across</Chip>}
-                </Row>
-              ))}
+              {reading.map((f) => <Row key={`r${f.id}`} title={f.fileName}><Chip>Bringing across</Chip></Row>)}
+              {refused.map((f) => refusedRow(`f${f.id}`, f.fileName, CANT_READ, 'Couldn’t read it', { fileId: f.id }))}
+              {sends.map((s) => (s.problem
+                ? refusedRow(s.key, s.name, s.problem === 'cant_read' ? CANT_READ : 'Wheelhouse couldn’t send this file. Try again in a moment.', s.problem === 'cant_read' ? 'Couldn’t read it' : 'Not sent', { send: s })
+                : <Row key={s.key} title={s.name}><Chip>Bringing across</Chip></Row>))}
               {LATER_KINDS.map((k) => <Row key={k} title={k}><Chip>Later</Chip></Row>)}
             </ul>
           </div>
@@ -211,18 +231,21 @@ export function MovePage() {
     );
   }
 
-  const looks = lookCount(products);
-  const productCount = products.filter((f) => f.report === 'price_list').reduce((sum, f) => sum + f.rowsIn, 0);
-  const stockCount = priceLists.reduce((sum, f) => sum + f.stockIn, 0);
+  const looks = sumOf(products, (f) => f.rowsLook);
+  const stockLooks = sumOf(priceLists, (f) => f.stockLook);
+  const productsIn = sumOf(priceLists, (f) => f.rowsIn);
+  const productsSame = sumOf(priceLists, (f) => f.rowsSame);
   return (
     <Page>
       <Stages />
       <Card id="t-here-s-what-came-across" title="Here’s what came across">
         <ul className="m-0 list-none p-0">
-          <Row title="Products" sub={<>{n(productCount)} brought across</>}>
+          <Row title="Products" sub={<>{n(productsIn)} brought across{productsSame > 0 ? <> · {n(productsSame)} already here</> : null}</>}>
             {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
           </Row>
-          <Row title="Stock levels" sub={<>{n(stockCount)} brought across</>}><Chip tone="ok">All in</Chip></Row>
+          <Row title="Stock levels" sub={<>{n(sumOf(priceLists, (f) => f.stockIn))} brought across</>}>
+            {stockLooks > 0 ? <Chip tone="warn">{stockLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+          </Row>
           {LATER_KINDS.map((k) => <Row key={k} title={k}><Chip>Later</Chip></Row>)}
         </ul>
         <DropZone slim title="Drop more files here" onFiles={(f) => void onFiles(f)} />
