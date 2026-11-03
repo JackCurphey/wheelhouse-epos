@@ -102,7 +102,7 @@ Each row of Top Customers SHALL become a customer with their contact details, wh
 - **THEN** there's still one Maya, with the new phone
 
 ### Requirement: A customer who doesn't fit waits for a look
-A row with no name, or with the same email or phone as someone already here, SHALL wait for a look and SHALL NOT make a customer.
+A row with no name, no account number, or the same email or phone as someone already here, SHALL wait for a look and SHALL NOT make a customer.
 
 #### Scenario: The same person
 - **WHEN** a row's phone is another customer's, written with +44
@@ -116,15 +116,27 @@ Each row of Service Items Report SHALL become a bike on the customer it matches 
 - **THEN** once customers are in, the bikes join them and no longer need a look
 
 #### Scenario: Can't tell whose
-- **WHEN** a bike's only match is a name two customers share
-- **THEN** it needs a look, and neither customer gets it
+- **WHEN** a bike's only match is a name two customers share, its email and phone fit two people, or its name disagrees with the person they fit
+- **THEN** it needs a look, and nobody gets it
+
+#### Scenario: A corrected bike
+- **WHEN** a bike was corrected in Wheelhouse and the file is sent again
+- **THEN** it isn't added again
 
 ### Requirement: A deleted customer stays deleted
 Deleting a customer's details SHALL hold against any file, and SHALL remove rows about them still waiting in one.
 
 #### Scenario: The file sent again
 - **WHEN** a customer's details were deleted and Top Customers is sent again
-- **THEN** they don't come back, and their record stays blank
+- **THEN** they don't come back, their record stays blank, and the row is counted as left out
+
+#### Scenario: Only codes are kept
+- **WHEN** a customer's details are deleted
+- **THEN** only one-way codes of their account number, email and phone stay, unique to the shop, linked to nothing, used only to spot them on import
+
+#### Scenario: Added by hand, deleted before any file
+- **WHEN** someone added by hand and deleted is in the first file sent, by account number, email or phone
+- **THEN** they aren't created
 
 #### Scenario: A row waiting for a look
 - **WHEN** a row with their email is waiting for a look, and their details are deleted

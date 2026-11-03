@@ -7,3 +7,4 @@
 - [x] 1.3 Break each key rule on purpose, see its test go red, and restore
 - [x] 1.4 Log choices in Jack's section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
 - [x] 1.5 `/opsx:archive` as the last commit
+- [x] 1.6 The independent review, 3 Nov, and Jack's answers: one-way codes of a deleted person; the consent date; no account number; a bike's owner; ids in waiting rows; phones; counts; the deletion's lock order; bikes resent. Tests first, watched failing, each fix broken on purpose
