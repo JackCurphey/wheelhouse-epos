@@ -4,6 +4,7 @@ import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
+import { RecentDeliveries } from './delivery-page.tsx';
 import { ToReturn } from './to-return.tsx';
 import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, orderHref, stillToCome, type Order } from './deliveries-bits.tsx';
 
@@ -14,8 +15,9 @@ import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, order
  * stock"); "A delivery arrived?" for everyone, with or without an order
  * (openspec/changes/receive-delivery and receive-without-order).
  * To return to [Supplier] second, only when something's on it
- * (openspec/changes/to-return). Products to add and Recent deliveries come
- * later; the restock list waits for answers.
+ * (openspec/changes/to-return). Recent deliveries last, for everyone
+ * (openspec/changes/delivery-booked-in). Products to add comes later; the
+ * restock list waits for answers.
  */
 export function DeliveriesPage() {
   const session = useSession();
@@ -29,7 +31,7 @@ export function DeliveriesPage() {
       <div><Link to={ROUTES['rs-receive']} className={buttonVariants({ variant: 'accent' })}>Receive a delivery</Link></div>
     </Card>
   );
-  if (!owner) return <Page>{arrived}<p className="m-0 text-sm text-[var(--wh-muted)]">{ONLY_OWNER}</p></Page>;
+  if (!owner) return <Page>{arrived}<RecentDeliveries /><p className="m-0 text-sm text-[var(--wh-muted)]">{ONLY_OWNER}</p></Page>;
   const open = orders.data?.filter(isOpen);
   return (
     <Page>
@@ -56,6 +58,7 @@ export function DeliveriesPage() {
             </ul>
           )}
       </Card>
+      <RecentDeliveries />
     </Page>
   );
 }

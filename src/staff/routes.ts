@@ -48,6 +48,10 @@ export const ROUTES = {
   // Receive a delivery (rs-receive), from the hub and an order; ?order=[id]
   // picks the order (openspec/changes/receive-delivery).
   'rs-receive': '/workshop/deliveries/receive',
+  // A booked-in delivery (rs-delivery), from Recent deliveries; Delivery booked
+  // in (rs-booked), where Book in lands (openspec/changes/delivery-booked-in).
+  'rs-delivery': '/workshop/deliveries/delivery/:id',
+  'rs-booked': '/workshop/deliveries/delivery/:id/booked',
   // Close the day (eod-count), from the till after closing time
   // (openspec/changes/close-the-day).
   'eod-count': '/workshop/till/close',

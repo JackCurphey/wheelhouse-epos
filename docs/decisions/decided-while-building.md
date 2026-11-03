@@ -1928,6 +1928,53 @@ silent:
     a copy yet (Mark's step C), so whether a till drops a customer missing
     from a newer copy is a question for step C's design.
 
+### 3 Nov 2026: a delivery, once it's booked in (`openspec/changes/delivery-booked-in`, `rs-booked`, `rs-booked-staff`, `rs-delivery`, `rs-delivery-staff`, `rs-hub`; WP-2.3; receiving decisions 4, 9 and 10)
+
+**Why this piece:** the earliest open piece with a drawing that needs nothing
+of Mark's. Slice A and B's open pieces wait on step C, the till deposit or
+roles; WP-2.1's rest (categories, sizes and colours, changing prices) is
+WP-1.5's. So: slice C, WP-2.3.
+
+1. **Deliveries from before this piece aren't shown.** Nothing recorded them
+   as deliveries; the stock history could only guess at which lines came
+   together, and a guess isn't a record. Recent deliveries starts empty.
+2. **Recent deliveries is the newest 10, and no section at all with none.**
+   The drawing doesn't say how many or what none looks like. *Pattern:* To
+   return, shown only when something's on it.
+3. **Staff read "the owner will return it"** where the drawing has "[Owner]
+   will return it", without the name. *Pattern:* "Orders are for the shop's
+   owner for now."
+4. **"Set aside" is one line per kind:** "1 set aside as damaged", "2 set aside
+   as a wrong item". The drawing shows only damaged.
+5. **With nothing in stock, the page says "Nothing booked in"**, not "0 items
+   booked in · stock updated", which isn't true of a delivery that was all
+   damaged. Not drawn.
+6. **"1 item", not "1 items",** on the new pages and Recent deliveries.
+   Receive a delivery's own "Book in 1 items" is unchanged, as built.
+7. **See the list goes to Deliveries and orders**, where To return is second on
+   the page; it doesn't scroll to the supplier's section.
+8. **A line's cost is copied when it's booked in:** the order line's, or the
+   product's when it isn't on an order. A product with no cost set shows
+   £0.00, as a stock list does. A set-aside item keeps its cost the same way.
+9. **An item sent back says Returned** on its delivery instead of On To return
+   (not drawn; the word is the To return list's button). Missing items aren't
+   listed: they never arrived, and they stay to come on the order.
+10. **A booking that only marks items missing keeps no delivery.** The old
+    app's order route can do that; Receive a delivery can't.
+11. **A delivery with no supplier is named "Delivery · [n] items"** (not drawn).
+12. **The frame's title stays "Deliveries and orders"** on these pages, not the
+    drawing's "Delivery booked in" and "Delivery". *Pattern:* every sub-page,
+    such as Receive a delivery and an order.
+13. **Left out, as they need what isn't built:** the job line ("1 held for
+    WH-1042"; order lines don't record a job), "Cost went up? Change it" (a
+    product's cost isn't edited until WP-1.5), the Invoice section (later,
+    issue #116 question 6), Cycle to Work and frame numbers.
+14. **Noted, not changed:** `GET /api/purchase-orders` sends every signed-in
+    person each order line's cost, and Receive a delivery reads it, so a
+    member of staff could find costs in the browser's tools there. The new
+    delivery routes leave costs out for them, as audit M12 asks. Closing the
+    older gap means splitting what Receive a delivery reads, its own piece.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

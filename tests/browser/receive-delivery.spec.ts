@@ -74,11 +74,23 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
 
     await main.getByRole('button', { name: 'Book in 2 items' }).click();
+    // Delivery booked in (openspec/changes/delivery-booked-in): 2 booked in, 1
+    // set aside, so nothing is left to come. Jo is told the owner will return it.
     await expect(main.getByText('2 items booked in · stock updated')).toBeVisible();
-    // 2 booked in and 1 set aside: nothing is left to come (second review, 26
-    // Oct); the supplier stays picked (receive-without-order).
-    await expect(main.getByRole('list', { name: 'Still to come on the order' })).toHaveCount(0);
-    await expect(main.getByRole('radio', { name: supplierName, exact: true })).toBeChecked();
+    await expect(main.getByText('1 set aside as damaged — the owner will return it')).toBeVisible();
+    await expect(main.getByText('still to come on the order')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+
+    // It's on Recent deliveries; its page has no costs for Jo, on the page or from the server.
+    await main.getByRole('link', { name: 'Deliveries and orders' }).click();
+    const recent = main.getByRole('list', { name: 'Recent deliveries' });
+    await recent.getByRole('link', { name: new RegExp(`Open the delivery from ${supplierName}`) }).first().click();
+    await expect(main.getByRole('heading', { level: 2, name: `${supplierName} · 2 items` })).toBeVisible();
+    await expect(main.getByText('Booked in', { exact: false }).first()).toContainText('by Jo Taylor');
+    await expect(main.getByRole('list', { name: 'Items in this delivery' })).toContainText(`B05S-RX-${size} · 2`);
+    await expect(main.getByRole('list', { name: 'Set aside as problems' })).toContainText('On To return');
+    await expect(main.getByText('Costs are for people who can order stock.')).toBeVisible();
+    await expect(main.getByText('£')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
 
     const found = await asOwner(`/api/products?search=B05S-RX-${size}`);
