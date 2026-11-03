@@ -1,16 +1,19 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, apiGet } from '@/lib/api/client.ts';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { Back, Card, Page, Row, Tag, day, linkClass, money, mono, orderHref } from './deliveries-bits.tsx';
+import { PrintLabels } from './delivery-labels.tsx';
 
 /**
  * A delivery once it's booked in (openspec/changes/delivery-booked-in):
  * Delivery booked in, where Book in lands (rs-booked, rs-booked-staff in
  * receiving.mjs; audit M10; walk-through 3 M4), a delivery's page (rs-delivery,
  * rs-delivery-staff; audit H4 and M12) and Recent deliveries on the hub.
+ * Print labels is on the booked-in page (openspec/changes/delivery-labels).
  * Costs come from the server only for the Owner, until roles. The invoice
  * check, a job waiting for a part and Cost went up? come later.
  */
@@ -19,7 +22,7 @@ type Summary = { id: number; supplierName: string | null; items: number; bookedI
 type Delivery = Summary & {
   supplierId: number | null;
   bookedCost?: number;
-  lines: { id: number; productId: number; name: string; sku: string | null; qty: number; unitCost?: number; lineCost?: number }[];
+  lines: { id: number; productId: number; name: string; sku: string | null; barcode: string | null; price: number; qty: number; unitCost?: number; lineCost?: number }[];
   setAside: { id: number; name: string; kind: Kind; qty: number; returned: boolean; cost?: number }[];
   stillToCome: { orderId: number; supplierName: string; orderedAt: string | null; qty: number }[];
 };
@@ -52,11 +55,15 @@ function Waiting({ failed, gone }: { failed: boolean; gone: boolean }) {
 
 /** Delivery booked in: what happened and what's next (rs-booked, rs-booked-staff; audit M10). */
 export function DeliveryBookedPage() {
+  const [labels, setLabels] = useState(false);
   const { delivery: d, failed, gone } = useDelivery();
   if (!d) return <Waiting failed={failed} gone={gone} />;
   // Who can order stock: the server sends costs only to them, following who's
   // checked in; the sign-in on a till can be the Owner's with Jo serving.
   const owner = d.bookedCost !== undefined;
+  // Staff land here to label what they booked in: first for them, and for
+  // the Owner beside what's next (walk-through 3 M4).
+  const print = d.lines.length > 0 ? <Button variant="accent" onClick={() => setLabels(true)}>Print labels</Button> : null;
   const kinds = (['damaged', 'wrong_item'] as const)
     .map((kind) => ({ kind, qty: d.setAside.filter((p) => p.kind === kind).reduce((n, p) => n + p.qty, 0) }))
     .filter((k) => k.qty > 0);
@@ -68,6 +75,7 @@ export function DeliveryBookedPage() {
         <p role="status" className="m-0 flex items-center gap-2 text-base font-bold text-[var(--wh-status-complete-ink)]">
           {d.items > 0 ? <><NavIcon name="check" size={18} />{`${count(d.items)} booked in · stock updated`}</> : 'Nothing booked in'}
         </p>
+        {owner || !print ? null : <div>{print}</div>}
         {kinds.length + d.stillToCome.length > 0 ? (
           <ul aria-labelledby="t-booked-in" className="m-0 list-none p-0">
             {kinds.map(({ kind, qty }) => (owner
@@ -87,9 +95,11 @@ export function DeliveryBookedPage() {
           </ul>
         ) : null}
         <div className="flex flex-wrap gap-2 pt-1.5">
+          {owner ? print : null}
           <Link to={ROUTES['rs-receive']} className={buttonVariants({ variant: 'default' })}>Receive another delivery</Link>
         </div>
       </Card>
+      {labels ? <PrintLabels supplierName={d.supplierName} bookedInAt={d.bookedInAt} lines={d.lines} onClose={() => setLabels(false)} /> : null}
     </Page>
   );
 }

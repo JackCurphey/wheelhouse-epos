@@ -2003,6 +2003,35 @@ WP-1.5's. So: slice C, WP-2.3.
 19. **Delivery booked in's links follow what the server sent,** not the sign-in,
     so Jo at a till signed in as the Owner doesn't get them.
 
+### 3 Nov 2026: Print labels (`openspec/changes/delivery-labels`, `rs-labels`, `rs-booked`, `rs-booked-staff`; WP-2.3; receiving decision 8; Jack's 26 Oct answer 5)
+
+1. **The label itself wasn't drawn.** It prints what the old app's sticker
+   does: name, price, a Code 128 barcode of the product's barcode or, with
+   none, its code, and that code in words. *Pattern:* the old app's sticker,
+   printed as the bike tag is. A stand-in until shops design their own
+   printouts.
+2. **"Printing on [Label printer], the one used last" and Change are left out,**
+   and the box's note drops "and new ones added in this delivery". The print
+   helper was dropped for browser printing (26 Oct answer 5), so the browser's
+   print window picks the printer, and Add this product isn't built.
+3. **The size is the shop's saved label size** (`label_settings`, 50 by 25 mm
+   unless changed). The drawing has no size. Only the old app's sticker box can
+   change it for now; a label-size setting in the new app isn't drawn.
+4. **A product with neither barcode nor code prints its name and price,** with
+   no barcode, so it can't be scanned; a code Code 128 can't draw prints in
+   words only.
+5. **Print labels is only on Delivery booked in,** as drawn, not on a delivery's
+   page later. **"Print 0 labels" is off**, with the box still open to add some.
+6. **A count can go above what was received,** for spares, up to about ten
+   times what came: at least 10, 500 at most, so a slip can't print thousands.
+   A line starts at what came only up to 500.
+   The drawing says any count can be changed; the limit is the review's, 3 Nov.
+7. **The barcode has clear space each side and fits the label:** a narrowest bar
+   of 0.33 mm where it fits, and a long code scaled down to the label's width.
+   A very long code on a 50 mm label has thin bars a scanner may not read. No
+   real scan has been tried yet.
+8. **"Booked in just now" lasts 5 minutes,** then the box says the day.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
