@@ -8,12 +8,12 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
-import { bringAcrossRound } from '../server/move/bring-across.js';
+import { bringAcrossRound, bringBatch, readNextFile } from '../server/move/bring-across.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { staffLogin } from './helpers/till.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { xlsxOf } from './helpers/xlsx.js';
+import { xlsxOf, zipOf } from './helpers/xlsx.js';
 
 let server;
 let owner;
@@ -38,6 +38,8 @@ const inShop = (fn) => runWithShop(owner.shop.id, fn);
 const finish = async () => { for (let i = 0; i < 5; i += 1) await bringAcrossRound(); };
 const productBy = (sku) => inShop(() => prepare('SELECT * FROM products WHERE sku = ?').get(sku));
 const fileIn = async (id) => (await staff('/api/move')).body.files.find((f) => f.id === id);
+const num = (over) => ({ state: 'done', rowsIn: 0, rowsSame: 0, rowsSkipped: 0, rowsLook: 0, stockIn: 0, stockLook: 0, ...over });
+const counts = (f) => ({ state: f.state, rowsIn: f.rowsIn, rowsSame: f.rowsSame, rowsSkipped: f.rowsSkipped, rowsLook: f.rowsLook, stockIn: f.stockIn, stockLook: f.stockLook });
 const whyOf = (fileId) => inShop(() => prepare("SELECT why FROM move_rows WHERE file_id = ? AND state = 'look' ORDER BY id").all(fileId));
 
 const HEAD = ['Store', 'Department', 'Category', 'Supplier', 'Item Lookup Code', 'Description', 'Store Cost', 'Price', 'Tax Rate', 'Min (Reorder Point)', 'Qty On Hand', 'Active'];
@@ -50,12 +52,12 @@ const line = (over = {}) => {
 const priceList = (...lines) => xlsxOf([['Price List - Store Level'], HEAD, ...lines]);
 const barcodes = (...lines) => xlsxOf([['Alias', 'ILC', 'Description'], ...lines]);
 
-test('a price list under a title is recognised, waits, then its products come across with their figures', async () => {
+test('a send only stores the file and replies; then it\'s recognised, under its title, and its products come across with their figures', async () => {
   const pads = line();
   const sku = pads[4];
   const res = await send(priceList(pads), { name: 'Price List.xlsx' });
-  assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.deepEqual({ report: res.body.report, fileName: res.body.fileName, state: res.body.state, rowsTotal: res.body.rowsTotal, rowsIn: res.body.rowsIn }, { report: 'price_list', fileName: 'Price List.xlsx', state: 'bringing', rowsTotal: 1, rowsIn: 0 });
+  assert.equal(res.status, 202, JSON.stringify(res.body));
+  assert.deepEqual({ report: res.body.report, fileName: res.body.fileName, state: res.body.state }, { report: null, fileName: 'Price List.xlsx', state: 'reading' });
   assert.equal(await productBy(sku), undefined, 'nothing comes across until the background round');
 
   await finish();
@@ -65,7 +67,11 @@ test('a price list under a title is recognised, waits, then its products come ac
     { name: 'Shimano brake pads', category: 'Drivetrain › Derailleurs', price: 28, cost: 14, vat: 2000, supplier: '[Supplier]', min: 2, qty: 6, active: 1, online: false }
   );
   const f = await fileIn(res.body.id);
-  assert.deepEqual({ state: f.state, rowsIn: f.rowsIn, rowsLook: f.rowsLook, stockIn: f.stockIn }, { state: 'done', rowsIn: 1, rowsLook: 0, stockIn: 1 });
+  assert.equal(f.report, 'price_list');
+  assert.deepEqual(counts(f), num({ rowsIn: 1, stockIn: 1 }));
+  assert.equal(f.rowsTotal, 1);
+  const held = await inShop(() => prepare('SELECT count(*)::int AS n FROM move_file_bytes WHERE file_id = ?').get(f.id));
+  assert.equal(held.n, 0, 'the file itself goes once it\'s read');
 });
 
 test('stock has one history line saying it came from Citrus Lime, under the sender; none for zero', async () => {
@@ -88,7 +94,7 @@ test('a retried send counts once, and the same key with another file is refused'
   const file = priceList(pads);
   const first = await send(file, { requestKey });
   const again = await send(file, { requestKey });
-  assert.equal(again.status, 201);
+  assert.equal(again.status, 202);
   assert.equal(again.body.id, first.body.id);
   assert.equal((await send(priceList(line()), { requestKey })).status, 409);
   await finish();
@@ -106,7 +112,7 @@ test('the same file again changes nothing, and what was changed in Wheelhouse st
   await finish();
   const after2 = await productBy(pads[4]);
   assert.deepEqual({ price: Number(after2.price), category: after2.category, qty: after2.stock_qty }, { price: 30, category: 'Brakes', qty: 6 });
-  assert.deepEqual({ rowsIn: (await fileIn(res.body.id)).rowsIn, stockIn: (await fileIn(res.body.id)).stockIn }, { rowsIn: 1, stockIn: 0 });
+  assert.deepEqual(counts(await fileIn(res.body.id)), num({ rowsSame: 1 }), 'left alone isn\'t counted as brought across');
   assert.equal((await staff(`/api/products/${p.id}`)).body.history.length, 1);
 });
 
@@ -127,14 +133,14 @@ test('rows that don\'t fit wait with their reason, and the rest come across', as
   ));
   await finish();
   const f = await fileIn(res.body.id);
-  assert.deepEqual({ state: f.state, rowsIn: f.rowsIn, rowsLook: f.rowsLook }, { state: 'done', rowsIn: 1, rowsLook: 10 });
+  assert.deepEqual(counts(f), num({ rowsIn: 1, rowsLook: 10, stockIn: 1, stockLook: 10 }));
   assert.deepEqual((await whyOf(f.id)).map((r) => r.why), ['No product code', 'No description', 'No price', 'The price isn’t a number Wheelhouse can use', 'The price isn’t a number Wheelhouse can use', 'The cost isn’t a number Wheelhouse can use', 'The VAT rate isn’t 0, 5 or 20%', 'The stock isn’t a whole number', 'The reorder level isn’t a whole number', 'The price isn’t a number Wheelhouse can use']);
   assert.equal((await productBy(good[4])).stock_qty, 6);
 });
 
-test('every other figure is taken as Excel keeps it: 20% as 0.2, £ and commas, empty cost and reorder level, off sale', async () => {
+test('every other figure is taken as Excel keeps it: 20% as 0.2, thousands commas, empty cost and reorder level, off sale', async () => {
   const fraction = line({ 'Tax Rate': 0.2 });
-  const words = line({ 'Tax Rate': '5%', Price: '£1,234.50', 'Store Cost': null, 'Min (Reorder Point)': null, Active: 'No', Department: null, Category: null });
+  const words = line({ 'Tax Rate': '5%', Price: '1,234.50', 'Store Cost': null, 'Min (Reorder Point)': null, Active: 'No', Department: null, Category: null });
   await send(priceList(fraction, words));
   await finish();
   assert.equal((await productBy(fraction[4])).vat_rate_bp, 2000);
@@ -142,7 +148,7 @@ test('every other figure is taken as Excel keeps it: 20% as 0.2, £ and commas, 
   assert.deepEqual({ vat: p.vat_rate_bp, price: Number(p.price), cost: Number(p.cost), min: p.low_stock_threshold, active: p.active, category: p.category }, { vat: 500, price: 1234.5, cost: 0, min: 3, active: 0, category: 'Uncategorised' });
 });
 
-test('a second store\'s rows need a look and the first store\'s stock stands', async () => {
+test('a second store\'s rows need a look and the first store\'s stock stands, and Stock levels knows', async () => {
   const pads = line();
   const other = [...pads];
   other[0] = '[Shop 2]';
@@ -151,6 +157,37 @@ test('a second store\'s rows need a look and the first store\'s stock stands', a
   await finish();
   assert.equal((await productBy(pads[4])).stock_qty, 6);
   assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['Stock at [Shop 2]: one shop’s stock comes across for now']);
+  assert.deepEqual(counts(await fileIn(res.body.id)), num({ rowsIn: 1, rowsLook: 1, stockIn: 1, stockLook: 1 }));
+});
+
+test('a second shop\'s own file is compared with the first shop ever sent: flagged, not mixed in', async () => {
+  const theirs = line({ Store: '[Shop 2]', 'Qty On Hand': 40 });
+  const res = await send(priceList(theirs));
+  await finish();
+  assert.equal(await productBy(theirs[4]), undefined);
+  assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['Stock at [Shop 2]: one shop’s stock comes across for now']);
+  assert.deepEqual(counts(await fileIn(res.body.id)), num({ rowsLook: 1, stockLook: 1 }));
+});
+
+test('odd prices aren\'t prices: £, a comma, 12,50, 0x10, 1e3, and commas in the wrong place', async () => {
+  const odd = ['£', ',', '12,50', '0x10', '1e3', '£12.50', '1,23,456', '1,2345', ' ', 'Infinity', '.', '-'];
+  const lines = odd.map((Price) => line({ Price }));
+  const res = await send(priceList(...lines));
+  await finish();
+  // A cell of only a space reads as empty.
+  const whys = (await whyOf(res.body.id)).map((r) => r.why);
+  assert.equal(whys.length, odd.length);
+  assert.ok(whys.every((w) => w === 'The price isn’t a number Wheelhouse can use' || w === 'No price'), JSON.stringify(whys));
+  for (const l of lines) assert.equal(await productBy(l[4]), undefined);
+  const stock = line({ 'Qty On Hand': '1e3' });
+  const cost = line({ 'Store Cost': '0x10' });
+  const rate = line({ 'Tax Rate': '2e1' });
+  const fine = line({ Price: '1,234,567.50', 'Qty On Hand': '1,000' });
+  const res2 = await send(priceList(stock, cost, rate, fine));
+  await finish();
+  assert.deepEqual((await whyOf(res2.body.id)).map((r) => r.why), ['The stock isn’t a whole number', 'The cost isn’t a number Wheelhouse can use', 'The VAT rate isn’t 0, 5 or 20%']);
+  const p = await productBy(fine[4]);
+  assert.deepEqual({ price: Number(p.price), qty: p.stock_qty }, { price: 1234567.5, qty: 1000 });
 });
 
 test('barcodes join their products, whichever file came first', async () => {
@@ -162,7 +199,7 @@ test('barcodes join their products, whichever file came first', async () => {
   await finish();
   assert.equal((await productBy(pads[4])).barcode, '4524667000001');
   const f = await fileIn(list.body.id);
-  assert.deepEqual({ state: f.state, rowsIn: f.rowsIn, rowsLook: f.rowsLook }, { state: 'done', rowsIn: 1, rowsLook: 0 });
+  assert.deepEqual(counts(f), num({ rowsIn: 1 }));
 });
 
 test('a barcode another product has, or a second barcode, needs a look and changes nothing', async () => {
@@ -175,29 +212,28 @@ test('a barcode another product has, or a second barcode, needs a look and chang
   assert.equal((await productBy(a[4])).barcode, '[Barcode 1]');
   assert.equal((await productBy(b[4])).barcode, null);
   const f = await fileIn(res.body.id);
-  assert.deepEqual({ rowsIn: f.rowsIn, rowsLook: f.rowsLook }, { rowsIn: 2, rowsLook: 3 });
+  assert.deepEqual(counts(f), num({ rowsIn: 1, rowsSame: 1, rowsLook: 3 }));
   assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['This product already has a different barcode', 'Another product has this barcode', 'No barcode']);
 });
 
 test('a row\'s data is emptied once it\'s in, and only the columns used are ever kept', async () => {
   const head = [...HEAD, 'Item Notes'];
   const res = await send(xlsxOf([head, [...line(), '[Private note]'], [...line({ Price: null }), '[Private note]']]));
-  const kept = await inShop(() => prepare('SELECT data FROM move_rows WHERE file_id = ? ORDER BY id').all(res.body.id));
-  assert.ok(!JSON.stringify(kept).includes('Private note'));
   await finish();
   const rows = await inShop(() => prepare('SELECT state, data FROM move_rows WHERE file_id = ? ORDER BY id').all(res.body.id));
   assert.deepEqual(rows[0], { state: 'in', data: {} });
   assert.equal(rows[1].state, 'look');
   assert.equal(rows[1].data['Description'], 'Shimano brake pads');
+  assert.ok(!JSON.stringify(rows).includes('Private note'));
 });
 
 test('a restart picks up where it stopped: a batch that fails leaves its rows waiting and nothing half done', async () => {
   const pads = line();
   const res = await send(priceList(pads));
+  await readNextFile(owner.shop.id);
   // A database that fails the whole batch part-way: nothing of the batch stays.
   await assert.rejects(inShop(async () => {
     await prepare('SELECT 1').get();
-    const { bringBatch } = await import('../server/move/bring-across.js');
     await bringBatch({ afterRows: () => { throw new Error('stopped here'); } });
   }), /stopped here/);
   assert.equal(await productBy(pads[4]), undefined);
@@ -207,34 +243,81 @@ test('a restart picks up where it stopped: a batch that fails leaves its rows wa
   assert.equal((await staff(`/api/products/${(await productBy(pads[4])).id}`)).body.history.length, 1);
 });
 
-test('a row that fails unexpectedly needs a look, and the rest of the file comes across', async () => {
+test('a row that fails unexpectedly needs a look, and the rest come across', async () => {
   const odd = line();
   const good = line();
   const res = await send(priceList(odd, good));
-  const { bringBatch } = await import('../server/move/bring-across.js');
+  await readNextFile(owner.shop.id);
   await inShop(() => bringBatch({ beforeRow: async (row) => { if (row.data['Item Lookup Code'] === odd[4]) await prepare('SELECT 1/0').get(); } }));
   await finish();
   assert.equal(await productBy(odd[4]), undefined);
   assert.equal((await productBy(good[4])).stock_qty, 6);
   assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['Wheelhouse couldn’t bring this row across']);
+  assert.deepEqual(counts(await fileIn(res.body.id)), num({ rowsIn: 1, rowsLook: 1, stockIn: 1, stockLook: 1 }));
+});
+
+test('a row caught by a deadlock isn\'t failed: it stays waiting, then comes across', async () => {
+  const pads = line();
+  const res = await send(priceList(pads));
+  await readNextFile(owner.shop.id);
+  const deadlock = () => { throw Object.assign(new Error('deadlock'), { code: '40P01' }); };
+  await inShop(() => bringBatch({ beforeRow: deadlock }));
+  assert.equal((await inShop(() => prepare('SELECT state FROM move_rows WHERE file_id = ?').get(res.body.id))).state, 'waiting');
+  await finish();
+  assert.equal((await productBy(pads[4])).stock_qty, 6);
+});
+
+test('half a character in a file name or a cell doesn\'t stop the file, and a missing one can\'t be read', async () => {
+  const half = line({ Description: 'Shimano\ud800 brake pads' });
+  const res = await staff('/api/move/files', { method: 'POST', body: { fileName: 'a\ud800.xlsx', dataBase64: priceList(half).toString('base64'), requestKey: key() } });
+  assert.equal(res.status, 202, JSON.stringify(res.body));
+  await finish();
+  assert.equal((await productBy(half[4])).name, 'Shimano\ufffd brake pads');
+  const none = zipOf({ 'xl/worksheets/sheet1.xml': '<worksheet><sheetData><row><c r="A1" t="inlineStr"><is><t>&#x110000;</t></is></c></row></sheetData></worksheet>' });
+  const bad = await send(none);
+  assert.equal(bad.status, 202);
+  await finish();
+  assert.equal((await fileIn(bad.body.id)).state, 'cant_read');
 });
 
 test('a stray nothing-character in a cell or a file name doesn\'t stop the file', async () => {
   const pads = line({ Description: 'Shimano\u0000 brake pads' });
   const res = await send(priceList(pads), { name: 'a\u0000.xlsx' });
-  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.status, 202, JSON.stringify(res.body));
   await finish();
   assert.equal((await productBy(pads[4])).name, 'Shimano brake pads');
 });
 
-test('a file that can\'t be read is refused and nothing is kept', async () => {
-  const before2 = (await staff('/api/move')).body.files.length;
+test('a file that can\'t be read says so, keeps nothing of it, and goes when asked; one that\'s being read can\'t', async () => {
   for (const file of [Buffer.from('hello'), xlsxOf([['Some', 'Other', 'Report'], ['1', '2', '3']]), xlsxOf([['Item Lookup Code', 'Serial Number'], ['B05S-RX', '[Serial]']]), xlsxOf([HEAD])]) {
     const res = await send(file);
-    assert.equal(res.status, 422, JSON.stringify(res.body));
-    assert.equal(res.body.code, 'cant_read');
+    assert.equal(res.status, 202, JSON.stringify(res.body));
+    const reading = await staff(`/api/move/files/${res.body.id}`, { method: 'DELETE' });
+    assert.equal(reading.status, 404, 'still being read');
+    await finish();
+    const f = await fileIn(res.body.id);
+    assert.equal(f.state, 'cant_read');
+    assert.equal(f.report, null);
+    const kept = await inShop(() => prepare('SELECT (SELECT count(*)::int FROM move_rows WHERE file_id = ?) AS rows, (SELECT count(*)::int FROM move_file_bytes WHERE file_id = ?) AS bytes').get(f.id, f.id));
+    assert.deepEqual(kept, { rows: 0, bytes: 0 });
+    assert.equal((await staff(`/api/move/files/${f.id}`, { method: 'DELETE' })).status, 200);
+    assert.equal(await fileIn(f.id), undefined);
   }
-  assert.equal((await staff('/api/move')).body.files.length, before2);
+  const brought = await send(priceList(line()));
+  await finish();
+  assert.equal((await staff(`/api/move/files/${brought.body.id}`, { method: 'DELETE' })).status, 404, 'one that came across stays');
+});
+
+test('a send that\'s too big is refused at once, and a shop can\'t queue without limit', async () => {
+  const big = await send(Buffer.alloc(31 * 1024 * 1024, 1));
+  assert.equal(big.status, 422);
+  assert.equal(big.body.code, 'cant_read');
+  const sent = [];
+  for (let i = 0; i < 12; i += 1) sent.push(await send(Buffer.from('hello')));
+  assert.ok(sent.slice(0, 10).every((r) => r.status === 202), JSON.stringify(sent.map((r) => r.status)));
+  assert.equal(sent[11].status, 429);
+  assert.equal(sent[11].body.code, 'busy');
+  await finish();
 });
 
 test('only the Owner can send a file or see how they\'re getting on, and no file name is too long', async () => {
@@ -242,7 +325,7 @@ test('only the Owner can send a file or see how they\'re getting on, and no file
   assert.equal((await send(priceList(line()), { who: jo })).status, 403);
   assert.equal((await staffRequest(server.baseUrl, '', '/api/move')).status, 401);
   const long = await send(priceList(line()), { name: `${'a'.repeat(400)}.xlsx` });
-  assert.equal(long.status, 201);
+  assert.equal(long.status, 202);
   assert.ok(long.body.fileName.length <= 200);
 });
 
@@ -265,7 +348,7 @@ test('with the timer running, a sent file comes across by itself, and the next o
   const sendAndWait = async () => {
     const pads = line();
     const res = await staffRequest(quick.baseUrl, owner.cookie, '/api/move/files', { method: 'POST', body: { fileName: 'a.xlsx', dataBase64: priceList(pads).toString('base64'), requestKey: key() } });
-    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.status, 202, JSON.stringify(res.body));
     let product;
     for (let i = 0; i < 300 && !product; i += 1) {
       await new Promise((r) => { setTimeout(r, 100); });

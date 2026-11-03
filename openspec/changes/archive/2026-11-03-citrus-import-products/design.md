@@ -25,3 +25,19 @@
 11. **Barcode row.** Each batch first locks its products in id order, the order sales use. Alias → `barcode`. Needs a look: no such product ("The product isn't in the products file"), a product with another barcode (one barcode each until WP-1.5), or a barcode another product has. When a price list finishes, barcode rows waiting on a missing product are tried again, whichever file arrived first.
 
 12. **What the screens read (`GET /api/move`).** Owner only: each file's report, name, state and counts, oldest first. It carries no cost and no row data.
+
+## After the independent review, 3 Nov
+
+These replace what's above where they differ.
+
+13. **A file is read off the request, in a worker.** The send stores the file (`move_file_bytes`) with its request key and replies 202, so a slow read can't reach the gateway's 5-second limit and look like a failed send. The timer reads it in a `worker_threads` worker with `resourceLimits` and a 60-second limit, one read at a time per server, holding no database connection. The bytes go once it's read. A file state of `reading` or `cant_read` joins `bringing` and `done`; a file that can't be read stays listed until the Owner chooses another (`DELETE /api/move/files/:id`). One send at a time per server, and 10 waiting per shop; beyond that, 429 `busy`. Measured on a made-up 100,000-row price list: send 96 ms, read 7 s, the server answering within 7 ms throughout.
+
+14. **Reading scans straight through.** The patterns that could take minutes on a tiny file are gone. Caps: 300,000 rows, 5,000,000 cells counting gaps, column 300, 32,767 characters a cell, 150 million characters in all counting a shared word each time it's used, 64 million characters kept. A character that doesn't exist can't be read; half a character is cleaned with `toWellFormed()`. Logs carry a database error's code only, never its other fields, which can quote a row.
+
+15. **No savepoint per row.** A batch of 200 runs in one transaction. If a row fails, the batch rolls back and its rows go one at a time, each in its own transaction. A deadlock or lock wait leaves the row waiting for the next round; only another failure puts it to a look. All the shop's `move_files` rows are locked in id order first.
+
+16. **Counts mean what they say.** A code already here is `same`, not `in`, so a resent file doesn't double anything. `stock_look` counts rows with stock that didn't come across, so Stock levels can't say All in over them.
+
+17. **The first store this shop ever sent** is the stock's store, across files, not per file (design 10).
+
+18. **Only plain numbers:** digits with commas only where thousands go, and a point. £, 12,50, 0x10 and 1e3 need a look (design 7's "£ and commas" no longer holds).
