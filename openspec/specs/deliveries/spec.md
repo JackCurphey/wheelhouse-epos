@@ -233,3 +233,35 @@ Deliveries and orders SHALL list the newest deliveries for everyone, each "[Supp
 #### Scenario: nothing booked in yet
 - **WHEN** no delivery has been kept
 - **THEN** there is no Recent deliveries section
+
+### Requirement: A delivery names the person who booked it in
+A delivery SHALL name the person checked in by PIN, or on an ordinary browser the person signed in. On a till or workshop computer with nobody checked in, Book in SHALL be refused and nothing booked in. The name SHALL stay if that person is later deleted.
+
+#### Scenario: a workshop computer signed in as the Owner
+- **WHEN** Jo Taylor checks in by PIN on a workshop computer signed in as Jack Lewis, and books a delivery in
+- **THEN** the delivery reads "by Jo Taylor"
+
+#### Scenario: nobody checked in
+- **WHEN** Book in is pressed on a workshop computer with nobody checked in
+- **THEN** it is refused with "Check in with your PIN first", and stock doesn't change
+
+### Requirement: Book in sent twice books in once
+A Book in sent again with the same request key and the same items SHALL get the first delivery's answer and change nothing. The same key with other items SHALL be refused and change nothing.
+
+#### Scenario: the reply was lost
+- **WHEN** Book in is pressed, the reply is lost, and Try again sends it again
+- **THEN** stock goes up once and there is one delivery
+
+### Requirement: Order costs are only sent to who can see them
+Purchase order replies SHALL include unit costs and totals only for someone who can see costs: the Owner, until roles add each person's "Can see costs and margin" switch. On a shared computer that SHALL follow who is checked in, not who is signed in.
+
+#### Scenario: Jo Taylor at a till signed in as the Owner
+- **WHEN** Jo Taylor is checked in and the till reads an order
+- **THEN** the reply has no costs in it
+
+### Requirement: An old delivery keeps the names it had
+A delivery SHALL show its supplier's and products' names and codes as they were when it was booked in.
+
+#### Scenario: a product renamed later
+- **WHEN** a product and its supplier are renamed
+- **THEN** a delivery booked in earlier still shows the old names

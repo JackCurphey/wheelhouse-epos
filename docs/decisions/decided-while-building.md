@@ -1969,11 +1969,36 @@ WP-1.5's. So: slice C, WP-2.3.
     WH-1042"; order lines don't record a job), "Cost went up? Change it" (a
     product's cost isn't edited until WP-1.5), the Invoice section (later,
     issue #116 question 6), Cycle to Work and frame numbers.
-14. **Noted, not changed:** `GET /api/purchase-orders` sends every signed-in
-    person each order line's cost, and Receive a delivery reads it, so a
-    member of staff could find costs in the browser's tools there. The new
-    delivery routes leave costs out for them, as audit M12 asks. Closing the
-    older gap means splitting what Receive a delivery reads, its own piece.
+14. **Order costs are for the Owner only, on the server too.** Follows Reports
+    and accounts decisions 5 and 9 (`2026-10-01-reports-and-accounts-review.md`:
+    each person's "Can see costs and margin" switch, off to start, drawing
+    `rp-person`) and Jack's comment of 3 Nov ("it should be a setting,
+    ultimately, that the owner decides in setup whether staff can see costs or
+    not"). Owner only until roles add the switch. `GET /api/purchase-orders`,
+    `GET /api/purchase-orders/:id`, Book in's reply and the delivery routes all
+    go through one function, `canSeeCosts` (`server/lib/can-see-costs.js`), where
+    the switch plugs in. On a shared computer it follows who's checked in. An
+    order's page leaves out Total cost when none is sent. The old app reads
+    missing costs as £0.00 on its order pages, for staff only; it's a placeholder.
+    **Noted, not changed:** `/api/products` still sends each product's cost to
+    anyone signed in; New order reads it. It's outside this piece's routes.
+15. **Waits on roles:** "Can see costs and margin" for staff.
+16. **A delivery names the person checked in by PIN,** or on an ordinary browser
+    the person signed in, with the name copied so it stays if they're deleted.
+    **On a till or workshop computer with nobody checked in, Book in is refused**
+    ("Check in with your PIN first"), as the float check is, because it would
+    name the wrong person. **Noted, not changed:** a product's stock history
+    still names the sign-in (`stock_movements.login_id`), as it does for every
+    stock change, so on a shared computer it can read the Owner.
+17. **Book in has a request key,** made once for the scanned list and new when
+    the supplier changes, as a booking's is. If the reply was lost and the person
+    changes the list before trying again, Book in is refused and says to check
+    Recent deliveries, not booked in a second time.
+18. **Names on a delivery are as they were when it was booked in:** supplier,
+    product and code, on its lines and what was set aside. Labels use the product
+    as it is now.
+19. **Delivery booked in's links follow what the server sent,** not the sign-in,
+    so Jo at a till signed in as the Owner doesn't get them.
 
 ### 3 Nov 2026: Print labels (`openspec/changes/delivery-labels`, `rs-labels`, `rs-booked`, `rs-booked-staff`; WP-2.3; receiving decision 8; Jack's 26 Oct answer 5)
 

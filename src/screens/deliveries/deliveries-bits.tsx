@@ -11,10 +11,10 @@ import { ROUTES } from '@/staff/routes.ts';
  * has nothing still to come; `notComing` is what had been to come
  * (openspec/changes/close-part-delivered).
  */
-export type OrderItem = { id: number; productId: number; name: string; sku: string | null; qtyOrdered: number; qtyReceived: number; outstanding: number; notComing: number; unitCost: number };
+export type OrderItem = { id: number; productId: number; name: string; sku: string | null; qtyOrdered: number; qtyReceived: number; outstanding: number; notComing: number; unitCost?: number };
 export type Order = {
   id: number; supplierId: number; supplierName: string; status: 'draft' | 'ordered' | 'partially_received' | 'received' | 'closed' | 'cancelled';
-  orderedAt: string | null; items: OrderItem[]; totalCost: number;
+  orderedAt: string | null; items: OrderItem[]; totalCost?: number;
 };
 
 export const mono = 'font-[family-name:var(--wh-font-mono)]';

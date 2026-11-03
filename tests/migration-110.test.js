@@ -62,7 +62,20 @@ test('110 keeps a delivery and its lines, leaves older items alone, and is safe 
   await withClient(url.href, async (c) => {
     await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.shop)]);
     assert.deepEqual((await c.query('SELECT delivery_id, unit_cost FROM delivery_problems WHERE id = $1', [ids.old])).rows[0], { delivery_id: null, unit_cost: null });
-    const { rows: [d] } = await c.query('INSERT INTO deliveries (booked_in_at) VALUES (now()) RETURNING id, supplier_id, booked_by_login_id');
+    const { rows: [d] } = await c.query('INSERT INTO deliveries (booked_in_at, request_key_hash) VALUES (now(), $1) RETURNING id, supplier_id, booked_by_login_id', ['[key hash]']);
+    // One delivery for a key, per shop; no key is no limit.
+    await assert.rejects(c.query('INSERT INTO deliveries (request_key_hash) VALUES ($1)', ['[key hash]']), /idx_deliveries_request_key/);
+    await c.query('INSERT INTO deliveries (request_key_hash) VALUES (NULL), (NULL)');
+    await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.other)]);
+    await c.query('DELETE FROM deliveries WHERE request_key_hash = $1', ['[none]']);
+    await c.query('INSERT INTO deliveries (request_key_hash) VALUES ($1)', ['[key hash]']);
+    await c.query('DELETE FROM deliveries');
+    await c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(ids.shop)]);
+    // A person deleted later: the delivery keeps the name.
+    const { rows: [jo] } = await c.query("INSERT INTO employees (name) VALUES ('Jo Taylor') RETURNING id");
+    await c.query('UPDATE deliveries SET booked_by_employee_id = $1, booked_by_name = $2 WHERE id = $3', [jo.id, 'Jo Taylor', d.id]);
+    await c.query('DELETE FROM employees WHERE id = $1', [jo.id]);
+    assert.deepEqual((await c.query('SELECT booked_by_employee_id, booked_by_name FROM deliveries WHERE id = $1', [d.id])).rows[0], { booked_by_employee_id: null, booked_by_name: 'Jo Taylor' });
     assert.equal(d.supplier_id, null, 'no supplier is allowed');
     assert.equal(d.booked_by_login_id, null);
     await c.query('INSERT INTO delivery_lines (delivery_id, product_id, qty, unit_cost) VALUES ($1, $2, 2, 28)', [d.id, ids.product]);

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
+import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { Back, Card, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
 import { Count, useSearch } from './new-order.tsx';
@@ -65,6 +66,9 @@ export function ReceivePage() {
   const [said, setSaid] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // One key for the life of the scanned list, so Try again after a lost reply
+  // books in once (openspec/changes/delivery-booked-in, design 6).
+  const [requestKey, setRequestKey] = useState(newRequestKey);
   const [marking, setMarking] = useState<string | null>(null);
   const matches = useSearch(text);
 
@@ -111,6 +115,7 @@ export function ReceivePage() {
     // The list belongs to one supplier's delivery (logged: changing From clears it).
     setChosen(id);
     setAllIn(false);
+    setRequestKey(newRequestKey());
     setScanned([]);
     setSaid('');
     setProblem(null);
@@ -170,6 +175,7 @@ export function ReceivePage() {
     setProblem(null);
     try {
       const done = await apiMutate<Booked>('/api/deliveries/receive', {
+        requestKey,
         supplierId: supplierId === null ? null : Number(supplierId),
         items: scanned.filter((s) => s.qty - setAside(s) > 0)
           .map((s) => (s.itemId !== undefined ? { productId: s.productId, itemId: s.itemId, qty: s.qty - setAside(s) } : { productId: s.productId, qty: s.qty - setAside(s) })),
@@ -184,7 +190,7 @@ export function ReceivePage() {
       // A refusal is usually counts that moved on: show the server's.
       void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t book the delivery in. Try again in a moment.');
-    } finally {
+      // Only a failure turns Book in back on: after a success the page is moving on.
       setBusy(false);
     }
   }

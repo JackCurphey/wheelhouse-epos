@@ -86,6 +86,9 @@ test('booking in keeps the delivery: who, when, its supplier, each line at the o
     ['[Product]', 'wrong_item', 2, 25, false],
   ]);
   assert.deepEqual(d.stillToCome.map((o) => [o.orderId, o.supplierName, o.qty, typeof o.orderedAt]), [[order.id, '[Supplier]', 1, 'string']]);
+  // The stock itself: what was booked in, and not what was set aside.
+  assert.equal(await stockOf(pads.id), 2);
+  assert.equal(await stockOf(thing.id), 3);
 });
 
 test('each line carries its barcode and price, for its labels, for anyone signed in', async () => {

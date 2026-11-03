@@ -11,7 +11,7 @@ const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: t
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
 const PADS = { id: 1, productId: 11, name: 'Shimano brake pads', sku: 'B05S-RX', barcode: '4524667000001', price: 28, qty: 2 };
 const THING = { id: 2, productId: 12, name: '[Product]', sku: '[Supplier code]', barcode: null, price: 1.5, qty: 3 };
-const DELIVERY = { id: 77, supplierId: 1, supplierName: '[Supplier]', items: 5, bookedInAt: '2026-09-01T10:00:00.000Z', bookedBy: 'Jack Lewis', lines: [THING, PADS], setAside: [], stillToCome: [] };
+const DELIVERY = { id: 77, supplierId: 1, supplierName: '[Supplier]', items: 5, bookedInAt: new Date().toISOString(), bookedBy: 'Jack Lewis', lines: [THING, PADS], setAside: [], stillToCome: [], bookedCost: 0 };
 
 const realFetch = globalThis.fetch;
 let uninstall;
@@ -54,7 +54,8 @@ const openBox = async (r) => {
 };
 
 test('Print labels: first for Staff, before the list; for the Owner beside Receive another delivery', async () => {
-  const staff = await open({ me: JO });
+  const { bookedCost, ...forStaff } = DELIVERY; // eslint-disable-line no-unused-vars
+  const staff = await open({ me: JO, delivery: forStaff });
   const button = staff.ui.getByRole('button', { name: 'Print labels' });
   const another = staff.ui.getByRole('link', { name: 'Receive another delivery' });
   assert.ok(staff.within(staff.ui.getByRole('main')).getByRole('status').compareDocumentPosition(button) & 4);
