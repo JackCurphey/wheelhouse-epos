@@ -3,6 +3,7 @@
 // design 5 to 11). A row and what it wrote commit together, so a restart picks
 // up what's still waiting and nothing comes across twice.
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
+import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners } from './bring-customers.js';
 
 const BATCH = 500;
 const BATCHES_A_ROUND = 20;
@@ -80,15 +81,19 @@ async function barcodeRow(d) {
   return { state: 'in' };
 }
 
-const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow };
+const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow, customers: customerRow, bikes: bikeRow };
+// Those that wait for another file: when it finishes, they try again.
+const WAITS_FOR = { price_list: ['barcodes', NO_PRODUCT], customers: ['bikes', NO_CUSTOMER] };
 
-// A price list finishing lets barcodes that found no product try again.
+// A price list finishing lets barcodes that found no product try again, and
+// customers finishing lets bikes that found no customer.
 async function retryAfter(file) {
-  if (file.report !== 'price_list') return;
+  const waiting = WAITS_FOR[file.report];
+  if (!waiting) return;
   const again = await prepare(
     `UPDATE move_rows r SET state = 'waiting', why = NULL FROM move_files f
-      WHERE r.file_id = f.id AND f.report = 'barcodes' AND r.state = 'look' AND r.why = ? RETURNING r.file_id`
-  ).all(NO_PRODUCT);
+      WHERE r.file_id = f.id AND f.report = ? AND r.state = 'look' AND r.why = ? RETURNING r.file_id`
+  ).all(waiting[0], waiting[1]);
   const perFile = new Map();
   for (const { file_id: id } of again) perFile.set(id, (perFile.get(id) ?? 0) + 1);
   for (const [id, count] of [...perFile].sort(([a], [b]) => a - b)) {
@@ -102,7 +107,7 @@ async function retryAfter(file) {
  */
 export async function bringBatch({ beforeRow = () => {}, afterRows = () => {} } = {}) {
   const file = await prepare(
-    `SELECT * FROM move_files WHERE state = 'bringing' ORDER BY (report = 'price_list') DESC, id LIMIT 1`
+    `SELECT * FROM move_files WHERE state = 'bringing' ORDER BY array_position(ARRAY['price_list', 'customers', 'barcodes', 'bikes'], report), id LIMIT 1`
   ).get();
   if (!file) return false;
   await dbExec('BEGIN');
@@ -122,6 +127,7 @@ export async function bringBatch({ beforeRow = () => {}, afterRows = () => {} } 
       const codes = rows.map((r) => r.data.ILC).filter(Boolean);
       await prepare('SELECT id FROM products WHERE sku = ANY(?) ORDER BY id FOR UPDATE').all(codes);
     }
+    if (file.report === 'bikes') await lockBikeOwners(rows);
     let rowsIn = 0;
     let rowsLook = 0;
     let stockIn = 0;

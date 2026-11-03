@@ -12,10 +12,10 @@ import { Card, Page, Row, mono } from '@/screens/deliveries/deliveries-bits.tsx'
  * mv-progress-failed, mv-summary in moving.mjs; Moving from Citrus Lime
  * decisions 2, 4 and 9; openspec/changes/citrus-import-screens). The owner
  * drops the files in; it starts by itself, with no Import button, and carries
- * on if they leave. Customers, Fix and Ask us to help follow in later pull
- * requests of WP-2.4; Run alongside and Switch over are WP-8.1.
+ * on if they leave. Fix and Ask us to help follow in a later pull request of
+ * WP-2.4; Run alongside and Switch over are WP-8.1.
  */
-type MoveFile = { id: number; report: 'price_list' | 'barcodes'; fileName: string; state: 'bringing' | 'done'; rowsTotal: number; rowsIn: number; rowsLook: number; stockIn: number };
+type MoveFile = { id: number; report: 'price_list' | 'barcodes' | 'customers' | 'bikes'; fileName: string; state: 'bringing' | 'done'; rowsTotal: number; rowsIn: number; rowsLook: number; stockIn: number };
 type Sending = { key: string; name: string; problem?: 'cant_read' | 'not_sent' };
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024;
@@ -27,8 +27,9 @@ const REPORTS_NOTE = 'Download these from Citrus Lime, then drop them in togethe
 // docs/superpowers/specs/2026-10-05-citrus-lime-exports.md.
 const WHERE_PRODUCTS = 'Price List - Store Level and Barcode/Alias List, in Cloud Reports';
 const WHERE_STOCK = 'Price List - Store Level, the same file';
+const WHERE_CUSTOMERS = 'Top Customers and Service Items Report (tick “include items never serviced”), in Cloud Reports';
 const WHERE_LATER = 'Comes across later';
-const LATER_KINDS = ['Customers', 'Sales', 'Workshop jobs'];
+const LATER_KINDS = ['Sales', 'Workshop jobs'];
 
 function Stages() {
   return (
@@ -152,6 +153,7 @@ export function MovePage() {
   const files = move.data.files;
   const products = files.filter((f) => f.report === 'price_list' || f.report === 'barcodes');
   const priceLists = files.filter((f) => f.report === 'price_list');
+  const people = files.filter((f) => f.report === 'customers' || f.report === 'bikes');
   const bringing = files.some((f) => f.state === 'bringing');
   const hiddenInput = <input ref={another} type="file" multiple hidden aria-label="Choose another file" accept=".xlsx,.csv" onChange={(e) => { anotherChosen([...(e.target.files ?? [])]); e.target.value = ''; }} />;
 
@@ -164,6 +166,7 @@ export function MovePage() {
           <ul className="m-0 list-none p-0">
             <Row title="Products" sub={WHERE_PRODUCTS}><Chip>Not added yet</Chip></Row>
             <Row title="Stock levels" sub={WHERE_STOCK}><Chip>Not added yet</Chip></Row>
+            <Row title="Customers" sub={WHERE_CUSTOMERS}><Chip>Not added yet</Chip></Row>
             {LATER_KINDS.map((k) => <Row key={k} title={k} sub={WHERE_LATER}><Chip>Later</Chip></Row>)}
           </ul>
           <DropZone title="Drop all the files here" onFiles={(f) => void onFiles(f)} />
@@ -178,8 +181,7 @@ export function MovePage() {
       if (list.every((f) => f.state === 'done')) return <Chip tone="ok">Done</Chip>;
       return <Chip>{list.some((f) => f.rowsIn + f.rowsLook > 0) ? 'Bringing across' : 'Waiting'}</Chip>;
     };
-    const done = products.reduce((sum, f) => sum + f.rowsIn + f.rowsLook, 0);
-    const total = products.reduce((sum, f) => sum + f.rowsTotal, 0);
+    const progress = (list: MoveFile[]) => <>{names(list)} · <span className={mono}>{list.reduce((sum, f) => sum + f.rowsIn + f.rowsLook, 0)}</span> of <span className={mono}>{list.reduce((sum, f) => sum + f.rowsTotal, 0)}</span></>;
     return (
       <Page>
         <Stages />
@@ -188,8 +190,9 @@ export function MovePage() {
           {hiddenInput}
           <div role="status" aria-live="polite">
             <ul className="m-0 list-none p-0">
-              <Row title="Products" sub={products.length ? <>{names(products)} · <span className={mono}>{done}</span> of <span className={mono}>{total}</span></> : undefined}>{state(products)}</Row>
+              <Row title="Products" sub={products.length ? progress(products) : undefined}>{state(products)}</Row>
               <Row title="Stock levels" sub={priceLists.length ? names(priceLists) : undefined}>{state(priceLists)}</Row>
+              <Row title="Customers" sub={people.length ? progress(people) : undefined}>{state(people)}</Row>
               {sends.map((s) => (
                 <Row key={s.key} title={s.name}
                   sub={s.problem === 'cant_read' ? 'Wheelhouse couldn’t read this file' : s.problem === 'not_sent' ? 'Wheelhouse couldn’t send this file. Try again in a moment.' : undefined}>
@@ -211,18 +214,23 @@ export function MovePage() {
     );
   }
 
-  const looks = lookCount(products);
-  const productCount = products.filter((f) => f.report === 'price_list').reduce((sum, f) => sum + f.rowsIn, 0);
   const stockCount = priceLists.reduce((sum, f) => sum + f.stockIn, 0);
+  const count = (report: MoveFile['report']) => files.filter((f) => f.report === report).reduce((sum, f) => sum + f.rowsIn, 0);
+  const allIn = (list: MoveFile[]) => (lookCount(list) > 0 ? <Chip tone="warn">{lookCount(list)} need a look</Chip> : <Chip tone="ok">All in</Chip>);
   return (
     <Page>
       <Stages />
       <Card id="t-here-s-what-came-across" title="Here’s what came across">
         <ul className="m-0 list-none p-0">
-          <Row title="Products" sub={<>{n(productCount)} brought across</>}>
-            {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
-          </Row>
-          <Row title="Stock levels" sub={<>{n(stockCount)} brought across</>}><Chip tone="ok">All in</Chip></Row>
+          {products.length
+            ? <Row title="Products" sub={<>{n(count('price_list'))} brought across</>}>{allIn(products)}</Row>
+            : <Row title="Products"><Chip>Not added yet</Chip></Row>}
+          {priceLists.length
+            ? <Row title="Stock levels" sub={<>{n(stockCount)} brought across</>}><Chip tone="ok">All in</Chip></Row>
+            : <Row title="Stock levels"><Chip>Not added yet</Chip></Row>}
+          {people.length
+            ? <Row title="Customers" sub={<>{n(count('customers'))} brought across · {n(count('bikes'))} bikes</>}>{allIn(people)}</Row>
+            : <Row title="Customers"><Chip>Not added yet</Chip></Row>}
           {LATER_KINDS.map((k) => <Row key={k} title={k}><Chip>Later</Chip></Row>)}
         </ul>
         <DropZone slim title="Drop more files here" onFiles={(f) => void onFiles(f)} />

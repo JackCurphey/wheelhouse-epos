@@ -7,6 +7,7 @@ import path from 'node:path';
 import { prepare, dbExec } from './db.js';
 import { wipedAnswers, wipedNotes, wipedTitle, REMOVED } from './workshop/booking-notes.js';
 import { UPLOADS_DIR } from './lib/uploads.js';
+import { forgetMoveRows } from './move/bring-customers.js';
 
 export const shopZone = async () => (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
 
@@ -177,6 +178,8 @@ async function deleteOnce(requestId) {
       `SELECT lower(email) AS email FROM customers WHERE id = ANY(?::int[]) AND email <> ''
        UNION SELECT lower(email) FROM customer_logins WHERE customer_id = ANY(?::int[])`
     ).all(ids, ids)).map((r) => r.email);
+    // Rows about them still waiting in a Citrus Lime file (citrus-import-customers, design 8).
+    await forgetMoveRows(ids, emails);
     const jobs = (await prepare('SELECT id FROM workshop_jobs WHERE customer_id = ANY(?::int[])').all(ids)).map((j) => j.id);
     const sales = (await prepare('SELECT id FROM sales WHERE customer_id = ANY(?::int[])').all(ids)).map((s) => s.id);
 

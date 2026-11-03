@@ -160,3 +160,19 @@ test('anyone else is told it\'s for the owner, and has no sidebar link', async (
   const links = [...document.querySelectorAll('nav[aria-label="Main"] a')].map((a) => a.textContent);
   assert.ok(!links.includes('Moving from Citrus Lime'));
 });
+
+test('customers: where to find them, how many, the bikes beside them, and any that need a look', async () => {
+  const view = await open({ files: [FILE({ report: 'customers', rowsIn: 12, rowsLook: 2, stockIn: 0 }), FILE({ id: 2, report: 'bikes', rowsIn: 5, rowsLook: 1, stockIn: 0 })] });
+  await text(view, /Here’s what came across/);
+  assert.match(rowOf('Customers').textContent, /12 brought across · 5 bikes/);
+  assert.match(rowOf('Customers').textContent, /3 need a look/);
+  assert.match(rowOf('Products').textContent, /Not added yet/);
+  assert.match(rowOf('Sales').textContent, /Later/);
+});
+
+test('the customers row says which reports to download', async () => {
+  const view = await open();
+  await text(view, /Bring your data from Citrus Lime/);
+  assert.match(rowOf('Customers').textContent, /Top Customers and Service Items Report \(tick “include items never serviced”\), in Cloud Reports.*Not added yet/);
+  view.unmount();
+});
