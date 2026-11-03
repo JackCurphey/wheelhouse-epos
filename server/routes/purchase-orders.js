@@ -8,6 +8,10 @@ import { deferShopifyPushes } from '../lib/sales.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso, ValidationError } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { currentSession } from '../lib/session.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
+import { readRequestKey } from '../booking-request-key.js';
+import { thisTill } from '../till/this-till.js';
+import { currentCheckin, ownAccountHere } from './till-pins.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -34,7 +38,9 @@ const totalCost = (items) => Math.round(items.reduce((sum, it) => sum + it.qty_o
 // had been to come is not coming (openspec/changes/close-part-delivered).
 const CLOSED = ['closed', 'cancelled'];
 
-function serializePurchaseOrder(row, items) {
+// `costs`: canSeeCosts(req), the one check. Without it, no unit costs or total
+// are in the reply at all; everything Receive a delivery needs still is.
+function serializePurchaseOrder(row, items, costs) {
   const closed = CLOSED.includes(row.status);
   return {
     id: row.id,
@@ -56,10 +62,10 @@ function serializePurchaseOrder(row, items) {
           qtyReceived: it.qty_received,
           outstanding: closed ? 0 : outstanding(it),
           notComing: closed ? Math.max(0, outstanding(it)) : 0,
-          unitCost: it.unit_cost,
+          ...(costs ? { unitCost: it.unit_cost } : {}),
         }))
       : undefined,
-    totalCost: items ? totalCost(items) : undefined,
+    totalCost: items && costs ? totalCost(items) : undefined,
   };
 }
 
@@ -133,16 +139,45 @@ async function inTransaction(fn) {
 }
 
 // A delivery as Recent deliveries and its page read it: how many were booked
-// in is what's on its lines.
+// in is what's on its lines; names as they were when it was booked in (design 8).
 const RECENT_DELIVERIES = 10;
 const MAX_DB_INT = 2147483647;
-const DELIVERY_SELECT = `SELECT d.id, d.supplier_id, d.booked_in_at, s.name AS supplier_name, l.name AS booked_by,
+const DELIVERY_SELECT = `SELECT d.id, d.supplier_id, d.booked_in_at, d.supplier_name, d.booked_by_name,
     (SELECT COALESCE(sum(dl.qty), 0)::int FROM delivery_lines dl WHERE dl.delivery_id = d.id) AS items
-  FROM deliveries d LEFT JOIN suppliers s ON s.id = d.supplier_id LEFT JOIN logins l ON l.id = d.booked_by_login_id`;
+  FROM deliveries d`;
 const serializeDelivery = (d) => ({
   id: d.id, supplierName: d.supplier_name ?? null, items: d.items,
-  bookedInAt: new Date(d.booked_in_at).toISOString(), bookedBy: d.booked_by ?? null,
+  bookedInAt: new Date(d.booked_in_at).toISOString(), bookedBy: d.booked_by_name ?? null,
 });
+
+// Who is booking this in (openspec/changes/delivery-booked-in, design 5): the
+// person checked in by PIN, or on an ordinary browser the sign-in's person. A
+// till or workshop computer stays signed in as someone else, so with nobody
+// checked in there it names nobody: null, and the route asks for a PIN.
+const CHECK_IN_FIRST = { error: 'Check in with your PIN first', code: 'check_in_first' };
+async function whoIsBooking(req) {
+  const ctx = await currentSession(req);
+  const checkin = await currentCheckin(req);
+  if (checkin) return { loginId: ctx.login.id, employeeId: checkin.employee_id, name: checkin.name };
+  if (!(await ownAccountHere(req, ctx)) || (await thisTill(req))) return null;
+  return { loginId: ctx.login.id, employeeId: ctx.login.employee_id ?? null, name: ctx.login.name };
+}
+
+// Book in sent again with its request key (design 6), inside the transaction:
+// waits for any first send to finish, so the two can't both book. Null when
+// the key is new.
+const REUSED_KEY = { status: 409, body: { error: 'This delivery was already booked in with different items. Check Recent deliveries before booking it in again.', code: 'reused_key' } };
+async function replayDelivery({ keyHash, bodyHash }) {
+  await db.prepare('SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))').get(keyHash);
+  const made = await db.prepare('SELECT id, request_body_hash FROM deliveries WHERE request_key_hash = ?').get(keyHash);
+  if (!made) return null;
+  if (made.request_body_hash !== bodyHash) return { refusal: (res) => sendJson(res, REUSED_KEY.status, REUSED_KEY.body) };
+  const { items } = await db.prepare(`${DELIVERY_SELECT} WHERE d.id = ?`).get(made.id);
+  const orderIds = (await db.prepare(
+    'SELECT purchase_order_id AS id FROM delivery_lines WHERE delivery_id = ? AND purchase_order_id IS NOT NULL UNION SELECT purchase_order_id FROM delivery_problems WHERE delivery_id = ? AND purchase_order_id IS NOT NULL ORDER BY id'
+  ).all(made.id, made.id)).map((r) => r.id);
+  return { booked: items, orderIds, deliveryId: made.id, shopifyPushes: [] };
+}
 
 const refuse = (message) => ({ refusal: (res) => badRequest(res, message) });
 
@@ -166,7 +201,8 @@ const refuse = (message) => ({ refusal: (res) => badRequest(res, message) });
  * order. Marking only Missing keeps none: nothing arrived. Returns { refusal }
  * or { booked, orderIds, deliveryId, shopifyPushes }.
  */
-async function bookIn({ orderId = null, supplier = null, lines, problems, loginId }) {
+async function bookIn({ orderId = null, supplier = null, lines, problems, who, requestKey = null }) {
+  const loginId = who.loginId;
   const onOrder = [...lines, ...problems].filter((x) => x.itemId !== undefined);
   // Which orders: the one named, or the ones the lines are on.
   let orderIds;
@@ -216,8 +252,13 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
 
   const arrived = items.length > 0 || problems.some((p) => p.kind !== 'missing');
   const deliverySupplierId = supplier?.id ?? orders.get(orderIds[0])?.supplier_id ?? null;
+  const deliverySupplierName = deliverySupplierId === null ? null
+    : supplier?.name ?? (await db.prepare('SELECT name FROM suppliers WHERE id = ?').get(deliverySupplierId)).name;
   const deliveryId = arrived
-    ? (await db.prepare('INSERT INTO deliveries (supplier_id, booked_by_login_id, booked_in_at) VALUES (?, ?, ?) RETURNING id').get(deliverySupplierId, loginId, nowIso())).id
+    ? (await db.prepare(
+      `INSERT INTO deliveries (supplier_id, supplier_name, booked_by_login_id, booked_by_employee_id, booked_by_name, booked_in_at, request_key_hash, request_body_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+    ).get(deliverySupplierId, deliverySupplierName, loginId, who.employeeId, who.name, nowIso(), requestKey?.keyHash ?? null, requestKey?.bodyHash ?? null)).id
     : null;
 
   const shopifyPushes = [];
@@ -239,8 +280,8 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
       'INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id, login_id) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(product.id, qty, fromOrder ? 'po_receipt' : 'intake', note, fromOrder?.id ?? null, loginId);
     await db.prepare(
-      'INSERT INTO delivery_lines (delivery_id, product_id, purchase_order_id, purchase_order_item_id, qty, unit_cost) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(deliveryId, product.id, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost);
+      'INSERT INTO delivery_lines (delivery_id, product_id, product_name, product_sku, purchase_order_id, purchase_order_item_id, qty, unit_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(deliveryId, product.id, product.name, product.sku, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost);
     if (product.shopify_inventory_item_id) shopifyPushes.push({ product, newQty: product.stock_qty });
     booked += qty;
   }
@@ -248,10 +289,10 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, loginI
     const line = itemId !== undefined ? itemsById.get(itemId) : null;
     const order = line ? orders.get(line.purchase_order_id) : null;
     // What it cost then, as a delivery line does; the product's when it isn't on an order.
-    const cost = line ? line.unit_cost : (await db.prepare('SELECT cost FROM products WHERE id = ?').get(productId)).cost;
+    const made = await db.prepare('SELECT cost, name FROM products WHERE id = ?').get(line?.product_id ?? productId);
     await db.prepare(
-      'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, supplier_id, kind, qty, note, delivery_id, unit_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(order?.id ?? null, line?.id ?? null, line?.product_id ?? productId, order?.supplier_id ?? supplier?.id ?? null, kind, qty, note, deliveryId, cost);
+      'INSERT INTO delivery_problems (purchase_order_id, purchase_order_item_id, product_id, supplier_id, kind, qty, note, delivery_id, unit_cost, product_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(order?.id ?? null, line?.id ?? null, line?.product_id ?? productId, order?.supplier_id ?? supplier?.id ?? null, kind, qty, note, deliveryId, line ? line.unit_cost : made.cost, made.name);
   }
   // Each order: received when nothing is left to come (booked in or set
   // aside); partly delivered once anything is in stock; otherwise, with only
@@ -285,8 +326,9 @@ export function register(route) {
     }
     sql += ' ORDER BY po.id DESC LIMIT 500';
     const rows = await db.prepare(sql).all(...args);
+    const costs = await canSeeCosts(req);
     const withItems = await Promise.all(
-      rows.map(async (r) => serializePurchaseOrder(r, await loadPurchaseOrderItems(r.id)))
+      rows.map(async (r) => serializePurchaseOrder(r, await loadPurchaseOrderItems(r.id), costs))
     );
     sendJson(res, 200, withItems);
   });
@@ -296,7 +338,7 @@ export function register(route) {
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
     if (!row) return notFound(res, 'Purchase order not found');
     const items = await loadPurchaseOrderItems(id);
-    sendJson(res, 200, serializePurchaseOrder(row, items));
+    sendJson(res, 200, serializePurchaseOrder(row, items, await canSeeCosts(req)));
   });
 
   route('POST', '/api/purchase-orders', async (req, res) => {
@@ -337,7 +379,7 @@ export function register(route) {
       }
       await db.exec('COMMIT');
       const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(poId);
-      sendJson(res, 201, serializePurchaseOrder(row, await loadPurchaseOrderItems(poId)));
+      sendJson(res, 201, serializePurchaseOrder(row, await loadPurchaseOrderItems(poId), await canSeeCosts(req)));
     } catch (err) {
       await db.exec('ROLLBACK');
       throw err;
@@ -418,7 +460,7 @@ export function register(route) {
     }
 
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id), await canSeeCosts(req)));
   });
 
   route('POST', '/api/purchase-orders/:id/mark-ordered', async (req, res, params) => {
@@ -433,7 +475,7 @@ export function register(route) {
       .run(nowIso(), nowIso(), id);
     if (changed.changes === 0) return sendJson(res, 409, { error: 'Only a draft purchase order can be marked as ordered' });
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id), await canSeeCosts(req)));
   });
 
   route('POST', '/api/purchase-orders/:id/cancel', async (req, res, params) => {
@@ -471,7 +513,7 @@ export function register(route) {
       });
     }
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id), await canSeeCosts(req)));
   });
 
   // Booking a delivery in against one order (openspec/changes/receive-delivery,
@@ -499,15 +541,16 @@ export function register(route) {
     }
     if (lines.length === 0 && problems.length === 0) return badRequest(res, 'No quantities to receive were provided');
 
-    const loginId = (await currentSession(req))?.login.id ?? null;
-    const done = await inTransaction(() => bookIn({ orderId: id, lines, problems, loginId }));
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const done = await inTransaction(() => bookIn({ orderId: id, lines, problems, who }));
     if (done.refusal) return done.refusal(res);
     // Same reasoning as createSale's shopifyPushes: the HTTP calls wait until
     // after COMMIT and after the request releases its pooled connection;
     // a Shopify hiccup is logged and never fails the receipt.
     deferShopifyPushes(afterRelease, shopId, done.shopifyPushes);
     const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
+    sendJson(res, 200, serializePurchaseOrder(row, await loadPurchaseOrderItems(id), await canSeeCosts(req)));
   });
 
   // To return to [Supplier] (openspec/changes/to-return; rs-hub; receiving
@@ -572,6 +615,8 @@ export function register(route) {
   // an order. A problem not on an order is damaged or wrong only.
   route('POST', '/api/deliveries/receive', async (req, res, params, query, afterRelease, shopId) => {
     const body = await readJsonBody(req);
+    const key = readRequestKey(body);
+    if (key.error) return badRequest(res, key.error);
     let supplier = null;
     if (body.supplierId !== null && body.supplierId !== undefined) {
       const supplierId = Number(body.supplierId);
@@ -595,14 +640,16 @@ export function register(route) {
     }
     if (lines.length === 0 && problems.length === 0) return badRequest(res, 'Nothing to book in');
 
-    const loginId = (await currentSession(req))?.login.id ?? null;
-    const done = await inTransaction(() => bookIn({ supplier, lines, problems, loginId }));
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const done = await inTransaction(async () => (key.value && (await replayDelivery(key.value))) || bookIn({ supplier, lines, problems, who, requestKey: key.value }));
     if (done.refusal) return done.refusal(res);
     deferShopifyPushes(afterRelease, shopId, done.shopifyPushes);
+    const costs = await canSeeCosts(req);
     const orders = [];
     for (const id of done.orderIds) {
       const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
-      orders.push(serializePurchaseOrder(row, await loadPurchaseOrderItems(id)));
+      orders.push(serializePurchaseOrder(row, await loadPurchaseOrderItems(id), costs));
     }
     sendJson(res, 200, { booked: done.booked, orders, deliveryId: done.deliveryId });
   });
@@ -626,14 +673,13 @@ export function register(route) {
     if (!Number.isInteger(id) || id < 1 || id > MAX_DB_INT) return notFound(res, 'Delivery not found');
     const row = await db.prepare(`${DELIVERY_SELECT} WHERE d.id = ?`).get(id);
     if (!row) return notFound(res, 'Delivery not found');
-    const canSeeCosts = (await currentSession(req))?.login.is_owner === true;
+    const costs = await canSeeCosts(req);
     const lines = await db.prepare(
-      `SELECT l.id, l.product_id, l.qty, l.unit_cost, p.name, p.sku FROM delivery_lines l JOIN products p ON p.id = l.product_id
-        WHERE l.delivery_id = ? ORDER BY l.id`
+      'SELECT id, product_id, qty, unit_cost, product_name, product_sku FROM delivery_lines WHERE delivery_id = ? ORDER BY id'
     ).all(id);
     const aside = await db.prepare(
-      `SELECT dp.id, dp.kind, dp.qty, dp.unit_cost, dp.returned_at, p.name FROM delivery_problems dp JOIN products p ON p.id = dp.product_id
-        WHERE dp.delivery_id = ? AND dp.kind IN ('damaged', 'wrong_item') ORDER BY dp.id`
+      `SELECT id, kind, qty, unit_cost, returned_at, product_name FROM delivery_problems
+        WHERE delivery_id = ? AND kind IN ('damaged', 'wrong_item') ORDER BY id`
     ).all(id);
     // Read now, not kept: what the delivery's orders still have to come.
     const orders = await db.prepare(
@@ -650,16 +696,16 @@ export function register(route) {
       ...serializeDelivery(row),
       supplierId: row.supplier_id,
       lines: lines.map((l) => ({
-        id: l.id, productId: l.product_id, name: l.name, sku: l.sku, qty: l.qty,
-        ...(canSeeCosts ? { unitCost: l.unit_cost, lineCost: costOf(l.qty, l.unit_cost) } : {}),
+        id: l.id, productId: l.product_id, name: l.product_name, sku: l.product_sku, qty: l.qty,
+        ...(costs ? { unitCost: l.unit_cost, lineCost: costOf(l.qty, l.unit_cost) } : {}),
       })),
       setAside: aside.map((p) => ({
-        id: p.id, name: p.name, kind: p.kind, qty: p.qty, returned: p.returned_at !== null,
-        ...(canSeeCosts ? { cost: costOf(p.qty, p.unit_cost) } : {}),
+        id: p.id, name: p.product_name, kind: p.kind, qty: p.qty, returned: p.returned_at !== null,
+        ...(costs ? { cost: costOf(p.qty, p.unit_cost) } : {}),
       })),
       stillToCome,
     };
-    if (canSeeCosts) body.bookedCost = Math.round(lines.reduce((sum, l) => sum + l.qty * l.unit_cost * 100, 0)) / 100;
+    if (costs) body.bookedCost = Math.round(lines.reduce((sum, l) => sum + l.qty * l.unit_cost * 100, 0)) / 100;
     sendJson(res, 200, body);
   });
 }
