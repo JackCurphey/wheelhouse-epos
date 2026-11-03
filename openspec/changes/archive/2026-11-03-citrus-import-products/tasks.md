@@ -8,3 +8,4 @@
 - [x] 1.4 Log choices in Jack's section of `decided-while-building.md`; lint, `npm test`, `npm run test:browser`; self-review against the drawings and this spec
 - [x] 1.5 `/opsx:archive` as the last commit
 - [x] 1.6 The independent review, 3 Nov: reading in a worker with limits and a straight-through scan; the send replying before the read; the first store ever sent; plain numbers only; left-alone rows and refused stock counted apart; no savepoint per row. Tests first, with the review's made-up files, watched failing, each fix broken on purpose
+- [x] 1.7 Migration 111 safe to run again over a database holding customer and bike files
