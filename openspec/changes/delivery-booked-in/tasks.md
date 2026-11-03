@@ -10,6 +10,7 @@
 
 - [x] 1a.1 Tests first, each watched failing (`tests/deliveries-who-and-costs.test.js`, `tests/migration-110.test.js`, `tests/remove-shop.test.js`): who a delivery names on a workshop computer and a till; one request key books once; order costs for the Owner only, on every route and shared computer; old deliveries after a rename; a failure after the stock update takes everything back
 - [x] 1a.2 Migration 110 extended; `whoIsBooking`, `replayDelivery`, `canSeeCosts`
+- [x] 1a.2a The re-review, 3 Nov: a till with nobody checked in gets no costs; the old app shows a dash, not £0.00, for a cost not sent; migration 110's comment says a draft's database needs its row deleted. Tests first, watched failing
 - [x] 1a.3 Break each rule on purpose, see its test go red, and restore
 
 ## 2. Screens (next pull request)

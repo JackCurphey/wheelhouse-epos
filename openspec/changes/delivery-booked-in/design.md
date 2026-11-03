@@ -105,7 +105,8 @@ start, so until roles (WP-1.1) add it, only the Owner sees costs. The switch
 plugs in there. No switch or setting is built here.
 
 The person is whoever's at the computer: the one checked in if there is one,
-otherwise the sign-in. Every purchase order reply and both delivery reads use
+otherwise the sign-in. A till with nobody checked in gets no costs, even under
+the Owner's sign-in, as anyone could be at it. Every purchase order reply and both delivery reads use
 it, so the order routes leave out `unitCost` and `totalCost` for anyone else.
 
 ## 8. Names as they were
