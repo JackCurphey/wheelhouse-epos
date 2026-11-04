@@ -1,6 +1,6 @@
 // Wheelhouse - local server, PostgreSQL-backed.
-import { moveStock } from './lib/stock.js';
 import './load-env.js';
+import { moveStock } from './lib/stock.js';
 import { hostedCopyRefusal } from './hosted-copy-guard.js';
 import { devAutologinRefusal } from './lib/dev-autologin.js';
 import { startSender } from './messaging/engine.js';

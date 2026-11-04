@@ -53,3 +53,8 @@ test('only server/lib/stock.js writes stock', () => {
   assert.deepEqual(writers, []);
   assert.deepEqual(writersIn(readFileSync(path.join(SERVER, THE_ONE_PLACE), 'utf8')), ['writes a stock line', 'changes stock_qty'], 'the check still sees the one place');
 });
+
+test('server.js still loads its settings before anything can read them', () => {
+  const [first] = readFileSync(path.join(SERVER, 'server.js'), 'utf8').match(/^import .*$/m);
+  assert.match(first, /load-env\.js/, 'load-env has to stay the first import, or db.js connects with no settings');
+});
