@@ -110,8 +110,18 @@ here before starting it, so two people never build the same one):
   deleted customer can't be brought back by a staff save, an old booking
   link or anything already under way). Each had an independent review and
   a hand-started CI run.
-  **Now (30 Oct):** paused for the weekend at Jack's request (usage). Roles
-  and the settings store (WP-1.1, 1.2) stay Mark's.
+  Merged 3 Nov: a delivery is kept when it's booked in, with Delivery booked
+  in, a delivery's page and Recent deliveries (#594, migration 110; #595);
+  print labels after a delivery is booked in (#596); staff aren't sent what
+  the shop pays for stock (#597, the Owner only until roles add the per-person
+  switch). Merged 4 Nov: the Citrus Lime import, first part (#598 products and
+  stock, #599 the page, #600 customers and their bikes; migrations 111, 112;
+  Jack's answers in `docs/decisions/2026-11-03-answers.md`). Each had an
+  independent review and a hand-started CI run. Not built yet: Fix, Leave it
+  out, `mv-sorted` and Ask us to help (`mv-help`, `mv-help-sent`); rows needing
+  a look wait, holding their details, until Fix exists.
+  **Now (4 Nov):** next is the rest of the import. Roles and the settings store
+  (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
