@@ -194,6 +194,7 @@ export function register(route) {
     // With whatever it still holds, so nothing of it stays and nothing blocks it.
     await dbExec('BEGIN');
     try {
+      await prepare("SET LOCAL lock_timeout = '2s'").run();
       const file = await prepare(`SELECT id FROM move_files WHERE id = ? AND state = 'cant_read' FOR UPDATE`).get(id);
       if (!file) {
         await dbExec('ROLLBACK');
@@ -205,6 +206,7 @@ export function register(route) {
       await dbExec('COMMIT');
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (err.code === '55P03') return sendJson(res, 503, { error: 'Wheelhouse is busy with your files just now. Try again in a moment.', code: 'busy' });
       throw err;
     }
     sendJson(res, 200, { ok: true });
