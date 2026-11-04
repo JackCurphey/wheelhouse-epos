@@ -69,7 +69,7 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
       WHEELHOUSE_DEV_AUTOLOGIN: '',
       // Test servers share a database: one mustn't pick up another test's waiting
       // Citrus Lime file. A test that wants the timer sets its own.
-      WH_MOVE_TICK_MS: '3600000', ...env },
+      WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Kept as well as shown, for a test that checks what the server logged.

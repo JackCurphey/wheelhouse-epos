@@ -276,43 +276,59 @@ export async function readNextFile(shopId, { afterChunk = () => {} } = {}) {
 
 /**
  * One run of the timer: each shop's waiting files read, then a few batches, each
- * with its own connection. Returns whether any shop may have more to do.
+ * with its own connection. `onlyShops` limits it to those; null is every shop.
+ * Returns the shops that may have more to do.
  */
-export async function bringAcrossRound(stopping = () => false) {
-  let more = false;
-  const { rows: shops } = await pool.query('SELECT id FROM shops');
-  for (const { id: shopId } of shops) {
+export async function bringAcrossRound(stopping = () => false, onlyShops = null) {
+  const more = new Set();
+  const shops = onlyShops ? [...onlyShops] : (await pool.query('SELECT id FROM shops')).rows.map((s) => s.id);
+  for (const shopId of shops) {
     try {
-      while (!stopping() && (await readNextFile(shopId))) more = true;
+      while (!stopping() && (await readNextFile(shopId))) more.add(shopId);
       for (let i = 0; i < BATCHES_A_ROUND; i += 1) {
-        if (stopping()) return true;
+        if (stopping()) { more.add(shopId); break; }
         if (!(await runWithShop(shopId, () => bringBatch()))) break;
-        if (i === BATCHES_A_ROUND - 1) more = true;
+        if (i === BATCHES_A_ROUND - 1) more.add(shopId);
       }
     } catch (err) {
-      more = true;
+      more.add(shopId);
       if (!(err instanceof ReadBusy)) console.error(`Move: bringing across failed for shop ${shopId} this round`, err.code ?? err.name);
     }
   }
   return more;
 }
 
-// Nothing is looked for until there's a reason: once at the start, for anything
-// a restart left waiting, and after a file is sent (design 5). A quiet server
-// doesn't open a connection per shop every few seconds.
-let wanted = true;
-export function wakeBringingAcross() { wanted = true; }
+// Nothing is looked for until there's a reason: every shop once at the start, for
+// anything a restart left waiting, then only a shop that's sent a file or has more
+// to do (design 5). A quiet server doesn't open a connection per shop every few
+// seconds, and a server only touches other shops' files at the start.
+const wantedShops = new Set();
+export function wakeBringingAcross(shopId) { wantedShops.add(shopId); }
 
-/** Starts the timer; returns stop(), which waits for a round in flight. As the messages sender. */
-export function startBringingAcross(intervalMs = Number(process.env.WH_MOVE_TICK_MS ?? 2000)) {
+/**
+ * Starts the timer; returns stop(), which waits for a round in flight. As the
+ * messages sender. Test servers share a database, so they don't look at every shop
+ * at the start (WH_MOVE_SCAN_AT_START, set off in tests/helpers/liveServer.js).
+ */
+export function startBringingAcross(intervalMs = Number(process.env.WH_MOVE_TICK_MS ?? 2000), {
+  round: runRound = bringAcrossRound,
+  scanAtStart = process.env.WH_MOVE_SCAN_AT_START !== 'off',
+} = {}) {
   let round = null;
   let stopped = false;
+  let wantAll = scanAtStart;
   const timer = setInterval(() => {
-    if (round || !wanted) return;
-    wanted = false;
-    round = bringAcrossRound(() => stopped)
-      .then((more) => { if (more) wanted = true; })
-      .catch((err) => { wanted = true; console.error('Move: bringing across failed this round', err.code ?? err.name); })
+    if (round || (!wantAll && wantedShops.size === 0)) return;
+    const only = wantAll ? null : new Set(wantedShops);
+    wantAll = false;
+    wantedShops.clear();
+    round = runRound(() => stopped, only)
+      .then((more) => { for (const shopId of more) wantedShops.add(shopId); })
+      .catch((err) => {
+        if (only) for (const shopId of only) wantedShops.add(shopId);
+        else wantAll = true;
+        console.error('Move: bringing across failed this round', err.code ?? err.name);
+      })
       .finally(() => { round = null; });
   }, intervalMs);
   timer.unref();

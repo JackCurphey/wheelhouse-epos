@@ -102,7 +102,7 @@ export function register(route) {
         await dbExec('ROLLBACK');
         throw err;
       }
-      wakeBringingAcross();
+      wakeBringingAcross(shopId);
       sendJson(res, 202, serializeFile(file));
     } finally {
       sendingShops.delete(shopId);
