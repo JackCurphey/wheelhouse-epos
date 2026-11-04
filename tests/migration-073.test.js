@@ -157,8 +157,8 @@ test('073 adds pence beside pounds on orders, backfills them, and leaves the tot
     assert.deepEqual(report.mismatches, [], text);
     assert.deepEqual(report.notConvertedYet, [], text);
     assert.equal(report.checked.orders, 8);
-    // 8 orders and 12 order lines, each with both pounds and pence.
-    assert.equal(report.checked.conversion, 20);
+    // 8 orders, 12 order lines and 4 products (migration 114), each with both pounds and pence.
+    assert.equal(report.checked.conversion, 24);
   });
 });
 
