@@ -252,6 +252,10 @@ const MERGE_FIELDS: { key: 'name' | 'phone' | 'email' | 'address' | 'notes'; lab
   { key: 'notes', label: 'Note', of: (c) => c.notes ?? '' },
 ];
 
+// What the server said, if it's meant for reading: a refusal, or that it's busy (citrus-import-fix, design 20).
+const canSay = (err: unknown): err is ApiError => err instanceof ApiError && err.hasServerMessage
+  && (err.status < 500 || (err.body as { code?: string } | null)?.code === 'busy');
+
 /** The same person? (cs-merge): only what differs, a choice of each, Merge into one or They're different people. */
 function MergeDialog({ me, twin, myJobs, mySales, onClose }: { me: Customer & { createdAt?: string }; twin: Twin; myJobs: number; mySales: number; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -270,7 +274,7 @@ function MergeDialog({ me, twin, myJobs, mySales, onClose }: { me: Customer & { 
       }
       onClose();
     } catch (err) {
-      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
+      setProblem(canSay(err) ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
     } finally {
       setBusy(false);
     }
@@ -339,7 +343,7 @@ function Duplicates({ me }: { me: Customer & { createdAt?: string } }) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     } catch (err) {
-      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t undo that. Try again in a moment.');
+      setProblem(canSay(err) ? err.message : 'Wheelhouse couldn’t undo that. Try again in a moment.');
     }
   }
   const items = history.data?.items ?? [];
