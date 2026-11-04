@@ -31,6 +31,9 @@ export function phoneForms(text) {
   const national = nationalNumber(text);
   return national ? [national, `0${national}`, `44${national}`, `0044${national}`, `440${national}`, `00440${national}`] : [];
 }
+// An account number is the same in any case, with or without spaces around it (the
+// review, 4 Nov). So A1 and a1 are one account.
+const accountKey = (text) => String(text ?? '').trim().toLowerCase();
 export const cleanEmail = (text) => String(text ?? '').trim().toLowerCase();
 export const cleanName = (text) => String(text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 const realDay = (y, m, d) => {
@@ -57,8 +60,8 @@ export function consentDay(text) {
 // someone with access to this database: the salt is stored beside the codes, so
 // that person could test a guessed email or phone against them.
 const codeOf = (salt, kind, value) => createHmac('sha256', salt).update(`${kind}:${value}`).digest('hex');
-const codesFor = (salt, { account, emails = [], phones = [] }) => [
-  ...(account ? [['account', String(account).trim()]] : []),
+const codesFor = (salt, { accounts = [], emails = [], phones = [] }) => [
+  ...accounts.filter(Boolean).map((v) => ['account', v]),
   ...emails.map(cleanEmail).filter(Boolean).map((v) => ['email', v]),
   ...phones.map(nationalNumber).filter(Boolean).map((v) => ['phone', v]),
 ].map(([kind, value]) => [kind, codeOf(salt, kind, value)]);
@@ -68,20 +71,23 @@ export async function moveSalt() {
   return (await prepare('SELECT salt FROM move_deleted_salt').get())?.salt ?? null;
 }
 // Which of a person's details a deleted customer left a code for: 'account', 'contact', or null.
-async function deletedMatch(context, person) {
+// A code made before the review of 4 Nov kept the number's own case, so that form is tried as well.
+async function deletedMatch(context, { account, ...person }) {
   if (!context.salt) return null;
-  const codes = codesFor(context.salt, person);
+  const accounts = account ? [...new Set([accountKey(account), String(account).trim()])] : [];
+  const codes = codesFor(context.salt, { ...person, accounts });
   if (codes.length === 0) return null;
   const hits = await prepare('SELECT kind FROM move_deleted_codes WHERE code = ANY(?)').all(codes.map(([, code]) => code));
   if (hits.some((h) => h.kind === 'account')) return 'account';
   return hits.length ? 'contact' : null;
 }
 
-const liveMatches = (email, forms) => prepare(
+// Those it fits, leaving out anyone a person has said it isn't.
+const liveMatches = (email, forms, notThem = []) => prepare(
   `SELECT id, name FROM customers
-    WHERE ${LIVE} AND ((? <> '' AND email <> '' AND lower(trim(email)) = ?) OR (phone <> '' AND ${DIGITS} = ANY(?)))
+    WHERE ${LIVE} AND ((? <> '' AND email <> '' AND lower(trim(email)) = ?) OR (phone <> '' AND ${DIGITS} = ANY(?))) AND id <> ALL(?::int[])
     ORDER BY id LIMIT 2`
-).all(email, email, forms);
+).all(email, email, forms, notThem);
 
 export async function customerRow(d, file, context) {
   const account = (d['Account Number'] ?? '').trim();
@@ -91,15 +97,16 @@ export async function customerRow(d, file, context) {
   // Their own account number: someone who asked to be deleted never comes back.
   if (match === 'account') return { state: 'skipped' };
   // Merged included: they've come across, and stay as they are (design 5).
-  if (account && (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account))) return { state: 'same' };
+  if (account && (await prepare('SELECT id FROM customers WHERE lower(trim(citrus_account)) = ?').get(accountKey(account)))) return { state: 'same' };
   // Only a person, on this one row, gets past this (mv-fix; answer 6). A batch never does.
   if ((match === 'contact' || context.storedShared) && !context.decided?.shared) return look(SHARED_CONTACT);
   const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
   if (!name) return look('No name');
   // With no account number a resent file couldn't tell them from themselves.
   if (!account) return look('No account number');
-  const [same] = await liveMatches(cleanEmail(email), phoneForms(phone));
-  if (same && context.decided?.notSameAs !== same.id) return look(SAME_PERSON, same.id);
+  // Each person it looks like needs their own tick: the next is asked about in turn.
+  const [same] = await liveMatches(cleanEmail(email), phoneForms(phone), context.decided?.notSameAs ?? []);
+  if (same) return look(SAME_PERSON, same.id);
   const address = [d.Address, d['Address 2'], d.City, d.County, d.Country].filter(Boolean).join(', ') || null;
   const yes = YES.test(d['GDPR Consent'] ?? '');
   const made = await prepare(
@@ -184,18 +191,18 @@ export async function forgetForMove(customerIds, emails) {
   const people = await prepare('SELECT name, phone, citrus_account FROM customers WHERE id = ANY(?::int[])').all(customerIds);
   await prepare('INSERT INTO move_deleted_salt (salt) VALUES (?) ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').get(randomBytes(32).toString('hex'));
   const salt = await moveSalt();
-  const codes = people.flatMap((p) => codesFor(salt, { account: p.citrus_account, phones: [p.phone] }));
+  const codes = people.flatMap((p) => codesFor(salt, { accounts: [accountKey(p.citrus_account)], phones: [p.phone] }));
   codes.push(...codesFor(salt, { emails }));
   for (const [kind, code] of codes) {
     await prepare('INSERT INTO move_deleted_codes (kind, code) VALUES (?, ?) ON CONFLICT (shop_id, code) DO NOTHING RETURNING id').get(kind, code);
   }
   const phones = people.flatMap((p) => phoneForms(p.phone));
-  const accounts = people.map((p) => p.citrus_account).filter(Boolean);
+  const accounts = people.map((p) => accountKey(p.citrus_account)).filter(Boolean);
   const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
   const rows = await prepare(
-    `SELECT id, file_id, state, data, (data->>'Account Number' = ANY(?::text[])) AS by_account FROM move_rows
+    `SELECT id, file_id, state, data, (lower(trim(data->>'Account Number')) = ANY(?::text[])) AS by_account FROM move_rows
       WHERE state IN ('waiting', 'look', 'left_out') AND (
-        data->>'Account Number' = ANY(?::text[])
+        lower(trim(data->>'Account Number')) = ANY(?::text[])
         OR customer_id = ANY(?::int[])
         OR lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
         OR regexp_replace(coalesce(data->>'Phone', ''), '\\D', '', 'g') = ANY(?::text[])

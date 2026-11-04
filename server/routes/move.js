@@ -37,6 +37,7 @@ const serializeFile = (f) => ({
   rowsFixed: f.rows_fixed,
   stockIn: f.stock_in,
   stockLook: f.stock_look,
+  stockLeftOut: f.stock_left_out,
 });
 
 // Owner only, and not while someone else is checked in on this computer.
@@ -59,8 +60,9 @@ async function readRowRequest(req, res, params) {
   if (typeof body.seen !== 'string') { badRequest(res, 'Send what you saw of this row'); return null; }
   return { id: Number(params.id), who, body, key: key.value, seen: body.seen };
 }
-// Only what a person ticked, as it is: anything else counts as not ticked.
-const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Number.isInteger(d?.notSameAs) ? d.notSameAs : null });
+// Only what a person ticked, as it is: anything else counts as not ticked. Each person
+// a row looks like has a tick of their own, so notSameAs is a list.
+const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Array.isArray(d?.notSameAs) ? d.notSameAs.filter((id) => Number.isInteger(id) && Math.abs(id) < 2 ** 31) : [] });
 
 // One send at a time per shop, as each holds a whole file in memory: a stalled
 // upload holds up only its own shop, until its connection ends.

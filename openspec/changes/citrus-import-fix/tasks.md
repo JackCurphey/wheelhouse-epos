@@ -27,3 +27,14 @@
 - [x] 4.3 Break each rule on purpose, see its test go red, restore
 - [x] 4.4 Lint, `npm test`, `npm run test:browser`, consolidate check, check-migrations, after merging latest main
 - [x] 4.5 `/opsx:archive` as the last commit of the top pull request
+
+## 5. The independent review and Jack's answers, 4 Nov (each in the branch it belongs to)
+
+- [x] 5.1 Left-out rows keep their link; each person a row looks like gets a tick; account numbers in any case; left-out stock counted; staff records can be removed; closing the review's test gaps (`jack/citrus-import-fix`)
+- [x] 5.2 Help requests cleared at a deletion; no pretend inbox on production, failing closed; other-shop check (`jack/citrus-import-fix-rules`)
+- [x] 5.3 Looking and more-sent reset; Stock levels not All in with stock left out; the line and focus across boards (`jack/citrus-import-fix-screens`)
+- [x] 5.4 The form's line and real reasons, a new key for changed text, not offered without an inbox; keyboard focus in a browser (`jack/citrus-import-help-screens`)
+
+## 6. Still needed
+
+- [ ] 6.1 **A real inbox before the first real shop** (Jack, 4 Nov, answer 3): a real account, Jack's to say. See them, when Your data is built (answer 1)
