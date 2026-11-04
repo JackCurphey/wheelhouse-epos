@@ -8,6 +8,7 @@ import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { wakeBringingAcross } from '../move/bring-across.js';
 import { fixRow, leaveOutRow, lookList } from '../move/fix-row.js';
+import { sendHelp } from '../move/help-inbox.js';
 import { readRequestKey } from '../booking-request-key.js';
 import { someoneElseCheckedIn } from './till-pins.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
@@ -17,6 +18,8 @@ const MAX_NAME = 200;
 const MAX_WAITING_A_SHOP = 10;
 const OWNER_ONLY = "Only the shop's owner can bring data across";
 const CANT_READ = { error: 'Wheelhouse couldn’t read this file', code: 'cant_read' };
+const MAX_HELP = 4000;
+const MAX_CARD = 120;
 const REUSED_KEY = { error: 'That was sent before with a different file. Choose the file again.', code: 'reused_key' };
 const BUSY = { error: 'Wheelhouse is still taking in another of your files. Try again in a moment.', code: 'busy' };
 
@@ -148,6 +151,33 @@ export function register(route) {
     if (!r) return;
     const { status, body } = await leaveOutRow(r.id, { seen: r.seen, key: r.key, who: r.who });
     sendJson(res, status, body);
+  });
+
+  // Ask us to help (mv-help): what was written, the card and who's asking; nothing from the rows.
+  route('POST', '/api/move/help', async (req, res, params, query, afterRelease, shopId) => {
+    if (await refused(req, res)) return;
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const body = await readJsonBody(req);
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Write what looks wrong');
+    const key = readRequestKey(body);
+    if (key.error || !key.value) return badRequest(res, key.error ?? 'A request key is required');
+    const clean = (v) => (typeof v === 'string' ? v.replaceAll('\u0000', '').toWellFormed().trim() : '');
+    const text = clean(body.text);
+    const card = clean(body.card);
+    if (!text || text.length > MAX_HELP) return badRequest(res, 'Write what looks wrong, in up to 4,000 characters');
+    if (!card || card.length > MAX_CARD) return badRequest(res, 'Say which card this is from');
+    const ctx = await currentSession(req);
+    const shop = await prepare('SELECT name FROM shops WHERE id = ?').get(shopId);
+    let sent;
+    try {
+      sent = await sendHelp({ text, card, who, replyTo: ctx.login.email ?? '', shopName: shop.name, ...key.value });
+    } catch (err) {
+      console.error('Move: Ask us to help couldn’t be passed on', err.code ?? err.name);
+      return sendJson(res, 502, { error: 'Couldn’t send. What you wrote is kept here. Try again.', code: 'not_sent' });
+    }
+    if (sent.reused) return sendJson(res, 409, REUSED_KEY);
+    sendJson(res, 200, { ok: true });
   });
 
   // Choose another file: a file that couldn't be read goes from the list.
