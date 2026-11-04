@@ -8,7 +8,7 @@ The first part of WP-2.4 (#598, #599, #600) brings products, stock, customers an
 - Fix: a pop-up for that one row, asking for the row's own details, checked by the same rules as a row in a file. A row that still doesn't fit stays as it was and says why.
 - Leave it out: the row is kept, out of the way, and counted as left out.
 - `mv-sorted` once every row is fixed or left out.
-- Ask us to help, top right of each card (`mv-help`, `mv-help-sent`): what looks wrong goes to the Wheelhouse team through an adapter with a pretend version.
+- Ask us to help, top right of each card (`mv-help`, `mv-help-sent`): what looks wrong goes to the Wheelhouse team through an adapter with a pretend version, which only runs on the test copy, in local development and in tests. A real inbox is needed before the first real shop.
 - A row someone has chosen to bring across despite sharing a deleted customer's email or phone needs that person's tick on that row. Nothing does it in bulk. A deleted customer's account number is always left out.
 
 ## Out of scope
@@ -22,7 +22,7 @@ WP-2.4, Jack's. Risky areas: migrations (113); money and stock (a fixed price li
 ## Follows
 
 - Drawings: `mv-fix`, `mv-sorted`, `mv-help`, `mv-help-sent` (`docs/design/user-journeys/generator/moving.mjs`); the Fix line on `mv-start` (`consolidate/j09.mjs`).
-- Decisions: `docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` 2, 9 (M3, L2); `docs/decisions/2026-10-03-ux-walkthrough-second-walk.md` 4 and 4d (what Fix asks is left for the build, logged for Jack); `docs/decisions/2026-10-08-not-drawn-pages.md` #30 and #43; `docs/decisions/2026-11-03-answers.md` all six.
+- Decisions: `docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` 2, 9 (M3, L2); `docs/decisions/2026-10-03-ux-walkthrough-second-walk.md` 4 and 4d (what Fix asks is left for the build, logged for Jack); `docs/decisions/2026-10-08-not-drawn-pages.md` #30 and #43; `docs/decisions/2026-11-03-answers.md` all six; `docs/decisions/2026-11-04-answers.md` all three.
 
 ## Capabilities
 

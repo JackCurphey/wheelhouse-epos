@@ -35,7 +35,7 @@ Leave it out SHALL keep the row, counted as left out, and it SHALL no longer nee
 
 #### Scenario: A row left out
 - **WHEN** the owner leaves out a row with stock
-- **THEN** nothing is made, and Products and Stock levels each need one fewer look
+- **THEN** nothing is made, and Products and Stock levels each need one fewer look, and Stock levels says how many were left out, not All in
 
 ### Requirement: A person decides about a row sharing a deleted customer's details
 A row with the reason "Shares contact details with a customer who was deleted", or one whose corrected email or phone is a deleted customer's, SHALL NOT come across unless the person fixing that row ticks that this is someone else. Nothing SHALL do this for more than one row at a time. It SHALL NOT link to, merge with or restore the deleted customer.
@@ -56,12 +56,20 @@ A row with the reason "Shares contact details with a customer who was deleted", 
 - **WHEN** a row is fixed to a deleted customer's account number, ticked or not
 - **THEN** it's left out as they asked, counted, and its row emptied
 
+#### Scenario: An account number in another case
+- **WHEN** a deleted customer's account number comes in another case, or with spaces around it, typed or in a file
+- **THEN** it's left out in the same way; A1 and a1 are one account
+
 ### Requirement: A person decides about a row that looks like someone already here
 A customer row that "Looks like the same person as [customer name]" SHALL come across only if the email or phone is corrected, or the person fixing that row ticks that this is someone else. It SHALL then be a new customer; nothing SHALL merge them.
 
 #### Scenario: A son sharing his mum's email
 - **WHEN** the owner ticks that the row isn't [customer name], and saves
 - **THEN** a new customer is made, and [customer name] is unchanged
+
+#### Scenario: A row like two people
+- **WHEN** a row's email is one customer's and its phone another's, and the owner ticks that it isn't the first
+- **THEN** it asks about the second, naming them, and makes nobody until each has their own tick
 
 ### Requirement: A deletion isn't undone by a row left open
 A save or leave-out SHALL be refused if the row has gone or changed since it was shown. Deleting someone's details SHALL treat rows left out as it treats rows needing a look.
@@ -78,6 +86,10 @@ A save or leave-out SHALL be refused if the row has gone or changed since it was
 - **WHEN** a left-out row has their account number, or their exact name and their email or phone
 - **THEN** it goes, and the count follows
 
+#### Scenario: A row left out, then they changed their details, then were deleted
+- **WHEN** a row with their exact name was flagged as the same person and left out, they changed their email and phone in Wheelhouse, and their details are deleted
+- **THEN** it goes, as a row needing a look does
+
 ### Requirement: Who sorted a row is recorded
 A fix or leave-out SHALL record who did it: the person checked in where someone is, otherwise the person signed in. On a till or workshop computer with nobody checked in it SHALL be refused. Only the Owner SHALL do it.
 
@@ -85,15 +97,23 @@ A fix or leave-out SHALL record who did it: the person checked in where someone 
 - **WHEN** the owner's sign-in saves a fix on a till with nobody checked in
 - **THEN** it says to check in first, and nothing changes
 
+#### Scenario: A staff record removed
+- **WHEN** someone who sorted a row or asked for help has their staff record removed
+- **THEN** it's removed, and the row stays, naming nobody
+
 ### Requirement: Everything's sorted
 When every row that needed a look has been fixed or left out, the page SHALL say "Everything’s sorted", with how many rows were left out.
 
 #### Scenario: The last row left out
 - **WHEN** the last row is dealt with
-- **THEN** it shows "Everything’s sorted" and Left out with its count
+- **THEN** it shows "Everything’s sorted" and Left out with its count, says what happened to that row, and the focus goes there
+
+#### Scenario: Another file afterwards
+- **WHEN** the owner sends another file from "Everything’s sorted"
+- **THEN** the summary shows, and once that file's rows are sorted, "Everything’s sorted" again
 
 ### Requirement: Ask us to help
-Each card on the page SHALL have Ask us to help, top right, opening a short form: "What looks wrong?", and a line saying the team sees which card it was asked from and who's asking. Send SHALL pass it to the Wheelhouse team and say "Thanks — we’ve got it. Any reply comes to your email." Sending waits until something is written. Nothing from a move's rows SHALL go with it.
+Each card on the page SHALL have Ask us to help, top right, opening a short form: "What looks wrong?", and a line saying the team sees which card it was asked from and who's asking. Send SHALL pass it to the Wheelhouse team and say "Thanks — we’ve got it. Any reply comes to your email." Sending waits until something is written. The form SHALL ask people not to include customers' details. Nothing from a move's rows SHALL go with it. Until a real inbox is connected, it SHALL work only on the test copy, in local development and in tests; anywhere else, or if it can't be told, the page SHALL NOT offer it and the server SHALL refuse it.
 
 #### Scenario: Sent
 - **WHEN** the owner writes what looks wrong and sends it from Here’s what came across
@@ -101,4 +121,12 @@ Each card on the page SHALL have Ask us to help, top right, opening a short form
 
 #### Scenario: It couldn't be sent
 - **WHEN** the send fails
-- **THEN** what they wrote stays in the box, to try again
+- **THEN** what they wrote stays in the box, to try again, and it says why; changing what they wrote sends it as new
+
+#### Scenario: Production with no inbox
+- **WHEN** the server is production, and not the test copy, with no real inbox
+- **THEN** Ask us to help isn't on the page, and a request is refused and not kept
+
+#### Scenario: A customer named in a request, then deleted
+- **WHEN** a request holds a customer's exact email, phone in a usual form, or name, in any case, and their details are deleted
+- **THEN** the request goes, and one with a misspelt name or about someone else stays
