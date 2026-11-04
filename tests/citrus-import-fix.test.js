@@ -580,6 +580,22 @@ test('undoing a merge puts the row\'s link back, and deleting her then takes the
   await countsRight(m.fileId);
 });
 
+test('a merge undone: the name of the person split back off no longer counts as the kept record\'s', async () => {
+  const maya = person();
+  const keptPerson = person({ 'First Name': 'Kept', 'Last Name': `Record${key().slice(0, 6)}` });
+  await bring(customers(maya, keptPerson));
+  const mayaId = (await byAccount(maya.v['Account Number'])).id;
+  const keptId = (await byAccount(keptPerson.v['Account Number'])).id;
+  // Maya's own name, with the kept record's email: it points at the kept record.
+  const fileId = await bring(customers(person({ 'First Name': maya.v['First Name'], 'Last Name': maya.v['Last Name'], Email: keptPerson.v.Email })));
+  assert.equal((await rowsOf(fileId))[0].customer_id, keptId);
+  const merged = await staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId: mayaId, keep: {} } });
+  assert.equal((await staff(`/api/customer-merges/${merged.body.id}/undo`, { method: 'POST', body: {} })).status, 200);
+  await deleted(keptId);
+  const [row] = await rowsOf(fileId);
+  assert.deepEqual([row.state, row.why, row.customer_id], ['look', SHARED_CONTACT, null], 'Maya is still here, and this row may be hers');
+});
+
 test('a row with another name, linked to a merged record, stays when the kept record is deleted, with no link', async () => {
   const maya = person();
   const keptPerson = person({ 'First Name': 'Kept', 'Last Name': `Record${key().slice(0, 6)}` });
