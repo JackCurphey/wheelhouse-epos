@@ -47,3 +47,5 @@ These replace what's above where they differ.
 20. **What the codes don't do.** The salt is in the same database, so someone with access to it could test a guessed email or phone against the codes. They stop a file bringing someone back, and differ between shops; they aren't encryption.
 
 21. **A large file and a deletion.** Rows are stored without holding the move files (`citrus-import-products`, design 13), so a deletion isn't refused while a 100,000-row file is stored.
+
+22. **A waiting row that shares a deleted customer's details stays** (Jack, 4 Nov, answer 4; this replaces design 8 and 14's removing it). A row with their account number is their own and goes, and its file's counts follow. A row needing a look that points at them, or shares their email or phone, stays: its reason becomes "Shares contact details with a customer who was deleted", `customer_id` is cleared, and a name on it that's theirs goes. Its own details stay, the shared email or phone included, so `rows_look` and `rows_total` don't change. A row not yet looked at is left waiting, and gets the same reason from the codes when it's looked at.

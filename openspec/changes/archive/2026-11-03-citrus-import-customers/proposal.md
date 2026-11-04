@@ -7,7 +7,7 @@ Products and stock come across (`citrus-import-products`, `citrus-import-screens
 - Top Customers becomes customers, each with their address, offers yes or no, and the date of that yes. Service Items Report becomes their bikes, matched by email, then phone, then name, as it has no account number.
 - A row that doesn't fit waits for a look: no name, looks like the same person as someone already here, a bike whose customer can't be found.
 - Someone already brought across is left alone, so a file can be sent twice. A customer who asked for their details to be deleted never comes back from a file: only one-way codes of them are kept to spot them (Jack, 3 Nov).
-- Deleting someone's details also removes rows about them still waiting in a file.
+- Deleting someone's details removes a waiting row with their account number; a row that only shares their email or phone stays as needs a look, with no link to them (Jack, 4 Nov).
 - The page's Customers row works, with the bikes counted beside it.
 
 ## Out of scope

@@ -124,7 +124,7 @@ Each row of Service Items Report SHALL become a bike on the customer it matches 
 - **THEN** it isn't added again
 
 ### Requirement: A deleted customer stays deleted
-Deleting a customer's details SHALL hold against any file, and SHALL remove rows about them still waiting in one.
+Deleting a customer's details SHALL hold against any file, SHALL remove a waiting row with their account number, and SHALL keep a waiting row that only shares their email or phone, with no link to them.
 
 #### Scenario: The file sent again
 - **WHEN** a customer's details were deleted and Top Customers is sent again
@@ -146,8 +146,12 @@ Deleting a customer's details SHALL hold against any file, and SHALL remove rows
 - **WHEN** a row has a deleted customer's account number
 - **THEN** it's left out, counted, and its row emptied
 
-#### Scenario: A row waiting for a look
-- **WHEN** a row with their email is waiting for a look, and their details are deleted
+#### Scenario: A row that shares their details
+- **WHEN** a row with their email or phone is waiting for a look, and their details are deleted
+- **THEN** the row stays as needs a look, "Shares contact details with a customer who was deleted", with no link to them and not their name, its own details kept, and the count unchanged
+
+#### Scenario: A row with their account number
+- **WHEN** a row with their account number is waiting, and their details are deleted
 - **THEN** the row goes, and the count follows
 #### Scenario: Sent again
 - **WHEN** a file is sent again
