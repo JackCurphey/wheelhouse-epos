@@ -39,7 +39,9 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = null, dups = [], undoable = [] } = {}) {
+let mergeBusy = false;
+async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = null, dups = [], undoable = [], busy = false } = {}) {
+  mergeBusy = busy;
   calls = [];
   duplicates = dups;
   merges = undoable;
@@ -65,6 +67,7 @@ async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = n
     if (u.pathname === '/api/customers/5/history') return reply(200, { items: history });
     if (u.pathname === '/api/customers/5/possible-duplicates') return reply(200, duplicates);
     if (u.pathname === '/api/customers/5/merges') return reply(200, merges);
+    if (mergeBusy && method === 'POST' && (u.pathname === '/api/customers/5/merge' || u.pathname === '/api/customer-merges/77/undo')) return reply(503, { error: 'Wheelhouse is busy with this shop’s files just now. Try again in a moment.', code: 'busy' });
     if (u.pathname === '/api/customers/5/merge' && method === 'POST') { duplicates = []; merges = [{ id: 77, otherName: 'Maya P.', mergedAt: '2026-09-01T10:00:00.000Z', undoUntil: '2026-10-01T10:00:00.000Z' }]; return reply(200, { id: 77 }); }
     if (u.pathname === '/api/customers/5/not-duplicate' && method === 'POST') { duplicates = []; return reply(200, { ok: true }); }
     if (u.pathname === '/api/customer-merges/77/undo' && method === 'POST') { merges = []; return reply(200, { ok: true }); }
@@ -288,6 +291,20 @@ test('Merge into one sends the choices; the page then offers Undo the merge', as
   fireEvent.click(ui.getByRole('button', { name: 'Undo the merge' }));
   await waitFor(() => assert.ok(posts().some(([path]) => path === '/api/customer-merges/77/undo')));
   await waitFor(() => assert.ok(ui.queryByText(/Merged with Maya P\./) === null));
+});
+
+test('Merge told Wheelhouse is busy says that plainly, and stays open to try again', async () => {
+  const { ui, fireEvent, within } = await open({ dups: [TWIN], busy: true });
+  fireEvent.click(await ui.findByRole('button', { name: 'Check' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'The same person?' }));
+  fireEvent.click(dialog.getByRole('button', { name: 'Merge into one' }));
+  assert.ok((await dialog.findByText('Wheelhouse is busy with this shop’s files just now. Try again in a moment.')) !== null);
+});
+
+test('Undo told Wheelhouse is busy says that plainly', async () => {
+  const { ui, fireEvent } = await open({ undoable: [{ id: 77, otherName: 'Maya P.', mergedAt: '2026-08-20T10:00:00.000Z', undoUntil: '2026-09-19T10:00:00.000Z' }], busy: true });
+  fireEvent.click(await ui.findByRole('button', { name: 'Undo the merge' }));
+  assert.ok((await ui.findByText('Wheelhouse is busy with this shop’s files just now. Try again in a moment.')) !== null);
 });
 
 test('They’re different people says so to the server and the notice goes', async () => {

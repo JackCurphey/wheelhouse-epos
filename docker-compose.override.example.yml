@@ -6,5 +6,7 @@
 services:
   app:
     environment:
+      # Says this is development, for what only runs there (the pretend help inbox).
+      NODE_ENV: development
       WHEELHOUSE_DEV_AUTOLOGIN: ${WHEELHOUSE_DEV_AUTOLOGIN:-}
       WHEELHOUSE_DEV_LOGIN_EMAIL: ${WHEELHOUSE_DEV_LOGIN_EMAIL:-}

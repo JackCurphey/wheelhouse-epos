@@ -177,6 +177,27 @@ export async function lookRows(fileId) {
 // The name a row holds, whichever report it's from.
 const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last Name']].filter(Boolean).join(' '));
 
+// Whether a help request holds this person's exact email, phone or name, in any case
+// (Jack, 4 Nov, answers 2 and 4). A name counts only if it's at least two words, as whole
+// words, and a phone only as the whole number: spaces and punctuation may sit in it, but
+// a run of digits with anything more isn't theirs. So a misspelt or one-word name, or a
+// phone straight after another number, gets through. The card comes from this page's own
+// headings, so only an email is looked for there, as the server takes it as text.
+const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const holdsEmail = (text, emails) => emails.some((e) => new RegExp(`(?<![a-z0-9._%+-])${escaped(e)}(?!\\.?[a-z0-9_-])`).test(cleanName(text)));
+function holdsNameOrPhone(text, { phones, names }) {
+  const flat = cleanName(text);
+  if (names.some((n) => n.includes(' ') && new RegExp(`(?<![\\p{L}\\p{N}])${escaped(n)}(?![\\p{L}\\p{N}])`, 'u').test(flat))) return true;
+  return (text.match(/\d[\d \t().-]*\d/g) ?? []).some((run) => phones.includes(nationalNumber(run)));
+}
+// The whole request goes: nothing identifying may stay, and it has no use without its text.
+async function forgetHelpRequests(person) {
+  const asked = await prepare('SELECT id, what_looks_wrong, card FROM move_help_requests ORDER BY id').all();
+  for (const { id, what_looks_wrong: text, card } of asked) {
+    if (holdsEmail(`${text}\n${card}`, person.emails) || holdsNameOrPhone(text, person)) await prepare('DELETE FROM move_help_requests WHERE id = ? RETURNING id').get(id);
+  }
+}
+
 /**
  * Deleting someone's details (Jack, 3 and 4 Nov; design 8, 10, 22 and 23): one-way
  * codes of their account number, emails and phones are kept, with nothing else.
@@ -186,6 +207,7 @@ const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last
  * someone else's, so they stay, with their own details, the shared email or phone
  * included: one needing a look takes answer 3's reason and loses its link now, and
  * one still waiting is left to take that reason from the codes when it's looked at.
+ * A request for help holding their details goes too.
  * Inside the deletion's transaction, with every move file locked first and their
  * customer records not yet blanked.
  */
@@ -204,6 +226,11 @@ export async function forgetForMove(customerIds, emails) {
   // leaves only its name on the merge, and a row moved to the kept record still has that name.
   const mergedNames = await prepare('SELECT other_name FROM customer_merges WHERE kept_id = ANY(?::int[]) AND undone_at IS NULL').all(customerIds);
   const names = new Set([...people.map((p) => p.name), ...mergedNames.map((m) => m.other_name)].map(cleanName).filter(Boolean));
+  await forgetHelpRequests({
+    emails: emails.map(cleanEmail).filter(Boolean),
+    phones: [...new Set(people.map((p) => nationalNumber(p.phone)).filter(Boolean))],
+    names: [...names],
+  });
   const rows = await prepare(
     `SELECT id, file_id, state, data, (lower(trim(data->>'Account Number')) = ANY(?::text[])) AS by_account FROM move_rows
       WHERE state IN ('waiting', 'look', 'left_out') AND (
