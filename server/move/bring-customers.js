@@ -175,21 +175,24 @@ export async function lookRows(fileId) {
 // The name a row holds, whichever report it's from.
 const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last Name']].filter(Boolean).join(' '));
 
-// Whether what someone wrote holds this person's exact email, phone or name, in any
-// case, phones in their usual forms (Jack, 4 Nov, answer 2). A misspelt name gets through.
+// Whether a help request holds this person's exact email, phone or name, in any case
+// (Jack, 4 Nov, answers 2 and 4). A name counts only if it's at least two words, as whole
+// words, and a phone only as the whole number: spaces and punctuation may sit in it, but
+// a run of digits with anything more isn't theirs. So a misspelt or one-word name, or a
+// phone straight after another number, gets through. The card comes from this page's own
+// headings, so only an email is looked for there, as the server takes it as text.
 const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-function mentions(text, { emails, phones, names }) {
+const holdsEmail = (text, emails) => emails.some((e) => new RegExp(`(?<![a-z0-9._%+-])${escaped(e)}(?!\\.?[a-z0-9_-])`).test(cleanName(text)));
+function holdsNameOrPhone(text, { phones, names }) {
   const flat = cleanName(text);
-  if (emails.some((e) => new RegExp(`(?<![a-z0-9._%+-])${escaped(e)}(?!\\.?[a-z0-9_-])`).test(flat))) return true;
-  if (names.some((n) => new RegExp(`(?<![\\p{L}\\p{N}])${escaped(n)}(?![\\p{L}\\p{N}])`, 'u').test(flat))) return true;
-  const runs = (text.match(/\d[\d\s().-]*\d/g) ?? []).map((run) => run.replace(/\D/g, ''));
-  return phones.some((p) => runs.some((run) => run.includes(p)));
+  if (names.some((n) => n.includes(' ') && new RegExp(`(?<![\\p{L}\\p{N}])${escaped(n)}(?![\\p{L}\\p{N}])`, 'u').test(flat))) return true;
+  return (text.match(/\d[\d \t().-]*\d/g) ?? []).some((run) => phones.includes(nationalNumber(run)));
 }
 // The whole request goes: nothing identifying may stay, and it has no use without its text.
 async function forgetHelpRequests(person) {
   const asked = await prepare('SELECT id, what_looks_wrong, card FROM move_help_requests ORDER BY id').all();
   for (const { id, what_looks_wrong: text, card } of asked) {
-    if (mentions(`${text}\n${card}`, person)) await prepare('DELETE FROM move_help_requests WHERE id = ? RETURNING id').get(id);
+    if (holdsEmail(`${text}\n${card}`, person.emails) || holdsNameOrPhone(text, person)) await prepare('DELETE FROM move_help_requests WHERE id = ? RETURNING id').get(id);
   }
 }
 
@@ -217,7 +220,10 @@ export async function forgetForMove(customerIds, emails) {
   }
   const phones = people.flatMap((p) => phoneForms(p.phone));
   const accounts = people.map((p) => accountKey(p.citrus_account)).filter(Boolean);
-  const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
+  // With the names of anyone merged into them: a hidden record removed after its 30 days
+  // leaves only its name on the merge, and a row moved to the kept record still has that name.
+  const mergedNames = await prepare('SELECT other_name FROM customer_merges WHERE kept_id = ANY(?::int[]) AND undone_at IS NULL').all(customerIds);
+  const names = new Set([...people.map((p) => p.name), ...mergedNames.map((m) => m.other_name)].map(cleanName).filter(Boolean));
   await forgetHelpRequests({
     emails: emails.map(cleanEmail).filter(Boolean),
     phones: [...new Set(people.map((p) => nationalNumber(p.phone)).filter(Boolean))],

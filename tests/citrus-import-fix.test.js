@@ -518,3 +518,163 @@ test('removing a staff record who sorted a row works, and the row stays with nob
   const [row] = await rowsOf(fileId);
   assert.deepEqual([row.state, row.sorted_by_employee_id], ['left_out', null]);
 });
+
+// ---- A row about someone merged: the re-check, 4 Nov ----
+
+// Maya with a row about her, left out or needing a look, and merged into a record with other details.
+async function aRowAboutSomeoneMerged({ leave }) {
+  const maya = person();
+  const keptPerson = person({ 'First Name': 'Kept', 'Last Name': `Record${key().slice(0, 6)}` });
+  await bring(customers(maya, keptPerson));
+  const mayaId = (await byAccount(maya.v['Account Number'])).id;
+  const keptId = (await byAccount(keptPerson.v['Account Number'])).id;
+  const copy = person({ 'First Name': maya.v['First Name'], 'Last Name': maya.v['Last Name'], Email: maya.v.Email });
+  const fileId = await bring(customers(copy));
+  const look = await oneLook(fileId);
+  if (leave) assert.equal((await leaveOut(look)).status, 200);
+  const merged = await staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId: mayaId, keep: {} } });
+  assert.equal(merged.status, 200, JSON.stringify(merged.body));
+  return { mayaId, keptId, fileId, mergeId: merged.body.id };
+}
+const removedAfter31Days = async ({ mergeId, keptId, mayaId }) => {
+  await inShop(() => prepare("UPDATE customer_merges SET merged_at = now() - interval '31 days' WHERE id = ?").run(mergeId));
+  assert.equal((await staff(`/api/customers/${keptId}/merges`)).status, 200);
+  assert.equal(await inShop(() => prepare('SELECT id FROM customers WHERE id = ?').get(mayaId)), undefined, 'the hidden record has gone');
+};
+
+for (const [what, leave] of [['left out', true], ['needing a look', false]]) {
+  test(`a row ${what} moves with a merge, and goes when the kept record is deleted, within the 30 days`, async () => {
+    const m = await aRowAboutSomeoneMerged({ leave });
+    assert.equal((await rowsOf(m.fileId))[0].customer_id, m.keptId);
+    await deleted(m.keptId);
+    assert.deepEqual(await rowsOf(m.fileId), []);
+    const f = await countsRight(m.fileId);
+    assert.deepEqual([f.rowsTotal, f.rowsLook, f.rowsLeftOut], [0, 0, 0]);
+  });
+
+  test(`a row ${what} keeps its link after the hidden record is removed at 31 days, and goes when the kept record is deleted`, async () => {
+    const m = await aRowAboutSomeoneMerged({ leave });
+    await removedAfter31Days(m);
+    assert.equal((await rowsOf(m.fileId))[0].customer_id, m.keptId);
+    await deleted(m.keptId);
+    assert.deepEqual(await rowsOf(m.fileId), [], 'it has her name and email, and must not stay');
+    const f = await countsRight(m.fileId);
+    assert.deepEqual([f.rowsTotal, f.rowsLook, f.rowsLeftOut], [0, 0, 0]);
+  });
+}
+
+test('a link made before merges moved it still moves when the hidden record is removed', async () => {
+  const m = await aRowAboutSomeoneMerged({ leave: true });
+  await inShop(() => prepare('UPDATE move_rows SET customer_id = ? WHERE file_id = ?').run(m.mayaId, m.fileId));
+  await removedAfter31Days(m);
+  assert.equal((await rowsOf(m.fileId))[0].customer_id, m.keptId);
+});
+
+test('undoing a merge puts the row\'s link back, and deleting her then takes the row', async () => {
+  const m = await aRowAboutSomeoneMerged({ leave: true });
+  const undone = await staff(`/api/customer-merges/${m.mergeId}/undo`, { method: 'POST', body: {} });
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  assert.equal((await rowsOf(m.fileId))[0].customer_id, m.mayaId);
+  await deleted(m.mayaId);
+  assert.deepEqual(await rowsOf(m.fileId), []);
+  await countsRight(m.fileId);
+});
+
+test('a merge undone: the name of the person split back off no longer counts as the kept record\'s', async () => {
+  const maya = person();
+  const keptPerson = person({ 'First Name': 'Kept', 'Last Name': `Record${key().slice(0, 6)}` });
+  await bring(customers(maya, keptPerson));
+  const mayaId = (await byAccount(maya.v['Account Number'])).id;
+  const keptId = (await byAccount(keptPerson.v['Account Number'])).id;
+  // Maya's own name, with the kept record's email: it points at the kept record.
+  const fileId = await bring(customers(person({ 'First Name': maya.v['First Name'], 'Last Name': maya.v['Last Name'], Email: keptPerson.v.Email })));
+  assert.equal((await rowsOf(fileId))[0].customer_id, keptId);
+  const merged = await staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId: mayaId, keep: {} } });
+  assert.equal((await staff(`/api/customer-merges/${merged.body.id}/undo`, { method: 'POST', body: {} })).status, 200);
+  await deleted(keptId);
+  const [row] = await rowsOf(fileId);
+  assert.deepEqual([row.state, row.why, row.customer_id], ['look', SHARED_CONTACT, null], 'Maya is still here, and this row may be hers');
+});
+
+test('a row with another name, linked to a merged record, stays when the kept record is deleted, with no link', async () => {
+  const maya = person();
+  const keptPerson = person({ 'First Name': 'Kept', 'Last Name': `Record${key().slice(0, 6)}` });
+  await bring(customers(maya, keptPerson));
+  const mayaId = (await byAccount(maya.v['Account Number'])).id;
+  const keptId = (await byAccount(keptPerson.v['Account Number'])).id;
+  const fileId = await bring(customers(person({ Email: maya.v.Email })));
+  assert.equal((await leaveOut(await oneLook(fileId))).status, 200);
+  assert.equal((await staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId: mayaId, keep: {} } })).status, 200);
+  await deleted(keptId);
+  const [row] = await rowsOf(fileId);
+  assert.deepEqual([row.state, row.customer_id, row.why], ['left_out', null, SHARED_CONTACT]);
+});
+
+// Whatever else is running, it waits for the move files, the order a batch and a deletion use.
+async function waitsForTheFiles(start) {
+  let release;
+  const held = new Promise((r) => { release = r; });
+  let locked;
+  const isLocked = new Promise((r) => { locked = r; });
+  const holding = inShop(async () => {
+    await prepare('BEGIN').run();
+    await prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
+    locked();
+    await held;
+    await prepare('ROLLBACK').run();
+  });
+  await isLocked;
+  let finished = false;
+  const going = start().then((res) => { finished = true; return res; });
+  try {
+    await new Promise((r) => { setTimeout(r, 500); });
+    assert.equal(finished, false, 'it went ahead while a batch or deletion held the move files');
+  } finally {
+    release();
+    await holding;
+  }
+  const res = await Promise.race([going, new Promise((_, no) => { setTimeout(() => no(new Error('it never finished')), 10_000); })]);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+}
+
+test('a merge takes the move files first', async () => {
+  const keptPerson = person();
+  const maya = person();
+  await bring(customers(maya, keptPerson));
+  const mayaId = (await byAccount(maya.v['Account Number'])).id;
+  const keptId = (await byAccount(keptPerson.v['Account Number'])).id;
+  await waitsForTheFiles(() => staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId: mayaId, keep: {} } }));
+});
+
+test('undoing a merge takes the move files first', async () => {
+  const m = await aRowAboutSomeoneMerged({ leave: true });
+  await waitsForTheFiles(() => staff(`/api/customer-merges/${m.mergeId}/undo`, { method: 'POST', body: {} }));
+});
+
+test('removing a hidden record takes the move files first', async () => {
+  const m = await aRowAboutSomeoneMerged({ leave: true });
+  await inShop(() => prepare("UPDATE customer_merges SET merged_at = now() - interval '31 days' WHERE id = ?").run(m.mergeId));
+  await waitsForTheFiles(() => staff(`/api/customers/${m.keptId}/merges`));
+  assert.equal((await rowsOf(m.fileId))[0].customer_id, m.keptId);
+});
+
+test('a merge and a fix of a bike row about the same person at the same moment: no deadlock', async () => {
+  for (let i = 0; i < 6; i += 1) {
+    const maya = person();
+    const keptPerson = person();
+    await bring(customers(maya, keptPerson));
+    const mayaId = (await byAccount(maya.v['Account Number'])).id;
+    const keptId = (await byAccount(keptPerson.v['Account Number'])).id;
+    // Her email with another name: it needs a look, and points at her.
+    const fileId = await bring(bikes({ Description: '[Bike]', 'Serial Number': `[Frame ${key().slice(0, 6)}]`, 'Customer Name': '[Someone else]', 'Email Address': maya.v.Email }));
+    const look = await oneLook(fileId);
+    assert.equal((await rowsOf(fileId))[0].customer_id, mayaId);
+    const [fixed, merged] = await Promise.race([
+      Promise.all([fix(look, { 'Customer Name': maya.name }), staff(`/api/customers/${keptId}/merge`, { method: 'POST', body: { otherId: mayaId, keep: {} } })]),
+      new Promise((_, no) => { setTimeout(() => no(new Error('deadlocked')), 15_000); }),
+    ]);
+    assert.ok([200, 409, 422].includes(fixed.status), JSON.stringify(fixed.body));
+    assert.equal(merged.status, 200, JSON.stringify(merged.body));
+    await countsRight(fileId);
+  }
+});

@@ -35,6 +35,8 @@
 - [x] 5.3 Looking and more-sent reset; Stock levels not All in with stock left out; the line and focus across boards (`jack/citrus-import-fix-screens`)
 - [x] 5.4 The form's line and real reasons, a new key for changed text, not offered without an inbox; keyboard focus in a browser (`jack/citrus-import-help-screens`)
 
+- [x] 5.5 The re-check: a row's link follows a merge, with the move files locked first (`jack/citrus-import-fix`); help requests matched by whole numbers and two-word names, not the card's labels (`jack/citrus-import-fix-rules`); log (`jack/citrus-import-fix-screens`)
+
 ## 6. Still needed
 
 - [ ] 6.1 **A real inbox before the first real shop** (Jack, 4 Nov, answer 3): a real account, Jack's to say. See them, when Your data is built (answer 1)

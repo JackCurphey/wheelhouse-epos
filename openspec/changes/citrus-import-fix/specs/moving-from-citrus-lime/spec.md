@@ -86,6 +86,14 @@ A save or leave-out SHALL be refused if the row has gone or changed since it was
 - **WHEN** a left-out row has their account number, or their exact name and their email or phone
 - **THEN** it goes, and the count follows
 
+#### Scenario: A row about someone merged, then the kept record deleted
+- **WHEN** a row left out or needing a look has their exact name and a link to them, they're merged into another record, whether or not the 30 days have gone, and that record's details are deleted
+- **THEN** the row goes, and the count follows
+
+#### Scenario: A merge undone
+- **WHEN** that merge is undone
+- **THEN** the row's link goes back to them
+
 #### Scenario: A row left out, then they changed their details, then were deleted
 - **WHEN** a row with their exact name was flagged as the same person and left out, they changed their email and phone in Wheelhouse, and their details are deleted
 - **THEN** it goes, as a row needing a look does
@@ -130,3 +138,7 @@ Each card on the page SHALL have Ask us to help, top right, opening a short form
 #### Scenario: A customer named in a request, then deleted
 - **WHEN** a request holds a customer's exact email, phone in a usual form, or name, in any case, and their details are deleted
 - **THEN** the request goes, and one with a misspelt name or about someone else stays
+
+#### Scenario: Words and numbers that only look like them
+- **WHEN** a customer called Will is deleted and a request says "The import will not finish for Sam Patel", or a customer's phone is 555 1234 and a request quotes barcode 5012345551234
+- **THEN** the request stays: a name must be at least two words and a phone the whole number
