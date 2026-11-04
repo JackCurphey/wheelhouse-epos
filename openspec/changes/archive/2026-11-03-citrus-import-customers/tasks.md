@@ -11,3 +11,4 @@
 - [x] 1.7 The re-review, 4 Nov, and Jack's answer 3: only an account number is skipped; only contact details need a look; a deletion during a large store; the codes' comment. Tests first, watched failing, each fix broken on purpose
 - [x] 1.8 A failed clean-up no longer leaves the test's server running; the timer's reach is in `citrus-import-products`, design 19
 - [x] 1.9 Jack's answer 4, 4 Nov: a row sharing a deleted customer's details stays as needs a look, with no link to them; a row with their account number goes. Test first, watched failing, each fix broken on purpose; the tests' wait has a limit
+- [x] 1.10 Jack's answer 5, 4 Nov, and the re-check: a row with their exact name and contact details goes, waiting or needing a look; a file that can't be read keeps no rows, and choosing another clears them. Tests first with a bounded wait, watched failing, each rule broken on purpose
