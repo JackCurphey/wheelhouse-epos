@@ -8,7 +8,7 @@ import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
 
 const BATCH = 200;
 const BATCHES_A_ROUND = 20;
-const INSERT_CHUNK = 1000;
+const INSERT_CHUNK = 500;
 export const NO_PRODUCT = 'The product isn’t in the products file';
 const STOCK_NOTE = 'Brought across from Citrus Lime';
 const ROW_FAILED = 'Wheelhouse couldn’t bring this row across';
@@ -224,10 +224,13 @@ export async function bringBatch({ beforeRow = () => {}, afterRows = () => {} } 
 
 /**
  * Reads the shop's next waiting file, outside any database connection, then
- * stores its rows, or marks it can't-read. The bytes go either way. Returns
- * whether there was one.
+ * stores its rows, or marks it can't-read. The rows go in small transactions that
+ * hold no lock on the move files, so a deletion waiting on those is never turned
+ * away by a large file, and only the last step, which takes the file's lock, makes
+ * them count. Stopped part-way, it starts again from the file: leftovers go first.
+ * The bytes go at the end. Returns whether there was one. `afterChunk` is for a test.
  */
-export async function readNextFile(shopId) {
+export async function readNextFile(shopId, { afterChunk = () => {} } = {}) {
   const next = await runWithShop(shopId, async () => {
     const file = await prepare(`SELECT id, file_name FROM move_files WHERE state = 'reading' ORDER BY id LIMIT 1`).get();
     if (!file) return null;
@@ -236,6 +239,14 @@ export async function readNextFile(shopId) {
   });
   if (!next) return false;
   const found = await readInWorker(next.bytes, next.file_name);
+  if (found) {
+    await runWithShop(shopId, () => prepare('DELETE FROM move_rows WHERE file_id = ?').run(next.id));
+    for (let at = 0; at < found.rows.length; at += INSERT_CHUNK) {
+      const chunk = found.rows.slice(at, at + INSERT_CHUNK);
+      await runWithShop(shopId, () => prepare('INSERT INTO move_rows (file_id, data) SELECT ?, unnest(?::jsonb[]) RETURNING id').all(next.id, chunk));
+      await afterChunk();
+    }
+  }
   await runWithShop(shopId, async () => {
     await dbExec('BEGIN');
     try {
@@ -243,10 +254,9 @@ export async function readNextFile(shopId) {
       if (file) {
         await prepare('DELETE FROM move_file_bytes WHERE file_id = ?').run(next.id);
         if (found) {
-          for (let at = 0; at < found.rows.length; at += INSERT_CHUNK) {
-            await prepare('INSERT INTO move_rows (file_id, data) SELECT ?, unnest(?::jsonb[]) RETURNING id').all(next.id, found.rows.slice(at, at + INSERT_CHUNK));
-          }
-          await prepare(`UPDATE move_files SET report = ?, store_name = ?, rows_total = ?, state = 'bringing' WHERE id = ?`).run(found.report, found.storeName, found.rows.length, next.id);
+          // Counted, not taken from the file: a deletion may have removed some since.
+          const { n } = await prepare('SELECT count(*)::int AS n FROM move_rows WHERE file_id = ?').get(next.id);
+          await prepare(`UPDATE move_files SET report = ?, store_name = ?, rows_total = ?, state = 'bringing' WHERE id = ?`).run(found.report, found.storeName, n, next.id);
         } else {
           await prepare(`UPDATE move_files SET state = 'cant_read', finished_at = now() WHERE id = ?`).run(next.id);
         }

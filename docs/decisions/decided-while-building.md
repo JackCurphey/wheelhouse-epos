@@ -2081,7 +2081,7 @@ WP-1.5's. So: slice C, WP-2.3.
 8. **Only plain numbers are prices, costs and quantities** (the independent review, 3 Nov): 1,234.50 is, but £12.50, 12,50, 1e3 and 0x10 need a look. **Empty cells:** no cost is £0.00 and no reorder level is 3, as adding a product does by hand; no VAT rate is 20%. A VAT rate other than 0, 5 or 20% needs a look.
 9. **Nothing shows online because of it:** every product comes across with Show online off.
 10. **Only the columns used are kept, and a row's are emptied once it's in.** A row that needs a look keeps its own until it's dealt with.
-11. **A file is stored, then read in the background** (the independent review, 3 Nov), so a slow read can't look like a failed send. Its bytes go once it's read. A made-up 100,000-row price list: send answered in 96 ms, read in 7 s, across in under 5 minutes. One send at a time per server; a second is told to try again in a moment, and a shop can have 10 waiting.
+11. **A file is stored, then read in the background** (the independent review, 3 Nov), so a slow read can't look like a failed send. Its bytes go once it's read. A made-up 100,000-row price list: send answered in 96 ms, read in 7 s, across in under 5 minutes. One send at a time per shop; a second is told to try again in a moment, and a shop can have 10 waiting.
 12. **What's too much to read:** 300,000 rows, 5,000,000 cells, 300 columns, 32,767 characters in a cell (Excel's own limit), 150 million characters in all, 60 seconds or 1 GB to read it. Any of those, or a character that doesn't exist, is "couldn't read it".
 
 ## Decided here, for Jack to overrule
