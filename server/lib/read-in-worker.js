@@ -35,8 +35,12 @@ export function readInWorker(bytes, fileName, { timeLimitMs = TIME_LIMIT_MS, mem
     };
     const timer = setTimeout(() => finish(null), timeLimitMs);
     worker.once('message', (result) => finish(result));
-    // Out of memory or anything else: the file can't be read. Nothing of it is logged.
-    worker.once('error', () => finish(null));
+    // Out of memory or anything else: the file can't be read. Only the error's
+    // code is logged, as its message could quote the file.
+    worker.once('error', (err) => {
+      console.error('Move: reading a file failed', err.code ?? err.name);
+      finish(null);
+    });
     worker.once('exit', () => finish(null));
   });
 }

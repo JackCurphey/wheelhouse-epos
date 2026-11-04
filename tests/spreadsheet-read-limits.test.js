@@ -58,7 +58,15 @@ test('in a worker: a good file reads, a bad one is null, one that runs out of ti
   assert.equal(await readInWorker(xlsxOf([['Alias', 'ILC'], ['1', '2']]), 'a.xlsx', { timeLimitMs: 0 }), null, 'time');
   const big = xlsxOf([['Alias', 'ILC'], ...Array.from({ length: 60_000 }, (_, i) => [`${'word'.repeat(20)}${i}`, `CODE-${i}`])]);
   assert.equal((await readInWorker(big, 'a.xlsx')).rows.length, 60_000, 'it reads with room to do so');
-  assert.equal(await readInWorker(big, 'a.xlsx', { memoryMb: 4 }), null, 'memory');
+  const logged = [];
+  const realError = console.error;
+  console.error = (...args) => { logged.push(args.join(' ')); };
+  try {
+    assert.equal(await readInWorker(big, 'secret name.xlsx', { memoryMb: 4 }), null, 'memory');
+  } finally {
+    console.error = realError;
+  }
+  assert.deepEqual(logged, ['Move: reading a file failed ERR_WORKER_OUT_OF_MEMORY'], 'the code, and nothing of the file');
 });
 
 test('one read at a time: a second is refused politely, and the next one after is fine', async () => {
