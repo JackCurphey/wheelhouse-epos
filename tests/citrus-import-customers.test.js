@@ -35,9 +35,12 @@ const key = () => randomBytes(24).toString('hex');
 const send = (file) => staff('/api/move/files', { method: 'POST', body: { fileName: 'export.xlsx', dataBase64: file.toString('base64'), requestKey: key() } });
 const inShop = (fn) => runWithShop(owner.shop.id, fn);
 // This shop only: going round every shop in the shared test database takes minutes.
+// With a limit, so a fault that keeps rows going round fails here instead of hanging.
 const finish = async () => {
-  while (await readNextFile(owner.shop.id));
-  while (await inShop(() => bringBatch()));
+  const stopAt = Date.now() + 20_000;
+  const inTime = () => assert.ok(Date.now() < stopAt, 'it never finished: rows are going round');
+  while (await readNextFile(owner.shop.id)) inTime();
+  while (await inShop(() => bringBatch())) inTime();
 };
 const fileIn = async (id) => (await staff('/api/move')).body.files.find((f) => f.id === id);
 const counts = (f) => ({ rowsIn: f.rowsIn, rowsSame: f.rowsSame, rowsSkipped: f.rowsSkipped, rowsLook: f.rowsLook });
@@ -49,7 +52,8 @@ const customersWith = (email) => inShop(() => prepare('SELECT * FROM customers W
 const HEAD = ['Account Number', 'Total Sales', 'First Name', 'Last Name', 'Address', 'Address 2', 'City', 'County', 'Postcode', 'Country', 'Email', 'Phone', 'GDPR Consent', 'GDPR Consent Date'];
 let n = 0;
 // Numbers and addresses unique to each made-up person, none of them real.
-const newPhone = () => { n += 1; return `07700 ${String(900000 + (n * 37 + randomBytes(2).readUInt16BE(0)) % 99999).padStart(6, '9')}`; };
+// One per made-up person: a shared number would make them look like the same person.
+const newPhone = () => { n += 1; return `07700 9${String(n).padStart(5, '0')}`; };
 const person = (over = {}) => {
   n += 1;
   const v = { 'Account Number': `A${n}-${key().slice(0, 6)}`, 'Total Sales': 99, 'First Name': 'Maya', 'Last Name': `Person${n}x${key().slice(0, 4)}`, Address: '[Address]', City: '[City]', Postcode: '[Postcode]', Email: `maya${n}.${key().slice(0, 6)}@example.test`, Phone: newPhone(), 'GDPR Consent': 'No', ...over };
@@ -307,7 +311,7 @@ test('a row waiting as "the same person as Pat", then Pat is deleted, then the s
   assert.equal((await fileIn(first.body.id)).rowsLook, 1);
   const c = await byAccount(pat.v['Account Number']);
   await deleted(c.id);
-  assert.deepEqual(await whyOf(first.body.id), [], 'the waiting row went');
+  assert.deepEqual(await whyOf(first.body.id), ['Shares contact details with a customer who was deleted'], 'the waiting row stays, with no link to Pat');
   const again = await send(customers(pat, lookalike));
   await finish();
   assert.equal((await customersWith(pat.v.Email)).length, 0);
@@ -454,28 +458,117 @@ test('a customer marked deleted gets no bike, even with their details still read
   assert.deepEqual(await whyOf(res.body.id), ['The customer on this bike isn’t in the customers file']);
 });
 
-test('deleting someone removes rows about them still waiting in a file, however the phone was written, and the counts follow', async () => {
+const rowsOf = (fileId) => inShop(() => prepare('SELECT state, why, customer_id, data FROM move_rows WHERE file_id = ? ORDER BY id').all(fileId));
+
+test('deleting a mum: her son\'s waiting row stays as needs a look, with no link to her, and his own details', async () => {
+  const mum = person({ 'First Name': 'Mum' });
+  await send(customers(mum));
+  await finish();
+  const c = await byAccount(mum.v['Account Number']);
+  const son = person({ 'First Name': 'Son', Email: mum.v.Email });
+  const res = await send(customers(son));
+  await finish();
+  assert.deepEqual(await whyOf(res.body.id), [`Looks like the same person as ${mum.name}`]);
+  await deleted(c.id);
+  const [row] = await rowsOf(res.body.id);
+  assert.deepEqual({ state: row.state, why: row.why, customer: row.customer_id }, { state: 'look', why: 'Shares contact details with a customer who was deleted', customer: null });
+  assert.deepEqual(await whyOf(res.body.id), ['Shares contact details with a customer who was deleted']);
+  assert.equal(row.data.Email, mum.v.Email, 'the shared email stays, as the row\'s own');
+  assert.equal(row.data['First Name'], 'Son');
+  assert.equal(row.data['Account Number'], son.v['Account Number']);
+  assert.ok(!JSON.stringify(row).includes(mum.name), 'nothing of her name');
+  const f = await fileIn(res.body.id);
+  assert.deepEqual({ rowsTotal: f.rowsTotal, ...counts(f) }, { rowsTotal: 1, rowsIn: 0, rowsSame: 0, rowsSkipped: 0, rowsLook: 1 });
+  // Nothing brings him in by himself, and nothing goes round.
+  await send(customers(person()));
+  await finish();
+  assert.equal((await rowsOf(res.body.id))[0].state, 'look');
+  assert.equal(await byAccount(son.v['Account Number']), undefined);
+});
+
+test('a kept row whose own name is the deleted customer\'s loses the name, and keeps the rest', async () => {
+  const mum = person();
+  await send(customers(mum));
+  await finish();
+  const c = await byAccount(mum.v['Account Number']);
+  const again = person({ 'First Name': mum.v['First Name'], 'Last Name': mum.v['Last Name'].toUpperCase(), Email: mum.v.Email });
+  const list = await send(customers(again));
+  const bike = await send(bikes({ Description: '[Bike]', 'Customer Name': `  ${mum.name} `, 'Email Address': mum.v.Email, 'Mobile Number': newPhone(), 'Serial Number': '[Frame]' }, { Description: '[Bike 2]', 'Customer Name': 'Someone Else', 'Email Address': mum.v.Email }));
+  await finish();
+  assert.equal((await fileIn(list.body.id)).rowsLook, 1);
+  assert.equal((await inShop(() => prepare('SELECT count(*)::int AS n FROM customer_bikes WHERE customer_id = ?').get(c.id))).n, 1, 'the first bike is hers');
+  assert.equal((await fileIn(bike.body.id)).rowsLook, 1);
+  await deleted(c.id);
+  const [kept] = await rowsOf(list.body.id);
+  assert.equal(kept.why, 'Shares contact details with a customer who was deleted');
+  assert.equal(kept.data['First Name'], undefined);
+  assert.equal(kept.data['Last Name'], undefined);
+  assert.equal(kept.data.Email, mum.v.Email);
+  assert.equal(kept.data['Account Number'], again.v['Account Number']);
+  const [bikeRow] = await rowsOf(bike.body.id).then((rows) => rows.filter((r) => r.state === 'look'));
+  assert.equal(bikeRow.why, 'Shares contact details with a customer who was deleted');
+  assert.equal(bikeRow.data['Customer Name'], 'Someone Else', 'another person\'s name on the row stays');
+  assert.equal(bikeRow.customer_id, null);
+});
+
+test('a row with their account number is their own: it goes, needing a look or waiting, and the counts follow', async () => {
+  const [p, q] = [person(), person()];
+  await send(customers(p, q));
+  await finish();
+  // Needing a look under an account number this customer then turns out to hold.
+  const lookAccount = `L${key().slice(0, 8)}`;
+  const looking = await send(customers(person({ 'Account Number': lookAccount, 'First Name': null, 'Last Name': null }), person()));
+  await finish();
+  assert.deepEqual(counts(await fileIn(looking.body.id)), { rowsIn: 1, rowsSame: 0, rowsSkipped: 0, rowsLook: 1 });
+  const c = await byAccount(p.v['Account Number']);
+  await inShop(() => prepare('UPDATE customers SET citrus_account = ? WHERE id = ?').run(lookAccount, c.id));
+  await deleted(c.id);
+  const f = await fileIn(looking.body.id);
+  assert.deepEqual({ rowsTotal: f.rowsTotal, ...counts(f) }, { rowsTotal: 1, rowsIn: 1, rowsSame: 0, rowsSkipped: 0, rowsLook: 0 });
+  assert.equal((await rowsOf(looking.body.id)).filter((r) => r.state === 'look').length, 0);
+  // Stored, not yet looked at.
+  const waiting = await send(customers(person({ 'Account Number': q.v['Account Number'] }), person()));
+  await readNextFile(owner.shop.id);
+  await deleted((await byAccount(q.v['Account Number'])).id);
+  await finish();
+  const w = await fileIn(waiting.body.id);
+  assert.deepEqual({ state: w.state, rowsTotal: w.rowsTotal, ...counts(w) }, { state: 'done', rowsTotal: 1, rowsIn: 1, rowsSame: 0, rowsSkipped: 0, rowsLook: 0 });
+});
+
+test('a waiting row with only their email or phone, not yet looked at, needs a look once it is', async () => {
+  const p = person();
+  await send(customers(p));
+  await finish();
+  const res = await send(customers(person({ Email: p.v.Email }), person({ Phone: p.v.Phone })));
+  await readNextFile(owner.shop.id);
+  await deleted((await byAccount(p.v['Account Number'])).id);
+  await finish();
+  assert.deepEqual(await whyOf(res.body.id), ['Shares contact details with a customer who was deleted', 'Shares contact details with a customer who was deleted']);
+  const f = await fileIn(res.body.id);
+  assert.deepEqual({ rowsTotal: f.rowsTotal, ...counts(f) }, { rowsTotal: 2, rowsIn: 0, rowsSame: 0, rowsSkipped: 0, rowsLook: 2 });
+});
+
+test('deleting someone keeps rows that only share their details, however the phone was written; a row with neither is left as it was', async () => {
   const p = person();
   await send(customers(p));
   await finish();
   const c = await byAccount(p.v['Account Number']);
   const about = await send(customers(person({ Email: p.v.Email }), person({ Phone: p.v.Phone }), person({ 'First Name': null, 'Last Name': null })));
   const national = p.v.Phone.replace(/\D/g, '').slice(1);
-  const bike = await send(bikes({ 'Mobile Number': `+44 (0)${national}`, 'Customer Name': 'x' }));
+  // Rows with no description point at nobody: only their phone can match.
+  const bike = await send(bikes({ 'Mobile Number': `+44 (0)${national}`, 'Customer Name': 'x' }, { 'Phone Number': `0044 ${national}`, 'Customer Name': 'x' }));
   await finish();
   assert.equal((await fileIn(about.body.id)).rowsLook, 3);
-  assert.equal((await fileIn(bike.body.id)).rowsLook, 1);
+  assert.deepEqual(await whyOf(bike.body.id), ['No description', 'No description']);
   await deleted(c.id);
-  const left = await inShop(() => prepare("SELECT count(*)::int AS n FROM move_rows WHERE file_id = ? AND state = 'look'").get(about.body.id));
-  assert.equal(left.n, 1, 'only the row with no name, which says nothing about them');
+  assert.deepEqual(await whyOf(about.body.id), ['Shares contact details with a customer who was deleted', 'Shares contact details with a customer who was deleted', 'No name']);
+  assert.deepEqual(await whyOf(bike.body.id), ['Shares contact details with a customer who was deleted', 'Shares contact details with a customer who was deleted']);
   const f = await fileIn(about.body.id);
-  assert.deepEqual({ rowsTotal: f.rowsTotal, rowsLook: f.rowsLook }, { rowsTotal: 1, rowsLook: 1 });
-  assert.equal((await fileIn(bike.body.id)).rowsLook, 0);
-  const text = JSON.stringify(await inShop(() => prepare('SELECT data FROM move_rows WHERE file_id = ANY(?::int[])').all([about.body.id, bike.body.id])));
-  assert.ok(!text.includes(p.v.Email) && !text.includes(p.v.Phone) && !text.includes(national));
+  assert.deepEqual({ rowsTotal: f.rowsTotal, rowsLook: f.rowsLook }, { rowsTotal: 3, rowsLook: 3 });
+  assert.equal((await fileIn(bike.body.id)).rowsLook, 2);
 });
 
-test('deleting someone removes a row pointing at them even after their email and phone changed', async () => {
+test('a row pointing at them stays, with the link gone, even after their email and phone changed', async () => {
   const p = person();
   await send(customers(p));
   await finish();
@@ -485,7 +578,9 @@ test('deleting someone removes a row pointing at them even after their email and
   assert.equal((await fileIn(res.body.id)).rowsLook, 1);
   assert.equal((await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: c.name, email: `${key().slice(0, 8)}@example.test`, phone: newPhone() } })).status, 200);
   await deleted(c.id);
-  assert.equal((await fileIn(res.body.id)).rowsLook, 0);
+  const [row] = await rowsOf(res.body.id);
+  assert.deepEqual({ why: row.why, customer: row.customer_id }, { why: 'Shares contact details with a customer who was deleted', customer: null });
+  assert.equal((await fileIn(res.body.id)).rowsLook, 1);
 });
 
 test('a bikes batch and a deletion at the same moment don\'t deadlock, and no bike row is failed by it', async () => {
