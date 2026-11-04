@@ -69,9 +69,11 @@ export function RowNewsLine({ news }: { news: RowNews }) {
  * focus back by itself: this does, once it's gone, if what opened it is still there.
  */
 export function useFocusBack() {
+  // Read while first drawing: the pop-up takes the focus as soon as it opens.
+  const from = useRef(document.activeElement);
   useEffect(() => {
-    const from = document.activeElement;
-    return () => { if (from instanceof window.HTMLElement && from.isConnected) from.focus(); };
+    const opener = from.current;
+    return () => { if (opener instanceof window.HTMLElement && opener.isConnected) opener.focus(); };
   }, []);
 }
 
