@@ -9,8 +9,8 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
-const PADS = { id: 1, productId: 11, name: 'Shimano brake pads', sku: 'B05S-RX', barcode: '4524667000001', price: 28, qty: 2 };
-const THING = { id: 2, productId: 12, name: '[Product]', sku: '[Supplier code]', barcode: null, price: 1.5, qty: 3 };
+const PADS = { id: 1, productId: 11, name: 'Shimano brake pads', sku: 'B05S-RX', barcode: '4524667000001', pricePence: 2800, qty: 2 };
+const THING = { id: 2, productId: 12, name: '[Product]', sku: '[Supplier code]', barcode: null, pricePence: 150, qty: 3 };
 const DELIVERY = { id: 77, supplierId: 1, supplierName: '[Supplier]', items: 5, bookedInAt: new Date().toISOString(), bookedBy: 'Jack Lewis', lines: [THING, PADS], setAside: [], stillToCome: [], bookedCost: 0 };
 
 const realFetch = globalThis.fetch;

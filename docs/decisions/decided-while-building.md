@@ -2141,6 +2141,15 @@ WP-1.5's. So: slice C, WP-2.3.
 26. **A batch stops at 250ms or 100 rows,** with a 25ms breath after, and rows sent back when a file finishes go 500 at a time. A large file takes a few minutes more because of the breaths and the limit: about 165 bikes a second measured, so 60,000 in about 6 minutes.
 27. **Customers have four new generated columns for matching** (`email_key`, `phone_key`, `name_key`, `citrus_account_key`), since row-level security stopped migration 112's indexes being used. Those indexes stay in the database, unused here, as removing them is a separate change. Measured numbers are in `openspec/changes/citrus-import-fix`, design 23.
 
+### 4 Nov 2026: products in whole pence (WP-1.5, piece 1; `openspec/changes/products-in-pence`; `st-list`, `st-product`, nothing on screen changes)
+
+1. **The database works out the pence from the pounds,** rather than the app writing both. Old code keeps writing pounds and can't get it wrong. Adding the columns locks the products table while it runs, about 3.7 seconds with 1,000,000 products; a read waited 3.5 seconds at most. Filling plain columns instead took 12 seconds, under the same lock.
+2. **Up to £99,999,999.99, as the pounds column has always held.** So a figure can be bigger than the till's old whole-number pence could carry; the till's copy no longer fails on one.
+3. **A cost below nothing stays below nothing,** in pence too: the old form can save one, and an adjustment still values it at its size. A new save in pence can't set one.
+4. **Who can change a price is as it was:** anyone signed in, through the server. Stock decision 11 says Staff can't change prices; no screen lets them yet except the old app. It's closed when the product's Edit is built (piece 6), or by roles.
+5. **A product's save waits 2 seconds for a held product,** then says "Wheelhouse is busy with this product just now. Try again in a moment." The 2 seconds is the Citrus import's. Other stock changes get their limit in piece 2.
+6. **Noted, not changed: the old app's pounds path still answers an error for a price over the column's limit,** and a stock list search reads the whole products table across every business, about 45ms at 1,000,000 (the row-level check isn't an index). Piece 6 looks at the search.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

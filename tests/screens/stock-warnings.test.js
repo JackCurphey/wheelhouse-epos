@@ -14,7 +14,7 @@ const JO = { ...JACK, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner
 // Shimano brake pads, as drawn; the numbers are the test's own.
 const ADJUSTED = { kind: 'stock_adjusted', movementId: 31, productId: 12, productName: 'Shimano brake pads', change: -2, valuePence: 2800, reason: 'damaged', note: '', byName: 'Jo Taylor', at: new Date().toISOString() };
 const BELOW = { kind: 'below_zero', count: 2, takeId: null };
-const product = (over) => ({ id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 'Shimano brake pads', category: '[Category]', price: 28, cost: 14, stockQty: 6, lowStockThreshold: 3, supplier: '[Supplier]', active: true, showOnline: false, description: '', photoUrl: null, vatRateBp: 2000, ...over });
+const product = (over) => ({ id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 'Shimano brake pads', category: '[Category]', pricePence: 2800, costPence: 1400, stockQty: 6, lowStockThreshold: 3, supplier: '[Supplier]', active: true, showOnline: false, description: '', photoUrl: null, vatRateBp: 2000, ...over });
 
 const realFetch = globalThis.fetch;
 let current;

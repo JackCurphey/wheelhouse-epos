@@ -38,9 +38,9 @@ export async function notCountedOf(take) {
 // what moved after its last count.
 export async function differencesOf(take) {
   const counted = await prepare(
-    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, p.stock_qty, ROUND(p.cost * 100)::int AS cost_pence
+    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, p.stock_qty, p.cost_pence
        FROM stock_take_counts c JOIN products p ON p.id = c.product_id
-      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.stock_qty, p.cost ORDER BY c.product_id`
+      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.stock_qty, p.cost_pence ORDER BY c.product_id`
   ).all(take.id);
   if (counted.length === 0) return [];
   // A till sale counts by close-the-day's rule (second review, 28 Oct): an

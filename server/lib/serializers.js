@@ -14,6 +14,10 @@ export function serializeProduct(row, costs = false) {
     category: row.category,
     price: row.price,
     cost: costs ? row.cost : null,
+    // Whole pence (openspec/changes/products-in-pence). The pounds above stay for
+    // the old app, the till's screen and purchase orders until those move.
+    pricePence: row.price_pence,
+    costPence: costs ? row.cost_pence : null,
     stockQty: row.stock_qty,
     lowStockThreshold: row.low_stock_threshold,
     supplier: row.supplier,

@@ -13,7 +13,7 @@ export async function buildSnapshot(till) {
   // break this. Sequential awaits get the same one-client-at-a-time
   // behaviour without depending on a deprecated queueing path.
   const products = await prepare(
-    `SELECT id, sku, barcode, name, category, ROUND(price * 100)::int AS price_pence, vat_rate_bp
+    `SELECT id, sku, barcode, name, category, price_pence, vat_rate_bp
      FROM products WHERE active = 1 ORDER BY name`
   ).all();
   const customers = await prepare('SELECT id, name, email, phone FROM customers WHERE active = 1 ORDER BY name').all();

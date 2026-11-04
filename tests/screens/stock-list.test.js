@@ -12,11 +12,11 @@ const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: t
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
 // Shimano brake pads B05S-RX £28.00 as drawn; the rest of each is a bracketed
 // placeholder, or a number only the test needs (stock, cost, levels).
-const product = (over) => ({ id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 'Shimano brake pads', category: '[Category]', price: 28, cost: 14, stockQty: 6, lowStockThreshold: 3, supplier: '[Supplier]', active: true, showOnline: false, description: '', photoUrl: null, vatRateBp: 2000, ...over });
+const product = (over) => ({ id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 'Shimano brake pads', category: '[Category]', pricePence: 2800, costPence: 1400, stockQty: 6, lowStockThreshold: 3, supplier: '[Supplier]', active: true, showOnline: false, description: '', photoUrl: null, vatRateBp: 2000, ...over });
 const LIST = [
   product({}),
-  product({ id: 2, sku: '[Supplier code 2]', name: '[Product running low]', price: 10, cost: 5, stockQty: 2 }),
-  product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', price: 10, cost: 5, stockQty: -1 }),
+  product({ id: 2, sku: '[Supplier code 2]', name: '[Product running low]', pricePence: 1000, costPence: 500, stockQty: 2 }),
+  product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', pricePence: 1000, costPence: 500, stockQty: -1 }),
 ];
 const HISTORY = [
   { id: 13, type: 'till_sale', change: -2, note: 'Till sale B1-[0000]', at: '2026-09-01T14:00:00.000Z' },
@@ -48,9 +48,9 @@ async function open(path, { me = OWNER, page = { ...product({}), history: HISTOR
     if (u.pathname === '/api/auth/me') return reply(200, me);
     if (u.pathname === '/api/products') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
-      return reply(200, LIST.filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q)).map((p) => (noCosts ? { ...p, cost: null } : p)));
+      return reply(200, LIST.filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q)).map((p) => (noCosts ? { ...p, costPence: null } : p)));
     }
-    if (u.pathname === '/api/products/1') return reply(200, { ...page, cost: me.isOwner && !noCosts ? page.cost : null });
+    if (u.pathname === '/api/products/1') return reply(200, { ...page, costPence: me.isOwner && !noCosts ? page.costPence : null });
     if (u.pathname === '/api/products/404') return reply(404, { error: 'Product not found' });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });

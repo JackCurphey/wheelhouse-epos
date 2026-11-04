@@ -35,6 +35,7 @@ export const CONVERTED = [
   { table: 'workshop_services', columns: ['price'] },
   { table: 'workshop_quote_lines', columns: ['unit_amount'] },
   { table: 'workshop_job_services', columns: ['booked_price'] },
+  { table: 'products', columns: ['price', 'cost'] }, // products-in-pence, migration 114
 ];
 
 // The shop's clock when it has no workshop settings row: the time_zone
