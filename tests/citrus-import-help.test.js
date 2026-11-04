@@ -191,3 +191,51 @@ test('a card holding their details counts too, and the whole request goes: nothi
   assert.equal(left.n, 0);
 });
 
+// ---- How exactly it has to match: Jack, 4 Nov, answer 4 ----
+
+test('a one-word name clears nothing: "Will" and a request about Sam Patel', async () => {
+  const { id } = await aPerson({ 'First Name': 'Will', 'Last Name': null });
+  const text = await asked(`The import will not finish for Sam Patel ${key().slice(0, 4)}`);
+  await deleted(id);
+  assert.equal(await stillThere(text), true);
+});
+
+test('a two-word name still clears a request in upper case', async () => {
+  const { p, id } = await aPerson({ 'First Name': 'Sam', 'Last Name': `Patel${key().slice(0, 6)}` });
+  const text = await asked(`THE IMPORT WILL NOT FINISH FOR ${p.name.toUpperCase()}`);
+  await deleted(id);
+  assert.equal(await stillThere(text), false);
+});
+
+test('a phone inside a longer number clears nothing: 555 1234 and a barcode', async () => {
+  const { id } = await aPerson({ Phone: '555 1234' });
+  const text = await asked(`barcode 5012345551234 ${key().slice(0, 4)}x`);
+  await deleted(id);
+  assert.equal(await stillThere(text), true);
+});
+
+test('a phone after a longer run of digits, or typed straight after another number, stays, as Jack accepted', async () => {
+  const { p, id } = await aPerson();
+  const digits = p.v.Phone.replace(/\D/g, '').slice(1);
+  const longer = await asked(`Ref 9${digits}1 ${key().slice(0, 4)}x`);
+  const straightAfter = await asked(`Ring 07700 000000 0${digits} ${key().slice(0, 4)}x`);
+  await deleted(id);
+  assert.deepEqual([await stillThere(longer), await stillThere(straightAfter)], [true, true]);
+});
+
+test('an international and a spaced phone still clear a request, on a line of their own', async () => {
+  for (const write of [(d) => `+44 ${d.slice(0, 4)} ${d.slice(4)}`, (d) => `0${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`, (d) => `(0${d.slice(0, 4)}) ${d.slice(4)}`, (d) => `0${d}\n12345`]) {
+    const { p, id } = await aPerson();
+    const digits = p.v.Phone.replace(/\D/g, '').slice(1);
+    const text = await asked(`Ring\n${write(digits)}\n[Note ${key().slice(0, 4)}]`);
+    await deleted(id);
+    assert.equal(await stillThere(text), false, write('0123456789'));
+  }
+});
+
+test('the card holds this page\'s own headings: a name or phone isn\'t looked for there, an email still is', async () => {
+  const { id } = await aPerson({ 'First Name': 'Came', 'Last Name': 'Across' });
+  const text = await asked(`[Plain words ${key().slice(0, 6)}]`, 'Here’s what came across');
+  await deleted(id);
+  assert.equal(await stillThere(text), true);
+});
