@@ -198,7 +198,10 @@ export async function forgetForMove(customerIds, emails) {
   }
   const phones = people.flatMap((p) => phoneForms(p.phone));
   const accounts = people.map((p) => accountKey(p.citrus_account)).filter(Boolean);
-  const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
+  // With the names of anyone merged into them: a hidden record removed after its 30 days
+  // leaves only its name on the merge, and a row moved to the kept record still has that name.
+  const mergedNames = await prepare('SELECT other_name FROM customer_merges WHERE kept_id = ANY(?::int[]) AND undone_at IS NULL').all(customerIds);
+  const names = new Set([...people.map((p) => p.name), ...mergedNames.map((m) => m.other_name)].map(cleanName).filter(Boolean));
   const rows = await prepare(
     `SELECT id, file_id, state, data, (lower(trim(data->>'Account Number')) = ANY(?::text[])) AS by_account FROM move_rows
       WHERE state IN ('waiting', 'look', 'left_out') AND (
