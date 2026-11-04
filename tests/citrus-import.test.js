@@ -9,7 +9,7 @@ import { randomBytes } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
-import { bringBatch, readNextFile } from '../server/move/bring-across.js';
+import { bringBatch, readNextFile, startBringingAcross, wakeBringingAcross } from '../server/move/bring-across.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { staffLogin } from './helpers/till.js';
@@ -27,9 +27,12 @@ before(async () => {
   jo = await staffLogin(owner.shop.id);
 });
 after(async () => {
-  if (owner) await deleteTestShop(owner.shop.id);
-  if (server) await server.stop();
-  await pool.end();
+  try {
+    if (owner) await deleteTestShop(owner.shop.id);
+  } finally {
+    if (server) await server.stop();
+    await pool.end();
+  }
 });
 
 const staff = (path, options, who = owner) => staffRequest(server.baseUrl, who.cookie, path, options);
@@ -453,4 +456,43 @@ test('a test server doesn\'t pick up files by itself unless it\'s asked to', asy
   await pause(3000);
   assert.equal((await fileIn(res.body.id)).state, 'reading');
   await finish();
+});
+
+test('the timer looks at every shop once at the start, then only the shops woken, and again at any with more to do', async () => {
+  const calls = [];
+  const answers = [new Set(), new Set([7])];
+  const round = async (stopping, only) => { calls.push(only === null ? 'all' : [...only].sort()); return answers.shift() ?? new Set(); };
+  const stop = startBringingAcross(10, { round, scanAtStart: true });
+  try {
+    await pause(60);
+    assert.deepEqual(calls, ['all'], 'once, and quiet after');
+    wakeBringingAcross(5);
+    await pause(60);
+    assert.deepEqual(calls, ['all', [5], [7]], 'the woken shop, then the one with more to do, and no other');
+  } finally {
+    await stop();
+  }
+});
+
+test('asked not to, the timer doesn\'t look at every shop at the start; a failed round looks again at what it was given', async () => {
+  const calls = [];
+  let fail = true;
+  const round = async (stopping, only) => {
+    calls.push(only === null ? 'all' : [...only]);
+    if (fail) { fail = false; throw new Error('stopped'); }
+    return new Set();
+  };
+  const realError = console.error;
+  console.error = () => {};
+  const stop = startBringingAcross(10, { round, scanAtStart: false });
+  try {
+    await pause(50);
+    assert.deepEqual(calls, []);
+    wakeBringingAcross(9);
+    await pause(60);
+    assert.deepEqual(calls, [[9], [9]]);
+  } finally {
+    console.error = realError;
+    await stop();
+  }
 });
