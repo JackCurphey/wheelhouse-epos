@@ -7,7 +7,7 @@ import { installDom, importFresh } from './dom.js';
 
 export const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 export const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
-export const FILE = (over) => ({ id: 1, report: 'customers', fileName: '[file name]', state: 'done', rowsTotal: 9, rowsIn: 7, rowsSame: 0, rowsSkipped: 0, rowsLook: 2, rowsLeftOut: 0, rowsFixed: 0, stockIn: 0, stockLook: 0, ...over });
+export const FILE = (over) => ({ id: 1, report: 'customers', fileName: '[file name]', state: 'done', rowsTotal: 9, rowsIn: 7, rowsSame: 0, rowsSkipped: 0, rowsLook: 2, rowsLeftOut: 0, rowsFixed: 0, stockIn: 0, stockLook: 0, stockLeftOut: 0, ...over });
 export const NO_NAME = { id: 11, report: 'customers', why: 'No name', seen: 'seen-11', fields: { 'Account Number': 'A11', Email: 'row@example.test' } };
 export const SAME = { id: 12, report: 'customers', why: 'Looks like the same person as Maya Patel', seen: 'seen-12', fields: { 'First Name': 'Sam', 'Last Name': 'Patel', 'Account Number': 'A12', Email: 'maya@example.test' }, sameAs: { id: 5, name: 'Maya Patel' } };
 export const SHARED = { id: 13, report: 'customers', why: 'Shares contact details with a customer who was deleted', seen: 'seen-13', fields: { 'First Name': '[Customer', 'Last Name': 'name]', 'Account Number': 'A13', Email: 'gone@example.test' } };
@@ -43,6 +43,7 @@ export async function open({ files = [FILE()], rows = [NO_NAME, SAME], total, an
     if (path === '/api/move/look') return json(200, { rows: state.rows, total: total ?? state.rows.length });
     if (path === '/api/move/files') {
       state.fileSends.push(JSON.parse(options.body));
+      state.whenSent?.(state);
       return json(202, FILE({ state: 'bringing' }));
     }
     if (path.startsWith('/api/move/')) {

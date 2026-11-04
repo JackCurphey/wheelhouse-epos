@@ -2,10 +2,11 @@
 // citrus-import-fix; mv-fix). The rules about deleted customers and the same person
 // are in citrus-import-fix-rules.test.js.
 import test from 'node:test';
+import { createHmac } from 'node:crypto';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
-import { SAME_PERSON } from '../server/move/bring-customers.js';
-import { aSite, barcodes, bikes, body, bring, bringBatch, browser, byAccount, bySku, code, countsRight, customers, deleteTestShop, finish, fix, historyOf, inShop, key, leaveOut, lookIn, oneLook, owner, pads, person, prepare, priceList, readNextFile, rowsOf, send, server, staff, staffFreshCookie, staffRequest, staffSignup } from './helpers/move-fix-kit.js';
+import { SAME_PERSON, SHARED_CONTACT } from '../server/move/bring-customers.js';
+import { aDeletedCustomer, aSharedRow, aSite, barcodes, bikes, body, bring, bringBatch, browser, byAccount, bySku, code, countsRight, customers, deleteTestShop, deleted, finish, fix, historyOf, inShop, key, leaveOut, lookIn, newPhone, oneLook, owner, pads, person, prepare, priceList, readNextFile, rowsOf, send, server, staff, staffFreshCookie, staffRequest, staffSignup } from './helpers/move-fix-kit.js';
 
 // ---- The list ----
 
@@ -229,13 +230,43 @@ test('leaving a row out keeps it, makes nothing, and the counts and stock look f
   assert.equal((await fix(look, { Price: '28' })).body.code, 'row_changed', 'it can\'t then be fixed');
 });
 
-test('leaving out a row about someone clears its link to them', async () => {
-  const here = person();
-  await bring(customers(here));
-  const fileId = await bring(customers(person({ Email: here.v.Email })));
-  assert.ok((await rowsOf(fileId))[0].customer_id);
+test('a row left out keeps its link, so it goes if they\'re deleted even after changing their email and phone', async () => {
+  const maya = person();
+  await bring(customers(maya));
+  const c = await byAccount(maya.v['Account Number']);
+  const copy = person({ 'First Name': maya.v['First Name'], 'Last Name': maya.v['Last Name'], Email: maya.v.Email });
+  const fileId = await bring(customers(copy));
+  assert.equal((await rowsOf(fileId))[0].customer_id, c.id);
   assert.equal((await leaveOut(await oneLook(fileId))).status, 200);
-  assert.equal((await rowsOf(fileId))[0].customer_id, null);
+  assert.equal((await rowsOf(fileId))[0].customer_id, c.id, 'kept');
+  const moved = await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: c.name, email: `moved.${key().slice(0, 6)}@example.test`, phone: newPhone() } });
+  assert.equal(moved.status, 200, JSON.stringify(moved.body));
+  await deleted(c.id);
+  assert.deepEqual(await rowsOf(fileId), [], 'as a row needing a look would');
+  const f = await countsRight(fileId);
+  assert.deepEqual([f.rowsTotal, f.rowsLeftOut], [0, 0]);
+});
+
+test('a row left out with another name, linked to someone deleted, stays with no link', async () => {
+  const maya = person();
+  await bring(customers(maya));
+  const c = await byAccount(maya.v['Account Number']);
+  const fileId = await bring(customers(person({ Email: maya.v.Email })));
+  assert.equal((await leaveOut(await oneLook(fileId))).status, 200);
+  await deleted(c.id);
+  const [row] = await rowsOf(fileId);
+  assert.deepEqual([row.state, row.customer_id, row.why], ['left_out', null, SHARED_CONTACT]);
+  await countsRight(fileId);
+});
+
+test('a row left out with stock is counted as stock left out', async () => {
+  const fileId = await bring(priceList(pads({ Price: null })));
+  assert.equal((await leaveOut(await oneLook(fileId))).status, 200);
+  const f = await countsRight(fileId);
+  assert.deepEqual([f.stockLook, f.stockLeftOut], [0, 1]);
+  const none = await bring(priceList(pads({ Price: null, 'Qty On Hand': 0 })));
+  assert.equal((await leaveOut(await oneLook(none))).status, 200);
+  assert.equal((await countsRight(none)).stockLeftOut, 0);
 });
 
 // ---- A row that changed, or a wait that's too long ----
@@ -267,7 +298,11 @@ test('told to wait too long for the move files, a save says try again and change
   });
   try {
     await new Promise((r) => { setTimeout(r, 100); });
-    const res = await fix(look, { Price: '28' });
+    // With a limit, so a save that waits for ever fails here instead of hanging.
+    const res = await Promise.race([
+      fix(look, { Price: '28' }),
+      new Promise((_, no) => { setTimeout(() => no(new Error('the save kept waiting for the lock')), 6000); }),
+    ]);
     assert.deepEqual([res.status, res.body.code], [503, 'busy']);
   } finally {
     release();
@@ -335,4 +370,141 @@ test('only the Owner sees or sorts rows, and another shop\'s row isn\'t there', 
   }
   assert.equal((await oneLook(fileId)).seen, look.seen);
   assert.equal((await leaveOut(look)).status, 200);
+});
+
+// ---- The review, 4 Nov ----
+
+test('a fixed row\'s stock history names who fixed it, not who sent the file', async () => {
+  const row = pads({ Price: null });
+  const fileId = await bring(priceList(row));
+  const made = await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `${key().slice(0, 8)}@example.test`, password: 'password123' } });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  await inShop(() => prepare('UPDATE move_files SET sent_by_login_id = ? WHERE id = ?').run(made.body.loginId, fileId));
+  assert.equal((await fix(await oneLook(fileId), { Price: '28' })).status, 200);
+  const product = await bySku(row['Item Lookup Code']);
+  assert.equal((await historyOf(product.id))[0].login_id, owner.loginId);
+});
+
+test('a bike with the shared reason needs the tick even when the fix takes the email away', async () => {
+  const gone = await aDeletedCustomer();
+  const live = person();
+  await bring(customers(live));
+  const fileId = await bring(bikes({ Description: '[Bike]', 'Serial Number': `[Frame ${key().slice(0, 6)}]`, 'Customer Name': live.name, 'Email Address': gone.p.v.Email }));
+  const look = await oneLook(fileId);
+  assert.equal(look.why, SHARED_CONTACT);
+  const res = await fix(look, { 'Email Address': live.v.Email });
+  assert.deepEqual([res.status, res.body.decide], [422, 'shared']);
+  const c = await byAccount(live.v['Account Number']);
+  assert.equal((await inShop(() => prepare('SELECT count(*)::int AS n FROM customer_bikes WHERE customer_id = ?').get(c.id))).n, 0);
+});
+
+test('only true is a tick, and only a list of whole numbers says who it isn\'t', async () => {
+  const { son, row } = await aSharedRow();
+  for (const shared of ['yes', 1, 'true', [true]]) {
+    const res = await fix(row, {}, { decided: { shared } });
+    assert.deepEqual([res.status, res.body.decide], [422, 'shared'], JSON.stringify(shared));
+  }
+  assert.equal(await byAccount(son.v['Account Number']), undefined);
+  const here = person();
+  await bring(customers(here));
+  const c = await byAccount(here.v['Account Number']);
+  const fileId = await bring(customers(person({ Email: here.v.Email })));
+  const look = await oneLook(fileId);
+  for (const notSameAs of [c.id, String(c.id), [String(c.id)], true]) {
+    const res = await fix(look, {}, { decided: { notSameAs } });
+    assert.deepEqual([res.status, res.body.decide], [422, 'same_person'], JSON.stringify(notSameAs));
+  }
+});
+
+for (const [how, bikeHas] of [
+  ['email', (p) => ({ 'Email Address': p.v.Email.toUpperCase() })],
+  ['mobile', (p) => ({ 'Mobile Number': `+44 ${p.v.Phone.replace(/\D/g, '').slice(1)}` })],
+  ['phone', (p) => ({ 'Phone Number': p.v.Phone.replace(/\D/g, '') })],
+  ['name', () => ({ 'Customer Name': null })],
+]) {
+  test(`a fixed customer brings along a bike that fits them by ${how} alone`, async () => {
+    const p = person({ 'First Name': null, 'Last Name': null });
+    const lastName = `Person${key().slice(0, 6)}`;
+    const named = how === 'name' ? { 'Customer Name': `Maya ${lastName}` } : {};
+    const bikeFile = await bring(bikes({ Description: '[Bike]', 'Serial Number': `[Frame ${key().slice(0, 6)}]`, ...bikeHas(p), ...named }));
+    const fileId = await bring(customers(p));
+    assert.equal((await fix(await oneLook(fileId), { 'First Name': 'Maya', 'Last Name': lastName })).status, 200);
+    assert.deepEqual((await rowsOf(bikeFile)).map((r) => r.state), ['waiting']);
+    await finish();
+    const c = await byAccount(p.v['Account Number']);
+    assert.equal((await inShop(() => prepare('SELECT count(*)::int AS n FROM customer_bikes WHERE customer_id = ?').get(c.id))).n, 1);
+  });
+}
+
+test('a row like two people asks about each in turn, makes nobody until both are ticked, and merges nobody', async () => {
+  const mum = person();
+  const dad = person();
+  await bring(customers(mum, dad));
+  const mumId = (await byAccount(mum.v['Account Number'])).id;
+  const dadId = (await byAccount(dad.v['Account Number'])).id;
+  const son = person({ Email: mum.v.Email, Phone: dad.v.Phone });
+  const fileId = await bring(customers(son));
+  const look = await oneLook(fileId);
+  const first = await fix(look);
+  assert.deepEqual([first.status, first.body.decide, first.body.sameAs.id], [422, 'same_person', mumId]);
+  const second = await fix(look, {}, { decided: { notSameAs: [mumId] } });
+  assert.deepEqual([second.status, second.body.decide, second.body.sameAs.id, second.body.sameAs.name], [422, 'same_person', dadId, dad.name]);
+  assert.equal(await byAccount(son.v['Account Number']), undefined, 'one tick isn\'t enough');
+  assert.equal((await fix(look, {}, { decided: { notSameAs: [dadId] } })).body.sameAs.id, mumId, 'nor the other one alone');
+  const both = await fix(look, {}, { decided: { notSameAs: [mumId, dadId] } });
+  assert.deepEqual([both.status, both.body.state], [200, 'in'], JSON.stringify(both.body));
+  assert.notEqual((await byAccount(son.v['Account Number'])).id, mumId);
+  await countsRight(fileId);
+});
+
+test('a deleted account number is known in any case, with spaces around it, typed or in a file', async () => {
+  const gone = await aDeletedCustomer({ 'Account Number': `Ab-${key().slice(0, 6)}` });
+  const number = gone.p.v['Account Number'];
+  const typed = person({ 'First Name': null, 'Last Name': null });
+  const typedFile = await bring(customers(typed));
+  const res = await fix(await oneLook(typedFile), { 'First Name': 'Maya', 'Last Name': 'Person', 'Account Number': `  ${number.toUpperCase()} ` });
+  assert.deepEqual([res.status, res.body.state], [200, 'skipped'], JSON.stringify(res.body));
+  const inFile = person({ 'Account Number': number.toLowerCase() });
+  const fileId = await bring(customers(inFile));
+  assert.deepEqual((await rowsOf(fileId)).map((r) => [r.state, r.data]), [['skipped', {}]]);
+  assert.equal(await byAccount(number.toLowerCase()), undefined);
+});
+
+test('a code left by a deletion before this change still spots its own account number', async () => {
+  const number = `Old-${key().slice(0, 6)}`;
+  await aDeletedCustomer();
+  await inShop(async () => {
+    const { salt } = await prepare('SELECT salt FROM move_deleted_salt').get();
+    await prepare('INSERT INTO move_deleted_codes (kind, code) VALUES (?, ?) RETURNING id').get('account', createHmac('sha256', salt).update(`account:${number}`).digest('hex'));
+  });
+  const fileId = await bring(customers(person({ 'Account Number': number })));
+  assert.deepEqual((await rowsOf(fileId)).map((r) => r.state), ['skipped']);
+});
+
+test('a waiting row with their account number in another case goes when they\'re deleted', async () => {
+  const maya = person({ 'Account Number': `Ab-${key().slice(0, 6)}` });
+  await bring(customers(maya));
+  const c = await byAccount(maya.v['Account Number']);
+  const rowWith = person({ 'First Name': null, 'Last Name': null, 'Account Number': ` ${maya.v['Account Number'].toUpperCase()}` });
+  const fileId = await bring(customers(rowWith));
+  // In another case it's the same account, so it has already come across as her.
+  assert.deepEqual((await rowsOf(fileId)).map((r) => r.state), ['same'], 'A1 and a1 are one account');
+  const other = await bring(customers(person({ 'First Name': null, 'Last Name': null })));
+  await inShop(() => prepare(`UPDATE move_rows SET data = jsonb_set(data, '{Account Number}', to_jsonb(?::text)) WHERE file_id = ?`).run(` ${maya.v['Account Number'].toUpperCase()}`, other));
+  await deleted(c.id);
+  assert.deepEqual(await rowsOf(other), []);
+  const f = await countsRight(other);
+  assert.deepEqual([f.rowsTotal, f.rowsLook], [0, 0]);
+});
+
+test('removing a staff record who sorted a row works, and the row stays with nobody named', async () => {
+  const fileId = await bring(priceList(pads({ Price: null })));
+  assert.equal((await leaveOut(await oneLook(fileId))).status, 200);
+  const made = await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `${key().slice(0, 8)}@example.test`, password: 'password123' } });
+  const { employee_id: employeeId } = await inShop(() => prepare('SELECT employee_id FROM logins WHERE id = ?').get(made.body.loginId));
+  await inShop(() => prepare('UPDATE move_rows SET sorted_by_employee_id = ? WHERE file_id = ?').run(employeeId, fileId));
+  const res = await staff(`/api/employees/${employeeId}/permanent`, { method: 'DELETE' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const [row] = await rowsOf(fileId);
+  assert.deepEqual([row.state, row.sorted_by_employee_id], ['left_out', null]);
 });

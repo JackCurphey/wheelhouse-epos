@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { Card, Page, Row, mono } from '@/screens/deliveries/deliveries-bits.tsx';
-import { FixBoard } from './fix-board.tsx';
+import { FixBoard, RowNewsLine, type RowNews } from './fix-board.tsx';
 import { HelpDialog, HelpLink, HelpThanks } from './ask-us-to-help.tsx';
 
 /**
@@ -19,7 +19,7 @@ import { HelpDialog, HelpLink, HelpThanks } from './ask-us-to-help.tsx';
  */
 type MoveFile = {
   id: number; report: 'price_list' | 'barcodes' | 'customers' | 'bikes' | null; fileName: string; state: 'reading' | 'cant_read' | 'bringing' | 'done';
-  rowsTotal: number; rowsIn: number; rowsSame: number; rowsSkipped: number; rowsLook: number; rowsLeftOut: number; rowsFixed: number; stockIn: number; stockLook: number;
+  rowsTotal: number; rowsIn: number; rowsSame: number; rowsSkipped: number; rowsLook: number; rowsLeftOut: number; rowsFixed: number; stockIn: number; stockLook: number; stockLeftOut: number;
 };
 type Sending = { key: string; name: string; problem?: 'cant_read' | 'not_sent' };
 
@@ -124,6 +124,18 @@ export function MovePage() {
   const [moreSent, setMoreSent] = useState(false);
   const [asking, setAsking] = useState<string | null>(null);
   const [thanked, setThanked] = useState(false);
+  // What just happened to a row: it shows on whichever board comes next (design 18).
+  const [news, setNews] = useState<RowNews | null>(null);
+  // Going between the rows and the summary, the button pressed has gone: the focus
+  // goes to the new board's heading.
+  const toHeading = useRef(false);
+  useEffect(() => {
+    if (!toHeading.current) return;
+    toHeading.current = false;
+    const heading = document.querySelector<HTMLElement>('section h2');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus();
+  });
 
   // One at a time, so a big drop doesn't send them all at once. A send that got
   // no answer goes again with the same key, so it can't count twice; so does one
@@ -154,6 +166,8 @@ export function MovePage() {
     setSends((all) => (problem ? all.map((s) => (s === send ? { ...s, problem } : s)) : all.filter((s) => s !== send)));
   }
   async function onFiles(files: File[]) {
+    setLooking(false);
+    setNews(null);
     for (const file of files) await sendOne(file);
   }
   // A refused row stays until a file is chosen: going sooner could take the
@@ -214,6 +228,9 @@ export function MovePage() {
   }
 
   const allLooks = sumOf(files, (f) => f.rowsLook);
+  // Nothing left to look at: the next rows are opened by choosing Look at the [n].
+  if (looking && allLooks === 0) setLooking(false);
+  const newsLine = news ? <RowNewsLine news={news} /> : null;
   // Stays on the rows while a fix's bikes or barcodes go round (design 13).
   if (looking && allLooks > 0 && reading.length === 0 && sends.length === 0 && refused.length === 0) {
     return (
@@ -221,7 +238,8 @@ export function MovePage() {
         <Stages />
         <FixBoard count={allLooks} listKey={LOOK_KEY} action={help(`${allLooks} need a look`)}
           kinds={{ products: sumOf(products, (f) => f.rowsLook), customers: sumOf(people, (f) => f.rowsLook) }}
-          onDoneForNow={() => setLooking(false)} onSorted={() => queryClient.invalidateQueries({ queryKey: KEY, exact: true })} />
+          news={news} onNews={setNews}
+          onDoneForNow={() => { toHeading.current = true; setNews(null); setLooking(false); }} onSorted={() => queryClient.invalidateQueries({ queryKey: KEY, exact: true })} />
         {helpBits}
       </Page>
     );
@@ -276,6 +294,7 @@ export function MovePage() {
         <Stages />
         <Card id="t-everything-s-sorted" title="Everything’s sorted" action={help('Everything’s sorted')}>
           <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Everything that fitted is in. The ones you left out are kept, and will be listed under Settings › Office › Your data, to add by hand when you like.</p>
+          {newsLine}
           <ul className="m-0 list-none p-0">
             <Row title="Left out" sub={<>{n(leftOut)} {leftOut === 1 ? 'row' : 'rows'}</>} />
           </ul>
@@ -292,6 +311,7 @@ export function MovePage() {
   const productsSame = sumOf(priceLists, (f) => f.rowsSame);
   // Left out by the owner: not All in without saying so (mv-sorted's files sent afterwards).
   const productsLeft = sumOf(products, (f) => f.rowsLeftOut);
+  const stockLeft = sumOf(priceLists, (f) => f.stockLeftOut);
   const peopleSetAside = sumOf(people, (f) => f.rowsLeftOut);
   const customers = files.filter((f) => f.report === 'customers');
   const bikes = files.filter((f) => f.report === 'bikes');
@@ -302,18 +322,19 @@ export function MovePage() {
     <Page>
       <Stages />
       <Card id="t-here-s-what-came-across" title="Here’s what came across" action={help('Here’s what came across')}>
+        {newsLine}
         <ul className="m-0 list-none p-0">
           {products.length
             ? (
               <Row title="Products" sub={<>{n(productsIn)} brought across{productsSame > 0 ? <> · {n(productsSame)} already here</> : null}{productsLeft > 0 ? <> · {n(productsLeft)} left out</> : null}</>}>
-                {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+                {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : productsLeft > 0 ? null : <Chip tone="ok">All in</Chip>}
               </Row>
             )
             : <Row title="Products"><Chip>Not added yet</Chip></Row>}
           {priceLists.length
             ? (
-              <Row title="Stock levels" sub={<>{n(sumOf(priceLists, (f) => f.stockIn))} brought across</>}>
-                {stockLooks > 0 ? <Chip tone="warn">{stockLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+              <Row title="Stock levels" sub={<>{n(sumOf(priceLists, (f) => f.stockIn))} brought across{stockLeft > 0 ? <> · {n(stockLeft)} left out</> : null}</>}>
+                {stockLooks > 0 ? <Chip tone="warn">{stockLooks} need a look</Chip> : stockLeft > 0 ? null : <Chip tone="ok">All in</Chip>}
               </Row>
             )
             : <Row title="Stock levels"><Chip>Not added yet</Chip></Row>}
@@ -321,14 +342,14 @@ export function MovePage() {
             ? (
               <Row title="Customers"
                 sub={<>{n(sumOf(customers, (f) => f.rowsIn))} brought across{peopleSame > 0 ? <> · {n(peopleSame)} already here</> : null}{peopleLeft > 0 ? <> · {n(peopleLeft)} left out, as they asked</> : null}{peopleSetAside > 0 ? <> · {n(peopleSetAside)} left out</> : null} · {n(sumOf(bikes, (f) => f.rowsIn))} bikes</>}>
-                {peopleLooks > 0 ? <Chip tone="warn">{peopleLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+                {peopleLooks > 0 ? <Chip tone="warn">{peopleLooks} need a look</Chip> : peopleSetAside > 0 ? null : <Chip tone="ok">All in</Chip>}
               </Row>
             )
             : <Row title="Customers"><Chip>Not added yet</Chip></Row>}
           {LATER_KINDS.map((k) => <Row key={k} title={k}><Chip>Later</Chip></Row>)}
         </ul>
         {allLooks > 0
-          ? <div className="flex justify-end pt-1.5"><Button variant="primary" onClick={() => setLooking(true)}>{`Look at the ${allLooks}`}</Button></div>
+          ? <div className="flex justify-end pt-1.5"><Button variant="primary" onClick={() => { toHeading.current = true; setNews(null); setMoreSent(false); setLooking(true); }}>{`Look at the ${allLooks}`}</Button></div>
           : null}
         <DropZone slim title="Drop more files here" onFiles={(f) => void onFiles(f)} />
       </Card>

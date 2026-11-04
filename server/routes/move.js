@@ -8,7 +8,7 @@ import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { wakeBringingAcross } from '../move/bring-across.js';
 import { fixRow, leaveOutRow, lookList } from '../move/fix-row.js';
-import { sendHelp } from '../move/help-inbox.js';
+import { helpInbox, sendHelp } from '../move/help-inbox.js';
 import { readRequestKey } from '../booking-request-key.js';
 import { someoneElseCheckedIn } from './till-pins.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
@@ -18,6 +18,8 @@ const MAX_NAME = 200;
 const MAX_WAITING_A_SHOP = 10;
 const OWNER_ONLY = "Only the shop's owner can bring data across";
 const CANT_READ = { error: 'Wheelhouse couldn’t read this file', code: 'cant_read' };
+const NO_INBOX = { error: 'Ask us to help isn’t connected yet.', code: 'no_inbox' };
+const REUSED_HELP = { error: 'That was sent before with something else. Try again.', code: 'reused_key' };
 const MAX_HELP = 4000;
 const MAX_CARD = 120;
 const REUSED_KEY = { error: 'That was sent before with a different file. Choose the file again.', code: 'reused_key' };
@@ -37,6 +39,7 @@ const serializeFile = (f) => ({
   rowsFixed: f.rows_fixed,
   stockIn: f.stock_in,
   stockLook: f.stock_look,
+  stockLeftOut: f.stock_left_out,
 });
 
 // Owner only, and not while someone else is checked in on this computer.
@@ -59,8 +62,9 @@ async function readRowRequest(req, res, params) {
   if (typeof body.seen !== 'string') { badRequest(res, 'Send what you saw of this row'); return null; }
   return { id: Number(params.id), who, body, key: key.value, seen: body.seen };
 }
-// Only what a person ticked, as it is: anything else counts as not ticked.
-const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Number.isInteger(d?.notSameAs) ? d.notSameAs : null });
+// Only what a person ticked, as it is: anything else counts as not ticked. Each person
+// a row looks like has a tick of their own, so notSameAs is a list.
+const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Array.isArray(d?.notSameAs) ? d.notSameAs.filter((id) => Number.isInteger(id) && Math.abs(id) < 2 ** 31) : [] });
 
 // One send at a time per shop, as each holds a whole file in memory: a stalled
 // upload holds up only its own shop, until its connection ends.
@@ -70,7 +74,7 @@ export function register(route) {
   route('GET', '/api/move', async (req, res) => {
     if (await refused(req, res)) return;
     const files = await prepare('SELECT * FROM move_files ORDER BY id').all();
-    sendJson(res, 200, { files: files.map(serializeFile) });
+    sendJson(res, 200, { files: files.map(serializeFile), helpOffered: helpInbox() !== null });
   });
 
   route('POST', '/api/move/files', async (req, res, params, query, afterRelease, shopId) => {
@@ -156,6 +160,8 @@ export function register(route) {
   // Ask us to help (mv-help): what was written, the card and who's asking; nothing from the rows.
   route('POST', '/api/move/help', async (req, res, params, query, afterRelease, shopId) => {
     if (await refused(req, res)) return;
+    const inbox = helpInbox();
+    if (!inbox) return sendJson(res, 503, NO_INBOX);
     const who = await whoIsBooking(req);
     if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
     const body = await readJsonBody(req);
@@ -171,12 +177,12 @@ export function register(route) {
     const shop = await prepare('SELECT name FROM shops WHERE id = ?').get(shopId);
     let sent;
     try {
-      sent = await sendHelp({ text, card, who, replyTo: ctx.login.email ?? '', shopName: shop.name, ...key.value });
+      sent = await sendHelp({ text, card, who, replyTo: ctx.login.email ?? '', shopName: shop.name, ...key.value }, inbox);
     } catch (err) {
       console.error('Move: Ask us to help couldn’t be passed on', err.code ?? err.name);
       return sendJson(res, 502, { error: 'Couldn’t send. What you wrote is kept here. Try again.', code: 'not_sent' });
     }
-    if (sent.reused) return sendJson(res, 409, REUSED_KEY);
+    if (sent.reused) return sendJson(res, 409, REUSED_HELP);
     sendJson(res, 200, { ok: true });
   });
 
