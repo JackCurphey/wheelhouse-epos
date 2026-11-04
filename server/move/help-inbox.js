@@ -2,6 +2,7 @@
 // design 15). Pretend until Jack says yes to a real inbox, which is a real account:
 // nothing leaves the server, and what was asked stays in move_help_requests. A real
 // one goes here behind the same send(), with its key names in server/hosted-copy-guard.js.
+// A real inbox is needed before the first real shop (Jack, 4 Nov, answer 3).
 import { dbExec, prepare } from '../db.js';
 
 const pretend = {
@@ -9,7 +10,17 @@ const pretend = {
     return { providerId: 'pretend' };
   },
 };
-export const helpInbox = () => pretend;
+
+/**
+ * The inbox, or null when there's none. Pretend only where it's known to be safe: the
+ * hosted test copy, or a server that says it's development or tests. Anything else is
+ * none, an unset NODE_ENV included: a shop's own docker-compose.yml sets none, and
+ * telling a real shop "we've got it" when nobody will see it is the thing to avoid.
+ */
+export function helpInbox(env = process.env) {
+  if (env.WHEELHOUSE_HOSTED_COPY === '1') return pretend;
+  return env.NODE_ENV === 'development' || env.NODE_ENV === 'test' ? pretend : null;
+}
 
 /**
  * Records what was asked, commits, then passes it on. Sent twice, it's recorded once
@@ -17,7 +28,7 @@ export const helpInbox = () => pretend;
  * and sending again with the same key tries again. Returns { reused } when the key was
  * used for something else. Inside the request's shop.
  */
-export async function sendHelp({ text, card, who, replyTo, shopName, keyHash, bodyHash }, inbox = helpInbox()) {
+export async function sendHelp({ text, card, who, replyTo, shopName, keyHash, bodyHash }, inbox) {
   await prepare(
     `INSERT INTO move_help_requests (what_looks_wrong, card, asked_by_login_id, asked_by_employee_id, asked_by_name, reply_to, request_key_hash, request_body_hash)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (shop_id, request_key_hash) DO NOTHING RETURNING id`

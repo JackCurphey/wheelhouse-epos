@@ -108,8 +108,8 @@ test('a row like someone here comes across only with a new email or phone, or a 
   const look = await oneLook(fileId);
   const res = await fix(look);
   assert.deepEqual([res.status, res.body.decide, res.body.sameAs?.name], [422, 'same_person', mum.name]);
-  assert.equal((await fix(look, {}, { decided: { notSameAs: mumBefore.id + 1000 } })).status, 422, 'a tick about someone else');
-  const ticked = await fix(look, {}, { decided: { notSameAs: mumBefore.id } });
+  assert.equal((await fix(look, {}, { decided: { notSameAs: [mumBefore.id + 1000] } })).status, 422, 'a tick about someone else');
+  const ticked = await fix(look, {}, { decided: { notSameAs: [mumBefore.id] } });
   assert.deepEqual([ticked.status, ticked.body.state], [200, 'in'], JSON.stringify(ticked.body));
   const made = await byAccount(son.v['Account Number']);
   assert.notEqual(made.id, mumBefore.id);
@@ -134,7 +134,7 @@ test('a deletion while the pop-up is open: a row sharing their details isn\'t sa
   const open = await oneLook(fileId);
   const c = await byAccount(mum.v['Account Number']);
   await deleted(c.id);
-  for (const save of [() => fix(open, {}, { decided: { notSameAs: c.id, shared: true } }), () => leaveOut(open)]) {
+  for (const save of [() => fix(open, {}, { decided: { notSameAs: [c.id], shared: true } }), () => leaveOut(open)]) {
     const res = await save();
     assert.deepEqual([res.status, res.body.code], [409, 'row_changed'], JSON.stringify(res.body));
   }
@@ -173,7 +173,7 @@ test('a fix and a deletion at the same moment: no deadlock, nothing lost, and th
       const fileId = await bring(customers(son));
       const open = await oneLook(fileId);
       const c = await byAccount(mum.v['Account Number']);
-      const [saved, gone] = await Promise.all([fix(open, {}, { decided: { notSameAs: c.id } }), deleted(c.id)]);
+      const [saved, gone] = await Promise.all([fix(open, {}, { decided: { notSameAs: [c.id] } }), deleted(c.id)]);
       assert.notEqual(gone?.status, 503, JSON.stringify(gone));
       const made = await byAccount(son.v['Account Number']);
       if (saved.status === 200) {

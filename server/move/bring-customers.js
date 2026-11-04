@@ -20,7 +20,7 @@ const LIVE = 'deleted_at IS NULL AND merged_into_id IS NULL';
 
 // A UK number however it's written, without its country code or leading 0:
 // 07700…, +44 7700…, 0044 7700…, +44 (0)7700…. Empty when it's too short to be one.
-function nationalNumber(text) {
+export function nationalNumber(text) {
   const digits = String(text ?? '').replace(/\D/g, '');
   if (digits.length < 7) return '';
   const rest = digits.startsWith('0044') ? digits.slice(4) : digits.startsWith('44') && digits.length >= 12 ? digits.slice(2) : digits;
@@ -175,6 +175,24 @@ export async function lookRows(fileId) {
 // The name a row holds, whichever report it's from.
 const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last Name']].filter(Boolean).join(' '));
 
+// Whether what someone wrote holds this person's exact email, phone or name, in any
+// case, phones in their usual forms (Jack, 4 Nov, answer 2). A misspelt name gets through.
+const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function mentions(text, { emails, phones, names }) {
+  const flat = cleanName(text);
+  if (emails.some((e) => new RegExp(`(?<![a-z0-9._%+-])${escaped(e)}(?!\\.?[a-z0-9_-])`).test(flat))) return true;
+  if (names.some((n) => new RegExp(`(?<![\\p{L}\\p{N}])${escaped(n)}(?![\\p{L}\\p{N}])`, 'u').test(flat))) return true;
+  const runs = (text.match(/\d[\d\s().-]*\d/g) ?? []).map((run) => run.replace(/\D/g, ''));
+  return phones.some((p) => runs.some((run) => run.includes(p)));
+}
+// The whole request goes: nothing identifying may stay, and it has no use without its text.
+async function forgetHelpRequests(person) {
+  const asked = await prepare('SELECT id, what_looks_wrong, card FROM move_help_requests ORDER BY id').all();
+  for (const { id, what_looks_wrong: text, card } of asked) {
+    if (mentions(`${text}\n${card}`, person)) await prepare('DELETE FROM move_help_requests WHERE id = ? RETURNING id').get(id);
+  }
+}
+
 /**
  * Deleting someone's details (Jack, 3 and 4 Nov; design 8, 10, 22 and 23): one-way
  * codes of their account number, emails and phones are kept, with nothing else.
@@ -184,6 +202,7 @@ const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last
  * someone else's, so they stay, with their own details, the shared email or phone
  * included: one needing a look takes answer 3's reason and loses its link now, and
  * one still waiting is left to take that reason from the codes when it's looked at.
+ * A request for help holding their details goes too.
  * Inside the deletion's transaction, with every move file locked first and their
  * customer records not yet blanked.
  */
@@ -199,6 +218,11 @@ export async function forgetForMove(customerIds, emails) {
   const phones = people.flatMap((p) => phoneForms(p.phone));
   const accounts = people.map((p) => accountKey(p.citrus_account)).filter(Boolean);
   const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
+  await forgetHelpRequests({
+    emails: emails.map(cleanEmail).filter(Boolean),
+    phones: [...new Set(people.map((p) => nationalNumber(p.phone)).filter(Boolean))],
+    names: [...names],
+  });
   const rows = await prepare(
     `SELECT id, file_id, state, data, (lower(trim(data->>'Account Number')) = ANY(?::text[])) AS by_account FROM move_rows
       WHERE state IN ('waiting', 'look', 'left_out') AND (
