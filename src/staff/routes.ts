@@ -28,6 +28,8 @@ export const ROUTES = {
   deliveries: '/workshop/deliveries',
   stocktake: '/workshop/stocktake',
   today: '/workshop/today',
+  // Moving from Citrus Lime (mv-start), the Owner's, after Today.
+  moving: '/workshop/moving',
   reports: '/workshop/reports',
   website: '/workshop/website',
   settings: '/workshop/settings',

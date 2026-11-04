@@ -2069,6 +2069,48 @@ WP-1.5's. So: slice C, WP-2.3.
    form doesn't. It needs telling with no product to read from, so `GET /api/auth/me`
    now says `canSeeCosts`; nothing else reads it yet.
 
+### 3 Nov 2026: Citrus Lime import, products and stock (WP-2.4; `openspec/changes/citrus-import-products`; `mv-progress`, `mv-summary`)
+
+1. **Excel's `.xlsx` and CSV are what's read; anything else, an old `.xls` included, is "couldn't read it".** We've only read the reports' column names on screen, never seen a downloaded file (`2026-10-05-citrus-lime-exports.md`). If "Export to Excel" turns out to give something else, the reader changes; nothing else does.
+2. **Each Citrus Lime code comes across as its own product,** so a jersey in three sizes is three products until WP-1.5 (Mark's) adds sizes and colours. Matrix Lookup Code isn't kept: the file can be read again then.
+3. **One shop's stock comes across.** A product has one stock figure until WP-1.4 and WP-5.2, so the first Store this shop ever sent counts, and any other store's rows need a look, in that file or a later one (the independent review, 3 Nov).
+4. **One barcode per product.** Wheelhouse keeps one, so a second barcode for a product needs a look rather than being lost quietly.
+5. **Serial Number List isn't read yet.** Wheelhouse has nowhere to keep a serial number on stock, so it's treated as a file it can't read, and isn't on the list of files to download.
+6. **A code already in Wheelhouse is left alone** and counted as in, following decision 3's "what you did in Wheelhouse stays". Bringing the same file again changes nothing. Changes coming across belong to the weekly refresh (WP-8.1).
+7. **Brought-across stock has a history line,** "Brought across from Citrus Lime", as Received, under the Owner's sign-in (stock control decision 6). Stock below zero stays below zero, so Today asks for it to be counted.
+8. **Only plain numbers are prices, costs and quantities** (the independent review, 3 Nov): 1,234.50 is, but £12.50, 12,50, 1e3 and 0x10 need a look. **Empty cells:** no cost is £0.00 and no reorder level is 3, as adding a product does by hand; no VAT rate is 20%. A VAT rate other than 0, 5 or 20% needs a look.
+9. **Nothing shows online because of it:** every product comes across with Show online off.
+10. **Only the columns used are kept, and a row's are emptied once it's in.** A row that needs a look keeps its own until it's dealt with.
+11. **A file is stored, then read in the background** (the independent review, 3 Nov), so a slow read can't look like a failed send. Its bytes go once it's read. A made-up 100,000-row price list: send answered in 96 ms, read in 7 s, across in under 5 minutes. One send at a time per shop; a second is told to try again in a moment, and a shop can have 10 waiting.
+12. **What's too much to read:** 300,000 rows, 5,000,000 cells, 300 columns, 32,767 characters in a cell (Excel's own limit), 150 million characters in all, 60 seconds or 1 GB to read it. Any of those, or a character that doesn't exist, is "couldn't read it".
+
+### 3 Nov 2026: Citrus Lime import, the page (WP-2.4; `openspec/changes/citrus-import-screens`; `mv-start`, `mv-progress`, `mv-progress-failed`, `mv-summary`)
+
+1. **The page is always in the Owner's sidebar, after Today.** It's drawn as being there "while the move is on", reached from Getting started. Getting started isn't built (WP-5.1), so nothing can say a move is on yet. Every Owner sees it until then, including shops not moving.
+2. **Which files to download is filled in from the exports list:** "Price List - Store Level and Barcode/Alias List, in Cloud Reports", replacing the drawing's placeholder.
+3. **Sales and Workshop jobs stay as rows, with a grey "Later".** They come with WP-8.1, or a shop's full export.
+4. **Next: run alongside, Look at the [n] and Ask us to help aren't shown yet,** nor are the stages links, since there's nothing behind them. They appear as each is built.
+5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It stays, even after leaving the page, until another is chosen (the independent review, 3 Nov).
+6. **A send that fails for another reason says "Not sent"** and "Wheelhouse couldn't send this file. Try again in a moment", so nobody hunts for a fault in a good file. A file over 30 MB is treated as can't read.
+7. **The summary has a slim "Drop more files here",** the Weekly refresh card's zone, for someone who sent only some of the files.
+8. **The summary's wording** (the independent review, 3 Nov): "[n] brought across" counts only what's new. Added where it applies, "· [n] already here" for a code left alone, so a resent file doesn't look like it came across twice. Stock levels says "[n] need a look", not All in, when any stock didn't come across.
+
+### 3 Nov 2026: Citrus Lime import, customers and bikes (WP-2.4; `openspec/changes/citrus-import-customers`; `mv-start`, `mv-summary`)
+
+1. **A deleted customer's account number, email and phone leave only one-way codes behind,** one per shop, used only to spot and skip them when a file comes (Jack's answers, `docs/decisions/2026-11-03-answers.md`, replacing this entry's earlier "the account number stays"). Nothing readable stays. A row with their account number is left out and counted, on the summary as "[n] left out, as they asked"; a row with only their email or phone needs a look (Jack, 4 Nov, answer 3).
+2. **The same email or phone as a live customer needs a look,** even if it's a family sharing one, as drawn ("Looks like the same person as").
+3. **A bike's whole description goes in Model,** with Make empty. Citrus Lime has one field, and splitting it would be a guess.
+4. **A bike matches everyone its email and phones fit, then the exact name if none do** (the independent review, 3 Nov). It needs a look if they fit two people, if the name on the bike disagrees with the person they fit, or if a name alone fits two.
+5. **A yes to offers keeps its date if it can be read,** as Excel's day number, dd/mm/yyyy or yyyy-mm-dd; otherwise the yes stands with no date. A no keeps no date, and the date goes whenever the yes or no changes (the independent review, 3 Nov).
+6. **Bikes are counted beside customers on the summary** ("[n] brought across · [n] bikes"), as bikes aren't one of the drawn kinds. "· [n] already here" and "· [n] left out, as they asked" are added where they apply.
+7. **Deleting someone removes the rows that are their own:** waiting or needing a look, with their account number, or with their exact name and their email or phone (or a link to them), and the file's counts follow (Jack, 4 Nov, answer 5). A row with another name that only shares their email or phone stays as needs a look, with no link to them, its shared email or phone included (answer 4). A row with only their name is left as it was, since a name alone can't be told from someone else's.
+8. **A customer row with no account number needs a look** (the independent review, 3 Nov): with nothing to know them by, a resent file would add them again.
+9. **A row needing a look holds the customer's id, not their name,** which is looked up when it's shown (the independent review, 3 Nov).
+10. **A bike already brought across isn't added again,** matched by the Citrus Lime row it came from, its frame number on that customer, or the same description and frame (the independent review, 3 Nov).
+11. **Known limit: the file sent again after a deletion.** Their row comes back as needs a look with the name from the file, because Wheelhouse no longer knows their name, so it can't tell the row is theirs (answer 3 covers this). The same goes for a row stored after the deletion, from a file still being stored when it ran.
+12. **Known limit: renamed before deletion.** If they were renamed in Wheelhouse first, their row's old name no longer matches, so it's treated as sharing contact details and stays, with that old name.
+13. **For the Fix piece:** its screen must not make a customer from a row needing a look because it shares a deleted customer's details without a person deciding.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

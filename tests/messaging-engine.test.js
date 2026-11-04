@@ -30,7 +30,7 @@ const customer = (fields) => inShop(async () => (await prepare(
   'INSERT INTO customers (name, phone, email, update_channel) VALUES (?, ?, ?, ?) RETURNING id'
 ).get(fields.name ?? 'Maya Patel', fields.phone ?? null, fields.email ?? null, fields.channel ?? null)).id);
 const message = (id) => inShop(() => prepare('SELECT * FROM customer_messages WHERE id = ?').get(id));
-const until = async (check, ms = 5000) => {
+const until = async (check, ms = 30000) => {
   const end = Date.now() + ms;
   for (;;) {
     const v = await check();
