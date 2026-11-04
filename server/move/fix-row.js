@@ -160,12 +160,17 @@ export function fixRow(rowId, { seen, fields, decided, key, who }) {
   });
 }
 
-/** Leave one row out: kept, with its details, for Your data; nothing is made. */
+/**
+ * Leave one row out: kept, with its details and its link, for Your data; nothing is
+ * made. The link stays so that deleting that customer still finds their own row, even
+ * if they've changed their email and phone since (forgetForMove).
+ */
 export function leaveOutRow(rowId, { seen, key, who }) {
   return onOneRow(rowId, { seen, key }, async (row, file) => {
-    await prepare(`UPDATE move_rows SET state = 'left_out', customer_id = NULL WHERE id = ?`).run(row.id);
-    await addCounts(file, { look: -1, stockLook: file.report === 'price_list' && holdsStock(row.data) ? -1 : 0 });
-    await prepare('UPDATE move_files SET rows_left_out = rows_left_out + 1 WHERE id = ?').run(file.id);
+    await prepare(`UPDATE move_rows SET state = 'left_out' WHERE id = ?`).run(row.id);
+    const held = file.report === 'price_list' && holdsStock(row.data) ? 1 : 0;
+    await addCounts(file, { look: -1, stockLook: -held });
+    await prepare('UPDATE move_files SET rows_left_out = rows_left_out + 1, stock_left_out = stock_left_out + ? WHERE id = ?').run(held, file.id);
     await markSorted(row, who, key);
     return { id: row.id, state: 'left_out' };
   });
