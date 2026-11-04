@@ -135,8 +135,16 @@ Deleting a customer's details SHALL hold against any file, and SHALL remove rows
 - **THEN** only one-way codes of their account number, email and phone stay, unique to the shop, linked to nothing, used only to spot them on import
 
 #### Scenario: Added by hand, deleted before any file
-- **WHEN** someone added by hand and deleted is in the first file sent, by account number, email or phone
-- **THEN** they aren't created
+- **WHEN** someone added by hand and deleted is in the first file sent, by email or phone
+- **THEN** they aren't created, and the row needs a look
+
+#### Scenario: Someone sharing a deleted customer's email
+- **WHEN** a row has a deleted customer's email or phone, and its own account number
+- **THEN** it needs a look, "Shares contact details with a customer who was deleted", with no name and no customer, and nothing creates them
+
+#### Scenario: A deleted customer's own account number
+- **WHEN** a row has a deleted customer's account number
+- **THEN** it's left out, counted, and its row emptied
 
 #### Scenario: A row waiting for a look
 - **WHEN** a row with their email is waiting for a look, and their details are deleted

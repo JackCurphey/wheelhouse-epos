@@ -22,7 +22,7 @@
 
 These replace what's above where they differ.
 
-10. **One-way codes of a deleted person** (Jack: "Keep a scrambled code", "Yes, scramble all three", `docs/decisions/2026-11-03-answers.md`). At deletion, HMAC-SHA-256 codes of their account number, each email and each phone (normalised) go in `move_deleted_codes`, keyed with a random salt for that shop (`move_deleted_salt`), with row-level security and no link to the customer. `customerRow` and `bikeRow` check them first: a match is `skipped`, counted and emptied, never created. This covers someone added by hand and deleted before any file, and someone waiting as "the same person as" them. `citrus_account` and `citrus_ref` are blanked at deletion.
+10. **One-way codes of a deleted person** (Jack: "Keep a scrambled code", "Yes, scramble all three", `docs/decisions/2026-11-03-answers.md`). At deletion, HMAC-SHA-256 codes of their account number, each email and each phone (normalised) go in `move_deleted_codes`, keyed with a random salt for that shop (`move_deleted_salt`), with row-level security and no link to the customer. `customerRow` and `bikeRow` check them first; design 19 says what a match does. This covers someone added by hand and deleted before any file, and someone waiting as "the same person as" them. `citrus_account` and `citrus_ref` are blanked at deletion.
 
 11. **The date of a yes** goes by a trigger whenever `marketing_permission` changes, so every route (customers, the account, booking) follows, and it's cleared at deletion.
 
@@ -39,3 +39,11 @@ These replace what's above where they differ.
 17. **Phones.** `+44 (0)7700 900403` is the same number as 07700 900403: after removing 44 or 0044, a leading 0 goes too. One function serves customers, bikes, codes and waiting rows.
 
 18. **Left alone isn't in.** `same` and `skipped` are counted apart from `in`; the summary adds "· [n] already here" and "· [n] left out, as they asked".
+
+## After the re-review, 4 Nov
+
+19. **Account number or only contact details** (Jack, 4 Nov: "Needs a look"). A matching account number is `skipped`, counted and emptied. Only the email or phone matching needs a look, "Shares contact details with a customer who was deleted", with no name and no customer id; a bike has no account number, so it's always this. Such a row is never retried, so nothing creates the customer until Fix and Leave it out exist. Someone already here by account number stays `same`. "Left out, as they asked" counts `skipped` only.
+
+20. **What the codes don't do.** The salt is in the same database, so someone with access to it could test a guessed email or phone against the codes. They stop a file bringing someone back, and differ between shops; they aren't encryption.
+
+21. **A large file and a deletion.** Rows are stored without holding the move files (`citrus-import-products`, design 13), so a deletion isn't refused while a 100,000-row file is stored.
