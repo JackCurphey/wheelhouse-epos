@@ -2103,10 +2103,13 @@ WP-1.5's. So: slice C, WP-2.3.
 4. **A bike matches everyone its email and phones fit, then the exact name if none do** (the independent review, 3 Nov). It needs a look if they fit two people, if the name on the bike disagrees with the person they fit, or if a name alone fits two.
 5. **A yes to offers keeps its date if it can be read,** as Excel's day number, dd/mm/yyyy or yyyy-mm-dd; otherwise the yes stands with no date. A no keeps no date, and the date goes whenever the yes or no changes (the independent review, 3 Nov).
 6. **Bikes are counted beside customers on the summary** ("[n] brought across · [n] bikes"), as bikes aren't one of the drawn kinds. "· [n] already here" and "· [n] left out, as they asked" are added where they apply.
-7. **Deleting someone removes a waiting row with their account number.** A row that only points at them or shares their email or phone stays as needs a look, with no link to them and without their name, its shared email or phone included (Jack, 4 Nov, answer 4). A row with only their name is left as it was, since a name alone can't be told from someone else's.
+7. **Deleting someone removes the rows that are their own:** waiting or needing a look, with their account number, or with their exact name and their email or phone (or a link to them), and the file's counts follow (Jack, 4 Nov, answer 5). A row with another name that only shares their email or phone stays as needs a look, with no link to them, its shared email or phone included (answer 4). A row with only their name is left as it was, since a name alone can't be told from someone else's.
 8. **A customer row with no account number needs a look** (the independent review, 3 Nov): with nothing to know them by, a resent file would add them again.
 9. **A row needing a look holds the customer's id, not their name,** which is looked up when it's shown (the independent review, 3 Nov).
 10. **A bike already brought across isn't added again,** matched by the Citrus Lime row it came from, its frame number on that customer, or the same description and frame (the independent review, 3 Nov).
+11. **Known limit: the file sent again after a deletion.** Their row comes back as needs a look with the name from the file, because Wheelhouse no longer knows their name, so it can't tell the row is theirs (answer 3 covers this). The same goes for a row stored after the deletion, from a file still being stored when it ran.
+12. **Known limit: renamed before deletion.** If they were renamed in Wheelhouse first, their row's old name no longer matches, so it's treated as sharing contact details and stays, with that old name.
+13. **For the Fix piece:** its screen must not make a customer from a row needing a look because it shares a deleted customer's details without a person deciding.
 
 ## Decided here, for Jack to overrule
 

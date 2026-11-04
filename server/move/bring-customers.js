@@ -165,17 +165,19 @@ export async function lookRows(fileId) {
 }
 
 // The name a row holds, whichever report it's from.
-const ROW_NAME = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last Name']].filter(Boolean).join(' '));
+const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last Name']].filter(Boolean).join(' '));
 
 /**
- * Deleting someone's details (Jack, 3 Nov and 4 Nov; design 8, 10 and 22): one-way
+ * Deleting someone's details (Jack, 3 and 4 Nov; design 8, 10, 22 and 23): one-way
  * codes of their account number, emails and phones are kept, with nothing else.
- * A row with their account number is their own, and goes. A row needing a look
- * that only points at them or shares their email or phone may be someone else's,
- * so it stays, with the reason answer 3 gives, no link to them, and not their name;
- * its own details stay, the shared email or phone included. One not yet looked at
- * gets the same when it is, from the codes. Inside the deletion's transaction, with
- * every move file locked first and their customer records not yet blanked.
+ * Rows not yet in go if they're the person's own: their account number, or their
+ * exact name with their email or phone (or, for a row needing a look, a link to
+ * them). The file's counts follow. Other rows sharing their email or phone may be
+ * someone else's, so they stay, with their own details, the shared email or phone
+ * included: one needing a look takes answer 3's reason and loses its link now, and
+ * one still waiting is left to take that reason from the codes when it's looked at.
+ * Inside the deletion's transaction, with every move file locked first and their
+ * customer records not yet blanked.
  */
 export async function forgetForMove(customerIds, emails) {
   const people = await prepare('SELECT name, phone, citrus_account FROM customers WHERE id = ANY(?::int[])').all(customerIds);
@@ -188,36 +190,32 @@ export async function forgetForMove(customerIds, emails) {
   }
   const phones = people.flatMap((p) => phoneForms(p.phone));
   const accounts = people.map((p) => p.citrus_account).filter(Boolean);
-  const gone = await prepare(
-    `DELETE FROM move_rows WHERE state IN ('waiting', 'look') AND data->>'Account Number' = ANY(?::text[]) RETURNING file_id, state`
-  ).all(accounts);
+  const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
+  const rows = await prepare(
+    `SELECT id, file_id, state, data, (data->>'Account Number' = ANY(?::text[])) AS by_account FROM move_rows
+      WHERE state IN ('waiting', 'look') AND (
+        data->>'Account Number' = ANY(?::text[])
+        OR customer_id = ANY(?::int[])
+        OR lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
+        OR regexp_replace(coalesce(data->>'Phone', ''), '\\D', '', 'g') = ANY(?::text[])
+        OR regexp_replace(coalesce(data->>'Mobile Number', ''), '\\D', '', 'g') = ANY(?::text[])
+        OR regexp_replace(coalesce(data->>'Phone Number', ''), '\\D', '', 'g') = ANY(?::text[])
+      ) ORDER BY id`
+  ).all(accounts, accounts, customerIds, emails, phones, phones, phones);
+  const own = rows.filter((r) => r.by_account || names.has(rowName(r.data)));
+  const shares = rows.filter((r) => !own.includes(r) && r.state === 'look');
   const perFile = new Map();
-  for (const { file_id: id, state } of gone) {
-    const was = perFile.get(id) ?? { total: 0, look: 0 };
+  for (const { id, file_id: fileId, state } of own) {
+    await prepare('DELETE FROM move_rows WHERE id = ? RETURNING id').get(id);
+    const was = perFile.get(fileId) ?? { total: 0, look: 0 };
     was.total += 1;
     if (state === 'look') was.look += 1;
-    perFile.set(id, was);
+    perFile.set(fileId, was);
   }
   for (const [id, { total, look: looks }] of [...perFile].sort(([a], [b]) => a - b)) {
     await prepare('UPDATE move_files SET rows_total = rows_total - ?, rows_look = rows_look - ? WHERE id = ?').run(total, looks, id);
   }
-  const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
-  const kept = await prepare(
-    `SELECT id, data FROM move_rows WHERE state = 'look' AND (
-       customer_id = ANY(?::int[])
-       OR lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
-       OR regexp_replace(coalesce(data->>'Phone', ''), '\\D', '', 'g') = ANY(?::text[])
-       OR regexp_replace(coalesce(data->>'Mobile Number', ''), '\\D', '', 'g') = ANY(?::text[])
-       OR regexp_replace(coalesce(data->>'Phone Number', ''), '\\D', '', 'g') = ANY(?::text[])
-     ) ORDER BY id`
-  ).all(customerIds, emails, phones, phones, phones);
-  for (const { id, data } of kept) {
-    const own = { ...data };
-    if (names.has(ROW_NAME(data))) {
-      delete own['Customer Name'];
-      delete own['First Name'];
-      delete own['Last Name'];
-    }
-    await prepare('UPDATE move_rows SET why = ?, customer_id = NULL, data = ?::jsonb WHERE id = ?').run(SHARED_CONTACT, JSON.stringify(own), id);
+  for (const { id } of shares) {
+    await prepare('UPDATE move_rows SET why = ?, customer_id = NULL WHERE id = ?').run(SHARED_CONTACT, id);
   }
 }

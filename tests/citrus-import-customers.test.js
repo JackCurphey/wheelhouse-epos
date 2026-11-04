@@ -486,29 +486,113 @@ test('deleting a mum: her son\'s waiting row stays as needs a look, with no link
   assert.equal(await byAccount(son.v['Account Number']), undefined);
 });
 
-test('a kept row whose own name is the deleted customer\'s loses the name, and keeps the rest', async () => {
+test('a row needing a look with her exact name and her email is her own: it goes, however the name is written, and the counts follow', async () => {
   const mum = person();
   await send(customers(mum));
   await finish();
   const c = await byAccount(mum.v['Account Number']);
   const again = person({ 'First Name': mum.v['First Name'], 'Last Name': mum.v['Last Name'].toUpperCase(), Email: mum.v.Email });
-  const list = await send(customers(again));
-  const bike = await send(bikes({ Description: '[Bike]', 'Customer Name': `  ${mum.name} `, 'Email Address': mum.v.Email, 'Mobile Number': newPhone(), 'Serial Number': '[Frame]' }, { Description: '[Bike 2]', 'Customer Name': 'Someone Else', 'Email Address': mum.v.Email }));
+  const other = person({ Email: mum.v.Email });
+  const list = await send(customers(again, other));
+  const bike = await send(bikes({ 'Customer Name': `  ${mum.name} `, 'Email Address': mum.v.Email }, { 'Customer Name': 'Someone Else', 'Email Address': mum.v.Email }));
   await finish();
-  assert.equal((await fileIn(list.body.id)).rowsLook, 1);
-  assert.equal((await inShop(() => prepare('SELECT count(*)::int AS n FROM customer_bikes WHERE customer_id = ?').get(c.id))).n, 1, 'the first bike is hers');
-  assert.equal((await fileIn(bike.body.id)).rowsLook, 1);
+  assert.equal((await fileIn(list.body.id)).rowsLook, 2);
+  assert.equal((await fileIn(bike.body.id)).rowsLook, 2);
   await deleted(c.id);
-  const [kept] = await rowsOf(list.body.id);
-  assert.equal(kept.why, 'Shares contact details with a customer who was deleted');
-  assert.equal(kept.data['First Name'], undefined);
-  assert.equal(kept.data['Last Name'], undefined);
-  assert.equal(kept.data.Email, mum.v.Email);
-  assert.equal(kept.data['Account Number'], again.v['Account Number']);
-  const [bikeRow] = await rowsOf(bike.body.id).then((rows) => rows.filter((r) => r.state === 'look'));
-  assert.equal(bikeRow.why, 'Shares contact details with a customer who was deleted');
-  assert.equal(bikeRow.data['Customer Name'], 'Someone Else', 'another person\'s name on the row stays');
-  assert.equal(bikeRow.customer_id, null);
+  const kept = await rowsOf(list.body.id);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].data['Account Number'], other.v['Account Number'], 'the other person stays');
+  assert.equal(kept[0].why, 'Shares contact details with a customer who was deleted');
+  const f = await fileIn(list.body.id);
+  assert.deepEqual({ rowsTotal: f.rowsTotal, rowsLook: f.rowsLook }, { rowsTotal: 1, rowsLook: 1 });
+  const keptBike = await rowsOf(bike.body.id);
+  assert.equal(keptBike.length, 1);
+  assert.equal(keptBike[0].data['Customer Name'], 'Someone Else');
+  const b = await fileIn(bike.body.id);
+  assert.deepEqual({ rowsTotal: b.rowsTotal, rowsLook: b.rowsLook }, { rowsTotal: 1, rowsLook: 1 });
+  assert.ok(!JSON.stringify([kept, keptBike]).toLowerCase().includes(mum.v['Last Name'].toLowerCase()), 'her name is nowhere');
+});
+
+test('a son with the same name and email as his mum goes with her, and is back as needs a look only if the file is sent again', async () => {
+  const mum = person();
+  await send(customers(mum));
+  await finish();
+  const son = person({ 'First Name': mum.v['First Name'], 'Last Name': mum.v['Last Name'], Email: mum.v.Email });
+  const res = await send(customers(son));
+  await finish();
+  await deleted((await byAccount(mum.v['Account Number'])).id);
+  assert.deepEqual(await rowsOf(res.body.id), []);
+  const again = await send(customers(son));
+  await finish();
+  assert.deepEqual(await whyOf(again.body.id), ['Shares contact details with a customer who was deleted']);
+  assert.equal(await byAccount(son.v['Account Number']), undefined);
+});
+
+test('a row pointing at her with her exact name goes, even after her email changed', async () => {
+  const mum = person();
+  await send(customers(mum));
+  await finish();
+  const c = await byAccount(mum.v['Account Number']);
+  const res = await send(customers(person({ 'First Name': mum.v['First Name'], 'Last Name': mum.v['Last Name'], Email: mum.v.Email })));
+  await finish();
+  assert.equal((await staff(`/api/customers/${c.id}`, { method: 'PUT', body: { name: c.name, email: `${key().slice(0, 8)}@example.test`, phone: newPhone() } })).status, 200);
+  await deleted(c.id);
+  assert.deepEqual(await rowsOf(res.body.id), []);
+});
+
+test('at the deletion, a row still waiting with her name and email goes; with another name and the shared email it stays, then needs a look', async () => {
+  const mum = person();
+  await send(customers(mum));
+  await finish();
+  const hers = person({ 'First Name': mum.v['First Name'], 'Last Name': mum.v['Last Name'], Email: mum.v.Email });
+  const son = person({ 'First Name': 'Son', Email: mum.v.Email });
+  const res = await send(customers(hers, son));
+  const bike = await send(bikes({ Description: '[Bike]', 'Customer Name': mum.name, 'Mobile Number': mum.v.Phone }, { Description: '[Bike 2]', 'Customer Name': 'Son', 'Mobile Number': mum.v.Phone }));
+  await readNextFile(owner.shop.id);
+  await readNextFile(owner.shop.id);
+  assert.deepEqual((await rowsOf(res.body.id)).map((r) => r.state), ['waiting', 'waiting']);
+  await deleted((await byAccount(mum.v['Account Number'])).id);
+  const left = await rowsOf(res.body.id);
+  assert.deepEqual(left.map((r) => r.data['Account Number']), [son.v['Account Number']], 'gone at the deletion, not later');
+  assert.deepEqual({ state: left[0].state, why: left[0].why }, { state: 'waiting', why: null }, 'untouched until it\'s looked at');
+  assert.equal((await fileIn(res.body.id)).rowsTotal, 1);
+  assert.equal((await rowsOf(bike.body.id)).length, 1);
+  assert.equal((await fileIn(bike.body.id)).rowsTotal, 1);
+  await finish();
+  assert.deepEqual(await whyOf(res.body.id), ['Shares contact details with a customer who was deleted']);
+  assert.deepEqual(await whyOf(bike.body.id), ['Shares contact details with a customer who was deleted']);
+  const f = await fileIn(res.body.id);
+  assert.deepEqual({ state: f.state, rowsTotal: f.rowsTotal, ...counts(f) }, { state: 'done', rowsTotal: 1, rowsIn: 0, rowsSame: 0, rowsSkipped: 0, rowsLook: 1 });
+  assert.equal(await byAccount(hers.v['Account Number']), undefined);
+  assert.equal(await byAccount(son.v['Account Number']), undefined);
+});
+
+test('stopped part-way through storing, then the file can\'t be read again: no row of it is left', async () => {
+  const p = person();
+  const res = await send(customers(p));
+  await assert.rejects(readNextFile(owner.shop.id, { afterChunk: () => { throw new Error('stopped here'); } }), /stopped here/);
+  assert.equal((await rowsOf(res.body.id)).length, 1, 'part stored, with her details in it');
+  await inShop(() => prepare('UPDATE move_file_bytes SET bytes = ? WHERE file_id = ?').run(Buffer.from('not a spreadsheet'), res.body.id));
+  await finish();
+  const f = await fileIn(res.body.id);
+  assert.equal(f.state, 'cant_read');
+  assert.deepEqual(await rowsOf(res.body.id), []);
+  assert.equal((await staff(`/api/move/files/${f.id}`, { method: 'DELETE' })).status, 200);
+});
+
+test('choosing another file clears whatever a file that can\'t be read still holds, rather than failing', async () => {
+  const res = await send(Buffer.from('not a spreadsheet'));
+  await finish();
+  const id = res.body.id;
+  assert.equal((await fileIn(id)).state, 'cant_read');
+  // As a file left by an earlier crash may be.
+  await inShop(() => prepare("INSERT INTO move_rows (file_id, data) VALUES (?, '{\"Email\":\"[left behind]\"}') RETURNING id").get(id));
+  await inShop(() => prepare('INSERT INTO move_file_bytes (file_id, bytes) VALUES (?, ?) RETURNING file_id').get(id, Buffer.from('x')));
+  const gone = await staff(`/api/move/files/${id}`, { method: 'DELETE' });
+  assert.equal(gone.status, 200, JSON.stringify(gone.body));
+  assert.equal(await fileIn(id), undefined);
+  assert.deepEqual(await rowsOf(id), []);
+  assert.equal((await staff(`/api/move/files/${id}`, { method: 'DELETE' })).status, 404);
 });
 
 test('a row with their account number is their own: it goes, needing a look or waiting, and the counts follow', async () => {

@@ -243,8 +243,10 @@ export async function readNextFile(shopId, { afterChunk = () => {} } = {}) {
   });
   if (!next) return false;
   const found = await readInWorker(next.bytes, next.file_name);
+  // Leftovers from a store that stopped part-way go whichever way this read went,
+  // so a file that now can't be read keeps nobody's details.
+  await runWithShop(shopId, () => prepare('DELETE FROM move_rows WHERE file_id = ?').run(next.id));
   if (found) {
-    await runWithShop(shopId, () => prepare('DELETE FROM move_rows WHERE file_id = ?').run(next.id));
     for (let at = 0; at < found.rows.length; at += INSERT_CHUNK) {
       const chunk = found.rows.slice(at, at + INSERT_CHUNK);
       await runWithShop(shopId, () => prepare('INSERT INTO move_rows (file_id, data) SELECT ?, unnest(?::jsonb[]) RETURNING id').all(next.id, chunk));
