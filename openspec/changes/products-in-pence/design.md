@@ -53,12 +53,12 @@ The migration runner holds one transaction per file, so a backfill's lock lasts 
 
 `check-money-totals.mjs`'s `CONVERTED` gains products. Its check compares pounds × 100 with pence for every row.
 
+## 7. Query plans
+
+No new `WHERE`, join or sort uses the new columns, so no new index and no row-level security trap. Checked on the large table: the list's and a product's plans are unchanged (task 3.3).
+
 ## 8. How big a price can be
 
 A sale line can't carry a price over £21,474,836.47: `server/till/sync.js` refuses one and `till_sale_lines` holds `INTEGER` pence, step C's to change. Rather than widen those, a save refuses so large a price: simpler, and a price nobody could sell isn't a price. Every writer holds to it: `POST` and `PUT /api/products` in pence and pounds, the supplier import, and the Citrus import (the row needs a look). A product already over it stays, opens, and saves if its price isn't sent. The pounds' own limit stays on cost, which is never sold.
 
 Known, not changed: two of the most expensive thing on one sale go past what a line can carry, and sync refuses that line, as it does today.
-
-## 7. Query plans
-
-No new `WHERE`, join or sort uses the new columns, so no new index and no row-level security trap. Checked on the large table: the list's and a product's plans are unchanged (task 3.3).
