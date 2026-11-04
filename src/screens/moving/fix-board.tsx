@@ -53,29 +53,52 @@ const NO_ANSWER = 'Wheelhouse didn’t answer. Try again in a moment.';
 const SERVER_SAYS_GONE = new Set(['row_changed', 'row_gone', 'reused_key']);
 const gone = (err: unknown) => err instanceof ApiError && SERVER_SAYS_GONE.has((err.body as { code?: string } | null)?.code ?? '');
 type Said = { why?: string; decide?: 'shared' | 'same_person'; sameAs?: { id: number; name: string } };
+type Person = { id: number; name: string };
+/** What just happened to a row, which outlives the board it happened on. */
+export type RowNews = { text: string; bad: boolean };
+
+/** The line saying what happened; it takes the focus, as the row's buttons have gone. */
+export function RowNewsLine({ news }: { news: RowNews }) {
+  const line = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { line.current?.focus(); }, [news]);
+  return <p ref={line} tabIndex={-1} role={news.bad ? 'alert' : 'status'} className={`m-0 text-sm font-semibold ${news.bad ? 'text-[var(--wh-danger-hover)]' : ''}`}>{news.text}</p>;
+}
+
+/**
+ * A pop-up here is removed from the page, not closed, so the browser doesn't give the
+ * focus back by itself: this does, once it's gone, if what opened it is still there.
+ */
+export function useFocusBack() {
+  useEffect(() => {
+    const from = document.activeElement;
+    return () => { if (from instanceof window.HTMLElement && from.isConnected) from.focus(); };
+  }, []);
+}
 
 function FixDialog({ row, title, onDone, onGone, onClose }: { row: LookRow; title: string; onDone: (o: Outcome) => void; onGone: (message: string) => void; onClose: () => void }) {
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...row.fields }));
   const [shared, setShared] = useState(false);
-  const [notSame, setNotSame] = useState(false);
+  // Each person the row looks like has a tick of their own.
+  const [people, setPeople] = useState<Person[]>(row.sameAs ? [row.sameAs] : []);
+  const [notThem, setNotThem] = useState<number[]>([]);
   const [asked, setAsked] = useState<Said>({});
   const [failed, setFailed] = useState('');
   const [saving, setSaving] = useState(false);
   // Kept until the server has answered: a save it never answered may have gone through.
   const key = useRef(newRequestKey());
-  const sameAs = asked.sameAs ?? row.sameAs;
+  useFocusBack();
   const asksShared = row.why === SHARED || asked.decide === 'shared';
 
   function change(field: string, value: string) {
     setValues((v) => ({ ...v, [field]: value }));
-    if (WHO_THEY_ARE.has(field)) { setShared(false); setNotSame(false); }
+    if (WHO_THEY_ARE.has(field)) { setShared(false); setNotThem([]); }
   }
   async function save() {
     setSaving(true);
     setFailed('');
     try {
       const fields = Object.fromEntries(ASKS[row.report].map(([field]) => [field, values[field] ?? '']));
-      const done = await send<Outcome>(`/api/move/rows/${row.id}/fix`, { seen: row.seen, fields, decided: { shared, notSameAs: notSame && sameAs ? sameAs.id : null }, requestKey: key.current });
+      const done = await send<Outcome>(`/api/move/rows/${row.id}/fix`, { seen: row.seen, fields, decided: { shared, notSameAs: notThem }, requestKey: key.current });
       onDone(done);
     } catch (err) {
       setSaving(false);
@@ -84,8 +107,10 @@ function FixDialog({ row, title, onDone, onGone, onClose }: { row: LookRow; titl
       // Refused, so nothing was kept of that try.
       key.current = newRequestKey();
       const said = (err.body ?? {}) as Said;
-      // The tick was about one person: about someone else, nobody has said it yet.
-      if (said.sameAs && said.sameAs.id !== sameAs?.id) setNotSame(false);
+      if (said.sameAs) {
+        const next = said.sameAs;
+        setPeople((all) => (all.some((p) => p.id === next.id) ? all : [...all, next]));
+      }
       setAsked(said);
       setFailed(said.why ?? err.message);
     }
@@ -107,7 +132,10 @@ function FixDialog({ row, title, onDone, onGone, onClose }: { row: LookRow; titl
           </div>
         ))}
         {asksShared ? <Checkbox label={SHARED_TICK} checked={shared} onChange={(e) => setShared(e.target.checked)} /> : null}
-        {sameAs ? <Checkbox label={`This is someone else, not ${sameAs.name}`} checked={notSame} onChange={(e) => setNotSame(e.target.checked)} /> : null}
+        {people.map((p) => (
+          <Checkbox key={p.id} label={`This is someone else, not ${p.name}`} checked={notThem.includes(p.id)}
+            onChange={(e) => setNotThem((all) => (e.target.checked ? [...all, p.id] : all.filter((id) => id !== p.id)))} />
+        ))}
       </DialogBody>
       <DialogFooter className="flex justify-end gap-2.5">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -123,8 +151,8 @@ const TOLD: Record<Outcome['state'], string> = { in: 'came across', same: 'is al
  * The board. `action` is its Ask us to help; `count` says how many need a look in all,
  * and `kinds` how many under each heading, from the files, as the list stops at 200.
  */
-export function FixBoard({ count, kinds, listKey, action, onDoneForNow, onSorted }: {
-  count: number; kinds: { products: number; customers: number }; listKey: unknown[]; action?: ReactNode; onDoneForNow: () => void; onSorted: () => Promise<unknown>;
+export function FixBoard({ count, kinds, listKey, action, news, onNews, onDoneForNow, onSorted }: {
+  count: number; kinds: { products: number; customers: number }; listKey: unknown[]; action?: ReactNode; news: RowNews | null; onNews: (news: RowNews) => void; onDoneForNow: () => void; onSorted: () => Promise<unknown>;
 }) {
   const queryClient = useQueryClient();
   const list = useQuery({
@@ -134,24 +162,20 @@ export function FixBoard({ count, kinds, listKey, action, onDoneForNow, onSorted
     refetchInterval: (q) => (q.state.data && q.state.data.total !== count ? 2000 : false),
   });
   const [open, setOpen] = useState<{ row: LookRow; title: string } | null>(null);
-  const [said, setSaid] = useState<{ text: string; bad: boolean } | null>(null);
   const [leaving, setLeaving] = useState<number | null>(null);
-  const status = useRef<HTMLParagraphElement>(null);
   const rows = list.data?.rows ?? [];
-  // The row whose buttons had focus has gone: focus goes to what happened.
-  useEffect(() => { if (said) status.current?.focus(); }, [said]);
 
   async function refresh() {
     await Promise.all([queryClient.invalidateQueries({ queryKey: listKey }), onSorted()]);
   }
   async function sorted(title: string, done: Outcome) {
     setOpen(null);
-    setSaid({ text: `${title} ${TOLD[done.state]}`, bad: false });
+    onNews({ text: `${title} ${TOLD[done.state]}`, bad: false });
     await refresh();
   }
   async function gotGone(message: string) {
     setOpen(null);
-    setSaid({ text: message, bad: true });
+    onNews({ text: message, bad: true });
     await refresh();
   }
   async function leaveOut(row: LookRow, title: string) {
@@ -185,7 +209,7 @@ export function FixBoard({ count, kinds, listKey, action, onDoneForNow, onSorted
   return (
     <Card id="t-need-a-look" title={`${count} need a look`} action={action}>
       <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Everything else is in. These didn’t fit, so they’re waiting for you — leave any out and add it by hand later.</p>
-      {said ? <p ref={status} tabIndex={-1} role={said.bad ? 'alert' : 'status'} className={`m-0 text-sm font-semibold ${said.bad ? 'text-[var(--wh-danger-hover)]' : ''}`}>{said.text}</p> : null}
+      {news ? <RowNewsLine news={news} /> : null}
       {list.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load this. Try again in a moment.</p> : null}
       {group('Products', kinds.products, rows.filter((r) => r.report === 'price_list' || r.report === 'barcodes'))}
       {group('Customers', kinds.customers, rows.filter((r) => r.report === 'customers' || r.report === 'bikes'))}

@@ -58,7 +58,7 @@ test('Fix asks for that row\'s details, by the kind of row, and saves them with 
   assert.equal(body.fields.Price, '28.00');
   assert.equal(body.fields['Item Lookup Code'], 'B05S-RX');
   assert.ok(body.requestKey.length >= 32);
-  assert.ok(!('decided' in body) || (!body.decided.shared && !body.decided.notSameAs), 'nothing ticked');
+  assert.deepEqual(body.decided, { shared: false, notSameAs: [] }, 'nothing ticked');
   await see(view, /Everything’s sorted/);
 });
 
@@ -140,7 +140,7 @@ test('a row like someone here asks about that person, and sends who it isn\'t', 
   view.rtl.fireEvent.click(view.getByRole('checkbox', { name: 'This is someone else, not Maya Patel' }));
   click(view, 'Save');
   await see(view, /Everything’s sorted/);
-  assert.equal(view.state.calls[0].body.decided.notSameAs, 5);
+  assert.deepEqual(view.state.calls[0].body.decided.notSameAs, [5]);
 });
 
 test('a save with no answer goes again with the same key; a refused one takes a new key', async () => {
@@ -262,23 +262,89 @@ test('a row left out counts as dealt with while a file is still coming across', 
   await see(view, /\[file name\] · 3 of 9/);
 });
 
-test('told the row looks like someone else now, the tick about the first person is taken off', async () => {
+test('a row like two people asks about each with a tick of their own, and sends both', async () => {
   const view = await open({
     rows: [SAME], files: [FILE({ rowsLook: 1 })],
-    answer: (path, body, json) => (body.decided?.notSameAs === 6 ? undefined : json(422, { error: 'x', why: 'Looks like the same person as [customer name]', code: 'still_needs_a_look', decide: 'same_person', sameAs: { id: 6, name: '[customer name]' } })),
+    answer: (path, body, json) => (body.decided?.notSameAs?.includes(6) ? undefined : json(422, { error: 'x', why: 'Looks like the same person as [customer name]', code: 'still_needs_a_look', decide: 'same_person', sameAs: { id: 6, name: '[customer name]' } })),
   });
   await toList(view, 'Look at the 1');
   await openFix(view, 'Sam Patel');
-  view.rtl.fireEvent.click(view.getByRole('checkbox', { name: 'This is someone else, not Maya Patel' }));
+  const first = view.getByRole('checkbox', { name: 'This is someone else, not Maya Patel' });
+  view.rtl.fireEvent.click(first);
   click(view, 'Save');
   const next = await view.findByRole('checkbox', { name: 'This is someone else, not [customer name]' });
   assert.equal(next.checked, false, 'nobody has said it isn\'t them');
+  assert.equal(view.getByRole('checkbox', { name: 'This is someone else, not Maya Patel' }).checked, true, 'that one stands');
+  assert.deepEqual(view.state.calls[0].body.decided.notSameAs, [5]);
   click(view, 'Save');
   await view.rtl.waitFor(() => assert.equal(view.state.calls.length, 2));
-  assert.equal(view.state.calls[1].body.decided.notSameAs, null);
+  assert.deepEqual(view.state.calls[1].body.decided.notSameAs, [5]);
   view.rtl.fireEvent.click(next);
   click(view, 'Save');
   await see(view, /Everything’s sorted/);
+  assert.deepEqual(view.state.calls[2].body.decided.notSameAs, [5, 6]);
+});
+
+test('sorting the last row, then sending another file: what came across, then its rows, then sorted again', async () => {
+  const view = await open({ rows: [NO_NAME], files: [FILE({ rowsLook: 1 })] });
+  await toList(view, 'Look at the 1');
+  click(view, 'Leave out A11');
+  await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
+  view.state.whenSent = (state) => {
+    state.rows = [PADS];
+    state.files = [FILE({ rowsLook: 0, rowsLeftOut: 1 }), FILE({ id: 2, report: 'price_list', rowsLook: 1 })];
+  };
+  view.rtl.fireEvent.change(view.getByLabelText('Choose files'), { target: { files: [new window.File(['x'], 'more.xlsx')] } });
+  await view.findByRole('heading', { level: 2, name: 'Here’s what came across' });
+  assert.ok(view.queryByRole('heading', { level: 2, name: '1 need a look' }) === null, 'not straight to the rows');
+  await toList(view, 'Look at the 1');
+  await view.findByRole('heading', { level: 2, name: '1 need a look' });
+  click(view, 'Leave out Shimano brake pads');
+  await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
+});
+
+test('Stock levels isn\'t All in with stock left out, and says how many', async () => {
+  const view = await open({ rows: [], files: [FILE({ report: 'price_list', rowsLook: 0, rowsLeftOut: 2, stockLeftOut: 1, stockIn: 7 }), FILE({ id: 2, report: 'customers', rowsLook: 0 })] });
+  await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
+  view.state.whenSent = () => {};
+  view.rtl.fireEvent.change(view.getByLabelText('Choose files'), { target: { files: [new window.File(['x'], 'more.xlsx')] } });
+  await view.findByRole('heading', { level: 2, name: 'Here’s what came across' });
+  const row = (title) => [...document.querySelectorAll('li')].find((li) => li.textContent.startsWith(title)).textContent;
+  assert.match(row('Stock levels'), /7 brought across · 1 left out/);
+  assert.ok(!row('Stock levels').includes('All in'));
+  assert.ok(!row('Products').includes('All in'), 'nor Products with rows left out');
+  assert.ok(row('Customers').includes('All in'), 'nothing of theirs left out');
+});
+
+test('the last row left out: its line shows on Everything\'s sorted and takes the focus', async () => {
+  const view = await open({ rows: [NO_NAME], files: [FILE({ rowsLook: 1 })] });
+  await toList(view, 'Look at the 1');
+  click(view, 'Leave out A11');
+  await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
+  const line = await view.findByText('A11 left out');
+  assert.equal(line.getAttribute('role'), 'status');
+  await view.rtl.waitFor(() => assert.ok(document.activeElement === line));
+});
+
+test('Cancel on Fix gives the focus back to its button', async () => {
+  const view = await open();
+  await toList(view);
+  const button = view.getByRole('button', { name: 'Fix A11' });
+  button.focus();
+  view.rtl.fireEvent.click(button);
+  await view.findByRole('dialog', { name: 'Fix A11' });
+  click(view, 'Cancel');
+  await view.rtl.waitFor(() => assert.ok(document.activeElement === button));
+});
+
+test('Look at the [n] and Done for now move the focus to the new board\'s heading', async () => {
+  const view = await open();
+  await toList(view);
+  const rowsHeading = view.getByRole('heading', { level: 2, name: '2 need a look' });
+  await view.rtl.waitFor(() => assert.ok(document.activeElement === rowsHeading));
+  click(view, 'Done for now');
+  const summary = await view.findByRole('heading', { level: 2, name: 'Here’s what came across' });
+  await view.rtl.waitFor(() => assert.ok(document.activeElement === summary));
 });
 
 test('Leave it out pressed twice goes once', async () => {
