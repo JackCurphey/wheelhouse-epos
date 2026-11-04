@@ -6,18 +6,18 @@ import { Button } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { Card, Page, Row, mono } from '@/screens/deliveries/deliveries-bits.tsx';
+import { FixBoard } from './fix-board.tsx';
 
 /**
  * Office › Moving from Citrus Lime, Bring your data (mv-start, mv-progress,
- * mv-progress-failed, mv-summary in moving.mjs; Moving from Citrus Lime
- * decisions 2, 4 and 9; openspec/changes/citrus-import-screens). The owner
- * drops the files in; it starts by itself, with no Import button, and carries
- * on if they leave. Fix and Ask us to help follow in a later pull request of
- * WP-2.4; Run alongside and Switch over are WP-8.1.
+ * mv-progress-failed, mv-summary, mv-fix, mv-sorted in moving.mjs; Moving from Citrus Lime decisions 2, 4 and 9;
+ * openspec/changes/citrus-import-screens and citrus-import-fix). The owner drops
+ * the files in; it starts by itself, with no Import button, and carries on if they
+ * leave. Run alongside and Switch over are WP-8.1.
  */
 type MoveFile = {
   id: number; report: 'price_list' | 'barcodes' | 'customers' | 'bikes' | null; fileName: string; state: 'reading' | 'cant_read' | 'bringing' | 'done';
-  rowsTotal: number; rowsIn: number; rowsSame: number; rowsSkipped: number; rowsLook: number; stockIn: number; stockLook: number;
+  rowsTotal: number; rowsIn: number; rowsSame: number; rowsSkipped: number; rowsLook: number; rowsLeftOut: number; rowsFixed: number; stockIn: number; stockLook: number;
 };
 type Sending = { key: string; name: string; problem?: 'cant_read' | 'not_sent' };
 
@@ -25,6 +25,7 @@ const MAX_FILE_BYTES = 30 * 1024 * 1024;
 const BUSY_WAIT_MS = 2000;
 const BUSY_TRIES = 15;
 const KEY = ['move'];
+const LOOK_KEY = ['move', 'look'];
 const STAGES = ['Bring your data', 'Run alongside', 'Switch over'];
 const REPORTS_NOTE = 'Download these from Citrus Lime, then drop them in together. Nothing in Citrus Lime changes.';
 const CANT_READ = 'Wheelhouse couldn’t read this file';
@@ -70,7 +71,7 @@ function Chip({ tone = 'grey', children }: { tone?: 'ok' | 'warn' | 'grey'; chil
 const n = (value: number) => <span className={`${mono} text-size-15`}>{value}</span>;
 const names = (files: MoveFile[]) => files.map((f) => f.fileName).join(', ');
 const sumOf = (files: MoveFile[], pick: (f: MoveFile) => number) => files.reduce((sum, f) => sum + pick(f), 0);
-const dealtWith = (f: MoveFile) => f.rowsIn + f.rowsSame + f.rowsSkipped + f.rowsLook;
+const dealtWith = (f: MoveFile) => f.rowsIn + f.rowsSame + f.rowsSkipped + f.rowsLook + f.rowsLeftOut;
 
 function readAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -115,6 +116,10 @@ export function MovePage() {
   const [sends, setSends] = useState<Sending[]>([]);
   const another = useRef<HTMLInputElement>(null);
   const replacing = useRef<{ send?: Sending; fileId?: number } | null>(null);
+  // Looking at the rows (mv-fix) until Done for now.
+  const [looking, setLooking] = useState(false);
+  // Files dropped on Everything's sorted: what came across shows, not sorted again.
+  const [moreSent, setMoreSent] = useState(false);
 
   // One at a time, so a big drop doesn't send them all at once. A send that got
   // no answer goes again with the same key, so it can't count twice; so does one
@@ -196,6 +201,19 @@ export function MovePage() {
     );
   }
 
+  const allLooks = sumOf(files, (f) => f.rowsLook);
+  // Stays on the rows while a fix's bikes or barcodes go round (design 13).
+  if (looking && allLooks > 0 && reading.length === 0 && sends.length === 0 && refused.length === 0) {
+    return (
+      <Page>
+        <Stages />
+        <FixBoard count={allLooks} listKey={LOOK_KEY}
+          kinds={{ products: sumOf(products, (f) => f.rowsLook), customers: sumOf(people, (f) => f.rowsLook) }}
+          onDoneForNow={() => setLooking(false)} onSorted={() => queryClient.invalidateQueries({ queryKey: KEY, exact: true })} />
+      </Page>
+    );
+  }
+
   if (busy || sends.length > 0 || refused.length > 0) {
     const state = (list: MoveFile[]) => {
       if (list.length === 0) return <Chip>Not added yet</Chip>;
@@ -235,10 +253,31 @@ export function MovePage() {
     );
   }
 
+  // Every row fixed or left out (mv-sorted). See them and Next: run alongside wait
+  // for what's behind them, Your data and WP-8.1 (design 14).
+  const leftOut = sumOf(files, (f) => f.rowsLeftOut);
+  if (allLooks === 0 && !moreSent && leftOut + sumOf(files, (f) => f.rowsFixed) > 0) {
+    return (
+      <Page>
+        <Stages />
+        <Card id="t-everything-s-sorted" title="Everything’s sorted">
+          <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Everything that fitted is in. The ones you left out are kept, and will be listed under Settings › Office › Your data, to add by hand when you like.</p>
+          <ul className="m-0 list-none p-0">
+            <Row title="Left out" sub={<>{n(leftOut)} {leftOut === 1 ? 'row' : 'rows'}</>} />
+          </ul>
+          <DropZone slim title="Drop more files here" onFiles={(f) => { setMoreSent(true); void onFiles(f); }} />
+        </Card>
+      </Page>
+    );
+  }
+
   const looks = sumOf(products, (f) => f.rowsLook);
   const stockLooks = sumOf(priceLists, (f) => f.stockLook);
   const productsIn = sumOf(priceLists, (f) => f.rowsIn);
   const productsSame = sumOf(priceLists, (f) => f.rowsSame);
+  // Left out by the owner: not All in without saying so (mv-sorted's files sent afterwards).
+  const productsLeft = sumOf(products, (f) => f.rowsLeftOut);
+  const peopleSetAside = sumOf(people, (f) => f.rowsLeftOut);
   const customers = files.filter((f) => f.report === 'customers');
   const bikes = files.filter((f) => f.report === 'bikes');
   const peopleSame = sumOf(customers, (f) => f.rowsSame);
@@ -251,7 +290,7 @@ export function MovePage() {
         <ul className="m-0 list-none p-0">
           {products.length
             ? (
-              <Row title="Products" sub={<>{n(productsIn)} brought across{productsSame > 0 ? <> · {n(productsSame)} already here</> : null}</>}>
+              <Row title="Products" sub={<>{n(productsIn)} brought across{productsSame > 0 ? <> · {n(productsSame)} already here</> : null}{productsLeft > 0 ? <> · {n(productsLeft)} left out</> : null}</>}>
                 {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
               </Row>
             )
@@ -266,13 +305,16 @@ export function MovePage() {
           {people.length
             ? (
               <Row title="Customers"
-                sub={<>{n(sumOf(customers, (f) => f.rowsIn))} brought across{peopleSame > 0 ? <> · {n(peopleSame)} already here</> : null}{peopleLeft > 0 ? <> · {n(peopleLeft)} left out, as they asked</> : null} · {n(sumOf(bikes, (f) => f.rowsIn))} bikes</>}>
+                sub={<>{n(sumOf(customers, (f) => f.rowsIn))} brought across{peopleSame > 0 ? <> · {n(peopleSame)} already here</> : null}{peopleLeft > 0 ? <> · {n(peopleLeft)} left out, as they asked</> : null}{peopleSetAside > 0 ? <> · {n(peopleSetAside)} left out</> : null} · {n(sumOf(bikes, (f) => f.rowsIn))} bikes</>}>
                 {peopleLooks > 0 ? <Chip tone="warn">{peopleLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
               </Row>
             )
             : <Row title="Customers"><Chip>Not added yet</Chip></Row>}
           {LATER_KINDS.map((k) => <Row key={k} title={k}><Chip>Later</Chip></Row>)}
         </ul>
+        {allLooks > 0
+          ? <div className="flex justify-end pt-1.5"><Button variant="primary" onClick={() => setLooking(true)}>{`Look at the ${allLooks}`}</Button></div>
+          : null}
         <DropZone slim title="Drop more files here" onFiles={(f) => void onFiles(f)} />
       </Card>
     </Page>

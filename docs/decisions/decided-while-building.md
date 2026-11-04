@@ -2111,6 +2111,25 @@ WP-1.5's. So: slice C, WP-2.3.
 12. **Known limit: renamed before deletion.** If they were renamed in Wheelhouse first, their row's old name no longer matches, so it's treated as sharing contact details and stays, with that old name.
 13. **For the Fix piece:** its screen must not make a customer from a row needing a look because it shares a deleted customer's details without a person deciding.
 
+### 4 Nov 2026: Citrus Lime import, Fix, Leave it out and Ask us to help (WP-2.4; `openspec/changes/citrus-import-fix`; `mv-fix`, `mv-sorted`, `mv-help`, `mv-help-sent`)
+
+1. **What Fix asks** (left for the build, second walk 4d). Customers: first name, last name, account number, email, phone. Products: code, description, price, cost, VAT rate, stock, reorder level. Barcodes: product code, barcode. Bikes: description, frame number, customer name, email, mobile, phone. A row's other columns stay as they came. We've still never seen a downloaded export.
+2. **A row sharing a deleted customer's email or phone needs a tick on that row:** "I've checked: this is someone else, not the customer who was deleted" (answer 6). It asks even if the fix took the email and phone away, since the row may really be theirs. A deleted customer's account number is left out whatever is ticked. Nothing does this for more than one row.
+3. **A row that looks like someone here comes across with a new email or phone, or a tick:** "This is someone else, not [customer name]". It's then a new customer, and nothing merges them. The tick goes if the email, phone or account number changes. Merge stays on the customer's own page.
+4. **A fix that still doesn't fit keeps nothing.** The pop-up says why and keeps what was typed; the row stays as it came, and Cancel leaves it.
+5. **A code or account number already here, fixed to:** nothing is overwritten and no stock is added, as for a file sent twice. It says "[row] is already here, so nothing changed".
+6. **Another shop's stock row can't be fixed into this shop's stock.** It says why, and Leave it out is the way. A big second store's file means leaving each one out; no "leave all out" is drawn, so none is built.
+7. **See them isn't shown yet, and the sentence on `mv-sorted` changes.** It's drawn linking to Settings › Office › Your data, which isn't built, and that page's drawing doesn't show left-out rows. So it reads "The ones you left out are kept, and will be listed under Settings › Office › Your data, to add by hand when you like". **Until that's built, nobody can see which rows were left out.** They're kept with their details for it.
+8. **Done for now goes to the summary,** not to `mv-sorted` as the mockup's link does, since that board says Everything's sorted and is drawn for "when every row is fixed or left out". `mv-sorted` shows by itself when the last row goes, and on coming back to the page.
+9. **`mv-sorted` keeps the summary's slim "Drop more files here",** since more files may be still to send. Sending one goes to the summary.
+10. **The list shows 200 rows at a time,** with "Showing the first 200 of [n]. The rest show as these are sorted."
+11. **After a fix or leave-out, a line says what happened** ("[row] came across", "[row] left out"), and takes the focus, as the row's buttons have gone. Not drawn; screen readers need it, and "already here" and "left out, as they asked" need saying.
+12. **Rows are under Products and Customers,** bikes under Customers and barcodes under Products, as the summary counts them.
+13. **A row left out comes back as needing a look if the file is sent again.** Nothing remembers the choice.
+14. **Deleting someone treats a left-out row as it treats one needing a look:** their own goes and the count follows; one only sharing their details stays left out, with answer 3's reason and no link.
+15. **Ask us to help goes to a pretend inbox,** kept in the shop's records (`move_help_requests`) until a real inbox exists; nothing leaves the server. So nobody at Wheelhouse sees these yet. It's on every card of Bring your data. A send that fails keeps what was written and says "Couldn't send", following Send feedback, since `mv-help` doesn't draw that.
+16. **A fix or leave-out is the Owner's, recorded by who's checked in,** and refused on a till or workshop computer with nobody checked in, as booking a delivery in is.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

@@ -8,7 +8,7 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
-const FILE = (over) => ({ id: 1, report: 'price_list', fileName: '[file name]', state: 'done', rowsTotal: 9, rowsIn: 9, rowsSame: 0, rowsSkipped: 0, rowsLook: 0, stockIn: 7, stockLook: 0, ...over });
+const FILE = (over) => ({ id: 1, report: 'price_list', fileName: '[file name]', state: 'done', rowsTotal: 9, rowsIn: 9, rowsSame: 0, rowsSkipped: 0, rowsLook: 0, rowsLeftOut: 0, rowsFixed: 0, stockIn: 7, stockLook: 0, ...over });
 
 let current;
 afterEach(async () => {
