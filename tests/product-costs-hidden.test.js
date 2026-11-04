@@ -14,6 +14,7 @@ import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js'
 import { deleteTestShop } from './helpers/testShop.js';
 
 const COST = 71823.57;
+// Pounds, or the same figure in whole pence (openspec/changes/products-in-pence).
 const SHOWS_COST = /7182357|71823\.57/;
 
 let server;
@@ -211,6 +212,10 @@ for (const [who, sees, computer] of PEOPLE) {
     assert.equal(await costOf(id), sees ? 5 : COST, 'a new figure');
     assert.equal((await send(`/api/products/${id}`, PUT({ cost: 0 }))).status, 200);
     assert.equal(await costOf(id), sees ? 0 : COST, 'a figure of nothing');
+    // The same in whole pence (products-in-pence); one who can't see costs isn't even refused.
+    assert.equal((await send(`/api/products/${id}`, PUT({ costPence: 1999 }))).status, 200);
+    assert.equal(await costOf(id), sees ? 19.99 : COST, 'a figure in pence');
+    assert.equal((await send(`/api/products/${id}`, PUT({ costPence: -1 }))).status, sees ? 400 : 200);
   });
 
   test(`adding a product: ${who}’s starts with ${sees ? 'the cost typed' : 'none, whatever is sent'}`, async () => {

@@ -20,7 +20,7 @@ const SHOWN = 50;
 const SORTS: Record<SortKey, (p: Product) => number | string> = {
   name: (p) => p.name.toLowerCase(),
   stock: (p) => p.stockQty,
-  price: (p) => p.price,
+  price: (p) => p.pricePence,
   margin: (p) => margin(p) ?? -Infinity,
 };
 const plural = (n: number) => (n === 1 ? '1 product' : `${n} products`);
@@ -60,7 +60,7 @@ export function StockPage() {
     });
   const shown = all ? rows : rows.slice(0, SHOWN);
   // The sign-in can say Owner with someone else at the till: what the server sent decides.
-  const margins = owner && (list.data ?? []).some((p) => p.cost !== null);
+  const margins = owner && (list.data ?? []).some((p) => p.costPence !== null);
   const cols = isPhone ? 'grid-cols-[minmax(0,1fr)_auto]' : margins ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.7fr)]' : 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]';
   const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); setAll(false); };
   const head = (key: SortKey, label: string, right = false) => (
@@ -108,13 +108,13 @@ export function StockPage() {
                   <span role="cell" className="min-w-0">
                     <Link to={productHref(p.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">
                       <span className="text-size-15 font-semibold underline decoration-[var(--wh-border)]">{p.name}</span>
-                      <span className="text-size-13 text-[var(--wh-muted)]">{[p.sku, p.category, p.supplier, isPhone ? money(p.price) : null].filter(Boolean).join(' · ')}</span>
+                      <span className="text-size-13 text-[var(--wh-muted)]">{[p.sku, p.category, p.supplier, isPhone ? money(p.pricePence) : null].filter(Boolean).join(' · ')}</span>
                     </Link>
                   </span>
                   <span role="cell" className={`flex flex-wrap items-center gap-2 ${isPhone ? 'justify-end' : ''}`}>
                     <span className="sr-only">In stock: </span><span className={`${mono} text-size-15`}>{count(p.stockQty)}</span><StateTag state={stockState(p)} />
                   </span>
-                  {isPhone ? null : <span role="cell" className={`${mono} text-right text-size-15`}><span className="sr-only">Price: </span>{money(p.price)}</span>}
+                  {isPhone ? null : <span role="cell" className={`${mono} text-right text-size-15`}><span className="sr-only">Price: </span>{money(p.pricePence)}</span>}
                   {isPhone || !margins ? null : <span role="cell" className="text-right text-size-15 text-[var(--wh-muted)]"><span className="sr-only">Margin: </span>{marginText(p)}</span>}
                 </div>
               ))}

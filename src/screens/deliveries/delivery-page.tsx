@@ -22,7 +22,7 @@ type Summary = { id: number; supplierName: string | null; items: number; bookedI
 type Delivery = Summary & {
   supplierId: number | null;
   bookedCost?: number;
-  lines: { id: number; productId: number; name: string; sku: string | null; barcode: string | null; price: number; qty: number; unitCost?: number; lineCost?: number }[];
+  lines: { id: number; productId: number; name: string; sku: string | null; barcode: string | null; pricePence: number; qty: number; unitCost?: number; lineCost?: number }[];
   setAside: { id: number; name: string; kind: Kind; qty: number; returned: boolean; cost?: number }[];
   stillToCome: { orderId: number; supplierName: string; orderedAt: string | null; qty: number }[];
 };

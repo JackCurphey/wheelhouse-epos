@@ -11,7 +11,7 @@ const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).h
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const JO = { ...OWNER, id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false };
 // Shimano brake pads B05S-RX £28.00 as drawn; the rest bracketed, or a number only the test needs.
-const PADS = { id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 'Shimano brake pads', category: '[Category]', price: 28, cost: 14, stockQty: 6, lowStockThreshold: 3, supplier: '[Supplier]', active: true, showOnline: false, description: '', photoUrl: null, vatRateBp: 2000 };
+const PADS = { id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 'Shimano brake pads', category: '[Category]', pricePence: 2800, costPence: 1400, stockQty: 6, lowStockThreshold: 3, supplier: '[Supplier]', active: true, showOnline: false, description: '', photoUrl: null, vatRateBp: 2000 };
 const HISTORY = [
   { id: 12, type: 'adjustment', change: -1, reason: 'damaged', note: '[note]', who: 'Jo Taylor', at: '2026-09-01T12:00:00.000Z' },
   { id: 11, type: 'po_receipt', change: 7, reason: null, note: '', who: null, at: '2026-09-01T09:00:00.000Z' },

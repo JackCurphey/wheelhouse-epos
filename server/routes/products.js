@@ -12,6 +12,7 @@ import { currentSession } from '../lib/session.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
+import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -22,6 +23,7 @@ const REASONS_DOWN = ['damaged', 'lost_stolen', 'used_workshop', 'faulty_return'
 const REASONS_UP = ['found', 'other'];
 const MAX_CHANGE = 100000;
 const MAX_NOTE = 500;
+const SAVE_LOCK_WAIT = '2s';
 
 // A product is only fit to be live on Shopify when it's BOTH marked to show
 // online AND active - `show_online` alone isn't enough, since a deactivated
@@ -83,6 +85,29 @@ function sentCost(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+// What was sent as a price and cost, as pounds exact to store: a figure in pence
+// first (openspec/changes/products-in-pence, design 3), otherwise a cost as the old
+// form sends it. `price` is undefined when no pence were sent, leaving the old
+// `price` to its caller; `cost` is null when none was given; `refused` is a
+// refusal's message. Someone who can't see costs has any cost ignored, not refused.
+function sentMoney(body, costs) {
+  if (body.pricePence !== undefined && !(wholePence(body.pricePence) && body.pricePence <= MAX_PRICE_PENCE)) {
+    return { refused: 'A price must be a whole number of pence, up to £21,474,836.47' };
+  }
+  if (body.pricePence === undefined && body.price !== undefined && priceTooBig(body.price)) {
+    return { refused: 'A price can be at most £21,474,836.47' };
+  }
+  const costPence = costs ? body.costPence : undefined;
+  const noCostPence = costPence === undefined || costPence === null || costPence === '';
+  if (!noCostPence && !wholePence(costPence)) {
+    return { refused: 'A cost must be a whole number of pence, up to £99,999,999.99' };
+  }
+  return {
+    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : undefined,
+    cost: noCostPence ? (costs ? sentCost(body.cost) : null) : penceToPounds(costPence),
+  };
+}
+
 // PUT /api/products/:id, inside its transaction: the fields sent merged into
 // the row read FOR UPDATE, checked and written. Returns a refusal's message,
 // or nothing once written; a refused write leaves the transaction to roll back.
@@ -93,8 +118,10 @@ async function saveProduct(id, existing, body, costs) {
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
   const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
   const category = body.category !== undefined ? String(body.category).trim() || 'Uncategorised' : existing.category;
-  const price = body.price !== undefined ? Number(body.price) || 0 : existing.price;
-  const cost = (costs ? sentCost(body.cost) : null) ?? existing.cost;
+  const money = sentMoney(body, costs);
+  if (money.refused) return money.refused;
+  const price = money.price ?? (body.price !== undefined ? Number(body.price) || 0 : existing.price);
+  const cost = money.cost ?? existing.cost;
   const lowStockThreshold =
     body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
   const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
@@ -160,10 +187,12 @@ export function register(route) {
     const sku = (body.sku || '').trim() || null;
     const barcode = (body.barcode || '').trim() || null;
     const category = (body.category || 'Uncategorised').trim();
-    const price = Number(body.price) || 0;
     // Someone who can't see costs adds a product with none recorded.
     const costs = await canSeeCosts(req);
-    const cost = (costs ? sentCost(body.cost) : null) ?? 0;
+    const money = sentMoney(body, costs);
+    if (money.refused) return badRequest(res, money.refused);
+    const price = money.price ?? (Number(body.price) || 0);
+    const cost = money.cost ?? 0;
     const stockQty = Number.isFinite(Number(body.stockQty)) ? Math.trunc(Number(body.stockQty)) : 0;
     const lowStockThreshold = Number.isFinite(Number(body.lowStockThreshold))
       ? Math.trunc(Number(body.lowStockThreshold))
@@ -205,10 +234,13 @@ export function register(route) {
 
     // Read again FOR UPDATE inside a transaction, so a price and a description
     // saved at once both stay (more-saves-dont-clash). The Shopify sync runs
-    // after COMMIT, so the lock is never held while it waits on the network.
+    // after COMMIT, so the lock is never held while it waits on the network. With
+    // a limit: a product held by something stuck answers busy, rather than holding
+    // a connection until the server has none left (products-in-pence, design 4).
     let locked;
     await db.exec('BEGIN');
     try {
+      await db.prepare(`SET LOCAL lock_timeout = '${SAVE_LOCK_WAIT}'`).run();
       locked = await db.prepare('SELECT * FROM products WHERE id = ? FOR UPDATE').get(id);
       if (!locked) {
         await db.exec('ROLLBACK');
@@ -222,6 +254,7 @@ export function register(route) {
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
+      if (err.code === '55P03') return sendJson(res, 503, { error: 'Wheelhouse is busy with this product just now. Try again in a moment.', code: 'busy' });
       throw err;
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
@@ -301,7 +334,7 @@ export function register(route) {
       let toSee = false;
       if (type === 'adjustment') {
         const { cost_pence: costPence, over } = await db.prepare(
-          'SELECT abs(round(p.cost * 100))::bigint AS cost_pence, s.stock_adjust_today_over_pence AS over FROM products p, shops s WHERE p.id = ? AND s.id = ?'
+          'SELECT abs(p.cost_pence) AS cost_pence, s.stock_adjust_today_over_pence AS over FROM products p, shops s WHERE p.id = ? AND s.id = ?'
         ).get(id, shopId);
         valuePence = Math.abs(change) * costPence;
         toSee = over !== null && valuePence > over;

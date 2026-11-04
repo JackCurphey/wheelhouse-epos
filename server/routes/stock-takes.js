@@ -48,7 +48,7 @@ function serializeTake(t) {
 async function appliedSummary(ids) {
   if (ids.length === 0) return [];
   return db.prepare(
-    `SELECT stock_take_id, COUNT(*) FILTER (WHERE difference <> 0)::int AS changed, COALESCE(SUM(difference * cost_pence), 0)::int AS value
+    `SELECT stock_take_id, COUNT(*) FILTER (WHERE difference <> 0)::int AS changed, COALESCE(SUM(difference * cost_pence), 0)::bigint AS value
        FROM stock_take_results WHERE stock_take_id = ANY(?) GROUP BY stock_take_id`
   ).all(ids);
 }
@@ -381,7 +381,7 @@ export function register(route) {
       }
       await db.prepare(
         `INSERT INTO stock_take_results (stock_take_id, product_id, expected, counted, difference, cost_pence, stock_movement_id)
-         SELECT ?, v.p, v.e, v.c, v.d, v.k, v.m FROM unnest(?::int[], ?::int[], ?::int[], ?::int[], ?::int[], ?::int[]) AS v(p, e, c, d, k, m) RETURNING product_id`
+         SELECT ?, v.p, v.e, v.c, v.d, v.k, v.m FROM unnest(?::int[], ?::int[], ?::int[], ?::int[], ?::bigint[], ?::int[]) AS v(p, e, c, d, k, m) RETURNING product_id`
       ).all(id, rows.map((r) => r.productId), rows.map((r) => r.expected), rows.map((r) => r.counted), rows.map((r) => r.difference),
         rows.map((r) => r.costPence), rows.map((r) => movementOf.get(r.productId) ?? null));
       await db.prepare("UPDATE stock_takes SET status = 'applied', applied_at = now(), applied_by_login_id = ? WHERE id = ?").run(ctx.login.id, id);

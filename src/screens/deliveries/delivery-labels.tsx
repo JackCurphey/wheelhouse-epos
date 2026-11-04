@@ -5,7 +5,8 @@ import { apiGet } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { printPaper } from '@/screens/till/receipt.tsx';
-import { Row, day, money } from './deliveries-bits.tsx';
+import { Row, day } from './deliveries-bits.tsx';
+import { money } from '@/screens/stock/stock-bits.tsx';
 import { Count } from './new-order.tsx';
 
 /**
@@ -17,7 +18,7 @@ import { Count } from './new-order.tsx';
  * delivery" waits for Add this product. A stand-in, as the bike tag is, until
  * shops can design their own printouts.
  */
-export type LabelLine = { id: number; name: string; sku: string | null; barcode: string | null; price: number; qty: number };
+export type LabelLine = { id: number; name: string; sku: string | null; barcode: string | null; pricePence: number; qty: number };
 type Size = { widthMm: number; heightMm: number };
 
 const COUNT = 'Labels for';
@@ -59,7 +60,7 @@ function LabelsPaper({ labels, size }: { labels: LabelLine[]; size: Size }) {
           <article key={i} aria-label="Label" style={{ width: `${size.widthMm}mm`, height: `${size.heightMm}mm` }}
             className="flex flex-col items-center justify-center overflow-hidden break-after-page text-center">
             <span className="max-w-full truncate text-size-13 font-bold">{l.name}</span>
-            <span className="text-size-13">{money(l.price)}</span>
+            <span className="text-size-13">{money(l.pricePence)}</span>
             {code ? <>{CAN_DRAW.test(code) ? <Barcode value={code} widthMm={size.widthMm} heightMm={size.heightMm * 0.4} /> : null}<span className="max-w-full truncate text-xs">{code}</span></> : null}
           </article>
         );

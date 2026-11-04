@@ -95,10 +95,10 @@ export function ProductPage() {
             {/* Anyone with the Stock page adjusts (2026-10-26-day-answers.md section 11). */}
             <div className="flex flex-wrap gap-2 pt-1"><Button onClick={() => setAdjusting(true)}>Adjust stock</Button></div>
           </Box>
-          <Box id="h-price" title={owner && p.cost !== null ? 'Price and cost' : 'Price'}>
-            {kv('Price', <span className={mono}>{money(p.price)}</span>)}
-            {owner && p.cost !== null ? kv('Cost', <span className={mono}>{money(p.cost)}</span>) : null}
-            {owner && p.cost !== null ? kv('Margin', marginText(p)) : null}
+          <Box id="h-price" title={owner && p.costPence !== null ? 'Price and cost' : 'Price'}>
+            {kv('Price', <span className={mono}>{money(p.pricePence)}</span>)}
+            {owner && p.costPence !== null ? kv('Cost', <span className={mono}>{money(p.costPence)}</span>) : null}
+            {owner && p.costPence !== null ? kv('Margin', marginText(p)) : null}
             {kv('VAT', p.vatRateBp === null ? '—' : `${p.vatRateBp / 100}%`)}
             {owner ? kv('Show on website', p.showOnline ? `On · as ${p.category}` : 'Off') : null}
           </Box>

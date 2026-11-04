@@ -192,6 +192,7 @@ test('the converted columns are the ones design.md Decision 1 lists, and step Aâ
     { table: 'workshop_services', columns: ['price'] },
     { table: 'workshop_quote_lines', columns: ['unit_amount'] },
     { table: 'workshop_job_services', columns: ['booked_price'] },
+    { table: 'products', columns: ['price', 'cost'] },
   ]);
 });
 
