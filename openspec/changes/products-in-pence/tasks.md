@@ -17,6 +17,6 @@
 ## 3. Check
 
 - [x] 3.1 Each rule broken on purpose, then restored.
-- [x] 3.2 Migration from empty on a scratch database and on a populated one; `check-money-totals` on the populated one.
+- [x] 3.2 Migration from empty on a scratch database and on a populated one; `check-money-totals` on both.
 - [x] 3.3 Large made-up table: the lock measured, plans for the list and a product checked.
-- [x] 3.4 `npm test`, `npm run test:browser`, consolidate tests, `npm run lint`, typecheck and check-migrations on the head after merging latest main; a self-review, with the independent review and `/review` by whoever merges; archive as the last commit.
+- [x] 3.4 `npm test`, `npm run test:browser`, consolidate tests, `npm run lint`, typecheck and check-migrations on the head after merging latest main; a fresh review; archive as the last commit.

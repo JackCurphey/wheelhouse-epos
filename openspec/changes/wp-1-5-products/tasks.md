@@ -2,7 +2,7 @@
 
 Each is its own OpenSpec change and pull request of 250 to 600 changed lines, reported and reviewed before the next starts.
 
-- [x] 1. `products-in-pence`: price and cost in whole pence beside the pounds; proven exact on awkward values; saved in pence; Stock and labels read pence. *Keeps:* "prices shown, not edited until products move to pence" (the server half). Migration 114.
+- [ ] 1. `products-in-pence`: price and cost in whole pence beside the pounds; proven exact on awkward values; saved in pence; Stock and labels read pence. *Keeps:* "prices shown, not edited until products move to pence" (the server half). Migration 114.
 - [ ] 2. `stock-movements-say-who`: `moveStock`, the one place stock changes; every writer through it (sales, till sync, adjust, stock take and its Undo, receiving, Shopify refund, import, add a product, catalogue import); who, why, shop and cause on each line; first site for every business. Lock limits and id order in one place.
 - [ ] 3. `stock-per-shop`: `product_stock`, existing stock to the oldest site, the till and workshop computer's own site; a product's page gets stock at each shop (`tr-sites`' line, not the send). *Keeps:* the import's "one stock figure until WP-1.4".
 - [ ] 4. `category-tree`: tree and details, built from existing text; Settings › Stockroom › Categories' server.
