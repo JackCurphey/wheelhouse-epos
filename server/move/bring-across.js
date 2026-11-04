@@ -7,9 +7,21 @@ import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
 import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
-// Small enough that a deletion waiting on the move files isn't told to try again.
+// A batch holds every move file, so it's short: well under the 800ms a deletion waits,
+// so a deletion isn't told to try again (citrus-import-fix, design 21). It stops at
+// whichever comes first, a time or a number of rows, in lots of a few rows so a slow
+// row can't overrun by much, and what it didn't reach waits for the next batch.
+export const BATCH_MS = 250;
 const BATCH = 100;
+const BATCH_LOT = 10;
 const BATCHES_A_ROUND = 20;
+// A moment between batches, for anyone waiting on the files.
+export const BATCH_BREATH_MS = 25;
+// Holding the files, a batch never waits long on anything else: a stuck product or
+// customer would hold up everything behind the files. It gives up and tries next tick.
+const BATCH_LOCK_WAIT = '500ms';
+// Rows sent back to waiting in one go when a file finishes.
+const RETRY_LOT = 500;
 const INSERT_CHUNK = 500;
 export const NO_PRODUCT = 'The product isn’t in the products file';
 const STOCK_NOTE = 'Brought across from Citrus Lime';
@@ -96,14 +108,20 @@ export const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow, cu
 // Those that wait for another file: when it finishes, they try again.
 const WAITS_FOR = { price_list: ['barcodes', NO_PRODUCT], customers: ['bikes', NO_CUSTOMER] };
 
-async function retryAfter(file) {
+// A lot of the rows waiting for this file, sent back to try again. True if there may be
+// more: the file stays coming across until there aren't, so the files are never held
+// for tens of thousands of rows at once, and the rows sent back wait behind it.
+async function retryAfter(file, lot) {
   const waiting = WAITS_FOR[file.report];
-  if (!waiting) return;
+  if (!waiting) return false;
   const again = await prepare(
-    `UPDATE move_rows r SET state = 'waiting', why = NULL FROM move_files f
-      WHERE r.file_id = f.id AND f.report = ? AND r.state = 'look' AND r.why = ? RETURNING r.file_id`
-  ).all(waiting[0], waiting[1]);
+    `UPDATE move_rows SET state = 'waiting', why = NULL WHERE id IN (
+       SELECT r.id FROM move_rows r JOIN move_files f ON f.id = r.file_id
+        WHERE f.report = ? AND r.state = 'look' AND r.why = ? ORDER BY r.id LIMIT ?
+     ) RETURNING file_id`
+  ).all(waiting[0], waiting[1], lot);
   await backToWaiting(again);
+  return again.length === lot;
 }
 
 // Rows just sent back to waiting: their files' counts follow, and those files carry on.
@@ -120,6 +138,7 @@ export async function backToWaiting(again) {
 // id order, as deleting someone's details does, then the batch's products in the
 // order sales use.
 export const lockFiles = () => prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
+const waitNoLonger = (howLong) => prepare(`SET LOCAL lock_timeout = '${howLong}'`).run();
 export async function lockForBatch(file, rows) {
   if (file.report === 'barcodes') {
     await prepare('SELECT id FROM products WHERE sku = ANY(?) ORDER BY id FOR UPDATE').all(rows.map((r) => r.data.ILC).filter(Boolean));
@@ -150,11 +169,12 @@ class RowFailed extends Error {}
 
 // After a batch failed: each row in its own transaction, so a savepoint per row
 // is never needed (server/db.js warns against them) and one odd row can't stop a
-// file. A deadlock isn't the row's fault: it stays waiting for the next round.
+// file. A deadlock or a lock wait isn't the row's fault: it stays waiting for the next round.
 async function oneByOne(file, ids, beforeRow) {
   for (const id of ids) {
     await dbExec('BEGIN');
     try {
+      await waitNoLonger(BATCH_LOCK_WAIT);
       await lockFiles();
       const row = await prepare(`SELECT id, data FROM move_rows WHERE id = ? AND state = 'waiting' FOR UPDATE`).get(id);
       if (row) {
@@ -167,11 +187,12 @@ async function oneByOne(file, ids, beforeRow) {
       await dbExec('COMMIT');
     } catch (err) {
       await dbExec('ROLLBACK');
-      if (TRY_AGAIN.has(err.code)) return;
+      if (TRY_AGAIN.has(err.code)) return 'busy';
       // The code only: a database error's other fields can quote the row.
       console.error(`Move: row ${id} couldn't come across`, err.code ?? err.name);
       await dbExec('BEGIN');
       try {
+        await waitNoLonger(BATCH_LOCK_WAIT);
         await lockFiles();
         const row = await prepare(`SELECT id, data FROM move_rows WHERE id = ? AND state = 'waiting' FOR UPDATE`).get(id);
         if (row) {
@@ -182,43 +203,56 @@ async function oneByOne(file, ids, beforeRow) {
         await dbExec('COMMIT');
       } catch (again) {
         await dbExec('ROLLBACK');
+        if (TRY_AGAIN.has(again.code)) return 'busy';
         throw again;
       }
     }
   }
+  return true;
 }
 
 /**
- * One batch for the current shop, inside its runWithShop. Returns whether there
- * was anything to do. `beforeRow` and `afterRows` are for a test failing it part-way.
+ * One batch for the current shop, inside its runWithShop. Returns whether there was
+ * anything to do, or 'busy' if it gave up waiting for a lock, with nothing changed.
+ * `beforeRow` and `afterRows` are for a test failing it part-way; `now`, `limitMs` and
+ * `retryLot` for a test choosing where it stops.
  */
-export async function bringBatch({ beforeRow = () => {}, afterRows = () => {} } = {}) {
+export async function bringBatch({ beforeRow = () => {}, afterRows = () => {}, now = Date.now, limitMs = BATCH_MS, retryLot = RETRY_LOT } = {}) {
   const file = await prepare(
     `SELECT * FROM move_files WHERE state = 'bringing' ORDER BY array_position(ARRAY['price_list', 'customers', 'barcodes', 'bikes'], report), id LIMIT 1`
   ).get();
   if (!file) return false;
-  let ids = null;
+  const ids = [];
   await dbExec('BEGIN');
   try {
+    await waitNoLonger(BATCH_LOCK_WAIT);
     await lockFiles();
-    const rows = await prepare(`SELECT id, data FROM move_rows WHERE file_id = ? AND state = 'waiting' ORDER BY id LIMIT ? FOR UPDATE`).all(file.id, BATCH);
-    if (rows.length === 0) {
-      await prepare(`UPDATE move_files SET state = 'done', finished_at = now() WHERE id = ?`).run(file.id);
-      await retryAfter(file);
-      await dbExec('COMMIT');
-      return true;
-    }
-    ids = rows.map((r) => r.id);
-    await lockForBatch(file, rows);
+    const started = now();
     const context = await batchContext(file);
     const totals = {};
-    for (const row of rows) {
-      try {
-        await beforeRow(row);
-        await settle(row, await ROW_APPLIERS[file.report](row.data, file, context), file, totals);
-      } catch (err) {
-        throw new RowFailed(err.code ?? err.name);
+    let timeUp = false;
+    while (!timeUp && ids.length < BATCH) {
+      const rows = await prepare(`SELECT id, data FROM move_rows WHERE file_id = ? AND state = 'waiting' ORDER BY id LIMIT ? FOR UPDATE`).all(file.id, BATCH_LOT);
+      if (rows.length === 0) break;
+      ids.push(...rows.map((r) => r.id));
+      await lockForBatch(file, rows);
+      for (const row of rows) {
+        try {
+          await beforeRow(row);
+          await settle(row, await ROW_APPLIERS[file.report](row.data, file, context), file, totals);
+        } catch (err) {
+          // A lock wait is nobody's fault: the batch gives back, and the next one starts over.
+          if (err.code === '55P03') throw err;
+          throw new RowFailed(err.code ?? err.name);
+        }
+        timeUp = now() - started >= limitMs;
+        if (timeUp) break;
       }
+    }
+    if (ids.length === 0) {
+      if (!(await retryAfter(file, retryLot))) await prepare(`UPDATE move_files SET state = 'done', finished_at = now() WHERE id = ?`).run(file.id);
+      await dbExec('COMMIT');
+      return true;
     }
     await addCounts(file, totals);
     await afterRows();
@@ -226,9 +260,9 @@ export async function bringBatch({ beforeRow = () => {}, afterRows = () => {} } 
     return true;
   } catch (err) {
     await dbExec('ROLLBACK');
+    if (err.code === '55P03') return 'busy';
     if (!(err instanceof RowFailed) && !TRY_AGAIN.has(err.code)) throw err;
-    if (ids) await oneByOne(file, ids, beforeRow);
-    return true;
+    return ids.length ? oneByOne(file, ids, beforeRow) : 'busy';
   }
 }
 
@@ -255,13 +289,25 @@ export async function readNextFile(shopId, { afterChunk = () => {} } = {}) {
   if (found) {
     for (let at = 0; at < found.rows.length; at += INSERT_CHUNK) {
       const chunk = found.rows.slice(at, at + INSERT_CHUNK);
-      await runWithShop(shopId, () => prepare('INSERT INTO move_rows (file_id, data) SELECT ?, unnest(?::jsonb[]) RETURNING id').all(next.id, chunk));
+      // A new row checks its file exists, so this waits while a batch holds the files.
+      await runWithShop(shopId, async () => {
+        await dbExec('BEGIN');
+        try {
+          await waitNoLonger(BATCH_LOCK_WAIT);
+          await prepare('INSERT INTO move_rows (file_id, data) SELECT ?, unnest(?::jsonb[]) RETURNING id').all(next.id, chunk);
+          await dbExec('COMMIT');
+        } catch (err) {
+          await dbExec('ROLLBACK');
+          throw err;
+        }
+      });
       await afterChunk();
     }
   }
   await runWithShop(shopId, async () => {
     await dbExec('BEGIN');
     try {
+      await waitNoLonger(BATCH_LOCK_WAIT);
       const file = await prepare(`SELECT id FROM move_files WHERE id = ? AND state = 'reading' FOR UPDATE`).get(next.id);
       if (file) {
         await prepare('DELETE FROM move_file_bytes WHERE file_id = ?').run(next.id);
@@ -287,7 +333,7 @@ export async function readNextFile(shopId, { afterChunk = () => {} } = {}) {
  * with its own connection. `onlyShops` limits it to those; null is every shop.
  * Returns the shops that may have more to do.
  */
-export async function bringAcrossRound(stopping = () => false, onlyShops = null) {
+export async function bringAcrossRound(stopping = () => false, onlyShops = null, { breathe = () => new Promise((r) => { setTimeout(r, BATCH_BREATH_MS); }) } = {}) {
   const more = new Set();
   const shops = onlyShops ? [...onlyShops] : (await pool.query('SELECT id FROM shops')).rows.map((s) => s.id);
   for (const shopId of shops) {
@@ -295,12 +341,15 @@ export async function bringAcrossRound(stopping = () => false, onlyShops = null)
       while (!stopping() && (await readNextFile(shopId))) more.add(shopId);
       for (let i = 0; i < BATCHES_A_ROUND; i += 1) {
         if (stopping()) { more.add(shopId); break; }
-        if (!(await runWithShop(shopId, () => bringBatch()))) break;
-        if (i === BATCHES_A_ROUND - 1) more.add(shopId);
+        const did = await runWithShop(shopId, () => bringBatch());
+        if (!did) break;
+        // Something's stuck: the next tick tries again, rather than twenty times now.
+        if (did === 'busy' || i === BATCHES_A_ROUND - 1) { more.add(shopId); break; }
+        await breathe();
       }
     } catch (err) {
       more.add(shopId);
-      if (!(err instanceof ReadBusy)) console.error(`Move: bringing across failed for shop ${shopId} this round`, err.code ?? err.name);
+      if (!(err instanceof ReadBusy) && !TRY_AGAIN.has(err.code)) console.error(`Move: bringing across failed for shop ${shopId} this round`, err.code ?? err.name);
     }
   }
   return more;
