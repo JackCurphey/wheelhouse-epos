@@ -41,3 +41,5 @@ These replace what's above where they differ.
 17. **The first store this shop ever sent** is the stock's store, across files, not per file (design 10).
 
 18. **Only plain numbers:** digits with commas only where thousands go, and a point. £, 12,50, 0x10 and 1e3 need a look (design 7's "£ and commas" no longer holds).
+
+19. **The timer's reach.** It looks at every shop once at the start, then only at a shop that's sent a file or has more to do. Test servers share a database, so `tests/helpers/liveServer.js` turns the first look off (`WH_MOVE_SCAN_AT_START`) and sets a long tick by default; a test wanting the timer sets its own, and then only touches its own shop.

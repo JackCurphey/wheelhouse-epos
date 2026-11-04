@@ -83,9 +83,12 @@ before(async () => {
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
 });
 after(async () => {
-  if (owner) await deleteTestShop(owner.shop.id);
-  if (server) await server.stop();
-  await pool.end();
+  try {
+    if (owner) await deleteTestShop(owner.shop.id);
+  } finally {
+    if (server) await server.stop();
+    await pool.end();
+  }
 });
 
 test('the server keeps answering while each is read, and tells the Owner it can\'t be read', async () => {
