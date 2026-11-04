@@ -37,6 +37,8 @@
 
 - [x] 5.5 The re-check: a row's link follows a merge, with the move files locked first (`jack/citrus-import-fix`); help requests matched by whole numbers and two-word names, not the card's labels (`jack/citrus-import-fix-rules`); log (`jack/citrus-import-fix-screens`)
 
+- [x] 5.6 The narrow re-check: lock limits on merges, Undo, batches and storing; `removeExpired` never waits; batches stop at a time limit; rows sent back in lots; generated columns row-level security can use (`jack/citrus-import-fix`); the customer's page says busy plainly (`jack/citrus-import-fix-screens`)
+
 ## 6. Still needed
 
 - [ ] 6.1 **A real inbox before the first real shop** (Jack, 4 Nov, answer 3): a real account, Jack's to say. See them, when Your data is built (answer 1)

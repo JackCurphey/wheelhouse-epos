@@ -41,8 +41,16 @@ function answersAfterMerge(kept, other) {
 
 // The move files before anything else, as a batch bringing a file across and deleting
 // someone's details take them (citrus-import-customers, design 15), since a merge now
-// writes to move_rows and those lock the files, then the rows, then the customers.
-const lockMoveFiles = () => prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
+// writes to move_rows and those lock the files, then the rows, then the customers. With
+// a limit: anything stuck behind them answers try again, rather than holding a connection
+// until the shop's server has none left (citrus-import-fix, design 20).
+const LOCK_WAIT = '2s';
+const lockMoveFiles = async () => {
+  await prepare(`SET LOCAL lock_timeout = '${LOCK_WAIT}'`).run();
+  await prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
+};
+const BUSY_CODES = new Set(['55P03', '40P01']);
+const BUSY = { error: 'Wheelhouse is busy with this shop’s files just now. Try again in a moment.', code: 'busy' };
 
 const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
 
@@ -50,6 +58,8 @@ const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
  * Removes, for good, merged records whose 30 days have gone (design 4). Anything
  * that has come to point at the hidden record since the merge (an offline till's
  * sale synced late, say) moves to the kept record first, so the removal can't fail.
+ * It runs while a customer's page is loading, which must never wait or fail for it: if
+ * the move files or anything it moves can't be had at once, a later call does it.
  */
 async function removeExpired() {
   const due = await prepare(
@@ -63,7 +73,8 @@ async function removeExpired() {
   for (const m of due) {
     await dbExec('BEGIN');
     try {
-      await lockMoveFiles();
+      await prepare("SET LOCAL lock_timeout = '100ms'").run();
+      await prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE NOWAIT').all();
       // Then the merge record, as Undo and deleting a customer's details take
       // it first, and still due: one undone or deleted since is skipped
       // (delete-account, second review).
@@ -86,6 +97,7 @@ async function removeExpired() {
       await dbExec('COMMIT');
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (BUSY_CODES.has(err.code)) return;
       console.error(`customer merge ${m.id}: the hidden record couldn’t be removed yet`, err);
     }
   }
@@ -209,6 +221,7 @@ export function register(route) {
       sendJson(res, 200, { id: row.id });
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (BUSY_CODES.has(err.code)) return sendJson(res, 503, BUSY);
       throw err;
     }
   });
@@ -297,6 +310,7 @@ export function register(route) {
       sendJson(res, 200, { ok: true });
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (BUSY_CODES.has(err.code)) return sendJson(res, 503, BUSY);
       throw err;
     }
   });
