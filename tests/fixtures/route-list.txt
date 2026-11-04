@@ -293,4 +293,7 @@ GET /api/privacy-requests/open-count
 POST /api/privacy-requests/:id/delete
 GET /api/move
 POST /api/move/files
+GET /api/move/look
+POST /api/move/rows/:id/fix
+POST /api/move/rows/:id/leave-out
 DELETE /api/move/files/:id
