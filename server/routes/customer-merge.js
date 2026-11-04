@@ -10,7 +10,8 @@ import { UK_NUMBER_SQL, ukNumber } from './customers.js';
 const UNDO_DAYS = 30;
 // Every table that points at a customer, moved together (design 2).
 // A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
-const MOVED = ['customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes', 'privacy_requests'];
+// A row from a Citrus Lime file about them moves too, so deleting the kept record still finds it (citrus-import-fix, design 19).
+const MOVED = ['move_rows', 'customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes', 'privacy_requests'];
 // The fields that may differ, and the columns each takes.
 // A company's details travel with its name (company customers' review 1).
 const FIELDS = { name: ['name', 'is_company', 'contact_name', 'vat_number', 'invoice_email'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
@@ -38,12 +39,27 @@ function answersAfterMerge(kept, other) {
   };
 }
 
+// The move files before anything else, as a batch bringing a file across and deleting
+// someone's details take them (citrus-import-customers, design 15), since a merge now
+// writes to move_rows and those lock the files, then the rows, then the customers. With
+// a limit: anything stuck behind them answers try again, rather than holding a connection
+// until the shop's server has none left (citrus-import-fix, design 20).
+const LOCK_WAIT = '2s';
+const lockMoveFiles = async () => {
+  await prepare(`SET LOCAL lock_timeout = '${LOCK_WAIT}'`).run();
+  await prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
+};
+const BUSY_CODES = new Set(['55P03', '40P01']);
+const BUSY = { error: 'Wheelhouse is busy with this shop’s files just now. Try again in a moment.', code: 'busy' };
+
 const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
 
 /**
  * Removes, for good, merged records whose 30 days have gone (design 4). Anything
  * that has come to point at the hidden record since the merge (an offline till's
  * sale synced late, say) moves to the kept record first, so the removal can't fail.
+ * It runs while a customer's page is loading, which must never wait or fail for it: if
+ * the move files or anything it moves can't be had at once, a later call does it.
  */
 async function removeExpired() {
   const due = await prepare(
@@ -57,7 +73,9 @@ async function removeExpired() {
   for (const m of due) {
     await dbExec('BEGIN');
     try {
-      // The merge record first, as Undo and deleting a customer's details take
+      await prepare("SET LOCAL lock_timeout = '100ms'").run();
+      await prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE NOWAIT').all();
+      // Then the merge record, as Undo and deleting a customer's details take
       // it first, and still due: one undone or deleted since is skipped
       // (delete-account, second review).
       const still = await prepare('SELECT id FROM customer_merges WHERE id = ? AND other_id IS NOT NULL AND undone_at IS NULL FOR UPDATE').get(m.id);
@@ -79,6 +97,7 @@ async function removeExpired() {
       await dbExec('COMMIT');
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (BUSY_CODES.has(err.code)) return;
       console.error(`customer merge ${m.id}: the hidden record couldn’t be removed yet`, err);
     }
   }
@@ -142,6 +161,7 @@ export function register(route) {
     const shopId = (await prepare("SELECT current_setting('app.current_shop_id')::int AS id").get()).id;
     await dbExec('BEGIN');
     try {
+      await lockMoveFiles();
       // Both locked in one go, lowest id first, so two opposite merges can't deadlock.
       const both = await prepare('SELECT * FROM customers WHERE id IN (?, ?) AND active = 1 ORDER BY id FOR UPDATE').all(id, otherId);
       const kept = both.find((c) => c.id === id);
@@ -201,6 +221,7 @@ export function register(route) {
       sendJson(res, 200, { id: row.id });
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (BUSY_CODES.has(err.code)) return sendJson(res, 503, BUSY);
       throw err;
     }
   });
@@ -229,6 +250,7 @@ export function register(route) {
     const shopId = (await prepare("SELECT current_setting('app.current_shop_id')::int AS id").get()).id;
     await dbExec('BEGIN');
     try {
+      await lockMoveFiles();
       // Past 30 days (expired), whether or not the removal has run yet.
       const m = await prepare(
         `SELECT *, merged_at < now() - make_interval(days => ${UNDO_DAYS}) AS expired FROM customer_merges WHERE id = ? FOR UPDATE`
@@ -288,6 +310,7 @@ export function register(route) {
       sendJson(res, 200, { ok: true });
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (BUSY_CODES.has(err.code)) return sendJson(res, 503, BUSY);
       throw err;
     }
   });

@@ -7,14 +7,21 @@ import { readJsonBody, sendJson, badRequest, notFound } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { wakeBringingAcross } from '../move/bring-across.js';
+import { fixRow, leaveOutRow, lookList } from '../move/fix-row.js';
+import { helpInbox, sendHelp } from '../move/help-inbox.js';
 import { readRequestKey } from '../booking-request-key.js';
 import { someoneElseCheckedIn } from './till-pins.js';
+import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024;
 const MAX_NAME = 200;
 const MAX_WAITING_A_SHOP = 10;
 const OWNER_ONLY = "Only the shop's owner can bring data across";
 const CANT_READ = { error: 'Wheelhouse couldn’t read this file', code: 'cant_read' };
+const NO_INBOX = { error: 'Ask us to help isn’t connected yet.', code: 'no_inbox' };
+const REUSED_HELP = { error: 'That was sent before with something else. Try again.', code: 'reused_key' };
+const MAX_HELP = 4000;
+const MAX_CARD = 120;
 const REUSED_KEY = { error: 'That was sent before with a different file. Choose the file again.', code: 'reused_key' };
 const BUSY = { error: 'Wheelhouse is still taking in another of your files. Try again in a moment.', code: 'busy' };
 
@@ -28,8 +35,11 @@ const serializeFile = (f) => ({
   rowsSame: f.rows_same,
   rowsSkipped: f.rows_skipped,
   rowsLook: f.rows_look,
+  rowsLeftOut: f.rows_left_out,
+  rowsFixed: f.rows_fixed,
   stockIn: f.stock_in,
   stockLook: f.stock_look,
+  stockLeftOut: f.stock_left_out,
 });
 
 // Owner only, and not while someone else is checked in on this computer.
@@ -39,6 +49,23 @@ async function refused(req, res) {
   return false;
 }
 
+// What a fix or leave-out needs, read and checked; it has answered if it returns null.
+async function readRowRequest(req, res, params) {
+  if (await refused(req, res)) return null;
+  if (!/^\d{1,9}$/.test(params.id)) { notFound(res, 'Row not found'); return null; }
+  const who = await whoIsBooking(req);
+  if (!who) { sendJson(res, 409, CHECK_IN_FIRST); return null; }
+  const body = await readJsonBody(req);
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) { badRequest(res, 'Send the row'); return null; }
+  const key = readRequestKey(body);
+  if (key.error || !key.value) { badRequest(res, key.error ?? 'A request key is required'); return null; }
+  if (typeof body.seen !== 'string') { badRequest(res, 'Send what you saw of this row'); return null; }
+  return { id: Number(params.id), who, body, key: key.value, seen: body.seen };
+}
+// Only what a person ticked, as it is: anything else counts as not ticked. Each person
+// a row looks like has a tick of their own, so notSameAs is a list.
+const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Array.isArray(d?.notSameAs) ? d.notSameAs.filter((id) => Number.isInteger(id) && Math.abs(id) < 2 ** 31) : [] });
+
 // One send at a time per shop, as each holds a whole file in memory: a stalled
 // upload holds up only its own shop, until its connection ends.
 const sendingShops = new Set();
@@ -47,7 +74,7 @@ export function register(route) {
   route('GET', '/api/move', async (req, res) => {
     if (await refused(req, res)) return;
     const files = await prepare('SELECT * FROM move_files ORDER BY id').all();
-    sendJson(res, 200, { files: files.map(serializeFile) });
+    sendJson(res, 200, { files: files.map(serializeFile), helpOffered: helpInbox() !== null });
   });
 
   route('POST', '/api/move/files', async (req, res, params, query, afterRelease, shopId) => {
@@ -109,6 +136,56 @@ export function register(route) {
     }
   });
 
+  route('GET', '/api/move/look', async (req, res) => {
+    if (await refused(req, res)) return;
+    sendJson(res, 200, await lookList());
+  });
+
+  // One row at a time, always: nothing here takes more than one (mv-fix; answer 6).
+  route('POST', '/api/move/rows/:id/fix', async (req, res, params, query, afterRelease, shopId) => {
+    const r = await readRowRequest(req, res, params);
+    if (!r) return;
+    const { status, body } = await fixRow(r.id, { seen: r.seen, fields: r.body.fields ?? {}, decided: readDecided(r.body.decided), key: r.key, who: r.who });
+    if (body.more) wakeBringingAcross(shopId);
+    sendJson(res, status, body);
+  });
+
+  route('POST', '/api/move/rows/:id/leave-out', async (req, res, params) => {
+    const r = await readRowRequest(req, res, params);
+    if (!r) return;
+    const { status, body } = await leaveOutRow(r.id, { seen: r.seen, key: r.key, who: r.who });
+    sendJson(res, status, body);
+  });
+
+  // Ask us to help (mv-help): what was written, the card and who's asking; nothing from the rows.
+  route('POST', '/api/move/help', async (req, res, params, query, afterRelease, shopId) => {
+    if (await refused(req, res)) return;
+    const inbox = helpInbox();
+    if (!inbox) return sendJson(res, 503, NO_INBOX);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const body = await readJsonBody(req);
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Write what looks wrong');
+    const key = readRequestKey(body);
+    if (key.error || !key.value) return badRequest(res, key.error ?? 'A request key is required');
+    const clean = (v) => (typeof v === 'string' ? v.replaceAll('\u0000', '').toWellFormed().trim() : '');
+    const text = clean(body.text);
+    const card = clean(body.card);
+    if (!text || text.length > MAX_HELP) return badRequest(res, 'Write what looks wrong, in up to 4,000 characters');
+    if (!card || card.length > MAX_CARD) return badRequest(res, 'Say which card this is from');
+    const ctx = await currentSession(req);
+    const shop = await prepare('SELECT name FROM shops WHERE id = ?').get(shopId);
+    let sent;
+    try {
+      sent = await sendHelp({ text, card, who, replyTo: ctx.login.email ?? '', shopName: shop.name, ...key.value }, inbox);
+    } catch (err) {
+      console.error('Move: Ask us to help couldn’t be passed on', err.code ?? err.name);
+      return sendJson(res, 502, { error: 'Couldn’t send. What you wrote is kept here. Try again.', code: 'not_sent' });
+    }
+    if (sent.reused) return sendJson(res, 409, REUSED_HELP);
+    sendJson(res, 200, { ok: true });
+  });
+
   // Choose another file: a file that couldn't be read goes from the list.
   route('DELETE', '/api/move/files/:id', async (req, res, params) => {
     if (await refused(req, res)) return;
@@ -117,6 +194,7 @@ export function register(route) {
     // With whatever it still holds, so nothing of it stays and nothing blocks it.
     await dbExec('BEGIN');
     try {
+      await prepare("SET LOCAL lock_timeout = '2s'").run();
       const file = await prepare(`SELECT id FROM move_files WHERE id = ? AND state = 'cant_read' FOR UPDATE`).get(id);
       if (!file) {
         await dbExec('ROLLBACK');
@@ -128,6 +206,7 @@ export function register(route) {
       await dbExec('COMMIT');
     } catch (err) {
       await dbExec('ROLLBACK');
+      if (err.code === '55P03') return sendJson(res, 503, { error: 'Wheelhouse is busy with your files just now. Try again in a moment.', code: 'busy' });
       throw err;
     }
     sendJson(res, 200, { ok: true });

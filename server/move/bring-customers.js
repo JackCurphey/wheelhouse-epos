@@ -14,8 +14,6 @@ const SEVERAL_NAME = 'More than one customer has this name';
 const NAME_DIFFERS = 'The name on this bike isn’t the name of the customer with this email or phone';
 const look = (why, customerId) => ({ state: 'look', why, customerId });
 const YES = /^(yes|true|y|1)$/i;
-// The same index expression as migration 112.
-const DIGITS = "regexp_replace(coalesce(phone, ''), '\\D', '', 'g')";
 const LIVE = 'deleted_at IS NULL AND merged_into_id IS NULL';
 
 // A UK number however it's written, without its country code or leading 0:
@@ -27,12 +25,15 @@ function nationalNumber(text) {
   return rest.replace(/^0/, '');
 }
 // Every way it may be held, as digits: for finding a customer, a bike's owner, and waiting rows.
-function phoneForms(text) {
+export function phoneForms(text) {
   const national = nationalNumber(text);
   return national ? [national, `0${national}`, `44${national}`, `0044${national}`, `440${national}`, `00440${national}`] : [];
 }
-const cleanEmail = (text) => String(text ?? '').trim().toLowerCase();
-const cleanName = (text) => String(text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+// An account number is the same in any case, with or without spaces around it (the
+// review, 4 Nov). So A1 and a1 are one account.
+const accountKey = (text) => String(text ?? '').trim().toLowerCase();
+export const cleanEmail = (text) => String(text ?? '').trim().toLowerCase();
+export const cleanName = (text) => String(text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 const realDay = (y, m, d) => {
   const at = new Date(Date.UTC(y, m - 1, d));
   return at.getUTCFullYear() === y && at.getUTCMonth() === m - 1 && at.getUTCDate() === d ? at.toISOString().slice(0, 10) : null;
@@ -57,8 +58,8 @@ export function consentDay(text) {
 // someone with access to this database: the salt is stored beside the codes, so
 // that person could test a guessed email or phone against them.
 const codeOf = (salt, kind, value) => createHmac('sha256', salt).update(`${kind}:${value}`).digest('hex');
-const codesFor = (salt, { account, emails = [], phones = [] }) => [
-  ...(account ? [['account', String(account).trim()]] : []),
+const codesFor = (salt, { accounts = [], emails = [], phones = [] }) => [
+  ...accounts.filter(Boolean).map((v) => ['account', v]),
   ...emails.map(cleanEmail).filter(Boolean).map((v) => ['email', v]),
   ...phones.map(nationalNumber).filter(Boolean).map((v) => ['phone', v]),
 ].map(([kind, value]) => [kind, codeOf(salt, kind, value)]);
@@ -68,20 +69,27 @@ export async function moveSalt() {
   return (await prepare('SELECT salt FROM move_deleted_salt').get())?.salt ?? null;
 }
 // Which of a person's details a deleted customer left a code for: 'account', 'contact', or null.
-async function deletedMatch(context, person) {
+// A code made before the review of 4 Nov kept the number's own case, so that form is tried as well.
+async function deletedMatch(context, { account, ...person }) {
   if (!context.salt) return null;
-  const codes = codesFor(context.salt, person);
+  const accounts = account ? [...new Set([accountKey(account), String(account).trim()])] : [];
+  const codes = codesFor(context.salt, { ...person, accounts });
   if (codes.length === 0) return null;
   const hits = await prepare('SELECT kind FROM move_deleted_codes WHERE code = ANY(?)').all(codes.map(([, code]) => code));
   if (hits.some((h) => h.kind === 'account')) return 'account';
   return hits.length ? 'contact' : null;
 }
 
-const liveMatches = (email, forms) => prepare(
-  `SELECT id, name FROM customers
-    WHERE ${LIVE} AND ((? <> '' AND email <> '' AND lower(trim(email)) = ?) OR (phone <> '' AND ${DIGITS} = ANY(?)))
-    ORDER BY id LIMIT 2`
-).all(email, email, forms);
+// Those it fits, leaving out anyone a person has said it isn't.
+// By the plain columns of migration 113, which row-level security lets an index serve.
+// Found first and sorted after, or the planner may walk every customer in id order
+// looking for the first that fits.
+const liveMatches = (email, forms, notThem = []) => prepare(
+  `WITH found AS MATERIALIZED (
+     SELECT id, name FROM customers
+      WHERE ${LIVE} AND ((? <> '' AND email_key <> '' AND email_key = ?) OR (phone_key <> '' AND phone_key = ANY(?))) AND id <> ALL(?::int[])
+   ) SELECT id, name FROM found ORDER BY id LIMIT 2`
+).all(email, email, forms, notThem);
 
 export async function customerRow(d, file, context) {
   const account = (d['Account Number'] ?? '').trim();
@@ -91,13 +99,15 @@ export async function customerRow(d, file, context) {
   // Their own account number: someone who asked to be deleted never comes back.
   if (match === 'account') return { state: 'skipped' };
   // Merged included: they've come across, and stay as they are (design 5).
-  if (account && (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account))) return { state: 'same' };
-  if (match === 'contact') return look(SHARED_CONTACT);
+  if (account && (await prepare('SELECT id FROM customers WHERE citrus_account_key = ?').get(accountKey(account)))) return { state: 'same' };
+  // Only a person, on this one row, gets past this (mv-fix; answer 6). A batch never does.
+  if ((match === 'contact' || context.storedShared) && !context.decided?.shared) return look(SHARED_CONTACT);
   const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
   if (!name) return look('No name');
   // With no account number a resent file couldn't tell them from themselves.
   if (!account) return look('No account number');
-  const [same] = await liveMatches(cleanEmail(email), phoneForms(phone));
+  // Each person it looks like needs their own tick: the next is asked about in turn.
+  const [same] = await liveMatches(cleanEmail(email), phoneForms(phone), context.decided?.notSameAs ?? []);
   if (same) return look(SAME_PERSON, same.id);
   const address = [d.Address, d['Address 2'], d.City, d.County, d.Country].filter(Boolean).join(', ') || null;
   const yes = YES.test(d['GDPR Consent'] ?? '');
@@ -120,7 +130,7 @@ async function bikeOwner(d) {
     return { id: contacts[0].id };
   }
   if (!name) return { why: NO_CUSTOMER };
-  const named = await prepare(`SELECT id FROM customers WHERE lower(trim(name)) = ? AND ${LIVE} ORDER BY id LIMIT 2`).all(name);
+  const named = await prepare(`WITH found AS MATERIALIZED (SELECT id FROM customers WHERE name_key = ? AND ${LIVE}) SELECT id FROM found ORDER BY id LIMIT 2`).all(name);
   if (named.length > 1) return { why: SEVERAL_NAME };
   return named[0] ? { id: named[0].id } : { why: NO_CUSTOMER };
 }
@@ -137,7 +147,7 @@ export async function lockBikeOwners(rows) {
 
 export async function bikeRow(d, file, context) {
   // A bike has no account number, so only ever a contact match.
-  if (await deletedMatch(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] })) return look(SHARED_CONTACT);
+  if (!context.decided?.shared && (context.storedShared || await deletedMatch(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] }))) return look(SHARED_CONTACT);
   if (!d.Description) return look('No description');
   const owner = await bikeOwner(d);
   if (!owner.id) return look(owner.why, owner.customerId);
@@ -167,15 +177,37 @@ export async function lookRows(fileId) {
 // The name a row holds, whichever report it's from.
 const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last Name']].filter(Boolean).join(' '));
 
+// Whether a help request holds this person's exact email, phone or name, in any case
+// (Jack, 4 Nov, answers 2 and 4). A name counts only if it's at least two words, as whole
+// words, and a phone only as the whole number: spaces and punctuation may sit in it, but
+// a run of digits with anything more isn't theirs. So a misspelt or one-word name, or a
+// phone straight after another number, gets through. The card comes from this page's own
+// headings, so only an email is looked for there, as the server takes it as text.
+const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const holdsEmail = (text, emails) => emails.some((e) => new RegExp(`(?<![a-z0-9._%+-])${escaped(e)}(?!\\.?[a-z0-9_-])`).test(cleanName(text)));
+function holdsNameOrPhone(text, { phones, names }) {
+  const flat = cleanName(text);
+  if (names.some((n) => n.includes(' ') && new RegExp(`(?<![\\p{L}\\p{N}])${escaped(n)}(?![\\p{L}\\p{N}])`, 'u').test(flat))) return true;
+  return (text.match(/\d[\d \t().-]*\d/g) ?? []).some((run) => phones.includes(nationalNumber(run)));
+}
+// The whole request goes: nothing identifying may stay, and it has no use without its text.
+async function forgetHelpRequests(person) {
+  const asked = await prepare('SELECT id, what_looks_wrong, card FROM move_help_requests ORDER BY id').all();
+  for (const { id, what_looks_wrong: text, card } of asked) {
+    if (holdsEmail(`${text}\n${card}`, person.emails) || holdsNameOrPhone(text, person)) await prepare('DELETE FROM move_help_requests WHERE id = ? RETURNING id').get(id);
+  }
+}
+
 /**
  * Deleting someone's details (Jack, 3 and 4 Nov; design 8, 10, 22 and 23): one-way
  * codes of their account number, emails and phones are kept, with nothing else.
- * Rows not yet in go if they're the person's own: their account number, or their
+ * Rows not yet in, or left out, go if they're the person's own: their account number, or their
  * exact name with their email or phone (or, for a row needing a look, a link to
  * them). The file's counts follow. Other rows sharing their email or phone may be
  * someone else's, so they stay, with their own details, the shared email or phone
  * included: one needing a look takes answer 3's reason and loses its link now, and
  * one still waiting is left to take that reason from the codes when it's looked at.
+ * A request for help holding their details goes too.
  * Inside the deletion's transaction, with every move file locked first and their
  * customer records not yet blanked.
  */
@@ -183,18 +215,26 @@ export async function forgetForMove(customerIds, emails) {
   const people = await prepare('SELECT name, phone, citrus_account FROM customers WHERE id = ANY(?::int[])').all(customerIds);
   await prepare('INSERT INTO move_deleted_salt (salt) VALUES (?) ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').get(randomBytes(32).toString('hex'));
   const salt = await moveSalt();
-  const codes = people.flatMap((p) => codesFor(salt, { account: p.citrus_account, phones: [p.phone] }));
+  const codes = people.flatMap((p) => codesFor(salt, { accounts: [accountKey(p.citrus_account)], phones: [p.phone] }));
   codes.push(...codesFor(salt, { emails }));
   for (const [kind, code] of codes) {
     await prepare('INSERT INTO move_deleted_codes (kind, code) VALUES (?, ?) ON CONFLICT (shop_id, code) DO NOTHING RETURNING id').get(kind, code);
   }
   const phones = people.flatMap((p) => phoneForms(p.phone));
-  const accounts = people.map((p) => p.citrus_account).filter(Boolean);
-  const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
+  const accounts = people.map((p) => accountKey(p.citrus_account)).filter(Boolean);
+  // With the names of anyone merged into them: a hidden record removed after its 30 days
+  // leaves only its name on the merge, and a row moved to the kept record still has that name.
+  const mergedNames = await prepare('SELECT other_name FROM customer_merges WHERE kept_id = ANY(?::int[]) AND undone_at IS NULL').all(customerIds);
+  const names = new Set([...people.map((p) => p.name), ...mergedNames.map((m) => m.other_name)].map(cleanName).filter(Boolean));
+  await forgetHelpRequests({
+    emails: emails.map(cleanEmail).filter(Boolean),
+    phones: [...new Set(people.map((p) => nationalNumber(p.phone)).filter(Boolean))],
+    names: [...names],
+  });
   const rows = await prepare(
-    `SELECT id, file_id, state, data, (data->>'Account Number' = ANY(?::text[])) AS by_account FROM move_rows
-      WHERE state IN ('waiting', 'look') AND (
-        data->>'Account Number' = ANY(?::text[])
+    `SELECT id, file_id, state, data, (lower(trim(data->>'Account Number')) = ANY(?::text[])) AS by_account FROM move_rows
+      WHERE state IN ('waiting', 'look', 'left_out') AND (
+        lower(trim(data->>'Account Number')) = ANY(?::text[])
         OR customer_id = ANY(?::int[])
         OR lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
         OR regexp_replace(coalesce(data->>'Phone', ''), '\\D', '', 'g') = ANY(?::text[])
@@ -203,17 +243,18 @@ export async function forgetForMove(customerIds, emails) {
       ) ORDER BY id`
   ).all(accounts, accounts, customerIds, emails, phones, phones, phones);
   const own = rows.filter((r) => r.by_account || names.has(rowName(r.data)));
-  const shares = rows.filter((r) => !own.includes(r) && r.state === 'look');
+  const shares = rows.filter((r) => !own.includes(r) && r.state !== 'waiting');
   const perFile = new Map();
   for (const { id, file_id: fileId, state } of own) {
     await prepare('DELETE FROM move_rows WHERE id = ? RETURNING id').get(id);
-    const was = perFile.get(fileId) ?? { total: 0, look: 0 };
+    const was = perFile.get(fileId) ?? { total: 0, look: 0, leftOut: 0 };
     was.total += 1;
     if (state === 'look') was.look += 1;
+    if (state === 'left_out') was.leftOut += 1;
     perFile.set(fileId, was);
   }
-  for (const [id, { total, look: looks }] of [...perFile].sort(([a], [b]) => a - b)) {
-    await prepare('UPDATE move_files SET rows_total = rows_total - ?, rows_look = rows_look - ? WHERE id = ?').run(total, looks, id);
+  for (const [id, { total, look: looks, leftOut }] of [...perFile].sort(([a], [b]) => a - b)) {
+    await prepare('UPDATE move_files SET rows_total = rows_total - ?, rows_look = rows_look - ?, rows_left_out = rows_left_out - ? WHERE id = ?').run(total, looks, leftOut, id);
   }
   for (const { id } of shares) {
     await prepare('UPDATE move_rows SET why = ?, customer_id = NULL WHERE id = ?').run(SHARED_CONTACT, id);

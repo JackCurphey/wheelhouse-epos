@@ -67,6 +67,8 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
     env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend',
       // A developer's .env may switch the local sign-in skip on; a test server never has it unless the test asks (dev-autologin.test.js).
       WHEELHOUSE_DEV_AUTOLOGIN: '',
+      // Says what this is, for what only runs in tests and development (the pretend help inbox).
+      NODE_ENV: 'test',
       // Test servers share a database: one mustn't pick up another test's waiting
       // Citrus Lime file. A test that wants the timer sets its own.
       WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off', ...env },
