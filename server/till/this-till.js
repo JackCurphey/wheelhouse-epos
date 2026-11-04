@@ -20,7 +20,7 @@ export async function thisTill(req) {
   const token = tillCookieToken(req);
   if (!token) return null;
   const row = await prepare(
-    `SELECT t.id, t.code, t.name, s.name AS site_name FROM tills t JOIN sites s ON s.id = t.site_id
+    `SELECT t.id, t.code, t.name, t.site_id, s.name AS site_name FROM tills t JOIN sites s ON s.id = t.site_id
       WHERE t.browser_token_hash = ? AND t.active = true`
   ).get(hashLinkCode(token));
   return row ?? null;

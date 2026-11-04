@@ -96,7 +96,7 @@ const ADJUSTMENT_TO_SEE = "m.type = 'adjustment' AND m.to_see AND m.seen_at IS N
 // Its value is what the shop paid: only to someone who can see costs.
 async function adjustmentsToSee(costs) {
   const rows = await prepare(
-    `SELECT m.id, m.product_id, p.name AS product_name, m.change_qty, m.value_pence, m.reason, m.note, l.name AS by_name, m.created_at
+    `SELECT m.id, m.product_id, p.name AS product_name, m.change_qty, m.value_pence, m.reason, m.note, COALESCE(m.who_name, l.name) AS by_name, m.created_at
        FROM stock_movements m JOIN products p ON p.id = m.product_id LEFT JOIN logins l ON l.id = m.login_id
       WHERE ${ADJUSTMENT_TO_SEE} ORDER BY m.created_at, m.id`
   ).all();

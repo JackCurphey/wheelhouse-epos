@@ -726,6 +726,12 @@ async function dispatch(req, res) {
         );
       } catch (err) {
         console.error(err);
+        // A lock limit ran out, or a deadlock was broken: nothing was stored and
+        // trying again can work (openspec/changes/stock-movements-say-who, design 4).
+        if (err.code === '55P03' || err.code === '40P01') {
+          sendJson(res, 503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' });
+          return;
+        }
         sendJson(res, 500, { error: err.message || 'Internal server error' });
         return;
       }

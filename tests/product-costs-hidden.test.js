@@ -152,8 +152,12 @@ for (const [who, sees, computer] of PEOPLE) {
     answered(saved, 'a save');
     says(sees, saved, 'a save');
     const adjusted = await send(`/api/products/${id}/stock`, POST({ change: 1, type: 'adjustment', reason: 'found' }));
-    answered(adjusted, 'an adjustment');
-    says(sees, adjusted, 'an adjustment');
+    // With nobody checked in here it asks for a PIN (stock-movements-say-who), which tells nothing.
+    if (adjusted.body?.code === 'check_in_first') says(false, adjusted, 'asking for a PIN');
+    else {
+      answered(adjusted, 'an adjustment');
+      says(sees, adjusted, 'an adjustment');
+    }
     const imported = await send(`/api/catalogue-items/${await catalogueItem()}/import`, POST({ price: 28, category: 'Brakes' }));
     answered(imported, 'an import');
     says(sees, imported, 'an import');
