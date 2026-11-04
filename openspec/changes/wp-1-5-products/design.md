@@ -10,7 +10,7 @@
 
 ## 3. Sizes and colours: each size and colour stays a row in `products` (piece 5)
 
-**Proposed, for approval before piece 5 starts** (see `tasks.md`).
+**Jack's decision, 4 Nov** (`docs/decisions/2026-11-04-answers.md`, answer 5: option 1).
 
 - New table `product_groups`: the one product people see (name, category, photo, description). New columns on `products`: `group_id`, `size`, `colour`.
 - Each size and colour is a `products` row, with its own barcode (rule 3), code, price, cost and stock. A product with no sizes has no group, exactly as today.
@@ -20,7 +20,7 @@ Why: every line table in section 1 keeps working without a new column, the old t
 
 The trade-off: the old app's Inventory and the old till's search list each size as its own line until they are retired, and `products` then means "something you can sell".
 
-Decision 4 chose "one product, with a grid" over "each size as its own product". This keeps that on every new screen; the row-per-size is underneath. Because the words look alike, it is put to the person running this work before piece 5 rather than assumed.
+Decision 4 chose "one product, with a grid" over "each size as its own product". This keeps that on every new screen; the row-per-size is underneath, and Jack accepted the old stock list and old till search showing each size separately until they're retired.
 
 ## 4. Stock per shop (pieces 2 and 3)
 

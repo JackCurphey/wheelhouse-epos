@@ -88,9 +88,9 @@ test('saving in pence: exact, and winning over pounds sent with it', async () =>
   assert.deepEqual([row.price, row.price_pence], ['1.15', 115]);
   assert.equal((await save(p.id, { pricePence: 0 })).status, 200, 'nothing is a figure');
   assert.equal((await stored(p.id)).price_pence, 0);
-  assert.equal((await save(p.id, { pricePence: 9999999999 })).status, 200, 'the most the pounds can hold');
+  assert.equal((await save(p.id, { pricePence: 2147483647 })).status, 200, 'the most a sale line can carry');
   row = await stored(p.id);
-  assert.deepEqual([row.price, row.price_pence], ['99999999.99', 9999999999]);
+  assert.deepEqual([row.price, row.price_pence], ['21474836.47', 2147483647]);
 });
 
 test('the old app’s save in pounds still works, and the pence follow', async () => {
@@ -100,7 +100,7 @@ test('the old app’s save in pounds still works, and the pence follow', async (
   assert.deepEqual([res.body.pricePence, res.body.costPence, res.body.price, res.body.cost], [820, 115, 8.2, 1.15]);
 });
 
-for (const [what, figure] of [['a fraction of a penny', 28.5], ['below nothing', -1], ['too much', 10000000000], ['text', '2800'], ['a price of nothing sent', null], ['true', true]]) {
+for (const [what, figure] of [['a fraction of a penny', 28.5], ['below nothing', -1], ['too much', 2147483648], ['text', '2800'], ['a price of nothing sent', null], ['true', true]]) {
   test(`a price in pence that is ${what} is refused, and nothing it came with is stored`, async () => {
     const p = await pads();
     const res = await save(p.id, { pricePence: figure, description: '[Changed]' });
@@ -151,8 +151,9 @@ test('Jo Taylor is sent no cost in pence, and can’t change one, whatever she s
   assert.equal((await stored(added.body.id)).cost_pence, 0, 'a product she adds starts with no cost');
 });
 
-test('the till’s snapshot reads pence, and survives a price over what an INTEGER holds', async () => {
-  const p = await pads({ pricePence: 2147483648 });
+test('the till’s snapshot reads pence, and survives a price already over what an INTEGER holds', async () => {
+  const p = await pads();
+  await inShop(() => prepare('UPDATE products SET price = 21474836.48 WHERE id = ?').run(p.id));
   const snapshot = await inShop(() => buildSnapshot({ id: 0, code: 'B1', name: '[Till]', site_id: null }));
   assert.equal(snapshot.products.find((x) => x.id === p.id).pricePence, 2147483648);
   // Leave nothing that would upset other tests' snapshots of this shop.
@@ -171,7 +172,63 @@ test('an adjustment’s value reads the cost in pence, exactly, at its size when
   assert.equal(negative.value_pence, 1999);
 });
 
-test('a save of a product held by something else answers busy within seconds, and stores nothing', async () => {
+test('a price stops at what a sale line can carry, £21,474,836.47, in pence and in pounds; a cost doesn’t', async () => {
+  const p = await pads();
+  assert.equal((await save(p.id, { pricePence: 2147483647 })).status, 200);
+  assert.equal((await stored(p.id)).price_pence, 2147483647);
+  assert.equal((await save(p.id, { price: 21474836.47 })).status, 200);
+  for (const over of [{ pricePence: 2147483648 }, { price: 21474836.48 }, { price: '21474836.48' }, { price: 100000000 }, { price: -100000000 }, { price: 'Infinity' }]) {
+    const res = await save(p.id, { ...over, description: '[Changed]' });
+    assert.equal(res.status, 400, `${JSON.stringify(over)}: ${JSON.stringify(res.body)}`);
+    assert.match(res.body.error, /price/i);
+    n += 1;
+    assert.equal((await staff('/api/products', { method: 'POST', body: { name: '[Refused]', sku: `[Over ${n}]`, ...over } })).status, 400, JSON.stringify(over));
+  }
+  const row = await stored(p.id);
+  assert.deepEqual([row.price_pence, row.description], [2147483647, '']);
+  assert.equal((await save(p.id, { costPence: 9999999999 })).status, 200, 'a cost can be as much as its column holds');
+  assert.equal((await stored(p.id)).cost_pence, 9999999999);
+});
+
+test('a product already priced over the limit still opens, and saves when its price isn’t sent', async () => {
+  const p = await pads();
+  await inShop(() => prepare('UPDATE products SET price = 30000000 WHERE id = ?').run(p.id));
+  assert.equal((await staff(`/api/products/${p.id}`)).body.pricePence, 3000000000);
+  assert.equal((await save(p.id, { description: '[Changed]' })).status, 200);
+  const row = await stored(p.id);
+  assert.deepEqual([row.price_pence, row.description], [3000000000, '[Changed]']);
+  await inShop(() => prepare('UPDATE products SET price = 28 WHERE id = ?').run(p.id));
+});
+
+test('importing a supplier’s item at a price over the limit is refused', async () => {
+  const item = await inShop(async () => {
+    const supplier = await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES ('[Supplier]', 'mock_csv', '{}', now())").run();
+    return (await prepare("INSERT INTO supplier_catalogue_items (supplier_id, supplier_sku, name, price, stock_qty, status) VALUES (?, ?, ?, 14, 0, 'new')").run(supplier.lastInsertRowid, '[Supplier code]', '[Catalogue item]')).lastInsertRowid;
+  });
+  const res = await staff(`/api/catalogue-items/${item}/import`, { method: 'POST', body: { price: 21474836.48, category: '[Category]' } });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  const fine = await staff(`/api/catalogue-items/${item}/import`, { method: 'POST', body: { price: 21474836.47, category: '[Category]' } });
+  assert.equal(fine.status, 201, JSON.stringify(fine.body));
+  assert.equal(fine.body.pricePence, 2147483647);
+});
+
+test('a cost over what an INTEGER holds counts, applies, shows and undoes in a stock take', async () => {
+  const p = await pads({ stockQty: 2, costPence: 2147483649 });
+  const take = (await staff('/api/stock-takes', { method: 'POST', body: { kind: 'area', target: '[Area]' } })).body;
+  assert.equal((await staff(`/api/stock-takes/${take.id}/join`, { method: 'POST', body: {} })).status, 200);
+  assert.equal((await staff(`/api/stock-takes/${take.id}/counts`, { method: 'POST', body: { productId: p.id, qty: 1 } })).status, 200);
+  const applied = await staff(`/api/stock-takes/${take.id}/apply`, { method: 'POST', body: {} });
+  assert.equal(applied.status, 200, JSON.stringify(applied.body));
+  const result = await inShop(() => prepare('SELECT cost_pence, difference FROM stock_take_results WHERE stock_take_id = ?').get(take.id));
+  assert.deepEqual([result.cost_pence, result.difference], [2147483649, -1]);
+  assert.equal(applied.body.valuePence, -2147483649, 'its value at cost, exact');
+  assert.equal((await staff('/api/stock-takes')).status, 200, 'the list of counts opens');
+  const undone = await staff(`/api/stock-takes/${take.id}/undo`, { method: 'POST', body: {} });
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  assert.equal((await staff(`/api/products/${p.id}`)).body.stockQty, 2);
+});
+
+test('a save of a product held by something else answers busy after its 2 seconds, and stores nothing', async () => {
   const p = await pads();
   const holder = await pool.connect();
   try {
@@ -185,7 +242,9 @@ test('a save of a product held by something else answers busy within seconds, an
     ]);
     assert.equal(res.status, 503, JSON.stringify(res.body));
     assert.equal(res.body.code, 'busy');
-    assert.ok(Date.now() - started < 8000);
+    // The 2 seconds itself: long enough to ride out a normal wait, short enough not to starve the pool.
+    const waited = Date.now() - started;
+    assert.ok(waited >= 1900 && waited < 4500, `waited ${waited}ms`);
   } finally {
     await holder.query('ROLLBACK');
     holder.release();
@@ -194,6 +253,10 @@ test('a save of a product held by something else answers busy within seconds, an
   assert.deepEqual([row.price, row.description], ['28.00', '']);
   // Once it's free, the same save goes straight through.
   assert.equal((await save(p.id, { pricePence: 1 })).status, 200);
+  // The refused save closed its own transaction: the server's safety net for one
+  // left open says so here, just after the reply, and must have had nothing to do.
+  await new Promise((resolve) => { setTimeout(resolve, 200); });
+  assert.ok(!server.stderr.includes('request finished with a transaction still open'), server.stderr.slice(-500));
 });
 
 test('a delivery’s lines send the price in pence, for its labels', async () => {

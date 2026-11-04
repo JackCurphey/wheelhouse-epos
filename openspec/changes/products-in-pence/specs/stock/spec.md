@@ -16,7 +16,7 @@ Every product SHALL have its price and cost in whole pence, exactly equal to its
 - **THEN** its price in pence changes with it, and the old till still sells it at £[price]
 
 ### Requirement: A price or cost can be saved in whole pence
-A product SHALL be able to be added or saved with a price or cost in whole pence. A figure that isn't a whole number from 0 to 9,999,999,999 SHALL be refused, and a refused save SHALL store nothing. A price in pence SHALL win over a price in pounds sent with it.
+A product SHALL be able to be added or saved with a price or cost in whole pence. A figure that isn't a whole number SHALL be refused, as SHALL a cost over 9,999,999,999 pence, and a refused save SHALL store nothing. A price in pence SHALL win over a price in pounds sent with it.
 
 #### Scenario: Saving a price
 - **WHEN** a product is saved with a price of 2800 pence
@@ -25,6 +25,24 @@ A product SHALL be able to be added or saved with a price or cost in whole pence
 #### Scenario: A fraction of a penny
 - **WHEN** a product is saved with a price of 28.5 pence and a new description
 - **THEN** the save is refused, and neither changes
+
+### Requirement: A price stops at what a sale can carry
+A price over £21,474,836.47 SHALL be refused however it is sent or brought in, since a sale line can't carry it. A product already priced over it SHALL still open and save when its price isn't changed.
+
+#### Scenario: Too large a price
+- **WHEN** a product is saved at £21,474,836.48, in pence or pounds
+- **THEN** the save is refused and nothing it sent is stored
+
+#### Scenario: From a Citrus Lime file
+- **WHEN** a row of a price list has a price of £21,474,836.48
+- **THEN** the row needs a look and the rest come across
+
+### Requirement: A count holds any cost a product can
+A stock take SHALL count, apply, show and undo a product whatever its cost.
+
+#### Scenario: A very large cost
+- **WHEN** a product costs more than £21,474,836.47 and a count finds one fewer
+- **THEN** Apply goes through with its value at cost exact, and Undo puts it back
 
 ### Requirement: A cost in pence follows the cost rules
 A cost in pence SHALL go only to someone who can see costs. Someone who can't see costs SHALL NOT be able to change a cost in pence, whatever they send. A save with no cost in pence, or a null or empty one, SHALL leave the stored cost as it is.

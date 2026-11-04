@@ -16,7 +16,7 @@ const product = (over) => ({ id: 1, sku: 'B05S-RX', barcode: '[barcode]', name: 
 const LIST = [
   product({}),
   product({ id: 2, sku: '[Supplier code 2]', name: '[Product running low]', pricePence: 1000, costPence: 500, stockQty: 2 }),
-  product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', pricePence: 1000, costPence: 500, stockQty: -1 }),
+  product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', pricePence: 1500, costPence: 500, stockQty: -1 }),
 ];
 const HISTORY = [
   { id: 13, type: 'till_sale', change: -2, note: 'Till sale B1-[0000]', at: '2026-09-01T14:00:00.000Z' },
@@ -117,6 +117,19 @@ test('searching asks the server, by what was typed', async () => {
   await ui.findByText('1 product');
   assert.ok(calls.some((c) => c.includes('/api/products?search=B05S')), calls.join('\n'));
   assert.ok(ui.queryByRole('link', { name: /\[Product running low\]/ }) === null);
+});
+
+test('sorting by Price goes by the price, lowest first, then highest', async () => {
+  const { ui, fireEvent } = await open('/workshop/stock');
+  await ui.findByRole('link', { name: /Shimano brake pads/ });
+  const order = () => ui.getAllByRole('link').map((a) => a.textContent).filter((t) => /Shimano|\[Product/.test(t));
+  fireEvent.click(ui.getByRole('button', { name: 'Price' }));
+  assert.match(order()[0], /running low/, '£10.00, ahead of the name order’s [Product below zero]');
+  assert.match(order()[1], /below zero/);
+  assert.match(order()[2], /Shimano/);
+  fireEvent.click(ui.getByRole('button', { name: 'Price' }));
+  assert.match(order()[0], /Shimano/);
+  assert.match(order()[2], /running low/);
 });
 
 test('sorting by In stock puts the lowest first', async () => {

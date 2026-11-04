@@ -2144,11 +2144,13 @@ WP-1.5's. So: slice C, WP-2.3.
 ### 4 Nov 2026: products in whole pence (WP-1.5, piece 1; `openspec/changes/products-in-pence`; `st-list`, `st-product`, nothing on screen changes)
 
 1. **The database works out the pence from the pounds,** rather than the app writing both. Old code keeps writing pounds and can't get it wrong. Adding the columns locks the products table while it runs, about 3.7 seconds with 1,000,000 products; a read waited 3.5 seconds at most. Filling plain columns instead took 12 seconds, under the same lock.
-2. **Up to £99,999,999.99, as the pounds column has always held.** So a figure can be bigger than the till's old whole-number pence could carry; the till's copy no longer fails on one.
+2. **A price stops at £21,474,836.47; a cost at £99,999,999.99, as its column has always held.** A sale line can't carry more (`server/till/sync.js`, `till_sale_lines`), and refusing so large a price at every save and import is simpler than widening the till's tables, which are step C's (the independent review, 4 Nov). The Citrus import makes such a row need a look. A product already over it stays and opens, and the till's copy no longer fails on one. A count's stored cost widened, so a very large cost applies and undoes.
 3. **A cost below nothing stays below nothing,** in pence too: the old form can save one, and an adjustment still values it at its size. A new save in pence can't set one.
 4. **Who can change a price is as it was:** anyone signed in, through the server. Stock decision 11 says Staff can't change prices; no screen lets them yet except the old app. It's closed when the product's Edit is built (piece 6), or by roles.
 5. **A product's save waits 2 seconds for a held product,** then says "Wheelhouse is busy with this product just now. Try again in a moment." The 2 seconds is the Citrus import's. Other stock changes get their limit in piece 2.
-6. **Noted, not changed: the old app's pounds path still answers an error for a price over the column's limit,** and a stock list search reads the whole products table across every business, about 45ms at 1,000,000 (the row-level check isn't an index). Piece 6 looks at the search.
+6. **Noted, not changed: a stock list search reads the whole products table across every business,** about 45ms at 1,000,000 (the row-level check isn't an index). Piece 6 looks at the search.
+7. **A margin near a half point can show 1 point differently.** It now works on whole pence: £12.00 with a £9.55 cost at 20% VAT is exactly 4.5%, which showed 4% and now shows 5%, the right rounding. Kept (the independent review, 4 Nov).
+8. **Known, no code: 40 saves at once on one held product give some server errors at the pool's limit,** rather than all answering busy (the independent review, 4 Nov). Each waits its 2 seconds holding a connection. Nothing is stored by any of them.
 
 ## Decided here, for Jack to overrule
 

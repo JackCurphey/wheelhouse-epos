@@ -12,7 +12,7 @@ import { currentSession } from '../lib/session.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { penceToPounds, wholePence } from '../lib/pence.js';
+import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -91,8 +91,11 @@ function sentCost(value) {
 // `price` to its caller; `cost` is null when none was given; `refused` is a
 // refusal's message. Someone who can't see costs has any cost ignored, not refused.
 function sentMoney(body, costs) {
-  if (body.pricePence !== undefined && !wholePence(body.pricePence)) {
-    return { refused: 'A price must be a whole number of pence, up to £99,999,999.99' };
+  if (body.pricePence !== undefined && !(wholePence(body.pricePence) && body.pricePence <= MAX_PRICE_PENCE)) {
+    return { refused: 'A price must be a whole number of pence, up to £21,474,836.47' };
+  }
+  if (body.pricePence === undefined && body.price !== undefined && priceTooBig(body.price)) {
+    return { refused: 'A price can be at most £21,474,836.47' };
   }
   const costPence = costs ? body.costPence : undefined;
   const noCostPence = costPence === undefined || costPence === null || costPence === '';

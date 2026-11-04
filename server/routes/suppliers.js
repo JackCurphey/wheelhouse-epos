@@ -8,6 +8,7 @@ import { runSync } from '../suppliers/index.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
+import { priceTooBig } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -142,7 +143,7 @@ export function register(route) {
     const body = await readJsonBody(req);
     const category = (body.category || 'Uncategorised').trim();
     const sellPrice = Number(body.price);
-    if (!Number.isFinite(sellPrice) || sellPrice < 0) return badRequest(res, 'A valid sell price is required');
+    if (!Number.isFinite(sellPrice) || sellPrice < 0 || priceTooBig(sellPrice)) return badRequest(res, 'A valid sell price is required');
 
     const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(item.supplier_id);
     try {

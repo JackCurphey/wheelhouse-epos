@@ -5,6 +5,7 @@
 // still waiting and nothing comes across twice.
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
+import { priceTooBig } from '../lib/pence.js';
 import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
 // A batch holds every move file, so it's short: well under the 800ms a deletion waits,
@@ -65,7 +66,7 @@ async function priceListRow(d, file, context) {
   if (!d.Description) return look('No description');
   if (d.Price === undefined) return look('No price');
   const price = moneyOf(d.Price);
-  if (price === null) return look('The price isn’t a number Wheelhouse can use');
+  if (price === null || priceTooBig(price)) return look('The price isn’t a number Wheelhouse can use');
   const cost = d['Store Cost'] === undefined ? 0 : moneyOf(d['Store Cost']);
   if (cost === null) return look('The cost isn’t a number Wheelhouse can use');
   const vat = d['Tax Rate'] === undefined ? 2000 : vatOf(d['Tax Rate']);

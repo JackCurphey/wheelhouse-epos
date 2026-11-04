@@ -17,6 +17,10 @@ test('£28 at 20% VAT with a £14 cost is a 40% margin', () => {
   assert.equal(margin({ pricePence: 2800, costPence: 1400, vatRateBp: 2000 }), 40);
 });
 
+test('a half point rounds up, worked on whole pence: £12.00 with a £9.55 cost at 20% VAT is 4.5%, so 5%', () => {
+  assert.equal(margin({ pricePence: 1200, costPence: 955, vatRateBp: 2000 }), 5);
+});
+
 test('no cost recorded (0, as the old app saves it) is no margin, not 100%', () => {
   assert.equal(margin({ pricePence: 2800, costPence: 0, vatRateBp: 2000 }), null);
   assert.equal(marginText({ pricePence: 2800, costPence: 0, vatRateBp: 2000 }), '—');

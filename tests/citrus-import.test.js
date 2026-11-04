@@ -147,6 +147,15 @@ test('rows that don\'t fit wait with their reason, and the rest come across', as
   assert.equal((await productBy(good[4])).stock_qty, 6);
 });
 
+test('a price over what a sale line can carry needs a look; the most it can carry comes across (products-in-pence)', async () => {
+  const over = line({ Price: 21474836.48 });
+  const most = line({ Price: 21474836.47 });
+  const res = await send(priceList(over, most));
+  await finish();
+  assert.deepEqual((await whyOf(res.body.id)).map((r) => r.why), ['The price isn’t a number Wheelhouse can use']);
+  assert.equal((await productBy(most[4])).price_pence, 2147483647);
+});
+
 test('every other figure is taken as Excel keeps it: 20% as 0.2, thousands commas, empty cost and reorder level, off sale', async () => {
   const fraction = line({ 'Tax Rate': 0.2 });
   const words = line({ 'Tax Rate': '5%', Price: '1,234.50', 'Store Cost': null, 'Min (Reorder Point)': null, Active: 'No', Department: null, Category: null });

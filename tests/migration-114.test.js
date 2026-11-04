@@ -77,6 +77,11 @@ test('114 converts every price and cost exactly, on an empty and a populated dat
     for (const [pounds] of AWKWARD) await c.query("INSERT INTO products (name, price, cost) VALUES ('[Product]', $1, $1)", [pounds]);
     for (const [pounds] of NEGATIVE_COSTS) await c.query("INSERT INTO products (name, price, cost) VALUES ('[Negative cost]', 28, $1)", [pounds]);
     await c.query(`INSERT INTO products (name, price, cost) SELECT '[Sweep]', g / 100.0, g / 100.0 FROM generate_series(0, ${SWEEP - 1}) g`);
+    // A count applied before 114 keeps its figure when the column widens.
+    const { rows: [counted] } = await c.query("INSERT INTO products (name, price, cost) VALUES ('[Counted]', 28, 14) RETURNING id");
+    const { rows: [jack] } = await c.query("INSERT INTO logins (shop_id, name, email, password_hash) VALUES ($1, 'Jack Lewis', 'jack@example.test', 'x') RETURNING id", [ids.shop]);
+    const { rows: [take] } = await c.query("INSERT INTO stock_takes (kind, target, started_by_login_id) VALUES ('area', '[Area]', $1) RETURNING id", [jack.id]);
+    await c.query('INSERT INTO stock_take_results (stock_take_id, product_id, expected, counted, difference, cost_pence) VALUES ($1, $2, 1, 1, 0, 1400)', [take.id, counted.id]);
     await inShop(c, ids.other);
     await c.query("INSERT INTO products (name, price, cost) VALUES ('[Other product]', 12.34, 5.67)");
     await c.query('DELETE FROM schema_migrations WHERE filename = ANY($1)', [LATER]);
@@ -92,7 +97,12 @@ test('114 converts every price and cost exactly, on an empty and a populated dat
     const negative = await c.query("SELECT cost::text AS pounds, cost_pence FROM products WHERE name = '[Negative cost]' ORDER BY id");
     assert.deepEqual(negative.rows.map((r) => [r.pounds, Number(r.cost_pence)]), NEGATIVE_COSTS);
     const { rows: [figures] } = await wrongFigures(c);
-    assert.deepEqual(figures, { rows: SWEEP + AWKWARD.length + NEGATIVE_COSTS.length, wrong_price: 0, wrong_cost: 0 });
+    assert.deepEqual(figures, { rows: SWEEP + AWKWARD.length + NEGATIVE_COSTS.length + 1, wrong_price: 0, wrong_cost: 0 });
+    // A count's cost holds whatever a product's can.
+    const { rows: [{ data_type: kind }] } = await c.query("SELECT data_type FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'stock_take_results' AND column_name = 'cost_pence'");
+    assert.equal(kind, 'bigint');
+    const { rows: [result] } = await c.query('SELECT cost_pence FROM stock_take_results');
+    assert.equal(Number(result.cost_pence), 1400);
   };
   await withClient(url.href, check);
 

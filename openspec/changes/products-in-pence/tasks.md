@@ -19,4 +19,5 @@
 - [x] 3.1 Each rule broken on purpose, then restored.
 - [x] 3.2 Migration from empty on a scratch database and on a populated one; `check-money-totals` on both.
 - [x] 3.3 Large made-up table: the lock measured, plans for the list and a product checked.
+- [x] 3.3a The independent review's fixes: a count's cost widened; a price's limit on every writer; the 2 seconds, a timed-out save's rollback and sorting by price each pinned and seen red; the margin claim corrected.
 - [x] 3.4 `npm test`, `npm run test:browser`, consolidate tests, `npm run lint`, typecheck and check-migrations on the head after merging latest main; a fresh review; archive as the last commit.
