@@ -6,6 +6,9 @@ import { prepare } from '../db.js';
 export const NO_CUSTOMER = 'The customer on this bike isn’t in the customers file';
 // The customer's name is looked up when it's shown (lookRows), never stored in the row.
 export const SAME_PERSON = 'Looks like the same person as';
+// Only their email or phone: someone else may share it, so it's for a person to
+// decide (Jack, 4 Nov, "Needs a look"). No name and no customer: nothing to show who.
+export const SHARED_CONTACT = 'Shares contact details with a customer who was deleted';
 const SEVERAL_CONTACT = 'More than one customer has this email or phone';
 const SEVERAL_NAME = 'More than one customer has this name';
 const NAME_DIFFERS = 'The name on this bike isn’t the name of the customer with this email or phone';
@@ -48,9 +51,11 @@ export function consentDay(text) {
 }
 
 // One-way codes of what a deleted person leaves behind (Jack, 3 Nov,
-// docs/decisions/2026-11-03-answers.md): keyed with the shop's own random salt,
-// so they can't be compared across shops or worked back from a list. They're used
-// only to spot and skip that person on import, and are linked to nothing else.
+// docs/decisions/2026-11-03-answers.md): keyed with the shop's own random salt, so
+// the same details give different codes in another shop, and linked to nothing
+// else. They're used only to spot that person on import. They aren't proof against
+// someone with access to this database: the salt is stored beside the codes, so
+// that person could test a guessed email or phone against them.
 const codeOf = (salt, kind, value) => createHmac('sha256', salt).update(`${kind}:${value}`).digest('hex');
 const codesFor = (salt, { account, emails = [], phones = [] }) => [
   ...(account ? [['account', String(account).trim()]] : []),
@@ -62,12 +67,14 @@ const codesFor = (salt, { account, emails = [], phones = [] }) => [
 export async function moveSalt() {
   return (await prepare('SELECT salt FROM move_deleted_salt').get())?.salt ?? null;
 }
-async function wasDeleted(context, person) {
-  if (!context.salt) return false;
+// Which of a person's details a deleted customer left a code for: 'account', 'contact', or null.
+async function deletedMatch(context, person) {
+  if (!context.salt) return null;
   const codes = codesFor(context.salt, person);
-  if (codes.length === 0) return false;
-  const hit = await prepare('SELECT 1 AS yes FROM move_deleted_codes WHERE code = ANY(?) LIMIT 1').get(codes.map(([, code]) => code));
-  return Boolean(hit);
+  if (codes.length === 0) return null;
+  const hits = await prepare('SELECT kind FROM move_deleted_codes WHERE code = ANY(?)').all(codes.map(([, code]) => code));
+  if (hits.some((h) => h.kind === 'account')) return 'account';
+  return hits.length ? 'contact' : null;
 }
 
 const liveMatches = (email, forms) => prepare(
@@ -80,14 +87,16 @@ export async function customerRow(d, file, context) {
   const account = (d['Account Number'] ?? '').trim();
   const email = (d.Email ?? '').trim();
   const phone = (d.Phone ?? '').trim();
-  // Someone who asked to be deleted never comes back, however the file's sent.
-  if (await wasDeleted(context, { account, emails: [email], phones: [phone] })) return { state: 'skipped' };
+  const match = await deletedMatch(context, { account, emails: [email], phones: [phone] });
+  // Their own account number: someone who asked to be deleted never comes back.
+  if (match === 'account') return { state: 'skipped' };
+  // Merged included: they've come across, and stay as they are (design 5).
+  if (account && (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account))) return { state: 'same' };
+  if (match === 'contact') return look(SHARED_CONTACT);
   const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
   if (!name) return look('No name');
   // With no account number a resent file couldn't tell them from themselves.
   if (!account) return look('No account number');
-  // Merged included: they've come across, and stay as they are (design 5).
-  if (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account)) return { state: 'same' };
   const [same] = await liveMatches(cleanEmail(email), phoneForms(phone));
   if (same) return look(SAME_PERSON, same.id);
   const address = [d.Address, d['Address 2'], d.City, d.County, d.Country].filter(Boolean).join(', ') || null;
@@ -127,7 +136,8 @@ export async function lockBikeOwners(rows) {
 }
 
 export async function bikeRow(d, file, context) {
-  if (await wasDeleted(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] })) return { state: 'skipped' };
+  // A bike has no account number, so only ever a contact match.
+  if (await deletedMatch(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] })) return look(SHARED_CONTACT);
   if (!d.Description) return look('No description');
   const owner = await bikeOwner(d);
   if (!owner.id) return look(owner.why, owner.customerId);

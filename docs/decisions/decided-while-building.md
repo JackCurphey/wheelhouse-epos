@@ -2097,7 +2097,7 @@ WP-1.5's. So: slice C, WP-2.3.
 
 ### 3 Nov 2026: Citrus Lime import, customers and bikes (WP-2.4; `openspec/changes/citrus-import-customers`; `mv-start`, `mv-summary`)
 
-1. **A deleted customer's account number, email and phone leave only one-way codes behind,** one per shop, used only to spot and skip them when a file comes (Jack's answers, `docs/decisions/2026-11-03-answers.md`, replacing this entry's earlier "the account number stays"). Nothing readable stays. A row that matches is left out and counted, on the summary as "[n] left out, as they asked".
+1. **A deleted customer's account number, email and phone leave only one-way codes behind,** one per shop, used only to spot and skip them when a file comes (Jack's answers, `docs/decisions/2026-11-03-answers.md`, replacing this entry's earlier "the account number stays"). Nothing readable stays. A row with their account number is left out and counted, on the summary as "[n] left out, as they asked"; a row with only their email or phone needs a look (Jack, 4 Nov, answer 3).
 2. **The same email or phone as a live customer needs a look,** even if it's a family sharing one, as drawn ("Looks like the same person as").
 3. **A bike's whole description goes in Model,** with Make empty. Citrus Lime has one field, and splitting it would be a guess.
 4. **A bike matches everyone its email and phones fit, then the exact name if none do** (the independent review, 3 Nov). It needs a look if they fit two people, if the name on the bike disagrees with the person they fit, or if a name alone fits two.
