@@ -27,12 +27,12 @@ function nationalNumber(text) {
   return rest.replace(/^0/, '');
 }
 // Every way it may be held, as digits: for finding a customer, a bike's owner, and waiting rows.
-function phoneForms(text) {
+export function phoneForms(text) {
   const national = nationalNumber(text);
   return national ? [national, `0${national}`, `44${national}`, `0044${national}`, `440${national}`, `00440${national}`] : [];
 }
-const cleanEmail = (text) => String(text ?? '').trim().toLowerCase();
-const cleanName = (text) => String(text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+export const cleanEmail = (text) => String(text ?? '').trim().toLowerCase();
+export const cleanName = (text) => String(text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 const realDay = (y, m, d) => {
   const at = new Date(Date.UTC(y, m - 1, d));
   return at.getUTCFullYear() === y && at.getUTCMonth() === m - 1 && at.getUTCDate() === d ? at.toISOString().slice(0, 10) : null;
@@ -92,13 +92,14 @@ export async function customerRow(d, file, context) {
   if (match === 'account') return { state: 'skipped' };
   // Merged included: they've come across, and stay as they are (design 5).
   if (account && (await prepare('SELECT id FROM customers WHERE citrus_account = ?').get(account))) return { state: 'same' };
-  if (match === 'contact') return look(SHARED_CONTACT);
+  // Only a person, on this one row, gets past this (mv-fix; answer 6). A batch never does.
+  if ((match === 'contact' || context.storedShared) && !context.decided?.shared) return look(SHARED_CONTACT);
   const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
   if (!name) return look('No name');
   // With no account number a resent file couldn't tell them from themselves.
   if (!account) return look('No account number');
   const [same] = await liveMatches(cleanEmail(email), phoneForms(phone));
-  if (same) return look(SAME_PERSON, same.id);
+  if (same && context.decided?.notSameAs !== same.id) return look(SAME_PERSON, same.id);
   const address = [d.Address, d['Address 2'], d.City, d.County, d.Country].filter(Boolean).join(', ') || null;
   const yes = YES.test(d['GDPR Consent'] ?? '');
   const made = await prepare(
@@ -137,7 +138,7 @@ export async function lockBikeOwners(rows) {
 
 export async function bikeRow(d, file, context) {
   // A bike has no account number, so only ever a contact match.
-  if (await deletedMatch(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] })) return look(SHARED_CONTACT);
+  if (!context.decided?.shared && (context.storedShared || await deletedMatch(context, { emails: [d['Email Address']], phones: [d['Mobile Number'], d['Phone Number']] }))) return look(SHARED_CONTACT);
   if (!d.Description) return look('No description');
   const owner = await bikeOwner(d);
   if (!owner.id) return look(owner.why, owner.customerId);
@@ -170,7 +171,7 @@ const rowName = (d) => cleanName(d['Customer Name'] ?? [d['First Name'], d['Last
 /**
  * Deleting someone's details (Jack, 3 and 4 Nov; design 8, 10, 22 and 23): one-way
  * codes of their account number, emails and phones are kept, with nothing else.
- * Rows not yet in go if they're the person's own: their account number, or their
+ * Rows not yet in, or left out, go if they're the person's own: their account number, or their
  * exact name with their email or phone (or, for a row needing a look, a link to
  * them). The file's counts follow. Other rows sharing their email or phone may be
  * someone else's, so they stay, with their own details, the shared email or phone
@@ -193,7 +194,7 @@ export async function forgetForMove(customerIds, emails) {
   const names = new Set(people.map((p) => cleanName(p.name)).filter(Boolean));
   const rows = await prepare(
     `SELECT id, file_id, state, data, (data->>'Account Number' = ANY(?::text[])) AS by_account FROM move_rows
-      WHERE state IN ('waiting', 'look') AND (
+      WHERE state IN ('waiting', 'look', 'left_out') AND (
         data->>'Account Number' = ANY(?::text[])
         OR customer_id = ANY(?::int[])
         OR lower(trim(coalesce(data->>'Email', data->>'Email Address', ''))) = ANY(?::text[])
@@ -203,17 +204,18 @@ export async function forgetForMove(customerIds, emails) {
       ) ORDER BY id`
   ).all(accounts, accounts, customerIds, emails, phones, phones, phones);
   const own = rows.filter((r) => r.by_account || names.has(rowName(r.data)));
-  const shares = rows.filter((r) => !own.includes(r) && r.state === 'look');
+  const shares = rows.filter((r) => !own.includes(r) && r.state !== 'waiting');
   const perFile = new Map();
   for (const { id, file_id: fileId, state } of own) {
     await prepare('DELETE FROM move_rows WHERE id = ? RETURNING id').get(id);
-    const was = perFile.get(fileId) ?? { total: 0, look: 0 };
+    const was = perFile.get(fileId) ?? { total: 0, look: 0, leftOut: 0 };
     was.total += 1;
     if (state === 'look') was.look += 1;
+    if (state === 'left_out') was.leftOut += 1;
     perFile.set(fileId, was);
   }
-  for (const [id, { total, look: looks }] of [...perFile].sort(([a], [b]) => a - b)) {
-    await prepare('UPDATE move_files SET rows_total = rows_total - ?, rows_look = rows_look - ? WHERE id = ?').run(total, looks, id);
+  for (const [id, { total, look: looks, leftOut }] of [...perFile].sort(([a], [b]) => a - b)) {
+    await prepare('UPDATE move_files SET rows_total = rows_total - ?, rows_look = rows_look - ?, rows_left_out = rows_left_out - ? WHERE id = ?').run(total, looks, leftOut, id);
   }
   for (const { id } of shares) {
     await prepare('UPDATE move_rows SET why = ?, customer_id = NULL WHERE id = ?').run(SHARED_CONTACT, id);

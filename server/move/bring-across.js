@@ -13,11 +13,11 @@ const BATCHES_A_ROUND = 20;
 const INSERT_CHUNK = 500;
 export const NO_PRODUCT = 'The product isn’t in the products file';
 const STOCK_NOTE = 'Brought across from Citrus Lime';
-const ROW_FAILED = 'Wheelhouse couldn’t bring this row across';
+export const ROW_FAILED = 'Wheelhouse couldn’t bring this row across';
 const MAX_MONEY = 99_999_999.99; // NUMERIC(10,2)
 const MAX_QTY = 100_000; // as an adjustment's limit
 // Worth trying again rather than blaming the row: a deadlock, a lock wait, a clash.
-const TRY_AGAIN = new Set(['40P01', '40001', '55P03']);
+export const TRY_AGAIN = new Set(['40P01', '40001', '55P03']);
 
 // A plain number, with commas only where thousands go. Nothing else: not £ or a
 // lone comma (Number would read those as 0 once removed), not 12,50, 0x10 or 1e3.
@@ -43,7 +43,7 @@ function vatOf(text) {
 }
 const look = (why) => ({ state: 'look', why });
 // Stock that didn't come across, so Stock levels can't say All in (design 12).
-const holdsStock = (d) => numberOf(d['Qty On Hand'] ?? '0') !== 0;
+export const holdsStock = (d) => numberOf(d['Qty On Hand'] ?? '0') !== 0;
 
 // Design 7 to 10. Everything is read and checked before anything is written.
 async function priceListRow(d, file, context) {
@@ -92,7 +92,7 @@ async function barcodeRow(d) {
   return { state: 'in' };
 }
 
-const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow, customers: customerRow, bikes: bikeRow };
+export const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow, customers: customerRow, bikes: bikeRow };
 // Those that wait for another file: when it finishes, they try again.
 const WAITS_FOR = { price_list: ['barcodes', NO_PRODUCT], customers: ['bikes', NO_CUSTOMER] };
 
@@ -103,24 +103,30 @@ async function retryAfter(file) {
     `UPDATE move_rows r SET state = 'waiting', why = NULL FROM move_files f
       WHERE r.file_id = f.id AND f.report = ? AND r.state = 'look' AND r.why = ? RETURNING r.file_id`
   ).all(waiting[0], waiting[1]);
+  await backToWaiting(again);
+}
+
+// Rows just sent back to waiting: their files' counts follow, and those files carry on.
+export async function backToWaiting(again) {
   const perFile = new Map();
   for (const { file_id: id } of again) perFile.set(id, (perFile.get(id) ?? 0) + 1);
   for (const [id, count] of [...perFile].sort(([a], [b]) => a - b)) {
     await prepare(`UPDATE move_files SET state = 'bringing', rows_look = rows_look - ?, finished_at = NULL WHERE id = ?`).run(count, id);
   }
+  return perFile.size > 0;
 }
 
 // The batch's locks, taken before any row is written: every file of the shop in
 // id order, as deleting someone's details does, then the batch's products in the
 // order sales use.
-const lockFiles = () => prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
-async function lockForBatch(file, rows) {
+export const lockFiles = () => prepare('SELECT id FROM move_files ORDER BY id FOR UPDATE').all();
+export async function lockForBatch(file, rows) {
   if (file.report === 'barcodes') {
     await prepare('SELECT id FROM products WHERE sku = ANY(?) ORDER BY id FOR UPDATE').all(rows.map((r) => r.data.ILC).filter(Boolean));
   }
   if (file.report === 'bikes') await lockBikeOwners(rows);
 }
-async function batchContext(file) {
+export async function batchContext(file) {
   if (file.report === 'customers' || file.report === 'bikes') return { salt: await moveSalt() };
   if (file.report !== 'price_list') return {};
   const first = await prepare(`SELECT store_name FROM move_files WHERE report = 'price_list' AND store_name <> '' ORDER BY id LIMIT 1`).get();
@@ -128,14 +134,14 @@ async function batchContext(file) {
 }
 
 // A row's outcome, then the file's counts: added up once per batch, not per row.
-async function settle(row, done, file, totals) {
+export async function settle(row, done, file, totals) {
   if (done.state === 'look') await prepare(`UPDATE move_rows SET state = 'look', why = ?, customer_id = ? WHERE id = ?`).run(done.why, done.customerId ?? null, row.id);
-  else await prepare(`UPDATE move_rows SET state = ?, why = NULL, data = '{}' WHERE id = ?`).run(done.state, row.id);
+  else await prepare(`UPDATE move_rows SET state = ?, why = NULL, customer_id = NULL, data = '{}' WHERE id = ?`).run(done.state, row.id);
   totals[done.state] = (totals[done.state] ?? 0) + 1;
   totals.stock = (totals.stock ?? 0) + (done.stock ?? 0);
   if (done.state === 'look' && file.report === 'price_list' && holdsStock(row.data)) totals.stockLook = (totals.stockLook ?? 0) + 1;
 }
-const addCounts = (file, t) => prepare(
+export const addCounts = (file, t) => prepare(
   `UPDATE move_files SET rows_in = rows_in + ?, rows_same = rows_same + ?, rows_skipped = rows_skipped + ?, rows_look = rows_look + ?,
           stock_in = stock_in + ?, stock_look = stock_look + ? WHERE id = ?`
 ).run(t.in ?? 0, t.same ?? 0, t.skipped ?? 0, t.look ?? 0, t.stock ?? 0, t.stockLook ?? 0, file.id);

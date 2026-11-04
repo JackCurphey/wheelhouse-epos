@@ -7,8 +7,10 @@ import { readJsonBody, sendJson, badRequest, notFound } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { wakeBringingAcross } from '../move/bring-across.js';
+import { fixRow, leaveOutRow, lookList } from '../move/fix-row.js';
 import { readRequestKey } from '../booking-request-key.js';
 import { someoneElseCheckedIn } from './till-pins.js';
+import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024;
 const MAX_NAME = 200;
@@ -28,6 +30,8 @@ const serializeFile = (f) => ({
   rowsSame: f.rows_same,
   rowsSkipped: f.rows_skipped,
   rowsLook: f.rows_look,
+  rowsLeftOut: f.rows_left_out,
+  rowsFixed: f.rows_fixed,
   stockIn: f.stock_in,
   stockLook: f.stock_look,
 });
@@ -38,6 +42,22 @@ async function refused(req, res) {
   if (await someoneElseCheckedIn(req)) { sendJson(res, 403, { error: OWNER_ONLY, code: 'owner_only' }); return true; }
   return false;
 }
+
+// What a fix or leave-out needs, read and checked; it has answered if it returns null.
+async function readRowRequest(req, res, params) {
+  if (await refused(req, res)) return null;
+  if (!/^\d{1,9}$/.test(params.id)) { notFound(res, 'Row not found'); return null; }
+  const who = await whoIsBooking(req);
+  if (!who) { sendJson(res, 409, CHECK_IN_FIRST); return null; }
+  const body = await readJsonBody(req);
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) { badRequest(res, 'Send the row'); return null; }
+  const key = readRequestKey(body);
+  if (key.error || !key.value) { badRequest(res, key.error ?? 'A request key is required'); return null; }
+  if (typeof body.seen !== 'string') { badRequest(res, 'Send what you saw of this row'); return null; }
+  return { id: Number(params.id), who, body, key: key.value, seen: body.seen };
+}
+// Only what a person ticked, as it is: anything else counts as not ticked.
+const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Number.isInteger(d?.notSameAs) ? d.notSameAs : null });
 
 // One send at a time per shop, as each holds a whole file in memory: a stalled
 // upload holds up only its own shop, until its connection ends.
@@ -107,6 +127,27 @@ export function register(route) {
     } finally {
       sendingShops.delete(shopId);
     }
+  });
+
+  route('GET', '/api/move/look', async (req, res) => {
+    if (await refused(req, res)) return;
+    sendJson(res, 200, await lookList());
+  });
+
+  // One row at a time, always: nothing here takes more than one (mv-fix; answer 6).
+  route('POST', '/api/move/rows/:id/fix', async (req, res, params, query, afterRelease, shopId) => {
+    const r = await readRowRequest(req, res, params);
+    if (!r) return;
+    const { status, body } = await fixRow(r.id, { seen: r.seen, fields: r.body.fields ?? {}, decided: readDecided(r.body.decided), key: r.key, who: r.who });
+    if (body.more) wakeBringingAcross(shopId);
+    sendJson(res, status, body);
+  });
+
+  route('POST', '/api/move/rows/:id/leave-out', async (req, res, params) => {
+    const r = await readRowRequest(req, res, params);
+    if (!r) return;
+    const { status, body } = await leaveOutRow(r.id, { seen: r.seen, key: r.key, who: r.who });
+    sendJson(res, status, body);
   });
 
   // Choose another file: a file that couldn't be read goes from the list.

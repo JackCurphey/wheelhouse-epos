@@ -164,8 +164,8 @@ const serializeDelivery = (d) => ({
 // person checked in by PIN, or on an ordinary browser the sign-in's person. A
 // till or workshop computer stays signed in as someone else, so with nobody
 // checked in there it names nobody: null, and the route asks for a PIN.
-const CHECK_IN_FIRST = { error: 'Check in with your PIN first', code: 'check_in_first' };
-async function whoIsBooking(req) {
+export const CHECK_IN_FIRST = { error: 'Check in with your PIN first', code: 'check_in_first' };
+export async function whoIsBooking(req) {
   const ctx = await currentSession(req);
   const checkin = await currentCheckin(req);
   if (checkin) return { loginId: ctx.login.id, employeeId: checkin.employee_id, name: checkin.name };
