@@ -162,7 +162,6 @@ export function MovePage() {
     setSends((all) => (problem ? all.map((s) => (s === send ? { ...s, problem } : s)) : all.filter((s) => s !== send)));
   }
   async function onFiles(files: File[]) {
-    setLooking(false);
     setNews(null);
     for (const file of files) await sendOne(file);
   }
