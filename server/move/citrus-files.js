@@ -11,6 +11,16 @@ const REPORTS = {
     needs: ['Alias', 'ILC'],
     keeps: ['Alias', 'ILC', 'Description'],
   },
+  // Top Customers (openspec/changes/citrus-import-customers, design 2).
+  customers: {
+    needs: ['Account Number', 'First Name', 'Last Name', 'Email', 'Phone'],
+    keeps: ['Account Number', 'First Name', 'Last Name', 'Address', 'Address 2', 'City', 'County', 'Postcode', 'Country', 'Email', 'Phone', 'GDPR Consent', 'GDPR Consent Date'],
+  },
+  // Service Items Report: the customers' bikes.
+  bikes: {
+    needs: ['Description', 'Serial Number', 'Customer Name', 'Email Address'],
+    keeps: ['Description', 'Serial Number', 'Customer Name', 'Email Address', 'Mobile Number', 'Phone Number'],
+  },
 };
 const HEADING_ROWS = 20;
 const MAX_KEPT_CHARS = 64_000_000;

@@ -114,8 +114,22 @@ export function register(route) {
     if (await refused(req, res)) return;
     const id = Number(params.id);
     if (!Number.isInteger(id)) return notFound(res, 'File not found');
-    const gone = await prepare(`DELETE FROM move_files WHERE id = ? AND state = 'cant_read' RETURNING id`).get(id);
-    if (!gone) return notFound(res, 'File not found');
+    // With whatever it still holds, so nothing of it stays and nothing blocks it.
+    await dbExec('BEGIN');
+    try {
+      const file = await prepare(`SELECT id FROM move_files WHERE id = ? AND state = 'cant_read' FOR UPDATE`).get(id);
+      if (!file) {
+        await dbExec('ROLLBACK');
+        return notFound(res, 'File not found');
+      }
+      await prepare('DELETE FROM move_rows WHERE file_id = ?').run(id);
+      await prepare('DELETE FROM move_file_bytes WHERE file_id = ?').run(id);
+      await prepare('DELETE FROM move_files WHERE id = ?').run(id);
+      await dbExec('COMMIT');
+    } catch (err) {
+      await dbExec('ROLLBACK');
+      throw err;
+    }
     sendJson(res, 200, { ok: true });
   });
 }

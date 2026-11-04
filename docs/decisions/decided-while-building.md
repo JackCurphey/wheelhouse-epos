@@ -2084,6 +2084,33 @@ WP-1.5's. So: slice C, WP-2.3.
 11. **A file is stored, then read in the background** (the independent review, 3 Nov), so a slow read can't look like a failed send. Its bytes go once it's read. A made-up 100,000-row price list: send answered in 96 ms, read in 7 s, across in under 5 minutes. One send at a time per shop; a second is told to try again in a moment, and a shop can have 10 waiting.
 12. **What's too much to read:** 300,000 rows, 5,000,000 cells, 300 columns, 32,767 characters in a cell (Excel's own limit), 150 million characters in all, 60 seconds or 1 GB to read it. Any of those, or a character that doesn't exist, is "couldn't read it".
 
+### 3 Nov 2026: Citrus Lime import, the page (WP-2.4; `openspec/changes/citrus-import-screens`; `mv-start`, `mv-progress`, `mv-progress-failed`, `mv-summary`)
+
+1. **The page is always in the Owner's sidebar, after Today.** It's drawn as being there "while the move is on", reached from Getting started. Getting started isn't built (WP-5.1), so nothing can say a move is on yet. Every Owner sees it until then, including shops not moving.
+2. **Which files to download is filled in from the exports list:** "Price List - Store Level and Barcode/Alias List, in Cloud Reports", replacing the drawing's placeholder.
+3. **Sales and Workshop jobs stay as rows, with a grey "Later".** They come with WP-8.1, or a shop's full export.
+4. **Next: run alongside, Look at the [n] and Ask us to help aren't shown yet,** nor are the stages links, since there's nothing behind them. They appear as each is built.
+5. **A file that can't be read gets a row named after the file,** not under Customers as drawn, because Wheelhouse can't tell which kind an unreadable file was. It stays, even after leaving the page, until another is chosen (the independent review, 3 Nov).
+6. **A send that fails for another reason says "Not sent"** and "Wheelhouse couldn't send this file. Try again in a moment", so nobody hunts for a fault in a good file. A file over 30 MB is treated as can't read.
+7. **The summary has a slim "Drop more files here",** the Weekly refresh card's zone, for someone who sent only some of the files.
+8. **The summary's wording** (the independent review, 3 Nov): "[n] brought across" counts only what's new. Added where it applies, "· [n] already here" for a code left alone, so a resent file doesn't look like it came across twice. Stock levels says "[n] need a look", not All in, when any stock didn't come across.
+
+### 3 Nov 2026: Citrus Lime import, customers and bikes (WP-2.4; `openspec/changes/citrus-import-customers`; `mv-start`, `mv-summary`)
+
+1. **A deleted customer's account number, email and phone leave only one-way codes behind,** one per shop, used only to spot and skip them when a file comes (Jack's answers, `docs/decisions/2026-11-03-answers.md`, replacing this entry's earlier "the account number stays"). Nothing readable stays. A row with their account number is left out and counted, on the summary as "[n] left out, as they asked"; a row with only their email or phone needs a look (Jack, 4 Nov, answer 3).
+2. **The same email or phone as a live customer needs a look,** even if it's a family sharing one, as drawn ("Looks like the same person as").
+3. **A bike's whole description goes in Model,** with Make empty. Citrus Lime has one field, and splitting it would be a guess.
+4. **A bike matches everyone its email and phones fit, then the exact name if none do** (the independent review, 3 Nov). It needs a look if they fit two people, if the name on the bike disagrees with the person they fit, or if a name alone fits two.
+5. **A yes to offers keeps its date if it can be read,** as Excel's day number, dd/mm/yyyy or yyyy-mm-dd; otherwise the yes stands with no date. A no keeps no date, and the date goes whenever the yes or no changes (the independent review, 3 Nov).
+6. **Bikes are counted beside customers on the summary** ("[n] brought across · [n] bikes"), as bikes aren't one of the drawn kinds. "· [n] already here" and "· [n] left out, as they asked" are added where they apply.
+7. **Deleting someone removes the rows that are their own:** waiting or needing a look, with their account number, or with their exact name and their email or phone (or a link to them), and the file's counts follow (Jack, 4 Nov, answer 5). A row with another name that only shares their email or phone stays as needs a look, with no link to them, its shared email or phone included (answer 4). A row with only their name is left as it was, since a name alone can't be told from someone else's.
+8. **A customer row with no account number needs a look** (the independent review, 3 Nov): with nothing to know them by, a resent file would add them again.
+9. **A row needing a look holds the customer's id, not their name,** which is looked up when it's shown (the independent review, 3 Nov).
+10. **A bike already brought across isn't added again,** matched by the Citrus Lime row it came from, its frame number on that customer, or the same description and frame (the independent review, 3 Nov).
+11. **Known limit: the file sent again after a deletion.** Their row comes back as needs a look with the name from the file, because Wheelhouse no longer knows their name, so it can't tell the row is theirs (answer 3 covers this). The same goes for a row stored after the deletion, from a file still being stored when it ran.
+12. **Known limit: renamed before deletion.** If they were renamed in Wheelhouse first, their row's old name no longer matches, so it's treated as sharing contact details and stays, with that old name.
+13. **For the Fix piece:** its screen must not make a customer from a row needing a look because it shares a deleted customer's details without a person deciding.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

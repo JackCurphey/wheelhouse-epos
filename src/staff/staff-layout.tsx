@@ -4,7 +4,7 @@ import { apiMutate } from '@/lib/api/client.ts';
 import { pageNav } from '@/lib/page-nav.ts';
 import { useSession, type SessionUser } from '@/lib/auth/use-session.ts';
 import { useAccessibilityClasses, useYourSettings } from '@/lib/your-settings.ts';
-import { NAV_ROUTES, pageLabel, roomsFor, type NavItem, type Role } from './nav.ts';
+import { NAV_ROUTES, pageLabel, sidebarRooms, type NavItem, type Role } from './nav.ts';
 import { NavIcon } from './nav-icon.tsx';
 import { HeaderSlotContext } from './header-slot.ts';
 import { HeaderSearch } from './header-search.tsx';
@@ -52,7 +52,7 @@ function SideItem({ item, onPick }: { item: NavItem; onPick?: () => void }) {
 function RoomList({ role, onPick }: { role: Role; onPick?: () => void }) {
   return (
     <div className="flex flex-col gap-2">
-      {roomsFor(role).map((r) => (
+      {sidebarRooms(role).map((r) => (
         <div key={r.room} className="flex flex-col gap-0.5">
           <div className="px-3 py-0.5 text-size-11 font-bold tracking-[1px] uppercase opacity-70">{r.room}</div>
           {r.items.map((i) => (
@@ -130,7 +130,7 @@ function RailItem({ item }: { item: NavItem }) {
       }
     >
       <NavIcon name={item.icon} size={19} />
-      <span className="text-center text-xs leading-tight">{item.label}</span>
+      <span className="text-center text-xs leading-tight">{item.railLabel ?? item.label}</span>
     </NavLink>
   );
 }
@@ -170,7 +170,7 @@ function Rail({ user, shopName, role, roleName, folded }: { user: SessionUser; s
           className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg border border-[var(--wh-on-accent)]/30 text-xs font-semibold text-[var(--sidebar-foreground)]">
           <span aria-hidden="true" className="inline-flex -rotate-90"><NavIcon name="chevron" size={16} /></span>Unfold
         </button>
-        {roomsFor(role).map((r, i) => (
+        {sidebarRooms(role).map((r, i) => (
           <div key={r.room} className={`flex flex-col gap-px ${i ? 'border-t border-[var(--wh-on-accent)]/20 pt-[3px]' : ''}`}>
             {r.items.map((item) => (
               <RailItem key={item.key} item={item} />
