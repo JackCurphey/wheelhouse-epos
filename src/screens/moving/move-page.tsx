@@ -7,10 +7,12 @@ import { NavIcon } from '@/staff/nav-icon.tsx';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { Card, Page, Row, mono } from '@/screens/deliveries/deliveries-bits.tsx';
 import { FixBoard, RowNewsLine, type RowNews } from './fix-board.tsx';
+import { HelpDialog, HelpLink, HelpThanks } from './ask-us-to-help.tsx';
 
 /**
  * Office › Moving from Citrus Lime, Bring your data (mv-start, mv-progress,
- * mv-progress-failed, mv-summary, mv-fix, mv-sorted in moving.mjs; Moving from Citrus Lime decisions 2, 4 and 9;
+ * mv-progress-failed, mv-summary, mv-fix, mv-sorted, mv-help, mv-help-sent in
+ * moving.mjs; Moving from Citrus Lime decisions 2, 4 and 9;
  * openspec/changes/citrus-import-screens and citrus-import-fix). The owner drops
  * the files in; it starts by itself, with no Import button, and carries on if they
  * leave. Run alongside and Switch over are WP-8.1.
@@ -108,7 +110,7 @@ export function MovePage() {
   const isOwner = session.status === 'signed-in' && session.user.isOwner;
   const move = useQuery({
     queryKey: KEY,
-    queryFn: () => apiGet<{ files: MoveFile[] }>('/api/move'),
+    queryFn: () => apiGet<{ files: MoveFile[]; helpOffered?: boolean }>('/api/move'),
     enabled: isOwner,
     // While a file comes across, this page keeps up (audit M4).
     refetchInterval: (q) => (q.state.data?.files.some((f) => f.state === 'reading' || f.state === 'bringing') ? 2000 : false),
@@ -120,6 +122,8 @@ export function MovePage() {
   const [looking, setLooking] = useState(false);
   // Files dropped on Everything's sorted: what came across shows, not sorted again.
   const [moreSent, setMoreSent] = useState(false);
+  const [asking, setAsking] = useState<string | null>(null);
+  const [thanked, setThanked] = useState(false);
   // What just happened to a row: it shows on whichever board comes next (design 18).
   const [news, setNews] = useState<RowNews | null>(null);
   // Going between the rows and the summary, the button pressed has gone: the focus
@@ -188,6 +192,14 @@ export function MovePage() {
   if (!move.data) return <Page><Stages /><p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></Page>;
 
   const files = move.data.files;
+  // Only where the server says there's an inbox to send it to (Jack, 4 Nov, answer 3).
+  const help = (card: string) => (move.data?.helpOffered === true ? <HelpLink onClick={() => { setThanked(false); setAsking(card); }} /> : null);
+  const helpBits = (
+    <>
+      {asking ? <HelpDialog card={asking} who={session.user.name} shop={session.shop.name} onClose={() => setAsking(null)} onSent={() => { setAsking(null); setThanked(true); }} /> : null}
+      {thanked ? <HelpThanks onClose={() => setThanked(false)} /> : null}
+    </>
+  );
   const products = files.filter((f) => f.report === 'price_list' || f.report === 'barcodes');
   const priceLists = files.filter((f) => f.report === 'price_list');
   const people = files.filter((f) => f.report === 'customers' || f.report === 'bikes');
@@ -200,7 +212,7 @@ export function MovePage() {
     return (
       <Page>
         <Stages />
-        <Card id="t-bring-your-data-from-citrus-lime" title="Bring your data from Citrus Lime">
+        <Card id="t-bring-your-data-from-citrus-lime" title="Bring your data from Citrus Lime" action={help('Bring your data from Citrus Lime')}>
           <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">{REPORTS_NOTE}</p>
           <ul className="m-0 list-none p-0">
             <Row title="Products" sub={WHERE_PRODUCTS}><Chip>Not added yet</Chip></Row>
@@ -210,6 +222,7 @@ export function MovePage() {
           </ul>
           <DropZone title="Drop all the files here" onFiles={(f) => void onFiles(f)} />
         </Card>
+        {helpBits}
       </Page>
     );
   }
@@ -223,10 +236,11 @@ export function MovePage() {
     return (
       <Page>
         <Stages />
-        <FixBoard count={allLooks} listKey={LOOK_KEY}
+        <FixBoard count={allLooks} listKey={LOOK_KEY} action={help(`${allLooks} need a look`)}
           kinds={{ products: sumOf(products, (f) => f.rowsLook), customers: sumOf(people, (f) => f.rowsLook) }}
           news={news} onNews={setNews}
           onDoneForNow={() => { toHeading.current = true; setNews(null); setLooking(false); }} onSorted={() => queryClient.invalidateQueries({ queryKey: KEY, exact: true })} />
+        {helpBits}
       </Page>
     );
   }
@@ -249,7 +263,7 @@ export function MovePage() {
     return (
       <Page>
         <Stages />
-        <Card id="t-bringing-your-data-across" title="Bringing your data across">
+        <Card id="t-bringing-your-data-across" title="Bringing your data across" action={help('Bringing your data across')}>
           <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">You can leave this page — Wheelhouse carries on and shows the result here.</p>
           {hiddenInput}
           <div role="status" aria-live="polite">
@@ -266,6 +280,7 @@ export function MovePage() {
             </ul>
           </div>
         </Card>
+        {helpBits}
       </Page>
     );
   }
@@ -277,7 +292,7 @@ export function MovePage() {
     return (
       <Page>
         <Stages />
-        <Card id="t-everything-s-sorted" title="Everything’s sorted">
+        <Card id="t-everything-s-sorted" title="Everything’s sorted" action={help('Everything’s sorted')}>
           <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Everything that fitted is in. The ones you left out are kept, and will be listed under Settings › Office › Your data, to add by hand when you like.</p>
           {newsLine}
           <ul className="m-0 list-none p-0">
@@ -285,6 +300,7 @@ export function MovePage() {
           </ul>
           <DropZone slim title="Drop more files here" onFiles={(f) => { setMoreSent(true); void onFiles(f); }} />
         </Card>
+        {helpBits}
       </Page>
     );
   }
@@ -305,7 +321,7 @@ export function MovePage() {
   return (
     <Page>
       <Stages />
-      <Card id="t-here-s-what-came-across" title="Here’s what came across">
+      <Card id="t-here-s-what-came-across" title="Here’s what came across" action={help('Here’s what came across')}>
         {newsLine}
         <ul className="m-0 list-none p-0">
           {products.length
@@ -337,6 +353,7 @@ export function MovePage() {
           : null}
         <DropZone slim title="Drop more files here" onFiles={(f) => void onFiles(f)} />
       </Card>
+      {helpBits}
     </Page>
   );
 }

@@ -159,7 +159,7 @@ const TOLD: Record<Outcome['state'], string> = { in: 'came across', same: 'is al
  * and `kinds` how many under each heading, from the files, as the list stops at 200.
  */
 export function FixBoard({ count, kinds, listKey, action, news, onNews, onDoneForNow, onSorted }: {
-  count: number; kinds: { products: number; customers: number }; listKey: unknown[]; action?: ReactNode; news: RowNews | null; onNews: (news: RowNews) => void; onDoneForNow: () => void; onSorted: () => Promise<unknown>;
+  count: number; kinds: { products: number; customers: number }; listKey: unknown[]; action: ReactNode; news: RowNews | null; onNews: (news: RowNews) => void; onDoneForNow: () => void; onSorted: () => Promise<unknown>;
 }) {
   const queryClient = useQueryClient();
   const list = useQuery({
