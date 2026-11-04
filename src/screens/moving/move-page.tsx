@@ -110,7 +110,7 @@ export function MovePage() {
   const isOwner = session.status === 'signed-in' && session.user.isOwner;
   const move = useQuery({
     queryKey: KEY,
-    queryFn: () => apiGet<{ files: MoveFile[] }>('/api/move'),
+    queryFn: () => apiGet<{ files: MoveFile[]; helpOffered?: boolean }>('/api/move'),
     enabled: isOwner,
     // While a file comes across, this page keeps up (audit M4).
     refetchInterval: (q) => (q.state.data?.files.some((f) => f.state === 'reading' || f.state === 'bringing') ? 2000 : false),
@@ -193,7 +193,8 @@ export function MovePage() {
   if (!move.data) return <Page><Stages /><p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></Page>;
 
   const files = move.data.files;
-  const help = (card: string) => <HelpLink onClick={() => { setThanked(false); setAsking(card); }} />;
+  // Only where the server says there's an inbox to send it to (Jack, 4 Nov, answer 3).
+  const help = (card: string) => (move.data?.helpOffered === true ? <HelpLink onClick={() => { setThanked(false); setAsking(card); }} /> : null);
   const helpBits = (
     <>
       {asking ? <HelpDialog card={asking} who={session.user.name} shop={session.shop.name} onClose={() => setAsking(null)} onSent={() => { setAsking(null); setThanked(true); }} /> : null}

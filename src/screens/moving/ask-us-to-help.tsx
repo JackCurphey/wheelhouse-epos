@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Check } from 'lucide-react';
-import { apiMutate } from '@/lib/api/client.ts';
+import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Textarea } from '@/components/ui/textarea.tsx';
@@ -8,6 +8,9 @@ import { NavIcon } from '@/staff/nav-icon.tsx';
 import { Floating } from '@/screens/diary/diary-bits.tsx';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { linkClass } from '@/screens/deliveries/deliveries-bits.tsx';
+import { useFocusBack } from './fix-board.tsx';
+
+const COULDNT_SEND = 'Couldn’t send. What you wrote is kept here. Try again.';
 
 /**
  * Ask us to help (mv-help, mv-help-sent in moving.mjs; Jack, 15 Oct, not-drawn pages
@@ -22,19 +25,21 @@ export function HelpLink({ onClick }: { onClick: () => void }) {
 
 export function HelpDialog({ card, who, shop, onClose, onSent }: { card: string; who: string; shop: string; onClose: () => void; onSent: () => void }) {
   const [text, setText] = useState('');
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState('');
   const [sending, setSending] = useState(false);
+  // Kept for sending the same words again, so they count once; new words are a new request.
   const key = useRef(newRequestKey());
+  useFocusBack();
   const written = text.trim() !== '';
   async function send() {
     if (!written || sending) return;
     setSending(true);
-    setFailed(false);
+    setFailed('');
     try {
       await apiMutate('/api/move/help', { text, card, requestKey: key.current });
       onSent();
-    } catch {
-      setFailed(true);
+    } catch (err) {
+      setFailed(err instanceof ApiError && err.message ? err.message : COULDNT_SEND);
       setSending(false);
     }
   }
@@ -47,10 +52,12 @@ export function HelpDialog({ card, who, shop, onClose, onSent }: { card: string;
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
-        {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">Couldn’t send. What you wrote is kept here. Try again.</p> : null}
+        {failed ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed}</p> : null}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="ah-text" className="text-sm font-semibold">What looks wrong?</label>
-          <Textarea id="ah-text" rows={4} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} />
+          <Textarea id="ah-text" rows={4} maxLength={4000} value={text}
+            onChange={(e) => { setText(e.target.value); setFailed(''); key.current = newRequestKey(); }} />
+          <span className="text-size-13 text-[var(--wh-muted)]">Please don’t include customers’ details.</span>
         </div>
         <p className="m-0 flex gap-2 text-sm text-[var(--wh-muted)]">
           <NavIcon name="website" size={16} />

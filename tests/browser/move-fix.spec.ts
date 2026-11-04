@@ -89,3 +89,80 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await expect(main.getByRole('heading', { level: 2, name: 'Everything’s sorted' })).toBeVisible();
   });
 }
+
+const focusedName = (page: import('@playwright/test').Page) => page.evaluate(() => {
+  const at = document.activeElement as HTMLElement | null;
+  return at?.getAttribute('aria-label') ?? at?.textContent?.trim() ?? '';
+});
+const pressUntil = async (page: import('@playwright/test').Page, name: string) => {
+  for (let i = 0; i < 60; i += 1) {
+    await page.keyboard.press('Tab');
+    if ((await focusedName(page)) === name) return;
+  }
+  throw new Error(`Tab never reached ${name}`);
+};
+
+test('by keyboard alone: pop-ups give focus back, the last row\'s line takes it, and another file goes to the summary', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+  shops.push(owner);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/moving`);
+  const main = page.getByRole('main');
+  await main.getByLabel('Choose files').setInputFiles({ name: 'Price List.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: PRICE_LIST });
+  await expect(main.getByRole('button', { name: 'Look at the 2' })).toBeVisible({ timeout: 30_000 });
+
+  await main.getByRole('button', { name: 'Look at the 2' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(main.getByRole('heading', { level: 2, name: '2 need a look' })).toBeFocused();
+
+  // Fix: Cancel, then Escape, each back to the button.
+  await pressUntil(page, 'Fix Shimano brake pads');
+  await page.keyboard.press('Enter');
+  const box = page.getByRole('dialog', { name: 'Fix Shimano brake pads' });
+  await expect(box).toBeVisible();
+  await box.getByRole('button', { name: 'Cancel' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(box).toBeHidden();
+  expect(await focusedName(page)).toBe('Fix Shimano brake pads');
+  await page.keyboard.press('Enter');
+  await expect(box).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(box).toBeHidden();
+  expect(await focusedName(page)).toBe('Fix Shimano brake pads');
+
+  // Ask us to help: Cancel, back to the link.
+  await main.getByRole('button', { name: 'Ask us to help' }).focus();
+  await page.keyboard.press('Enter');
+  const help = page.getByRole('dialog', { name: 'Ask us to help' });
+  await expect(help).toBeVisible();
+  await help.getByRole('button', { name: 'Cancel' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(help).toBeHidden();
+  expect(await focusedName(page)).toBe('Ask us to help');
+
+  // A row left out: its line takes the focus, on this board and on the next.
+  await main.getByRole('button', { name: 'Leave out [Product]' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(main.getByText('[Product] left out')).toBeFocused();
+  await main.getByRole('button', { name: 'Leave out Shimano brake pads' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(main.getByRole('heading', { level: 2, name: 'Everything’s sorted' })).toBeVisible();
+  await expect(main.getByText('Shimano brake pads left out')).toBeFocused();
+  await expect(main.getByRole('listitem').filter({ hasText: 'Left out' })).toContainText('2 rows');
+
+  // Another file: what came across, then its rows, then sorted again.
+  await main.getByLabel('Choose files').setInputFiles({ name: 'More.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: xlsxOf([
+    ['Price List - Store Level'],
+    ['Store', 'Department', 'Category', 'Supplier', 'Item Lookup Code', 'Description', 'Store Cost', 'Price', 'Tax Rate', 'Qty On Hand'],
+    ['[Shop]', 'Brakes', null, '[Supplier]', '[Another code]', '[Another product]', 1, null, 20, 0],
+  ]) });
+  await expect(main.getByRole('heading', { level: 2, name: 'Here’s what came across' })).toBeVisible({ timeout: 30_000 });
+  await expect(main.getByRole('listitem').filter({ hasText: 'Stock levels' })).toContainText('2 left out');
+  await expect(main.getByRole('listitem').filter({ hasText: 'Stock levels' })).not.toContainText('All in');
+  await main.getByRole('button', { name: 'Look at the 1' }).click();
+  await main.getByRole('button', { name: 'Leave out [Another product]' }).click();
+  await expect(main.getByRole('heading', { level: 2, name: 'Everything’s sorted' })).toBeVisible();
+  await expect(main.getByText('[Another product] left out')).toBeFocused();
+});

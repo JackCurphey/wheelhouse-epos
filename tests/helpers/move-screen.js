@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 // `answer` decides what a fix, leave-out or help says; by default each works, and the row goes.
-export async function open({ files = [FILE()], rows = [NO_NAME, SAME], total, answer } = {}) {
+export async function open({ files = [FILE()], rows = [NO_NAME, SAME], total, answer, helpOffered = true } = {}) {
   const uninstall = installDom('http://localhost/workshop/moving');
   const realFetch = globalThis.fetch;
   current = { uninstall, realFetch };
@@ -39,7 +39,7 @@ export async function open({ files = [FILE()], rows = [NO_NAME, SAME], total, an
   globalThis.fetch = async (url, options = {}) => {
     const path = new URL(url, 'http://localhost').pathname;
     if (path === '/api/auth/me') return json(200, OWNER);
-    if (path === '/api/move') return json(200, { files: state.files });
+    if (path === '/api/move') return json(200, { files: state.files, ...(helpOffered === undefined ? {} : { helpOffered }) });
     if (path === '/api/move/look') return json(200, { rows: state.rows, total: total ?? state.rows.length });
     if (path === '/api/move/files') {
       state.fileSends.push(JSON.parse(options.body));
