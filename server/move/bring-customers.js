@@ -20,7 +20,7 @@ const LIVE = 'deleted_at IS NULL AND merged_into_id IS NULL';
 
 // A UK number however it's written, without its country code or leading 0:
 // 07700…, +44 7700…, 0044 7700…, +44 (0)7700…. Empty when it's too short to be one.
-export function nationalNumber(text) {
+function nationalNumber(text) {
   const digits = String(text ?? '').replace(/\D/g, '');
   if (digits.length < 7) return '';
   const rest = digits.startsWith('0044') ? digits.slice(4) : digits.startsWith('44') && digits.length >= 12 ? digits.slice(2) : digits;
