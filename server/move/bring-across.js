@@ -5,8 +5,10 @@
 // still waiting and nothing comes across twice.
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
+import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
-const BATCH = 200;
+// Small enough that a deletion waiting on the move files isn't told to try again.
+const BATCH = 100;
 const BATCHES_A_ROUND = 20;
 const INSERT_CHUNK = 500;
 export const NO_PRODUCT = 'The product isn’t in the products file';
@@ -90,9 +92,9 @@ async function barcodeRow(d) {
   return { state: 'in' };
 }
 
-const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow };
+const ROW_APPLIERS = { price_list: priceListRow, barcodes: barcodeRow, customers: customerRow, bikes: bikeRow };
 // Those that wait for another file: when it finishes, they try again.
-const WAITS_FOR = { price_list: ['barcodes', NO_PRODUCT] };
+const WAITS_FOR = { price_list: ['barcodes', NO_PRODUCT], customers: ['bikes', NO_CUSTOMER] };
 
 async function retryAfter(file) {
   const waiting = WAITS_FOR[file.report];
@@ -116,8 +118,10 @@ async function lockForBatch(file, rows) {
   if (file.report === 'barcodes') {
     await prepare('SELECT id FROM products WHERE sku = ANY(?) ORDER BY id FOR UPDATE').all(rows.map((r) => r.data.ILC).filter(Boolean));
   }
+  if (file.report === 'bikes') await lockBikeOwners(rows);
 }
 async function batchContext(file) {
+  if (file.report === 'customers' || file.report === 'bikes') return { salt: await moveSalt() };
   if (file.report !== 'price_list') return {};
   const first = await prepare(`SELECT store_name FROM move_files WHERE report = 'price_list' AND store_name <> '' ORDER BY id LIMIT 1`).get();
   return { firstStore: first?.store_name ?? '' };
@@ -125,7 +129,7 @@ async function batchContext(file) {
 
 // A row's outcome, then the file's counts: added up once per batch, not per row.
 async function settle(row, done, file, totals) {
-  if (done.state === 'look') await prepare(`UPDATE move_rows SET state = 'look', why = ? WHERE id = ?`).run(done.why, row.id);
+  if (done.state === 'look') await prepare(`UPDATE move_rows SET state = 'look', why = ?, customer_id = ? WHERE id = ?`).run(done.why, done.customerId ?? null, row.id);
   else await prepare(`UPDATE move_rows SET state = ?, why = NULL, data = '{}' WHERE id = ?`).run(done.state, row.id);
   totals[done.state] = (totals[done.state] ?? 0) + 1;
   totals.stock = (totals.stock ?? 0) + (done.stock ?? 0);
@@ -184,7 +188,7 @@ async function oneByOne(file, ids, beforeRow) {
  */
 export async function bringBatch({ beforeRow = () => {}, afterRows = () => {} } = {}) {
   const file = await prepare(
-    `SELECT * FROM move_files WHERE state = 'bringing' ORDER BY array_position(ARRAY['price_list', 'barcodes'], report), id LIMIT 1`
+    `SELECT * FROM move_files WHERE state = 'bringing' ORDER BY array_position(ARRAY['price_list', 'customers', 'barcodes', 'bikes'], report), id LIMIT 1`
   ).get();
   if (!file) return false;
   let ids = null;
@@ -239,8 +243,10 @@ export async function readNextFile(shopId, { afterChunk = () => {} } = {}) {
   });
   if (!next) return false;
   const found = await readInWorker(next.bytes, next.file_name);
+  // Leftovers from a store that stopped part-way go whichever way this read went,
+  // so a file that now can't be read keeps nobody's details.
+  await runWithShop(shopId, () => prepare('DELETE FROM move_rows WHERE file_id = ?').run(next.id));
   if (found) {
-    await runWithShop(shopId, () => prepare('DELETE FROM move_rows WHERE file_id = ?').run(next.id));
     for (let at = 0; at < found.rows.length; at += INSERT_CHUNK) {
       const chunk = found.rows.slice(at, at + INSERT_CHUNK);
       await runWithShop(shopId, () => prepare('INSERT INTO move_rows (file_id, data) SELECT ?, unnest(?::jsonb[]) RETURNING id').all(next.id, chunk));

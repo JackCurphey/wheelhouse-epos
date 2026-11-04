@@ -12,11 +12,11 @@ import { Card, Page, Row, mono } from '@/screens/deliveries/deliveries-bits.tsx'
  * mv-progress-failed, mv-summary in moving.mjs; Moving from Citrus Lime
  * decisions 2, 4 and 9; openspec/changes/citrus-import-screens). The owner
  * drops the files in; it starts by itself, with no Import button, and carries
- * on if they leave. Customers, Fix and Ask us to help follow in later pull
- * requests of WP-2.4; Run alongside and Switch over are WP-8.1.
+ * on if they leave. Fix and Ask us to help follow in a later pull request of
+ * WP-2.4; Run alongside and Switch over are WP-8.1.
  */
 type MoveFile = {
-  id: number; report: 'price_list' | 'barcodes' | null; fileName: string; state: 'reading' | 'cant_read' | 'bringing' | 'done';
+  id: number; report: 'price_list' | 'barcodes' | 'customers' | 'bikes' | null; fileName: string; state: 'reading' | 'cant_read' | 'bringing' | 'done';
   rowsTotal: number; rowsIn: number; rowsSame: number; rowsSkipped: number; rowsLook: number; stockIn: number; stockLook: number;
 };
 type Sending = { key: string; name: string; problem?: 'cant_read' | 'not_sent' };
@@ -33,8 +33,9 @@ const CANT_READ = 'Wheelhouse couldn’t read this file';
 // docs/superpowers/specs/2026-10-05-citrus-lime-exports.md.
 const WHERE_PRODUCTS = 'Price List - Store Level and Barcode/Alias List, in Cloud Reports';
 const WHERE_STOCK = 'Price List - Store Level, the same file';
+const WHERE_CUSTOMERS = 'Top Customers and Service Items Report (tick “include items never serviced”), in Cloud Reports';
 const WHERE_LATER = 'Comes across later';
-const LATER_KINDS = ['Customers', 'Sales', 'Workshop jobs'];
+const LATER_KINDS = ['Sales', 'Workshop jobs'];
 
 function Stages() {
   return (
@@ -171,6 +172,7 @@ export function MovePage() {
   const files = move.data.files;
   const products = files.filter((f) => f.report === 'price_list' || f.report === 'barcodes');
   const priceLists = files.filter((f) => f.report === 'price_list');
+  const people = files.filter((f) => f.report === 'customers' || f.report === 'bikes');
   const reading = files.filter((f) => f.state === 'reading');
   const refused = files.filter((f) => f.state === 'cant_read');
   const busy = files.some((f) => f.state === 'bringing') || reading.length > 0;
@@ -185,6 +187,7 @@ export function MovePage() {
           <ul className="m-0 list-none p-0">
             <Row title="Products" sub={WHERE_PRODUCTS}><Chip>Not added yet</Chip></Row>
             <Row title="Stock levels" sub={WHERE_STOCK}><Chip>Not added yet</Chip></Row>
+            <Row title="Customers" sub={WHERE_CUSTOMERS}><Chip>Not added yet</Chip></Row>
             {LATER_KINDS.map((k) => <Row key={k} title={k} sub={WHERE_LATER}><Chip>Later</Chip></Row>)}
           </ul>
           <DropZone title="Drop all the files here" onFiles={(f) => void onFiles(f)} />
@@ -218,6 +221,7 @@ export function MovePage() {
             <ul className="m-0 list-none p-0">
               <Row title="Products" sub={products.length ? progress(products) : undefined}>{state(products)}</Row>
               <Row title="Stock levels" sub={priceLists.length ? names(priceLists) : undefined}>{state(priceLists)}</Row>
+              <Row title="Customers" sub={people.length ? progress(people) : undefined}>{state(people)}</Row>
               {reading.map((f) => <Row key={`r${f.id}`} title={f.fileName}><Chip>Bringing across</Chip></Row>)}
               {refused.map((f) => refusedRow(`f${f.id}`, f.fileName, CANT_READ, 'Couldn’t read it', { fileId: f.id }))}
               {sends.map((s) => (s.problem
@@ -235,17 +239,38 @@ export function MovePage() {
   const stockLooks = sumOf(priceLists, (f) => f.stockLook);
   const productsIn = sumOf(priceLists, (f) => f.rowsIn);
   const productsSame = sumOf(priceLists, (f) => f.rowsSame);
+  const customers = files.filter((f) => f.report === 'customers');
+  const bikes = files.filter((f) => f.report === 'bikes');
+  const peopleSame = sumOf(customers, (f) => f.rowsSame);
+  const peopleLeft = sumOf(customers, (f) => f.rowsSkipped);
+  const peopleLooks = sumOf(people, (f) => f.rowsLook);
   return (
     <Page>
       <Stages />
       <Card id="t-here-s-what-came-across" title="Here’s what came across">
         <ul className="m-0 list-none p-0">
-          <Row title="Products" sub={<>{n(productsIn)} brought across{productsSame > 0 ? <> · {n(productsSame)} already here</> : null}</>}>
-            {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
-          </Row>
-          <Row title="Stock levels" sub={<>{n(sumOf(priceLists, (f) => f.stockIn))} brought across</>}>
-            {stockLooks > 0 ? <Chip tone="warn">{stockLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
-          </Row>
+          {products.length
+            ? (
+              <Row title="Products" sub={<>{n(productsIn)} brought across{productsSame > 0 ? <> · {n(productsSame)} already here</> : null}</>}>
+                {looks > 0 ? <Chip tone="warn">{looks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+              </Row>
+            )
+            : <Row title="Products"><Chip>Not added yet</Chip></Row>}
+          {priceLists.length
+            ? (
+              <Row title="Stock levels" sub={<>{n(sumOf(priceLists, (f) => f.stockIn))} brought across</>}>
+                {stockLooks > 0 ? <Chip tone="warn">{stockLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+              </Row>
+            )
+            : <Row title="Stock levels"><Chip>Not added yet</Chip></Row>}
+          {people.length
+            ? (
+              <Row title="Customers"
+                sub={<>{n(sumOf(customers, (f) => f.rowsIn))} brought across{peopleSame > 0 ? <> · {n(peopleSame)} already here</> : null}{peopleLeft > 0 ? <> · {n(peopleLeft)} left out, as they asked</> : null} · {n(sumOf(bikes, (f) => f.rowsIn))} bikes</>}>
+                {peopleLooks > 0 ? <Chip tone="warn">{peopleLooks} need a look</Chip> : <Chip tone="ok">All in</Chip>}
+              </Row>
+            )
+            : <Row title="Customers"><Chip>Not added yet</Chip></Row>}
           {LATER_KINDS.map((k) => <Row key={k} title={k}><Chip>Later</Chip></Row>)}
         </ul>
         <DropZone slim title="Drop more files here" onFiles={(f) => void onFiles(f)} />
