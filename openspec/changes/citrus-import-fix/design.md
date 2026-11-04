@@ -42,6 +42,27 @@ Rows needing a look wait in `move_rows` with `state = 'look'` and a reason (`cit
 
 19. **A row about someone follows them through a merge** (the re-check, 4 Nov). `move_rows` joins the tables a merge moves, so its link goes to the kept record at the merge, comes back at Undo, and anything still on the hidden record moves when that's removed after 30 days. A row's name may not be the kept record's, so a deletion also counts as theirs the names on merges into them (`customer_merges.other_name`, which stays after the hidden record goes). A merge, an Undo and removing a hidden record now take the move files first, the order a batch, a fix and a deletion use: otherwise a merge holding a customer waits for a row a fix holds, while the fix waits for that customer.
 
+20. **Nothing waits for long behind the move files** (the re-check, 4 Nov). A batch stuck on another lock used to sit holding the files, and merges queued behind it with no limit: ten of them used every connection on the server, and other shops got errors. Now a merge, an Undo and Choose another file wait 2 seconds, then answer 503 busy, try again, which the customer's page says plainly. `removeExpired` runs while a customer's page loads, so it asks for the files with no wait and everything else for 100ms, and if it can't have them a later call does it. A batch, storing a file and its last step wait 500ms for any lock, give back with nothing changed, and try again next tick; `bringBatch` returns `busy`, and the round stops rather than trying twenty times.
+
+21. **A batch stops at 250ms** (or 100 rows), in lots of 10 rows, so a slow row can't overrun by much, and the rest wait for the next batch. There's a 25ms breath between batches. Rows sent back when a file finishes go 500 at a time, with the file still coming across until none are left, rather than tens of thousands in one go. Those rows wait behind that file, as customers come before bikes.
+
+22. **The cause of slow rows: row-level security stops expression indexes being used.** `lower(...)` and `regexp_replace(...)` aren't marked leakproof, so Postgres won't run them before the shop check, and migration 112's indexes served nothing: every row read every customer. Migration 113 adds plain generated columns (`email_key`, `phone_key`, `name_key`, `citrus_account_key`) with their own indexes, and the queries compare those with `=`. A row's cost falls from about 20ms to about 6ms on the measuring machine, most of what's left being round trips.
+
+23. **Measured** on Docker on a Mac, on a scratch database, with made-up files, 20,040 customers and 60,000 bikes going round, a merge, a deletion, a leave-out and a customer's merges page every few seconds. The timings are from one run of each, with batches in a plain loop rather than the timer.
+
+| | Before | After |
+|---|---|---|
+| Batch, customers | p50 2058ms, max 3657ms | p50 258ms, p95 274ms, max 433ms |
+| Batch, bikes | p50 5342ms, max 5440ms | p50 260ms, p95 329ms, max 340ms |
+| Merge wait, customers | max 836ms | p50 54ms, max 302ms |
+| Merge wait, bikes | p50 4211ms | p50 74ms, max 102ms |
+| Deletion, customers | 6 of 8 worked | 11 of 11 worked, max 462ms |
+| Deletion, bikes | 0 of 3 worked | 9 of 9 worked, max 346ms |
+| Fix (leave-out), bikes | 0 of 3 worked | 9 of 9 worked, max 266ms |
+| Customer's merges page | about 5ms | about 6ms, max 18ms |
+
+Throughput after: about 165 bikes a second while batches run, so 60,000 bikes in about 6 minutes, and more with the timer's gap between rounds.
+
 ## Risks
 
 - Leaving out one by one is slow for a big second store's file. No bulk button is drawn, and none is added here. Noted for Jack.

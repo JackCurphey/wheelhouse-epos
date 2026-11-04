@@ -14,8 +14,6 @@ const SEVERAL_NAME = 'More than one customer has this name';
 const NAME_DIFFERS = 'The name on this bike isn’t the name of the customer with this email or phone';
 const look = (why, customerId) => ({ state: 'look', why, customerId });
 const YES = /^(yes|true|y|1)$/i;
-// The same index expression as migration 112.
-const DIGITS = "regexp_replace(coalesce(phone, ''), '\\D', '', 'g')";
 const LIVE = 'deleted_at IS NULL AND merged_into_id IS NULL';
 
 // A UK number however it's written, without its country code or leading 0:
@@ -83,10 +81,14 @@ async function deletedMatch(context, { account, ...person }) {
 }
 
 // Those it fits, leaving out anyone a person has said it isn't.
+// By the plain columns of migration 113, which row-level security lets an index serve.
+// Found first and sorted after, or the planner may walk every customer in id order
+// looking for the first that fits.
 const liveMatches = (email, forms, notThem = []) => prepare(
-  `SELECT id, name FROM customers
-    WHERE ${LIVE} AND ((? <> '' AND email <> '' AND lower(trim(email)) = ?) OR (phone <> '' AND ${DIGITS} = ANY(?))) AND id <> ALL(?::int[])
-    ORDER BY id LIMIT 2`
+  `WITH found AS MATERIALIZED (
+     SELECT id, name FROM customers
+      WHERE ${LIVE} AND ((? <> '' AND email_key <> '' AND email_key = ?) OR (phone_key <> '' AND phone_key = ANY(?))) AND id <> ALL(?::int[])
+   ) SELECT id, name FROM found ORDER BY id LIMIT 2`
 ).all(email, email, forms, notThem);
 
 export async function customerRow(d, file, context) {
@@ -97,7 +99,7 @@ export async function customerRow(d, file, context) {
   // Their own account number: someone who asked to be deleted never comes back.
   if (match === 'account') return { state: 'skipped' };
   // Merged included: they've come across, and stay as they are (design 5).
-  if (account && (await prepare('SELECT id FROM customers WHERE lower(trim(citrus_account)) = ?').get(accountKey(account)))) return { state: 'same' };
+  if (account && (await prepare('SELECT id FROM customers WHERE citrus_account_key = ?').get(accountKey(account)))) return { state: 'same' };
   // Only a person, on this one row, gets past this (mv-fix; answer 6). A batch never does.
   if ((match === 'contact' || context.storedShared) && !context.decided?.shared) return look(SHARED_CONTACT);
   const name = [d['First Name'], d['Last Name']].filter(Boolean).join(' ');
@@ -128,7 +130,7 @@ async function bikeOwner(d) {
     return { id: contacts[0].id };
   }
   if (!name) return { why: NO_CUSTOMER };
-  const named = await prepare(`SELECT id FROM customers WHERE lower(trim(name)) = ? AND ${LIVE} ORDER BY id LIMIT 2`).all(name);
+  const named = await prepare(`WITH found AS MATERIALIZED (SELECT id FROM customers WHERE name_key = ? AND ${LIVE}) SELECT id FROM found ORDER BY id LIMIT 2`).all(name);
   if (named.length > 1) return { why: SEVERAL_NAME };
   return named[0] ? { id: named[0].id } : { why: NO_CUSTOMER };
 }

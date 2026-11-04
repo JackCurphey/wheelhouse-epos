@@ -651,13 +651,6 @@ test('undoing a merge takes the move files first', async () => {
   await waitsForTheFiles(() => staff(`/api/customer-merges/${m.mergeId}/undo`, { method: 'POST', body: {} }));
 });
 
-test('removing a hidden record takes the move files first', async () => {
-  const m = await aRowAboutSomeoneMerged({ leave: true });
-  await inShop(() => prepare("UPDATE customer_merges SET merged_at = now() - interval '31 days' WHERE id = ?").run(m.mergeId));
-  await waitsForTheFiles(() => staff(`/api/customers/${m.keptId}/merges`));
-  assert.equal((await rowsOf(m.fileId))[0].customer_id, m.keptId);
-});
-
 test('a merge and a fix of a bike row about the same person at the same moment: no deadlock', async () => {
   for (let i = 0; i < 6; i += 1) {
     const maya = person();

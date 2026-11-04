@@ -2137,6 +2137,9 @@ WP-1.5's. So: slice C, WP-2.3.
 22. **Known limit: a help request after the deletion.** One sent again with the same key after the deletion, or a new one naming them, is stored and not cleared, as Wheelhouse no longer knows them. Answer 2 only covers requests already there.
 23. **Not proved: a help request sent during the moment a deletion is scanning** may survive it.
 24. **Known limit: "· [n] left out" stays on the summary** after that row later comes across in another file, because nothing remembers the choice.
+25. **A merge or Undo told to wait over 2 seconds for the files says "Wheelhouse is busy with this shop's files just now. Try again in a moment."** (the narrow re-check, 4 Nov). The 2 seconds is Fix's wait. A batch waits 500ms for any lock and gives up until the next tick. Removing a hidden record after 30 days doesn't wait: a later page load does it, so it can run late during a large import.
+26. **A batch stops at 250ms or 100 rows,** with a 25ms breath after, and rows sent back when a file finishes go 500 at a time. A large file takes a few minutes more because of the breaths and the limit: about 165 bikes a second measured, so 60,000 in about 6 minutes.
+27. **Customers have four new generated columns for matching** (`email_key`, `phone_key`, `name_key`, `citrus_account_key`), since row-level security stopped migration 112's indexes being used. Those indexes stay in the database, unused here, as removing them is a separate change. Measured numbers are in `openspec/changes/citrus-import-fix`, design 23.
 
 ## Decided here, for Jack to overrule
 
