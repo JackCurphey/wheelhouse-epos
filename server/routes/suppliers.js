@@ -9,6 +9,8 @@ import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/htt
 import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { priceTooBig } from '../lib/pence.js';
+import { moveStock } from '../lib/stock.js';
+import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -146,16 +148,28 @@ export function register(route) {
     if (!Number.isFinite(sellPrice) || sellPrice < 0 || priceTooBig(sellPrice)) return badRequest(res, 'A valid sell price is required');
 
     const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(item.supplier_id);
+    // Starting stock needs someone to name, and has its line (stock-movements-say-who, design 6).
+    const who = item.stock_qty !== 0 ? await whoIsBooking(req) : null;
+    if (item.stock_qty !== 0 && !who) return sendJson(res, 409, CHECK_IN_FIRST);
     try {
-      const info = await db
-        .prepare(
-          `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, supplier, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(item.supplier_sku, item.barcode, item.name, category, sellPrice, item.price, item.stock_qty, supplier.name, nowIso());
-      await db
-        .prepare(`UPDATE supplier_catalogue_items SET status = 'imported', product_id = ?, updated_at = ? WHERE id = ?`)
-        .run(info.lastInsertRowid, nowIso(), id);
+      let info;
+      await db.exec('BEGIN');
+      try {
+        info = await db
+          .prepare(
+            `INSERT INTO products (sku, barcode, name, category, price, cost, supplier, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(item.supplier_sku, item.barcode, item.name, category, sellPrice, item.price, supplier.name, nowIso());
+        if (who) await moveStock([{ productId: info.lastInsertRowid, change: item.stock_qty, type: 'intake', note: `Imported from ${supplier.name}’s catalogue` }], who);
+        await db
+          .prepare(`UPDATE supplier_catalogue_items SET status = 'imported', product_id = ?, updated_at = ? WHERE id = ?`)
+          .run(info.lastInsertRowid, nowIso(), id);
+        await db.exec('COMMIT');
+      } catch (err) {
+        await db.exec('ROLLBACK').catch(() => {});
+        throw err;
+      }
       const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
       sendJson(res, 201, serializeProduct(product, await canSeeCosts(req)));
     } catch (err) {

@@ -1,4 +1,5 @@
 // Wheelhouse - local server, PostgreSQL-backed.
+import { moveStock } from './lib/stock.js';
 import './load-env.js';
 import { hostedCopyRefusal } from './hosted-copy-guard.js';
 import { devAutologinRefusal } from './lib/dev-autologin.js';
@@ -12,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { sendJson, notFound, badRequest, readRawBody, nowIso, ValidationError } from './lib/http.js';
+import { sendJson, notFound, badRequest, readRawBody, ValidationError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
 import {
   loadDocumentLine, createSale,
@@ -151,7 +152,9 @@ async function processShopifyOrderWebhook(shopId, order) {
         cashTendered: null,
         payments: [{ tenderType: 'Shopify', amount: payableTotal }],
         note: `Shopify order #${order.order_number || order.id}`,
-      });
+      // Its claim is already committed, so failing here loses the order: it waits
+      // far longer than a person would (stock-movements-say-who, design 4).
+      }, { stockLockWait: '30s' });
     } catch (err) {
       // claimShopifyEvent above commits immediately, standalone - it isn't
       // part of a transaction with createSale. If createSale throws
@@ -182,13 +185,10 @@ async function processShopifyRefundWebhook(shopId, refund) {
   try {
     pushes = await runWithShop(shopId, async () => {
       const items = await matchRefundLineItemsToProducts(refund);
-      // Relative, in one transaction with its movement lines, as adjust
-      // stock does (routes/products.js): `product` was read without a lock,
-      // so writing `product.stock_qty + qty` back would undo a sale or
-      // adjustment made in between. Rows are taken in product id order, as
-      // a sale does, so the two can't deadlock.
-      items.sort((a, b) => a.product.id - b.product.id);
-      const toPush = [];
+      // Relative, in one transaction with its lines (lib/stock.js): `product` was
+      // read without a lock, so writing `product.stock_qty + qty` back would undo a
+      // sale or adjustment made in between. No person did this; its cause says what.
+      let toPush = [];
       await db.exec('BEGIN');
       try {
         // The claim is the transaction's first statement, so a rollback takes
@@ -198,15 +198,9 @@ async function processShopifyRefundWebhook(shopId, refund) {
           await db.exec('ROLLBACK');
           return [];
         }
-        for (const { product, qty } of items) {
-          const updated = await db
-            .prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING stock_qty')
-            .get(qty, nowIso(), product.id);
-          await db.prepare(
-            `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
-          ).run(product.id, qty, `Shopify refund #${refund.id}`);
-          if (product.shopify_inventory_item_id) toPush.push({ product, newQty: updated.stock_qty });
-        }
+        toPush = (await moveStock(items.map(({ product, qty }) => ({
+          productId: product.id, change: qty, type: 'return', note: `Shopify refund #${refund.id}`, shopifyRefundId: String(refund.id),
+        })))).pushes;
         await db.exec('COMMIT');
       } catch (err) {
         await db.exec('ROLLBACK').catch(() => {});

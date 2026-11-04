@@ -2152,6 +2152,19 @@ WP-1.5's. So: slice C, WP-2.3.
 7. **A margin near a half point can show 1 point differently.** It now works on whole pence: £12.00 with a £9.55 cost at 20% VAT is exactly 4.5%, which showed 4% and now shows 5%, the right rounding. Kept (the independent review, 4 Nov).
 8. **Known, no code: 40 saves at once on one held product give some server errors at the pool's limit,** rather than all answering busy (the independent review, 4 Nov). Each waits its 2 seconds holding a connection. Nothing is stored by any of them.
 
+### 4 Nov 2026: every stock line says who, why, which shop and what caused it (WP-1.5, piece 2; `openspec/changes/stock-movements-say-who`; `st-product`, `st-today-adjust`, nothing new on screen)
+
+1. **The history names the person at the computer.** Jo Taylor checked in at the Owner's till now reads Jo Taylor, on a product's history and on Today. Older lines keep the sign-in they recorded, the only name they have.
+2. **With nobody checked in on a till or workshop computer, adjusting, adding or importing a product with stock, and applying or undoing a count now ask for a PIN.** Stock decision 6 needs a name. *Pattern:* booking in (`CHECK_IN_FIRST`). Sales don't, as the old till must keep working.
+3. **A sale's line names the sale's cashier,** so the two agree, with the sign-in kept beside it.
+4. **Shopify orders and refunds name nobody:** no person did them, and the line says what caused it.
+5. **A supplier import with stock now writes a line,** "Imported from [Supplier]'s catalogue". The 28 Oct note left that for Jack; decision 6 has every change in the history. Its figure is still the supplier's own, not a count of the shelf.
+6. **A shop on a line is the till or workshop computer's own, otherwise the business's oldest, otherwise none.** Giving every business a first shop, and filling in older lines, moved to piece 3 from the split plan's piece 2: it changes what Till setup shows, and goes with the stock it's for.
+7. **Every stock change waits 2 seconds for a held product, then says "Wheelhouse is busy with this just now. Try again in a moment."** That includes a sale at the till. A count that changes 50,000 products held them for 2.3 seconds when measured (10,000: 0.4 seconds), so a sale of one of those during it could be told to try again.
+8. **A Shopify order waits 30 seconds instead.** Its claim is committed before the sale, so a failure loses the order for good, which was true before this for any failure. Noted, not changed: moving the claim into the sale's transaction, as a refund's is, is the real fix.
+9. **Noted, not changed: the old app's order route has no request key.** The new Receive a delivery has one; removing the old screen (CLAUDE.md rule 5) is the fix, and is a separate small piece.
+10. **A till's flag "at [n] after the sale" gives the figure after the whole sale,** where two lines are on one product, not after each line.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
