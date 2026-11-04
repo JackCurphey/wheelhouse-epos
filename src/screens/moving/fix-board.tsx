@@ -73,7 +73,12 @@ export function useFocusBack() {
   const from = useRef(document.activeElement);
   useEffect(() => {
     const opener = from.current;
-    return () => { if (opener instanceof window.HTMLElement && opener.isConnected) opener.focus(); };
+    return () => {
+      // Only if nobody has moved it on: this can run a moment after the pop-up closes.
+      const now = document.activeElement;
+      const lost = !now || now === document.body || now.closest('dialog') !== null;
+      if (lost && opener instanceof window.HTMLElement && opener.isConnected) opener.focus();
+    };
   }, []);
 }
 

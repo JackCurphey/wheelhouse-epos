@@ -333,8 +333,42 @@ test('Cancel on Fix gives the focus back to its button', async () => {
   button.focus();
   view.rtl.fireEvent.click(button);
   await view.findByRole('dialog', { name: 'Fix A11' });
+  const cancel = view.getByRole('button', { name: 'Cancel' });
+  cancel.focus();
+  assert.ok(document.activeElement === cancel, 'the focus is inside the pop-up');
+  view.rtl.fireEvent.click(cancel);
+  await view.rtl.waitFor(() => assert.ok(view.queryByRole('dialog') === null));
+  assert.ok(document.activeElement === button);
+});
+
+test('focus left on the page when a pop-up goes returns to its button', async () => {
+  const view = await open();
+  await toList(view);
+  const button = view.getByRole('button', { name: 'Fix A11' });
+  button.focus();
+  view.rtl.fireEvent.click(button);
+  await view.findByRole('dialog', { name: 'Fix A11' });
+  document.activeElement?.blur();
+  assert.ok(document.activeElement === document.body);
   click(view, 'Cancel');
-  await view.rtl.waitFor(() => assert.ok(document.activeElement === button));
+  await view.rtl.waitFor(() => assert.ok(view.queryByRole('dialog') === null));
+  assert.ok(document.activeElement === button);
+});
+
+test('focus moved elsewhere by the time a pop-up goes isn\'t pulled back to its button', async () => {
+  const view = await open();
+  await toList(view);
+  const button = view.getByRole('button', { name: 'Fix A11' });
+  button.focus();
+  view.rtl.fireEvent.click(button);
+  await view.findByRole('dialog', { name: 'Fix A11' });
+  // As when Escape has closed it and someone has already moved on, before it's removed.
+  const elsewhere = view.getByRole('button', { name: 'Done for now' });
+  elsewhere.focus();
+  assert.ok(document.activeElement === elsewhere);
+  click(view, 'Cancel');
+  await view.rtl.waitFor(() => assert.ok(view.queryByRole('dialog') === null));
+  assert.ok(document.activeElement === elsewhere, `focus went to ${document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName}`);
 });
 
 test('Look at the [n] and Done for now move the focus to the new board\'s heading', async () => {
