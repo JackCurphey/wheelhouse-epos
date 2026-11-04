@@ -119,9 +119,15 @@ here before starting it, so two people never build the same one):
   Jack's answers in `docs/decisions/2026-11-03-answers.md`). Each had an
   independent review and a hand-started CI run. Not built yet: Fix, Leave it
   out, `mv-sorted` and Ask us to help (`mv-help`, `mv-help-sent`); rows needing
-  a look wait, holding their details, until Fix exists.
-  **Now (4 Nov):** next is the rest of the import. Roles and the settings store
-  (WP-1.1, 1.2) stay Mark's.
+  a look wait, holding their details, until Fix exists. Then the rest of it,
+  4 Nov (#602 to #605, migration 113; `docs/decisions/2026-11-04-answers.md`):
+  Fix, Leave it out, `mv-sorted`, and Ask us to help with a pretend inbox,
+  refused on production until a real inbox is connected. See them on `mv-sorted`
+  waits for Settings › Your data. Customer matching uses new key columns on
+  `customers`; import batches stop at 250ms, so merges, deletions and Fix get
+  through during a large file. Merge and Undo answer busy after 2 seconds.
+  **Now (4 Nov):** next is WP-1.5 (products, stock, sizes and colours). Roles
+  and the settings store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
