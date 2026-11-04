@@ -470,6 +470,16 @@ test('a deleted account number is known in any case, with spaces around it, type
   assert.equal(await byAccount(number.toLowerCase()), undefined);
 });
 
+test('a customer whose account number was held with spaces around it is known by it once deleted', async () => {
+  const p = person({ 'Account Number': `Sp-${key().slice(0, 6)}` });
+  await bring(customers(p));
+  const c = await byAccount(p.v['Account Number']);
+  await inShop(() => prepare('UPDATE customers SET citrus_account = ? WHERE id = ?').run(`  ${p.v['Account Number']} `, c.id));
+  await deleted(c.id);
+  const fileId = await bring(customers(person({ 'Account Number': p.v['Account Number'].toLowerCase() })));
+  assert.deepEqual((await rowsOf(fileId)).map((r) => r.state), ['skipped']);
+});
+
 test('a code left by a deletion before this change still spots its own account number', async () => {
   const number = `Old-${key().slice(0, 6)}`;
   await aDeletedCustomer();
