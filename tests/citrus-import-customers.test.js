@@ -22,9 +22,12 @@ before(async () => {
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
 });
 after(async () => {
-  if (owner) await deleteTestShop(owner.shop.id);
-  if (server) await server.stop();
-  await pool.end();
+  try {
+    if (owner) await deleteTestShop(owner.shop.id);
+  } finally {
+    if (server) await server.stop();
+    await pool.end();
+  }
 });
 
 const staff = (path, options) => staffRequest(server.baseUrl, owner.cookie, path, options);
