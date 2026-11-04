@@ -16,7 +16,7 @@ const MAX_WAITING_A_SHOP = 10;
 const OWNER_ONLY = "Only the shop's owner can bring data across";
 const CANT_READ = { error: 'Wheelhouse couldn’t read this file', code: 'cant_read' };
 const REUSED_KEY = { error: 'That was sent before with a different file. Choose the file again.', code: 'reused_key' };
-const BUSY = { error: 'Wheelhouse is taking in another file just now. Try again in a moment.', code: 'busy' };
+const BUSY = { error: 'Wheelhouse is still taking in another of your files. Try again in a moment.', code: 'busy' };
 
 const serializeFile = (f) => ({
   id: f.id,
@@ -39,8 +39,9 @@ async function refused(req, res) {
   return false;
 }
 
-// One send at a time per server: each holds a whole file in memory.
-let sending = false;
+// One send at a time per shop, as each holds a whole file in memory: a stalled
+// upload holds up only its own shop, until its connection ends.
+const sendingShops = new Set();
 
 export function register(route) {
   route('GET', '/api/move', async (req, res) => {
@@ -49,10 +50,10 @@ export function register(route) {
     sendJson(res, 200, { files: files.map(serializeFile) });
   });
 
-  route('POST', '/api/move/files', async (req, res) => {
+  route('POST', '/api/move/files', async (req, res, params, query, afterRelease, shopId) => {
     if (await refused(req, res)) return;
-    if (sending) { res.setHeader('Retry-After', '2'); return sendJson(res, 429, BUSY); }
-    sending = true;
+    if (sendingShops.has(shopId)) { res.setHeader('Retry-After', '2'); return sendJson(res, 429, BUSY); }
+    sendingShops.add(shopId);
     try {
       let body;
       try {
@@ -104,7 +105,7 @@ export function register(route) {
       wakeBringingAcross();
       sendJson(res, 202, serializeFile(file));
     } finally {
-      sending = false;
+      sendingShops.delete(shopId);
     }
   });
 

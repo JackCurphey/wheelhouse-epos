@@ -6,6 +6,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { bringBatch, readNextFile } from '../server/move/bring-across.js';
@@ -20,7 +21,8 @@ let owner;
 let jo;
 before(async () => {
   // The test drives the rounds itself; the server's own timer stays out of the way.
-  server = await startLiveServer({ env: { WH_MOVE_TICK_MS: '3600000' } });
+  // The helper keeps the timer out of the way: these tests drive the reading and the batches.
+  server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   jo = await staffLogin(owner.shop.id);
 });
@@ -368,4 +370,87 @@ test('with the timer running, a sent file comes across by itself, and the next o
   } finally {
     await quick.stop();
   }
+});
+
+// An upload that has sent its headers and part of its body, then goes quiet.
+function stalledUpload(who) {
+  const url = new URL('/api/move/files', server.baseUrl);
+  const req = httpRequest({ host: url.hostname, port: url.port, path: url.pathname, method: 'POST', headers: { cookie: who.cookie, 'content-type': 'application/json', 'content-length': 1_000_000 } });
+  const ended = new Promise((resolve) => { req.on('error', resolve); req.on('close', resolve); });
+  req.write('{"fileName":"a.xlsx",');
+  return { stop: async () => { req.destroy(); await ended; } };
+}
+const pause = (ms) => new Promise((r) => { setTimeout(r, ms); });
+
+test('a stalled upload at one shop doesn\'t turn away another shop; at its own shop it does, until it ends', async () => {
+  const other = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
+  try {
+    const stalled = stalledUpload(owner);
+    await pause(300);
+    const theirs = await staffRequest(server.baseUrl, other.cookie, '/api/move/files', { method: 'POST', body: { fileName: 'a.xlsx', dataBase64: priceList(line()).toString('base64'), requestKey: key() } });
+    assert.equal(theirs.status, 202, JSON.stringify(theirs.body));
+    const mine = await send(priceList(line()));
+    assert.equal(mine.status, 429, 'one at a time at a shop');
+    assert.equal(mine.body.code, 'busy');
+    await stalled.stop();
+    await pause(200);
+    assert.equal((await send(Buffer.from('hello'))).status, 202, 'free again once it ends');
+    await finish();
+  } finally {
+    await deleteTestShop(other.shop.id);
+  }
+});
+
+test('storing a very large file never holds the move files for long, so a deletion waiting on them isn\'t turned away', async () => {
+  const rows = ['Alias,ILC'];
+  for (let i = 0; i < 100_000; i += 1) rows.push(`[Barcode ${i}],[Code ${i}]`);
+  const res = await send(Buffer.from(`${rows.join('\n')}\n`), { name: 'big.csv' });
+  assert.equal(res.status, 202);
+  let stored = false;
+  const storing = readNextFile(owner.shop.id).then(() => { stored = true; });
+  const client = await pool.connect();
+  let probes = 0;
+  try {
+    while (!stored) {
+      // What a deletion does: the move files, in order, waiting at most 0.8 seconds.
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+      await client.query("SET LOCAL lock_timeout = '800ms'");
+      await client.query('SELECT id FROM move_files ORDER BY id FOR UPDATE');
+      await client.query('COMMIT');
+      probes += 1;
+      await pause(20);
+    }
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+  }
+  await storing;
+  assert.ok(probes > 3, `the lock was tried while it stored: ${probes}`);
+  const f = await fileIn(res.body.id);
+  assert.deepEqual({ state: f.state, rowsTotal: f.rowsTotal }, { state: 'bringing', rowsTotal: 100_000 });
+  // These rows find no product: leave none waiting for the other tests.
+  await inShop(() => prepare("UPDATE move_rows SET state = 'look', why = 'x' WHERE file_id = ?").run(f.id));
+  await inShop(() => prepare("UPDATE move_files SET state = 'done' WHERE id = ?").run(f.id));
+});
+
+test('stopped part-way through storing, it starts again with no row twice', async () => {
+  const pads = line();
+  const res = await send(priceList(pads, line(), line()));
+  await assert.rejects(readNextFile(owner.shop.id, { afterChunk: () => { throw new Error('stopped here'); } }), /stopped here/);
+  const f = await fileIn(res.body.id);
+  assert.equal(f.state, 'reading', 'still to be read');
+  assert.equal(f.report, null);
+  await finish();
+  const after2 = await fileIn(res.body.id);
+  assert.deepEqual({ state: after2.state, rowsTotal: after2.rowsTotal, rowsIn: after2.rowsIn }, { state: 'done', rowsTotal: 3, rowsIn: 3 });
+  const held = await inShop(() => prepare('SELECT (SELECT count(*)::int FROM move_rows WHERE file_id = ?) AS rows, (SELECT count(*)::int FROM move_file_bytes WHERE file_id = ?) AS bytes').get(f.id, f.id));
+  assert.deepEqual(held, { rows: 3, bytes: 0 });
+});
+
+test('a test server doesn\'t pick up files by itself unless it\'s asked to', async () => {
+  const res = await send(priceList(line()));
+  await pause(3000);
+  assert.equal((await fileIn(res.body.id)).state, 'reading');
+  await finish();
 });
