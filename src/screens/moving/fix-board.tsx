@@ -84,6 +84,8 @@ function FixDialog({ row, title, onDone, onGone, onClose }: { row: LookRow; titl
       // Refused, so nothing was kept of that try.
       key.current = newRequestKey();
       const said = (err.body ?? {}) as Said;
+      // The tick was about one person: about someone else, nobody has said it yet.
+      if (said.sameAs && said.sameAs.id !== sameAs?.id) setNotSame(false);
       setAsked(said);
       setFailed(said.why ?? err.message);
     }
@@ -125,9 +127,15 @@ export function FixBoard({ count, kinds, listKey, action, onDoneForNow, onSorted
   count: number; kinds: { products: number; customers: number }; listKey: unknown[]; action?: ReactNode; onDoneForNow: () => void; onSorted: () => Promise<unknown>;
 }) {
   const queryClient = useQueryClient();
-  const list = useQuery({ queryKey: listKey, queryFn: () => apiGet<{ rows: LookRow[]; total: number }>('/api/move/look') });
+  const list = useQuery({
+    queryKey: listKey,
+    queryFn: () => apiGet<{ rows: LookRow[]; total: number }>('/api/move/look'),
+    // Rows going round after a fix come back by themselves: it keeps up until the counts agree.
+    refetchInterval: (q) => (q.state.data && q.state.data.total !== count ? 2000 : false),
+  });
   const [open, setOpen] = useState<{ row: LookRow; title: string } | null>(null);
   const [said, setSaid] = useState<{ text: string; bad: boolean } | null>(null);
+  const [leaving, setLeaving] = useState<number | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
   const rows = list.data?.rows ?? [];
   // The row whose buttons had focus has gone: focus goes to what happened.
@@ -147,10 +155,13 @@ export function FixBoard({ count, kinds, listKey, action, onDoneForNow, onSorted
     await refresh();
   }
   async function leaveOut(row: LookRow, title: string) {
+    setLeaving(row.id);
     try {
       await sorted(title, await send<Outcome>(`/api/move/rows/${row.id}/leave-out`, { seen: row.seen, requestKey: newRequestKey() }));
     } catch (err) {
       await gotGone(err instanceof ApiError ? err.message : NO_ANSWER);
+    } finally {
+      setLeaving(null);
     }
   }
   const group = (heading: string, n: number, of: LookRow[]) => (of.length === 0 ? null : (
@@ -162,7 +173,7 @@ export function FixBoard({ count, kinds, listKey, action, onDoneForNow, onSorted
           return (
             <Row key={row.id} title={title} sub={row.why}>
               <span className="flex gap-2">
-                <Button variant="default" aria-label={`Leave out ${title}`} onClick={() => void leaveOut(row, title)}>Leave it out</Button>
+                <Button variant="default" aria-label={`Leave out ${title}`} disabled={leaving !== null} onClick={() => void leaveOut(row, title)}>Leave it out</Button>
                 <Button variant="default" aria-label={`Fix ${title}`} onClick={() => setOpen({ row, title })}>Fix</Button>
               </span>
             </Row>

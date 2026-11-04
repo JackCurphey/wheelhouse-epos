@@ -261,3 +261,41 @@ test('a row left out counts as dealt with while a file is still coming across', 
   const view = await open({ rows: [], files: [FILE({ state: 'bringing', rowsTotal: 9, rowsIn: 2, rowsLook: 0, rowsLeftOut: 1 })] });
   await see(view, /\[file name\] · 3 of 9/);
 });
+
+test('told the row looks like someone else now, the tick about the first person is taken off', async () => {
+  const view = await open({
+    rows: [SAME], files: [FILE({ rowsLook: 1 })],
+    answer: (path, body, json) => (body.decided?.notSameAs === 6 ? undefined : json(422, { error: 'x', why: 'Looks like the same person as [customer name]', code: 'still_needs_a_look', decide: 'same_person', sameAs: { id: 6, name: '[customer name]' } })),
+  });
+  await toList(view, 'Look at the 1');
+  await openFix(view, 'Sam Patel');
+  view.rtl.fireEvent.click(view.getByRole('checkbox', { name: 'This is someone else, not Maya Patel' }));
+  click(view, 'Save');
+  const next = await view.findByRole('checkbox', { name: 'This is someone else, not [customer name]' });
+  assert.equal(next.checked, false, 'nobody has said it isn\'t them');
+  click(view, 'Save');
+  await view.rtl.waitFor(() => assert.equal(view.state.calls.length, 2));
+  assert.equal(view.state.calls[1].body.decided.notSameAs, null);
+  view.rtl.fireEvent.click(next);
+  click(view, 'Save');
+  await see(view, /Everything’s sorted/);
+});
+
+test('Leave it out pressed twice goes once', async () => {
+  const view = await open();
+  await toList(view);
+  const button = view.getByRole('button', { name: 'Leave out A11' });
+  view.rtl.fireEvent.click(button);
+  view.rtl.fireEvent.click(button);
+  await see(view, /A11 left out/);
+  assert.equal(view.state.calls.length, 1);
+  assert.ok(!document.body.textContent.includes('changed since'));
+});
+
+test('a row coming back from going round joins the list by itself', async () => {
+  const view = await open({ rows: [NO_NAME], files: [FILE({ rowsLook: 2 })] });
+  await toList(view, 'Look at the 2');
+  assert.ok(view.queryByRole('button', { name: 'Fix [Bike]' }) === null);
+  view.state.rows = [NO_NAME, BIKE];
+  await view.findByRole('button', { name: 'Fix [Bike]' }, { timeout: 5000 });
+});
