@@ -39,7 +39,7 @@ test('the list stops at 200 and says how many there are', async () => {
 
 // ---- Fix ----
 
-test('a row fixed with stock names who fixed it, by their PIN, and that till’s shop, on its line', async () => {
+test('a row fixed with stock at a till names who fixed it, by their PIN, and goes to the oldest shop, as the rest of the file does', async () => {
   await aSite();
   const site = (await staff('/api/sites', { method: 'POST', body: { name: '[Second site]', code: 'F' } })).body;
   const offer = await staff('/api/your-settings/till-pin/offer', { method: 'POST' });
@@ -54,7 +54,11 @@ test('a row fixed with stock names who fixed it, by their PIN, and that till’s
   const line = await inShop(() => prepare('SELECT m.who_name, m.employee_id, m.site_id FROM stock_movements m JOIN products p ON p.id = m.product_id WHERE p.sku = ?').get(row['Item Lookup Code']));
   assert.equal(line.who_name, 'Jack Lewis');
   assert.ok(Number.isInteger(line.employee_id));
-  assert.equal(line.site_id, site.id);
+  const oldest = (await inShop(() => prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get())).id;
+  assert.notEqual(oldest, site.id, 'the till isn’t at the oldest');
+  assert.equal(line.site_id, oldest);
+  const figures = await inShop(() => prepare('SELECT s.site_id, s.qty FROM product_stock s JOIN products p ON p.id = s.product_id WHERE p.sku = ?').all(row['Item Lookup Code']));
+  assert.deepEqual(figures.map((f) => f.site_id), [oldest]);
 });
 
 test('a product with no price, fixed: it comes across with its stock and one history line, and the counts follow', async () => {

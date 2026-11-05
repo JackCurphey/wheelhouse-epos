@@ -106,6 +106,14 @@ test('117 and 118 give every business a first shop, its stock and older lines th
   };
   await withClient(url.href, holds);
 
+  // The key for links can't be used to read a whole business's products (design 5).
+  await withClient(url.href, async (c) => {
+    const { rows: keys } = await c.query("SELECT indexdef FROM pg_indexes WHERE tablename = 'products' AND indexdef LIKE '%UNIQUE%(id, shop_id)%'");
+    assert.equal(keys.length, 1);
+    const { rows: leading } = await c.query("SELECT indexname FROM pg_indexes WHERE tablename = 'products' AND indexdef LIKE '%(shop_id, id)%'");
+    assert.deepEqual(leading, []);
+  });
+
   // Each business's stock is its own, and can't point at another's.
   await withClient(url.href, async (c) => {
     await inShop(c, ids.none);

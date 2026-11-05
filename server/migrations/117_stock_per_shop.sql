@@ -13,8 +13,10 @@
 -- Keys that include the business, so a row can't point at another business's shop or
 -- product (WP-1.4 spec §5, rule 1: a link isn't checked by row-level security).
 -- CREATE UNIQUE INDEX rather than ADD CONSTRAINT: reads carry on while it builds.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_shop_id_id ON sites (shop_id, id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_products_shop_id_id ON products (shop_id, id);
+-- id first: a link's check finds it just the same, and the planner can't use it to read a
+-- whole business's products, which with stale statistics made applying a count take minutes.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_id_shop_id ON sites (id, shop_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_id_shop_id ON products (id, shop_id);
 
 CREATE TABLE IF NOT EXISTS product_stock (
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int,

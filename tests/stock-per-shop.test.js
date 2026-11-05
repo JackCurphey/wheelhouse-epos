@@ -163,3 +163,80 @@ test('removing a business takes its stock at each shop and leaves another’s', 
   assert.equal(rows.length, 0);
   assert.deepEqual(await figures(mine), { total: 1, shops: { [first.id]: 1 } });
 });
+
+// ---- Renaming the business ----
+
+const details = (who, body) => staffRequest(server.baseUrl, who.cookie, '/api/shop-details', { method: 'PUT', body });
+const sitesOf = async (who) => (await staffRequest(server.baseUrl, who.cookie, '/api/sites')).body.sort((a, b) => a.id - b.id);
+
+test('renaming the business renames the shop named after it; its code stays, and another shop’s name', async () => {
+  const made = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
+  try {
+    const added = await staffRequest(server.baseUrl, made.cookie, '/api/sites', { method: 'POST', body: { name: '[Second site]', code: 'S' } });
+    assert.equal(added.status, 201);
+    const res = await details(made, { name: '[New name]' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.name, '[New name]');
+    assert.deepEqual((await sitesOf(made)).map((s) => [s.name, s.code]), [['[New name]', 'N'], ['[Second site]', 'S']]);
+  } finally {
+    await deleteTestShop(made.shop.id);
+  }
+});
+
+test('renaming the business keeps a shop named something else', async () => {
+  const made = await staffSignup(server.baseUrl);
+  try {
+    await inShop(() => prepare("UPDATE sites SET name = 'Bolton', code = 'B' RETURNING id").get(), made.shop.id);
+    assert.equal((await details(made, { name: '[New name]' })).status, 200);
+    assert.deepEqual((await sitesOf(made)).map((s) => [s.name, s.code]), [['Bolton', 'B']]);
+  } finally {
+    await deleteTestShop(made.shop.id);
+  }
+});
+
+test('saving other details, or the same name, leaves the shop alone', async () => {
+  const made = await staffSignup(server.baseUrl);
+  try {
+    assert.equal((await details(made, { phone: '[Phone]' })).status, 200);
+    assert.equal((await details(made, { name: made.shop.name })).status, 200);
+    assert.deepEqual((await sitesOf(made)).map((s) => s.name), [made.shop.name]);
+  } finally {
+    await deleteTestShop(made.shop.id);
+  }
+});
+
+test('three renames at once: the shop ends on whichever the business did', async () => {
+  const made = await staffSignup(server.baseUrl);
+  try {
+    const answers = await Promise.all(['[One]', '[Two]', '[Three]'].map((name) => details(made, { name })));
+    assert.deepEqual(answers.map((a) => a.status), [200, 200, 200]);
+    const { rows: [{ name }] } = await pool.query('SELECT name FROM shops WHERE id = $1', [made.shop.id]);
+    assert.deepEqual((await sitesOf(made)).map((s) => s.name), [name]);
+  } finally {
+    await deleteTestShop(made.shop.id);
+  }
+});
+
+test('a rename and its shop go together: a held shop answers busy after its limit, and neither changes', async () => {
+  const made = await staffSignup(server.baseUrl);
+  const holder = await pool.connect();
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SELECT set_config('app.current_shop_id', $1, true)", [String(made.shop.id)]);
+    await holder.query('SELECT id FROM sites FOR UPDATE');
+    const started = Date.now();
+    const res = await Promise.race([details(made, { name: '[New name]' }), new Promise((_, reject) => { setTimeout(() => reject(new Error('still waiting after 8s')), 8000); })]);
+    const waited = Date.now() - started;
+    await holder.query('ROLLBACK');
+    assert.equal(res.status, 503, JSON.stringify(res.body));
+    assert.equal(res.body.code, 'busy');
+    assert.ok(waited >= 1900 && waited < 4500, `waited ${waited}ms`);
+    const { rows: [{ name }] } = await pool.query('SELECT name FROM shops WHERE id = $1', [made.shop.id]);
+    assert.equal(name, made.shop.name);
+    assert.deepEqual((await sitesOf(made)).map((s) => s.name), [made.shop.name]);
+  } finally {
+    await holder.query('ROLLBACK').catch(() => {});
+    holder.release();
+    await deleteTestShop(made.shop.id);
+  }
+});
