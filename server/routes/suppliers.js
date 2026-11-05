@@ -9,7 +9,8 @@ import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/htt
 import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { priceTooBig } from '../lib/pence.js';
-import { moveStock } from '../lib/stock.js';
+import { categoryFor } from '../lib/categories.js';
+import { limitLockWait, moveStock } from '../lib/stock.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -143,7 +144,6 @@ export function register(route) {
     if (!item) return notFound(res, 'Catalogue item not found');
     if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
     const body = await readJsonBody(req);
-    const category = (body.category || 'Uncategorised').trim();
     const sellPrice = Number(body.price);
     if (!Number.isFinite(sellPrice) || sellPrice < 0 || priceTooBig(sellPrice)) return badRequest(res, 'A valid sell price is required');
 
@@ -155,6 +155,9 @@ export function register(route) {
       let info;
       await db.exec('BEGIN');
       try {
+        // Its category's path found or made (category-tree), with a limit on waiting.
+        await limitLockWait();
+        const category = await categoryFor(body.category);
         info = await db
           .prepare(
             `INSERT INTO products (sku, barcode, name, category, price, cost, supplier, updated_at)

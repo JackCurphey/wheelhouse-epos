@@ -298,3 +298,6 @@ POST /api/move/rows/:id/fix
 POST /api/move/rows/:id/leave-out
 POST /api/move/help
 DELETE /api/move/files/:id
+GET /api/product-categories
+POST /api/product-categories
+PUT /api/product-categories/:id

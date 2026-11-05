@@ -11,7 +11,8 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { lockStock, moveStock, oldestSite } from '../lib/stock.js';
+import { categoryFor } from '../lib/categories.js';
+import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
 
@@ -118,7 +119,8 @@ async function saveProduct(id, existing, body, costs) {
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
   const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
-  const category = body.category !== undefined ? String(body.category).trim() || 'Uncategorised' : existing.category;
+  // A category sent is found or made (category-tree); one not sent stays as it is.
+  const category = body.category !== undefined ? await categoryFor(body.category) : existing.category;
   const money = sentMoney(body, costs);
   if (money.refused) return money.refused;
   const price = money.price ?? (body.price !== undefined ? Number(body.price) || 0 : existing.price);
@@ -195,7 +197,6 @@ export function register(route) {
     if (!name) return badRequest(res, 'Product name is required');
     const sku = (body.sku || '').trim() || null;
     const barcode = (body.barcode || '').trim() || null;
-    const category = (body.category || 'Uncategorised').trim();
     // Someone who can't see costs adds a product with none recorded.
     const costs = await canSeeCosts(req);
     const money = sentMoney(body, costs);
@@ -219,6 +220,9 @@ export function register(route) {
       await db.exec('BEGIN');
       let info;
       try {
+        // Its category's path found or made (category-tree), with a limit on waiting.
+        await limitLockWait();
+        const category = await categoryFor(body.category);
         info = await db
           .prepare(
             `INSERT INTO products (sku, barcode, name, category, price, cost, low_stock_threshold, supplier, show_online, description, photo_url, updated_at)

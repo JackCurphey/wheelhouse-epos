@@ -157,10 +157,8 @@ export function register(route) {
     const named = kind === 'category' || kind === 'area';
     const target = named ? String(body.target ?? '').trim() : '';
     if (named && !target) return badRequest(res, kind === 'area' ? 'Name the area' : 'Pick a category');
-    if (target.length > MAX_TARGET) return badRequest(res, `Keep the name to ${MAX_TARGET} characters`);
-    if (kind === 'category' && !(await db.prepare('SELECT 1 FROM products WHERE category = ? LIMIT 1').get(target))) {
-      return badRequest(res, 'No products are in that category');
-    }
+    // An area's name stops at 60; a category is its whole path, however deep (category-tree).
+    if (kind === 'area' && target.length > MAX_TARGET) return badRequest(res, `Keep the name to ${MAX_TARGET} characters`);
     let productIds = null;
     if (kind === 'below_zero') {
       productIds = (await db.prepare('SELECT id FROM products WHERE stock_qty < 0 AND active = 1 ORDER BY id').all()).map((p) => p.id);
@@ -168,9 +166,18 @@ export function register(route) {
     }
     // It belongs to the shop it's started at, whichever computer applies it (stock-per-shop).
     const siteId = (await siteHere(req)) ?? await oldestSite();
-    const { id } = await db.prepare('INSERT INTO stock_takes (kind, target, product_ids, started_by_login_id, site_id) VALUES (?, ?, ?, ?, ?) RETURNING id')
-      .get(kind, target, productIds, ctx.login.id, siteId);
-    sendJson(res, 201, serializeTake(await takeOf(id)));
+    // A category's row held while the count is made (category-tree): a rename at the same
+    // moment either finishes first, and this finds its products gone, or waits for this and
+    // sees the count. With the limit on waiting, so nothing hangs.
+    await inTransaction(res, async () => {
+      if (kind === 'category') {
+        await db.prepare('SELECT id FROM product_categories WHERE path = ? FOR KEY SHARE').get(target);
+        if (!(await db.prepare('SELECT 1 FROM products WHERE category = ? LIMIT 1').get(target))) return [400, 'No products are in that category'];
+      }
+      const { id } = await db.prepare('INSERT INTO stock_takes (kind, target, product_ids, started_by_login_id, site_id) VALUES (?, ?, ?, ?, ?) RETURNING id')
+        .get(kind, target, productIds, ctx.login.id, siteId);
+      return [201, serializeTake(await takeOf(id))];
+    });
   });
 
   // The counting page (tk-count): this person's own lines, lines asked to be
