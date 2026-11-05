@@ -12,7 +12,7 @@ import { lockStock, moveStock } from '../server/lib/stock.js';
 import { differenceRows } from '../server/lib/stock-take-differences.js';
 import { removeShop } from '../server/remove-shop.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { firstShopIsBolton, staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -25,7 +25,7 @@ before(async () => {
   server = await startLiveServer({ env: { TRUST_PROXY: '1' } });
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   other = await staffSignup(server.baseUrl);
-  bolton = (await staffRequest(server.baseUrl, owner.cookie, '/api/sites', { method: 'POST', body: { name: 'Bolton', code: 'B' } })).body;
+  bolton = await firstShopIsBolton(owner);
   second = (await staffRequest(server.baseUrl, owner.cookie, '/api/sites', { method: 'POST', body: { name: '[Second site]', code: 'S' } })).body;
   owner.pin = await withPin(owner.cookie);
   const made = await staffRequest(server.baseUrl, owner.cookie, '/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } });
@@ -77,9 +77,12 @@ async function computer(kind, site, pin) {
 }
 const asOwner = () => browser(owner.cookie);
 let n = 0;
-const product = (stock = 6, cost = 14) => inShop(async () => {
+// Its stock at Bolton unless said (stock-per-shop): a change at a till is that shop's.
+const product = (stock = 6, cost = 14, site = bolton) => inShop(async () => {
   n += 1;
-  return (await prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES (?, 'Shimano brake pads', '[Category]', 28, ?, ?, now())").run(`B05S-RX-${n}`, cost, stock)).lastInsertRowid;
+  const id = (await prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES (?, 'Shimano brake pads', '[Category]', 28, ?, ?, now())").run(`B05S-RX-${n}`, cost, stock)).lastInsertRowid;
+  await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) RETURNING product_id').run(site.id, id, stock);
+  return id;
 });
 const stockOf = (id) => inShop(async () => (await prepare('SELECT stock_qty FROM products WHERE id = ?').get(id)).stock_qty);
 const linesOf = (id) => inShop(() => prepare('SELECT * FROM stock_movements WHERE product_id = ? ORDER BY id').all(id));
@@ -235,18 +238,10 @@ test('moveStock tells Shopify only the products it holds there, with the figure 
   assert.deepEqual(out.pushes.map((p) => [p.product.id, p.newQty]), [[linked, 5]]);
 });
 
-test('moveStock: a shop not given is the business’s oldest; a business with no shop yet has none', async () => {
+test('moveStock: a shop not given is the business’s oldest', async () => {
   const id = await product();
   await inTransaction(() => moveStock([{ productId: id, change: -1, type: 'sale' }]));
   assert.equal((await linesOf(id))[0].site_id, bolton.id);
-  const line = await runWithShop(other.shop.id, async () => {
-    const theirs = (await prepare("INSERT INTO products (name, stock_qty, updated_at) VALUES ('[Product]', 1, now())").run()).lastInsertRowid;
-    await dbExec('BEGIN');
-    await moveStock([{ productId: theirs, change: -1, type: 'sale' }]);
-    await dbExec('COMMIT');
-    return prepare('SELECT site_id FROM stock_movements WHERE product_id = ?').get(theirs);
-  });
-  assert.ok(line.site_id === null);
 });
 
 test('another business can’t move or read this one’s stock', async () => {
@@ -334,7 +329,7 @@ test('adjusting on Jo’s own sign-in names her', async () => {
 
 for (const kind of ['till', 'workshop']) {
   test(`adjusting at a ${kind} computer with Jo checked in names Jo, not the sign-in, and that computer’s shop`, async () => {
-    const id = await product();
+    const id = await product(6, 14, second);
     const send = await computer(kind, second, jo.pin);
     const res = await send(`/api/products/${id}/stock`, POST(adjust));
     assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -461,7 +456,7 @@ async function countOneUnder(id, send = asOwner()) {
 }
 
 test('applying and undoing a count: the person checked in, that shop, the count', async () => {
-  const id = await product(6);
+  const id = await product(6, 14, second);
   const send = await computer('till', second, owner.pin);
   const take = await countOneUnder(id, send);
   const applied = await send(`/api/stock-takes/${take}/apply`, POST());

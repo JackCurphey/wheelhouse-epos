@@ -387,7 +387,7 @@ test('counting: an applied count can’t be counted any more', async () => {
 });
 
 test('a product’s history says Counted, and who applied it', async () => {
-  const pads = { ...PADS, price: 28, cost: 14, active: true, history: [{ id: 1, type: 'count', change: -2, reason: null, note: 'Stock take of [Area] · counted 4, expected 6 · counted by Jo Taylor', who: 'Jack Lewis', at: STARTED }, { id: 2, type: 'count_undone', change: 2, reason: null, note: 'Undid the stock take of [Area]', who: 'Jack Lewis', at: STARTED }] };
+  const pads = { ...PADS, price: 28, cost: 14, active: true, stockAtShops: [{ id: 1, name: 'Bolton', qty: PADS.stockQty, here: true }], history: [{ id: 1, type: 'count', change: -2, reason: null, note: 'Stock take of [Area] · counted 4, expected 6 · counted by Jo Taylor', who: 'Jack Lewis', at: STARTED }, { id: 2, type: 'count_undone', change: 2, reason: null, note: 'Undid the stock take of [Area]', who: 'Jack Lewis', at: STARTED }] };
   const { ui, within } = await open('/workshop/stock/11', { product: pads });
   const history = within(await ui.findByRole('region', { name: /history/i }));
   const lines = await history.findAllByRole('listitem');

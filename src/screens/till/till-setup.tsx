@@ -61,9 +61,9 @@ function SetupForm({ ownerName }: { ownerName: string }) {
   if (data.thisTill) return <Navigate to={ROUTES.till} replace />;
   // A workshop computer goes to its own Enter your PIN.
   if (data.thisWorkshop) return <Navigate to={ROUTES.desk} replace />;
-  // A business with no site yet: WP-1.4 gives every business its first (design 6).
-  if (!data.sites.length) return <Frame><p className={LINE}>This business has no shops set up in Wheelhouse yet, so a till can’t be added here.</p></Frame>;
+  // Every business has a first shop (openspec/changes/stock-per-shop, design 2).
   const site = data.sites.find((s) => s.id === siteId) ?? data.sites[0];
+  if (!site) return <Frame><p role="alert" className={LINE}>Wheelhouse couldn’t load this page. Try again in a moment.</p></Frame>;
   const { numbers, chosen } = tillNumbers(site.taken);
   const number = picked !== null && numbers.some((n) => n.number === picked && !n.inUse) ? picked : chosen;
   const code = number === null ? null : `${site.code}${number}`;

@@ -10,7 +10,7 @@ import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { buildSnapshot } from '../server/till/snapshot.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { firstShopIsBolton, staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 const COST = 71823.57;
@@ -23,7 +23,7 @@ let jo;
 before(async () => {
   server = await startLiveServer({ env: { TRUST_PROXY: '1' } });
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
-  owner.site = (await staffRequest(server.baseUrl, owner.cookie, '/api/sites', { method: 'POST', body: { name: 'Bolton', code: 'B' } })).body;
+  owner.site = await firstShopIsBolton(owner);
   owner.pin = await withPin(owner.cookie);
   owner.supplierId = await inShop(async () => (await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES ('[Supplier]', 'mock_csv', '{}', now())").run()).lastInsertRowid);
   await inShop(() => prepare('UPDATE shops SET stock_adjust_today_over_pence = 1 WHERE id = ?').run(owner.shop.id));
@@ -95,8 +95,10 @@ const PEOPLE = [
 let n = 0;
 const product = ({ cost = COST, stock = 0 } = {}) => inShop(async () => {
   n += 1;
-  return (await prepare('INSERT INTO products (sku, name, category, price, cost, stock_qty, low_stock_threshold, description, updated_at) VALUES (?, ?, ?, 28, ?, ?, 3, ?, now())')
+  const id = (await prepare('INSERT INTO products (sku, name, category, price, cost, stock_qty, low_stock_threshold, description, updated_at) VALUES (?, ?, ?, 28, ?, ?, 3, ?, now())')
     .run(`B05S-RX-${n}`, `Shimano brake pads ${n}`, 'Brakes', cost, stock, '')).lastInsertRowid;
+  await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) RETURNING product_id').run(owner.site.id, id, stock);
+  return id;
 });
 const costOf = (id) => inShop(async () => (await prepare('SELECT cost FROM products WHERE id = ?').get(id)).cost);
 const linesOf = (orderId) => inShop(() => prepare('SELECT product_id, unit_cost FROM purchase_order_items WHERE purchase_order_id = ? ORDER BY id').all(orderId));
@@ -366,8 +368,12 @@ async function countOf(lines) {
   assert.equal((await send(`/api/stock-takes/${started.body.id}/join`, POST())).status, 200);
   const ids = {};
   for (const { name, cost, stock, counted } of lines) {
-    ids[name] = await inShop(async () => (await prepare('INSERT INTO products (sku, name, category, price, cost, stock_qty, low_stock_threshold, description, updated_at) VALUES (?, ?, ?, 28, ?, ?, 3, ?, now())')
-      .run(`${name}-${n}`, name, 'Brakes', cost, stock, '')).lastInsertRowid);
+    ids[name] = await inShop(async () => {
+      const id = (await prepare('INSERT INTO products (sku, name, category, price, cost, stock_qty, low_stock_threshold, description, updated_at) VALUES (?, ?, ?, 28, ?, ?, 3, ?, now())')
+        .run(`${name}-${n}`, name, 'Brakes', cost, stock, '')).lastInsertRowid;
+      await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) RETURNING product_id').run(owner.site.id, id, stock);
+      return id;
+    });
     const res = await send(`/api/stock-takes/${started.body.id}/counts`, POST({ productId: ids[name], qty: counted }));
     assert.equal(res.status, 200, res.text);
   }

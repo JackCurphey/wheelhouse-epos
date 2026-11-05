@@ -33,6 +33,12 @@ export async function staffSignup(baseUrl, overrides = {}) {
   return { cookie: `${SESSION_COOKIE}=${token}`, shop: created.shop, email: created.login.email, loginId: created.login.id };
 }
 
+// A new business's first shop is named after it (stock-per-shop): for a test drawn at
+// Bolton, this makes it the drawings' Bolton, B.
+export function firstShopIsBolton(owner) {
+  return runWithShop(owner.shop.id, () => prepare("UPDATE sites SET name = 'Bolton', code = 'B' RETURNING id, name, code").get());
+}
+
 export function staffRequest(baseUrl, cookie, path, options) {
   return jsonRequest(baseUrl, cookie, path, options);
 }

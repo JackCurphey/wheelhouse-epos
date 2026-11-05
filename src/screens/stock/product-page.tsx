@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, ApiError } from '@/lib/api/client.ts';
@@ -22,7 +22,8 @@ import { count, marginText, money, mono, stockState, StateTag, type Product } fr
  * bike's frame numbers aren't recorded yet.
  */
 type Move = { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string };
-type Page = Product & { history: Move[] };
+type ShopStock = { id: number; name: string; qty: number; here: boolean };
+type Page = Product & { stockAtShops: ShopStock[]; history: Move[] };
 type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted';
 const WHAT: Record<string, [string, Show | null]> = {
   sale: ['Sold', 'Sold'],
@@ -58,7 +59,6 @@ export function ProductPage() {
   const known = Number.isInteger(id);
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
-  const here = session.status === 'signed-in' ? session.shop.name : 'Here';
   const isPhone = useMedia('(max-width: 767px)');
   const [show, setShow] = useState<Show>('Everything');
   const [adjusting, setAdjusting] = useState(false);
@@ -68,6 +68,8 @@ export function ProductPage() {
   }
   const p = product.data;
   if (!p) return <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>;
+  // The shop this computer changes stock at (openspec/changes/stock-per-shop, design 7).
+  const here = p.stockAtShops.find((s) => s.here);
   const codes = [p.sku, p.category, p.supplier, p.barcode ? `barcode ${p.barcode}` : null].filter(Boolean).join(' · ');
   const moves = p.history.filter((m) => show === 'Everything' || WHAT[m.type]?.[1] === show);
   const pill = (s: Show) => (
@@ -90,8 +92,11 @@ export function ProductPage() {
             </div>
           ) : null}
           <Box id="h-in-stock" title="In stock">
-            {kv(here, <><StateTag state={stockState(p)} /><span className={mono}>{count(p.stockQty)}</span></>)}
-            {kv('Low-stock level', <span className={mono}>{p.lowStockThreshold}</span>)}
+            {/* tr-sites' lines. "On its way" comes with sending stock. */}
+            {p.stockAtShops.map((s) => (
+              <Fragment key={s.id}>{kv(s.name, <><StateTag state={stockState({ stockQty: s.qty, lowStockThreshold: p.lowStockThreshold })} /><span className={mono}>{count(s.qty)}</span></>)}</Fragment>
+            ))}
+            {kv('Low-stock level', <span className={mono}>{p.stockAtShops.length > 1 ? `${p.lowStockThreshold} each` : p.lowStockThreshold}</span>)}
             {/* Anyone with the Stock page adjusts (2026-10-26-day-answers.md section 11). */}
             <div className="flex flex-wrap gap-2 pt-1"><Button onClick={() => setAdjusting(true)}>Adjust stock</Button></div>
           </Box>
@@ -125,7 +130,7 @@ export function ProductPage() {
           )}
         </section>
       </div>
-      {adjusting ? <AdjustStock product={p} shopName={here} onClose={() => setAdjusting(false)} /> : null}
+      {adjusting && here ? <AdjustStock product={p} shopName={here.name} now={here.qty} onClose={() => setAdjusting(false)} /> : null}
     </div>
   );
 }

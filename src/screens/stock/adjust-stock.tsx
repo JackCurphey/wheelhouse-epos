@@ -37,9 +37,8 @@ const pillClass = (on: boolean) =>
 const field = 'min-h-11 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-size-15 text-[var(--wh-ink)]';
 const stepBtn = 'size-11 border-0 bg-[var(--wh-panel)] text-xl text-[var(--wh-ink)]';
 
-export function AdjustStock({ product, shopName, onClose }: { product: Product; shopName: string; onClose: () => void }) {
+export function AdjustStock({ product, shopName, now, onClose }: { product: Product; shopName: string; now: number; onClose: () => void }) {
   const queryClient = useQueryClient();
-  const now = product.stockQty;
   const [changeText, setChangeText] = useState('−1');
   const [afterText, setAfterText] = useState(String(now - 1));
   const [reason, setReason] = useState<string | null>(null);

@@ -60,3 +60,31 @@ for (const [width, height, label] of [[1280, 900, 'computer'], [375, 812, 'phone
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
 }
+
+// A product's stock at each shop (openspec/changes/stock-per-shop; tr-sites).
+for (const [width, height, label] of [[1280, 900, 'computer'], [375, 812, 'phone']] as const) {
+  test(`stock at two shops on a ${label}: each listed, and the first shop Adjust changes`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height });
+    const staff = (path: string, options?: object) => staffRequest(server!.baseUrl, owner.cookie, path, options);
+    const sites = await staff('/api/sites');
+    if (sites.body.length === 1) expect((await staff('/api/sites', { method: 'POST', body: { name: '[Second site]', code: 'S' } })).status).toBe(201);
+    const made = await staff('/api/products', { method: 'POST', body: { name: 'Shimano brake pads', sku: `B05S-RX-two-${label}`, category: '[Category]', stockQty: 6, price: 28 } });
+    expect(made.status).toBe(201);
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+    await page.goto(`${server!.baseUrl}/workshop/stock/${made.body.id}`);
+    const inStock = page.getByRole('region', { name: 'In stock' });
+    await expect(inStock).toContainText(`${sites.body[0].name}6`);
+    await expect(inStock).toContainText(/\[Second site\]Running low0/);
+    await expect(inStock).toContainText(/Low-stock level\d+ each/);
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+    await inStock.getByRole('button', { name: 'Adjust stock' }).click();
+    const box = page.getByRole('dialog', { name: 'Adjust stock' });
+    await expect(box.getByRole('textbox', { name: 'In stock after' })).toHaveValue('5');
+    await box.getByRole('radio', { name: 'Damaged' }).click();
+    await box.getByRole('button', { name: 'Adjust' }).click();
+    await expect(box).toBeHidden();
+    await expect(inStock).toContainText(`${sites.body[0].name}5`);
+    await expect(inStock).toContainText(/\[Second site\]Running low0/);
+  });
+}
