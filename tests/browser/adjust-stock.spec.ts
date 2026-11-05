@@ -75,7 +75,7 @@ for (const [width, height, label] of [[1280, 900, 'computer'], [375, 812, 'phone
     await page.goto(`${server!.baseUrl}/workshop/stock/${made.body.id}`);
     const inStock = page.getByRole('region', { name: 'In stock' });
     await expect(inStock).toContainText(`${sites.body[0].name}6`);
-    await expect(inStock).toContainText('[Second site]0');
+    await expect(inStock).toContainText(/\[Second site\]Running low0/);
     await expect(inStock).toContainText(/Low-stock level\d+ each/);
     expect(await sideways(page)).toBeLessThanOrEqual(0);
     await inStock.getByRole('button', { name: 'Adjust stock' }).click();
@@ -85,6 +85,6 @@ for (const [width, height, label] of [[1280, 900, 'computer'], [375, 812, 'phone
     await box.getByRole('button', { name: 'Adjust' }).click();
     await expect(box).toBeHidden();
     await expect(inStock).toContainText(`${sites.body[0].name}5`);
-    await expect(inStock).toContainText('[Second site]0');
+    await expect(inStock).toContainText(/\[Second site\]Running low0/);
   });
 }
