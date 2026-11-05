@@ -59,7 +59,7 @@ Large made-up tables on a scratch database, under the app role, with a stock wri
 | 50,000 | 5.7 s | 7.0 s | told three times, for about 6 s |
 
 **Stale statistics.** The independent review saw Apply at 50,000 take 182 s straight after loading the rows, and 4.6 s with statistics; its likely plan is a nested loop reading the whole business's products by `(shop_id, id)` for each product, though the 182 s didn't reproduce here. Two changes, as the planner believing a table is nearly empty can pick either:
-- The key for links is now `(id, shop_id)`, which a link's check finds just the same and which can't be used to read a whole business.
+- The key for links is now `(id, shop_id)`, which a link's check finds just the same. *Corrected after the re-check, 5 Nov:* the planner can still use it to read a whole business, as an index scan with `Index Cond: (shop_id = ...)` or a bitmap scan, since `shop_id` is in it; no harm was measured from that. What it no longer offers is a key led by `shop_id`, which made such a read cheap enough to be chosen. Migration 117's comment says "can't" too; 117 is merged, and the migration check refuses any edit to a merged file, so it stays as it is and this is the correction.
 - A count reads its products' figures with a read of its own, not a join. The join read every figure at the shop for each product.
 
 Measured here with autovacuum off and statistics taken before the rows were loaded: 50,000 products 6.8 s before and 6.9 s after, so no difference there; 20,000 new products beside 1,000,000 older ones 17.0 s before, 17.2 s with the key alone, 2.7 s with both. Ordinary runs after both: 20,000 products 2.9 s, 50,000 6.9 s.

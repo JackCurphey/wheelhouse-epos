@@ -2198,6 +2198,8 @@ WP-1.5's. So: slice C, WP-2.3.
 13. **Known, no code, for the switcher's list:** "Count them" on an ordinary browser can't clear a below-zero warning held at the other shop, as the count goes to the oldest while its products are picked by the total. Letters outside A to Z in a shop's first letter: "Éclair Vélo" gets code C. `server/scripts/migrate-to-postgres.js`, the old one-off copy, would leave products with no shop row.
 14. **Before deploying, check no count is running at a business with two shops.** One running through the deploy over-adds a sale made at the other shop. Design 11.
 15. **Applying a count with stale statistics:** the review saw 182 seconds at 50,000 products straight after loading them. The key for links now starts with the product, and a count reads its figures on their own. 20,000 new products beside 1,000,000 older went from 17.0 to 2.7 seconds here; the 182 seconds didn't reproduce here, at 6.8 seconds before and 6.9 after. Design 5.
+16. **For the switcher's list (the re-check, 5 Nov): renaming the business to a name another shop already has leaves two shops with the same name.** Refusing the rename, or leaving the first shop's name alone, are Jack's to choose when a second shop can be added. No screen can add one yet.
+17. **For the switcher's list: the count check's "not counted" list took 210 seconds straight after a very large load, with the database's statistics not yet taken, and 328 ms with them.** On main before this piece too. Nothing changed.
 
 ### 5 Nov 2026: a request's body is read before it takes a connection (`openspec/changes/body-read-first`; nothing on screen changes)
 
@@ -2211,6 +2213,18 @@ WP-1.5's. So: slice C, WP-2.3.
 8. **Known, no code, for the design: a few addresses can use up what's shared.** Two addresses holding 100 MB each stop every shop's bookings and customer sign-ins for up to 4 minutes. Two addresses holding up to 30 MB stop every shop's Shopify webhooks for 30 seconds, and how Shopify retries isn't known here. Two addresses holding 10 MB each stop staff sign-up and sign-out posts for 30 seconds.
 9. **Known, no code: a signed-in shop can get in its own way.** 200 stalled small requests, or 20 MB of them, stop that shop's own tills and sales for up to 30 seconds, and three shops doing so stop every shop's for the same time. It takes a sign-in and it doesn't last, so it isn't worth more code.
 10. **At the till, 408 and 429 read as busy, and busy now says "Wheelhouse is busy just now, so this sale may not be recorded yet."** Never to reverse a card. It said "isn't recorded yet" (4 Nov, stock-movements-say-who, 11 above), which wasn't true on a second press after a lost answer, when the sale may already be there. The rest is unchanged: try again in a moment, and if the card machine took the payment, don't take it again.
+
+### 5 Nov 2026: the category tree and its details (WP-1.5, piece 4; `openspec/changes/category-tree`; `st-categories`, `st-category-edit`, no screen yet)
+
+1. **A product's text category is the link to its category, not a new column.** It's always the category's whole path, "Drivetrain › Derailleurs". The split plan's `category_id` would have rewritten every product in the migration and been a second figure to keep in step. Renaming a category rewrites its products' text.
+2. **Text is tidied: split on ›, each part trimmed, empty parts dropped.** Only untidy text was rewritten. Nothing left, or "Uncategorised", is no category.
+3. **"bearings" and "Bearings" stay two categories,** as the shop wrote them. A new category can't take a name beside one already there in any case.
+4. **Renaming or moving a category is refused while one of its categories is being counted:** "[path] is being counted. Apply that count first." Not drawn. A count's target holds 60 characters and a path can be longer, so following the rename wasn't always possible.
+5. **A detail's kind of answer can't change once saved:** remove it and add it again. Drawn as a line of text, not a choice. A detail's name is used once from the top of the tree to the bottom.
+6. **A number needs a unit, a choice at least one choice** (audit H4: "the box asks for what each kind needs"). Up to 60 characters for a name, 12 for a unit, 40 for a choice; 50 details and 50 choices.
+7. **Reading the tree is for anyone signed in; changing it is the Owner's** until "Can order stock" (decision 11, 5 Oct later change).
+8. **Not built: deleting a category** (not drawn). Moving one leaves its products' answers to details it no longer inherits stored and unshown, for piece 6 to say.
+9. **Building the tree at 1,000,000 products held products against stock changes for 2.9 seconds,** telling one sale to try again; 0.3 seconds at 100,000. Renaming a category with 50,000 products takes half a second.
 
 ## Decided here, for Jack to overrule
 

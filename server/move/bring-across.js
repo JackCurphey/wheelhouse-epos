@@ -6,6 +6,7 @@
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
 import { priceTooBig } from '../lib/pence.js';
+import { categoryFor } from '../lib/categories.js';
 import { moveStock, oldestSite } from '../lib/stock.js';
 import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
@@ -77,7 +78,8 @@ async function priceListRow(d, file, context) {
   const min = d['Min (Reorder Point)'] === undefined ? 3 : wholeOf(d['Min (Reorder Point)']);
   if (min === null || min < 0) return look('The reorder level isn’t a whole number');
 
-  const category = [d.Department, d.Category].filter(Boolean).join(' › ') || 'Uncategorised';
+  // Its category's path found or made (category-tree), under the batch's own wait.
+  const category = await categoryFor([d.Department, d.Category].filter(Boolean).join(' › '));
   const active = /^(no|false|0)$/i.test(d.Active ?? '') ? 0 : 1;
   // Never overwrites (design 9): a code already here stays as it is.
   const made = await prepare(
