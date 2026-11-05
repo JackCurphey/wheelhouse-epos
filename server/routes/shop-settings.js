@@ -6,6 +6,7 @@
 import { ownerOnly } from '../lib/owner-only.js';
 import { dbExec, prepare } from '../db.js';
 import { badRequest, nowIso, readJsonBody, sendJson } from '../lib/http.js';
+import { limitLockWait } from '../lib/stock.js';
 import { isPence } from './float-check.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -96,7 +97,22 @@ export function register(route) {
       values.push(text === '' ? null : text);
     }
     // The column names come from SHOP_DETAIL_FIELDS above, never from the request.
-    if (sets.length) await db.prepare(`UPDATE shops SET ${sets.join(', ')} WHERE id = ?`).run(...values, shopId);
+    if (sets.length) {
+      // A first shop named after the business follows it; a shop named anything else keeps
+      // its name, and every shop its code (openspec/changes/stock-per-shop, design 2).
+      // NO KEY UPDATE: every new row in this business checks its link to this one.
+      await db.exec('BEGIN');
+      try {
+        await limitLockWait();
+        const { name: before } = await db.prepare('SELECT name FROM shops WHERE id = ? FOR NO KEY UPDATE').get(shopId);
+        await db.prepare(`UPDATE shops SET ${sets.join(', ')} WHERE id = ?`).run(...values, shopId);
+        if (body.name !== undefined) await db.prepare('UPDATE sites SET name = ? WHERE name = ?').run(body.name.trim(), before);
+        await db.exec('COMMIT');
+      } catch (err) {
+        await db.exec('ROLLBACK').catch(() => {});
+        throw err;
+      }
+    }
     sendJson(res, 200, serializeShopDetails(await db.prepare(SHOP_DETAILS_SELECT).get(shopId)));
   });
 

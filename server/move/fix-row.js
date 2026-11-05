@@ -134,8 +134,10 @@ export function fixRow(rowId, { seen, fields, decided, key, who }) {
     try {
       await lockForBatch(file, [{ data }]);
       // The deleted customers' codes are read here, under the lock, whatever was shown.
+      // The person is whoever's fixing it; the stock is the file's, so the shop is the
+      // rest of the file's, wherever the Fix is pressed (stock-per-shop, design 3).
       const context = { ...(await batchContext(file)), decided, storedShared: row.why === SHARED_CONTACT };
-      done = await ROW_APPLIERS[file.report](data, { ...file, sent_by_login_id: who.loginId, moved_by: { ...who, siteId: who.siteId ?? context.siteId } }, context);
+      done = await ROW_APPLIERS[file.report](data, { ...file, sent_by_login_id: who.loginId, moved_by: { ...who, siteId: context.siteId } }, context);
     } catch (err) {
       // A value the database won't take, or a clash it found first: only this row's problem.
       if (/^2[23]/.test(err.code ?? '')) throw new Refused(refusal(422, { error: ROW_FAILED, why: ROW_FAILED, code: 'still_needs_a_look' }));

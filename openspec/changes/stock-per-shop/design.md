@@ -14,13 +14,15 @@ The total always equals the sum because of this, not a check in the database. Th
 
 Named after the business, its code the name's first letter, as `ms-add-shop`'s code is "suggested from the name"; A where there's no letter (`123`). Made by `createShop` and migration 117, and by `moveStock` for a business made any other way (tests' `createTestShop`), with `ON CONFLICT` for two at once.
 
-Why the business's name: sign-up asks for nothing else. Today's product page already labels its one figure with the business's name, and `docs/decisions/2026-10-18-shop-details.md` has the business's one set of details moving onto its first site. What this costs: a business in Bolton sees "North Street Cycles", not "Bolton", and its tills are N1, N2, until a screen can change them. Nothing can rename a shop yet (`ms-sites` is WP-1.4/5.2), and a till's code doesn't change with its shop's. Logged for Jack to overrule.
+Why the business's name: sign-up asks for nothing else. Today's product page already labels its one figure with the business's name, and `docs/decisions/2026-10-18-shop-details.md` has the business's one set of details moving onto its first site. What this costs: a business in Bolton sees "North Street Cycles", not "Bolton", and its tills are N1, N2, until a screen can change them. Nothing can rename a shop by itself yet (`ms-sites` is WP-1.4/5.2), and a till's code doesn't change with its shop's. Logged for Jack to overrule.
+
+**Renaming the business** (Settings › Shop details) renames a shop with exactly the old name, in the same transaction, under the 2-second limit, so product pages and the till's strip don't keep an old name for good. A shop named anything else, such as Bolton, keeps its name, and every shop its code: a till's N1 stays N1 under a new name.
 
 **Till setup** follows the drawing with no new design: Shop as pills, Till number from the shop's letter, "Make this computer Till N1". The undrawn "This business has no shops" goes. Where a till's or workshop computer's strip would read "North Street Cycles · North Street Cycles", it says the name once.
 
 ## 3. Which shop
 
-A till or workshop computer's own (`siteHere`); otherwise the business's oldest, until a session has a chosen shop (WP-1.4). Writers aren't changed: piece 2 already passes this as `who.siteId`. Nothing takes a shop from what a request sends, so a request can't name another's. Shopify and the Citrus import are the oldest.
+A till or workshop computer's own (`siteHere`); otherwise the business's oldest, until a session has a chosen shop (WP-1.4). Writers aren't changed: piece 2 already passes this as `who.siteId`. Nothing takes a shop from what a request sends, so a request can't name another's. Shopify and the Citrus import are the oldest. **That includes Fix on a Citrus row pressed at a till:** the person is whoever's fixing it, but the stock is the file's, and goes where the rest of the file went. Piece 2 had it landing on that till's shop, when only one figure existed for it to reach.
 
 ## 4. Below zero
 
@@ -56,6 +58,12 @@ Large made-up tables on a scratch database, under the app role, with a stock wri
 | 20,000 | 2.2 s | 2.8 s | told once to try again |
 | 50,000 | 5.7 s | 7.0 s | told three times, for about 6 s |
 
+**Stale statistics.** The independent review saw Apply at 50,000 take 182 s straight after loading the rows, and 4.6 s with statistics; its likely plan is a nested loop reading the whole business's products by `(shop_id, id)` for each product, though the 182 s didn't reproduce here. Two changes, as the planner believing a table is nearly empty can pick either:
+- The key for links is now `(id, shop_id)`, which a link's check finds just the same and which can't be used to read a whole business.
+- A count reads its products' figures with a read of its own, not a join. The join read every figure at the shop for each product.
+
+Measured here with autovacuum off and statistics taken before the rows were loaded: 50,000 products 6.8 s before and 6.9 s after, so no difference there; 20,000 new products beside 1,000,000 older ones 17.0 s before, 17.2 s with the key alone, 2.7 s with both. Ordinary runs after both: 20,000 products 2.9 s, 50,000 6.9 s.
+
 Writing 50,000 shop figures is about 0.9 s of that. Jack's answer 6 accepted "about 6 seconds" at 50,000; this is that plus about a second. The "before" column was measured earlier, not side by side. The Citrus import costs one more statement per row with stock, in its existing batches; not measured again.
 
 ## 6. A count belongs to a shop
@@ -77,3 +85,14 @@ A row for another store still reads "Stock at [Store]: one shop's stock comes ac
 ## 9. What's in nobody's way
 
 No change to `till_sales`, the snapshot's shape, the sync's request or answer, or `sales`. Step C's sale writes through `moveStock` with its till's shop as the old sync does. The settings store and roles aren't touched: `siteHere` stays one place for WP-1.4 to add a session's chosen shop to, as `oldestSite` is for its fallback.
+
+## 10. Known, no code: for the switcher's list
+
+- **"Count them" on an ordinary browser can't clear a below-zero warning held at the other shop** (`server/routes/stock-takes.js`, starting a count): the count goes to the oldest shop while its products are picked by the total.
+- **Letters outside A to Z in a shop's first letter:** "Éclair Vélo" gets code C.
+- **`server/scripts/migrate-to-postgres.js`,** the old one-off copy, would leave products with no shop row.
+
+## 11. Deploy notes
+
+- **Check no count is running at a business with two shops before deploying.** A count running through the deploy, at a two-shop business, over-adds a sale made at the other shop (`server/lib/stock-take-differences.js`, what moved): that sale is already in the total copied to the oldest shop, and now isn't allowed for as it moved elsewhere.
+- Stop an older server first, where that matters (section 5).

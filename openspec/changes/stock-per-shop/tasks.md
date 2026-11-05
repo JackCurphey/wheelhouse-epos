@@ -12,6 +12,8 @@ Each test written first and watched failing for the right reason; each rule brok
 - [x] 1.6 The check that nothing else writes stock also covers `product_stock`
 - [x] 1.7 Measure both migrations on large made-up tables, with a sale and a read tried throughout; query plans under row-level security (design 5)
 
+- [x] 1.8 From the independent review: renaming the business renames the shop named after it; a Citrus Fix goes to the oldest shop; the check also sees `TRUNCATE`, `MERGE` and `ON CONFLICT DO UPDATE`; the key for links is `(id, shop_id)`
+
 ## 2. Second pull request: the count, Adjust and the screens
 
 - [x] 2.1 Test: a count is one shop's, through its routes (`tests/stock-per-shop-routes.test.js`)
@@ -19,5 +21,6 @@ Each test written first and watched failing for the right reason; each rule brok
 - [x] 2.3 Test and build: Adjust at this shop's figure; the product's page says each shop's
 - [x] 2.4 Screen tests first: In stock lists each shop, "[n] each"; Adjust's figure is this shop's; Till setup's first shop; a till or workshop computer named after the business says it once
 - [x] 2.5 Remove "This business has no shops"
+- [x] 2.5a A count reads its products' figures on their own, not by a join
 - [x] 2.6 Log in `docs/decisions/decided-while-building.md`
 - [x] 2.7 Full runs; self-review; archive as the top pull request's last commit

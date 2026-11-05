@@ -7,6 +7,10 @@ Every business SHALL have at least one shop: one made when it signs up, and one 
 - **WHEN** North Street Cycles signs up
 - **THEN** it has one shop, North Street Cycles, code N, and Set up this till offers it, with N1 as the first till number
 
+#### Scenario: Renaming the business
+- **WHEN** North Street Cycles is renamed in Settings
+- **THEN** its shop named North Street Cycles takes the new name and keeps code N; a shop named Bolton would stay Bolton
+
 #### Scenario: A business with Bolton already
 - **WHEN** this reaches a business that already has Bolton
 - **THEN** it has Bolton and nothing else
@@ -21,6 +25,10 @@ Each product's stock SHALL be held per shop. The business's total SHALL stay on 
 #### Scenario: A change with no shop of its own
 - **WHEN** stock changes from an ordinary browser, Shopify or the Citrus Lime import
 - **THEN** it is the business's oldest shop's
+
+#### Scenario: Fixing a Citrus Lime row at a till
+- **WHEN** a row with stock is fixed at a till at [Second site]
+- **THEN** its line names the person fixing it, and its stock goes to the business's oldest shop, with the rest of the file
 
 #### Scenario: Stock already here
 - **WHEN** this reaches a product with stock
