@@ -2193,6 +2193,11 @@ WP-1.5's. So: slice C, WP-2.3.
 8. **A product's page lists each shop with its own tag, then "Low-stock level [n] each" with two or more,** as `tr-sites`. "On its way" comes with sending stock. Everyone with the page sees them (3 Oct later change).
 9. **Applying a count at 50,000 products now takes 7.0 seconds, up from 5.7,** so a sale can be told to try again for about a second longer than the "about 6 seconds" in `2026-11-04-answers.md`, answer 6. At 20,000, 2.8 seconds, told once.
 10. **The Citrus import's other-store rows are unchanged.** They need a look and can be left out; design 8 says why and what would change.
+11. **Renaming the business renames a shop with exactly the old name, and only that** (the independent review). So a first shop named after the business follows it, on a product's page and the till's strip, in one transaction. A shop named Bolton stays Bolton, and every shop keeps its code: N1 stays N1 under a new name. *Pattern:* the 2-second limit, busy.
+12. **A Citrus Lime row fixed at a till goes to the oldest shop, with the rest of its file** (the independent review; spec "with no shop of its own"). Who's on the line stays whoever fixed it. Piece 2 put it on that till's shop, when only one figure existed for it to reach. The file's stock doesn't depend on where Fix is pressed.
+13. **Known, no code, for the switcher's list:** "Count them" on an ordinary browser can't clear a below-zero warning held at the other shop, as the count goes to the oldest while its products are picked by the total. Letters outside A to Z in a shop's first letter: "Éclair Vélo" gets code C. `server/scripts/migrate-to-postgres.js`, the old one-off copy, would leave products with no shop row.
+14. **Before deploying, check no count is running at a business with two shops.** One running through the deploy over-adds a sale made at the other shop. Design 11.
+15. **Applying a count with stale statistics:** the review saw 182 seconds at 50,000 products straight after loading them. The key for links now starts with the product, and a count reads its figures on their own. 20,000 new products beside 1,000,000 older went from 17.0 to 2.7 seconds here; the 182 seconds didn't reproduce here, at 6.8 seconds before and 6.9 after. Design 5.
 
 ## Decided here, for Jack to overrule
 

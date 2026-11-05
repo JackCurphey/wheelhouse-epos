@@ -15,6 +15,15 @@ import { oldestSite } from './stock.js';
 // The shop a count belongs to. Migration 117 and starting one give every count its own.
 export const siteOfTake = async (take) => take.site_id ?? await oldestSite();
 
+// Those products' figures at that shop, none being none. A read of its own, not a join:
+// with stale statistics the planner joined this by reading every figure at the shop for
+// each product, and Apply holds its products meanwhile (design 5).
+const withFigureAt = async (siteId, rows, idOf) => {
+  const ids = rows.map(idOf);
+  const qty = new Map((await prepare('SELECT product_id, qty FROM product_stock WHERE site_id = ? AND product_id = ANY(?::int[])').all(siteId, ids)).map((r) => [r.product_id, r.qty]));
+  return rows.map((r) => ({ ...r, stock_qty: qty.get(idOf(r)) ?? 0 }));
+};
+
 // How a movement after the count reads on its line ("[n] sold during the count").
 const KIND = { sale: 'sold', till_sale: 'sold', return: 'returned', po_receipt: 'booked in', intake: 'booked in', adjustment: 'adjusted' };
 
@@ -30,13 +39,13 @@ export async function notCountedOf(take) {
     : take.kind === 'category' ? 'p.active = 1 AND p.category = ?'
       : 'p.id = ANY(?)';
   const args = take.kind === 'category' ? [take.target] : take.kind === 'below_zero' ? [take.product_ids] : [];
-  return prepare(
-    `SELECT p.id, p.name, p.sku, COALESCE(s.qty, 0) AS stock_qty FROM products p
-       LEFT JOIN product_stock s ON s.product_id = p.id AND s.site_id = ? WHERE ${scope}
+  const rows = await prepare(
+    `SELECT p.id, p.name, p.sku FROM products p WHERE ${scope}
        AND NOT EXISTS (SELECT 1 FROM stock_take_counts c WHERE c.stock_take_id = ? AND c.product_id = p.id)
        AND NOT EXISTS (SELECT 1 FROM stock_take_recounts r WHERE r.stock_take_id = ? AND r.product_id = p.id)
      ORDER BY p.name, p.id`
-  ).all(await siteOfTake(take), ...args, take.id, take.id);
+  ).all(...args, take.id, take.id);
+  return withFigureAt(await siteOfTake(take), rows, (p) => p.id);
 }
 
 // Every counted product, in product-id order, with what it was expected,
@@ -44,12 +53,11 @@ export async function notCountedOf(take) {
 // what moved after its last count.
 export async function differencesOf(take) {
   const siteId = await siteOfTake(take);
-  const counted = await prepare(
-    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, COALESCE(s.qty, 0) AS stock_qty, p.cost_pence
+  const counted = await withFigureAt(siteId, await prepare(
+    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, p.cost_pence
        FROM stock_take_counts c JOIN products p ON p.id = c.product_id
-       LEFT JOIN product_stock s ON s.product_id = c.product_id AND s.site_id = ?
-      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, s.qty, p.cost_pence ORDER BY c.product_id`
-  ).all(siteId, take.id);
+      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.cost_pence ORDER BY c.product_id`
+  ).all(take.id), (r) => r.product_id);
   if (counted.length === 0) return [];
   // A till sale counts by close-the-day's rule (second review, 28 Oct): an
   // online one from when it reached the server, so a till clock that is
