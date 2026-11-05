@@ -7,4 +7,5 @@
 - [x] 1.5 `server/routes/sales.js`: paying for an order reads its body before the transaction
 - [x] 1.6 Break each changed branch on purpose, confirm the break is in the file, see the tests go red, restore and check the restore
 - [x] 1.7 The review's fixes, tests first: a byte limit per shop for staff and tills; a place held only while reading, bytes until the request is over; everything given back for a pipelined request on Node 22; staff sign-in and webhooks on gates of their own; every upload route and every door tested on its own. Break each, see red, on Node 22 where it matters
-- [x] 1.8 Self-review; through the gateway with a real trickle; `npm test`, `npm run test:browser`, the drawing coverage check and lint on the head after merging main
+- [x] 1.8 A payment with a key after `sale-request-key`: a stalled send holds nothing, and a lost answer gets the first sale, once
+- [x] 1.9 Self-review; through the gateway with a real trickle; `npm test`, `npm run test:browser`, the drawing coverage check and lint on the head after merging main

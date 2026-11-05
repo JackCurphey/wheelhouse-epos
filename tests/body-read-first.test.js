@@ -6,9 +6,9 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { connect } from 'node:net';
 import { once } from 'node:events';
-import { createHmac } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import '../server/load-env.js';
-import { pool } from '../server/db.js';
+import { pool, runWithShop, prepare } from '../server/db.js';
 import { encryptSecret } from '../server/shopify.js';
 import { createServer } from 'node:http';
 import { createBodyReadGate, readBodyFirst } from '../server/lib/read-body-first.js';
@@ -486,6 +486,39 @@ live('a payment on an order holds the order only once its whole body has arrived
   } finally {
     stall.end();
   }
+});
+
+live('a payment with a key: a stalled send holds nothing, and a lost answer still gets the first sale, once', async () => {
+  const made = await staffOf(other, '/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ lineType: 'labour', name: 'Fit chain', unitPrice: 15, minutes: 20 }] } });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const path = `/api/sale-documents/${made.body.id}/convert`;
+  const cashierId = await runWithShop(other.shop.id, async () => (await prepare("INSERT INTO employees (name, is_cashier, active) VALUES ('Test Staff', 1, 1) RETURNING id").get()).id);
+  const pay = JSON.stringify({ requestKey: randomBytes(24).toString('hex'), cashierId, cashAmount: 15, cashTendered: 15 });
+
+  // The same send, stalled part-way: it isn't in the key's queue, so it holds up nothing.
+  const stall = await open(server.baseUrl);
+  stall.socket.write(head('POST', path, sized(pay.length, { Cookie: other.cookie })) + pay.slice(0, 20));
+  await pause(200);
+
+  // Its answer lost: the whole body sent, the sale made, the connection gone.
+  const lost = await open(server.baseUrl);
+  lost.socket.write(head('POST', path, sized(pay.length, { Cookie: other.cookie })) + pay);
+  await until('the first answer', 4000, () => statuses(lost.text).length === 1);
+  assert.deepEqual(statuses(lost.text), [201], lost.text);
+  const firstId = JSON.parse(lost.text.slice(lost.text.indexOf('\r\n\r\n') + 4)).id;
+  lost.socket.resetAndDestroy();
+
+  const again = await within(4000, 'the second press', fetch(server.baseUrl + path, { method: 'POST', headers: { 'content-type': 'application/json', cookie: other.cookie }, body: pay }));
+  assert.equal(again.status, 201);
+  assert.equal((await again.json()).id, firstId, 'the first sale again');
+
+  // The stalled send finishes after all: the same answer, and no second sale.
+  stall.socket.write(pay.slice(20));
+  await until('the stalled send answered', 4000, () => statuses(stall.text).length === 1);
+  assert.deepEqual(statuses(stall.text), [201], stall.text);
+  stall.socket.destroy();
+  const { count } = await runWithShop(other.shop.id, () => prepare('SELECT COUNT(*)::int AS count FROM sales WHERE id >= ?').get(firstId));
+  assert.equal(count, 1, 'one sale');
 });
 
 // ---------- A large upload still works, on every upload route ----------
