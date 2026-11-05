@@ -145,6 +145,20 @@ test('Adjust sends the change, the reason and the note; the history says the rea
   assert.match(lines[1], /^Adjusted · Damaged.*Jo Taylor/);
 });
 
+test('a held product says Wheelhouse is busy, and the box stays open to try again', async () => {
+  const { box, fireEvent } = await openBox({ reply: { status: 503, body: { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' } } });
+  fireEvent.click(box.getByRole('radio', { name: 'Lost or stolen' }));
+  fireEvent.click(box.getByRole('button', { name: 'Adjust' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Wheelhouse is busy with this just now. Try again in a moment.');
+});
+
+test('a server fault still says it couldn’t, not the server’s own words', async () => {
+  const { box, fireEvent } = await openBox({ reply: { status: 500, body: { error: 'relation "x" does not exist' } } });
+  fireEvent.click(box.getByRole('radio', { name: 'Lost or stolen' }));
+  fireEvent.click(box.getByRole('button', { name: 'Adjust' }));
+  assert.match((await box.findByRole('alert')).textContent, /^Wheelhouse couldn’t adjust the stock/);
+});
+
 test('a refusal from the server shows in the box, which stays open', async () => {
   const { box, fireEvent } = await openBox({ reply: { status: 400, body: { error: 'Stock cannot go below zero' } } });
   fireEvent.click(box.getByRole('radio', { name: 'Lost or stolen' }));

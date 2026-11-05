@@ -16,6 +16,9 @@ ALTER TABLE stock_movements
   ADD COLUMN IF NOT EXISTS shopify_refund_id TEXT;
 ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_employee_id_fkey;
 ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL NOT VALID;
+-- Removing a staff member checks this link, so it needs an index or each removal reads
+-- every line. Only lines with a person, so it costs no time on what's already there.
+CREATE INDEX IF NOT EXISTS idx_stock_movements_employee ON stock_movements (employee_id) WHERE employee_id IS NOT NULL;
 ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_site_id_fkey;
 ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_site_id_fkey FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE SET NULL NOT VALID;
 ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_sale_id_fkey;

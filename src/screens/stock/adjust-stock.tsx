@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
@@ -31,7 +31,7 @@ function whole(text: string): number | null {
   const t = text.trim().replace('−', '-');
   return /^-?\d+$/.test(t) ? Number(t) : null;
 }
-const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t adjust the stock. Try again in a moment.');
+const words = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t adjust the stock. Try again in a moment.');
 const pillClass = (on: boolean) =>
   `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${on ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--input)] bg-[var(--wh-panel)]'}`;
 const field = 'min-h-11 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-size-15 text-[var(--wh-ink)]';

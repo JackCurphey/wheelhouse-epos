@@ -10,6 +10,10 @@ const INDIRECT_CLEANUP = [
   'DELETE FROM sessions WHERE login_id IN (SELECT id FROM logins WHERE shop_id = $1)',
   'DELETE FROM customer_sessions WHERE customer_login_id IN (SELECT id FROM customer_logins WHERE shop_id = $1)',
   'DELETE FROM workshop_job_attachments WHERE workshop_job_id IN (SELECT id FROM workshop_jobs WHERE shop_id = $1)',
+  // Stock lines before what they point at: otherwise every sale, delivery and person
+  // deleted searches every line for its link (stock-movements-say-who, design 9).
+  'DELETE FROM stock_take_results WHERE shop_id = $1',
+  'DELETE FROM stock_movements WHERE shop_id = $1',
 ];
 
 // Every table carrying a shop_id, discovered rather than listed. An explicit

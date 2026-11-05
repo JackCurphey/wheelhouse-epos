@@ -61,8 +61,26 @@ export async function differencesOf(take) {
     `SELECT c.product_id, l.name, c.qty FROM stock_take_counts c JOIN logins l ON l.id = c.login_id
       WHERE c.stock_take_id = ? ORDER BY c.first_counted_at, c.id`
   ).all(take.id);
+  return differenceRows(counted, moved, by);
+}
+
+// Work out each line, from what's read above. Every product finds its own rows
+// directly: this runs under the products' locks, and blocks the server for every shop
+// while it does, so it can't compare every product with every row.
+const groupedByProduct = (rows) => {
+  const grouped = new Map();
+  for (const row of rows) {
+    const mine = grouped.get(row.product_id);
+    if (mine) mine.push(row);
+    else grouped.set(row.product_id, [row]);
+  }
+  return grouped;
+};
+export function differenceRows(counted, moved, by) {
+  const movedOf = groupedByProduct(moved);
+  const byOf = groupedByProduct(by);
   return counted.map((r) => {
-    const after = moved.filter((m) => m.product_id === r.product_id);
+    const after = movedOf.get(r.product_id) ?? [];
     const expected = r.stock_qty - after.reduce((n, m) => n + m.change, 0);
     const difference = r.counted - expected;
     // What moved after the count, by kind; a count applied and undone nets to nothing.
@@ -80,7 +98,7 @@ export async function differencesOf(take) {
       difference,
       costPence: r.cost_pence,
       valuePence: difference * r.cost_pence,
-      byCounter: by.filter((b) => b.product_id === r.product_id).map((b) => ({ name: b.name, qty: b.qty })),
+      byCounter: (byOf.get(r.product_id) ?? []).map((b) => ({ name: b.name, qty: b.qty })),
       allowedFor: [...kinds].filter(([, change]) => change !== 0).map(([kind, change]) => ({ kind, change })),
     };
   });

@@ -35,16 +35,17 @@ export async function lockStock(productIds, { wait = STOCK_LOCK_WAIT } = {}) {
  * oldest, if it has one yet. Background work with nobody behind it sends none.
  * `neverBelowZero`: a change taking a product under zero refuses the whole call, and
  * going up is always allowed, so Found works on a product below zero.
+ * `held`: what lockStock returned, when the caller already holds these, to save locking twice.
  *
  * Returns { refused, missing, products, pushes, lineOf }: `refused`, the product that
  * would go below zero, with nothing written (the caller rolls back and says so);
  * `missing`, ids no longer held, which get no line; `products`, id to the row after;
  * `pushes`, what to send Shopify after COMMIT; `lineOf`, id to its newest line's id.
  */
-export async function moveStock(moves, who = {}, { neverBelowZero = false, wait } = {}) {
+export async function moveStock(moves, who = {}, { neverBelowZero = false, wait, held: alreadyHeld } = {}) {
   const result = { refused: null, missing: [], products: new Map(), pushes: [], lineOf: new Map() };
   if (moves.length === 0) return result;
-  const held = new Map((await lockStock(moves.map((m) => m.productId), { wait })).map((p) => [p.id, p]));
+  const held = new Map((alreadyHeld ?? await lockStock(moves.map((m) => m.productId), { wait })).map((p) => [p.id, p]));
 
   // Several lines can be on one product, and one statement can only change it once.
   const totals = new Map();
