@@ -10,7 +10,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { prepare, dbExec } from '../db.js';
-import { badRequest, ClientGoneError, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
+import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
 import { currentCustomerSession, setCustomerSessionCookie } from '../lib/session.js';
@@ -1694,7 +1694,7 @@ export function register(route) {
     }
     if (out.status === 201) await sendLinkMessage(confirmedAtOnce ? 'booking_confirmed' : 'request_received', out.body.id, shop.id, out.body.privateLink);
     sendJson(res, out.status, out.body);
-  });
+  }, { maxBody: MAX_BOOKING_BODY_BYTES, answerOverflow: true, upload: true });
 
   // The private booking link, read back without sign-in.
   // screens: pending, change-pending, cancelled
@@ -1733,7 +1733,7 @@ export function register(route) {
     const added = await addPhotoWithCode(params.code, checked.value[0]);
     if (!added) return photoCodeGone(res);
     sendJson(res, 201, added);
-  });
+  }, { maxBody: MAX_PHOTO_CODE_BODY_BYTES, upload: true });
 
   // "Stop these" for service reminders (stop-reminders; account and reminders
   // decision 6; Jack's answer 5): no sign-in; opening the page changes
@@ -1920,12 +1920,9 @@ export function register(route) {
   route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
     const found = await resolveBookingLink(req, res, params.code);
     if (!found) return;
-    // A body that can't be read still cancels, as it always has; a customer who
-    // went away before it arrived never finished asking, so nothing happens.
-    const body = await readJsonBody(req).catch((err) => {
-      if (err instanceof ClientGoneError) throw err;
-      return null;
-    });
+    // A body that can't be parsed still cancels. A customer who went away before
+    // it all arrived never gets this far (readBodyFirst), so nothing happens.
+    const body = await readJsonBody(req).catch(() => null);
     const out = await withJobBookingLock(found.id, [], async (job) => {
       // A double tap: the customer's own cancel already went through, so the
       // answer is the cancelled booking, unchanged (final review), and no second
