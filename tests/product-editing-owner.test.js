@@ -76,8 +76,12 @@ test('the Owner’s sign-in with Jo checked in on a till is Jo: refused', async 
   };
   const site = (await as(owner, '/api/sites')).body[0];
   assert.equal((await send('/api/till-setup', 'POST', { siteId: site.id, number: 5 })).status, 201);
+  // Nobody checked in: it could be anyone, so it asks for a PIN, as changing stock there does.
+  const empty = await send(`/api/products/${pads.id}`, 'PUT', { pricePence: 100 });
+  assert.deepEqual([empty.status, empty.body.code], [409, 'check_in_first']);
   assert.equal((await send('/api/till-checkin', 'POST', { pin })).status, 201);
   refused(await send(`/api/products/${pads.id}`, 'PUT', { pricePence: 100 }), 'price at a till');
+  assert.equal((await row(pads.id)).price, 28, 'nothing changed');
 });
 
 test('the Owner adds and changes; staff still adjust and receive, as before', async () => {

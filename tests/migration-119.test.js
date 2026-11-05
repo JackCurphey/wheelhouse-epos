@@ -24,6 +24,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
 const FILE = '119_category_tree.sql';
 const LATER = readdirSync(path.join(ROOT, 'server/migrations')).filter((f) => f.endsWith('.sql') && f >= FILE);
+// 121 keeps a number answer's key beside it (product-editing): the answers below give both.
 
 function adminUrlOrSkip(t) {
   try {
@@ -136,9 +137,9 @@ test('119 builds each business’s tree from its products’ text, tidies only u
     }
     await assert.rejects(c.query("INSERT INTO product_categories (parent_id, name, path) VALUES ($1, '[Child]', 'Bearings › [Child]')", [theirs]), /foreign key/i, 'a parent that’s another business’s');
     await assert.rejects(c.query("INSERT INTO category_details (category_id, name, kind) VALUES ($1, '[Detail]', 'text')", [theirs]), /foreign key/i, 'a detail on another business’s category');
-    await assert.rejects(c.query('INSERT INTO product_details (product_id, detail_id, value_number) VALUES ($1, $2, 30)', [ids.bearing, theirDetail]), /foreign key/i, 'an answer to another business’s detail');
+    await assert.rejects(c.query('INSERT INTO product_details (product_id, detail_id, value_number, value_key) VALUES ($1, $2, 30, 300000)', [ids.bearing, theirDetail]), /foreign key/i, 'an answer to another business’s detail');
     const detail = (await one(c, "INSERT INTO category_details (category_id, name, kind, unit, position) VALUES ($1, 'Outer diameter', 'number', 'mm', 0) RETURNING id", [mine])).id;
-    await assert.rejects(c.query('INSERT INTO product_details (product_id, detail_id, value_number) VALUES ($1, $2, 30)', [ids.theirs, detail]), /foreign key/i, 'an answer for another business’s product');
+    await assert.rejects(c.query('INSERT INTO product_details (product_id, detail_id, value_number, value_key) VALUES ($1, $2, 30, 300000)', [ids.theirs, detail]), /foreign key/i, 'an answer for another business’s product');
     await assert.rejects(c.query("INSERT INTO product_categories (shop_id, name, path) VALUES ($1, '[X]', '[X]')", [ids.b]), /row-level security/i);
     // A kind it doesn't know, or a unit or choices that don't go with its kind.
     await assert.rejects(c.query("INSERT INTO category_details (category_id, name, kind) VALUES ($1, '[D]', 'date')", [mine]), /check/i);
@@ -147,7 +148,7 @@ test('119 builds each business’s tree from its products’ text, tidies only u
     // A path is one category's.
     await assert.rejects(c.query("INSERT INTO product_categories (name, path) VALUES ('Bearings', 'Bearings')"), /unique/i);
     // Removing a detail takes its answers.
-    await c.query('INSERT INTO product_details (product_id, detail_id, value_number) VALUES ($1, $2, 30)', [ids.bearing, detail]);
+    await c.query('INSERT INTO product_details (product_id, detail_id, value_number, value_key) VALUES ($1, $2, 30, 300000)', [ids.bearing, detail]);
     await c.query('DELETE FROM category_details WHERE id = $1', [detail]);
     assert.equal((await one(c, 'SELECT count(*)::int AS n FROM product_details WHERE product_id = $1', [ids.bearing])).n, 0);
   });

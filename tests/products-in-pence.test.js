@@ -137,18 +137,14 @@ test('Jo Taylor is sent no cost in pence, and can’t change one, whatever she s
   const read = (await staff(`/api/products/${p.id}`, undefined, jo)).body;
   assert.ok(read.costPence === null);
   assert.equal(read.pricePence, 2800, 'she still sees the price');
+  // Staff don't change products at all now (product-editing; decision 11).
   const res = await save(p.id, { costPence: 1, description: '[Changed]' }, jo);
-  assert.equal(res.status, 200);
-  assert.ok(res.body.costPence === null);
+  assert.deepEqual([res.status, res.body.code], [403, 'owner_only']);
   const row = await stored(p.id);
-  assert.deepEqual([row.cost_pence, row.description], [1400, '[Changed]']);
-  // Bad figures are ignored too: she was never going to set one.
-  assert.equal((await save(p.id, { costPence: -1 }, jo)).status, 200);
-  assert.equal((await stored(p.id)).cost_pence, 1400);
+  assert.deepEqual([row.cost_pence, row.description], [1400, '']);
   n += 1;
   const added = await staff('/api/products', { method: 'POST', body: { name: '[Product]', sku: `[Jo ${n}]`, pricePence: 2800, costPence: 1400 } }, jo);
-  assert.equal(added.status, 201);
-  assert.equal((await stored(added.body.id)).cost_pence, 0, 'a product she adds starts with no cost');
+  assert.deepEqual([added.status, added.body.code], [403, 'owner_only'], 'nor add one');
 });
 
 test('the till’s snapshot reads pence, and survives a price already over what an INTEGER holds', async () => {
