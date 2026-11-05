@@ -254,18 +254,43 @@ live('with no sign-in, a small route has no reason for 2 MB: told so in words, a
     const under = await within(10_000, what, fetch(server.baseUrl + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: bodyWith(100, 90_000) }));
     assert.doesNotMatch(await under.text(), TOO_MUCH, `${what}, under it`);
   }
-  // Far over: nobody reads on for ever. It answers at 2 MB, with the rest not yet sent.
+  // Under 2 MB it reads on to the end before answering, which is what lets the client
+  // hear it: nothing comes back while part of the body is still to come.
+  const near = connect(new URL(server.baseUrl).port, '127.0.0.1');
+  let early = '';
+  near.on('error', () => {});
+  near.on('data', (d) => { early += d.toString('latin1'); });
+  await once(near, 'connect');
+  near.write(`POST /api/portal/${owner.shop.slug}/login HTTP/1.1\r\nHost: a\r\nContent-Type: application/json\r\nContent-Length: 1500000\r\n\r\n`);
+  near.write(Buffer.alloc(1_400_000, 'A'));
+  await pause(300);
+  const beforeTheRest = early;
+  near.write(Buffer.alloc(100_000, 'A'));
+  const by = Date.now() + 3000;
+  while (!early && Date.now() < by) await pause(10);
+  near.destroy();
+  assert.equal(beforeTheRest, '', 'nothing while the rest is still to come');
+  assert.match(early, TOO_MUCH, 'then the words');
+
+  // Far over: nobody reads on for ever. Past 2 MB the server answers and closes with the
+  // rest of the body unread, and closing with bytes unread resets the connection, which
+  // can reach the client before the answer does (about 1 in 12 here; the design says so).
+  // So this asks only that the server ends it without waiting for the rest: answered, or
+  // closed. Waiting, it would do neither, with the other 17 MB never sent.
   const far = connect(new URL(server.baseUrl).port, '127.0.0.1');
   let heard = '';
+  let closed = false;
   far.on('error', () => {});
   far.on('data', (d) => { heard += d.toString('latin1'); });
+  far.on('close', () => { closed = true; });
   await once(far, 'connect');
   far.write(`POST /api/portal/${owner.shop.slug}/login HTTP/1.1\r\nHost: a\r\nContent-Type: application/json\r\nContent-Length: ${20 * 1024 * 1024}\r\n\r\n`);
   far.write(Buffer.alloc(3 * 1024 * 1024, 'A'));
   const end = Date.now() + 3000;
-  while (!heard && Date.now() < end) await pause(10);
+  while (!heard && !closed && Date.now() < end) await pause(10);
   far.destroy();
-  assert.match(heard, /HTTP\/1\.1 400/, 'answered without waiting for the rest');
+  assert.ok(closed || /^HTTP\/1\.1 400/.test(heard), `ended without waiting for the rest: ${JSON.stringify({ heard: heard.slice(0, 40), closed })}`);
+  if (heard) assert.match(heard, TOO_MUCH, 'and if heard, in words');
   await assertAlive('after each');
 });
 
