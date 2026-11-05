@@ -92,6 +92,11 @@ async function openPay(t) {
   return t.within(await t.ui.findByRole('dialog'));
 }
 
+// An answer that never arrives, marked handled as it sits waiting to be used.
+const lostAnswer = () => { const lost = Promise.reject(new TypeError('Failed to fetch')); lost.catch(() => {}); return lost; };
+// What was sent, with the sale's request key checked by its own tests.
+const noKey = ({ requestKey, ...rest }) => rest;
+
 test('an empty sale says so, and Take payment is off', async () => {
   const { sale } = await openTill();
   assert.ok(has(sale.queryByText('Nothing in the sale yet')));
@@ -161,7 +166,7 @@ test('card: key it into the machine, then Card approved saves the sale and shows
   assert.ok(has(await pay.findByText('Key £18.00 into the card machine.')));
   t.fireEvent.click(pay.getByRole('button', { name: 'Card approved' }));
   assert.ok(has(await pay.findByText('Paid')));
-  assert.deepEqual(sales(), [{
+  assert.deepEqual(sales().map(noKey), [{
     items: [{ lineType: 'labour', serviceId: 1, name: 'Fit & adjust brakes', unitPrice: 18, minutes: 30 }],
     cashAmount: 0, cardAmount: 18, cashTendered: null, cashierId: 21, sellPastStock: true,
   }]);
@@ -182,7 +187,7 @@ test('cash: the note buttons, the change to give, and Cash taken', async () => {
   assert.ok(has(pay.queryByText('£12.00')));
   t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
   assert.ok(has(await pay.findByText('Paid')));
-  assert.deepEqual(sales(), [{
+  assert.deepEqual(sales().map(noKey), [{
     items: [{ productId: 40, qty: 1, unitPrice: 28 }],
     cashAmount: 28, cardAmount: 0, cashTendered: 40, cashierId: 21, sellPastStock: true,
   }]);
@@ -243,6 +248,59 @@ test('busy on a card sale says to try again and not to take the card again; on c
   t.fireEvent.click(await pay.findByRole('button', { name: '£20.00' }));
   t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
   assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment.')));
+});
+
+test('a lost answer, then Card approved again: the same request key, and Paid when the sale is there', async () => {
+  const t = await openTill();
+  await addService(t);
+  saleReply = lostAnswer();
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  await pay.findByText(/Lost touch with the server/);
+  saleReply = null;
+  t.fireEvent.click(pay.getByRole('button', { name: 'Card approved' }));
+  await pay.findByRole('heading', { name: 'Paid' });
+  const sent = sales();
+  assert.equal(sent.length, 2);
+  assert.ok(typeof sent[0].requestKey === 'string' && sent[0].requestKey.length >= 32, 'a key');
+  assert.equal(sent[1].requestKey, sent[0].requestKey, 'kept across the retry');
+});
+
+test('going Back keeps the key; the next sale gets a new one', async () => {
+  const t = await openTill();
+  await addService(t);
+  saleReply = lostAnswer();
+  let pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  await pay.findByText(/Lost touch with the server/);
+  t.fireEvent.click(pay.getByRole('button', { name: 'Back' }));
+  saleReply = null;
+  t.fireEvent.click(await pay.findByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  await pay.findByRole('heading', { name: 'Paid' });
+  t.fireEvent.click(pay.getByRole('button', { name: 'No receipt' }));
+  await addService(t);
+  pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  await pay.findByRole('heading', { name: 'Paid' });
+  const sent = sales();
+  assert.equal(sent[1].requestKey, sent[0].requestKey);
+  assert.notEqual(sent[2].requestKey, sent[0].requestKey);
+});
+
+test('a key already used for a different sale says it was recorded, and nothing about reversing', async () => {
+  const t = await openTill();
+  await addService(t);
+  const words = 'This sale was already recorded, as sale 501, with different items or a different payment. Check it before taking payment again.';
+  saleReply = { status: 409, ok: false, json: async () => ({ error: words, code: 'reused_key', saleId: 501 }) };
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(has(await pay.findByText(words)));
+  assert.equal(has(pay.queryByText(/reverse/)), false);
 });
 
 test('if the sale can’t be saved, staff are told and the sale stays', async () => {

@@ -48,7 +48,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  */
 type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
-export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
+export function PayDialog({ lines, onClose, onNextSale, job, requestKey }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; requestKey: string }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
@@ -73,7 +73,7 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     setError(null);
     try {
       // To the penny: the screen rounds what staff type, so the record must too.
-      const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, cashierId: serving.id };
+      const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, requestKey, cashierId: serving.id };
       let note: string | null = null;
       // Both reply with the whole sale, which is what the receipt prints.
       let sale: ReceiptSale & { jobWarning?: string };

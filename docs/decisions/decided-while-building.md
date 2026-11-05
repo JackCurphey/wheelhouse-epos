@@ -2166,8 +2166,18 @@ WP-1.5's. So: slice C, WP-2.3.
 10. **A till's flag "at [n] after the sale" gives the figure after the whole sale,** where two lines are on one product, not after each line.
 11. **At the till, busy never says to reverse a payment.** With a card or split: "Wheelhouse is busy just now, so this sale isn't recorded yet. Try again in a moment: if the card machine took the payment, don't take it again." With cash, without that last part. Not drawn. *Pattern:* the till's other refusals, except that those can't be cured by pressing again. Adjust, Apply, Undo and Book in show the busy words rather than "couldn't".
 12. **A Citrus Lime row with stock costs more than it did:** 20,000 rows take 60 seconds, against about 44 before this piece, batches still within their limits.
-13. **A job already paid says so at the till.** After a lost answer, pressing Card approved again reads "This job is already paid: sale [n] was recorded. Don't take payment again. If the card machine took a second payment, reverse that one on the machine." The server's refusal now says which sale, so it's told apart from a real refusal, which still says none was recorded. Not drawn. The second sentence stays, as another till really can have paid it. `POST /api/sales` has no request key, so a plain sale's lost answer then a second press records it twice: its own pull request, later.
+13. **A job already paid says so at the till.** After a lost answer, pressing Card approved again reads "This job is already paid: sale [n] was recorded. Don't take payment again. If the card machine took a second payment, reverse that one on the machine." The server's refusal now says which sale, so it's told apart from a real refusal, which still says none was recorded. Not drawn. The second sentence stays, as another till really can have paid it. `POST /api/sales` had no request key: settled by `sale-request-key`, 5 Nov.
 14. **Known, no code:** an order that can never succeed (a price of 1e40, no `line_items`) gets an error on every delivery until Shopify gives up; low risk. The old app's "Check in with your PIN first" on a page with no PIN entry (the old app is a placeholder); a Citrus upload at an empty till asks for no PIN, as nothing moves until the batches run; many orders behind one held product can use up the pool, as on main.
+
+### 5 Nov 2026: a sale sent twice counts once (`openspec/changes/sale-request-key`; `till-*`, nothing new on screen)
+
+1. **A lost answer, then pressing again, records one sale.** It goes on to Paid with the first sale, and a job goes on to its usual after-paid step, with the first answer's warning if it had one.
+2. **The key belongs to the sale on the till,** not to one press: Back and another payment method keep it, and Next sale and Clear start a new one. *Pattern:* Book in.
+3. **The same key with different items or a different payment is refused:** "This sale was already recorded, as sale [n], with different items or a different payment. Check it before taking payment again." Not drawn. It doesn't mention reversing a payment, as that sale may be the right one.
+4. **"Already paid" on a job now only means someone else's payment,** or this one with different details, so its advice about a second card payment is true when it shows.
+5. **The till's "Lost touch with the server, so the sale may have saved" wording stays.** Pressing again is now safe, but what's on screen wasn't asked to change.
+6. **The old till sends a key too,** checked by reading its source, as no browser test drives it.
+7. **Reloading the till's page starts a new key,** so a lost answer, then a reload, then the same sale, records it twice. The key isn't kept across a reload.
 
 ## Decided here, for Jack to overrule
 
