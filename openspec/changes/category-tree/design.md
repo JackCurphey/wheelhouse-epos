@@ -8,11 +8,11 @@ Why: a new column would need filling on every product, rewriting the whole `prod
 
 ## 2. Tidy text
 
-Split on "›", each part trimmed, empty parts dropped, joined with " › " (`server/lib/categories.js`, `tidyCategory`; migration 119 does the same in SQL). Nothing left is "Uncategorised", which isn't a category: such a product has none. Letters keep their case, so "bearings" and "Bearings" stay two categories, as the shop wrote them; merging them would change products the shop decided, and isn't drawn. A new category's name can't repeat a sibling's in any case (section 5).
+Split on "›", each part trimmed, empty parts and "Uncategorised" dropped, joined with " › " (`server/lib/categories.js`, `tidyCategory`; migration 119 does the same in SQL). "Uncategorised" isn't a category anywhere in a path: "Uncategorised › Tyres" is Tyres, "[Wheels] › Uncategorised" is [Wheels] (the review, 5 Nov). Nothing left is "Uncategorised": such a product has none. Letters keep their case, so "bearings" and "Bearings" stay two categories, as the shop wrote them; merging them would change products the shop decided, and isn't drawn. A new category's name can't repeat a sibling's in any case (section 5).
 
 ## 3. Writing a product's category
 
-Every writer finds or makes the categories in its path, in its own transaction: adding a product, saving one, a supplier's item imported, and a Citrus Lime row (its "Department › Category"). Each category found is read `FOR KEY SHARE`, so a rename at the same moment either finishes first, and the writer makes the old path afresh, or waits for the writer. Two making the same path at once: the second finds the first's (`ON CONFLICT`). Adding a product and the supplier import now take the 2-second limit before this; saving one already had it, and the Citrus import keeps its batch's own wait.
+Every writer finds or makes the categories in its path, in its own transaction: adding a product, saving one, a supplier's item imported, and a Citrus Lime row (its "Department › Category"). The Citrus row does it only once the row has come across: a file sent again after a rename finds its codes already here and makes nothing, so the old names don't come back as empty categories (the review). Each category found is read `FOR KEY SHARE`, so a rename at the same moment either finishes first, and the writer makes the old path afresh, or waits for the writer. Two making the same path at once: the second finds the first's (`ON CONFLICT`). Adding a product and the supplier import now take the 2-second limit before this; saving one already had it, and the Citrus import keeps its batch's own wait.
 
 ## 4. The migration
 
@@ -34,16 +34,21 @@ Most of it is building the index, which holds products against writes, not reads
 `POST`: a name and where it sits. `PUT /:id`: Save, as `st-category-edit` does it, its name, where it sits and its own details as a whole list. A detail sent with its id is kept, one without is added, one left out is removed with its answers. The Owner only, until "Can order stock" (roles, WP-1.1).
 
 - **Names:** not empty, no "›", up to 60 characters; not a sibling's in any case (409, "There’s already a category called [name] in [parent]").
-- **Details:** up to 50, a name once from the top of the tree to the bottom (above it, and anywhere inside it); a number needs a unit (up to 12 characters), a choice 1 to 50 choices (each up to 40, none twice); a detail's kind can't change ("Remove it and add it again").
-- **Renaming or moving** rewrites the paths inside it and its products' text. It can't sit inside itself or one of its own. A count running on any category in it refuses: "[path] is being counted. Apply that count first." Updating the count's target instead was weighed: a count's target holds 60 characters and a path can be longer.
+- **Details:** up to 50, a name once from the top of the tree to the bottom (above it, and anywhere inside it). Moving checks the same against the new place, for the category and everything inside it: "[Bearings] can’t go inside [Wheels]: [Wheels] already has a detail called Height", or "[Sealed] and [Wheels] both have a detail called Height" for one inside it; a number needs a unit (up to 12 characters), a choice 1 to 50 choices (each up to 40, none twice); a detail's kind can't change ("Remove it and add it again").
+- **Renaming or moving** rewrites the paths inside it and its products' text. It can't sit inside itself or one of its own. A count running on any category in it refuses: "[path] is being counted. Apply that count first." **Starting a count of a category holds that category's row** (`FOR KEY SHARE`, under the limit) while it checks for products and makes the count, so a rename at the same moment either finishes first, and the count finds no products, or waits and sees the count (the review: without it, a count started while a rename waited on a product counted a category that then no longer existed).
+- **A count's category can be any length.** A tree makes paths over 60 characters normal ("Components › Drivetrain › Derailleurs › Rear derailleurs › 12-speed"), so 119 lets a category's target be any length; an area's name still stops at 60.
 - **Locks:** the limit first, then every category of the business `FOR UPDATE` in id order (a business has tens), then the products in id order, as stock takes them. A product saved at the same moment holds its product then its category, the other order: one waits up to 2 seconds or the database breaks the tie, and it answers busy. Reply after COMMIT.
 
 Renaming through the route, with an adjustment of one of its products tried throughout: 1,000 products 24 ms, 20,000 187 ms, 50,000 474 ms, never busy.
 
-## 6. Not built
+## 6. Deploy notes
+
+- **A count running at deploy on untidy category text** ("  Drivetrain ›  Derailleurs ") follows its products: 119 tidies a running count's target the same way. One already applied keeps what it said.
+
+## 7. Not built
 
 Deleting a category (not drawn); the screens (piece 8); a product's answers, Edit and searching by a detail (pieces 6 and 9). A detail removed from a parent while a child shows it is the parent's to remove. Moving a category leaves its products' answers to details it no longer inherits stored and unshown; piece 6 says what a product shows.
 
-## 7. From piece 3's re-check
+## 8. From piece 3's re-check
 
 Design 5 of `stock-per-shop` said the planner "can't use" `(id, shop_id)` to read a whole business; it can, with no harm measured. Corrected there. Migration 117's comment says the same; 117 is merged and the migration check refuses any edit to a merged file ("Files on main are frozen"), so the file stays and the design is the correction.

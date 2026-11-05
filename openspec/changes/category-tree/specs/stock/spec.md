@@ -7,6 +7,10 @@ A business's categories SHALL form a tree: each sits at the top or inside one ot
 - **WHEN** a product is added with the category "Drivetrain ›Derailleurs "
 - **THEN** it reads "Drivetrain › Derailleurs", and Derailleurs sits inside Drivetrain
 
+#### Scenario: Uncategorised inside a path
+- **WHEN** a product is added with the category "Uncategorised › Tyres"
+- **THEN** its category is Tyres, and there is no category called Uncategorised
+
 ### Requirement: Each category has its own details
 In Settings › Stockroom › Categories the Owner SHALL give a category details: a name and the kind of answer, a number with its unit, a choice from a list with its choices, or text. A category SHALL pass its details down to the categories inside it, and a detail's name SHALL be used once from the top of the tree to the bottom. Removing a detail SHALL remove its answers, and the edit box SHALL be able to say how many products that is.
 
@@ -25,6 +29,21 @@ Renaming a category, or moving it inside another, SHALL change the path of every
 - **WHEN** Drivetrain is renamed
 - **THEN** its derailleurs read "[new name] › Derailleurs"
 
+#### Scenario: Moving where a detail's name is taken
+- **WHEN** Wheels and Bearings each have Height, and Bearings is moved inside Wheels
+- **THEN** it is refused, saying Wheels already has a detail called Height, and Bearings stays where it was
+
 #### Scenario: Being counted
 - **WHEN** Drivetrain › Derailleurs is being counted and Drivetrain is renamed
 - **THEN** it says "Drivetrain › Derailleurs is being counted. Apply that count first." and nothing changes
+
+#### Scenario: A count started while a rename is under way
+- **WHEN** a count of a category is started at the same moment the category is renamed
+- **THEN** either the rename is refused because the count is running, or the count finds no products in the old name; never a count of a category that's gone
+
+### Requirement: A category of any depth can be counted
+Starting a count of a category SHALL work for any path the tree holds, however long. An area's name SHALL still stop at 60 characters.
+
+#### Scenario: A deep category
+- **WHEN** a count of "Components › Drivetrain › Derailleurs › Rear derailleurs › 12-speed" is started
+- **THEN** it starts
