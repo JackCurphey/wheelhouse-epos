@@ -9,6 +9,10 @@ The server SHALL refuse a request made of more small pieces of data than it coul
 - **WHEN** someone with no sign-in sends a booking about as large as allowed, made of many thousands of tiny empty values
 - **THEN** they are told "That's too much to send in one go." and the connection closes, and everyone else, at every shop, is answered as normal
 
+#### Scenario: Far too much for a small request
+- **WHEN** someone with no sign-in sends over 100 KB to sign up or sign in
+- **THEN** they are told "That's too much to send in one go." and the connection closes
+
 #### Scenario: The largest honest booking
 - **WHEN** Maya books with 5 photos of 10 MB each
 - **THEN** her booking is taken as normal

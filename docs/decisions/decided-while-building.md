@@ -2197,8 +2197,10 @@ WP-1.5's. So: slice C, WP-2.3.
 ### 5 Nov 2026: a request built to run the server out of memory is refused (`openspec/changes/json-shape`; nothing on screen changes)
 
 1. **A request can hold 10,000 small pieces of data with no sign-in, and 200,000 signed in.** Counted as it arrives, by the characters that start one: `{`, `[`, `,`, `:`. Over that: "That's too much to send in one go." A photo in a booking has none of these, so it costs nothing. 10,000 is far more than any booking, sign-in or message needs, and a note's commas count. 200,000 is about what a till's offline sync could honestly send at its 2 MB. Shopify's webhooks have no count, as they're only read once their signature is good.
-2. **Routes with no sign-in and no photos now take at most 100 KB, not 2 MB.** They have no reason for more. Over it, the connection is cut, as it always was over 2 MB.
+2. **Routes with no sign-in and no photos now take at most 100 KB, not 2 MB.** They have no reason for more. Over it: "That's too much to send in one go." The rest is read and thrown away up to 2 MB, so the sender hears that rather than seeing an error; past that, the connection closes.
 3. **Photos stay inside the booking's JSON.** Moving them out would be bigger and isn't needed: an honest booking at the largest size, 5 photos of 10 MB, is taken on a 524 MB heap.
+4. **Known, no code: a Shopify webhook with a good signature has no count.** Only someone holding a shop's real Shopify secret could send a costly body that way.
+5. **Known, no code: a till's sync has no limit on how many sales it carries,** only the 2 MB and the 200,000 (`batchProblem`, `server/till/sync.js`).
 
 ## Decided here, for Jack to overrule
 

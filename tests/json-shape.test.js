@@ -235,16 +235,37 @@ test('a body handed to its route no longer holds its bytes', async () => {
 
 const OVER_SMALL = 200 * 1024;
 
-live('with no sign-in, a small route has no reason for 2 MB: cut off well before it', async () => {
+live('with no sign-in, a small route has no reason for 2 MB: told so in words, and closed', async () => {
   for (const [what, path] of [
     ['a customer signing in', `/api/portal/${owner.shop.slug}/login`],
     ['a customer signing up', `/api/portal/${owner.shop.slug}/signup`],
     ['a staff account', '/api/auth/login'],
   ]) {
-    const over = await send(path, bodyWith(100, OVER_SMALL));
-    assert.equal(over.status, null, `${what}: ${JSON.stringify(over)}`);
-    assert.equal(over.closed, true, what);
+    // By a real client, which finds a connection cut under it an error (UND_ERR_SOCKET),
+    // at sizes from just over the limit to about where the old one was.
+    for (const size of [101 * 1024, 150_000, OVER_SMALL, 1_500_000]) {
+      for (let i = 0; i < 3; i++) {
+        const res = await within(10_000, what, fetch(server.baseUrl + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: bodyWith(100, size) }));
+        assert.equal(res.status, 400, `${what}, ${size}`);
+        assert.match((await res.json()).error, TOO_MUCH, `${what}, ${size}`);
+        assert.equal(res.headers.get('connection'), 'close', `${what}, ${size}`);
+      }
+    }
+    const under = await within(10_000, what, fetch(server.baseUrl + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: bodyWith(100, 90_000) }));
+    assert.doesNotMatch(await under.text(), TOO_MUCH, `${what}, under it`);
   }
+  // Far over: nobody reads on for ever. It answers at 2 MB, with the rest not yet sent.
+  const far = connect(new URL(server.baseUrl).port, '127.0.0.1');
+  let heard = '';
+  far.on('error', () => {});
+  far.on('data', (d) => { heard += d.toString('latin1'); });
+  await once(far, 'connect');
+  far.write(`POST /api/portal/${owner.shop.slug}/login HTTP/1.1\r\nHost: a\r\nContent-Type: application/json\r\nContent-Length: ${20 * 1024 * 1024}\r\n\r\n`);
+  far.write(Buffer.alloc(3 * 1024 * 1024, 'A'));
+  const end = Date.now() + 3000;
+  while (!heard && Date.now() < end) await pause(10);
+  far.destroy();
+  assert.match(heard, /HTTP\/1\.1 400/, 'answered without waiting for the rest');
   await assertAlive('after each');
 });
 

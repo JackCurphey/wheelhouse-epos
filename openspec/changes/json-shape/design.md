@@ -28,7 +28,7 @@ So base64 is safe at its size and tiny values aren't, and a limit safe alone isn
 | Signed-in uploads | 200,000 | 2 MB, or the route's |
 | Signed-in small bodies, and tills | 200,000 | 2 MB |
 
-A route that declares `maxBody` keeps it. The till's sync has no limit on its items, and at 2 MB it could honestly hold about 200,000 values, so the signed-in limit is set there rather than lower.
+A route that declares `maxBody` keeps it. A small route with no sign-in, over its 100 KB, gets the same 400 and closes. A client still sending when its connection is cut can lose the answer and see only an error, so what's left is read and thrown away, up to 2 MB, holding no memory, with the deadline and the place in the gate as for any read. Past 2 MB the connection closes whether or not the client has heard. The till's sync has no limit on its items, and at 2 MB it could honestly hold about 200,000 values, so the signed-in limit is set there rather than lower.
 
 The answer is a 400 with "That's too much to send in one go.", which the screens already show as a refusal in the server's words, and the connection closes.
 
@@ -50,7 +50,12 @@ On the real server in the same container, with `TRUST_PROXY=1` so one machine co
 
 The byte limits on each gate let in only two or three full bookings at a time, and most routes parse only once they have one of the 10 connections. That's what keeps these together under the heap limit, along with the count.
 
+## How far these figures have been checked
+
+The independent review of this change did not run its memory and body-shape probes. The memory figures in this document are the author's own measurements, and haven't been independently reproduced.
+
 ## Not covered
 
-- A small route with no sign-in that answers before reading, such as a booking link that doesn't exist, answers as before. A body over 100 KB to it is simply not read on.
+- A Shopify webhook with a good signature has no count, so only the holder of a real secret could send a costly body.
+- `batchProblem` in `server/till/sync.js` has no cap on a batch, so only the 2 MB and 200,000 limits apply to a till's sync.
 - Memory here is sampled, so a peak between samples isn't seen. The heap was never near its limit in the samples, and no scenario stopped the server.

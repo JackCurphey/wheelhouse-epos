@@ -6,7 +6,7 @@ One POST with no sign-in stops the server for every shop. A booking can be about
 
 - Bodies are counted as they arrive for the characters that make values (`{`, `[`, `,`, `:`). Base64 has none of these. Over the limit, the client is told "That's too much to send in one go." with a 400, and the connection closes, without the rest being read or anything being parsed.
 - The limit is 10,000 with no sign-in, and 200,000 for signed-in staff and tills, whose bodies can honestly be long lists.
-- Routes with no sign-in and no photos now read at most 100 KB rather than 2 MB, as they have no reason for more. The two routes with photos keep their sizes.
+- Routes with no sign-in and no photos now take at most 100 KB rather than 2 MB, as they have no reason for more. Over it, the client gets the same 400 and the connection closes. The two routes with photos keep their sizes.
 - A body handed to its route stops being held twice.
 
 ## Out of scope

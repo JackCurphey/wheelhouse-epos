@@ -162,6 +162,11 @@ export async function readBodyFirst(req, res, { maxBody: routeMaxBody, answerOve
 
   const maxBody = routeMaxBody ?? gate?.limits.smallBody ?? SMALL_BODY_BYTES;
   const maxValues = gate?.limits.values ?? Infinity;
+  // A small route with no sign-in, over the limit set for it by its gate: told so in
+  // words here. A client still sending when its connection is cut may never see an
+  // answer, so what's left is read and thrown away, up to where the old limit was.
+  const answerSmall = routeMaxBody === undefined && Boolean(gate?.limits.smallBody);
+  const readOnTo = answerSmall ? SMALL_BODY_BYTES : maxBody * 2;
   const chunks = [];
   let bytes = 0;
   let values = 0;
@@ -181,14 +186,14 @@ export async function readBodyFirst(req, res, { maxBody: routeMaxBody, answerOve
     function onData(chunk) {
       bytes += chunk.length;
       if (overflowed) {
-        // Still reading so the client can be answered; stop at twice the cap.
-        if (bytes > maxBody * 2) finish('over');
+        // Still reading so the client can be answered, up to a point.
+        if (bytes > readOnTo) finish('over');
         return;
       }
       if (bytes > maxBody) {
         overflowed = true;
         chunks.length = 0;
-        if (!answerOverflow) finish('over');
+        if (!answerOverflow && !answerSmall) finish('over');
         return;
       }
       if (maxValues !== Infinity) {
@@ -215,7 +220,7 @@ export async function readBodyFirst(req, res, { maxBody: routeMaxBody, answerOve
     tooManyAtOnce(res);
     return false;
   }
-  if (outcome === 'tangled') {
+  if (outcome === 'tangled' || (overflowed && answerSmall)) {
     answerAndClose(res, 400, 'That’s too much to send in one go.');
     return false;
   }

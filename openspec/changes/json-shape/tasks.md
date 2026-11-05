@@ -5,4 +5,5 @@
 - [x] 1.3 `server/lib/read-body-first.js`: count the characters that make values as a body arrives; gates say the limit and the small route's size. `server/lib/http.js`: a body handed to its route isn't held twice
 - [x] 1.4 Scenarios at the limits, many at once, on the real server in the container
 - [x] 1.5 Break each changed branch on purpose, confirm the break is in the file, see the tests go red, restore and check the restore
-- [x] 1.6 Self-review; Node 22 as well as the machine's; `npm test`, `npm run test:browser`, the drawing coverage check and lint on the head after merging main
+- [x] 1.6 The review's fix, test first: over 100 KB on a small route with no sign-in gets the words, heard by a real client, not a cut connection
+- [x] 1.7 Self-review; Node 22 as well as the machine's; `npm test`, `npm run test:browser`, the drawing coverage check and lint on the head after merging main
