@@ -116,3 +116,69 @@ test('each size is still a product to everything else: its own row, sold and cou
   assert.deepEqual(mine.sort((a, b) => a[0] - b[0]), [[sizes['11'], 'M', '[Red]'], [sizes['12'], 'L', '[Red]'], [sizes['13'], 'M', '[Blue]']]);
   assert.ok(flat.find((p) => p.id === pads).groupId === null);
 });
+
+// ---- From the independent review ----
+
+// A business of its own, so its list holds only what each test puts there.
+async function shopWith(fill) {
+  const shop = await staffSignup(server.baseUrl);
+  await runWithShop(shop.shop.id, () => fill(prepare));
+  return shop;
+}
+const sized = (prep, group, s, colour, { price = 10, stock = 0, threshold = 0, active = 1 } = {}) => prep(
+  `INSERT INTO products (name, sku, category, price, stock_qty, group_id, size, colour, low_stock_threshold, active, updated_at)
+   SELECT name, ?, category, ?, ?, id, ?, ?, ?, ?, now() FROM product_groups WHERE id = ? RETURNING id`
+).get(`${group}-${s}-${colour}-${randomUUID().slice(0, 4)}`, price, stock, s, colour, threshold, active, group);
+
+test('a size at exactly nothing isn’t below zero, and an off-sale size counts only with all', async () => {
+  const shop = await shopWith(async (prep) => {
+    const g = (await prep("INSERT INTO product_groups (name, category) VALUES ('[Gloves]', '[Clothing]') RETURNING id").get()).id;
+    await sized(prep, g, 'S', '[Black]', { stock: 0 });
+    await sized(prep, g, 'M', '[Black]', { stock: -2, threshold: 3 });
+    await sized(prep, g, 'L', '[Black]', { stock: 5, price: 40, active: 0 });
+  });
+  try {
+    const row = async (q = '') => (await as(shop, `/api/stock-list${q}`)).body.rows.find((r) => r.kind === 'group');
+    const shown = await row();
+    assert.deepEqual([shown.sizes, shown.stockQty, shown.sizesBelowZero, shown.sizesRunningLow, shown.priceHighPence], [2, -2, 1, 0, 1000]);
+    const all = await row('?all=1');
+    assert.deepEqual([all.sizes, all.stockQty, all.sizesBelowZero, all.priceHighPence], [3, 3, 1, 4000]);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
+
+test('a product with sizes sits in its category and name order with the rest', async () => {
+  const shop = await shopWith(async (prep) => {
+    await prep("INSERT INTO products (name, category, price, updated_at) VALUES ('[Z product]', '[Cat Z]', 1, now()), ('[A product]', '[Cat A]', 1, now()) RETURNING id").all();
+    const g = (await prep("INSERT INTO product_groups (name, category) VALUES ('[M group]', '[Cat M]') RETURNING id").get()).id;
+    await sized(prep, g, 'M', null);
+  });
+  try {
+    const rows = (await as(shop, '/api/stock-list')).body.rows;
+    assert.deepEqual(rows.map((r) => r.name), ['[A product]', '[M group]', '[Z product]']);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
+
+test('renaming or moving a category takes a product with sizes’ category with it', async () => {
+  const shop = await staffSignup(server.baseUrl);
+  try {
+    const call = (path, method, body) => staffRequest(server.baseUrl, shop.cookie, path, { method, body });
+    const kit = (await call('/api/product-categories', 'POST', { name: '[Kit]' })).body;
+    const tops = (await call('/api/product-categories', 'POST', { name: '[Tops]', parentId: kit.id })).body;
+    const other = (await call('/api/product-categories', 'POST', { name: '[Other]' })).body;
+    await runWithShop(shop.shop.id, async () => {
+      const g = (await prepare("INSERT INTO product_groups (name, category) VALUES ('[Jersey]', '[Kit] › [Tops]') RETURNING id").get()).id;
+      await sized(prepare, g, 'M', null);
+    });
+    const category = async () => (await call('/api/stock-list', 'GET')).body.rows.find((r) => r.kind === 'group').category;
+    assert.equal((await call(`/api/product-categories/${kit.id}`, 'PUT', { name: '[Clothes]' })).status, 200);
+    assert.equal(await category(), '[Clothes] › [Tops]');
+    assert.equal((await call(`/api/product-categories/${tops.id}`, 'PUT', { parentId: other.id })).status, 200);
+    assert.equal(await category(), '[Other] › [Tops]');
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
