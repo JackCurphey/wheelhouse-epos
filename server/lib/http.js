@@ -119,7 +119,9 @@ function takeHeldBody(req, held, maxBytes, resolve, reject) {
     req.destroy();
     return;
   }
-  resolve(Buffer.concat(held.chunks));
+  const body = Buffer.concat(held.chunks);
+  held.chunks = []; // Its memory, while the route does its work.
+  resolve(body);
 }
 
 // Always ends (openspec/changes/dropped-request-releases). Waiting for 'end' alone

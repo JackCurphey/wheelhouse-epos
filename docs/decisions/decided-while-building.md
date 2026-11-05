@@ -2194,6 +2194,12 @@ WP-1.5's. So: slice C, WP-2.3.
 9. **Known, no code: a signed-in shop can get in its own way.** 200 stalled small requests, or 20 MB of them, stop that shop's own tills and sales for up to 30 seconds, and three shops doing so stop every shop's for the same time. It takes a sign-in and it doesn't last, so it isn't worth more code.
 10. **At the till, 408 and 429 read as busy, and busy now says "Wheelhouse is busy just now, so this sale may not be recorded yet."** Never to reverse a card. It said "isn't recorded yet" (4 Nov, stock-movements-say-who, 11 above), which wasn't true on a second press after a lost answer, when the sale may already be there. The rest is unchanged: try again in a moment, and if the card machine took the payment, don't take it again.
 
+### 5 Nov 2026: a request built to run the server out of memory is refused (`openspec/changes/json-shape`; nothing on screen changes)
+
+1. **A request can hold 10,000 small pieces of data with no sign-in, and 200,000 signed in.** Counted as it arrives, by the characters that start one: `{`, `[`, `,`, `:`. Over that: "That's too much to send in one go." A photo in a booking has none of these, so it costs nothing. 10,000 is far more than any booking, sign-in or message needs, and a note's commas count. 200,000 is about what a till's offline sync could honestly send at its 2 MB. Shopify's webhooks have no count, as they're only read once their signature is good.
+2. **Routes with no sign-in and no photos now take at most 100 KB, not 2 MB.** They have no reason for more. Over it, the connection is cut, as it always was over 2 MB.
+3. **Photos stay inside the booking's JSON.** Moving them out would be bigger and isn't needed: an honest booking at the largest size, 5 photos of 10 MB, is taken on a 524 MB heap.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
