@@ -74,9 +74,11 @@ test('115 adds who, shop and cause to stock lines, leaves old lines alone, and r
     const { rows: [{ id: employee }] } = await c.query("INSERT INTO employees (name) VALUES ('Jo Taylor') RETURNING id");
     const { rows: [{ id: site }] } = await c.query("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id");
     const { rows: [{ id: line }] } = await c.query("INSERT INTO stock_movements (product_id, change_qty, type, employee_id, who_name, site_id) VALUES ($1, -1, 'adjustment', $2, 'Jo Taylor', $3) RETURNING id", [ids.pads, employee, site]);
-    // Removing a person has an index to find their lines by.
-    const { rows: [index] } = await c.query("SELECT indexdef FROM pg_indexes WHERE tablename = 'stock_movements' AND indexname = 'idx_stock_movements_employee'");
-    assert.match(index?.indexdef ?? '', /\(employee_id\) WHERE \(employee_id IS NOT NULL\)/);
+    // Removing a person, sale or delivery has an index to find its lines by.
+    for (const [name, column] of [['employee', 'employee_id'], ['sale', 'sale_id'], ['delivery', 'delivery_id']]) {
+      const { rows: [index] } = await c.query('SELECT indexdef FROM pg_indexes WHERE indexname = $1', [`idx_stock_movements_${name}`]);
+      assert.match(index?.indexdef ?? '', new RegExp(`\\(${column}\\) WHERE \\(${column} IS NOT NULL\\)`), name);
+    }
     // A link has to be to something real.
     await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, employee_id) VALUES ($1, -1, 'sale', 999999)", [ids.pads]), /foreign key/i);
     await assert.rejects(c.query("INSERT INTO stock_movements (product_id, change_qty, type, site_id) VALUES ($1, -1, 'sale', 999999)", [ids.pads]), /foreign key/i);
