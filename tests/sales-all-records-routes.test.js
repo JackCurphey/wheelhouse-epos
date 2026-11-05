@@ -31,7 +31,7 @@ before(async () => {
   await inShop(async () => {
     customerId = (await prepare("INSERT INTO customers (name) VALUES ('Sam Rider') RETURNING id").get()).id;
     jo = (await prepare("INSERT INTO employees (name, is_cashier) VALUES ('Jo Taylor', 1) RETURNING id").get()).id;
-    const site = await prepare("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id").get();
+    const site = await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get();
     const till = await prepare('INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?) RETURNING id')
       .get(site.id, 'B1', 'Till 1', randomUUID());
     oldToday = (await prepare(

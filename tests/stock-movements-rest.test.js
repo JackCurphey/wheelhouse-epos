@@ -11,7 +11,7 @@ import { encryptSecret } from '../server/shopify.js';
 import { readNextFile, bringBatch, ROW_APPLIERS } from '../server/move/bring-across.js';
 import { dbExec } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { firstShopIsBolton, staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { registerTill, tillRequest } from './helpers/till.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { xlsxOf } from './helpers/xlsx.js';
@@ -27,7 +27,7 @@ let till;
 before(async () => {
   server = await startLiveServer({ env: { TRUST_PROXY: '1', NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import=${FAKE_SHOPIFY}`.trim() } });
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
-  bolton = (await staff('/api/sites', { method: 'POST', body: { name: 'Bolton', code: 'B' } })).body;
+  bolton = await firstShopIsBolton(owner);
   second = (await staff('/api/sites', { method: 'POST', body: { name: '[Second site]', code: 'S' } })).body;
   till = await registerTill(server.baseUrl, owner, { siteCode: 'S' });
   const made = await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } });

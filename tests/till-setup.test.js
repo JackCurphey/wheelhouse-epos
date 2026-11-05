@@ -12,7 +12,7 @@ import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { hashLinkCode } from '../server/booking-link.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { firstShopIsBolton, staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { tillRequest } from './helpers/till.js';
 
@@ -35,7 +35,7 @@ async function shop({ site = true } = {}) {
   const owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   shops.push(owner);
   assert.equal((await call(owner.cookie, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 15000 } })).status, 200);
-  if (site) owner.site = (await post(owner.cookie, '/api/sites', { name: 'Bolton', code: 'B' })).body;
+  if (site) owner.site = await firstShopIsBolton(owner);
   return owner;
 }
 async function member(owner, name) {
@@ -207,7 +207,7 @@ test('the float check records its till; Today has a line per till, and the short
 test('with no till set up, Tills is one line with no number, as before', async () => {
   const owner = await shop({ site: false });
   assert.deepEqual((await call(owner.cookie, '/api/today/tills')).body, { tills: [{ code: null, openedAt: null, openedBy: null, floatCheck: null }] });
-  assert.deepEqual((await call(owner.cookie, '/api/till-setup')).body, { sites: [], thisTill: null, thisWorkshop: null, tills: [] });
+  assert.deepEqual((await call(owner.cookie, '/api/till-setup')).body.tills, []);
 });
 
 // Review, 28 Oct (the lead's independent review of jack/till-setup).

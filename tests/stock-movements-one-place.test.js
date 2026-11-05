@@ -49,6 +49,8 @@ export function writersIn(raw) {
   if (new RegExp(`INSERT\\s+INTO\\s+${table('stock_movements')}`, 'i').test(source)) found.push('writes a stock line');
   if (new RegExp(`DELETE\\s+FROM\\s+${table('stock_movements')}`, 'i').test(source)) found.push('deletes stock lines');
   if (new RegExp(`UPDATE\\s+${table('stock_movements')}`, 'i').test(source)) found.push('changes a stock line');
+  // A shop's figure (stock-per-shop): any write at all.
+  if (new RegExp(`(?:INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+${table('product_stock')}`, 'i').test(source)) found.push('changes a shop’s stock');
   // Changing stock: stock_qty anywhere in what's set, or a SET the source can't show.
   if (statements(`UPDATE\\s+${table('products')}`).some((s) => /\bstock_qty\b/i.test(s) || /\bSET\s+\$\{/i.test(s))) found.push('changes stock_qty');
   // Starting stock: a column list with stock_qty, or none at all.
@@ -84,6 +86,13 @@ test('the check sees each way of writing stock', () => {
     '`INSERT INTO public.products (sku, stock_qty) VALUES (?, ?)`',
     '`INSERT INTO products SELECT * FROM old_products`',
   ]) sees('starts a product with stock', sql);
+  for (const sql of [
+    '`INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?)`',
+    '`insert into "product_stock" (qty) VALUES (?)`',
+    '`UPDATE product_stock SET qty = qty + 1`',
+    '`UPDATE public.product_stock SET qty = 1`',
+    '`DELETE FROM product_stock WHERE site_id = ?`',
+  ]) sees('changes a shop’s stock', sql);
   sees('deletes stock lines', '`DELETE FROM stock_movements WHERE id = ?`');
   sees('changes a stock line', '`UPDATE stock_movements SET change_qty = 1`');
 });
@@ -96,6 +105,8 @@ test('the check leaves reads and other tables alone', () => {
     "'UPDATE products SET name = ? WHERE id = ?'",
     "'UPDATE products SET name = ? WHERE stock_qty < 0'",
     "'UPDATE products_archive SET stock_qty = 1'",
+    "'SELECT qty FROM product_stock WHERE site_id = ?'",
+    "'SELECT p.id FROM products p LEFT JOIN product_stock s ON s.product_id = p.id'",
   ]) assert.deepEqual(writersIn(sql), [], sql);
 });
 
@@ -109,7 +120,7 @@ test('only server/lib/stock.js writes stock, apart from the named exceptions', (
     .flatMap((f) => writersIn(readFileSync(f, 'utf8')).map((what) => `${path.relative(SERVER, f)}:${what}`));
   assert.deepEqual(writers.filter((w) => !KNOWN.has(w)), []);
   assert.deepEqual([...KNOWN.keys()].filter((k) => !writers.includes(k)), [], 'an exception that’s gone comes off the list');
-  assert.deepEqual(writersIn(readFileSync(path.join(SERVER, THE_ONE_PLACE), 'utf8')), ['writes a stock line', 'changes stock_qty'], 'the check still sees the one place');
+  assert.deepEqual(writersIn(readFileSync(path.join(SERVER, THE_ONE_PLACE), 'utf8')), ['writes a stock line', 'changes a shop’s stock', 'changes stock_qty'], 'the check still sees the one place');
 });
 
 test('marking a line Seen is the only change to a stock line, and never its figures', () => {

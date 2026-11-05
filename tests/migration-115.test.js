@@ -16,6 +16,8 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
 const FILE = '115_stock_movements_say_who.sql';
 const LATER = readdirSync(path.join(ROOT, 'server/migrations')).filter((f) => f.endsWith('.sql') && f >= FILE);
+// 117 on gives old lines their shop (stock-per-shop): this is what 115 itself leaves.
+const THESE = LATER.filter((f) => f < '117');
 
 function adminUrlOrSkip(t) {
   try {
@@ -57,7 +59,7 @@ test('115 adds who, shop and cause to stock lines, leaves old lines alone, and r
     await inShop(c, ids.shop);
     ids.pads = (await c.query("INSERT INTO products (name, stock_qty) VALUES ('Shimano brake pads', 6) RETURNING id")).rows[0].id;
     ids.old = (await c.query("INSERT INTO stock_movements (product_id, change_qty, type, note, reason, login_id) VALUES ($1, -1, 'adjustment', '[Note]', 'damaged', $2) RETURNING id", [ids.pads, ids.login])).rows[0].id;
-    await c.query('DELETE FROM schema_migrations WHERE filename = ANY($1)', [LATER]);
+    await c.query('DELETE FROM schema_migrations WHERE filename = ANY($1)', [THESE]);
   });
 
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`));
