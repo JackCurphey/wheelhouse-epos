@@ -76,14 +76,32 @@ export const readGates = {
   // By address. A booking with photos, about 73 MB, is the most anyone can send
   // with no sign-in; 100 MB leaves room for one and a little more.
   website: createBodyReadGate({ readsPerKey: 10, reads: 200, bytesPerKey: 100 * MB, bytes: 200 * MB }),
-  // By address. So stalled bookings can't stop a shop's staff signing in.
-  staffSignIn: createBodyReadGate({ readsPerKey: 10, reads: 100, bytesPerKey: 10 * MB, bytes: 20 * MB }),
+  // By address. Staff sign-up, sign-out and password posts, apart from the website.
+  // Signing in with WorkOS is GETs with no body, so it never comes here.
+  staffAccounts: createBodyReadGate({ readsPerKey: 10, reads: 100, bytesPerKey: 10 * MB, bytes: 20 * MB }),
   // By address. Shopify's, which retries.
   webhook: createBodyReadGate({ readsPerKey: 10, reads: 100, bytesPerKey: 30 * MB, bytes: 30 * MB }),
-  // By shop, staff and tills together. 150 MB is a full Citrus Lime file, 42 MB, and
-  // five job attachments at 21 MB, all arriving at the same moment.
-  signedIn: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 150 * MB, bytes: 250 * MB }),
+  // By shop. Uploads have a gate of their own, so however many are stalled, every
+  // shop's sales, payments and till syncs still get through. 150 MB is a full Citrus
+  // Lime file, 42 MB, and five job attachments at 21 MB, all arriving at once.
+  signedInUploads: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 150 * MB, bytes: 200 * MB }),
+  // By shop: staff's and tills' small bodies, each at most 2 MB and usually far less.
+  signedIn: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 20 * MB, bytes: 50 * MB }),
 };
+
+// Whatever a socket's requests need done when it closes, under one listener: any
+// number of requests can be pipelined on one connection.
+const onSocketClose = new WeakMap(); // socket -> Set of functions
+function whenSocketCloses(socket, fn) {
+  let waiting = onSocketClose.get(socket);
+  if (!waiting) {
+    waiting = new Set();
+    onSocketClose.set(socket, waiting);
+    socket.once('close', () => { for (const each of waiting) each(); });
+  }
+  waiting.add(fn);
+  return () => waiting.delete(fn);
+}
 
 const hasBody = (req) => Boolean(req.headers['transfer-encoding']) || Number(req.headers['content-length']) > 0;
 
@@ -117,13 +135,13 @@ export async function readBodyFirst(req, res, { maxBody = SMALL_BODY_BYTES, answ
   }
   // The answer has gone, or the connection has. Not the response's 'close': on Node
   // 22 it never fires for a pipelined response that was never given the socket.
-  const socket = req.socket;
-  const leave = () => {
-    socket.off('close', leave);
-    place?.leave();
-  };
-  res.once('finish', leave);
-  socket.once('close', leave);
+  if (place) {
+    const forget = whenSocketCloses(req.socket, place.leave);
+    res.once('finish', () => {
+      forget();
+      place.leave();
+    });
+  }
 
   const chunks = [];
   let bytes = 0;
@@ -164,8 +182,6 @@ export async function readBodyFirst(req, res, { maxBody = SMALL_BODY_BYTES, answ
     req.on('close', onGone);
   });
 
-  // Going no further, so what it held is free now, however slowly a client hears why.
-  if (outcome === 'gone' || outcome === 'late' || outcome === 'busy') leave();
   if (outcome === 'gone') return false;
   if (outcome === 'late') {
     answerAndClose(res, 408, 'That took too long to arrive. Please try again.');

@@ -28,7 +28,9 @@ export type ApiErrorCode =
   | 'settle_first'
   // An answer that splits quote lines that go together (openspec quote-goes-with).
   | 'pair'
-  // A lock limit ran out: nothing was stored, and trying again can work.
+  // A lock limit ran out, or the request took too long to arrive (408) or came with too
+  // many others (429): trying again can work, and it says nothing about what's stored,
+  // as this may be the second press after a lost answer.
   | 'busy'
   | 'not_found'
   | 'bad_request'
@@ -74,7 +76,7 @@ function classify(status: number, serverCode: ApiErrorBody['code']): ApiErrorCod
   if (status === 409) {
     return serverCode === 'stale' || serverCode === 'illegal' || serverCode === 'capacity' || serverCode === 'settle_first' || serverCode === 'pair' ? serverCode : 'unknown';
   }
-  if (status === 503 && serverCode === 'busy') return 'busy';
+  if ((status === 503 && serverCode === 'busy') || status === 408 || status === 429) return 'busy';
   if (status === 404) return 'not_found';
   if (status === 401) return 'unauthorized';
   if (status === 400) return 'bad_request';

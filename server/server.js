@@ -750,7 +750,7 @@ async function dispatch(req, res) {
       // becomes `db` for the duration of this one request.
       if (pathname.startsWith('/api/auth/')) {
         try {
-          if (!(await readBodyFirst(req, res, r.body, { gate: readGates.staffSignIn }))) return;
+          if (!(await readBodyFirst(req, res, r.body, { gate: readGates.staffAccounts }))) return;
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
@@ -774,7 +774,7 @@ async function dispatch(req, res) {
         if (!letGo) return;
       }
       try {
-        if (await readBodyFirst(req, res, r.body, { gate: readGates.signedIn, key: ctx.shop.id })) await serveStaffRoute(req, res, r, params, url, ctx);
+        if (await readBodyFirst(req, res, r.body, { gate: r.body.upload ? readGates.signedInUploads : readGates.signedIn, key: ctx.shop.id })) await serveStaffRoute(req, res, r, params, url, ctx);
       } finally {
         letGo?.();
       }

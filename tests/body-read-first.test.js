@@ -82,6 +82,7 @@ async function stalled(baseUrl, count, { path, headers = {}, length = 5000, meth
 let server;
 let owner;
 let other;
+let third;
 let till;
 const staffOf = (who, path, options) => staffRequest(server.baseUrl, who.cookie, path, options);
 
@@ -105,6 +106,7 @@ before(async () => {
   try {
     owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
     other = await staffSignup(server.baseUrl, { shopName: 'Elsewhere Cycles' });
+    third = await staffSignup(server.baseUrl, { shopName: 'Third Cycles' });
     till = await registerTill(server.baseUrl, owner);
   } finally {
     await server.stop();
@@ -114,6 +116,7 @@ after(async () => {
   try {
     if (owner) await deleteTestShop(owner.shop.id);
     if (other) await deleteTestShop(other.shop.id);
+    if (third) await deleteTestShop(third.shop.id);
   } finally {
     await pool.end();
   }
@@ -206,7 +209,7 @@ for (const [name, trickleMs] of [['gone quiet', 0], ['still sending one byte at 
 
 live('the deadline is at every door with no sign-in, and for a till and for staff', async () => {
   const doors = {
-    'staff signing in': { path: '/api/auth/login' },
+    'staff accounts': { path: '/api/auth/login' },
     'a customer signing in': { path: `/api/portal/${owner.shop.slug}/login` },
     'the shop\'s website': { path: `/api/portal/${owner.shop.slug}/booking-links/nope/cancel` },
     'a Shopify webhook': { path: `/webhooks/shopify/${owner.shop.id}/orders` },
@@ -361,11 +364,11 @@ live('100 complete small requests at once from one address: none refused', async
 const doors = () => ({
   'the website': bookings(),
   'a customer signing in': `/api/portal/${owner.shop.slug}/login`,
-  'staff signing in': '/api/auth/login',
+  'staff accounts': '/api/auth/login',
   'a Shopify webhook': `/webhooks/shopify/${owner.shop.id}/orders`,
 });
 
-for (const door of ['the website', 'a customer signing in', 'staff signing in', 'a Shopify webhook']) {
+for (const door of ['the website', 'a customer signing in', 'staff accounts', 'a Shopify webhook']) {
   live(`${door}: one address gets 10 reads at once, whatever else it does`, async () => {
     const stall = await stalled(server.baseUrl, 11, { path: doors()[door] });
     try {
@@ -376,12 +379,12 @@ for (const door of ['the website', 'a customer signing in', 'staff signing in', 
   });
 }
 
-live('10 stalled bookings from an address leave its staff signing in, and webhooks, alone; customers share them', async () => {
+live('10 stalled bookings from an address leave its staff accounts, and webhooks, alone; customers share them', async () => {
   const stall = await stalled(server.baseUrl, 10, { path: bookings() });
   try {
     await pause(200);
     const post = (path) => within(4000, path, fetch(server.baseUrl + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then((r) => r.status));
-    assert.notEqual(await post('/api/auth/login'), 429, 'staff signing in');
+    assert.notEqual(await post('/api/auth/login'), 429, 'staff accounts');
     assert.notEqual(await post(doors()['a Shopify webhook']), 429, 'a webhook');
     assert.equal(await post(doors()['a customer signing in']), 429, 'customers and bookings share a gate');
   } finally {
@@ -392,15 +395,84 @@ live('10 stalled bookings from an address leave its staff signing in, and webhoo
 // ---------- Staff and tills: memory, per shop ----------
 
 const TEN_MB = Buffer.alloc(10 * 1024 * 1024, 'x');
+const NEARLY_2_MB = Buffer.alloc(1_900_000, 'x');
 
-live('one shop\'s stalled uploads stop at its limit on bytes; another shop and the public aren\'t touched', async () => {
+// `count` stalled sends each from an address of its own, so a limit that went by
+// address would never be reached: only one by shop is.
+async function stalledHolding(count, path, headers, part, length) {
   const clients = [];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < count; i++) {
     const client = await open(server.baseUrl);
-    client.socket.write(head('POST', '/api/workshop-jobs/999999/attachments', sized(20 * 1024 * 1024, { Cookie: owner.cookie })));
-    client.socket.write(TEN_MB);
+    client.socket.write(head('POST', path, sized(length, { ...headers, 'X-Forwarded-For': `203.0.${100 + Math.floor(i / 250)}.${i % 250}` })));
+    client.socket.write(part);
     clients.push(client);
   }
+  return clients;
+}
+const stalledUploads = (who, count) => stalledHolding(count, '/api/workshop-jobs/999999/attachments', { Cookie: who.cookie }, TEN_MB, 20 * 1024 * 1024);
+const stalledSmall = (who, count) => stalledHolding(count, '/api/customers', { Cookie: who.cookie }, NEARLY_2_MB, 1_950_000);
+const endAll = (...lists) => { for (const list of lists) for (const c of list) c.socket.destroy(); };
+
+// A sale, a payment and a till sync at a shop: small bodies, each read and answered.
+async function assertSmallBodiesGetThrough(what, who) {
+  const sale = await within(4000, `${what}: a sale`, staffOf(who, '/api/sales', { method: 'POST', body: {} }));
+  assert.equal(sale.status, 400, `${what}: a sale`);
+  const pay = await within(4000, `${what}: paying for an order`, staffOf(who, '/api/sale-documents/999999/convert', { method: 'POST', body: {} }));
+  assert.equal(pay.status, 404, `${what}: paying for an order`);
+}
+
+live('two shops\' stalled uploads reach the overall limit, and every shop\'s sales and tills still get through', async () => {
+  const a = await stalledUploads(owner, 16);
+  let b = [];
+  try {
+    await until('the first shop\'s limit', 15_000, () => refusedCount(a) >= 1);
+    b = await stalledUploads(other, 6);
+    await until('the overall limit: the second shop refused well under its own', 15_000, () => refusedCount(b) >= 1);
+    await assertSmallBodiesGetThrough('a third shop', third);
+    await assertSmallBodiesGetThrough('the shop with the stalled uploads', owner);
+    const sync = await within(4000, 'its till', tillRequest(server.baseUrl, owner.shop.slug, till.token, '/sync', { method: 'POST', body: { items: [] } }));
+    assert.equal(sync.status, 200, 'its till');
+  } finally {
+    endAll(a, b);
+  }
+}, { TRUST_PROXY: '1' });
+
+live('small bodies have an overall limit of their own too', async () => {
+  const a = await stalledSmall(owner, 10);
+  const b = await stalledSmall(other, 10);
+  const c = await stalledSmall(third, 9);
+  try {
+    await until('the overall limit: the third shop refused under its own', 15_000, () => refusedCount(c) >= 1);
+    assert.equal(refusedCount(a) + refusedCount(b), 0);
+  } finally {
+    endAll(a, b, c);
+  }
+}, { TRUST_PROXY: '1' });
+
+live('a shop\'s stalled small bodies stop at its own limit, wherever they come from', async () => {
+  const a = await stalledSmall(owner, 15);
+  try {
+    await until('refused', 15_000, () => refusedCount(a) >= 1);
+    await assertSmallBodiesGetThrough('another shop', other);
+  } finally {
+    endAll(a);
+  }
+}, { TRUST_PROXY: '1' });
+
+live('12 requests pipelined on one connection are all answered, with no warning in the log', async () => {
+  const from = server.stderr.length;
+  const one = `${head('POST', '/api/customers', sized(2, { Cookie: owner.cookie }))}{}`;
+  const client = await open(server.baseUrl);
+  client.socket.write(one.repeat(12));
+  await until('12 answers', 8000, () => statuses(client.text).length === 12);
+  assert.deepEqual([...new Set(statuses(client.text))], [400]);
+  client.socket.destroy();
+  await pause(100);
+  assert.doesNotMatch(server.stderr.slice(from), /MaxListeners/);
+});
+
+live('one shop\'s stalled uploads stop at its limit on bytes; another shop and the public aren\'t touched', async () => {
+  const clients = await stalledUploads(owner, 16);
   try {
     await until('over 150 MB refused', 15_000, () => refusedCount(clients) >= 1);
     await until('at most 150 MB held', 3000, () => clients.filter((c) => !c.closed).length <= 15);
@@ -418,23 +490,17 @@ live('one shop\'s stalled uploads stop at its limit on bytes; another shop and t
   await pause(300);
   const again = await within(4000, 'the shop again', staffOf(owner, '/api/customers', { method: 'POST', body: {} }));
   assert.equal(again.status, 400, 'its bytes came back');
-});
+}, { TRUST_PROXY: '1' });
 
 live('a shop\'s stalled till syncs stop at the same limit', async () => {
-  const part = Buffer.alloc(1_900_000, 'x');
-  const clients = [];
-  for (let i = 0; i < 85; i++) {
-    const client = await open(server.baseUrl);
-    client.socket.write(head('POST', `/api/till/${owner.shop.slug}/sync`, sized(1_950_000, { Authorization: `Bearer ${till.token}` })));
-    client.socket.write(part);
-    clients.push(client);
-  }
+  const clients = await stalledHolding(15, `/api/till/${owner.shop.slug}/sync`, { Authorization: `Bearer ${till.token}` }, NEARLY_2_MB, 1_950_000);
   try {
-    await until('over 150 MB refused', 15_000, () => refusedCount(clients) >= 1);
+    await until('over its limit refused', 15_000, () => refusedCount(clients) >= 1);
+    await assertSmallBodiesGetThrough('another shop', other);
   } finally {
-    for (const c of clients) c.socket.destroy();
+    endAll(clients);
   }
-});
+}, { TRUST_PROXY: '1' });
 
 live('the upload deadline is on every upload route, and not on a small one', async () => {
   const uploads = {
@@ -894,6 +960,26 @@ test('a body refused for going over gives everything back', { timeout: 20_000 },
     assert.deepEqual(statuses(client.text), [429]);
     assert.equal(allBack(gate), true, 'too much for the gate');
   } finally {
+    await close();
+  }
+});
+
+test('any number of requests pipelined on one connection, none answered yet: one listener, no warning', { timeout: 15_000 }, async () => {
+  const gate = createBodyReadGate({ readsPerKey: 20, reads: 20, bytesPerKey: 1000, bytes: 1000 });
+  const warnings = [];
+  const onWarning = (w) => warnings.push(w.name);
+  process.on('warning', onWarning);
+  let reads = 0;
+  const { close } = await onRequest(async (req, res) => {
+    await readBodyFirst(req, res, {}, { gate, key: 'a' });
+    reads++; // never answered, so nothing lets go until the connection does
+  }, `${head('POST', '/', sized(2))}{}`.repeat(15));
+  try {
+    await until('all read', 3000, () => reads === 15);
+    await pause(50);
+    assert.deepEqual(warnings, []);
+  } finally {
+    process.off('warning', onWarning);
     await close();
   }
 });

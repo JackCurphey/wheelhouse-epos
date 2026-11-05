@@ -24,8 +24,19 @@ A request SHALL be told it took too long, and its connection closed, if the whol
 - **WHEN** part of a small request has arrived and the rest hasn't after 30 seconds
 - **THEN** the client is told it took too long and the connection closes
 
+### Requirement: Being asked to try again never tells a cashier to reverse a payment
+When a sale or a job's payment is answered that it took too long to arrive, or that too many came at once, the till SHALL say it is busy and to try again, and SHALL NOT say that no sale was recorded or to reverse a card payment. The till SHALL keep the sale's request key if an earlier answer was lost, so the sale can't be recorded twice.
+
+#### Scenario: A job's payment whose answer was lost
+- **WHEN** a job's payment is recorded but its answer is lost, and pressing Card approved again is told too many came at once
+- **THEN** the till says to try again and not to take the card again, and trying again gets the first sale
+
+#### Scenario: The only line removed and added back
+- **WHEN** a sale's answer is lost, pressing again is told it took too long, and the cashier removes the only line, adds it back and pays
+- **THEN** the same sale comes back, and no second sale is recorded
+
 ### Requirement: One caller can't take all the room
-The server SHALL limit how many requests can be arriving at once, and how much of them it holds, and SHALL ask those over the limit to try again shortly. Anyone with no sign-in SHALL count by their address; staff and tills SHALL count by their shop. A request SHALL hold its place only while it is arriving. The website, staff signing in, and signed-in staff and tills SHALL each have their own limits, so that one can't use up another's.
+The server SHALL limit how many requests can be arriving at once, and how much of them it holds, and SHALL ask those over the limit to try again shortly. Anyone with no sign-in SHALL count by their address; staff and tills SHALL count by their shop. A request SHALL hold its place only while it is arriving. The website, staff accounts, webhooks, signed-in uploads, and the small requests of signed-in staff and tills SHALL each have their own limits, so that one can't use up another's.
 
 #### Scenario: Too many at once from one address
 - **WHEN** one address has 10 requests arriving at once and starts another
@@ -35,13 +46,17 @@ The server SHALL limit how many requests can be arriving at once, and how much o
 - **WHEN** 100 customers on one address each send a whole small request at the same moment
 - **THEN** none of them is asked to try again
 
-#### Scenario: Stalled bookings and staff signing in
+#### Scenario: Stalled bookings and staff accounts
 - **WHEN** one address has 10 bookings stalled part-way through sending
-- **THEN** staff at that address can still sign in
+- **THEN** staff at that address can still sign up and sign out
 
 #### Scenario: A shop's stalled uploads
 - **WHEN** one shop has uploads stalled holding 150 MB between them
 - **THEN** its next upload is asked to try again shortly, and every other shop carries on as normal
+
+#### Scenario: Stalled uploads and a sale
+- **WHEN** two shops have uploads stalled, up to the limit for all shops
+- **THEN** every shop, those two included, can still make sales, take payments and sync its tills
 
 #### Scenario: A made-up address
 - **WHEN** a client puts a different address on each request, and the server isn't behind a proxy that sets it
