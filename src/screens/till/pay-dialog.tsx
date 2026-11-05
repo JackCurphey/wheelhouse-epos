@@ -96,7 +96,7 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
       else if (err.status < 500 && err.code !== 'busy' && (err.body as { code?: string } | null)?.code !== 'reused_key') onAnswerSettled?.();
       // Busy: trying again can work, and gets the first sale if there was one, so it's
       // never a reason to reverse a card payment or take it twice (the review of 5 Nov).
-      if (err instanceof ApiError && err.code === 'busy') setError(`Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment${card > 0 ? ': if the card machine took the payment, don’t take it again.' : '.'}`);
+      if (err instanceof ApiError && err.code === 'busy') setError(`Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment${card > 0 ? ': if the card machine took the payment, don’t take it again.' : '.'}`);
       // The key went on a sale with other details, as when the basket changed after a lost
       // answer. That sale stands, so nothing here says to reverse it; Clear gets out.
       else if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'reused_key') {

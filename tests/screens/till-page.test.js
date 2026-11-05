@@ -240,14 +240,14 @@ test('busy on a card sale says to try again and not to take the card again; on c
   const pay = await openPay(t);
   t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
-  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
+  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
   assert.equal(has(pay.queryByText(/reverse/)), false);
   assert.equal(has(pay.queryByText('Paid')), false);
   t.fireEvent.click(pay.getByRole('button', { name: 'Back' }));
   t.fireEvent.click(await pay.findByRole('button', { name: /^Cash/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: '£20.00' }));
   t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
-  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment.')));
+  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment.')));
 });
 
 test('a lost answer, then Card approved again: the same request key, and Paid when the sale is there', async () => {

@@ -2192,7 +2192,7 @@ WP-1.5's. So: slice C, WP-2.3.
 7. **Known, no code: a full Citrus Lime file at between about 1.12 and 1.4 megabits a second now fails,** where Node's 5 minutes used to let it through.
 8. **Known, no code, for the design: a few addresses can use up what's shared.** Two addresses holding 100 MB each stop every shop's bookings and customer sign-ins for up to 4 minutes. Two addresses holding up to 30 MB stop every shop's Shopify webhooks for 30 seconds, and how Shopify retries isn't known here. Two addresses holding 10 MB each stop staff sign-up and sign-out posts for 30 seconds.
 9. **Known, no code: a signed-in shop can get in its own way.** 200 stalled small requests, or 20 MB of them, stop that shop's own tills and sales for up to 30 seconds, and three shops doing so stop every shop's for the same time. It takes a sign-in and it doesn't last, so it isn't worth more code.
-10. **At the till, 408 and 429 read as busy: "Wheelhouse is busy just now, so this sale isn’t recorded yet."** Never to reverse a card. The words "isn't recorded yet" were written for 503; if this is a second press after a lost answer, the sale may already be there. They still lead to the right action, as trying again gets the first sale, so they're left as the stock spec has them.
+10. **At the till, 408 and 429 read as busy, and busy now says "Wheelhouse is busy just now, so this sale may not be recorded yet."** Never to reverse a card. It said "isn't recorded yet" (4 Nov, stock-movements-say-who, 11 above), which wasn't true on a second press after a lost answer, when the sale may already be there. The rest is unchanged: try again in a moment, and if the card machine took the payment, don't take it again.
 
 ## Decided here, for Jack to overrule
 

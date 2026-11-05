@@ -240,7 +240,7 @@ test('busy after the card step says to try again and not to take the card again,
   const t = await openJobTill();
   convertReply = { status: 503, ok: false, json: async () => ({ error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }) };
   const dlg = await payByCard(t);
-  assert.ok(has(await dlg.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
+  assert.ok(has(await dlg.findByText('Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
   assert.equal(has(dlg.queryByText(/reverse/)), false);
   assert.ok(has(dlg.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
 });
