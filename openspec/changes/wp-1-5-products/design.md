@@ -24,7 +24,7 @@ Decision 4 chose "one product, with a grid" over "each size as its own product".
 
 ## 4. Stock per shop (pieces 2 and 3)
 
-- Rule 3 and the WP-1.4 spec: stock counts and movements belong to a site. WP-1.4 isn't built: a new business has no site (`decided-while-building.md`, line 1244), and only tills and workshop computers know theirs. These pieces build the narrow part stock needs: every business gets a first site; `stock_movements.site_id`. The shop switcher and the session's chosen site stay with WP-1.4 and WP-5.2.
+- Rule 3 and the WP-1.4 spec: stock counts and movements belong to a site. WP-1.4 isn't built: a new business has no site (`decided-while-building.md`, line 1244), and only tills and workshop computers know theirs. These pieces build the narrow part stock needs: `stock_movements.site_id` (piece 2); every business gets a first site, and older lines their shop (piece 3). The shop switcher and the session's chosen site stay with WP-1.4 and WP-5.2.
 - New table `product_stock (shop_id, site_id, product_id, qty)`, one row per product per site. `products.stock_qty` stays, as the total the old till and every old read use. Nothing writes either figure except one function, `moveStock`, so they can't drift. A test fails if `stock_qty` is written anywhere else.
 - Which site a change is for: a till or workshop computer's own; otherwise the business's oldest site until the session has a chosen one. Existing stock goes to the oldest site (WP-1.4 spec §4, proposed there).
 

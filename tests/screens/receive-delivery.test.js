@@ -281,6 +281,15 @@ test('Cancel in Something wrong? marks nothing', async () => {
   assert.ok(ui.getByRole('button', { name: 'Book in 1 items' }));
 });
 
+test('a held product says Wheelhouse is busy and keeps the list', async () => {
+  const r = await receivePage({ receiveReply: [503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }] });
+  await scan(r, '4524667000001');
+  await r.ui.findByRole('list', { name: 'Scanned' });
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Book in 1 items' }));
+  assert.ok((await r.ui.findByRole('alert')).textContent.includes('Wheelhouse is busy with this just now. Try again in a moment.'));
+  assert.ok(r.ui.queryByRole('list', { name: 'Scanned' }) !== null);
+});
+
 test('a booking the server refuses says why and keeps the list', async () => {
   const r = await receivePage({ receiveReply: [400, { error: 'Cannot receive 1 of "Shimano brake pads" - only 0 outstanding' }] });
   await scan(r, '4524667000001');

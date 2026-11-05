@@ -1,5 +1,6 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
+import { limitLockWait, moveStock } from './lib/stock.js';
 import { hostedCopyRefusal } from './hosted-copy-guard.js';
 import { devAutologinRefusal } from './lib/dev-autologin.js';
 import { startSender } from './messaging/engine.js';
@@ -12,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { sendJson, notFound, badRequest, readRawBody, nowIso, ValidationError } from './lib/http.js';
+import { sendJson, notFound, badRequest, readRawBody, ValidationError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
 import { readBodyFirst } from './lib/read-body-first.js';
 import {
@@ -35,10 +36,9 @@ import {
   verifyShopifyWebhookHmac,
   matchOrderLineItemsToProducts,
   matchRefundLineItemsToProducts,
-  claimShopifyEvent,
   claimShopifyEventInTransaction,
   markShopifyEventError,
-  recordShopifyEventError,
+  recordFailedDelivery,
   pushStockToShopify,
 } from './shopify.js';
 
@@ -123,57 +123,75 @@ function idParamsWellFormed(params) {
 
 // ---------- Shopify order and refund webhooks (the dispatcher calls these) ----------
 
+// Three database scopes, as a refund's below: the claim and the sale in one transaction,
+// so any failure takes the claim with it and Shopify's retry applies the order, counted
+// once; then on failure its error record; then the push to Shopify. A duplicate waits on
+// the claim, then finds it taken. A paid order sells past stock, as the till's offline
+// sync does (Jack, 5 Nov): stock goes below zero and shows on Today. A product taken off
+// sale here is sold too (answer 8). Only a refusal that would be the same next time
+// (ValidationError: a bad figure) stays claimed, with its reason and logged as a fault,
+// as a paid order has gone unrecorded.
 async function processShopifyOrderWebhook(shopId, order) {
-  return runWithShop(shopId, async () => {
-    const claimed = await claimShopifyEvent(order.id, 'order');
-    if (!claimed) return;
-
-    const items = await matchOrderLineItemsToProducts(order);
-    if (items.length === 0) return;
-
-    try {
-      // Shopify's undiscounted line-item sum. order.total_discounts (a
-      // string) is the total discount Shopify already applied to the order -
-      // ignoring it here would record a discounted order at its full,
-      // pre-discount value in EPOS's sales history/dashboards. createSale
-      // computes its own total as subtotal - discount - groupDiscount.amount
-      // (groupDiscount is 0 here since customerId is null for Shopify
-      // orders), so mirror that same math for the payment amount, or
-      // createSale's "payments must sum to the total" validation would fail.
-      const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
-      const discount = Number.parseFloat(order.total_discounts) || 0;
-      const payableTotal = Math.max(0, subtotal - discount);
-      await createSale({
-        customerId: null,
-        cashierId: null,
-        items,
-        discount,
-        cashAmount: 0,
-        cardAmount: 0,
-        cashTendered: null,
-        payments: [{ tenderType: 'Shopify', amount: payableTotal }],
-        note: `Shopify order #${order.order_number || order.id}`,
-      });
-    } catch (err) {
-      // claimShopifyEvent above commits immediately, standalone - it isn't
-      // part of a transaction with createSale. If createSale throws
-      // something unexpected (not a ValidationError - a DB blip, a bug),
-      // that error still needs to propagate so the outer webhook handler
-      // returns a 500 and Shopify retries, but the event is already
-      // irreversibly marked claimed - claimShopifyEvent would report the
-      // retry as already-claimed and return without ever calling createSale
-      // again, permanently dropping the order. Marking the claim as an error
-      // here (regardless of which kind of failure this was) at least leaves
-      // an honest, investigable record instead of the misleading default
-      // status='ok' a claimed-but-never-actually-processed row would
-      // otherwise carry.
-      await markShopifyEventError(order.id, 'order', err.message);
-      if (err instanceof ValidationError) {
-        return;
+  const pushes = [];
+  try {
+    await runWithShop(shopId, async () => {
+      const items = await matchOrderLineItemsToProducts(order);
+      if (items.length < order.line_items.length) {
+        console.error(`Shopify order ${order.id}: ${order.line_items.length - items.length} of ${order.line_items.length} lines match nothing here, so aren't recorded`);
       }
-      throw err;
-    }
-  });
+      await db.exec('BEGIN');
+      try {
+        await limitLockWait();
+        if (!(await claimShopifyEventInTransaction(order.id, 'order'))) {
+          await db.exec('ROLLBACK');
+          return;
+        }
+        if (items.length > 0) {
+          // Shopify's undiscounted line-item sum. order.total_discounts (a
+          // string) is the total discount Shopify already applied to the order -
+          // ignoring it here would record a discounted order at its full,
+          // pre-discount value in EPOS's sales history/dashboards. createSale
+          // computes its own total as subtotal - discount - groupDiscount.amount
+          // (groupDiscount is 0 here since customerId is null for Shopify
+          // orders), so mirror that same math for the payment amount, or
+          // createSale's "payments must sum to the total" validation would fail.
+          const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+          const discount = Number.parseFloat(order.total_discounts) || 0;
+          const payableTotal = Math.max(0, subtotal - discount);
+          try {
+            await createSale({
+              customerId: null,
+              cashierId: null,
+              items,
+              discount,
+              cashAmount: 0,
+              cardAmount: 0,
+              cashTendered: null,
+              payments: [{ tenderType: 'Shopify', amount: payableTotal }],
+              note: `Shopify order #${order.order_number || order.id}`,
+              sellPastStock: true,
+              evenIfOffSale: true,
+            }, { deferShopifyPushesTo: pushes });
+          } catch (err) {
+            if (!(err instanceof ValidationError)) throw err;
+            console.error(`Shopify order ${order.id} refused for good: ${err.message}`);
+            await markShopifyEventError(order.id, 'order', err.message);
+          }
+        }
+        await db.exec('COMMIT');
+      } catch (err) {
+        await db.exec('ROLLBACK').catch(() => {});
+        throw err;
+      }
+    });
+  } catch (err) {
+    // The claim rolled back, so this is a record for whoever investigates: the retry
+    // still applies the order. Its own failure is logged and never hides the order's.
+    await recordFailedDelivery(shopId, order.id, 'order', err.message);
+    throw err;
+  }
+  // After COMMIT and with the connection back, so a slow Shopify never holds the row.
+  firePendingShopifyPushes(shopId, pushes);
 }
 
 // Three database scopes, each committed or rolled back on its own in either
@@ -184,15 +202,13 @@ async function processShopifyRefundWebhook(shopId, refund) {
   try {
     pushes = await runWithShop(shopId, async () => {
       const items = await matchRefundLineItemsToProducts(refund);
-      // Relative, in one transaction with its movement lines, as adjust
-      // stock does (routes/products.js): `product` was read without a lock,
-      // so writing `product.stock_qty + qty` back would undo a sale or
-      // adjustment made in between. Rows are taken in product id order, as
-      // a sale does, so the two can't deadlock.
-      items.sort((a, b) => a.product.id - b.product.id);
-      const toPush = [];
+      // Relative, in one transaction with its lines (lib/stock.js): `product` was
+      // read without a lock, so writing `product.stock_qty + qty` back would undo a
+      // sale or adjustment made in between. No person did this; its cause says what.
+      let toPush = [];
       await db.exec('BEGIN');
       try {
+        await limitLockWait();
         // The claim is the transaction's first statement, so a rollback takes
         // it too and Shopify's retry applies the refund. A duplicate arriving
         // meanwhile waits here on this claim, then finds it taken.
@@ -200,15 +216,9 @@ async function processShopifyRefundWebhook(shopId, refund) {
           await db.exec('ROLLBACK');
           return [];
         }
-        for (const { product, qty } of items) {
-          const updated = await db
-            .prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING stock_qty')
-            .get(qty, nowIso(), product.id);
-          await db.prepare(
-            `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
-          ).run(product.id, qty, `Shopify refund #${refund.id}`);
-          if (product.shopify_inventory_item_id) toPush.push({ product, newQty: updated.stock_qty });
-        }
+        toPush = (await moveStock(items.map(({ product, qty }) => ({
+          productId: product.id, change: qty, type: 'return', note: `Shopify refund #${refund.id}`, shopifyRefundId: String(refund.id),
+        })))).pushes;
         await db.exec('COMMIT');
       } catch (err) {
         await db.exec('ROLLBACK').catch(() => {});
@@ -220,8 +230,7 @@ async function processShopifyRefundWebhook(shopId, refund) {
     // The claim rolled back, so this is a record for whoever investigates,
     // not a claim: the retry still applies the refund. Its own failure is
     // logged and never hides the refund's.
-    await runWithShop(shopId, () => recordShopifyEventError(refund.id, 'refund', err.message))
-      .catch((recordErr) => console.error('Shopify refund error record failed', recordErr));
+    await recordFailedDelivery(shopId, refund.id, 'refund', err.message);
     throw err;
   }
   // After COMMIT, so a slow Shopify never holds the product's row.
@@ -483,6 +492,12 @@ async function serveStaffRoute(req, res, r, params, url, ctx) {
     );
   } catch (err) {
     console.error(err);
+    // A lock limit ran out, or a deadlock was broken: nothing was stored and
+    // trying again can work (openspec/changes/stock-movements-say-who, design 4).
+    if (err.code === '55P03' || err.code === '40P01') {
+      sendJson(res, 503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' });
+      return;
+    }
     sendJson(res, 500, { error: err.message || 'Internal server error' });
     return;
   }
@@ -588,7 +603,9 @@ async function dispatch(req, res) {
       }
 
       if (kind === 'orders') {
-        await processShopifyOrderWebhook(shopId, payload);
+        // An order queues its push before its own COMMIT: if that fails, this settles
+        // the queued slot, so stopping the server doesn't wait for it.
+        await runRequestWithPushSlotCleanup(() => processShopifyOrderWebhook(shopId, payload));
       } else {
         await processShopifyRefundWebhook(shopId, payload);
       }

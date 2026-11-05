@@ -10,11 +10,13 @@
 // same transaction; Undo does the same the other way.
 // Staff routes: they run with the shop's row-level security already bound.
 import { dbExec, prepare } from '../db.js';
-import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
+import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { currentSession } from '../lib/session.js';
 import { deferShopifyPushes } from '../lib/sales.js';
+import { limitLockWait, lockStock, moveStock } from '../lib/stock.js';
+import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 import { csvCell, textCell } from '../lib/csv.js';
 import { checkOf, differencesOf, notCountedOf, recountsAskedOf, takeLabel as label } from '../lib/stock-take-differences.js';
 
@@ -91,6 +93,7 @@ async function inTransaction(res, work) {
   await db.exec('BEGIN');
   let out;
   try {
+    await limitLockWait();
     out = await work();
     await db.exec(out[0] >= 400 ? 'ROLLBACK' : 'COMMIT');
   } catch (err) {
@@ -100,12 +103,6 @@ async function inTransaction(res, work) {
   sendJson(res, out[0], out[0] >= 400 ? { error: out[1] } : out[1]);
   return out[0] < 400;
 }
-
-// Locks the products in id order, the order sales and the till take them in,
-// so applying queues behind a sale (or a sale behind it) and never deadlocks.
-const lockProducts = (ids) => (ids.length
-  ? db.prepare('SELECT id FROM products WHERE id = ANY(?) ORDER BY id FOR NO KEY UPDATE').all(ids)
-  : Promise.resolve([]));
 
 const MATCHES = 20;
 const pounds = (pence) => `${pence < 0 ? '-' : ''}${(Math.abs(pence) / 100).toFixed(2)}`;
@@ -348,6 +345,8 @@ export function register(route) {
   route('POST', '/api/stock-takes/:id/apply', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res, CHECK_COUNT)) return;
     const ctx = await currentSession(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
     const costs = await canSeeCosts(req);
     const id = Number(params.id);
     if (!(await takeOf(id))) return notFound(res, 'Count not found');
@@ -357,28 +356,18 @@ export function register(route) {
       if (take.status !== 'counting') return [409, APPLIED];
       const ids = (await db.prepare('SELECT DISTINCT product_id FROM stock_take_counts WHERE stock_take_id = ? ORDER BY product_id').all(id)).map((r) => r.product_id);
       if (ids.length === 0) return [400, 'Nothing has been counted yet'];
-      await lockProducts(ids);
+      const held = await lockStock(ids);
       const what = label(take);
       const rows = await differencesOf(take);
       const changed = rows.filter((r) => r.difference !== 0);
       // One statement each for the stock, the history lines and the results,
       // so the products' locks are held as briefly as can be (review, 28 Oct).
-      const movementOf = new Map();
-      if (changed.length > 0) {
-        const updated = await db.prepare(
-          `UPDATE products p SET stock_qty = p.stock_qty + v.d, updated_at = ? FROM unnest(?::int[], ?::int[]) AS v(id, d) WHERE p.id = v.id RETURNING p.*`
-        ).all(nowIso(), changed.map((r) => r.productId), changed.map((r) => r.difference));
-        for (const product of updated) if (product.shopify_inventory_item_id) pushes.push({ product, newQty: product.stock_qty });
-        const notes = changed.map((r) => {
-          const by = names([...new Set(r.byCounter.filter((b) => b.qty > 0).map((b) => b.name))]);
-          return `Stock take of ${what} · counted ${r.counted}, expected ${r.expected}${by ? ` · counted by ${by}` : ''}`;
-        });
-        const lines = await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note, login_id, stock_take_id)
-           SELECT v.p, v.d, 'count', v.n, ?, ? FROM unnest(?::int[], ?::int[], ?::text[]) AS v(p, d, n) RETURNING id, product_id`
-        ).all(ctx.login.id, id, changed.map((r) => r.productId), changed.map((r) => r.difference), notes);
-        for (const l of lines) movementOf.set(l.product_id, l.id);
-      }
+      const moved = await moveStock(changed.map((r) => {
+        const by = names([...new Set(r.byCounter.filter((b) => b.qty > 0).map((b) => b.name))]);
+        return { productId: r.productId, change: r.difference, type: 'count', stockTakeId: id, note: `Stock take of ${what} · counted ${r.counted}, expected ${r.expected}${by ? ` · counted by ${by}` : ''}` };
+      }), who, { held });
+      pushes.push(...moved.pushes);
+      const movementOf = moved.lineOf;
       await db.prepare(
         `INSERT INTO stock_take_results (stock_take_id, product_id, expected, counted, difference, cost_pence, stock_movement_id)
          SELECT ?, v.p, v.e, v.c, v.d, v.k, v.m FROM unnest(?::int[], ?::int[], ?::int[], ?::int[], ?::bigint[], ?::int[]) AS v(p, e, c, d, k, m) RETURNING product_id`
@@ -394,7 +383,8 @@ export function register(route) {
   // the count back to counting so it can be checked and applied again.
   route('POST', '/api/stock-takes/:id/undo', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res, CHECK_COUNT)) return;
-    const ctx = await currentSession(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
     const id = Number(params.id);
     if (!(await takeOf(id))) return notFound(res, 'Count not found');
     const pushes = [];
@@ -402,7 +392,7 @@ export function register(route) {
       const take = await lockedTake(id);
       if (take.status !== 'applied') return [409, 'This count isn’t applied'];
       const changed = await db.prepare('SELECT product_id, difference FROM stock_take_results WHERE stock_take_id = ? AND difference <> 0 ORDER BY product_id').all(id);
-      await lockProducts(changed.map((r) => r.product_id));
+      await lockStock(changed.map((r) => r.product_id));
       // A later count of the same product has measured stock that already
       // includes this one's change; taking it off now would leave stock wrong
       // (review, 28 Oct: 10, counted 7, then 8, Undo the first gave 11). A
@@ -416,13 +406,9 @@ export function register(route) {
           ORDER BY r.id LIMIT 1`
       ).get(changed.map((r) => r.product_id), id, id);
       if (later) return [409, `A later count has corrected ${later.name}; undo that one first.`];
-      for (const r of changed) {
-        const product = await db.prepare('UPDATE products SET stock_qty = stock_qty - ?, updated_at = ? WHERE id = ? RETURNING *').get(r.difference, nowIso(), r.product_id);
-        await db.prepare(
-          "INSERT INTO stock_movements (product_id, change_qty, type, note, login_id, stock_take_id) VALUES (?, ?, 'count_undone', ?, ?, ?) RETURNING id"
-        ).run(r.product_id, -r.difference, `Undid the stock take of ${label(take)}`, ctx.login.id, id);
-        if (product.shopify_inventory_item_id) pushes.push({ product, newQty: product.stock_qty });
-      }
+      const note = `Undid the stock take of ${label(take)}`;
+      const moved = await moveStock(changed.map((r) => ({ productId: r.product_id, change: -r.difference, type: 'count_undone', note, stockTakeId: id })), who);
+      pushes.push(...moved.pushes);
       await db.prepare('DELETE FROM stock_take_results WHERE stock_take_id = ?').run(id);
       await db.prepare("UPDATE stock_takes SET status = 'counting', applied_at = NULL, applied_by_login_id = NULL WHERE id = ?").run(id);
       return [200, serializeTake(await takeOf(id))];

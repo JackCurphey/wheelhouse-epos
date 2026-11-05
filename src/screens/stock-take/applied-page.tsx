@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { buttonVariants } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
@@ -40,7 +40,7 @@ export function AppliedPage() {
       void queryClient.invalidateQueries({ queryKey: ['stock-take-check', id] });
       navigate(checkHref(id), { replace: true });
     } catch (err) {
-      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t undo the count. Try again in a moment.');
+      setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t undo the count. Try again in a moment.');
       setBusy(false);
     }
   }

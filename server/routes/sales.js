@@ -13,6 +13,8 @@ import {
   poundsToPence, documentTotalsPence,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
+import { currentSession } from '../lib/session.js';
+import { siteHere } from './purchase-orders.js';
 import { countedDeposit, depositShare, DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
 import { refundOwed } from '../payments/refund.js';
 import { work } from '../workshop/state-machines.js';
@@ -109,6 +111,10 @@ async function insertDocumentLine(docId, line) {
     line.note ?? null
   );
 }
+
+// The sign-in and this computer's shop, for a sale's stock lines; the person is the
+// sale's cashier (stock-movements-say-who, design 2).
+const saleMovedBy = async (req) => ({ loginId: (await currentSession(req)).login.id, siteId: await siteHere(req) });
 
 export function register(route) {
   // ---------- Sales ----------
@@ -211,7 +217,7 @@ export function register(route) {
     const shopifyPushes = [];
     try {
       saleId = await createSale(
-        { customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock: body.sellPastStock === true },
+        { movedBy: await saleMovedBy(req), customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock: body.sellPastStock === true },
         { deferShopifyPushesTo: shopifyPushes }
       );
     } catch (err) {
@@ -543,6 +549,9 @@ export function register(route) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
+    // Already paid says which sale, as the sale exists: a till that lost its answer and
+    // pressed again must not be told none was recorded (stock-movements-say-who, design 10).
+    if (doc.status === 'converted') return sendJson(res, 400, { error: `This ${doc.kind} is already converted`, code: 'already_converted', saleId: doc.converted_sale_id });
     if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
     // Tendering the order for a job is the shop saying the work is done, so the
@@ -641,6 +650,7 @@ export function register(route) {
     try {
       saleId = await createSale(
         {
+          movedBy: await saleMovedBy(req),
           customerId: doc.customer_id,
           cashierId: cashierResolved.cashierId,
           items: saleItems,

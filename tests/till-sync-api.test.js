@@ -209,7 +209,7 @@ async function waitUntilServerBlockedBy(ourPid, timeoutMs = 10000) {
     const { rows } = await pool.query(
       `SELECT 1 FROM pg_stat_activity a
         WHERE a.pid <> $1 AND a.wait_event_type = 'Lock'
-          AND a.query LIKE 'UPDATE products SET stock_qty = stock_qty - %'
+          AND a.query LIKE 'SELECT id, name, stock_qty FROM products WHERE id = ANY%'
           AND $1 = ANY(pg_blocking_pids(a.pid))
           AND EXISTS (
             SELECT 1 FROM pg_locks l

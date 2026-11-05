@@ -42,7 +42,7 @@ export async function thisWorkshop(req) {
   const token = workshopCookieToken(req);
   if (!token) return null;
   const row = await prepare(
-    `SELECT w.id, w.name, s.name AS site_name FROM workshop_computers w JOIN sites s ON s.id = w.site_id
+    `SELECT w.id, w.name, w.site_id, s.name AS site_name FROM workshop_computers w JOIN sites s ON s.id = w.site_id
       WHERE w.browser_token_hash = ? AND w.active = true`
   ).get(hashLinkCode(token));
   return row ?? null;

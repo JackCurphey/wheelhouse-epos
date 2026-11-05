@@ -5,7 +5,8 @@
 // they did in server.js.
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { prepare, dbExec, runWithShop } from '../db.js';
-import { nowIso, ValidationError } from './http.js';
+import { ValidationError } from './http.js';
+import { lockStock, moveStock } from './stock.js';
 import { pushInventoryLevel } from '../shopify.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 
@@ -118,17 +119,15 @@ function registerPendingShopifyPushSlot() {
 
 // registerPendingShopifyPushSlot's slot is only cleaned up on a request
 // tail's failure if that call happened inside runRequestWithPushSlotCleanup.
-// Today that is true of exactly ONE branch: the generic non-auth `/api/*`
-// loop in server.js's dispatcher (the one that wraps its route call in
+// Today that is true of TWO branches: the generic non-auth `/api/*` loop in
+// server.js's dispatcher and the Shopify order webhook (each wraps its call in
 // runRequestWithPushSlotCleanup). It is NOT true of the /api/auth/* branch
 // inside that same loop, the /api/portal/* branch, the website branch, or
-// the Shopify webhook branch - a deferred push registered from any of those
-// would not be settled by a request-tail throw and would orphan the slot.
-// No branch does that today (processShopifyOrderWebhook, the only webhook
-// caller of createSale, never passes deferShopifyPushesTo, so it always
-// takes the immediate-push path and never reaches here without a store) -
-// but nothing stops a future change to one of those four branches from
-// doing so. The guard in registerPendingShopifyPushSlot's `else` branch
+// the refund webhook - a deferred push registered from any of those would not
+// be settled by a request-tail throw and would orphan the slot. No branch does
+// that today, and the order webhook, which does defer its pushes (so they run
+// after its own COMMIT), is wrapped too - but nothing stops a future change to
+// one of those branches from doing so. The guard in registerPendingShopifyPushSlot's `else` branch
 // above is what will tell you if that ever happens; it is not structural
 // coverage, only a loud signal that coverage is missing.
 const pendingPushSlotRequestStorage = new AsyncLocalStorage();
@@ -365,7 +364,9 @@ export async function computeOrderTotals({ items, discount, customerId }) {
 // /api/sale-documents/:id/items, so the rules cannot drift between them.
 // checkStock is true only at tender - a quote or an open order may reference
 // something that is currently out of stock.
-export async function loadDocumentLine(it, { checkStock }) {
+// `evenIfOffSale`: for a Shopify order only, already paid for (Jack, 5 Nov, answer 8).
+// Off sale stays refused everywhere else.
+export async function loadDocumentLine(it, { checkStock, evenIfOffSale = false }) {
   // A labour line is a typed price with an optional recorded duration. It
   // carries no product, so nothing downstream may treat it as stock.
   if (it.lineType === 'labour') {
@@ -422,7 +423,7 @@ export async function loadDocumentLine(it, { checkStock }) {
   if (!productId || !Number.isFinite(qty) || qty <= 0) {
     throw new ValidationError('Each item needs a valid productId and positive qty');
   }
-  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND (active = 1 OR ?)').get(productId, evenIfOffSale);
   if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
   if (checkStock && product.stock_qty < qty) {
     throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
@@ -464,12 +465,12 @@ export async function loadDocumentLine(it, { checkStock }) {
 // behaviour runs unchanged, which is what every direct createSale() caller
 // that doesn't care about pool-connection lifetime (tests, the Shopify
 // webhook handlers) keeps getting for free.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false }, { deferShopifyPushesTo } = {}) {
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {}, evenIfOffSale = false }, { deferShopifyPushesTo } = {}) {
   // sellPastStock: the new till sells past zero stock and says so on the
   // line (journey 11 decision 5); everything else still refuses.
   const loaded = [];
   for (const it of items) {
-    loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock }));
+    loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock, evenIfOffSale }));
   }
 
   const { subtotal, discount: flatDiscount, groupDiscount, total } = await computeOrderTotals({ items: loaded, discount, customerId });
@@ -500,16 +501,10 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
 
   await db.exec('BEGIN');
   try {
-    // Product rows are locked in id order up front, so two sales with the same
-    // products in a different order wait for each other instead of deadlocking.
-    // NO KEY UPDATE, not UPDATE: a foreign-key check on a product (an order line
-    // or an offline till's sync saved at the same moment) takes KEY SHARE, which
-    // FOR UPDATE would wait on, and lines saved in another order could then
-    // deadlock with this sale (Jack's check, 21 Oct).
-    const productIds = [...new Set(loaded.filter((l) => l.product).map((l) => l.product.id))].sort((a, b) => a - b);
-    if (productIds.length) {
-      await db.prepare(`SELECT id FROM products WHERE id IN (${productIds.map(() => '?').join(', ')}) ORDER BY id FOR NO KEY UPDATE`).all(...productIds);
-    }
+    // Product rows are locked in id order up front, with a limit on waiting, so two
+    // sales with the same products in a different order wait for each other instead
+    // of deadlocking, and a held product answers busy (lib/stock.js; Jack's check, 21 Oct).
+    await lockStock(loaded.filter((l) => l.product).map((l) => l.product.id));
     const saleInfo = await db
       .prepare(
         `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
@@ -526,6 +521,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
       );
     }
 
+    const moves = [];
     for (const line of loaded) {
       await db.prepare(
         `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
@@ -543,31 +539,20 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
         line.minutes
       );
 
-      // Labour is not stock. stock_movements.product_id is NOT NULL, so a
-      // labour line reaching this block is a constraint violation, not a
-      // cosmetic bug.
-      if (line.lineType === 'product') {
-        // Counted down from what the row holds now, in one statement: the
-        // quantity loadDocumentLine read earlier may be out of date by now, and
-        // writing "that minus qty" back lost a sale when two tills sold at once.
-        // The stock check repeats here for the same reason; the row lock makes a
-        // second till wait, then see what the first left.
-        const updated = await db.prepare(
-          `UPDATE products SET stock_qty = stock_qty - ?, updated_at = ?
-            WHERE id = ? AND (? OR stock_qty >= ?) RETURNING stock_qty`
-        ).get(line.qty, nowIso(), line.product.id, sellPastStock, line.qty);
-        if (!updated) {
-          throw new ValidationError(`Not enough stock for "${line.product.name}" (need ${line.qty})`);
-        }
-        const newQty = updated.stock_qty;
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
-        ).run(line.product.id, -line.qty, `Sale #${saleId}`);
-        if (line.product.shopify_inventory_item_id) {
-          shopifyPushes.push({ product: line.product, newQty });
-        }
-      }
+      // Labour is not stock.
+      if (line.lineType === 'product') moves.push({ productId: line.product.id, change: -line.qty, type: 'sale', note: `Sale #${saleId}`, saleId });
     }
+    // Counted down from what the rows hold now: the quantity loadDocumentLine read
+    // earlier may be out of date, and writing "that minus qty" back lost a sale when
+    // two tills sold at once. The stock check repeats for the same reason. The person
+    // is the sale's own cashier, so the line and the sale agree (stock-movements-say-who).
+    const cashier = cashierId ? await db.prepare('SELECT name FROM employees WHERE id = ?').get(cashierId) : null;
+    const moved = await moveStock(moves, { ...movedBy, ...(cashier ? { employeeId: cashierId, name: cashier.name } : {}) }, { neverBelowZero: !sellPastStock });
+    if (moved.refused) {
+      const need = moves.filter((m) => m.productId === moved.refused.id).reduce((sum, m) => sum - m.change, 0);
+      throw new ValidationError(`Not enough stock for "${moved.refused.name}" (need ${need})`);
+    }
+    shopifyPushes.push(...moved.pushes);
     await db.exec('COMMIT');
 
     if (deferShopifyPushesTo) {

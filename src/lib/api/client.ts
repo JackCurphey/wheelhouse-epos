@@ -28,10 +28,16 @@ export type ApiErrorCode =
   | 'settle_first'
   // An answer that splits quote lines that go together (openspec quote-goes-with).
   | 'pair'
+  // A lock limit ran out: nothing was stored, and trying again can work.
+  | 'busy'
   | 'not_found'
   | 'bad_request'
   | 'unauthorized'
   | 'unknown';
+
+/** The server's own words are worth showing: a refusal, or its busy answer (503 `busy`), never a fault. */
+export const serverSaid = (err: unknown): err is ApiError =>
+  err instanceof ApiError && err.hasServerMessage && (err.status < 500 || err.code === 'busy');
 
 export class ApiError extends Error {
   status: number;
@@ -68,6 +74,7 @@ function classify(status: number, serverCode: ApiErrorBody['code']): ApiErrorCod
   if (status === 409) {
     return serverCode === 'stale' || serverCode === 'illegal' || serverCode === 'capacity' || serverCode === 'settle_first' || serverCode === 'pair' ? serverCode : 'unknown';
   }
+  if (status === 503 && serverCode === 'busy') return 'busy';
   if (status === 404) return 'not_found';
   if (status === 401) return 'unauthorized';
   if (status === 400) return 'bad_request';
