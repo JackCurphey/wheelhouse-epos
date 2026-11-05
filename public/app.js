@@ -93,6 +93,10 @@ function fileToBase64(file) {
 // A request key for the sale in progress, kept across retries, so a lost answer then a
 // second press records it once (openspec/changes/sale-request-key, design 5).
 let tillSaleKey = null;
+const orderSaleKey = new Map(); // each order's own, by its id
+function saleKeyFollowsBasket() {
+  if (!cart.length) tillSaleKey = null;
+}
 const newSaleKey = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, '0')).join('');
 
 async function api(path, { method = 'GET', body } = {}) {
@@ -698,6 +702,7 @@ function resetCart() {
 }
 
 function renderCart() {
+  saleKeyFollowsBasket();
   const body = document.getElementById('cart-body');
   if (!body) return;
 
@@ -1297,7 +1302,6 @@ async function completeSale() {
     openModal({ type: 'receipt', sale });
   } catch (err) {
     showToast(err.message);
-    if (err.code === 'reused_key') tillSaleKey = null;
     btn.disabled = false;
     btn.textContent = 'Complete sale';
   }
@@ -1339,9 +1343,8 @@ async function completeOrderFulfillment() {
     return;
   }
   try {
-    tillSaleKey ??= newSaleKey();
-    const sale = await api(`/api/sale-documents/${activeOrderId}/convert`, { method: 'POST', body: { ...payload, requestKey: tillSaleKey } });
-    tillSaleKey = null;
+    if (!orderSaleKey.has(activeOrderId)) orderSaleKey.set(activeOrderId, newSaleKey());
+    const sale = await api(`/api/sale-documents/${activeOrderId}/convert`, { method: 'POST', body: { ...payload, requestKey: orderSaleKey.get(activeOrderId) } });
     receiptSale = sale;
     cart = [];
     discount = 0;

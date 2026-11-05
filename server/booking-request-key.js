@@ -10,6 +10,13 @@ const KEY_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 
+// The same details in any field order read the same (a sale's; openspec/changes/sale-request-key).
+const inKeyOrder = (value) => {
+  if (Array.isArray(value)) return value.map(inKeyOrder);
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.keys(value).sort().map((k) => [k, inKeyOrder(value[k])]));
+};
+
 // { value: null } when the body has no key, { value: { keyHash, bodyHash,
 // linkCode } } for a good one, or { error }. The body hash covers everything
 // but the key itself, so it tells a true retry from the same key sent with
@@ -17,14 +24,14 @@ const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 // the same request carries the same private link: a slow first request that
 // replays after its retry can't change the link the customer is holding.
 // Only its hash is stored (booking-link.js), as for any other link.
-export function readRequestKey(body) {
+export function readRequestKey(body, { anyFieldOrder = false } = {}) {
   if (!Object.hasOwn(body, 'requestKey')) return { value: null };
   const { requestKey, ...rest } = body;
   if (typeof requestKey !== 'string' || !KEY_PATTERN.test(requestKey)) return { error: 'Invalid request key' };
   return {
     value: {
       keyHash: sha256(requestKey),
-      bodyHash: sha256(JSON.stringify(rest)),
+      bodyHash: sha256(JSON.stringify(anyFieldOrder ? inKeyOrder(rest) : rest)),
       linkCode: sha256(`booking-link:${requestKey}`),
     },
   };

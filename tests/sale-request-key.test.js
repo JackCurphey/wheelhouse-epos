@@ -104,7 +104,7 @@ test('the same key with a different basket or payment is refused, saying which s
     const res = await staff('/api/sales', POST(sale(id, requestKey, over)));
     assert.equal(res.status, 409, JSON.stringify(res.body));
     assert.deepEqual([res.body.code, res.body.saleId], ['reused_key', first.body.id]);
-    assert.match(res.body.error, /already recorded/);
+    assert.match(res.body.error, /already recorded, as sale \d+, with different details/);
   }
   assert.deepEqual([await stockOf(id), await salesOf(id)], [9, 1]);
 });
@@ -138,6 +138,24 @@ test('a sale of a held product answers busy and keeps no key: the same key then 
   assert.equal(await stockOf(id), 10);
   assert.equal((await staff('/api/sales', POST(body))).status, 201);
   assert.equal((await staff('/api/sales', POST(body))).status, 201);
+  assert.deepEqual([await stockOf(id), await salesOf(id)], [9, 1]);
+});
+
+test('the same details in another order are the same sale; another cashier or cash handed over are different details', async () => {
+  const id = await product(10);
+  const requestKey = key();
+  const first = await staff('/api/sales', POST({ items: [{ productId: id, qty: 1 }], cardAmount: 28, cashierId: cashier, requestKey }));
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  const reordered = await staff('/api/sales', POST({ requestKey, cashierId: cashier, cardAmount: 28, items: [{ qty: 1, productId: id }] }));
+  assert.deepEqual([reordered.status, reordered.body.id], [201, first.body.id]);
+  const made = await staff('/api/team', POST({ name: '[Name]', isCashier: true, email: `${randomUUID().slice(0, 8)}@example.test`, password: 'password123' }));
+  const someoneElse = (await pool.query('SELECT employee_id FROM logins WHERE id = $1', [made.body.loginId])).rows[0].employee_id;
+  for (const over of [{ cashierId: someoneElse }, { cashTendered: 30 }]) {
+    const res = await staff('/api/sales', POST({ items: [{ productId: id, qty: 1 }], cardAmount: 28, cashierId: cashier, requestKey, ...over }));
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.match(res.body.error, /with different details/);
+    assert.doesNotMatch(res.body.error, /items|payment\./);
+  }
   assert.deepEqual([await stockOf(id), await salesOf(id)], [9, 1]);
 });
 
@@ -245,6 +263,80 @@ test('a repeat of a job’s payment repeats the first answer’s warning, and do
   assert.equal(again.status, 201, JSON.stringify(again.body));
   assert.deepEqual([again.body.id, again.body.jobWarning], [first.body.id, first.body.jobWarning]);
   assert.equal((await staff(`/api/workshop-jobs/${job.id}`)).body.version, version, 'the job didn’t move');
+});
+
+test('a key used on a sale, then on an open order, is refused and pays nothing', async () => {
+  const id = await product(10);
+  const orderId = await order(id);
+  const requestKey = key();
+  const first = await staff('/api/sales', POST(sale(id, requestKey)));
+  const res = await staff(`/api/sale-documents/${orderId}/convert`, POST(pay(requestKey)));
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.deepEqual([res.body.code, res.body.saleId], ['reused_key', first.body.id]);
+  assert.deepEqual([await stockOf(id), await salesOf(id)], [9, 1]);
+  const still = await inShop(() => prepare('SELECT status FROM sale_documents WHERE id = ?').get(orderId));
+  assert.equal(still.status, 'open');
+});
+
+test('a key used on order A, then on open order B, is refused and pays nothing', async () => {
+  const id = await product(10);
+  const [a, b] = [await order(id), await order(id)];
+  const requestKey = key();
+  const first = await staff(`/api/sale-documents/${a}/convert`, POST(pay(requestKey)));
+  const res = await staff(`/api/sale-documents/${b}/convert`, POST(pay(requestKey)));
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.deepEqual([res.body.code, res.body.saleId], ['reused_key', first.body.id]);
+  assert.equal(await stockOf(id), 9);
+});
+
+test('a key sent on a sale and an order at once: one goes in, the other is refused, never a server error', async () => {
+  for (let round = 0; round < 5; round += 1) {
+    const id = await product(10);
+    const orderId = await order(id);
+    const requestKey = key();
+    const replies = await Promise.all([staff('/api/sales', POST(sale(id, requestKey))), staff(`/api/sale-documents/${orderId}/convert`, POST(pay(requestKey)))]);
+    assert.deepEqual(replies.map((r) => r.status).sort(), [201, 409], JSON.stringify(replies.map((r) => r.body)));
+    assert.equal(await stockOf(id), 9);
+  }
+});
+
+test('a converted order never answers with another order’s sale', async () => {
+  const id = await product(10);
+  const [a, b] = [await order(id), await order(id)];
+  const body = pay(key());
+  const paidA = await staff(`/api/sale-documents/${a}/convert`, POST(body));
+  const paidB = await staff(`/api/sale-documents/${b}/convert`, POST(pay(key())));
+  assert.notEqual(paidA.body.id, paidB.body.id);
+  // Order B is paid; A's key and details say nothing about it.
+  const res = await staff(`/api/sale-documents/${b}/convert`, POST(body));
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.deepEqual([res.body.code, res.body.saleId], ['already_converted', paidB.body.id]);
+});
+
+test('a repeat doesn’t run the deposit refund step again', async () => {
+  const alex = await seedMechanic(owner.shop.id, { name: `[Mechanic ${randomUUID().slice(0, 6)}]` });
+  let job = (await staff('/api/workshop-jobs', POST({ title: 'Standard service', jobDate: '2026-10-14', mechanicId: alex }))).body;
+  const items = await staff(`/api/sale-documents/${job.orderId}/items`, { method: 'PUT', body: { items: [{ lineType: 'labour', name: 'Standard service', unitPrice: 65 }] } });
+  assert.equal(items.status, 200, JSON.stringify(items.body));
+  const { orderId } = job;
+  for (const step of ['book-in', 'start', 'finish']) {
+    const moved = await staff(`/api/workshop-jobs/${job.id}/${step}`, POST(step === 'finish' ? { version: job.version, signedOffBy: alex } : { version: job.version }));
+    assert.equal(moved.status, 200, `${step}: ${JSON.stringify(moved.body)}`);
+    job = moved.body;
+  }
+  const body = { cardAmount: 65, cashierId: cashier, signedOffBy: null, requestKey: key() };
+  const first = await staff(`/api/sale-documents/${orderId}/convert`, POST(body));
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  // Owed after the first answer: a repeat isn't what makes it.
+  const ref = `ref-${randomUUID().slice(0, 8)}`;
+  await inShop(async () => {
+    await prepare("INSERT INTO pretend_payments (ref, idempotency_key, amount_pence, status) VALUES (?, ?, 1300, 'held') RETURNING ref").get(ref, ref);
+    await prepare("INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, job_id, refund_due_reason) VALUES ('pretend', ?, 1300, 'held', ?, ?, '[Reason]')").run(ref, ref, job.id);
+  });
+  assert.equal((await staff(`/api/sale-documents/${orderId}/convert`, POST(body))).status, 201);
+  await new Promise((resolve) => { setTimeout(resolve, 300); });
+  const row = await inShop(() => prepare('SELECT status, refund_due_reason FROM online_payments WHERE provider_ref = ?').get(ref));
+  assert.deepEqual([row.status, row.refund_due_reason], ['held', '[Reason]']);
 });
 
 test('a bad key on an order’s payment is refused, and pays nothing', async () => {
