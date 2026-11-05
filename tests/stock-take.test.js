@@ -182,7 +182,7 @@ test('a category count takes only its own products; a below-zero count only its 
   assert.equal(bz.body.label, 'Below zero');
   let p = await page(bz.body.id, jo);
   assert.deepEqual(p.stillToFind.map((s) => s.productId).sort(), [below1.id, below2.id].sort());
-  assert.deepEqual(Object.keys(p.stillToFind[0]).sort(), ['name', 'productId', 'sku'], 'still blind: names only, no numbers');
+  assert.deepEqual(Object.keys(p.stillToFind[0]).sort(), ['colour', 'name', 'productId', 'size', 'sku'], 'still blind: names only, no numbers (a size and colour are names: sizes-and-colours)');
   const off = await count(bz.body.id, { productId: pads.id, add: 1 }, jo);
   assert.equal(off.status, 400);
   assert.equal(off.body.error, 'Shimano brake pads isn’t below zero');
@@ -399,8 +399,8 @@ test('Download the count: a spreadsheet of what was counted', async () => {
   assert.match(res.headers.get('content-type'), /text\/csv/);
   assert.match(res.headers.get('content-disposition'), /attachment; filename="stock-take-\d+\.csv"/);
   const lines = (await res.text()).trim().split('\r\n');
-  assert.equal(lines[0], 'Product,Supplier code,Expected,Counted,Difference,At cost');
-  assert.equal(lines[1], `Shimano brake pads,${pads.sku},6,5,-1,-14.00`);
+  assert.equal(lines[0], 'Product,Size,Colour,Supplier code,Expected,Counted,Difference,At cost');
+  assert.equal(lines[1], `Shimano brake pads,,,${pads.sku},6,5,-1,-14.00`);
   const staffRes = await fetch(`${server.baseUrl}/api/stock-takes/${take.id}/download`, { headers: { cookie: jo.cookie } });
   assert.equal(staffRes.status, 403);
 });
@@ -523,7 +523,7 @@ test('the counting page’s search sends only names and codes, within the count�
   const res = await staff(`/api/stock-takes/${take.id}/products?search=shimano`, undefined, jo);
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(res.body.map((p) => p.id), [pads.id], 'only the category’s');
-  assert.deepEqual(Object.keys(res.body[0]).sort(), ['barcode', 'id', 'name', 'sku']);
+  assert.deepEqual(Object.keys(res.body[0]).sort(), ['barcode', 'colour', 'id', 'name', 'size', 'sku']);
   assert.ok(!JSON.stringify(res.body).includes('98765'));
   const bySku = await staff(`/api/stock-takes/${take.id}/products?search=${encodeURIComponent(pads.sku)}`, undefined, jo);
   assert.deepEqual(bySku.body.map((p) => p.id), [pads.id]);
@@ -566,7 +566,7 @@ test('Download the count: a name or code that starts like a formula is written a
   await act(take.id, 'apply');
   const res = await fetch(`${server.baseUrl}/api/stock-takes/${take.id}/download`, { headers: { cookie: owner.cookie } });
   const lines = (await res.text()).trim().split('\r\n');
-  assert.equal(lines[1], "'=SUM(A1),'@cmd,6,5,-1,-14.00", 'text guarded; numbers left as numbers');
+  assert.equal(lines[1], "'=SUM(A1),,,'@cmd,6,5,-1,-14.00", 'text guarded; numbers left as numbers');
 });
 
 // ---------- The second review, 28 Oct ----------

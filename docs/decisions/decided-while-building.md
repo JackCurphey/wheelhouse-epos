@@ -2241,6 +2241,16 @@ WP-1.5's. So: slice C, WP-2.3.
 4. **Known, no code: a Shopify webhook with a good signature has no count.** Only someone holding a shop's real Shopify secret could send a costly body that way.
 5. **Known, no code: a till's sync has no limit on how many sales it carries,** only the 2 MB and the 200,000 (`batchProblem`, `server/till/sync.js`).
 
+### 5 Nov 2026: sizes and colours underneath (WP-1.5, piece 5; `openspec/changes/sizes-and-colours`; `st-list`, `st-search-size`, `st-product-sizes`, `tk-count-below`, `tk-diff`)
+
+1. **Nothing makes a product with sizes yet.** Making them and adding a size or colour is product-editing (piece 6); linking the Citrus Lime per-code products is piece 7. This piece is what sits underneath, as Jack's answer 5 settled, and what reads it.
+2. **The new list gives a product with sizes its lowest and highest price, not words.** How a range reads ("from £[price]", or both) is for the list's screen (piece 9); not drawn, as the drawing shows one "£[price]".
+3. **Searching: every word must be found; a size or colour is a whole name, in any case.** "jersey M" is size M in each colour, each its own row; "M [Colour 1] jersey" is the one; a barcode or code is its size; the name alone is the product's one row. "L" isn't found in "[Blue]".
+4. **A group's sizes and colours are in the order they were made,** as sizes have no order of their own (S, M, L, XL is the drawing's).
+5. **On a count, a size is named by its product with sizes, with "Size M · [Colour 1]" in place of its code,** as drawn; a size alone reads "Size L", a colour alone "[Colour 2]". The count's download gains Size and Colour columns after Product. The counting page's search finds a size by its product's name, but not "jersey M" as Stock does: scanning finds it by its own barcode.
+6. **For piece 6: a size's own product name.** The old till and old stock list show each size by `products.name`; including its size and colour there would let them tell sizes apart until they're retired.
+7. **Adding the columns held products for 85 ms at 1,000,000 products,** reads included. The new list takes 541 ms at 100,000 products, today's 865 ms.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
