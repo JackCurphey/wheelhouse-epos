@@ -218,6 +218,12 @@ export function register(route) {
         await db.prepare(
           `UPDATE products p SET category = v.now FROM unnest(?::text[], ?::text[]) AS v(was, now) WHERE p.category = v.was`
         ).run(old, old.map(renamed));
+        // A product with sizes says its category too (sizes-and-colours): after its sizes,
+        // in id order, so whatever writes a group takes it after its products.
+        await db.prepare('SELECT id FROM product_groups WHERE category = ANY(?::text[]) ORDER BY id FOR NO KEY UPDATE').all(old);
+        await db.prepare(
+          `UPDATE product_groups g SET category = v.now FROM unnest(?::text[], ?::text[]) AS v(was, now) WHERE g.category = v.was`
+        ).run(old, old.map(renamed));
         await db.prepare(
           'UPDATE product_categories c SET path = v.now FROM unnest(?::text[], ?::text[]) AS v(was, now) WHERE c.path = v.was'
         ).run(old, old.map(renamed));

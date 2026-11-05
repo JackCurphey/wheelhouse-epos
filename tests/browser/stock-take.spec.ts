@@ -88,7 +88,7 @@ for (const [size, viewport, area] of [['computer', { width: 1280, height: 900 },
     await expect(main.getByRole('status').filter({ hasText: `Count applied · ${area} · 1 product corrected` })).toBeVisible();
     await expect(main.getByText(`${area} · stock corrected for 1 product`)).toBeVisible();
     const download = await page.request.get(`${server!.baseUrl}/api/stock-takes/${id}/download`);
-    expect((await download.text()).split('\r\n')[1]).toBe('Shimano brake pads,B05S-RX,4321,2,-4319,-60466.00');
+    expect((await download.text()).split('\r\n')[1]).toBe('Shimano brake pads,,,B05S-RX,4321,2,-4319,-60466.00');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
     await main.getByRole('button', { name: 'Undo' }).click();
     await expect(page).toHaveURL(`${server!.baseUrl}/workshop/stocktake/${id}/check`);
