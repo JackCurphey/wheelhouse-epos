@@ -126,8 +126,20 @@ here before starting it, so two people never build the same one):
   waits for Settings › Your data. Customer matching uses new key columns on
   `customers`; import batches stop at 250ms, so merges, deletions and Fix get
   through during a large file. Merge and Undo answer busy after 2 seconds.
-  **Now (4 Nov):** next is WP-1.5 (products, stock, sizes and colours). Roles
-  and the settings store (WP-1.1, 1.2) stay Mark's.
+  Merged 5 Nov: WP-1.5 taken up (told on #560), split into ten pieces in
+  `openspec/changes/wp-1-5-products/`, each size its own product joined in a
+  group (Jack's answer 5). Products in whole pence (#607, migration 114); every
+  stock change through `moveStock`, with who, why, shop and cause, a held product
+  answers busy after 2 seconds, applying a large count is faster, and a paid Shopify
+  order is always recorded unless a figure in it can't be used (#608, #609, migration
+  115; answers 6 to 8). Request keys on a sale and an order's payment, so a lost answer
+  and a second press count once (#611, migration 116). Dropped and stalled connections
+  no longer hold the database connections: bodies are read first, with deadlines and
+  limits (#610, #612). Each had an independent review and a hand-started CI run.
+  **Now (5 Nov):** in review: stock per shop, with a first shop for every business
+  (#613, #614, migrations 117, 118). Being fixed: one very large no-sign-in booking
+  request can crash the server (already on main). Next is the category tree (WP-1.5
+  piece 4). Roles and the settings store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
