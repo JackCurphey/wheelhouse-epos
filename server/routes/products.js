@@ -11,8 +11,8 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { lockStock, moveStock } from '../lib/stock.js';
-import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
+import { lockStock, moveStock, oldestSite } from '../lib/stock.js';
+import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -175,8 +175,16 @@ export function register(route) {
          WHERE m.product_id = ? ORDER BY m.created_at DESC, m.id DESC LIMIT 200`
       )
       .all(id);
+    // Stock at each shop, oldest first, and which is this computer's (tr-sites; stock
+    // decision 8). No row is none. For everyone: the 3 Oct later change to decision 3.
+    const shops = await db.prepare(
+      `SELECT s.id, s.name, COALESCE(ps.qty, 0) AS qty FROM sites s
+         LEFT JOIN product_stock ps ON ps.site_id = s.id AND ps.product_id = ? ORDER BY s.id`
+    ).all(id);
+    const here = (await siteHere(req)) ?? await oldestSite();
     sendJson(res, 200, {
       ...serializeProduct(row, await canSeeCosts(req)),
+      stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
       history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
     });
   });
@@ -341,7 +349,7 @@ export function register(route) {
         valuePence = Math.abs(change) * costPence;
         toSee = over !== null && valuePence > over;
       }
-      const moved = await moveStock([{ productId: id, change, type, note, reason, valuePence, toSee }], who, { neverBelowZero: true });
+      const moved = await moveStock([{ productId: id, change, type, note, reason, valuePence, toSee }], who, { neverBelowZero: 'here' });
       if (moved.refused) {
         await db.exec('ROLLBACK');
         return badRequest(res, 'Stock cannot go below zero');

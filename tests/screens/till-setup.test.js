@@ -112,14 +112,25 @@ test('a refusal is said in the server\'s words, and the page stays', async () =>
   assert.equal(window.location.pathname, '/workshop/till/setup');
 });
 
-test('staff are told only the owner adds tills; a business with no shop yet is told so', async () => {
+test('staff are told only the owner adds tills', async () => {
   const t = await open('/workshop/till/setup', { me: JO });
   assert.ok(await t.ui.findByText('Only the owner can add or remove tills.'));
   assert.ok(t.ui.queryByRole('button', { name: /Make this computer/ }) === null);
-  t.cleanup(); current.shell.queryClient.clear(); current.uninstall(); mock.timers.reset(); current = undefined;
-  const none = await open('/workshop/till/setup', { sites: [] });
-  assert.ok(await none.ui.findByText('This business has no shops set up in Wheelhouse yet, so a till can’t be added here.'));
-  assert.ok(none.ui.queryByRole('button', { name: /Make this computer/ }) === null);
+});
+
+test('a new business’s first shop, named after it: its pill, its letter, as drawn', async () => {
+  const t = await open('/workshop/till/setup', { sites: [{ id: 9, name: 'North Street Cycles', code: 'N', taken: [] }] });
+  await t.ui.findByRole('heading', { name: 'Set up this till' });
+  assert.ok(t.ui.getByRole('radio', { name: 'North Street Cycles' }));
+  assert.ok(t.ui.getByRole('button', { name: 'Make this computer Till N1' }));
+  assert.ok(t.ui.queryByText(/no shops/) === null);
+});
+
+test('a till at a shop named after the business says the name once', async () => {
+  const t = await open('/workshop/till', { thisTill: { id: 3, code: 'N1', name: null, siteName: 'North Street Cycles' }, till: { code: 'N1', name: null, siteName: 'North Street Cycles' } });
+  await t.ui.findByText('Till N1');
+  assert.ok(t.ui.queryByText('North Street Cycles · North Street Cycles') === null);
+  assert.ok(t.ui.getAllByText('North Street Cycles').length > 0);
 });
 
 test('a computer that is already a till goes to the till', async () => {

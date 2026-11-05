@@ -311,3 +311,9 @@ test('a till is not a workshop computer: no Working bar, and it never goes back 
   assert.equal(posts(t, '/api/till-checkin/active').length, 0);
   assert.ok(t.ui.getByRole('button', { name: /Serving: Alex Morgan/ }));
 });
+
+test('a workshop computer at a shop named after the business says the name once', async () => {
+  const t = await open('/workshop/diary', { workshop: { name: null, siteName: 'North Street Cycles' } });
+  await t.ui.findByRole('heading', { name: 'Enter your PIN' });
+  assert.match(t.ui.getByRole('banner').textContent, /^Workshop computerNorth Street CyclesNobody working/);
+});
