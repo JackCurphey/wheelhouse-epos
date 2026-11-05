@@ -48,7 +48,15 @@ export function makeRateLimiter(max, windowMs) {
   };
 }
 
+// A client that has gone can't be answered, so nothing is written. Only before
+// anything is sent: a second answer after a finished one is still the error it
+// always was.
+function clientHasGone(res) {
+  return !res.headersSent && res.destroyed;
+}
+
 export function sendJson(res, status, data) {
+  if (clientHasGone(res)) return;
   const body = JSON.stringify(data);
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -74,7 +82,34 @@ export function badRequest(res, msg = 'Bad request') {
 // that depends on the exact bytes (notably readRawBody's caller, which HMAC-
 // verifies the raw body against Shopify's signature).
 export async function readJsonBody(req, maxBytes = 2_000_000, { answerOverflow = false } = {}) {
+  const body = await readBody(req, maxBytes, answerOverflow);
+  return body.length === 0 ? {} : JSON.parse(body.toString('utf8'));
+}
+
+export function readRawBody(req, maxBytes = 2_000_000) {
+  return readBody(req, maxBytes, false);
+}
+
+// The client went away before the whole request was read: a phone losing signal,
+// a till switched off. Nobody's fault and nobody to answer. It passes up through
+// runWithShop like any failure, so a transaction rolls back and the connection
+// goes back to the pool; the dispatcher then stays quiet about it.
+export class ClientGoneError extends Error {
+  name = 'ClientGoneError';
+  constructor(cause) {
+    super('The client went away before its request was read', cause ? { cause } : undefined);
+  }
+}
+
+// Always ends (openspec/changes/dropped-request-releases). Waiting for 'end' alone
+// is not enough: a request destroyed before anyone listens never says so again, so
+// the wait would go on for good, holding the request's database connection.
+function readBody(req, maxBytes, answerOverflow) {
   return new Promise((resolve, reject) => {
+    // Node destroys an IncomingMessage only once it is finished with, or when the
+    // connection fails, so which of the two this is depends on whether it ended.
+    if (req.readableEnded) return reject(new Error('Request body already read'));
+    if (req.destroyed) return reject(new ClientGoneError());
     const chunks = [];
     let bytes = 0;
     let overflowed = false;
@@ -95,32 +130,11 @@ export async function readJsonBody(req, maxBytes = 2_000_000, { answerOverflow =
     });
     req.on('end', () => {
       if (overflowed) return reject(new Error('Payload too large'));
-      if (bytes === 0) return resolve({});
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
-      } catch (err) {
-        reject(err);
-      }
+      resolve(Buffer.concat(chunks));
     });
-    req.on('error', reject);
-  });
-}
-
-export function readRawBody(req, maxBytes = 2_000_000) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let bytes = 0;
-    req.on('data', (chunk) => {
-      bytes += chunk.length;
-      if (bytes > maxBytes) {
-        reject(new Error('Payload too large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
+    req.on('error', (err) => reject(new ClientGoneError(err)));
+    // After 'end' or a refusal above, the promise has settled and this does nothing.
+    req.on('close', () => reject(new ClientGoneError()));
   });
 }
 
