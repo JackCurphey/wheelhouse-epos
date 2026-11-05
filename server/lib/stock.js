@@ -1,8 +1,10 @@
 // The one place stock changes (openspec/changes/stock-movements-say-who; stock
-// control decision 6; Release 2 rule 3). Every change writes products.stock_qty and
-// its history line in the caller's transaction: who, why, which shop and what caused
+// control decision 6; Release 2 rule 3). Every change writes products.stock_qty (the
+// business's total), product_stock (that shop's figure; openspec/changes/stock-per-shop)
+// and its history line in the caller's transaction: who, why, which shop and what caused
 // it. tests/stock-movements-one-place.test.js fails if stock is written anywhere else.
 import { prepare } from '../db.js';
+import { MAKE_FIRST_SITE } from './first-site.js';
 import { nowIso } from './http.js';
 
 // How long stock waits for a product someone else holds, then gives up and answers
@@ -11,6 +13,15 @@ export const STOCK_LOCK_WAIT = '2s';
 
 // The shop a change is at when nothing says which.
 export const oldestSite = async () => (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get())?.id ?? null;
+
+// The oldest, making the first if the business has none. Signing up and migration 117
+// give every business one, so only a business made some other way gets here.
+async function oldestOrFirstSite() {
+  const oldest = await oldestSite();
+  if (oldest !== null) return oldest;
+  await prepare(MAKE_FIRST_SITE).run();
+  return oldestSite();
+}
 
 // The same limit for what a stock change locks before its products (an order, a
 // count, a request key), so nothing ahead of them can wait without one.
@@ -35,10 +46,10 @@ export async function lockStock(productIds, { wait = STOCK_LOCK_WAIT } = {}) {
  * caused it: purchaseOrderId, deliveryId, stockTakeId, tillSaleId, saleId, shopifyRefundId }.
  * `who`: { loginId, employeeId, name, siteId }: the sign-in, the person (who may be
  * someone checked in under it), and the shop; a shop not given is the business's
- * oldest, if it has one yet (null: looked already, it has none). Background work with
- * nobody behind it sends none.
+ * oldest. Background work with nobody behind it sends none.
  * `neverBelowZero`: a change taking a product under zero refuses the whole call, and
- * going up is always allowed, so Found works on a product below zero.
+ * going up is always allowed, so Found works on a product below zero. true looks at the
+ * business's total, as the old till's sale always has; 'here', at that shop's figure.
  * `held`: what lockStock returned, when the caller already holds these, to save locking twice.
  *
  * Returns { refused, missing, products, pushes, lineOf }: `refused`, the product that
@@ -54,16 +65,24 @@ export async function moveStock(moves, who = {}, { neverBelowZero = false, wait,
   // Several lines can be on one product, and one statement can only change it once.
   const totals = new Map();
   for (const m of moves) if (held.has(m.productId)) totals.set(m.productId, (totals.get(m.productId) ?? 0) + m.change);
+  if (totals.size === 0) {
+    result.missing = [...new Set(moves.map((m) => m.productId))];
+    return result;
+  }
+  const siteId = who.siteId ?? await oldestOrFirstSite();
+  const ids = [...totals.keys()].sort((a, b) => a - b);
   if (neverBelowZero) {
+    const here = neverBelowZero !== 'here' ? null : new Map((await prepare(
+      'SELECT product_id, qty FROM product_stock WHERE site_id = ? AND product_id = ANY(?::int[])'
+    ).all(siteId, ids)).map((r) => [r.product_id, r.qty]));
     for (const [id, change] of totals) {
-      if (change < 0 && held.get(id).stock_qty + change < 0) return { ...result, refused: held.get(id) };
+      const before = here ? here.get(id) ?? 0 : held.get(id).stock_qty;
+      if (change < 0 && before + change < 0) return { ...result, refused: held.get(id) };
     }
   }
   result.missing = [...new Set(moves.map((m) => m.productId))].filter((id) => !held.has(id));
   const stocked = moves.filter((m) => held.has(m.productId));
-  if (stocked.length === 0) return result;
 
-  const ids = [...totals.keys()].sort((a, b) => a - b);
   const updated = await prepare(
     `UPDATE products p SET stock_qty = p.stock_qty + v.d, updated_at = ?
        FROM unnest(?::int[], ?::int[]) AS v(id, d) WHERE p.id = v.id RETURNING p.*`
@@ -73,7 +92,13 @@ export async function moveStock(moves, who = {}, { neverBelowZero = false, wait,
     if (product.shopify_inventory_item_id) result.pushes.push({ product, newQty: product.stock_qty });
   }
 
-  const siteId = who.siteId !== undefined ? who.siteId : await oldestSite();
+  // Under the products' locks, so no two changes reach one shop's figure at once.
+  await prepare(
+    `INSERT INTO product_stock (site_id, product_id, qty)
+     SELECT ?, v.id, v.d FROM unnest(?::int[], ?::int[]) AS v(id, d)
+     ON CONFLICT (shop_id, site_id, product_id) DO UPDATE SET qty = product_stock.qty + EXCLUDED.qty RETURNING product_id`
+  ).run(siteId, ids, ids.map((id) => totals.get(id)));
+
   const column = (read) => stocked.map((m) => read(m) ?? null);
   const lines = await prepare(
     `INSERT INTO stock_movements (product_id, change_qty, type, note, reason, value_pence, to_see, login_id, employee_id, who_name, site_id,

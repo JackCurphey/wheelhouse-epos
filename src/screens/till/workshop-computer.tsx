@@ -32,7 +32,7 @@ export function WorkshopPinScreen({ workshop, shopName, names = [] }: { workshop
       <header className="flex h-14 shrink-0 items-center gap-1.5 bg-[var(--sidebar)] px-3.5 text-[var(--sidebar-foreground)] md:h-16 md:gap-3.5 md:px-5">
         <span className="flex min-w-0 grow flex-col gap-px">
           <span className="text-base font-bold">Workshop computer</span>
-          <span className="text-xs opacity-85 md:text-sm md:opacity-100">{workshop.siteName}<span className="hidden md:inline">{shopName ? ` · ${shopName}` : ''}</span></span>
+          <span className="text-xs opacity-85 md:text-sm md:opacity-100">{workshop.siteName}<span className="hidden md:inline">{shopName && shopName !== workshop.siteName ? ` · ${shopName}` : ''}</span></span>
         </span>
         <span className="pr-2 text-size-13 opacity-85 md:pr-0 md:text-sm">Nobody working<span className="hidden md:inline">{tapping ? ' — tap your name' : ' — enter your PIN'}</span></span>
       </header>

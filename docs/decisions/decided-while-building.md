@@ -2181,6 +2181,24 @@ WP-1.5's. So: slice C, WP-2.3.
 8. **A key on another sale or order is refused on an open order,** with nothing recorded, the same refusal as a sale's.
 9. **Till's Take payment box has the drawn ✕.** The drawing has it (`till-pay`), and it wasn't built: with no Escape key on a touch till, that left no way out.
 
+### 5 Nov 2026: stock at each shop, and every business's first shop (WP-1.5, piece 3; `openspec/changes/stock-per-shop`; `tr-sites`, `st-product`, `st-adjust`, `till-setup`, `ms-add-shop`)
+
+1. **A business's first shop is named after the business, with its first letter as its code** (A if it has no letter). Sign-up asks for nothing else, and the code follows Add a shop's "suggested from the name". So North Street Cycles in Bolton sees North Street Cycles and tills N1, N2, until a screen can rename a shop; a till's code doesn't change after that either. Replaces entry 10 of the till-setup notes: "This business has no shops" is gone. *Pattern:* `ms-add-shop`; the product page's name for its one figure.
+2. **Till setup needed no new design.** As drawn: the first shop as a pill, N1 as the number. Where a till's or workshop computer's strip would say "North Street Cycles · North Street Cycles", it says it once. Not drawn.
+3. **Existing stock goes to the oldest shop,** as the WP-1.4 spec proposed. Older lines say their shop: a till sale's the till's, any other the oldest.
+4. **`stock_qty` stays as the total,** for the old till, Shopify, reports, the stock list, low stock and Today, until the switcher.
+5. **Adjust is this shop's figure and can't take this shop below zero; the old till's sale is still checked against the total,** so it can take one shop below zero when another has stock. Stock never blocks a sale.
+6. **With Bolton at 5 and [Second site] at −1, Today doesn't list it**, since it counts the total. The product's page shows it. Comes with the switcher. No screen can add a second shop yet.
+7. **A count belongs to the shop it's started at,** whichever computer applies it, and allows only for what moved at that shop. Nothing says so on screen: nothing's drawn, and a one-shop business has no question. A later count at another shop stops an Undo here, which is stricter than it needs to be, and safe.
+8. **A product's page lists each shop with its own tag, then "Low-stock level [n] each" with two or more,** as `tr-sites`. "On its way" comes with sending stock. Everyone with the page sees them (3 Oct later change).
+9. **Applying a count at 50,000 products now takes 7.0 seconds, up from 5.7,** so a sale can be told to try again for about a second longer than the "about 6 seconds" in `2026-11-04-answers.md`, answer 6. At 20,000, 2.8 seconds, told once.
+10. **The Citrus import's other-store rows are unchanged.** They need a look and can be left out; design 8 says why and what would change.
+11. **Renaming the business renames a shop with exactly the old name, and only that** (the independent review). So a first shop named after the business follows it, on a product's page and the till's strip, in one transaction. A shop named Bolton stays Bolton, and every shop keeps its code: N1 stays N1 under a new name. *Pattern:* the 2-second limit, busy.
+12. **A Citrus Lime row fixed at a till goes to the oldest shop, with the rest of its file** (the independent review; spec "with no shop of its own"). Who's on the line stays whoever fixed it. Piece 2 put it on that till's shop, when only one figure existed for it to reach. The file's stock doesn't depend on where Fix is pressed.
+13. **Known, no code, for the switcher's list:** "Count them" on an ordinary browser can't clear a below-zero warning held at the other shop, as the count goes to the oldest while its products are picked by the total. Letters outside A to Z in a shop's first letter: "Éclair Vélo" gets code C. `server/scripts/migrate-to-postgres.js`, the old one-off copy, would leave products with no shop row.
+14. **Before deploying, check no count is running at a business with two shops.** One running through the deploy over-adds a sale made at the other shop. Design 11.
+15. **Applying a count with stale statistics:** the review saw 182 seconds at 50,000 products straight after loading them. The key for links now starts with the product, and a count reads its figures on their own. 20,000 new products beside 1,000,000 older went from 17.0 to 2.7 seconds here; the 182 seconds didn't reproduce here, at 6.8 seconds before and 6.9 after. Design 5.
+
 ### 5 Nov 2026: a request's body is read before it takes a connection (`openspec/changes/body-read-first`; nothing on screen changes)
 
 1. **A request has 30 seconds to arrive, or 4 minutes for an upload,** then gets "That took too long to arrive. Please try again." 30 seconds is 2 MB at about 530 kilobits a second. A full Citrus Lime file, 42 MB once encoded, needs about 1.4 megabits a second to arrive in 4 minutes. It had 5 minutes before, Node's own limit.

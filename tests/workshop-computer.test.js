@@ -12,7 +12,7 @@ import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { hashLinkCode } from '../server/booking-link.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
+import { firstShopIsBolton, staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -33,7 +33,7 @@ const run = (owner, sql, ...args) => runWithShop(owner.shop.id, () => prepare(sq
 async function shop() {
   const owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   shops.push(owner);
-  owner.site = (await post(owner.cookie, '/api/sites', { name: 'Bolton', code: 'B' })).body;
+  owner.site = await firstShopIsBolton(owner);
   return owner;
 }
 async function member(owner, name, { mechanic = false } = {}) {

@@ -6,7 +6,7 @@
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest } from '../helpers/staff.js';
+import { firstShopIsBolton, staffSignup, staffRequest } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
@@ -29,7 +29,7 @@ for (const [viewport, device] of [[{ width: 1440, height: 900 }, 'computer'], [{
     await page.setViewportSize(viewport);
     const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
     owners.push(owner);
-    expect((await staffRequest(server!.baseUrl, owner.cookie, '/api/sites', { method: 'POST', body: { name: 'Bolton', code: 'B' } })).status).toBe(201);
+    await firstShopIsBolton(owner);
     const [name, value] = owner.cookie.split('=');
     await context.addCookies([{ name, value, url: server!.baseUrl }]);
     const noSideScroll = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

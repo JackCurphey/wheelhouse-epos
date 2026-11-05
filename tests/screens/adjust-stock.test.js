@@ -32,9 +32,10 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open({ me = OWNER, reply = null } = {}) {
+const ONE_SHOP = [{ id: 7, name: 'North Street Cycles', qty: PADS.stockQty, here: true }];
+async function open({ me = OWNER, reply = null, shops = ONE_SHOP } = {}) {
   posts = [];
-  let page = { ...PADS, history: HISTORY };
+  let page = { ...PADS, stockAtShops: shops, history: HISTORY };
   globalThis.fetch = async (url, init = {}) => {
     const answer = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
@@ -43,7 +44,7 @@ async function open({ me = OWNER, reply = null } = {}) {
       const body = JSON.parse(init.body);
       posts.push(body);
       if (reply) return answer(reply.status, reply.body);
-      page = { ...page, stockQty: page.stockQty + body.change, history: [{ id: 13, type: 'adjustment', change: body.change, reason: body.reason, note: body.note, who: me.name, at: '2026-09-01T15:00:00.000Z' }, ...page.history] };
+      page = { ...page, stockQty: page.stockQty + body.change, stockAtShops: page.stockAtShops.map((x) => (x.here ? { ...x, qty: x.qty + body.change } : x)), history: [{ id: 13, type: 'adjustment', change: body.change, reason: body.reason, note: body.note, who: me.name, at: '2026-09-01T15:00:00.000Z' }, ...page.history] };
       return answer(200, page);
     }
     if (u.pathname === '/api/products/1') return answer(200, page);
@@ -164,4 +165,40 @@ test('a refusal from the server shows in the box, which stays open', async () =>
   fireEvent.click(box.getByRole('radio', { name: 'Lost or stolen' }));
   fireEvent.click(box.getByRole('button', { name: 'Adjust' }));
   assert.equal((await box.findByRole('alert')).textContent, 'Stock cannot go below zero');
+});
+
+// ---- At each shop (openspec/changes/stock-per-shop; tr-sites) ----
+
+const TWO_SHOPS = [{ id: 7, name: 'Bolton', qty: 5, here: false }, { id: 8, name: '[Second site]', qty: 2, here: true }];
+
+test('with two shops, In stock lists each, oldest first, and the level reads each', async () => {
+  const { ui, within } = await open({ shops: TWO_SHOPS });
+  const stock = ui.getByRole('region', { name: 'In stock' });
+  const text = stock.textContent;
+  assert.ok(text.indexOf('Bolton5') >= 0 && text.indexOf('[Second site]') > text.indexOf('Bolton5'), text);
+  assert.ok(within(stock).getByText(/each$/), 'Low-stock level [n] each');
+});
+
+test('with one shop, its name and no each', async () => {
+  const { ui, within } = await open();
+  const stock = ui.getByRole('region', { name: 'In stock' });
+  assert.match(stock.textContent, /North Street Cycles/);
+  assert.ok(within(stock).queryByText(/each$/) === null);
+});
+
+test('each shop’s row has its own warning: below zero at one, not the other', async () => {
+  const { ui } = await open({ shops: [{ id: 7, name: 'Bolton', qty: 5, here: true }, { id: 8, name: '[Second site]', qty: -1, here: false }] });
+  const rows = [...ui.getByRole('region', { name: 'In stock' }).querySelectorAll('div')].map((d) => d.textContent);
+  assert.ok(rows.some((r) => /^\[Second site\]Below zero/i.test(r)), rows.join(' | '));
+  assert.ok(!rows.some((r) => /^BoltonBelow zero/i.test(r)), rows.join(' | '));
+});
+
+test('Adjust is this shop’s: its name, its figure, what it’ll be after', async () => {
+  const { box, ui, fireEvent, within, waitFor } = await openBox({ shops: TWO_SHOPS });
+  assert.ok(box.getByText((_, el) => el?.tagName === 'P' && el.textContent === 'Shimano brake pads · B05S-RX · at [Second site] · 2 in stock now'));
+  assert.equal(box.getByRole('textbox', { name: 'In stock after' }).value, '1');
+  fireEvent.click(box.getByRole('radio', { name: 'Damaged' }));
+  fireEvent.click(box.getByRole('button', { name: 'Adjust' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Adjust stock' }) === null));
+  await waitFor(() => assert.match(within(ui.getByRole('region', { name: 'In stock' })).getByText('[Second site]').parentElement.textContent, /1$/));
 });

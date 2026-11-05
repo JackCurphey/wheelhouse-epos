@@ -39,7 +39,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(path, { me = OWNER, page = { ...product({}), history: HISTORY }, noCosts = false } = {}) {
+async function open(path, { me = OWNER, page = { ...product({}), stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: HISTORY }, noCosts = false } = {}) {
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
     calls.push(String(url));

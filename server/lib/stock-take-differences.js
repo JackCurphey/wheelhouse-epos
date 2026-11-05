@@ -5,10 +5,24 @@
 // here for Jack to overrule, 28 Oct). So:
 //   expected   = stock now - what moved after the product's last count
 //   difference = counted - expected
-// and applying adds the difference to stock as it is then. Run inside the
-// caller's transaction; applying locks the products first, so what this reads
-// can't move under it.
+// and applying adds the difference to stock as it is then. All of it at the shop the
+// count belongs to (openspec/changes/stock-per-shop, design 6): `stock_qty` here is that
+// shop's figure, not the business's total. Run inside the caller's transaction; applying
+// locks the products first, so what this reads can't move under it.
 import { prepare } from '../db.js';
+import { oldestSite } from './stock.js';
+
+// The shop a count belongs to. Migration 117 and starting one give every count its own.
+export const siteOfTake = async (take) => take.site_id ?? await oldestSite();
+
+// Those products' figures at that shop, none being none. A read of its own, not a join:
+// with stale statistics the planner joined this by reading every figure at the shop for
+// each product, and Apply holds its products meanwhile (design 5).
+const withFigureAt = async (siteId, rows, idOf) => {
+  const ids = rows.map(idOf);
+  const qty = new Map((await prepare('SELECT product_id, qty FROM product_stock WHERE site_id = ? AND product_id = ANY(?::int[])').all(siteId, ids)).map((r) => [r.product_id, r.qty]));
+  return rows.map((r) => ({ ...r, stock_qty: qty.get(idOf(r)) ?? 0 }));
+};
 
 // How a movement after the count reads on its line ("[n] sold during the count").
 const KIND = { sale: 'sold', till_sale: 'sold', return: 'returned', po_receipt: 'booked in', intake: 'booked in', adjustment: 'adjusted' };
@@ -25,23 +39,25 @@ export async function notCountedOf(take) {
     : take.kind === 'category' ? 'p.active = 1 AND p.category = ?'
       : 'p.id = ANY(?)';
   const args = take.kind === 'category' ? [take.target] : take.kind === 'below_zero' ? [take.product_ids] : [];
-  return prepare(
-    `SELECT p.id, p.name, p.sku, p.stock_qty FROM products p WHERE ${scope}
+  const rows = await prepare(
+    `SELECT p.id, p.name, p.sku FROM products p WHERE ${scope}
        AND NOT EXISTS (SELECT 1 FROM stock_take_counts c WHERE c.stock_take_id = ? AND c.product_id = p.id)
        AND NOT EXISTS (SELECT 1 FROM stock_take_recounts r WHERE r.stock_take_id = ? AND r.product_id = p.id)
      ORDER BY p.name, p.id`
   ).all(...args, take.id, take.id);
+  return withFigureAt(await siteOfTake(take), rows, (p) => p.id);
 }
 
 // Every counted product, in product-id order, with what it was expected,
 // counted and differs by, its value at cost in pence, who counted what, and
 // what moved after its last count.
 export async function differencesOf(take) {
-  const counted = await prepare(
-    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, p.stock_qty, p.cost_pence
+  const siteId = await siteOfTake(take);
+  const counted = await withFigureAt(siteId, await prepare(
+    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, p.cost_pence
        FROM stock_take_counts c JOIN products p ON p.id = c.product_id
-      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.stock_qty, p.cost_pence ORDER BY c.product_id`
-  ).all(take.id);
+      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.cost_pence ORDER BY c.product_id`
+  ).all(take.id), (r) => r.product_id);
   if (counted.length === 0) return [];
   // A till sale counts by close-the-day's rule (second review, 28 Oct): an
   // online one from when it reached the server, so a till clock that is
@@ -55,8 +71,9 @@ export async function differencesOf(take) {
        JOIN (SELECT product_id, MAX(last_counted_at) AS last_at FROM stock_take_counts WHERE stock_take_id = ? GROUP BY product_id) l
          ON l.product_id = m.product_id
        LEFT JOIN till_sales ts ON ts.id = m.till_sale_id
-      WHERE (CASE WHEN ts.id IS NULL THEN m.created_at WHEN ts.made_offline THEN LEAST(ts.till_clock_at, ts.received_at) ELSE ts.received_at END) > l.last_at GROUP BY m.product_id, m.type ORDER BY m.product_id, m.type`
-  ).all(take.id);
+      WHERE m.site_id = ?
+        AND (CASE WHEN ts.id IS NULL THEN m.created_at WHEN ts.made_offline THEN LEAST(ts.till_clock_at, ts.received_at) ELSE ts.received_at END) > l.last_at GROUP BY m.product_id, m.type ORDER BY m.product_id, m.type`
+  ).all(take.id, siteId);
   const by = await prepare(
     `SELECT c.product_id, l.name, c.qty FROM stock_take_counts c JOIN logins l ON l.id = c.login_id
       WHERE c.stock_take_id = ? ORDER BY c.first_counted_at, c.id`
