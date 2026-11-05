@@ -224,11 +224,23 @@ test('an order the server won\'t pay (a retired part) says why, and Take payment
   assert.equal((await sale.findByRole('button', { name: /^Take payment/ })).disabled, true);
 });
 
+for (const [status, words] of [[408, 'That took too long to arrive. Please try again.'], [429, 'Too many requests at once. Please try again in a moment.']]) {
+  test(`${status} after the card step, the job's payment perhaps already in: never to reverse it`, async () => {
+    const t = await openJobTill();
+    convertReply = { status, ok: false, json: async () => ({ error: words }) };
+    const dlg = await payByCard(t);
+    assert.ok(has(await dlg.findByText(/Wheelhouse is busy just now.*don’t take it again/)));
+    assert.equal(has(dlg.queryByText(/reverse/)), false);
+    assert.equal(has(dlg.queryByText(/No sale was recorded/)), false);
+    assert.ok(has(dlg.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
+  });
+}
+
 test('busy after the card step says to try again and not to take the card again, never to reverse it', async () => {
   const t = await openJobTill();
   convertReply = { status: 503, ok: false, json: async () => ({ error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }) };
   const dlg = await payByCard(t);
-  assert.ok(has(await dlg.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
+  assert.ok(has(await dlg.findByText('Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
   assert.equal(has(dlg.queryByText(/reverse/)), false);
   assert.ok(has(dlg.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
 });

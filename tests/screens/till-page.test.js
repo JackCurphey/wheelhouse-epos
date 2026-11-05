@@ -240,14 +240,14 @@ test('busy on a card sale says to try again and not to take the card again; on c
   const pay = await openPay(t);
   t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
-  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
+  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
   assert.equal(has(pay.queryByText(/reverse/)), false);
   assert.equal(has(pay.queryByText('Paid')), false);
   t.fireEvent.click(pay.getByRole('button', { name: 'Back' }));
   t.fireEvent.click(await pay.findByRole('button', { name: /^Cash/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: '£20.00' }));
   t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
-  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment.')));
+  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale may not be recorded yet. Try again in a moment.')));
 });
 
 test('a lost answer, then Card approved again: the same request key, and Paid when the sale is there', async () => {
@@ -367,6 +367,39 @@ test('a busy answer isn’t a lost one: removing the only line starts a new key'
   const sent = await correctedAfter(refusedWith(503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }), /Wheelhouse is busy just now/);
   assert.notEqual(sent[1].requestKey, sent[0].requestKey);
 });
+
+for (const [status, words] of [[408, 'That took too long to arrive. Please try again.'], [429, 'Too many requests at once. Please try again in a moment.']]) {
+  test(`${status} says nothing was or wasn’t recorded, like busy: never to reverse a card`, async () => {
+    const t = await openTill();
+    await addService(t);
+    saleReply = refusedWith(status, { error: words });
+    const pay = await pressCard(t);
+    assert.ok(has(await pay.findByText(/Wheelhouse is busy just now/)));
+    assert.equal(has(pay.queryByText(/reverse/)), false);
+    assert.equal(has(pay.queryByText(/No sale was recorded/)), false);
+    assert.ok(has(pay.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
+  });
+
+  test(`a lost answer, then ${status} on pressing again, then the only line removed and added: the same key, so the sale isn’t recorded twice`, async () => {
+    const t = await openTill();
+    await addService(t);
+    saleReply = lostAnswer();
+    const pay = await pressCard(t);
+    await pay.findByText(/Lost touch with the server/);
+    saleReply = refusedWith(status, { error: words });
+    t.fireEvent.click(pay.getByRole('button', { name: 'Card approved' }));
+    await pay.findByText(/Wheelhouse is busy just now/);
+    t.fireEvent.click(pay.getByRole('button', { name: 'Close' }));
+    await removeTheLine(t);
+    saleReply = null;
+    await addService(t);
+    const again = await pressCard(t);
+    await again.findByText('Paid');
+    const sent = sales();
+    assert.equal(sent.length, 3);
+    assert.deepEqual([sent[1].requestKey, sent[2].requestKey], [sent[0].requestKey, sent[0].requestKey]);
+  });
+}
 
 test('a lost answer settled by a refusal on pressing again: removing the only line then starts a new key', async () => {
   const t = await openTill();

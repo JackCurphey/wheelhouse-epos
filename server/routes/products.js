@@ -6,7 +6,7 @@
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
-import { readUploadedImage } from '../lib/uploads.js';
+import { readUploadedImage, uploadedImageBody } from '../lib/uploads.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
@@ -388,5 +388,5 @@ export function register(route) {
     await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
-  });
+  }, uploadedImageBody(MAX_PRODUCT_PHOTO_BYTES));
 }
